@@ -4,13 +4,13 @@
   "type": "module",
   "scripts": {
     "styles": "panda codegen && panda cssgen --outfile src/ui/generated/styles.css",
-    "contracts": "tsx ../../tooling/frontend/contracts.ts",
-    "check": "pnpm run contracts && pnpm run styles && tsc --noEmit -p tsconfig.json",
-    "build": "pnpm run check && vite build",
-    "dev": "pnpm run contracts && pnpm run styles && vite",
-    "compatibility": "tsx ../../tooling/frontend/compatibility.ts",
-    "storybook": "storybook dev --config-dir .storybook",
-    "storybook:build": "storybook build --config-dir .storybook --output-dir dist/storybook",
+    "contracts": "varlock run --path ../.. -- tsx ../../tooling/frontend/contracts.ts",
+    "check": "varlock run --path ../.. -- pnpm run contracts && varlock run --path ../.. -- pnpm run styles && varlock run --path ../.. -- tsc --noEmit -p tsconfig.json",
+    "build": "varlock run --path ../.. -- pnpm run check && varlock run --path ../.. -- vite build",
+    "dev": "varlock run --path ../.. -- pnpm run contracts && varlock run --path ../.. -- pnpm run styles && varlock run --path ../.. -- vite",
+    "compatibility": "varlock run --path ../.. -- tsx ../../tooling/frontend/compatibility.ts",
+    "storybook": "varlock run --path ../.. -- storybook dev --config-dir .storybook",
+    "storybook:build": "varlock run --path ../.. -- storybook build --config-dir .storybook --output-dir dist/storybook",
     "browser:install": "playwright install chromium"
   },
   "dependencies": {
@@ -28,9 +28,13 @@
     "@kobalte/core": "2.0.0-alpha.1",
     "@pandacss/dev": "1.12.0",
     "@solidjs/vite-plugin": "3.0.0-next.38",
+    "@varlock/vite-integration": "1.5.4",
     "boneyard-js": "1.10.0",
     "storybook": "11.0.0-alpha.0",
     "storybook-solidjs-vite": "11.0.0-next-20260903183420",
     "tsx": "4.23.15"
+  },
+  "varlock": {
+    "loadPath": "../../.env.schema"
   }
 }

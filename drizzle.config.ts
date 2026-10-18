@@ -5,7 +5,7 @@ import process from "node:process"
 const databaseUrl = process.env.DATABASE_URL
 
 if (!databaseUrl) {
-  throw new Error("Missing DATABASE_URL in .env / .env.local")
+  throw new Error("Missing DATABASE_URL in Varlock schema or .env.local")
 }
 
 export default defineConfig({

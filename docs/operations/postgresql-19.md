@@ -24,19 +24,19 @@ operator must repeat that exact name in `RITSEI_CONFIRM_DISPOSABLE_DATABASE`.
 
 ## Run
 
-Configure a disposable PostgreSQL 19 database URL and run:
+Configure `RITSEI_DISPOSABLE_DATABASE_URL` and
+`RITSEI_CONFIRM_DISPOSABLE_DATABASE` in `.env.local`, then run:
 
 ```sh
-export RITSEI_DISPOSABLE_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5433/ritsei_scratch
-export RITSEI_CONFIRM_DISPOSABLE_DATABASE=ritsei_scratch
-deno task postgres19:rehearse
+pnpm exec varlock run -- pnpm run postgres19:rehearse
 ```
 
 Optional evidence output:
 
+Set `RITSEI_POSTGRES19_EVIDENCE_PATH` in `.env.local`, then run:
+
 ```sh
-export RITSEI_POSTGRES19_EVIDENCE_PATH=docs/operations/postgresql-19-evidence-2026-08-31.json
-deno task postgres19:rehearse
+pnpm exec varlock run -- pnpm run postgres19:rehearse
 ```
 
 Do not point this procedure at a production database. The command is intentionally destructive

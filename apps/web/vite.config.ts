@@ -1,3 +1,5 @@
+import { resolve } from "node:path"
+import { varlockVitePlugin } from "@varlock/vite-integration"
 import solid from "@solidjs/vite-plugin"
 import { defineConfig } from "vite"
 
@@ -5,7 +7,7 @@ import { defineConfig } from "vite"
 // the repository root stays the CWD for scripted builds (see tooling scripts).
 export default defineConfig({
   root: import.meta.dirname,
-  plugins: [solid()],
+  plugins: [varlockVitePlugin({ rootDir: resolve(import.meta.dirname, "../..") }), solid()],
   resolve: { dedupe: ["solid-js"] },
   server: {
     host: "127.0.0.1",

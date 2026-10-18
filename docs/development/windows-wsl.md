@@ -53,10 +53,16 @@ PostgreSQL 19, TigerBeetle, and Playwright's Chromium browsers. The npm
 releases; the flake fails evaluation with an explicit message when they drift, so
 align them in the same change that updates `flake.lock`. CI runs
 `nix flake check --all-systems` to catch that drift.
-The shell exports the local development connection as:
+Varlock resolves the local development connection from `.env.schema` (or
+`.env.local` overrides). Run database commands through Varlock:
+
+```sh
+pnpm exec varlock run -- pnpm run db:migrate
+```
+
+The shell still provides the PostgreSQL data directory:
 
 ```text
-DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5433/ritsei
 PGDATA=$HOME/.local/share/ritsei/postgresql
 ```
 
@@ -96,8 +102,7 @@ Then install the repository dependencies and apply migrations:
 
 ```sh
 pnpm install
-cp .env.example .env
-pnpm run db:migrate
+pnpm exec varlock run -- pnpm run db:migrate
 ```
 
 Stop the local database when finished:

@@ -21,9 +21,9 @@ services:
     image: node:24-slim
     working_dir: /app
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ritsei
-      RITSEI_DEPLOYMENT_PROFILE: entry
-      RITSEI_FINANCIAL_AUTHORITY: postgresql
+      DATABASE_URL: ${RITSEI_ENTRY_DATABASE_URL}
+      RITSEI_DEPLOYMENT_PROFILE: ${RITSEI_DEPLOYMENT_PROFILE}
+      RITSEI_FINANCIAL_AUTHORITY: ${RITSEI_FINANCIAL_AUTHORITY}
     volumes:
       - ../..:/app
     command: ["pnpm", "run", "migrate"]
@@ -35,12 +35,12 @@ services:
     image: node:24-slim
     working_dir: /app
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ritsei
-      RITSEI_DEPLOYMENT_PROFILE: entry
-      RITSEI_FINANCIAL_AUTHORITY: postgresql
-      RITSEI_AUTH_PROFILE: transitional-local
-      RITSEI_TRANSITIONAL_USER_ACCOUNT_EMAIL: admin@example.test
-      PORT: "8000"
+      DATABASE_URL: ${RITSEI_ENTRY_DATABASE_URL}
+      RITSEI_DEPLOYMENT_PROFILE: ${RITSEI_DEPLOYMENT_PROFILE}
+      RITSEI_FINANCIAL_AUTHORITY: ${RITSEI_FINANCIAL_AUTHORITY}
+      RITSEI_AUTH_PROFILE: ${RITSEI_AUTH_PROFILE}
+      RITSEI_TRANSITIONAL_USER_ACCOUNT_EMAIL: ${RITSEI_TRANSITIONAL_USER_ACCOUNT_EMAIL}
+      PORT: ${PORT}
     volumes:
       - ../..:/app
     command: ["pnpm", "start"]
@@ -54,13 +54,13 @@ services:
     image: node:24-slim
     working_dir: /app
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ritsei
-      RITSEI_DEPLOYMENT_PROFILE: entry
-      RITSEI_FINANCIAL_AUTHORITY: postgresql
-      RITSEI_AUTH_PROFILE: transitional-local
-      RITSEI_TRANSITIONAL_USER_ACCOUNT_EMAIL: admin@example.test
-      WORKER_TENANT_ID: 00000000-0000-4000-8000-000000000001
-      WORKER_ID: entry-accounting-worker
+      DATABASE_URL: ${RITSEI_ENTRY_DATABASE_URL}
+      RITSEI_DEPLOYMENT_PROFILE: ${RITSEI_DEPLOYMENT_PROFILE}
+      RITSEI_FINANCIAL_AUTHORITY: ${RITSEI_FINANCIAL_AUTHORITY}
+      RITSEI_AUTH_PROFILE: ${RITSEI_AUTH_PROFILE}
+      RITSEI_TRANSITIONAL_USER_ACCOUNT_EMAIL: ${RITSEI_TRANSITIONAL_USER_ACCOUNT_EMAIL}
+      WORKER_TENANT_ID: ${WORKER_TENANT_ID}
+      WORKER_ID: ${RITSEI_ENTRY_WORKER_ID}
     volumes:
       - ../..:/app
     command: ["pnpm", "run", "worker"]

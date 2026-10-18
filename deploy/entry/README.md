@@ -5,12 +5,12 @@ It starts PostgreSQL 19, applies migrations, then starts the API and worker.
 TigerBeetle settings are intentionally absent.
 
 ```sh
-docker compose -f deploy/entry/compose.yaml config
-docker compose -f deploy/entry/compose.yaml up
+pnpm exec varlock run -- docker compose -f deploy/entry/compose.yaml config
+pnpm exec varlock run -- docker compose -f deploy/entry/compose.yaml up
 ```
 
 The PostgreSQL service is bound to `127.0.0.1:5433` so host or WSL development commands can use the
-same `DATABASE_URL` as `.env.example`.
+same local host port used by the Varlock schema.
 This is a local/reference deployment artifact, not production HA evidence.
 It does not provide PostgreSQL failover, workload isolation, backup automation, TLS, secrets
 management, or a bounded staging cohort. Those remain requirements for the standard, scale, and

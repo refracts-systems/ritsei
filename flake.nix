@@ -48,7 +48,6 @@
               export PGPORT="''${PGPORT:-5433}"
               export PGUSER="''${PGUSER:-postgres}"
               export PGDATABASE="''${PGDATABASE:-ritsei}"
-              export DATABASE_URL="''${DATABASE_URL:-postgresql://postgres:postgres@$PGHOST:$PGPORT/$PGDATABASE}"
             '';
           };
         });

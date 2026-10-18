@@ -257,7 +257,7 @@ if (isMain(import.meta.url)) {
   const databaseUrl = process.env["DATABASE_URL"]
   const inputPath = process.argv[2] ?? process.env["P0_BACKFILL_FILE"]
   if (databaseUrl === undefined || databaseUrl.trim() === "") {
-    console.error("DATABASE_URL is required; .env.local is loaded automatically")
+    console.error("DATABASE_URL is required; Varlock loads .env.local automatically")
     process.exit(1)
   }
   if (inputPath === undefined || inputPath.trim() === "") {

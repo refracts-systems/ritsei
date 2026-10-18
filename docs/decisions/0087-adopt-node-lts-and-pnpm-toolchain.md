@@ -70,7 +70,7 @@ surface does not need to change shape.
 - `deno.json`, `deno.lock`, and per-package `deno.json` files are removed; all
   orchestration lives in `package.json` scripts (root and `apps/web`).
 - Repository documentation and agent instructions are updated in the same change
-  (AGENTS.md, README, CONTRIBUTING, `.env.example`, lefthook, `.vscode` settings).
+  (AGENTS.md, README, CONTRIBUTING, `.env.schema`, lefthook, `.vscode` settings).
 - ESLint-equivalent lint parity for `deno lint` is left as follow-up work; type
   checking and boundary tooling remain the enforced gates.
 - The reproducible Nix dev shell keeps `nodejs_24` + `pnpm_12` (Deno is removed); the

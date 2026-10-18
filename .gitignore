@@ -6,7 +6,7 @@ node_modules/
 .tigerbeetle/
 .env
 .env.*
-!.env.example
+!.env.schema
 .DS_Store
 apps/web/src/experiments/solid-effect/dist/assets/
 apps/web/dist/

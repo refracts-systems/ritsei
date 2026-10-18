@@ -80,9 +80,8 @@ an explicitly documented replacement process.
 Run the full release gate with PostgreSQL 19 or newer available:
 
 ```sh
-export DATABASE_URL=postgres://postgres:postgres@localhost:5432/ritsei
-pnpm run migrate
-pnpm run release:check
+pnpm exec varlock run -- pnpm run migrate
+pnpm exec varlock run -- pnpm run release:check
 ```
 
 After creating the annotated tag, validate its metadata locally:

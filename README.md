@@ -84,7 +84,7 @@ Run the primary validation workflow:
 
 ```sh
 pnpm run check
-DATABASE_URL=postgres://... pnpm run db:check
+pnpm exec varlock run -- pnpm run db:check
 pnpm run db:migrate
 pnpm run check:affected
 pnpm run boundary:test
@@ -100,9 +100,9 @@ use `pnpm run fallow` for the full scan, focused `pnpm run fallow:*` tasks for
 review, and `pnpm run fallow:audit` for the baseline-backed changed-set gate.
 
 `pnpm run db:generate`, `pnpm run db:check`, and `pnpm run db:migrate` use the
-pinned Drizzle migration workflow and require `DATABASE_URL`, either directly
-or through `.env` / `.env.local`. `db:generate` creates migration files;
-`db:migrate` applies them.
+pinned Drizzle migration workflow and resolve `DATABASE_URL` through Varlock.
+Use `.env.local` for machine-specific values; `db:generate` creates migration
+files and `db:migrate` applies them.
 
 PostgreSQL integration tests are skipped only when `DATABASE_URL` is unset. If
 it is configured but the database is unreachable or invalid, the tests fail.

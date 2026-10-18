@@ -12,7 +12,7 @@ Authorization Code + PKCE profile. Provider claims never grant tenant membership
 Apply migrations, then run:
 
 ```sh
-deno task auth:bootstrap
+pnpm exec varlock run -- pnpm run auth:bootstrap
 ```
 
 The command is trusted and idempotent by tenant slug. It creates the initial UserAccount, tenant,

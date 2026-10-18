@@ -77,12 +77,13 @@ Effect v4 error handling uses `Effect.catch`, `Effect.catchCause`, or
   server routing.
 - Domain implementations depend on the kernel database capability and their own
   persistence tables, while public domain contracts remain engine-independent.
-- Running Drizzle Kit requires `DATABASE_URL`, loaded from `.env`, `.env.local`,
+- Running Drizzle Kit requires `DATABASE_URL`, resolved by Varlock from
+  `.env.schema`, `.env.local`,
   or the process environment.
 
 ## Validation
 
-- `deno task db:check` validates the Drizzle migration graph.
+- `pnpm run db:check` validates the Drizzle migration graph through Varlock.
 - Ownership tooling rejects migrations without Drizzle snapshots and review
   headers.
 - Architecture tests reject non-Effect HTTP routing.
