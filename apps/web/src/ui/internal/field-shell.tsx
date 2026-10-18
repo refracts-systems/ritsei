@@ -16,7 +16,7 @@ type FieldControlProps = {
 }
 
 const styles = {
-  root: css({ display: "flex", flexDirection: "column", gap: "2" }),
+  root: css({ display: "flex", flexDirection: "column", gap: "1.5" }),
   label: css({ textStyle: "label" }),
   error: css({ textStyle: "helper", color: "danger" }),
 }

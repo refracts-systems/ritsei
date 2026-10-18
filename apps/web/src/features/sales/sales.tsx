@@ -9,6 +9,7 @@ import type {
 } from "../../shared/contracts/generated/sales.ts"
 import { CommandFeedback, QueryBoundary } from "../../shared/request-feedback.tsx"
 import { ApiRuntime } from "../../shared/runtime.ts"
+import { formatDecimal } from "../../ui/foundations/format.ts"
 import { layout } from "../../ui/foundations/layout.ts"
 import { DataTable } from "../../ui/patterns/data-table.tsx"
 import { EntityWorkspace } from "../../ui/patterns/entity-workspace.tsx"
@@ -76,7 +77,6 @@ function CreateCustomerDialog(props: { reload: () => Promise<unknown> }) {
       open={open()}
       onOpenChange={createDialogOpenChange(mutation, setOpen, setInvalid)}
       trigger={<span>Create customer</span>}
-      triggerVariant="primary"
       title="Create customer"
       description="Create a tenant-local Sales customer master record. Customer identity remains bounded to this tenant."
     >
@@ -165,7 +165,6 @@ function CreateQuotationDialog(props: {
       open={open()}
       onOpenChange={createDialogOpenChange(mutation, setOpen, setInvalid)}
       trigger={<span>Create quotation</span>}
-      triggerVariant="primary"
       title="Create quotation"
       description="Create a draft quotation with a customer and exact two-decimal total. Quotation transitions are backend-owned."
     >
@@ -531,7 +530,21 @@ function CustomerTable(props: { customers: readonly Customer[] }) {
   )
 }
 
-function QuotationTable(props: { quotations: readonly Quotation[] }) {
+const customerLabel = (customers: readonly Customer[], id: string) =>
+  customers.find((customer) => customer.id === id)?.name
+
+function CustomerReference(props: { customers: readonly Customer[]; id: string }) {
+  return (
+    <Show when={customerLabel(props.customers, props.id)} keyed fallback={<code>{props.id}</code>}>
+      {(name) => <span title={props.id}>{name}</span>}
+    </Show>
+  )
+}
+
+function QuotationTable(props: {
+  quotations: readonly Quotation[]
+  customers: readonly Customer[]
+}) {
   return (
     <DataTable
       surface={false}
@@ -553,7 +566,9 @@ function QuotationTable(props: { quotations: readonly Quotation[] }) {
         {
           id: "customerId",
           header: "Customer",
-          cell: (quotation) => <code>{quotation.customerId}</code>,
+          cell: (quotation) => (
+            <CustomerReference customers={props.customers} id={quotation.customerId} />
+          ),
         },
         {
           id: "status",
@@ -562,13 +577,22 @@ function QuotationTable(props: { quotations: readonly Quotation[] }) {
             <Badge tone={quotationTone(quotation.status)}>{quotation.status}</Badge>
           ),
         },
-        { id: "total", header: "Total", cell: (quotation) => quotation.total },
+        {
+          id: "total",
+          header: "Total",
+          align: "end",
+          cell: (quotation) => formatDecimal(quotation.total),
+        },
       ]}
     />
   )
 }
 
-function OrderTable(props: { orders: readonly SalesOrder[]; selectedOrderId?: string }) {
+function OrderTable(props: {
+  orders: readonly SalesOrder[]
+  customers: readonly Customer[]
+  selectedOrderId?: string
+}) {
   return (
     <DataTable
       surface={false}
@@ -593,15 +617,20 @@ function OrderTable(props: { orders: readonly SalesOrder[]; selectedOrderId?: st
         {
           id: "customerId",
           header: "Customer",
-          cell: (order) => <code>{order.customerId}</code>,
+          cell: (order) => <CustomerReference customers={props.customers} id={order.customerId} />,
         },
         {
           id: "status",
           header: "Status",
           cell: (order) => <Badge tone={orderTone(order.status)}>{order.status}</Badge>,
         },
-        { id: "lines", header: "Lines", cell: (order) => order.lines.length },
-        { id: "total", header: "Total", cell: (order) => order.total },
+        { id: "lines", header: "Lines", align: "end", cell: (order) => order.lines.length },
+        {
+          id: "total",
+          header: "Total",
+          align: "end",
+          cell: (order) => formatDecimal(order.total),
+        },
       ]}
     />
   )
@@ -976,7 +1005,7 @@ export function Sales(props: {
             when={quotationData().length > 0}
             fallback={<p role="status">No quotations match the current filters.</p>}
           >
-            <QuotationTable quotations={quotationData()} />
+            <QuotationTable quotations={quotationData()} customers={customerData()} />
           </Show>
         </section>
         <section class={[surface(), layout.stack]} aria-labelledby="sales-orders-heading">
@@ -985,7 +1014,11 @@ export function Sales(props: {
             when={orderData().length > 0}
             fallback={<p role="status">No sales orders match the current filters.</p>}
           >
-            <OrderTable orders={orderData()} selectedOrderId={props.selectedOrderId} />
+            <OrderTable
+              orders={orderData()}
+              customers={customerData()}
+              selectedOrderId={props.selectedOrderId}
+            />
           </Show>
         </section>
       </QueryBoundary>

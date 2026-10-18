@@ -95,7 +95,7 @@ ADR-0010  Vite-based SolidJS SPA
                                   +--> ADR-0086 promotes the bridge to `apps/web/src/shared/solid-effect.ts`
                                       and keeps the experiment as a re-exporting evidence harness
               |
-              +--> ADR-0069 cartographic enterprise visual grammar
+              +--> ADR-0069 cartographic enterprise visual grammar (superseded by ADR-0090)
                         +--> HTML owns semantics and interaction
                         +--> WebGPU is optional and fallback-first
                         +--> material ratios are art direction, not a page template
@@ -103,6 +103,11 @@ ADR-0010  Vite-based SolidJS SPA
                                   +--> TypeGPU is deferred for future GPU-compute workloads
                         +--> ADR-0071 adopts seven universal cartographic archetypes
                                   +--> deterministic variation and semantic depth
+              |
+              +--> ADR-0090 Operational Clarity visual language
+                        +--> neutral surfaces, one cobalt accent, status color only for status
+                        +--> light icon navigation, 48px topbar, compact density
+                        +--> cartography renderer kept as a visualization tool only
 
 ADR-0030  UserAccount lifecycle and tenant membership
     |
@@ -172,7 +177,8 @@ provider boundary in ADR-0030; ADR-0059 defines the replaceable RelationshipEngi
 ADR-0006; ADR-0070 concretizes the optional cartographic renderer selected by ADR-0069 without
 changing its HTML-first, fallback-first semantics; and ADR-0071 replaces coarse industry categories
 with seven universal cartographic archetypes, context-aware semantic mappings, deterministic
-variation, and semantic depth. ADR-0073 supersedes the custom-checker selection portion of ADR-0062;
+variation, and semantic depth. ADR-0090 supersedes ADR-0069 and ADR-0071 as the product's visual
+language, keeping the cartography renderer and ADR-0070 only as a visualization tool. ADR-0073 supersedes the custom-checker selection portion of ADR-0062;
 ADR-0075 supersedes the dependency-manifest ownership portion of ADR-0050 while retaining package.json
 and deno.lock-based resolution; it deliberately defers a root catalog until multiple workspace members
 share a version invariant. ADR-0076 amends the typography direction in ADR-0056 without changing

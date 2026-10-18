@@ -175,7 +175,6 @@ function CreateWarehouseDialog(props: { reload: () => Promise<unknown> }) {
       open={open()}
       onOpenChange={createDialogOpenChange(mutation, setOpen, setInvalid)}
       trigger={<span>Create warehouse</span>}
-      triggerVariant="primary"
       title="Create warehouse"
       description="Create a tenant-local warehouse. Stock remains authoritative in Inventory after creation."
     >
@@ -260,7 +259,6 @@ function CreateItemDialog(props: { reload: () => Promise<unknown> }) {
       open={open()}
       onOpenChange={createDialogOpenChange(mutation, setOpen, setInvalid)}
       trigger={<span>Create item</span>}
-      triggerVariant="primary"
       title="Create item"
       description="Create an immutable item identity and unit of measure for tenant-local stock operations."
     >

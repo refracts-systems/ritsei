@@ -1,11 +1,13 @@
 import { css } from "../generated/css/index.js"
-import { phosphorClass } from "./providers/phosphor.ts"
+import { phosphorSymbolHref } from "./providers/phosphor.ts"
 import type { IconName } from "./registry.ts"
 import { defaultIconVariant, type IconSize, type IconTone, type IconVariant } from "./semantics.ts"
 
 const sizeStyles: Record<IconSize, string> = {
   xs: css({
     display: "inline-block",
+    flexShrink: "0",
+    verticalAlign: "middle",
     width: "iconXs",
     height: "iconXs",
     fontSize: "iconXs",
@@ -13,6 +15,8 @@ const sizeStyles: Record<IconSize, string> = {
   }),
   sm: css({
     display: "inline-block",
+    flexShrink: "0",
+    verticalAlign: "middle",
     width: "iconSm",
     height: "iconSm",
     fontSize: "iconSm",
@@ -20,6 +24,8 @@ const sizeStyles: Record<IconSize, string> = {
   }),
   md: css({
     display: "inline-block",
+    flexShrink: "0",
+    verticalAlign: "middle",
     width: "iconMd",
     height: "iconMd",
     fontSize: "iconMd",
@@ -27,6 +33,8 @@ const sizeStyles: Record<IconSize, string> = {
   }),
   lg: css({
     display: "inline-block",
+    flexShrink: "0",
+    verticalAlign: "middle",
     width: "iconLg",
     height: "iconLg",
     fontSize: "iconLg",
@@ -34,6 +42,8 @@ const sizeStyles: Record<IconSize, string> = {
   }),
   xl: css({
     display: "inline-block",
+    flexShrink: "0",
+    verticalAlign: "middle",
     width: "iconXl",
     height: "iconXl",
     fontSize: "iconXl",
@@ -41,6 +51,8 @@ const sizeStyles: Record<IconSize, string> = {
   }),
   display: css({
     display: "inline-block",
+    flexShrink: "0",
+    verticalAlign: "middle",
     width: "iconDisplay",
     height: "iconDisplay",
     fontSize: "iconDisplay",
@@ -76,18 +88,20 @@ export function Icon(props: IconProps) {
   const size = () => props.size ?? "md"
   const tone = () => props.tone ?? "default"
   const className = () =>
-    [phosphorClass(props.name, variant()), sizeStyles[size()], toneStyles[tone()], props.class]
-      .filter(Boolean)
-      .join(" ")
+    [sizeStyles[size()], toneStyles[tone()], props.class].filter(Boolean).join(" ")
 
   return (
-    <i
+    <svg
       id={props.id}
-      title={props.title}
       class={className()}
+      fill="currentColor"
+      viewBox="0 0 1024 1024"
       role={props.label ? "img" : undefined}
       aria-hidden={props.label ? undefined : "true"}
       aria-label={props.label}
-    />
+    >
+      {props.title && <title>{props.title}</title>}
+      <use href={phosphorSymbolHref(props.name, variant())} />
+    </svg>
   )
 }

@@ -92,9 +92,9 @@ current system; ADRs preserve decision history.
 | [`0066`](./0066-adopt-single-product-semver-authority.md) | Adopt a single product SemVer authority | Accepted |
 | [`0067`](./0067-separate-logical-database-and-physical-data-placement.md) | Separate logical database from physical data placement | Accepted |
 | [`0068`](./0068-establish-foundation-modules-platform-runtime-taxonomy.md) | Establish foundation, modules, platform, and runtime taxonomy | Accepted |
-| [`0069`](./0069-adopt-cartographic-enterprise-visual-grammar.md) | Adopt the cartographic enterprise visual grammar | Accepted |
+| [`0069`](./0069-adopt-cartographic-enterprise-visual-grammar.md) | Adopt the cartographic enterprise visual grammar | Superseded |
 | [`0070`](./0070-select-vgpu-and-defer-typegpu.md) | Select `vgpu` as the optional cartographic renderer and defer TypeGPU compute | Accepted |
-| [`0071`](./0071-adopt-universal-cartographic-archetypes.md) | Adopt seven universal cartographic visual archetypes | Accepted |
+| [`0071`](./0071-adopt-universal-cartographic-archetypes.md) | Adopt seven universal cartographic visual archetypes | Superseded |
 | [`0072`](./0072-prefer-native-solid-reactivity-for-effect-integration.md) | Prefer native Solid 2 reactivity for Effect integration | Accepted |
 | [`0073`](./0073-simplify-repository-enforcement-tooling.md) | Simplify repository enforcement tooling | Accepted |
 | [`0074`](./0074-switch-to-kobalte-for-solid2-accessible-primitives.md) | Use Kobalte for Solid 2 accessible primitives | Accepted |
@@ -113,5 +113,6 @@ current system; ADRs preserve decision history.
 | [`0087`](./0087-adopt-node-lts-and-pnpm-toolchain.md) | Adopt Node.js LTS and pnpm as the repository toolchain | Accepted |
 | [`0088`](./0088-adopt-oxc-formatting-and-linting.md) | Adopt Oxc formatting and linting | Accepted |
 | [`0089`](./0089-retire-roadmap-completion-evaluator.md) | Retire the roadmap completion evaluator | Accepted |
+| [`0090`](./0090-adopt-operational-clarity-visual-language.md) | Adopt the Operational Clarity visual language | Accepted |
 
 Accepted ADRs must not be rewritten to alter history. Create a new ADR and use `Supersedes`.

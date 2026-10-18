@@ -1,41 +1,35 @@
-# RITSEI Design System: Cartographic Enterprise UI
+# RITSEI Design System: Operational Clarity
 
 > **Status:** Canonical and active design-system specification
 >
-> **Implementation status:** The design-system contract is approved. `apps/web` contains the
-> current Panda token/text-style implementation, bundled Pretendard and IBM Plex Mono assets,
-> controlled Storybook evidence, a Kobalte-backed `ConfirmDialog` used by the application shell, and
-> an HTML/SVG `CartographyField` fallback exercised by the User Accounts workflow. Kobalte activation
-> is limited to that tested Dialog wrapper; visual regression and optional WebGPU evidence remain
-> activation-gated. `vgpu` is the selected optional cartographic renderer behind a RITSEI-owned
-> adapter, but it is not activated as a runtime dependency yet. This document therefore defines the
-> target contract and its remaining activation gates; it does not claim that optional GPU capabilities
-> already exist.
+> **Implementation status:** The visual language in this document is implemented in `apps/web`:
+> Panda tokens and recipes (`apps/web/panda.config.ts`), shell and workspace layouts
+> (`apps/web/src/ui/foundations/layout.ts`), the application shell (`apps/web/src/app/shell.tsx`), and
+> the shared primitives and Product Patterns under `apps/web/src/ui/`. Kobalte activation remains
+> limited to tested wrappers; visual-regression evidence and the optional WebGPU renderer remain
+> activation-gated.
 >
 > **Owns:** Navigation and shell visual contracts, Product Pattern composition, Flexible Workspace
-> presentation, Interaction Grammar, Visual Grammar, semantic design tokens, material rules, component
-> contracts, accessibility, density, renderer boundaries, and design-system governance.
+> presentation, Interaction Grammar, color, typography, density, surfaces, data-visualization rules,
+> content formatting, semantic design tokens, component contracts, accessibility, renderer
+> boundaries, and design-system governance.
 >
 > **Related documents**
 >
+> - Visual language decision: [`../decisions/0090-adopt-operational-clarity-visual-language.md`](../decisions/0090-adopt-operational-clarity-visual-language.md)
 > - Frontend architecture: [`./frontend.md`](./frontend.md)
 > - Active architecture: [`./architecture-spec-v4.md`](./architecture-spec-v4.md)
-> - Design-system decision: [`../decisions/0056-adopt-ritsei-semantic-frontend-design-system.md`](../decisions/0056-adopt-ritsei-semantic-frontend-design-system.md)
+> - Design-system ownership decision: [`../decisions/0056-adopt-ritsei-semantic-frontend-design-system.md`](../decisions/0056-adopt-ritsei-semantic-frontend-design-system.md)
 > - Typography decision: [`../decisions/0076-adopt-ritsei-typography-system.md`](../decisions/0076-adopt-ritsei-typography-system.md)
 > - Iconography decision: [`../decisions/0077-adopt-ritsei-iconography-system.md`](../decisions/0077-adopt-ritsei-iconography-system.md)
 > - Motion decision: [`../decisions/0078-adopt-ritsei-motion-system.md`](../decisions/0078-adopt-ritsei-motion-system.md)
-> - Skeleton architecture: [`./skeleton.md`](./skeleton.md)
 > - Solid 2 primitive selection: [`../decisions/0074-switch-to-kobalte-for-solid2-accessible-primitives.md`](../decisions/0074-switch-to-kobalte-for-solid2-accessible-primitives.md)
-> - Cartographic UI decision: [`../decisions/0069-adopt-cartographic-enterprise-visual-grammar.md`](../decisions/0069-adopt-cartographic-enterprise-visual-grammar.md)
-> - Cartographic renderer selection: [`../decisions/0070-select-vgpu-and-defer-typegpu.md`](../decisions/0070-select-vgpu-and-defer-typegpu.md)
-> - Cartographic renderer reference: [`./reference/cartographic-renderer-selection.md`](./reference/cartographic-renderer-selection.md)
-> - Universal cartographic archetypes: [`../decisions/0071-adopt-universal-cartographic-archetypes.md`](../decisions/0071-adopt-universal-cartographic-archetypes.md)
-> - Archetypes and semantic depth reference: [`./reference/cartographic-archetypes-and-semantic-depth.md`](./reference/cartographic-archetypes-and-semantic-depth.md)
+> - Optional visualization renderer: [`../decisions/0070-select-vgpu-and-defer-typegpu.md`](../decisions/0070-select-vgpu-and-defer-typegpu.md)
+> - Superseded visual direction (historical): [`../decisions/0069-adopt-cartographic-enterprise-visual-grammar.md`](../decisions/0069-adopt-cartographic-enterprise-visual-grammar.md), [`../decisions/0071-adopt-universal-cartographic-archetypes.md`](../decisions/0071-adopt-universal-cartographic-archetypes.md)
 > - Frontend state ownership: [`../decisions/0048-define-effect-application-architecture-and-frontend-state-ownership.md`](../decisions/0048-define-effect-application-architecture-and-frontend-state-ownership.md)
 > - Vite and SolidJS SPA: [`../decisions/0010-use-vite-solidjs-spa.md`](../decisions/0010-use-vite-solidjs-spa.md)
 > - Process Studio: [`./process-studio.md`](./process-studio.md)
 > - Authorization: [`./authorization.md`](./authorization.md)
-> - Architecture enforcement: [`./architecture-enforcement.md`](./architecture-enforcement.md)
 > - Documentation boundaries: [`../documentation-boundaries.md`](../documentation-boundaries.md)
 
 ## 1. Scope and normative language
@@ -54,78 +48,57 @@ A feature deviation MUST name the semantic problem it solves, the affected state
 accessibility behavior, and the exit or replacement path. Local styling exceptions MUST NOT become a
 new design-system dialect.
 
-The material ratios and HTML/rendering ratios in this document are **art-direction targets**, not a
-literal per-component budget or a universal page template. A form or table MAY be almost entirely
-HTML and still conform. A data-dense spatial view MAY use more canvas or WebGPU when its measured
-question requires it. For composed experiences that actually need a visual renderer, the current
-planning target is approximately `85–95%` HTML/CSS/SVG and `5–15%` Canvas/WebGPU.
-
 ## 2. Design thesis
 
-RITSEI does not use topographic patterns as decoration. Its visual language treats an ERP as a map of
-business operations: structure, routes, pressure, density, relationships, movement, risk, and change
-of state.
+RITSEI is used for hours at a time by people who post journals, confirm orders, receive goods, and
+investigate exceptions. The interface exists to make that work fast, legible, and trustworthy. Its
+visual language is therefore **Operational Clarity**:
 
-> **RITSEI is a living map of the business — precise enough to operate, expressive enough to
-> understand.**
+> **The data is the interface. Chrome stays quiet so state, numbers, and the next action are
+> obvious.**
 
-The design language has four controlled materials:
+Three principles govern every decision:
 
-```text
-55% Cartographic Structure
-25% Architectural Paper
-15% Precision Geometry
- 5% Optical Glass
-```
+1. **Hierarchy before decoration.** Position, size, weight, and spacing establish what matters.
+   Color and depth are reserved for meaning: action, selection, and status.
+2. **One accent, many neutrals.** A single cobalt accent marks what is interactive or selected.
+   Everything else is a calm, cool neutral. Semantic status colors appear only where a status exists.
+3. **Density with breathing room.** Enterprise users scan many records. Tables and forms are compact
+   (13–14px text, 36px controls, 40px rows) on a strict 4px grid, with enough whitespace between
+   groups that structure is visible at a glance.
 
-These percentages describe the visual emphasis of a composed experience:
-
-- **Cartographic Structure** communicates contour, field, density, route, boundary, elevation, and
-  spatial hierarchy.
-- **Architectural Paper** provides calm, tactile, warm surfaces without skeuomorphism.
-- **Precision Geometry** keeps grid, spacing, typography, alignment, controls, tables, and layout
-  exact.
-- **Optical Glass** provides temporary interactive depth for popovers, command palettes, inspectors,
-  and modals only.
-
-The governing principles are:
-
-> **Structure before decoration.**
->
-> **Meaning before motion.**
->
-> **Material before effects.**
+The language learns from proven operational software: SAP Fiori's floorplan discipline and object
+identity, the information density of financial terminals, and the restraint of modern product tools
+such as Linear and Stripe. It copies none of them. RITSEI's identity comes from consistency,
+precision, and the quality of its information architecture, not from ornament.
 
 The UI MUST remain deterministic, readable, accessible, power-conscious, and fast. A visual effect
 that reduces those properties is a defect, not brand expression.
 
-RITSEI is neither an Odoo-style application launcher with CRUD applications behind it nor a visual
-reproduction of SAP Fiori. It learns from stable information architecture, contextual continuity,
-and floorplan discipline, and from operational workspace efficiency. It expresses those ideas through
-cartographic identity, stable spatial navigation, adaptive workspaces, explicit object context, and a
-command-oriented direct path.
+Concept references (generated with GPT Image during the ADR-0090 redesign; non-normative — this
+document and the token sources are authoritative):
+[light](./assets/operational-clarity-concept-light.png) ·
+[dark](./assets/operational-clarity-concept-dark.png). The concept shows a KPI strip, pagination,
+and a ⌘K search field that are not implemented yet; they MUST NOT be added as inert UI.
 
 ## 3. Visual character and non-goals
 
 The target character is:
 
-- **Technical:** grid, geometry, charts, topology, and structured information.
-- **Calm:** no neon, excessive glow, or visual noise.
-- **Crafted:** tactile surfaces without sterile SaaS defaults.
-- **Spatial:** hierarchy comes from surface, field, elevation, and density, not only shadow.
-- **Distinctive:** cartographic language is part of the system and not a background image.
+- **Precise:** exact alignment, tabular numerals, consistent spacing, crisp 1px boundaries.
+- **Calm:** cool neutral surfaces, no saturated backgrounds, no gradients, no glow.
+- **Trustworthy:** financial values and identifiers are exact, aligned, and never ambiguous.
+- **Efficient:** the shortest path from orientation to action; no screen-filling hero headers.
+- **Consistent:** every workspace uses the same shell, header, toolbar, table, and inspector rules.
 
 RITSEI is NOT:
 
-- glassmorphism-heavy UI;
-- a futuristic gaming dashboard;
-- a watercolor-heavy application;
-- a beige editorial dashboard;
-- skeuomorphic enterprise software; or
-- a generic Tailwind SaaS dashboard.
-
-Cartographic identity MUST NOT force every screen to become a map, a graph, or a dashboard. The
-business question selects the projection.
+- a beige or paper-textured editorial interface;
+- a dark-slab sidebar with low-contrast navigation;
+- a marketing site or a dashboard of decorative KPI cards;
+- glassmorphism, neumorphism, or skeuomorphism;
+- a decorative map, contour, or topographic background; or
+- a generic template where every action is a primary button.
 
 ## 4. System layers
 
@@ -303,16 +276,16 @@ Before implementing a screen, an agent MUST identify:
 - object or situation identity, lifecycle/operational state, and attention;
 - the primary authorized command and where its result is observed;
 - which surrounding context is useful and the selected Flexible Workspace mode;
-- which visual boundaries represent distinct concepts and whether cartographic treatment conveys
-  declared business meaning; and
+- which visual boundaries represent distinct concepts and whether any visualization answers a
+  declared business question; and
 - how navigation, columns, keyboard focus, and accessibility adapt responsively.
 
 Agents MUST reuse these patterns before proposing another. If none fits, they MUST name the unmet
 semantic problem before extending the system. The canonical shell responsibilities and visual rules
 are in [Navigation](#navigation-and-workspace-shell). Agents MUST NOT independently introduce a new
 global navigation model, duplicate top navigation, per-page shell variants, permanent icon-only
-global navigation, arbitrary breadcrumbs, card grids or nested cards as the default, cartographic
-decoration without business meaning, canvas-only business data, or a new workspace pattern where an
+global navigation, arbitrary breadcrumbs, card grids or nested cards as the default, decorative
+visualization without business meaning, canvas-only business data, or a new workspace pattern where an
 existing Product Pattern fits.
 
 A Product Pattern MUST answer:
@@ -324,7 +297,7 @@ A Product Pattern MUST answer:
 - how density and responsive behavior change without changing meaning.
 
 Feature teams MUST compose an existing pattern before creating a new one. A new pattern requires a
-named semantic problem and the usage contract in Section 12.
+named semantic problem and the usage contract in Section 23.
 
 ## 7. Interaction Grammar and semantic states
 
@@ -366,186 +339,122 @@ System failure and pending states MUST retain their own label or icon even when 
 is also shown. Every important state MUST be communicated through at least two channels chosen from
 text, icon, shape, border, position, pattern, or semantic color.
 
-## 8. Core palette
+## 8. Color system
 
-Primitive tokens are the controlled material vocabulary. They MUST be defined centrally and consumed
-through semantic aliases. Feature code MUST NOT use these primitives directly.
+Color is a semantic resource. Primitive palettes exist only inside `apps/web/panda.config.ts`;
+components and features consume **semantic tokens**. Every semantic token has a light and a dark
+value.
 
-### Dark structural colors
+### Primitive palettes
 
-```css
---topo-950: #151A1E;
---topo-850: #252C32;
---topo-700: #37434B;
+```text
+steel     cool neutral for light surfaces and text     #FFFFFF … #161A20
+graphite  cool neutral for dark surfaces                #5F6672 … #0E1014
+cobalt    the single interactive accent                 #EEF2FF … #1B2440
 ```
 
-- **Topo Ink — `#151A1E`:** primary dark text, darkest canvas, strong contour, wordmark, and
-  high-contrast architectural elements.
-- **Topo Slate — `#252C32`:** sidebar, secondary dark surface, navigation, and dark cards.
-- **Structural Slate — `#37434B`:** tertiary dark surface, subtle boundary, and secondary contour.
+Status hues (green, amber, red, blue) are defined directly as semantic status triples rather than as
+general-purpose palettes, so they cannot be used decoratively.
 
-### Terrain colors
+### Semantic tokens
 
-```css
---terrain-700: #365A72;
---terrain-500: #57778A;
---terrain-300: #A7BBC4;
-```
+| Token | Light | Dark | Use |
+|---|---|---|---|
+| `canvas` | `#F5F6F8` | `#0E1014` | Application background behind surfaces |
+| `content` | `#FFFFFF` | `#15181D` | Surfaces: tables, forms, panels, topbar |
+| `contentSubtle` | `#FAFBFC` | `#1A1D23` | Table headers, toolbars, inset regions |
+| `contentHover` | `#F0F2F5` | `#1D2127` | Row and control hover |
+| `contentSelected` | `#EEF2FF` | `#1B2440` | Selected row or item |
+| `navigation` | `#FAFBFC` | `#121418` | Global navigation column |
+| `text` | `#161A20` | `#E6E8EB` | Primary text |
+| `muted` | `#5B6370` | `#9AA1AC` | Secondary text, labels, metadata |
+| `boundary` | `#E3E6EB` | `#262A31` | Hairline dividers and surface borders |
+| `boundaryControl` | `#D3D8DF` | `#3A3F48` | Button borders |
+| `boundaryStrong` | `#8A93A0` | `#5F6672` | Input borders (≥ 3:1 non-text contrast) |
+| `action` | `#2E52D6` | `#7C9BFF` | Primary buttons, active indicators |
+| `actionHover` | `#2442B0` | `#98B0FF` | Primary hover |
+| `actionText` | `#2442B0` | `#A9BCFF` | Links and selected navigation text |
+| `actionSubtle` | `#EEF2FF` | `#1B2440` | Selected navigation and tinted accents |
+| `onAction` | `#FFFFFF` | `#0E1014` | Text on `action` |
+| `focusRing` | `#2E52D6` | `#7C9BFF` | Keyboard focus outline |
+| `danger` / `onDanger` | `#C0352B` / white | `#FF8A80` / `#0E1014` | Destructive buttons, errors |
+| `backdrop` | 45% ink | 66% black | Modal and drawer scrim |
 
-- **Contour Blue — `#365A72`:** primary interaction, selected state, main chart, active process,
-  and important relationship.
-- **Terrain Blue — `#57778A`:** secondary information, hover, secondary charts, and topology.
-- **Mist Terrain — `#A7BBC4`:** subtle contour, inactive data, washed chart region, and depth.
+Status triples (`status.<tone>.fg | bg | border`) exist for `neutral`, `success`, `warning`, `danger`,
+and `info`. Foreground values meet 4.5:1 on both `content` and their own tinted background.
+`icon.*` tokens mirror the text and status foregrounds for glyphs.
 
-### Paper colors
+### Usage rules
 
-```css
---paper-base: #F4F0E6;
---paper-fiber: #E9E2D3;
---surface: #FAF8F2;
-```
-
-- **Ivory Paper — `#F4F0E6`:** light-mode canvas; never substitute pure white as the default.
-- **Fiber Paper — `#E9E2D3`:** inset panels, secondary regions, grouped sections, and crafted
-  backgrounds.
-- **Soft Surface — `#FAF8F2`:** elevated cards, inputs, and content surfaces.
-
-Paper texture MUST be subtle enough that it does not compete with data or look like a pasted image.
-
-### Survey accents
-
-```css
---brass: #A88F58;
---sand-marker: #C9B786;
-```
-
-Brass and sand are survey markers, not normal actions. They MAY mark milestones, financial focal
-points, topology anchors, or premium brand details. Their visual use SHOULD remain below roughly
-3–5% of a composed surface.
-
-### Semantic colors
-
-Semantic meaning takes priority over brand consistency:
-
-```css
---success:  #2E7D5B;
---info:     #3862B6;
---warning:  #D49A2C;
---critical: #C84A3C;
---neutral:  #64748B;
---forecast: #7567A8;
-```
-
-Semantic colors MUST be paired with explicit text, icon, or shape treatment. `--terrain-300`, brass,
-and low-contrast paper values MUST NOT be used as standalone text or status indicators.
-
-### Contrast and theme rules
-
-- Normal text MUST meet WCAG 2.2 AA contrast of at least 4.5:1; large text MUST meet 3:1.
-- Non-text controls, focus indicators, and meaningful chart marks MUST meet the applicable 3:1
-  non-text contrast requirement.
-- Every semantic background MUST have an approved readable foreground token; components MUST NOT
-  guess a foreground by inverting the background.
-- Light and dark themes MUST define semantic aliases separately. Dark mode is not a blind color
-  inversion.
-- High-contrast mode MUST preserve state distinctions through text, icon, border, or shape when
-  low-contrast material is removed.
-- Contrast checks are activation evidence for shared recipes, not an optional visual review.
+- The accent is reserved for: primary actions, links, focus, current location, and selection. It
+  MUST NOT be used for decoration, headings, or large fills.
+- A view SHOULD contain at most one primary (`action`) button per region; sibling commands use the
+  secondary or ghost treatment.
+- Status color MUST accompany a text label (and, for badges, a dot). Color alone is prohibited.
+- Normal text MUST meet WCAG 2.2 AA 4.5:1; large text 3:1. Input borders, focus indicators, and
+  meaningful chart marks MUST meet 3:1 non-text contrast.
+- Dark mode is defined separately, not inverted. It uses cool graphite surfaces with raised
+  surfaces lighter than the canvas, and a lighter accent so contrast holds.
+- High-contrast (`forced-colors`) mode MUST preserve state through borders, text, and system colors.
 
 ## 9. Light and dark mode
 
-Light mode is an architectural paper field:
+Light mode is the default operational theme: a cool `canvas` with white `content` surfaces and
+hairline boundaries. Dark mode is a first-class alternative for low-light work: `canvas` is the
+darkest layer, surfaces step up in lightness, and borders replace most shadows.
 
-```text
-65% paper / ivory
-20% topo ink / structural slate
-10% terrain family
- 5% mist + brass
-```
-
-The main canvas is `#F4F0E6`; elevated surfaces use `#FAF8F2`. Navigation MAY use a dark structural
-block as a spatial anchor.
-
-Dark mode is a mineral structural field:
-
-```text
-70% topo ink / slate
-15% terrain
-10% mist / ivory
- 5% brass
-```
-
-Dark mode MUST use restrained contour opacity and MUST preserve readable text and semantic status
-contrast. Paper character becomes a subtle mineral/grain surface rather than an inverted ivory
-canvas.
+The shell resolves the theme from the user's stored choice, then `prefers-color-scheme`. The
+preference is a per-device convenience stored locally; it is never business state. The theme is set
+on the document root so portaled overlays (dialogs, popovers) inherit it, and `color-scheme` is set
+so native controls and scrollbars match.
 
 ## 10. Typography
 
-RITSEI typography is information infrastructure: quiet, precise, readable in dense enterprise
-surfaces, and durable beyond short-lived SaaS trends. The active stack is:
+RITSEI typography is information infrastructure: quiet, precise, and readable in dense surfaces.
 
 ```text
-Product UI and marketing  Pretendard
-Technical values           IBM Plex Mono
-Future brand/display       Söhne, only after brand investment is justified
+Product UI        Pretendard (Inter-derived metrics, strong tabular numerals)
+Technical values  IBM Plex Mono — identifiers and code-like values only
 ```
 
-Söhne is an identity layer, not a replacement requirement for Pretendard. IBM Plex Mono MUST be
-limited to identifiers, code-like values, and technical information where character-by-character
-comparison has semantic value.
+Semantic text styles (components MUST use these instead of raw sizes):
 
-The application implementation is owned by `apps/web/panda.config.ts` and
-`apps/web/src/ui/foundations/typography.ts`. The shared UI surface loads the approved static WOFF2 weights from `@fontsource/pretendard`
-and `@fontsource/ibm-plex-mono`; a future approved variable Pretendard asset may replace them
-without changing the semantic contract. Components MUST use the semantic text styles rather than
-arbitrary font sizes or weights.
+| Style | Size / line | Weight | Use |
+|---|---|---|---|
+| `pageTitle` | 20 / 28 | 600 | One `h1` per workspace |
+| `sectionTitle` | 14 / 20 | 600 | Surface and section headings (`h2`) |
+| `body` | 14 / 20 | 400 | Default text |
+| `bodyCompact` | 13 / 18 | 400 | Descriptions, detail lists, dense copy |
+| `label` | 13 / 18 | 500 | Form labels, navigation, tabs |
+| `button` | 13 / 18 | 500 | Button labels |
+| `tableHeader` | 12 / 16 | 500 | Column headers (muted, sentence case) |
+| `tableCell` | 13 / 20 | 400 | Table cells |
+| `helper` / `metadata` | 12 / 16 | 400 / 500 | Hints, captions, timestamps |
+| `status` | 12 / 16 | 500 | Badges |
+| `numeric` | 14 / 20 | 500 | Standalone figures, tabular numerals |
+| `display` | 24 / 32 | 600 | Key figures in summaries only |
+| `code` | 12 / 16 | 400 | Identifiers (mono) |
 
-Foundation tokens:
-
-```text
-12 / 16   xs       metadata, helper text
-13 / 18   sm       labels, dense tables, status
-14 / 20   md       default application text
-16 / 24   lg       prominent body text
-18 / 26   xl       section headings
-20 / 28   2xl      subsection headings
-24 / 32   3xl      page titles
-32 / 40   4xl      restrained display
-```
-
-The default application size is 14px. Supported weights are 400 regular, 500 medium, and 600
-semibold. Primary information MUST NOT fall below 12px. Tables and financial values MUST use
-`font-variant-numeric: tabular-nums`; numeric columns SHOULD be right-aligned, while identifiers
-MAY use IBM Plex Mono. Labels and navigation use sentence case by default.
-
-Typography MUST remain scannable at dense enterprise layouts. Dates, currencies, quantities, and
-percentages MUST use locale-aware formatting and MUST NOT depend on glyph shape alone for meaning.
-The system MUST remain usable under zoom, OS text scaling, long labels, and localization.
-
-See [ADR-0076](../decisions/0076-adopt-ritsei-typography-system.md) for the decision record.
+Rules: primary information MUST NOT fall below 12px; all tables use `tabular-nums`; numeric columns
+are right-aligned; labels, headings, and navigation use sentence case; no text style uses
+all-caps for body content. The system MUST remain usable under 200% zoom, OS text scaling, long
+labels, and localization. See [ADR-0076](../decisions/0076-adopt-ritsei-typography-system.md); the
+size mapping above is amended by ADR-0090.
 
 ### Iconography
 
-Iconography is a semantic information layer, not decoration. Phosphor is the current provider;
-Nucleo UI is a future provider option. Application code MUST use the RITSEI `Icon` API and semantic
-registry names such as `action.delete`, `object.invoice`, and `status.warning`; provider names and
-imports remain inside `apps/web/src/ui/icons/providers/`.
+Phosphor (through the RITSEI `Icon` API and semantic registry names such as `navigation.sales` or
+`status.warning`) is the only icon source; provider imports stay inside
+`apps/web/src/ui/icons/providers/`. Regular weight is the default; `fill` marks the current
+navigation destination. Sizes are 14, 16, 18, 20, 24, and 32px; navigation and toolbars use 18px.
+Icons default to `currentColor`. Icon-only controls MUST have an accessible name, and critical state
+combines icon, text, and color.
 
-Canonical usage is:
-
-```text
-Regular   default utility UI
-Fill      selected or active state, selectively
-Duotone   empty states, onboarding, and expressive contextual surfaces
-```
-
-The canonical scale is 14, 16, 18, 20, 24, and 32px. The default is 18px; dense controls use 16px.
-Glyph size MUST NOT be confused with the containing control's interactive target. Icons default to
-`currentColor`, with semantic tones for status and emphasis. Critical state MUST combine icon, text,
-and color; icon-only controls MUST have an accessible name. Cartographic Identity remains a brand
-and illustration layer, not a reason to stylize every utility icon.
-
-See [ADR-0077](../decisions/0077-adopt-ritsei-iconography-system.md) for the decision record.
+Glyphs render as inline `<svg><use>` references into a static sprite,
+`apps/web/public/icons/phosphor.svg`, that contains only the registry's glyphs (regular and fill).
+The sprite is generated by `tooling/frontend/phosphor-sprite.ts` and a test keeps it in sync with
+the registry; the full Phosphor icon font is never loaded by the application. `duotone` currently
+renders the regular glyph. See [ADR-0077](../decisions/0077-adopt-ritsei-iconography-system.md).
 
 ### Motion
 
@@ -589,483 +498,100 @@ process command before persistence.
 
 See [ADR-0079](../decisions/0079-gate-dnd-kit-solid2-activation.md) for the decision record.
 
-## 11. Grid, geometry, and density
-
-Precision Geometry is the stabilizer for expressive material:
+## 11. Grid, spacing, and density
 
 ```text
 4px base grid
-8px common rhythm
-12 / 16 / 24 / 32px primary gaps
-8–12px card radius
-1px low-contrast borders
+spacing scale   4 · 6 · 8 · 10 · 12 · 16 · 20 · 24 · 32 · 48
+controls        36px (md, default) · 32px (sm, toolbars and dense surfaces)
+table rows      ~40px (10px vertical cell padding, 13px text)
+radii           6px controls · 8px surfaces · 10px overlays · full for badges
+borders         1px hairline (boundary); inputs use boundaryStrong
 ```
 
 Rules:
 
-- layout alignment MUST remain strict even when a cartographic layer is expressive;
-- arbitrary spacing values MUST NOT appear in feature code;
-- rounded corners MUST communicate grouping, not decorate every container;
-- large continuous surfaces are preferred when grouping does not require cards; and
-- the active density profile MUST be explicit and consistent within a workflow.
+- Feature code MUST NOT introduce arbitrary spacing; use the layout and recipe names.
+- Gap between page-level groups is 16–20px; inside a surface, 16px padding and 12–16px gaps.
+- The workspace stays full width for dense tables; an inspector column is 24rem and appears only
+  when the workspace has something to inspect.
+- Density profiles: `comfortable` (reading, review, touch), `compact` (default operational work),
+  `dense` (high-volume monitoring, only with readability evidence). A dense profile MUST preserve the
+  WCAG 2.2 target size (≥ 24px), keyboard access, row association, and visible labels.
 
-The initial density profiles are:
+## 12. Surfaces, borders, and elevation
 
-```text
-comfortable  reading, review, and touch-heavy work
-compact     default operational work
-dense       high-volume tables and monitoring, only when readability evidence supports it
-```
+RITSEI uses four surface levels. Depth comes primarily from tone and borders; shadows are minimal.
 
-A dense profile MUST preserve target size, keyboard access, row association, and localization. Density
-MUST NOT be used to hide required labels or remove error context.
-
-## 12. Surface and elevation system
-
-RITSEI has four surface types:
-
-- **Base Canvas:** paper or dark mineral field; almost no shadow.
-- **Content Surface:** tables, forms, documents, charts, and data regions; mostly flat.
-- **Group Surface:** cards, KPI groups, summaries, and configuration blocks; slight tonal lift.
-- **Interactive Surface:** selected items, inspectors, dropdowns, command menus, and floating
-  controls; temporary depth is permitted.
-
-Depth is applied in this order:
-
-```text
-tone → texture → border → blur → shadow
-```
-
-### Elevation levels
-
-#### L0 — Background
-
-Cartographic field or paper canvas.
-
-```css
-box-shadow: none;
-```
-
-#### L1 — Content Surface
-
-Tables, forms, charts, and data regions.
-
-```css
-box-shadow: 0 1px 2px rgb(21 26 30 / 0.04);
-```
-
-#### L2 — Card / Panel
-
-Grouped content only.
-
-```css
-box-shadow: 0 4px 12px rgb(21 26 30 / 0.06);
-```
-
-#### L3 — Interactive Surface
-
-Dropdowns, inspectors, command palettes, and selected process nodes.
-
-```css
-backdrop-filter: blur(10px);
-box-shadow: 0 8px 24px rgb(21 26 30 / 0.09);
-```
-
-Interactive glass opacity is controlled between `0.82` and `0.90`.
-
-#### L4 — Modal / Popover
-
-```css
-backdrop-filter: blur(14px);
-box-shadow: 0 18px 48px rgb(21 26 30 / 0.14);
-```
-
-L4 is the highest layer and MUST remain restrained.
-
-Glass MUST NOT be used where it reduces contrast, hides an important boundary, increases motion or
-power cost, or makes the underlying content harder to parse. It is never the default card treatment.
-
-## 13. Cartographic Visual Grammar
-
-Cartography is a representation system, not wallpaper. Its primitives are:
-
-```text
-Contour
-Field
-Route
-Boundary
-Marker
-Density
-Elevation
-Pulse
-Region
-```
-
-They represent:
-
-| Primitive | Permitted semantic readings |
-|---|---|
-| Contour | density, pressure, activity, capacity, risk, complexity |
-| Field | operating area, state distribution, ambient context |
-| Route | movement, process, dependency, transaction path, material flow |
-| Boundary | risk, policy, scope, ownership, threshold |
-| Marker | event, milestone, location, exception, decision |
-| Density | concentration, volume, workload, relationship intensity |
-| Elevation | concentration, queue pressure, severity, capacity load |
-| Pulse | active event, replenishment, pending movement, live activity |
-| Region | grouped scope, forecast area, operating condition |
-
-A primitive MUST have a declared semantic meaning in its projection contract. It MUST NOT be added
-only to fill empty space.
-
-Cartographic is a grammar for structure, relationship, pressure, movement, boundary, and state. It
-MUST NOT be interpreted as a requirement to place maps or topographic contours on every page. The
-business question selects the projection; finance, forms, tables, and ordinary record surfaces may
-use restrained fields, boundaries, concentration, or no cartographic material at all.
-
-### Topographic usage by surface
-
-```text
-Sidebar
-→ medium density
-
-Dashboard canvas
-→ sparse
-
-Charts
-→ contextual
-
-Process Studio
-→ expressive
-
-Inventory spatial view
-→ expressive
-
-Forms
-→ almost none
-
-Tables
-→ none or extremely subtle
-
-Modal background
-→ contextual deformation
-```
-
-Topographic forms MUST NOT move text, break alignment, obscure focus, or sit behind a standard
-enterprise table body.
-
-### Paper material
-
-Paper consists of:
-
-```text
-micro grain
-low-frequency luminance variance
-subtle directional fiber
-very low contrast noise
-```
-
-The material MAY be static and SHOULD freeze when no scene changes. It MUST be imperceptible as a
-texture asset and MUST NOT reduce text, chart, or control contrast.
-
-## 14. Domain-adaptive visual language
-
-Domains share one cartographic grammar but select different archetype compositions according to the
-business question. The foundation is seven universal business archetypes:
-
-| Archetype | Meaning | Visual grammar |
+| Level | Treatment | Use |
 |---|---|---|
-| **Stock** | Something available, stored, or held | density, mass, level |
-| **Flow** | Something moving from one point or state to another | route, direction, velocity |
-| **Capacity** | Load compared with ability or limit | pressure, compression, elevation |
-| **Value** | Money, exposure, or value concentration | field, concentration, variance |
-| **Relationship** | People, accounts, vendors, teams, or networks | nodes, proximity, connection |
-| **Progress** | Work moving toward an outcome | path, milestones, blockage |
-| **Asset / Space** | A thing or place with position and state | regions, boundaries, markers |
+| L0 Canvas | `canvas`, no border | Application background |
+| L1 Surface | `content`, 1px `boundary`, 8px radius, `raised` shadow (1px, 5%) | Tables, forms, sections, cards |
+| L1 Subtle | `contentSubtle`, 1px `boundary`, no shadow | Filter toolbars, status strips |
+| L2 Overlay | `content`, 1px `boundary`, 10px radius, `overlay` shadow | Dialogs, popovers, mobile drawer |
 
-A domain may emphasize several archetypes while sharing the same visual language:
+Rules:
 
-```text
-Process       → Progress + Flow
-Inventory     → Stock + Capacity + Flow + Asset / Space
-Manufacturing → Stock + Flow + Capacity + Progress + Asset / Space
-Procurement   → Relationship + Flow + Capacity + Value
-Finance       → Value + Relationship + Flow + Capacity
-CRM           → Relationship + Value + Progress
-```
+- Nested surfaces (card inside card) SHOULD NOT be used; a fieldset inside a dialog or section MAY
+  use a bordered group.
+- A collection table placed directly inside a surface bleeds to the surface edges, with a hairline
+  under its header and no bottom border on its last row.
+- Selected rows use `contentSelected` plus a 2px accent edge on the first cell.
+- Blur, translucency, texture, and gradients are not part of the system.
 
-The projection is selected by the user's question:
+## 13. Data visualization
 
-```text
-Movement + "Where is inventory going?"   → Flow
-Movement + "What happened to this item?"  → Progress / Flow
-Movement + "Where is inventory now?"      → Stock + Asset / Space
-```
+Charts and spatial views answer a declared business question; they are never decoration.
 
-Industry composition is a combination of archetypes, not a new dashboard family:
+- Prefer a table when exact values matter; use a chart when trend, distribution, or comparison is
+  the question. Every chart has an accessible text or table alternative.
+- Series colors: the accent for the primary series, neutrals for context, and status colors only
+  for status. Do not encode more than one meaning per channel.
+- Units, currency, time range, freshness, and missing data MUST be labeled.
+- Relationship and topology projections (for example the User Accounts distribution view) use the
+  existing typed projection contract and the HTML/SVG `CartographyField` renderer under
+  `apps/web/src/ui/renderers/cartography/`. That renderer is a visualization tool, not the brand
+  language; it MUST follow the colors and type in this document.
 
-```text
-Retail        = Stock + Flow + Value + Relationship
-Manufacturing = Stock + Flow + Capacity + Progress + Asset / Space
-Logistics     = Flow + Capacity + Asset / Space + Progress
-Banking       = Value + Relationship + Flow + Capacity
-Consulting    = Progress + Capacity + Relationship + Value
-Construction  = Progress + Asset / Space + Capacity + Stock + Value
-Hospitality   = Capacity + Relationship + Stock + Value
-Healthcare    = Capacity + Asset / Space + Flow + Relationship + Stock
-Telecom       = Asset / Space + Flow + Capacity + Relationship + Value
-Software/SaaS = Relationship + Capacity + Progress + Value
-Education     = Relationship + Capacity + Progress + Asset / Space
-Utilities     = Asset / Space + Flow + Capacity + Value
-```
+## 14. Domain surfaces
 
-Do not create `ManufacturingDashboard`, `RetailDashboard`, or `ISPDashboard` as the primary
-architecture. Compose approved archetypes, projections, and Product Patterns. The archetypes are
-visual projection concepts; they do not own business facts, authorization, workflow state, or
-domain invariants.
+All domains use the same shell, Product Patterns, and visual language. Domain differences come from
+content and composition, never from domain-specific palettes or materials.
 
-### Context-aware semantic mapping
+- **Revenue and Supply:** collection tables of customers, suppliers, quotations, and orders, with a
+  selected-document inspector; one primary "create" action; lifecycle shown as status badges.
+- **Inventory:** item and warehouse master data, stock positions, reservations, and movements;
+  quantities right-aligned with units; available vs. reserved shown explicitly.
+- **Finance:** configuration, chart of accounts, periods, and posted journals; amounts exact,
+  right-aligned, and grouped; debit/credit never signalled by color alone.
+- **Process Studio:** the designer canvas receives the space it needs; catalogs and monitors use
+  standard tables and badges.
+- **Administration:** parties, user accounts, and access use the same collection and inspector
+  rules; destructive or privilege-changing actions are confirmed.
 
-A numeric value MUST NOT map to one universal visual operation. The semantic dimension and business
-question determine the mapping:
+## 15. Content and formatting
 
-```text
-Inventory capacity ↑  → terrain elevation ↑
-Risk ↑               → compression / pressure ↑
-Movement ↑           → velocity ↑
-Uncertainty ↑        → boundary softness ↑
-Discrepancy ↑        → continuity breaks ↑
-```
+ERP trust depends on exact, consistent values.
 
-Examples include:
-
-```text
-Supplier risk         → pressure + contour density
-Financial exposure    → concentration + depth
-Machine failure risk  → local pulse + boundary
-Project risk          → obstruction + path compression
-Warehouse risk        → density + spatial pressure
-```
-
-The design system MUST NOT apply:
-
-```text
-high number → everything becomes higher
-```
-
-### Deterministic procedural variation
-
-RITSEI distinguishes stable procedural variation from per-render randomness:
-
-```text
-randomness      ✗
-variation       ✓
-```
-
-Renderer variation MUST be deterministic for the same stable entity identity, semantic state,
-surface type, and design-token inputs. `Math.random()` or equivalent unbounded randomness MUST NOT
-control the appearance of a business entity on each render.
-
-```text
-stable entity identity
-      +
-semantic state
-      +
-surface type
-      +
-design tokens
-      ↓
-stable seed
-      ↓
-procedural variation
-```
-
-The seed is an adapter input. Raw business identifiers MUST NOT be exposed to shaders when a derived
-seed is sufficient. Entities with equal semantic state MAY have different stable field shapes, but
-semantic comparability MUST remain intact.
-
-### Semantic depth
-
-UI depth remains the stable hierarchy defined in Section 12:
-
-```text
-L0 Canvas
-L1 Content
-L2 Card
-L3 Interactive
-L4 Modal
-```
-
-Semantic depth is different: it is the perceived depth of data inside a visual field. It MUST be
-selected by archetype and meaning, not assigned randomly. Risk may use compression and contour
-concentration; capacity may use elevation; movement may use velocity; uncertainty may use boundary
-softness. Semantic depth MUST NOT replace explicit labels, semantic color, contrast, reduced-motion
-behavior, or accessible alternatives.
-
-### Material vocabulary
-
-Cartographic renderers MAY use a generic material vocabulary broader than color and opacity:
-
-```text
-density
-amplitude
-compression
-roughness
-continuity
-velocity
-depth
-blur
-field radius
-contour count
-mass
-level
-concentration
-boundary softness
-proximity
-pulse
-```
-
-Business semantics map into this vocabulary through a CPU-side visual projection. The material
-vocabulary MUST NOT become a second domain model.
-
-### Data-driven material variation
-
-Material variation MAY respond to data and context when it expresses a declared business or system
-state rather than random decoration:
-
-| State or meaning | Permitted material response |
-|---|---|
-| Risk | Denser contours and stronger critical intensity |
-| Capacity | Greater elevation or height |
-| Flow | Directional lines or movement following the transaction direction |
-| Idle / stable | Flatter, sparser, calmer field |
-| Forecast | Softer or ghosted layer |
-| Discrepancy | Broken contour or restrained jitter |
-| Success / recovery | Lower density and a return toward the neutral palette |
-
-Layout, typography, spacing, interaction behavior, and semantic labels MUST remain consistent. Only
-the material layer and approved visual semantics vary. This gives RITSEI a consistent structure with
-a surface that responds to business conditions rather than a different dashboard dialect on every
-page.
-
-A useful progression is:
-
-```text
-Low risk      → sparse, calm
-Medium risk   → denser, warmer
-High risk     → tight contour, critical red pressure
-Recovered     → contour relaxes
-```
-
-Material variation MUST NOT override explicit text, semantic color, contrast, reduced-motion
-behavior, or the accessible fallback.
-
-## 15. Domain surfaces
-
-### Dashboard
-
-A dashboard MUST establish hierarchy:
-
-```text
-Page context
-↓
-Primary business state
-↓
-Operational field
-↓
-Key exceptions
-↓
-Supporting metrics
-```
-
-It MUST NOT default to twelve identical cards. The visual center is operational state, not KPI card
-quantity.
-
-### Inventory
-
-Inventory represents business space. Approved data mappings include:
-
-```text
-stock_level
-capacity
-turnover
-pick_frequency
-reorder_risk
-age
-movement
-```
-
-```text
-Contour rapat       → operational pressure tinggi
-Elevation tinggi    → capacity concentration
-Fast route          → high movement
-Flat area           → stable inventory
-Pulse               → replenishment needed
-Broken contour      → discrepancy
-```
-
-### Process Studio
-
-Process Studio visualizes business flow using the shared grammar:
-
-```text
-normal process → sparse contour
-high activity  → dense contour
-bottleneck     → contour convergence
-critical state → elevated region
-active event   → moving pulse
-```
-
-Its graph remains an editing representation, not business truth. See
-[`process-studio.md`](./process-studio.md).
-
-### Procurement
-
-Procurement may visualize dependency and supply pressure:
-
-```text
-Supplier → Purchase Order → Transit → Receiving → Inventory
-```
-
-Route thickness MAY represent volume. Contour density MAY represent supplier risk. Markers MAY
-represent delay or exception.
-
-### Manufacturing
-
-Manufacturing may represent production route, WIP density, work-center load, material dependency,
-bottlenecks, and machine state. Elevation MAY represent queue pressure.
-
-### Accounting and Finance
-
-Finance MUST NOT be forced into a literal map. It MAY use abstract cartographic language for:
-
-```text
-cash position field
-liquidity concentration
-aging distribution
-forecast region
-risk boundary
-```
-
-Numbers, tables, auditability, exact arithmetic, and reconciliation status remain primary.
-
-### CRM and Sales
-
-CRM may use pipeline terrain, account relationships, deal movement, territory, and revenue
-concentration. The primary CRM surface MUST remain scannable and operational.
+- **Money and decimals:** API decimal strings are formatted for display with
+  `ui/foundations/format.ts#formatDecimal`, which groups digits without converting to floating
+  point. Show the currency code where more than one currency can appear.
+- **Numbers and quantities:** right-aligned, tabular, with units where meaningful.
+- **Identifiers:** monospaced; in table cells long identifiers truncate visually with an ellipsis
+  while the full value remains in the DOM for copy and assistive technology. Prefer a human-readable
+  name with the identifier as secondary detail.
+- **Dates and times:** locale-aware, with time zone when it changes meaning.
+- **Status labels:** the domain's lifecycle word (`draft`, `confirmed`, `cancelled`) rendered as a
+  badge whose tone is mapped by the owning feature.
+- **Empty states:** say what is empty and what the user can do next. Loading states keep a semantic
+  `role="status"` label.
+- **Copy:** sentence case, verbs on buttons that name the outcome ("Confirm order"), no internal
+  jargon in user-facing descriptions where a plain phrase exists.
 
 ## 16. Core component contracts
 
-Every shared component has two contracts:
-
-### Machine contract
-
-Props, schemas, variants, slots, events, focus behavior, keyboard behavior, and accessibility
-behavior.
-
-### Human/product contract
-
-Every important component and Product Pattern MUST document:
+Every shared component has a machine contract (props, variants, slots, events, focus, keyboard, and
+accessibility behavior) and a human/product contract:
 
 ```text
 USE WHEN
@@ -1076,57 +602,35 @@ EMPTY / LOADING / ERROR / DEGRADED BEHAVIOR
 DENSITY AND RESPONSIVE BEHAVIOR
 ```
 
-Example:
-
-```text
-DecisionCard
-
-USE WHEN:
-  an operational condition requires awareness or intervention.
-
-DO NOT USE FOR:
-  ordinary status, passive metrics, successful operations, or decoration.
-
-REQUIRES:
-  a clear condition, affected scope, consequence or impact, and a next action when available.
-```
-
 ### Tables
 
-Tables MUST remain semantic HTML. They MUST be dense but readable and support:
-
-```text
-sticky headers
-strong numeric alignment
-minimal zebra striping
-semantic status
-subtle row selection
-keyboard navigation
-```
-
+Tables MUST remain semantic HTML. Header row on `contentSubtle` with 12px muted labels; 13px cells;
+hairline row separators; hover tint; selected rows tinted with an accent edge; numeric columns
+right-aligned; captions visually hidden (`sr-only`) when a visible heading already names the table.
 Canvas MUST NOT replace a standard enterprise table.
 
 ### Forms
 
-Forms are functional objects:
-
-```text
-paper surface
-1px border
-clear focus state
-terrain-blue interaction
-minimum decorative material
-```
-
-Forms MUST expose labels, validation, error association, keyboard order, and recovery guidance.
+Labels above controls (13px medium), helper text below (12px muted), errors in `danger` and
+associated with the control. Inputs are 36px with `boundaryStrong` borders and a 2px focus ring.
+Group related fields with a fieldset; actions sit at the end of the form or dialog footer.
 
 ### Buttons
 
-- Primary uses Contour Blue (`#365A72`) through a semantic action token.
-- Secondary uses paper or transparent surface with a structural border.
-- Danger uses semantic critical treatment.
-- Gold MUST NOT be a normal CTA.
-- Labels MUST name the action and remain consistent with the resulting confirmation.
+| Variant | Use |
+|---|---|
+| `primary` | The single most important command in a region |
+| `secondary` | Other commands (default) |
+| `ghost` | Low-emphasis and toolbar commands, icon-only utilities |
+| `danger` | Destructive commands, always confirmed |
+
+Sizes are `md` (36px) and `sm` (32px). Labels name the action and match the resulting confirmation.
+Loading buttons keep their width semantics and expose `aria-busy`.
+
+### Badges
+
+Pill-shaped, 20px tall, tinted background, colored text, and a leading dot. The label carries the
+meaning; the tone (`neutral`, `success`, `warning`, `danger`, `info`) is a second channel.
 
 ### Navigation and workspace shell
 
@@ -1151,6 +655,10 @@ global topbar:
 | Context header | Which object or situation is this? | Human-readable identity, identifier, lifecycle/operational state, impact, and a primary command entry where useful | Global operating context or repeated navigation labels |
 | Workspace | What is happening, and why? | The selected Product Pattern, evidence, dependencies, history, and task-specific content | New business authority or state inferred from presentation |
 | Command surface | What authorized business command can I perform? | Context-bound actions and their feedback | Navigation or frontend authorization authority |
+
+In the current implementation the RITSEI wordmark sits at the top of the global navigation column,
+and local navigation renders as a breadcrumb-style strip (`Area / Section`) at the start of the
+48px topbar, followed by the operating context (tenant) and global utilities (theme, sign out).
 
 The topbar search and command entry MAY share a visual field, but search, destinations, objects, and
 mutating commands MUST remain semantically distinguishable. The global entry SHOULD support direct
@@ -1190,11 +698,10 @@ collapsed state supports workspace-heavy work. The collapsed icon rail MUST NOT 
 or discoverable state. In collapsed mode, every destination MUST retain an accessible name; a tooltip
 MAY supplement, but MUST NOT replace, that name.
 
-The global rail is one continuous structural surface, not a stack of selected SaaS pills. An active
-domain SHOULD read as a region within that surface through a restrained terrain-blue tonal field,
-stronger label/icon emphasis, and, where useful, a subtle 2–3px structural marker. It MUST NOT rely
-on a floating card, rounded pill, large colored tile, or glow as its primary active treatment. Any
-contour response MUST remain restrained and semantically meaningful.
+The global navigation is one continuous light column on the `navigation` token, separated from the
+workspace by a hairline. The current destination uses the `actionSubtle` tint, `actionText` label,
+a filled icon, and `aria-current="page"`. It MUST NOT use a saturated fill, a large colored tile, or
+a glow as its active treatment.
 
 Local navigation MAY be a contextual side navigator, compact tabs/sections, or omitted when the
 workspace needs no second navigation level. It MUST collapse or disappear when its width burdens the
@@ -1230,37 +737,23 @@ navigator MAY use a side-column when its hierarchy warrants it.
 
 The shell MUST protect content width for dense tables, financial reports, ledgers, planning surfaces,
 and Process Studio. RITSEI MUST prefer one meaningful semantic layer over stacked sidebars, oversized
-headers, arbitrary breadcrumbs, tabs, toolbars, filters, and nested cards. Contour contrast MUST stay
-low enough that navigation labels, current location, and operational state dominate.
+headers, arbitrary breadcrumbs, tabs, toolbars, filters, and nested cards. Decoration MUST NOT
+compete with navigation labels, current location, and operational state.
 
 ### Cards
 
-Cards MUST be reserved for groups that materially improve comprehension. A visible boundary SHOULD
-represent a real conceptual boundary, not merely a component boundary. Card-inside-card,
-every-metric-as-card, all-white floating panels, and excessive shadows SHOULD NOT be used. Large
-continuous surfaces SHOULD be preferred when they keep one business object or situation coherent.
+Cards are reserved for groups that materially improve comprehension, such as the workspace launcher
+on My work. Card-inside-card, every-metric-as-card, and decorative cards SHOULD NOT be used.
 
 ### Charts
 
-Charts MUST remain accurate and readable. Cartographic material MAY provide terrain area, contour
-density, route, field, marker, or forecast fog, but labels, tooltips, units, currency, missing data,
-freshness, degraded state, and accessible textual/table alternatives remain explicit.
-
-### Icons and status
-
-Icons are geometric and precise with low personality and approximately 1.5–2px stroke. Brand
-personality comes from composition and material, not icon gimmicks.
-
-Badges are used sparingly. Important state combines semantic color with label, icon, shape, or border;
-color alone is prohibited.
+See Section 13. Labels, tooltips, units, currency, freshness, and accessible alternatives remain
+explicit.
 
 ### Empty and loading states
 
-Empty states MAY use a sparse contour illustration, paper field, minimal route, and small brass
-marker. They MUST explain what is empty and what the user can do next.
-
-Loading states MAY use a quiet terrain, gentle pulse, or contour propagation. They MUST be low-power,
-respect reduced motion, and preserve a semantic loading label.
+Empty states explain what is empty and the next available action, optionally with a dashed-border
+container. Loading states are quiet, respect reduced motion, and keep a semantic loading label.
 
 ## 17. Interaction, drag, and accessibility rules
 
@@ -1292,7 +785,7 @@ approval is per exercised primitive, not global: each activated primitive requir
 an application usage path, and a browser interaction/accessibility test. Unused or untested Kobalte
 primitives are not approved. Native semantic HTML remains the fallback and rollback path.
 
-The material layer MUST NOT carry information by itself. Canvas and WebGPU are never substitutes for
+Visualization layers MUST NOT carry information by themselves. Canvas and WebGPU are never substitutes for
 semantic DOM, accessible labels, keyboard access, or text/table alternatives.
 
 Analytical visualizations SHOULD use a hybrid composition: a visual canvas or SVG scene, a DOM
@@ -1311,241 +804,55 @@ All interactive controls MUST provide:
 
 ## 18. Motion system
 
-Motion explains change; it does not make a static screen look premium.
-
-```text
-Utility motion     120–180ms  hover, focus, selection
-Structural motion  180–280ms  panels, navigation, inspector
-Semantic motion    dynamic    process, inventory movement, events, bottlenecks
-```
-
-Semantic motion MAY be more expressive, but MUST be bounded by visibility, power, and reduced-motion
-rules. Respect:
-
-```css
-@media (prefers-reduced-motion: reduce)
-```
-
-Reduced motion MUST disable or replace particle flows, terrain animation, dynamic distortion, and
-continuous parallax. Static contour MAY remain.
-
-### Static-first rendering
-
-ERP scenes MUST default to static or event-driven rendering rather than a permanent 60 FPS loop:
-
-```text
-STATIC
-──────
-
-data changes
-    ↓
-render()
-    ↓
-GPU idle
-```
-
-A bounded active loop MAY run for pointer interaction, a visible transition, an operational flow, or
-another declared semantic change, then SHOULD stop when the activity settles:
-
-```text
-ACTIVE
-──────
-
-pointer / transition / flow
-          ↓
-      bounded loop
-          ↓
- animation settles
-          ↓
-         stop
-```
-
-Static topology, paper grain, and unchanged inputs SHOULD be baked or cached. Continuous animation
-is reserved for a real-time operational need and MUST be visibility-aware, throttled, and allowed a
-reduced-quality mode. Solid signals MUST carry semantic changes, not frame counters; renderer-owned
-time, delta, particles, simulation, scheduling, and frame submission stay behind the renderer
-adapter.
+Motion explains change; it does not make a static screen look premium. Utility motion (hover,
+focus, selection) is 80–120ms; structural motion (navigation drawer, inspector, dialogs) is
+180–240ms. All motion respects `prefers-reduced-motion`, which removes spatial movement while keeping
+state feedback. Scenes default to static or event-driven rendering; there is no permanent animation
+loop for static content. The full rules are in the Motion subsection of Section 10 and
+[ADR-0078](../decisions/0078-adopt-ritsei-motion-system.md).
 
 ## 19. HTML, CSS, SVG, Canvas, and WebGPU
 
-HTML remains the application and semantic layer. The default implementation balance is:
+HTML owns interaction and semantics. Standard forms, tables, and record views are 100% semantic
+HTML/CSS. SVG and Canvas are used for charts and relationship views; the optional `vgpu` WebGPU
+adapter selected by [ADR-0070](../decisions/0070-select-vgpu-and-defer-typegpu.md) is reserved for
+measured high-volume visualization and stays behind the RITSEI renderer adapter.
 
-```text
-HTML / CSS / SVG     85–95%
-Canvas / WebGPU       5–15%
-```
+The fallback hierarchy is mandatory: `WebGPU → Canvas/SVG → CSS → static semantic UI`. No critical
+action, value, status, or relationship may exist only in pixels. WebGPU MUST NOT own semantics,
+fetching, authorization, business aggregation, workflow state, or authoritative facts, and feature
+code MUST NOT import `vgpu` or raw WebGPU objects.
 
-This is a target for composed visual experiences, not a requirement that every route use a GPU. A
-standard form, table, or record editor MAY be 100% semantic HTML/CSS.
+## 20. Shadow and overlay constraints
 
-### Renderer ownership
-
-```text
-Application / Solid / HTML
-│
-├── Forms
-├── Tables
-├── Navigation
-├── Typography
-├── Accessibility
-│
-└── Optional material and visualization adapters
-     ├── TopologyField
-     ├── Contour
-     ├── PaperGrain
-     ├── OpticalSurface
-     ├── AmbientDepth
-     └── DataPulse
-```
-
-The cartography contract receives typed visual intent from a domain/application projection. The
-selected WebGPU implementation is `vgpu`, but it is reachable only through a RITSEI-owned renderer
-adapter:
-
-```text
-Domain projection
-      ↓
-typed visual intent
-      ↓
-RITSEI cartography contract
-      ├── SVG / Canvas / CSS fallback
-      └── vgpu adapter
-                ↓
-             WebGPU
-```
-
-WebGPU MAY handle procedural topology, dense visualization, field deformation, data-driven contour,
-particle movement, extremely dense charts, spatial visualization, and material rendering. It MUST
-NOT own semantics, fetching, authorization, business aggregation, workflow state, or authoritative
-facts. Feature and domain code MUST NOT import `vgpu` or raw WebGPU objects directly.
-
-### Progressive enhancement
-
-The fallback hierarchy is mandatory:
-
-```text
-vgpu / WebGPU
-↓
-Canvas 2D / SVG
-↓
-CSS
-↓
-Static semantic UI
-```
-
-If WebGPU is unavailable, denied, too expensive, or fails at runtime, the application MUST remain
-fully usable. No critical action, value, status, or relationship may exist only in a GPU scene.
-
-### Renderer selection
-
-Use CSS for simple blur, shadow, opacity, minor masks, basic texture, and static illusions.
-
-Use SVG for small contours, simple routes, vector distortion, and a small number of interactive
-paths.
-
-Use the `vgpu` adapter only when measured need includes thousands of objects, dynamic topology,
-continuous fields, massive data, real-time deformation, particle visualization, or complex
-data-driven material that lower layers cannot satisfy.
-
-A modal pressure effect with only 2–3px deformation belongs in CSS or SVG. WebGPU is justified only
-when the contour field is procedural and materially spans the application scene.
-
-`vgpu` is the selected optional renderer, not a commitment to expose its API or to add it before the
-activation gate passes. TypeGPU is deferred for a future GPU-compute-centered subsystem and is not a
-current RITSEI renderer dependency. Activation requires an implementation spike and the evidence in
-Section 23.
-
-## 20. Shadow, glass, and material constraints
-
-Shadow only confirms hierarchy. Paper provides physical depth, geometry provides structural depth,
-cartography provides spatial depth, and glass provides temporary interactive depth.
-
-Optical glass is limited to approximately 5% of the visual language and is approved only for:
-
-```text
-command palette
-floating filter
-quick inspector
-selected overlay
-popover
-modal controls
-```
-
-Reference constraints:
-
-```text
-Blur          8–16px
-Opacity       0.82–0.92
-Distortion    0–1.5px
-Border        translucent 1px
-Highlight     extremely subtle
-```
-
-Never use huge blur, rainbow reflection, strong transparency, or large glass cards everywhere.
-Contrast and performance evidence are required before a shared glass recipe is activated.
+Two shadows exist: `raised` (1px, ~5% opacity) for L1 surfaces and controls, and `overlay` for
+dialogs, popovers, and the mobile drawer. In dark mode borders do most of the separation and
+shadows are deeper but rarer. Blur, translucency, glass, and colored glows are not used.
 
 ## 21. Token and styling contract
 
-The token hierarchy is:
+The token hierarchy is `primitive → semantic → recipe/component → state`. Panda CSS is the styling
+substrate with `strictTokens` enabled. The constrained authoring surface is:
 
 ```text
-primitive
-   ↓
-semantic
-   ↓
-component
-   ↓
-state
+semantic tokens       canvas, content*, text, muted, boundary*, action*, status.*, icon.*
+recipes               control (kind: secondary | action | ghost | danger | input; size: md | sm)
+                      surface (tone: default | subtle | flush)
+layouts               ui/foundations/layout.ts named classes
+text styles           Section 10
+formatting            ui/foundations/format.ts
+css()                 inside apps/web/src/ui only, as a reviewed escape hatch
 ```
 
-Example:
+Panda's stock preset is used without its color palette, blurs, aspect ratios, stock shadows, and
+stock keyframes, so the shipped stylesheet carries only RITSEI tokens and stays inside the 50 KB
+stylesheet budget enforced by `apps/web/src/ui/accessibility.test.ts`.
 
-```css
---color-terrain-700: #365A72;
---color-action-primary: var(--color-terrain-700);
---button-primary-background: var(--color-action-primary);
-```
-
-The canonical primitive names in this document (`--topo-950`, `--terrain-700`, and so on) may be
-mapped to Panda token names such as `colors.topo.950`. Feature code consumes semantic aliases, not
-primitive values.
-
-Panda CSS is the selected styling substrate. The constrained RITSEI authoring surface is:
-
-```text
-semantic tokens
-config recipes
-config slot recipes
-approved layout patterns
-approved conditions
-css() as an exceptional, reviewed escape hatch
-```
-
-Feature code MUST NOT use:
-
-- raw foundation colors;
-- arbitrary spacing values;
-- broad styled JSX props;
-- unapproved recipes;
-- vendor-specific primitive styling; or
-- hard-coded material intensity in a feature component.
-
-Material tokens are centrally controlled:
-
-```css
---material-paper-grain: 0.018;
---material-contour-opacity: 0.08;
---material-contour-density: 0.4;
-
---glass-blur-interactive: 10px;
---glass-blur-modal: 14px;
-
---glass-opacity-interactive: 0.86;
---glass-opacity-modal: 0.90;
-```
-
-Theme, density, high-contrast, and reduced-motion variants MUST be expressed through semantic
-variants and recipes rather than ad hoc feature overrides.
+Feature code MUST NOT use raw colors, primitive palette tokens, arbitrary spacing, broad styled JSX
+props, unapproved recipes, or vendor-specific primitive styling. Panda only extracts styles from
+`apps/web/src/ui/**`; feature files compose named layouts, recipes, and primitives. Theme, density,
+high-contrast, and reduced-motion variants are expressed through semantic tokens and recipe
+variants, not ad hoc feature overrides.
 
 ## 22. Frontend location and dependency boundaries
 
@@ -1743,47 +1050,21 @@ This design system does not:
 
 - define backend business semantics or authorization;
 - define Process IR or Process Studio runtime semantics;
-- select a chart, graph, map, or canvas engine for every visual grammar;
-- adopt TypeGPU as a GPU application or compute platform before a measured requirement and separate ADR;
-- require WebGPU, SSR, SolidStart, or a universal metadata-driven UI framework;
+- select a chart, graph, map, or canvas engine for every visualization;
+- adopt TypeGPU or require WebGPU, SSR, SolidStart, or a metadata-driven UI framework;
 - add frontend dependencies before an implementation spike and activation gate;
 - replace frontend state ownership in ADR-0048; or
-- turn visual material into a second domain model.
+- create domain-specific palettes, materials, or decorative backgrounds.
 
 ## 25. Final formula
 
 ```text
-55% Cartographic Structure
-25% Architectural Paper
-15% Precision Geometry
- 5% Optical Glass
+Neutral canvas + white surfaces + hairline borders
+One cobalt accent for action, selection, and focus
+Status color only with a status label
+14px body · 13px tables · 36px controls · 4px grid
+Semantic HTML first; visualization only for a declared question
 ```
 
-With implementation balance:
-
-```text
-85–95% HTML / CSS / SVG
- 5–15% Canvas / WebGPU
-```
-
-As a non-normative screen-level design philosophy:
-
-```text
-90% deterministic structure
- 8% semantic procedural variation
- 2% entity-specific variation
-```
-
-This is not an engineering budget or a literal pixel allocation. It is a guardrail that keeps layout,
-typography, spacing, interaction, and accessibility stable while allowing data-driven material
-expression.
-
-The selected optional WebGPU implementation is `vgpu` behind a RITSEI-owned adapter. The most
-important rule remains:
-
-> **HTML owns interaction and semantics. WebGPU owns optional material, field, density, and
-> high-complexity visualization.**
-
-RITSEI should feel like an operating landscape, not a pile of cards. A screen is a readable business
-landscape: navigable, precise, expressive when useful, and quiet when decoration would obscure the
-work.
+> **RITSEI should feel like a precise instrument: quiet until something needs attention, then
+> unmistakable about what it is and what to do next.**

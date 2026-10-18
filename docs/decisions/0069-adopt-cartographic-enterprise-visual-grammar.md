@@ -1,11 +1,11 @@
 # ADR-0069: Adopt the Cartographic Enterprise Visual Grammar
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-09-01
 - Amends: ADR-0056 for visual language and renderer policy
 - Compatible with: ADR-0009, ADR-0010, ADR-0048, ADR-0057
 - Supersedes: None
-- Superseded by: None
+- Superseded by: ADR-0090 (Operational Clarity visual language)
 
 > **Related documents**
 >

@@ -15,15 +15,15 @@ export interface OperationalWorkspaceProps {
 export function OperationalWorkspace(props: OperationalWorkspaceProps) {
   return (
     <section class={[layout.stack, props.class]} aria-label={props.title}>
-      <header class={layout.row}>
-        <div class={layout.stack}>
+      <header class={layout.workspaceHeading}>
+        <div class={layout.workspaceTitle}>
           <h1>{props.title}</h1>
-          {props.description}
+          <div class={layout.workspaceDescription}>{props.description}</div>
         </div>
-        {props.actions}
+        {props.actions && <div class={layout.workspaceActions}>{props.actions}</div>}
       </header>
       {props.status && (
-        <div role="status" class={surface()}>
+        <div role="status" class={surface({ tone: "subtle" })}>
           {props.status}
         </div>
       )}
