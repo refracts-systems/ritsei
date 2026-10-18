@@ -58,6 +58,12 @@ surface does not need to change shape.
    `rc.6` does not provide (breaks every production web build). The exact-pin
    `overrides` in `pnpm-workspace.yaml` carry this baseline snapshot into the
    pnpm graph.
+9. **PostgreSQL 19 runtime evidence:** local validation runs PostgreSQL 19
+   rc1 in WSL (PGDG apt, Ubuntu 26.04). Upstream reverted SQL/PGQ
+   (`CREATE PROPERTY GRAPH` / `GRAPH_TABLE`) from PostgreSQL 19 after beta 3,
+   so the Party related-party path migration is amended to an equivalent
+   relational-join projection (ADR-0005 amendment). The CI `postgres:19beta3`
+   image precedes that revert and is inherited debt for the next CI refresh.
 
 ## Consequences
 

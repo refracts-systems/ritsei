@@ -58,11 +58,13 @@ approved primary path.
 **Exit:** token integrity, tenant binding, bounded wait, malformed/expired handling, promotion and
 timeline rejection, no-primary-fallback behavior, and route response semantics are tested.
 
-### Party property-graph pilot (`postgres19.property-graph-pilot`)
+### Party related-party path projection (`postgres19.property-graph-pilot`)
 
 Expose a bounded Party related-party path query over `party.parties`, `party.legal_entities`, and
-`party.party_relationships`. SQL/PGQ is a read projection; relational foreign keys, tenant scope,
-authorization, and mutation paths remain authoritative.
+`party.party_relationships`. The projection is relational: plain joins implement the two-edge path;
+relational foreign keys, tenant scope, authorization, and mutation paths remain authoritative. SQL/PGQ
+(`CREATE PROPERTY GRAPH` / `GRAPH_TABLE`) was reverted upstream from PostgreSQL 19 after beta 3, so the
+pilot waits for PostgreSQL 20 before being revisited with property graphs.
 
 **Exit:** the custom migration applies on a fresh PostgreSQL 19 database, the query is tenant-scoped
 and active-only, its result matches the relational baseline, and its bounded result is covered by a
@@ -89,10 +91,12 @@ production approval.
 ## Current evidence
 
 The repository proves the minimum version, a route-scoped consistency adapter and tests, a
-non-superuser control/`WAIT FOR` privilege test, a Party SQL/PGQ migration with a relational
-baseline and `EXPLAIN ANALYZE` test, and a disposable operational rehearsal. Evidence captured on
+non-superuser control/`WAIT FOR` privilege test, a Party relational read-projection migration with a
+relational baseline and `EXPLAIN ANALYZE` test, and a disposable operational rehearsal. Evidence captured on
 August 31, 2026 used PostgreSQL 19 Beta 3; production eligibility therefore remains **OPEN** as of
-September 2, 2026.
+September 2, 2026. SQL/PGQ was subsequently reverted upstream from PostgreSQL 19 after beta 3, so the
+Party projection became relational (ADR-0005 amendment, ADR-0087); the same result/baseline contract
+stays authoritative.
 
 ## Measures
 

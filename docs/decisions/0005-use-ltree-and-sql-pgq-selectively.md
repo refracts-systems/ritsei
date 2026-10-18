@@ -29,3 +29,12 @@ transactions or constraints.
 
 Benchmark representative hierarchy and graph queries and verify projection
 rebuildability.
+
+## Amendment (2026-10-18)
+
+Upstream reverted SQL/PGQ (`CREATE PROPERTY GRAPH` / `GRAPH_TABLE`) from
+PostgreSQL 19 after beta 3; it is expected to return at the earliest in
+PostgreSQL 20. Until then, read-oriented multi-edge traversal uses relational
+joins; the Party related-party path projection keeps its contract
+(`party.related_party_paths`) while the property-graph DDL is postponed. The
+`ltree` part of this decision is unaffected.
