@@ -2,26 +2,20 @@ import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 
-export class FinancialVerificationSigningFailure
-  extends Schema.TaggedError<FinancialVerificationSigningFailure>()(
-    "FinancialVerificationSigningFailure",
-    { keyId: Schema.String },
-  )
-{}
+export class FinancialVerificationSigningFailure extends Schema.TaggedError<FinancialVerificationSigningFailure>()(
+  "FinancialVerificationSigningFailure",
+  { keyId: Schema.String },
+) {}
 
-export class FinancialVerificationVerificationFailure
-  extends Schema.TaggedError<FinancialVerificationVerificationFailure>()(
-    "FinancialVerificationVerificationFailure",
-    { keyId: Schema.String },
-  )
-{}
+export class FinancialVerificationVerificationFailure extends Schema.TaggedError<FinancialVerificationVerificationFailure>()(
+  "FinancialVerificationVerificationFailure",
+  { keyId: Schema.String },
+) {}
 
-export class FinancialVerificationKeyGenerationFailure
-  extends Schema.TaggedError<FinancialVerificationKeyGenerationFailure>()(
-    "FinancialVerificationKeyGenerationFailure",
-    { keyId: Schema.String },
-  )
-{}
+export class FinancialVerificationKeyGenerationFailure extends Schema.TaggedError<FinancialVerificationKeyGenerationFailure>()(
+  "FinancialVerificationKeyGenerationFailure",
+  { keyId: Schema.String },
+) {}
 
 export interface FinancialVerificationVerifierService {
   readonly algorithm: "Ed25519"
@@ -38,12 +32,10 @@ export interface FinancialVerificationSignerService extends FinancialVerificatio
   ) => Effect.Effect<Uint8Array, FinancialVerificationSigningFailure>
 }
 
-export class FinancialVerificationKeyNotFound
-  extends Schema.TaggedError<FinancialVerificationKeyNotFound>()(
-    "FinancialVerificationKeyNotFound",
-    { keyId: Schema.String },
-  )
-{}
+export class FinancialVerificationKeyNotFound extends Schema.TaggedError<FinancialVerificationKeyNotFound>()(
+  "FinancialVerificationKeyNotFound",
+  { keyId: Schema.String },
+) {}
 
 export interface FinancialVerificationKeyringService {
   readonly verify: (

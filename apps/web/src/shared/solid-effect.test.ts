@@ -53,15 +53,12 @@ function mountRuntime<R>(layer: Layer.Layer<R>, children: () => Element) {
 
 describe("Solid 2 × Effect production bridge", () => {
   it("fails fast when a runtime provider is missing", () => {
-    assert.throws(
-      () => {
-        createRoot(() => {
-          const source = createMemo(() => runEffect(Effect.succeed(1)))
-          source()
-        })
-      },
-      MissingRuntimeContextError,
-    )
+    assert.throws(() => {
+      createRoot(() => {
+        const source = createMemo(() => runEffect(Effect.succeed(1)))
+        source()
+      })
+    }, MissingRuntimeContextError)
   })
 
   it.effect("resolves the Effect R channel from the scoped runtime", () =>
@@ -74,19 +71,18 @@ describe("Solid 2 × Effect production bridge", () => {
       const result = await source![Symbol.asyncIterator]().next()
       assert.deepStrictEqual(result, { done: false, value: 42 })
       dispose()
-    }))
+    }),
+  )
 
   it.effect("disposes the Layer scope with the Solid owner", () =>
     Effect.promise(async () => {
       let released = false
       const layer = Layer.effect(
         TestService,
-        Effect.acquireRelease(
-          Effect.succeed({ value: 42 }),
-          () =>
-            Effect.sync(() => {
-              released = true
-            }),
+        Effect.acquireRelease(Effect.succeed({ value: 42 }), () =>
+          Effect.sync(() => {
+            released = true
+          }),
         ),
       )
       let source: AsyncIterable<number> | undefined
@@ -94,14 +90,15 @@ describe("Solid 2 × Effect production bridge", () => {
         source = runEffect(Effect.map(TestService, (service) => service.value))
         return null
       })
-      assert.deepStrictEqual(
-        await source![Symbol.asyncIterator]().next(),
-        { done: false, value: 42 },
-      )
+      assert.deepStrictEqual(await source![Symbol.asyncIterator]().next(), {
+        done: false,
+        value: 42,
+      })
       dispose()
       await new Promise((resolve) => setTimeout(resolve, 0))
       assert.isTrue(released)
-    }))
+    }),
+  )
 
   it.effect("awaits fiber interruption when the async source closes", () =>
     Effect.promise(async () => {
@@ -113,7 +110,7 @@ describe("Solid 2 × Effect production bridge", () => {
             Effect.onInterrupt(() =>
               Effect.sync(() => {
                 interrupted = true
-              })
+              }),
             ),
           ),
         )
@@ -127,5 +124,6 @@ describe("Solid 2 × Effect production bridge", () => {
       assert.isTrue(interrupted)
       await pending
       dispose()
-    }))
+    }),
+  )
 })

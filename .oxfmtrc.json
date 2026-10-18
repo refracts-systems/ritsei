@@ -1,0 +1,17 @@
+{
+  "printWidth": 100,
+  "tabWidth": 2,
+  "useTabs": false,
+  "singleQuote": false,
+  "semi": false,
+  "ignorePatterns": [
+    "vendor/**",
+    "**/node_modules/**",
+    ".auto/**",
+    "**/dist/**",
+    "apps/web/src/ui/generated/**",
+    "apps/web/src/shared/contracts/generated/**",
+    "apps/web/dist/**",
+    "db/migrations/**/snapshot.json"
+  ]
+}

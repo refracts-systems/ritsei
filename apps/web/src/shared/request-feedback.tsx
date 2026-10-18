@@ -32,9 +32,7 @@ export function CommandFeedback(props: CommandFeedbackProps) {
           Reload {props.area ?? "this workspace"} before retrying
         </Button>
       </Show>
-      <p role="status">
-        {props.pending ? "Saving…" : props.success ? props.successMessage : ""}
-      </p>
+      <p role="status">{props.pending ? "Saving…" : props.success ? props.successMessage : ""}</p>
     </>
   )
 }
@@ -54,13 +52,13 @@ export function QueryBoundary(props: QueryBoundaryProps) {
     props.variant === "retry"
       ? "Unable to load "
       : props.errorPrefix === undefined
-      ? ""
-      : `${props.errorPrefix} `
+        ? ""
+        : `${props.errorPrefix} `
   const retryLabel = () =>
-    props.retryLabel
-      ?? (props.variant === "retry"
-        ? `Retry ${props.label}`
-        : props.retryPrefix === undefined
+    props.retryLabel ??
+    (props.variant === "retry"
+      ? `Retry ${props.label}`
+      : props.retryPrefix === undefined
         ? `Try loading ${props.label} again`
         : `${props.retryPrefix} ${props.label}`)
   return (
@@ -78,7 +76,13 @@ export function QueryBoundary(props: QueryBoundaryProps) {
         </div>
       )}
     >
-      <Loading fallback={<p role="status" aria-busy="true">Loading {props.label}…</p>}>
+      <Loading
+        fallback={
+          <p role="status" aria-busy="true">
+            Loading {props.label}…
+          </p>
+        }
+      >
         {props.children}
       </Loading>
     </Errored>

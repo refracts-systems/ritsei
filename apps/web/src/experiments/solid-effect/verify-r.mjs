@@ -56,21 +56,16 @@ function run(withProvider) {
   })
 }
 
-const withProvider = await Promise.race([
-  run(true),
-  sleep(8000).then(() => "timeout"),
-])
+const withProvider = await Promise.race([run(true), sleep(8000).then(() => "timeout")])
 console.log("with provider   :", JSON.stringify(withProvider))
 
-const withoutProvider = await Promise.race([
-  run(false),
-  sleep(8000).then(() => "timeout"),
-])
+const withoutProvider = await Promise.race([run(false), sleep(8000).then(() => "timeout")])
 console.log("without provider:", JSON.stringify(withoutProvider))
 
-const pass = withProvider.ok === true
-  && withProvider.count > 0
-  && withoutProvider.ok === false
-  && /MissingRuntimeContext|RuntimeContext/.test(withoutProvider.error)
+const pass =
+  withProvider.ok === true &&
+  withProvider.count > 0 &&
+  withoutProvider.ok === false &&
+  /MissingRuntimeContext|RuntimeContext/.test(withoutProvider.error)
 console.log(pass ? "PASS" : "FAIL")
 process.exit(pass ? 0 : 1)

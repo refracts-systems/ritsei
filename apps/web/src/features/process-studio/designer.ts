@@ -111,9 +111,11 @@ const appendCapability = (
   )
   ref.className = "capability"
   card.append(ref)
-  const found = catalog.find((entry) =>
-    entry.kind === node.capability?.kind
-    && entry.id === node.capability.id && entry.version === node.capability.version
+  const found = catalog.find(
+    (entry) =>
+      entry.kind === node.capability?.kind &&
+      entry.id === node.capability.id &&
+      entry.version === node.capability.version,
   )
   if (found !== undefined) {
     const description = text(found.title)
@@ -168,9 +170,10 @@ const catalogEditor = (
   const fields = tag("div")
   fields.className = "inspector-fields"
   const capabilityKind = catalogKind(node)
-  const selected = node.capability === undefined
-    ? ""
-    : `${node.capability.kind}:${node.capability.id}:${node.capability.version}`
+  const selected =
+    node.capability === undefined
+      ? ""
+      : `${node.capability.kind}:${node.capability.id}:${node.capability.version}`
   const catalogLabel = tag("label")
   catalogLabel.append(text(`Backend catalog ${catalogKindLabel(capabilityKind)}`))
   const catalogSelect = tag("select")
@@ -179,18 +182,22 @@ const catalogEditor = (
   placeholder.value = ""
   placeholder.textContent = "Select an active catalog entry"
   catalogSelect.append(placeholder)
-  catalog.filter((entry) => entry.kind === capabilityKind).forEach((entry) => {
-    const option = tag("option")
-    option.value = `${entry.kind}:${entry.id}:${entry.version}`
-    option.textContent = `${entry.title} · ${entry.id} v${entry.version}`
-    option.selected = option.value === selected
-    catalogSelect.append(option)
-  })
+  catalog
+    .filter((entry) => entry.kind === capabilityKind)
+    .forEach((entry) => {
+      const option = tag("option")
+      option.value = `${entry.kind}:${entry.id}:${entry.version}`
+      option.textContent = `${entry.title} · ${entry.id} v${entry.version}`
+      option.selected = option.value === selected
+      catalogSelect.append(option)
+    })
   catalogSelect.value = selected
   catalogSelect.addEventListener("change", () => {
     const [kind, id, version] = catalogSelect.value.split(":")
     if (
-      kind !== "DomainAction" && kind !== "DomainEvent" || id === undefined || version === undefined
+      (kind !== "DomainAction" && kind !== "DomainEvent") ||
+      id === undefined ||
+      version === undefined
     ) {
       handlers.capability(node.id, undefined)
       return
@@ -207,7 +214,8 @@ const catalogEditor = (
         targetPath: "command.value",
         sourceType: "string",
         targetType: "string",
-      })),
+      }),
+    ),
   )
   return fields
 }
@@ -272,9 +280,8 @@ const templateList = (handlers: Handlers): HTMLElement => {
   for (const template of ProcessStudioTemplates) {
     const option = tag("div")
     option.className = "template-option"
-    const load = button(
-      `Load ${template.name} · v${template.version}`,
-      () => handlers.template(template.id),
+    const load = button(`Load ${template.name} · v${template.version}`, () =>
+      handlers.template(template.id),
     )
     load.setAttribute(
       "aria-label",
@@ -393,7 +400,11 @@ const view = (
   canvas.append(nodeList(model, selected, handlers, catalog), validationPanel(issues))
   grid.append(
     canvas,
-    inspector(model.nodes.find((node) => node.id === selected), catalog, handlers),
+    inspector(
+      model.nodes.find((node) => node.id === selected),
+      catalog,
+      handlers,
+    ),
   )
   shell.append(grid)
   return shell
@@ -411,9 +422,8 @@ export const mountProcessDesigner = (
   options: DesignerModel | ProcessDesignerOptions = {},
 ): ProcessDesignerMount => {
   ensureStyle()
-  const normalized: ProcessDesignerOptions = "nodes" in options
-    ? { initialModel: options }
-    : options
+  const normalized: ProcessDesignerOptions =
+    "nodes" in options ? { initialModel: options } : options
   const initialModel = normalized.initialModel ?? makeInitialDesignerModel()
   const catalog = normalized.catalog ?? []
   let currentDraft = makeProcessStudioDraft(initialModel)

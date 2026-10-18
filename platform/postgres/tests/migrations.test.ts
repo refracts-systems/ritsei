@@ -50,7 +50,8 @@ describe("migration discovery", () => {
       for (const migration of migrations) {
         assert.match(migration.name, migrationNamePattern)
       }
-    }))
+    }),
+  )
 
   it.effect("rejects duplicate migration versions", () =>
     Effect.sync(() => {
@@ -61,19 +62,20 @@ describe("migration discovery", () => {
         () => validateMigrationCatalog([first, duplicateVersion(first)]),
         /duplicate migration version/,
       )
-    }))
+    }),
+  )
 
   it.effect("requires migration SQL and parseable snapshot metadata", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const directories = yield* Effect.promise(migrationDirectories)
       assert.isAbove(directories.length, 0)
 
       for (const directory of directories) {
         const migration = yield* Effect.promise(() =>
-          stat(`${migrationsDirectory}/${directory}/migration.sql`)
+          stat(`${migrationsDirectory}/${directory}/migration.sql`),
         )
         const snapshot = yield* Effect.promise(() =>
-          stat(`${migrationsDirectory}/${directory}/snapshot.json`)
+          stat(`${migrationsDirectory}/${directory}/snapshot.json`),
         )
         const metadata = yield* Effect.promise(() => readSnapshot(directory))
 
@@ -82,43 +84,43 @@ describe("migration discovery", () => {
         assert.match(metadata.id, /^[a-f0-9-]{36}$/)
         assert.isArray(metadata.prevIds)
       }
-    }))
+    }),
+  )
 })
 
 describe("migration integrity", () => {
   it.effect("fails closed before retiring the legacy process event outbox", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const sql = yield* Effect.promise(() => readFile(retireProcessEventOutboxMigration, "utf8"))
 
-      assert.match(
-        sql,
-        /LOCK TABLE "process"\."event_outbox" IN ACCESS EXCLUSIVE MODE/,
-      )
+      assert.match(sql, /LOCK TABLE "process"\."event_outbox" IN ACCESS EXCLUSIVE MODE/)
       assert.match(sql, /IF EXISTS \(SELECT 1 FROM "process"\."event_outbox"\)/)
       assert.match(
         sql,
         /RAISE EXCEPTION\s+'process\.event_outbox contains legacy rows; operator migration\/review is required before retirement'/,
       )
       assert.match(sql, /DROP TABLE "process"\."event_outbox"/)
-    }))
+    }),
+  )
 
   it.effect("matches every loader checksum to migration.sql", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const migrations = readMigrationFiles({ migrationsFolder: migrationsDirectory })
 
       for (const migration of migrations) {
         const sql = yield* Effect.promise(() =>
-          readFile(`${migrationsDirectory}/${migration.name}/migration.sql`, "utf8")
+          readFile(`${migrationsDirectory}/${migration.name}/migration.sql`, "utf8"),
         )
         const expected = createHash("sha256").update(sql).digest("hex")
 
         assert.match(migration.hash, checksumPattern)
         assert.strictEqual(migration.hash, expected)
       }
-    }))
+    }),
+  )
 
   it.effect("forms one ordered snapshot ancestry chain", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const directories = yield* Effect.promise(migrationDirectories)
       let previousId = rootSnapshotId
       const snapshotIds = new Set<string>()
@@ -130,7 +132,8 @@ describe("migration integrity", () => {
         snapshotIds.add(snapshot.id)
         previousId = snapshot.id
       }
-    }))
+    }),
+  )
 
   it.effect("rejects changed, missing, duplicated, or reordered applied migrations", () =>
     Effect.sync(() => {
@@ -168,5 +171,6 @@ describe("migration integrity", () => {
           /inserted before applied history/,
         )
       }
-    }))
+    }),
+  )
 })

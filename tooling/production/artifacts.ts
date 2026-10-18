@@ -47,14 +47,7 @@ for (const [name, entrypoint] of bundles) {
 }
 
 await copyTree("db/migrations", `${outputPath}/migrations`)
-await run("pnpm", [
-  "--filter",
-  "@ritsei/web",
-  "run",
-  "build",
-  "--outDir",
-  `${outputPath}/frontend`,
-])
+await run("pnpm", ["--filter", "@ritsei/web", "run", "build", "--outDir", `${outputPath}/frontend`])
 
 const artifacts: Artifact[] = []
 for (const [name, entrypoint] of bundles) {
@@ -90,8 +83,8 @@ const manifest = {
   },
   toolchain: {
     node: await run("node", ["--version"]),
-    esbuild: await run("pnpm", ["exec", "esbuild", "--version"]).then((v) =>
-      v.split("\n").at(-1) ?? v
+    esbuild: await run("pnpm", ["exec", "esbuild", "--version"]).then(
+      (v) => v.split("\n").at(-1) ?? v,
     ),
     frontend: "Vite via pnpm --filter @ritsei/web run build",
   },
@@ -109,11 +102,7 @@ const manifest = {
     "Historical source-only tags remain source-only; this manifest describes the artifact-backed build path.",
 }
 await mkdir("deploy/artifacts", { recursive: true })
-await writeFile(
-  "deploy/artifacts/manifest.json",
-  `${JSON.stringify(manifest, null, 2)}\n`,
-  "utf8",
-)
+await writeFile("deploy/artifacts/manifest.json", `${JSON.stringify(manifest, null, 2)}\n`, "utf8")
 console.log(JSON.stringify({ sourceRevision: revision, artifactRoot: relativeToRoot(outputPath) }))
 
 async function run(command: string, args: readonly string[]): Promise<string> {
@@ -155,7 +144,7 @@ async function describeTree(directory: string, relative = ""): Promise<ArtifactF
     const path = `${directory}/${entry.name}`
     const child = relative === "" ? entry.name : `${relative}/${entry.name}`
     if (entry.isDirectory()) {
-      files.push(...await describeTree(path, child))
+      files.push(...(await describeTree(path, child)))
     } else if (entry.isFile()) {
       files.push({
         path: child,

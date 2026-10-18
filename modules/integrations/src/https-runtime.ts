@@ -40,9 +40,7 @@ const eventIdentifier = (event: { readonly id?: unknown } | null | undefined): s
 }
 
 const isBoundedNonEmptyString = (value: unknown, maxBytes: number): value is string =>
-  typeof value === "string"
-  && Schema.is(NonEmptyString)(value)
-  && byteLength(value) <= maxBytes
+  typeof value === "string" && Schema.is(NonEmptyString)(value) && byteLength(value) <= maxBytes
 
 const decodeWebhookBody = (body: string, identifier: string) =>
   Effect.try({
@@ -50,25 +48,26 @@ const decodeWebhookBody = (body: string, identifier: string) =>
     catch: () => undefined,
   }).pipe(
     Effect.flatMap((value) => Schema.decodeUnknownEffect(WebhookIngestion)(value)),
-    Effect.mapError(() =>
-      new ExternalPayloadInvalid({
-        boundary: "external.https.webhook.body",
-        identifier,
-      })
+    Effect.mapError(
+      () =>
+        new ExternalPayloadInvalid({
+          boundary: "external.https.webhook.body",
+          identifier,
+        }),
     ),
   )
 
 type WebhookEnvelope = Schema.Schema.Type<typeof WebhookIngestion>
 
 const sameWebhookEnvelope = (left: WebhookEnvelope, right: WebhookEnvelope): boolean =>
-  left.specversion === right.specversion
-  && left.type === right.type
-  && left.source === right.source
-  && left.id === right.id
-  && left.time === right.time
-  && left.datacontenttype === right.datacontenttype
-  && left.subject === right.subject
-  && JSON.stringify(left.data) === JSON.stringify(right.data)
+  left.specversion === right.specversion &&
+  left.type === right.type &&
+  left.source === right.source &&
+  left.id === right.id &&
+  left.time === right.time &&
+  left.datacontenttype === right.datacontenttype &&
+  left.subject === right.subject &&
+  JSON.stringify(left.data) === JSON.stringify(right.data)
 
 export type HttpsSignatureVerifier = (input: {
   readonly tenantId: string
@@ -124,7 +123,7 @@ export const makeHttpsConnectorRuntime = (options: {
   })
 
   const ingestWebhook = (input: HttpsWebhookInput) =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const identifier = eventIdentifier(input.event)
       if (!isValidWebhookInput(input)) {
         return yield* Effect.fail(
@@ -161,15 +160,17 @@ export const makeHttpsConnectorRuntime = (options: {
         )
       }
       const envelope = yield* decodeWebhookBody(input.body, identifier)
-      const suppliedEnvelope = yield* Schema.decodeUnknownEffect(WebhookIngestion)(input.envelope)
-        .pipe(
-          Effect.mapError(() =>
+      const suppliedEnvelope = yield* Schema.decodeUnknownEffect(WebhookIngestion)(
+        input.envelope,
+      ).pipe(
+        Effect.mapError(
+          () =>
             new ExternalPayloadInvalid({
               boundary: "external.https.webhook.envelope",
               identifier,
-            })
-          ),
-        )
+            }),
+        ),
+      )
       if (!sameWebhookEnvelope(envelope, suppliedEnvelope)) {
         return yield* Effect.fail(
           new ExternalPayloadInvalid({

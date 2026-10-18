@@ -38,4 +38,5 @@ it.effect("applies the shared Drizzle schema primitives", () =>
       userAccount.uniqueConstraints.map((constraint) => constraint.name),
       ["user_accounts_email_key"],
     )
-  }))
+  }),
+)

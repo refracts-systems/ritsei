@@ -31,15 +31,11 @@ const purchaseOrdersKey = [...procurementCollectionKey, "purchase-orders"] as co
 const purchaseOrderDetailKey = (id: string) => ["procurement", "purchase-order", id] as const
 const purchaseReceiptsKey = (id: string) => ["procurement", "purchase-receipts", id] as const
 
-const invalidateSupplierAccounts = (
-  client: ReturnType<typeof useQueryClient>,
-  tenantId: string,
-) => client.invalidateQueries({ queryKey: serverQueryKey(tenantId, supplierAccountsKey) })
+const invalidateSupplierAccounts = (client: ReturnType<typeof useQueryClient>, tenantId: string) =>
+  client.invalidateQueries({ queryKey: serverQueryKey(tenantId, supplierAccountsKey) })
 
-const invalidatePurchaseOrders = (
-  client: ReturnType<typeof useQueryClient>,
-  tenantId: string,
-) => client.invalidateQueries({ queryKey: serverQueryKey(tenantId, purchaseOrdersKey) })
+const invalidatePurchaseOrders = (client: ReturnType<typeof useQueryClient>, tenantId: string) =>
+  client.invalidateQueries({ queryKey: serverQueryKey(tenantId, purchaseOrdersKey) })
 
 const invalidatePurchaseOrder = (
   client: ReturnType<typeof useQueryClient>,

@@ -17,7 +17,7 @@ describe("PostgreSQL 19 capability boundaries", () => {
     assert.isTrue(migration.includes("CREATE VIEW"))
     assert.isTrue(migration.includes("party_relationships"))
     assert.isTrue(migration.includes("legal_entity_organization_edges"))
-    assert.isTrue(migration.includes("\"relationship\".\"active\""))
+    assert.isTrue(migration.includes('"relationship"."active"'))
     assert.isFalse(migration.includes("INSERT INTO"))
     assert.isFalse(migration.includes("UPDATE "))
     assert.isFalse(migration.includes("DELETE FROM"))
@@ -29,16 +29,14 @@ describe("PostgreSQL 19 capability boundaries", () => {
       "ritsei_scratch",
     )
     assert.throws(() =>
-      disposableDatabaseName("postgresql://postgres:postgres@127.0.0.1:5433/ritsei")
+      disposableDatabaseName("postgresql://postgres:postgres@127.0.0.1:5433/ritsei"),
     )
   })
 
   it("keeps operational rehearsal evidence separate from production eligibility", () => {
     const rehearsal = read("tooling/postgresql-19/rehearse.ts")
     const operations = read("docs/operations/postgresql-19.md")
-    const evidence = JSON.parse(
-      read("docs/operations/postgresql-19-evidence-2026-08-31.json"),
-    ) as {
+    const evidence = JSON.parse(read("docs/operations/postgresql-19-evidence-2026-08-31.json")) as {
       readonly serverVersionNum: number
       readonly productionEligible: boolean
       readonly repack: {

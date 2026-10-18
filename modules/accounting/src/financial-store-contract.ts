@@ -4,36 +4,36 @@ import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
 
 const NonEmptyString = Schema.String.check(Schema.isPattern(/\S/))
-const TrimmedNonEmptyString = Schema.String.check(Schema.makeFilter(
-  (value) => /\S/.test(value) && value === value.trim(),
-  { expected: "a trimmed nonblank string" },
-))
-const InstantString = Schema.String.check(Schema.makeFilter(
-  (value) =>
-    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value)
-    && !Number.isNaN(Date.parse(value)),
-  { expected: "an ISO-8601 UTC instant" },
-))
-const PositiveInt = Schema.Int.check(
-  Schema.isBetween({ minimum: 1, maximum: 0x7fffffff }),
+const TrimmedNonEmptyString = Schema.String.check(
+  Schema.makeFilter((value) => /\S/.test(value) && value === value.trim(), {
+    expected: "a trimmed nonblank string",
+  }),
 )
-const ScanLimit = Schema.Int.check(
-  Schema.isBetween({ minimum: 1, maximum: 8188 }),
+const InstantString = Schema.String.check(
+  Schema.makeFilter(
+    (value) =>
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value) &&
+      !Number.isNaN(Date.parse(value)),
+    { expected: "an ISO-8601 UTC instant" },
+  ),
 )
-const NonNegativeInt = Schema.Int.check(
-  Schema.isBetween({ minimum: 0, maximum: 0x7fffffff }),
+const PositiveInt = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 0x7fffffff }))
+const ScanLimit = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 8188 }))
+const NonNegativeInt = Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: 0x7fffffff }))
+const MinorAmount = Schema.String.check(
+  Schema.makeFilter(
+    (value) => /^(0|[1-9][0-9]*)$/.test(value) && BigInt(value) <= (1n << 128n) - 1n,
+    { expected: "a non-negative unsigned 128-bit minor amount" },
+  ),
 )
-const MinorAmount = Schema.String.check(Schema.makeFilter(
-  (value) => /^(0|[1-9][0-9]*)$/.test(value) && BigInt(value) <= (1n << 128n) - 1n,
-  { expected: "a non-negative unsigned 128-bit minor amount" },
-))
-const PositiveMinorAmount = Schema.String.check(Schema.makeFilter(
-  (value) => /^[1-9][0-9]*$/.test(value) && BigInt(value) <= (1n << 128n) - 1n,
-  { expected: "a positive unsigned 128-bit minor amount" },
-))
-const Uuidv7 = Schema.String.check(Schema.isPattern(
-  /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-))
+const PositiveMinorAmount = Schema.String.check(
+  Schema.makeFilter((value) => /^[1-9][0-9]*$/.test(value) && BigInt(value) <= (1n << 128n) - 1n, {
+    expected: "a positive unsigned 128-bit minor amount",
+  }),
+)
+const Uuidv7 = Schema.String.check(
+  Schema.isPattern(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i),
+)
 
 export const FinancialStoreAuthority = Schema.Literals(["postgresql", "tigerbeetle"])
 export type FinancialStoreAuthority = Schema.Schema.Type<typeof FinancialStoreAuthority>
@@ -57,21 +57,19 @@ export const FinancialStoreWatermarkInput = Schema.Struct({
 })
 export type FinancialStoreWatermarkInput = Schema.Schema.Type<typeof FinancialStoreWatermarkInput>
 
-export class FinancialStoreObservationFailure
-  extends Schema.TaggedError<FinancialStoreObservationFailure>()(
-    "FinancialStoreObservationFailure",
-    {
-      scope: TrimmedNonEmptyString,
-      reason: Schema.Literals([
-        "unavailable",
-        "unsupported",
-        "incomplete",
-        "invalid_fact",
-        "invalid_watermark",
-      ]),
-    },
-  )
-{}
+export class FinancialStoreObservationFailure extends Schema.TaggedError<FinancialStoreObservationFailure>()(
+  "FinancialStoreObservationFailure",
+  {
+    scope: TrimmedNonEmptyString,
+    reason: Schema.Literals([
+      "unavailable",
+      "unsupported",
+      "incomplete",
+      "invalid_fact",
+      "invalid_watermark",
+    ]),
+  },
+) {}
 
 export interface FinancialStoreWatermarkCollectorService {
   readonly collect: (
@@ -79,20 +77,20 @@ export interface FinancialStoreWatermarkCollectorService {
   ) => Effect.Effect<FinancialStoreWatermark, FinancialStoreObservationFailure | Schema.SchemaError>
 }
 
-export const FinancialStoreWatermarkCollector = Context.Service<
-  FinancialStoreWatermarkCollectorService
->(
-  "RITSEI/FinancialStoreWatermarkCollector",
-)
+export const FinancialStoreWatermarkCollector =
+  Context.Service<FinancialStoreWatermarkCollectorService>(
+    "RITSEI/FinancialStoreWatermarkCollector",
+  )
 
 export const FinancialStoreInventoryRequest = Schema.Struct({
   scope: TrimmedNonEmptyString,
   maxRecords: ScanLimit,
   watermark: FinancialStoreWatermark,
-}).check(Schema.makeFilter(
-  (input) => input.scope === input.watermark.scope,
-  { expected: "inventory scope must match the watermark scope" },
-))
+}).check(
+  Schema.makeFilter((input) => input.scope === input.watermark.scope, {
+    expected: "inventory scope must match the watermark scope",
+  }),
+)
 export type FinancialStoreInventoryRequest = Schema.Schema.Type<
   typeof FinancialStoreInventoryRequest
 >
@@ -120,10 +118,11 @@ export const FinancialStoreTransferObservation = Schema.Struct({
   mappingVersion: NonNegativeInt,
   status: Schema.Literals(["accepted", "pending", "voided"]),
   observedAt: NonEmptyString,
-}).check(Schema.makeFilter(
-  (transfer) => transfer.debitAccountRef !== transfer.creditAccountRef,
-  { expected: "financial store transfer accounts must be distinct" },
-))
+}).check(
+  Schema.makeFilter((transfer) => transfer.debitAccountRef !== transfer.creditAccountRef, {
+    expected: "financial store transfer accounts must be distinct",
+  }),
+)
 export type FinancialStoreTransferObservation = Schema.Schema.Type<
   typeof FinancialStoreTransferObservation
 >
@@ -134,12 +133,14 @@ export const FinancialStoreInventory = Schema.Struct({
   watermark: FinancialStoreWatermark,
   accounts: Schema.Array(FinancialStoreAccountObservation),
   transfers: Schema.Array(FinancialStoreTransferObservation),
-}).check(Schema.makeFilter(
-  (inventory) =>
-    inventory.authority === inventory.watermark.authority
-    && inventory.scope === inventory.watermark.scope,
-  { expected: "inventory authority and scope must match its watermark" },
-))
+}).check(
+  Schema.makeFilter(
+    (inventory) =>
+      inventory.authority === inventory.watermark.authority &&
+      inventory.scope === inventory.watermark.scope,
+    { expected: "inventory authority and scope must match its watermark" },
+  ),
+)
 export type FinancialStoreInventory = Schema.Schema.Type<typeof FinancialStoreInventory>
 
 export interface FinancialStoreInventoryScannerService {
@@ -148,11 +149,8 @@ export interface FinancialStoreInventoryScannerService {
   ) => Effect.Effect<FinancialStoreInventory, FinancialStoreObservationFailure | Schema.SchemaError>
 }
 
-export const FinancialStoreInventoryScanner = Context.Service<
-  FinancialStoreInventoryScannerService
->(
-  "RITSEI/FinancialStoreInventoryScanner",
-)
+export const FinancialStoreInventoryScanner =
+  Context.Service<FinancialStoreInventoryScannerService>("RITSEI/FinancialStoreInventoryScanner")
 
 export type FinancialStoreObservationProvider = Readonly<{
   readonly authority: FinancialStoreAuthority
@@ -171,15 +169,13 @@ export interface FinancialStoreObservationRegistryService {
   ) => Effect.Effect<FinancialStoreInventory, FinancialStoreObservationFailure | Schema.SchemaError>
 }
 
-export const FinancialStoreObservationRegistry = Context.Service<
-  FinancialStoreObservationRegistryService
->(
-  "RITSEI/FinancialStoreObservationRegistry",
-)
+export const FinancialStoreObservationRegistry =
+  Context.Service<FinancialStoreObservationRegistryService>(
+    "RITSEI/FinancialStoreObservationRegistry",
+  )
 
 const observationScope = (input: unknown) =>
-  typeof input === "object" && input !== null && "scope" in input
-    && typeof input.scope === "string"
+  typeof input === "object" && input !== null && "scope" in input && typeof input.scope === "string"
     ? input.scope
     : "observation-registry"
 
@@ -192,22 +188,22 @@ export const makeFinancialStoreObservationRegistry = (
       const provider = byAuthority.get(authority)
       return provider === undefined
         ? Effect.fail(
-          new FinancialStoreObservationFailure({
-            scope: observationScope(input),
-            reason: "unsupported",
-          }),
-        )
+            new FinancialStoreObservationFailure({
+              scope: observationScope(input),
+              reason: "unsupported",
+            }),
+          )
         : provider.collector.collect(input)
     },
     scan: (authority, input) => {
       const provider = byAuthority.get(authority)
       return provider === undefined
         ? Effect.fail(
-          new FinancialStoreObservationFailure({
-            scope: observationScope(input),
-            reason: "unsupported",
-          }),
-        )
+            new FinancialStoreObservationFailure({
+              scope: observationScope(input),
+              reason: "unsupported",
+            }),
+          )
         : provider.scanner.scan(input)
     },
   }
@@ -216,10 +212,7 @@ export const makeFinancialStoreObservationRegistry = (
 export const makeFinancialStoreObservationRegistryLayer = (
   providers: readonly FinancialStoreObservationProvider[],
 ) =>
-  Layer.succeed(
-    FinancialStoreObservationRegistry,
-    makeFinancialStoreObservationRegistry(providers),
-  )
+  Layer.succeed(FinancialStoreObservationRegistry, makeFinancialStoreObservationRegistry(providers))
 
 export type FinancialStoreInventoryMismatch = Readonly<{
   readonly kind:
@@ -282,21 +275,18 @@ const canonicalValue = (value: unknown): unknown => {
   if (Array.isArray(value)) return value.map(canonicalValue)
   if (typeof value !== "object" || value === null) return value
   return Object.fromEntries(
-    Object.entries(value).toSorted(([left], [right]) => left.localeCompare(right)).map((
-      [key, child],
-    ) => [
-      key,
-      canonicalValue(child),
-    ]),
+    Object.entries(value)
+      .toSorted(([left], [right]) => left.localeCompare(right))
+      .map(([key, child]) => [key, canonicalValue(child)]),
   )
 }
 
 const canonicalJson = (value: unknown) => JSON.stringify(canonicalValue(value)) ?? ""
 
 const canonicalArray = (values: readonly unknown[]) =>
-  [...values].map(canonicalValue).sort((left, right) =>
-    canonicalJson(left).localeCompare(canonicalJson(right))
-  )
+  [...values]
+    .map(canonicalValue)
+    .sort((left, right) => canonicalJson(left).localeCompare(canonicalJson(right)))
 
 /** Canonical provider facts for hashes and exact same-boundary comparisons. */
 export const canonicalizeFinancialStoreFacts = (
@@ -328,22 +318,24 @@ export const hashFinancialStoreWatermarks = (
     const digest = new Uint8Array(
       await crypto.subtle.digest(
         "SHA-256",
-        new TextEncoder().encode(JSON.stringify({
-          source: [
-            source.authority,
-            source.scope,
-            source.value,
-            source.snapshotRef,
-            source.consistency,
-          ],
-          target: [
-            target.authority,
-            target.scope,
-            target.value,
-            target.snapshotRef,
-            target.consistency,
-          ],
-        })),
+        new TextEncoder().encode(
+          JSON.stringify({
+            source: [
+              source.authority,
+              source.scope,
+              source.value,
+              source.snapshotRef,
+              source.consistency,
+            ],
+            target: [
+              target.authority,
+              target.scope,
+              target.value,
+              target.snapshotRef,
+              target.consistency,
+            ],
+          }),
+        ),
       ),
     )
     return [...digest].map((byte) => byte.toString(16).padStart(2, "0")).join("")
@@ -369,9 +361,9 @@ const appendInventoryBoundaryMismatches = (
     })
   }
   if (
-    expected.watermark.value !== observed.watermark.value
-    || expected.watermark.snapshotRef !== observed.watermark.snapshotRef
-    || expected.watermark.consistency !== observed.watermark.consistency
+    expected.watermark.value !== observed.watermark.value ||
+    expected.watermark.snapshotRef !== observed.watermark.snapshotRef ||
+    expected.watermark.consistency !== observed.watermark.consistency
   ) {
     mismatches.push({
       kind: "watermark_mismatch",
@@ -418,9 +410,9 @@ const appendTransferMismatches = (
   }
   const expectedTransfers = new Map(expected.map((transfer) => [transfer.transferRef, transfer]))
   const observedTransfers = new Map(observed.map((transfer) => [transfer.transferRef, transfer]))
-  for (
-    const key of [...new Set([...expectedTransfers.keys(), ...observedTransfers.keys()])].sort()
-  ) {
+  for (const key of [
+    ...new Set([...expectedTransfers.keys(), ...observedTransfers.keys()]),
+  ].sort()) {
     const expectedTransfer = expectedTransfers.get(key)
     const observedTransfer = observedTransfers.get(key)
     if (expectedTransfer === undefined) {
@@ -492,15 +484,21 @@ export const FinancialBackupRestoreEvidence = Schema.Struct({
   comparison: Schema.Literals(["match", "mismatch", "incomplete"]),
   startedAt: InstantString,
   completedAt: InstantString,
-}).check(Schema.makeFilter(
-  (evidence) =>
-    evidence.authority === evidence.sourceWatermark.authority
-    && evidence.authority === evidence.restoredWatermark.authority,
-  { expected: "backup and restore watermarks must use the declared authority" },
-)).check(Schema.makeFilter(
-  (evidence) => Date.parse(evidence.completedAt) >= Date.parse(evidence.startedAt),
-  { expected: "backup restore completedAt at or after startedAt" },
-))
+})
+  .check(
+    Schema.makeFilter(
+      (evidence) =>
+        evidence.authority === evidence.sourceWatermark.authority &&
+        evidence.authority === evidence.restoredWatermark.authority,
+      { expected: "backup and restore watermarks must use the declared authority" },
+    ),
+  )
+  .check(
+    Schema.makeFilter(
+      (evidence) => Date.parse(evidence.completedAt) >= Date.parse(evidence.startedAt),
+      { expected: "backup restore completedAt at or after startedAt" },
+    ),
+  )
 export type FinancialBackupRestoreEvidence = Schema.Schema.Type<
   typeof FinancialBackupRestoreEvidence
 >
@@ -524,15 +522,13 @@ export type FinancialStagingTelemetrySnapshot = Schema.Schema.Type<
   typeof FinancialStagingTelemetrySnapshot
 >
 
-export class FinancialStagingTelemetryFailure
-  extends Schema.TaggedError<FinancialStagingTelemetryFailure>()(
-    "FinancialStagingTelemetryFailure",
-    {
-      scope: NonEmptyString,
-      reason: Schema.Literals(["unavailable", "incomplete", "invalid"]),
-    },
-  )
-{}
+export class FinancialStagingTelemetryFailure extends Schema.TaggedError<FinancialStagingTelemetryFailure>()(
+  "FinancialStagingTelemetryFailure",
+  {
+    scope: NonEmptyString,
+    reason: Schema.Literals(["unavailable", "incomplete", "invalid"]),
+  },
+) {}
 
 export interface FinancialStagingTelemetryService {
   readonly collect: (
@@ -572,28 +568,39 @@ export const FinancialStagingEvidence = Schema.Struct({
   result: Schema.Literals(["pass", "fail"]),
   mismatchCount: NonNegativeInt,
   orphanCount: NonNegativeInt,
-}).check(Schema.makeFilter(
-  (evidence) =>
-    evidence.tenantId === evidence.cohort.tenantId
-    && evidence.legalEntityId === evidence.cohort.legalEntityId
-    && evidence.deploymentRevision === evidence.cohort.deploymentRevision,
-  { expected: "staging evidence scope must match its cohort" },
-)).check(Schema.makeFilter(
-  (evidence) => Date.parse(evidence.completedAt) >= Date.parse(evidence.startedAt),
-  { expected: "completedAt at or after startedAt" },
-)).check(Schema.makeFilter(
-  (evidence) =>
-    evidence.operationIds.length <= evidence.cohort.maxOperationCount
-    && evidence.failureScenarioIds.every((scenario) =>
-      evidence.cohort.plannedScenarioIds.includes(scenario)
+})
+  .check(
+    Schema.makeFilter(
+      (evidence) =>
+        evidence.tenantId === evidence.cohort.tenantId &&
+        evidence.legalEntityId === evidence.cohort.legalEntityId &&
+        evidence.deploymentRevision === evidence.cohort.deploymentRevision,
+      { expected: "staging evidence scope must match its cohort" },
     ),
-  { expected: "staging evidence must stay within its approved cohort bounds" },
-)).check(Schema.makeFilter(
-  (evidence) =>
-    evidence.result !== "pass"
-    || (evidence.mismatchCount === 0 && evidence.orphanCount === 0),
-  { expected: "passing staging evidence must have zero mismatches and orphans" },
-))
+  )
+  .check(
+    Schema.makeFilter(
+      (evidence) => Date.parse(evidence.completedAt) >= Date.parse(evidence.startedAt),
+      { expected: "completedAt at or after startedAt" },
+    ),
+  )
+  .check(
+    Schema.makeFilter(
+      (evidence) =>
+        evidence.operationIds.length <= evidence.cohort.maxOperationCount &&
+        evidence.failureScenarioIds.every((scenario) =>
+          evidence.cohort.plannedScenarioIds.includes(scenario),
+        ),
+      { expected: "staging evidence must stay within its approved cohort bounds" },
+    ),
+  )
+  .check(
+    Schema.makeFilter(
+      (evidence) =>
+        evidence.result !== "pass" || (evidence.mismatchCount === 0 && evidence.orphanCount === 0),
+      { expected: "passing staging evidence must have zero mismatches and orphans" },
+    ),
+  )
 export type FinancialStagingEvidence = Schema.Schema.Type<typeof FinancialStagingEvidence>
 
 const evidenceKeys = [
@@ -635,15 +642,15 @@ const unorderedEvidenceKeys = new Set([
 ])
 
 /** Canonical form for hashing; capture ordering and nested property ordering cannot change identity. */
-export const canonicalizeFinancialStagingEvidence = (
-  evidence: FinancialStagingEvidence,
-) =>
-  JSON.stringify(evidenceKeys.map((key) => [
-    key,
-    unorderedEvidenceKeys.has(key)
-      ? canonicalArray(evidence[key] as readonly unknown[])
-      : canonicalValue(evidence[key]),
-  ]))
+export const canonicalizeFinancialStagingEvidence = (evidence: FinancialStagingEvidence) =>
+  JSON.stringify(
+    evidenceKeys.map((key) => [
+      key,
+      unorderedEvidenceKeys.has(key)
+        ? canonicalArray(evidence[key] as readonly unknown[])
+        : canonicalValue(evidence[key]),
+    ]),
+  )
 
 export const hashFinancialStagingEvidence = (evidence: FinancialStagingEvidence) =>
   Effect.promise(async () => {

@@ -15,7 +15,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "evaluates tenant membership relationships and unknown relationship kinds safely",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
         const userAccounts = yield* makeUserAccountService.pipe(
@@ -64,5 +64,6 @@ it.effect.skipIf(databaseUrl === undefined)(
         })
         assert.strictEqual(unknown.allowed, false)
         assert.strictEqual(unknown.result, "unknown")
-      })),
+      }),
+    ),
 )

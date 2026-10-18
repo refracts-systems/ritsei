@@ -49,11 +49,9 @@ export function App() {
         )
       }}
     >
-      {
-        /* Effect's R channel rides Solid context: this ManagedRuntime provides
+      {/* Effect's R channel rides Solid context: this ManagedRuntime provides
           SearchConfig to every Effect forked below it, and its Layer scope is
-          disposed when this subtree unmounts. */
-      }
+          disposed when this subtree unmounts. */}
       <RuntimeContext value={createRuntime(SearchConfigLive)}>
         <div class="app">
           <header class="app-header">
@@ -61,10 +59,9 @@ export function App() {
               Solid 2.0 <span class="times">×</span> Effect
             </h1>
             <p>
-              Two demos, one tiny integration (<code>
-                src/solid-effect.ts
-              </code>): Effects as interruptible async sources on the read path, Effect sagas as
-              transaction steps on the action path, services provided through Solid context.
+              Two demos, one tiny integration (<code>src/solid-effect.ts</code>): Effects as
+              interruptible async sources on the read path, Effect sagas as transaction steps on the
+              action path, services provided through Solid context.
             </p>
             <nav class="tabs">
               <button

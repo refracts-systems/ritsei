@@ -11,9 +11,7 @@ export const FINANCIAL_MAJOR_SCALE = 2
 export const FINANCIAL_LEDGER_MAX_MINOR = (1n << 128n) - 1n
 
 /** Exact, non-negative major-unit amounts used by ERP/API contracts. */
-export const FinancialMajorAmount = Schema.String.check(
-  Schema.isPattern(/^\d{1,18}(\.\d{1,2})?$/),
-)
+export const FinancialMajorAmount = Schema.String.check(Schema.isPattern(/^\d{1,18}(\.\d{1,2})?$/))
 export type FinancialMajorAmount = Schema.Schema.Type<typeof FinancialMajorAmount>
 
 export type FinancialAmountFailureReason =
@@ -38,10 +36,7 @@ const validExponent = (exponent: number) =>
   Number.isSafeInteger(exponent) && exponent >= 0 && exponent <= 38
 
 /** Convert an exact decimal major amount to an exact U128-compatible minor amount. */
-export const majorToMinor = (
-  value: string,
-  exponent: number,
-): FinancialAmountResult<string> => {
+export const majorToMinor = (value: string, exponent: number): FinancialAmountResult<string> => {
   if (!validExponent(exponent)) return invalid("invalid_exponent")
 
   const match = decimalPattern.exec(value)
@@ -66,10 +61,7 @@ export const requireExactMajorToMinor = (value: string, exponent: number): bigin
 }
 
 /** Convert an exact U128-compatible minor amount to a fixed-scale major string. */
-export const minorToMajor = (
-  value: string,
-  exponent: number,
-): FinancialAmountResult<string> => {
+export const minorToMajor = (value: string, exponent: number): FinancialAmountResult<string> => {
   if (!validExponent(exponent)) return invalid("invalid_exponent")
   if (!minorPattern.test(value)) return invalid("invalid_format")
 

@@ -6,9 +6,9 @@ import postgres, { type Sql } from "postgres"
 
 import { isMain } from "../../tooling/entrypoint.ts"
 
-const Uuid = Schema.String.check(Schema.isPattern(
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-))
+const Uuid = Schema.String.check(
+  Schema.isPattern(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i),
+)
 const NonBlankString = Schema.String.check(Schema.isPattern(/\S/))
 
 const WarehouseScope = Schema.Struct({
@@ -77,8 +77,8 @@ const assertExactCoverage = (
   const duplicates = duplicateKeys(mappings)
   if (missing.length > 0 || unknown.length > 0 || duplicates.length > 0) {
     throw new P0BackfillFailure(
-      `${resource} mapping must cover each row exactly once; missing=${missing.join(",")}; `
-        + `unknown=${unknown.join(",")}; duplicates=${duplicates.join(",")}`,
+      `${resource} mapping must cover each row exactly once; missing=${missing.join(",")}; ` +
+        `unknown=${unknown.join(",")}; duplicates=${duplicates.join(",")}`,
     )
   }
 }
@@ -96,13 +96,14 @@ const normalize = (input: P0Backfill): P0Backfill => ({
   })),
 })
 
-const failureMessage = (cause: unknown) => cause instanceof Error ? cause.message : String(cause)
+const failureMessage = (cause: unknown) => (cause instanceof Error ? cause.message : String(cause))
 
 export const decodeP0BackfillInput = (input: unknown, context = "input") =>
   Schema.decodeUnknownEffect(P0BackfillInput)(input).pipe(
     Effect.map(normalize),
-    Effect.mapError((cause) =>
-      new P0BackfillFailure(`${context}: invalid P0 backfill mapping: ${failureMessage(cause)}`)
+    Effect.mapError(
+      (cause) =>
+        new P0BackfillFailure(`${context}: invalid P0 backfill mapping: ${failureMessage(cause)}`),
     ),
   )
 
@@ -119,7 +120,7 @@ export const decodeP0BackfillJson = (text: string, path: string) => {
 }
 
 export const applyP0Backfill = (client: Sql, input: unknown) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const decoded = yield* decodeP0BackfillInput(input)
     yield* Effect.tryPromise({
       try: () =>
@@ -209,7 +210,8 @@ const readBoundedTextFile = (path: string): Promise<string> =>
         cause instanceof P0BackfillFailure
           ? cause
           : new P0BackfillFailure(`${path}: unable to read mapping file: ${failureMessage(cause)}`),
-      ))
+      ),
+    )
     stream.on("data", (data: Buffer | string) => {
       if (typeof data === "string") {
         stream.destroy()

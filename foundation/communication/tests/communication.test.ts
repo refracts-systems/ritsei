@@ -51,7 +51,7 @@ const intent = {
 }
 
 it.effect("creates a versioned intent without coupling it to a provider", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const created = yield* makeCommunicationIntent(
       Object.fromEntries(Object.entries(intent).filter(([key]) => key !== "communicationId")),
     )
@@ -64,10 +64,11 @@ it.effect("creates a versioned intent without coupling it to a provider", () =>
       communicationIdempotencyKey(decoded),
       `${tenantId}:purchase-order-approved:purchase-order-approved:1`,
     )
-  }))
+  }),
+)
 
 it.effect("keeps logical audience separate from resolved recipient snapshot", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const snapshot = yield* Schema.decodeUnknownEffect(RecipientSnapshot)({
       audience: intent.audience,
       to: [{ address: "finance@example.com", displayName: "Finance" }],
@@ -80,10 +81,11 @@ it.effect("keeps logical audience separate from resolved recipient snapshot", ()
 
     assert.strictEqual(snapshot.audience.type, "supplier-order-contact")
     assert.strictEqual(snapshot.to[0]?.address, "finance@example.com")
-  }))
+  }),
+)
 
 it.effect("rejects unsafe email links and malformed table rows", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const unsafe = yield* Effect.flip(
       Schema.decodeUnknownEffect(EmailMessage)({
         subject: "Purchase order",
@@ -101,10 +103,11 @@ it.effect("rejects unsafe email links and malformed table rows", () =>
 
     assert.strictEqual(unsafe._tag, "SchemaError")
     assert.strictEqual(malformedTable._tag, "SchemaError")
-  }))
+  }),
+)
 
 it.effect("keeps unknown provider outcomes on attempts while communication reconciles", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const communication = yield* Schema.decodeUnknownEffect(Communication)({
       communicationId,
       tenantId,
@@ -135,10 +138,11 @@ it.effect("keeps unknown provider outcomes on attempts while communication recon
     assert.strictEqual(communication.status, "reconciling")
     assert.strictEqual(attempt.status, "unknown")
     assert.strictEqual(attempt.providerEvidenceId, evidenceId)
-  }))
+  }),
+)
 
 it.effect("binds an email artifact to an existing document artifact reference", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const context = yield* Schema.decodeUnknownEffect(CommunicationContext)({
       contextType: "purchase-order-approved-context",
       contextVersion: 1,
@@ -165,16 +169,19 @@ it.effect("binds an email artifact to an existing document artifact reference", 
       text: "Purchase order approved",
       htmlHash: hash,
       textHash: hash,
-      attachments: [{
-        documentArtifactId,
-        filename: "purchase-order.pdf",
-        mediaType: "application/pdf",
-        disposition: "attachment",
-      }],
+      attachments: [
+        {
+          documentArtifactId,
+          filename: "purchase-order.pdf",
+          mediaType: "application/pdf",
+          disposition: "attachment",
+        },
+      ],
       rendererVersion: "email-ast@1",
       createdAt: timestamp,
     })
 
     assert.strictEqual(artifact.attachments[0]?.documentArtifactId, documentArtifactId)
     assert.strictEqual(artifact.template.templateVersion, 3)
-  }))
+  }),
+)

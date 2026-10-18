@@ -47,10 +47,10 @@ const connectAndOpenSales = async (page: Page, url: string) => {
 it.effect(
   "connects Sales customer, quotation, and order workflows through the backend surface",
   () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const { page, url, errors } = yield* builtApp
-      let customers = [] as typeof customer[]
-      let quotations = [] as typeof quotation[]
+      let customers = [] as (typeof customer)[]
+      let quotations = [] as (typeof quotation)[]
       let currentOrder: SalesOrder | undefined
       const requests: Array<{
         path: string
@@ -76,18 +76,22 @@ it.effect(
             return fulfillJson(
               route,
               200,
-              customers.filter((candidate) =>
-                search === undefined || candidate.name.toLowerCase().includes(search)
-                || candidate.email.includes(search)
+              customers.filter(
+                (candidate) =>
+                  search === undefined ||
+                  candidate.name.toLowerCase().includes(search) ||
+                  candidate.email.includes(search),
               ),
             )
           }
           if (path === "/sales/customers" && method === "POST") {
-            customers = [{
-              ...customer,
-              name: body.name.trim(),
-              email: body.email.trim().toLowerCase(),
-            }]
+            customers = [
+              {
+                ...customer,
+                name: body.name.trim(),
+                email: body.email.trim().toLowerCase(),
+              },
+            ]
             return fulfillJson(route, 201, customers[0])
           }
           if (path === `/sales/customers/${customerId}` && method === "GET") {
@@ -143,12 +147,12 @@ it.effect(
 
         await page.getByRole("button", { name: "Create customer", exact: true }).click()
         const customerDialog = page.getByRole("dialog", { name: "Create customer" })
-        await customerDialog.getByRole("textbox", { name: "Customer name", exact: true }).fill(
-          "Northwind Customer",
-        )
-        await customerDialog.getByRole("textbox", { name: "Email", exact: true }).fill(
-          "NORTHWIND@EXAMPLE.TEST",
-        )
+        await customerDialog
+          .getByRole("textbox", { name: "Customer name", exact: true })
+          .fill("Northwind Customer")
+        await customerDialog
+          .getByRole("textbox", { name: "Email", exact: true })
+          .fill("NORTHWIND@EXAMPLE.TEST")
         await customerDialog.getByRole("button", { name: "Create customer", exact: true }).click()
         await customerDialog.waitFor({ state: "hidden" })
         await page.getByRole("link", { name: customer.name, exact: true }).click()
@@ -158,12 +162,12 @@ it.effect(
 
         await page.getByRole("button", { name: "Create quotation", exact: true }).click()
         const quotationDialog = page.getByRole("dialog", { name: "Create quotation" })
-        await quotationDialog.getByRole("combobox", { name: "Customer", exact: true }).selectOption(
-          customerId,
-        )
-        await quotationDialog.getByRole("textbox", { name: "Quoted total", exact: true }).fill(
-          "25.00",
-        )
+        await quotationDialog
+          .getByRole("combobox", { name: "Customer", exact: true })
+          .selectOption(customerId)
+        await quotationDialog
+          .getByRole("textbox", { name: "Quoted total", exact: true })
+          .fill("25.00")
         await quotationDialog.getByRole("button", { name: "Create quotation", exact: true }).click()
         await quotationDialog.waitFor({ state: "hidden" })
         await page.getByRole("heading", { name: "Quotation detail", exact: true }).waitFor()
@@ -172,12 +176,12 @@ it.effect(
 
         await page.getByRole("button", { name: "Create sales order", exact: true }).click()
         const orderDialog = page.getByRole("dialog", { name: "Create sales order" })
-        await orderDialog.getByRole("combobox", { name: "Customer", exact: true }).selectOption(
-          customerId,
-        )
-        await orderDialog.getByRole("textbox", { name: "Quotation ID", exact: true }).fill(
-          quotationId,
-        )
+        await orderDialog
+          .getByRole("combobox", { name: "Customer", exact: true })
+          .selectOption(customerId)
+        await orderDialog
+          .getByRole("textbox", { name: "Quotation ID", exact: true })
+          .fill(quotationId)
         await orderDialog.getByRole("textbox", { name: "Item ID", exact: true }).fill(itemId)
         await orderDialog.getByRole("textbox", { name: "Quantity", exact: true }).fill("2")
         await orderDialog.getByRole("textbox", { name: "Unit price", exact: true }).fill("12.50")
@@ -197,24 +201,27 @@ it.effect(
         await cancelDialog.waitFor({ state: "hidden" })
         await page.getByText("cancelled", { exact: true }).first().waitFor()
 
-        assert.isTrue(requests.some((request) =>
-          request.path === "/sales/customers" && request.method === "POST"
-        ))
-        assert.isTrue(requests.some((request) =>
-          request.path === "/sales/quotations" && request.method === "POST"
-        ))
-        assert.isTrue(requests.some((request) =>
-          request.path === "/sales/orders" && request.method === "POST"
-        ))
+        assert.isTrue(
+          requests.some(
+            (request) => request.path === "/sales/customers" && request.method === "POST",
+          ),
+        )
+        assert.isTrue(
+          requests.some(
+            (request) => request.path === "/sales/quotations" && request.method === "POST",
+          ),
+        )
+        assert.isTrue(
+          requests.some((request) => request.path === "/sales/orders" && request.method === "POST"),
+        )
         assert.deepStrictEqual(
-          requests.find((request) =>
-            request.path === "/sales/orders" && request.method === "POST"
-          )?.body,
+          requests.find((request) => request.path === "/sales/orders" && request.method === "POST")
+            ?.body,
           { customerId, quotationId, lines: [{ itemId, quantity: "2", unitPrice: "12.50" }] },
         )
-        assert.isTrue(requests.some((request) =>
-          request.path === `/sales/orders/${orderId}/confirm`
-        ))
+        assert.isTrue(
+          requests.some((request) => request.path === `/sales/orders/${orderId}/confirm`),
+        )
         assert.isTrue(
           requests.some((request) => request.path === `/sales/orders/${orderId}/cancel`),
         )

@@ -31,7 +31,7 @@ const checkpointInput = {
 } as const
 
 it.effect("proves crash recovery from a serialized checkpoint", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const checkpoint = yield* Schema.decodeUnknownEffect(ProcessCheckpoint)(checkpointInput)
     const runtime = makeProcessRuntime()
     const scheduled = yield* runtime.scheduleTimer(checkpoint, "timer-1")
@@ -39,10 +39,11 @@ it.effect("proves crash recovery from a serialized checkpoint", () =>
 
     assert.deepStrictEqual(recovered, scheduled)
     assert.deepStrictEqual(recovered.scheduledTimerIds, ["timer-1"])
-  }))
+  }),
+)
 
 it.effect("suppresses a duplicate event and duplicate command", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const checkpoint = yield* Schema.decodeUnknownEffect(ProcessCheckpoint)(checkpointInput)
     const runtime = makeProcessRuntime()
     const execution = {
@@ -67,19 +68,20 @@ it.effect("suppresses a duplicate event and duplicate command", () =>
     assert.deepStrictEqual(replayedCommand, firstCommand)
     assert.deepStrictEqual(replayedEvent, firstEvent)
     assert.deepStrictEqual(replayedEvent.completedStepIds, ["step-1"])
-    assert.deepStrictEqual(replayedEvent.consumedEventIds, [
-      "018f3f77-0c5a-7cc0-8b62-6a163d214125",
-    ])
+    assert.deepStrictEqual(replayedEvent.consumedEventIds, ["018f3f77-0c5a-7cc0-8b62-6a163d214125"])
 
-    const conflict = yield* Effect.flip(runtime.recordCommand(firstCommand, {
-      ...execution,
-      idempotencyKey: "different-key",
-    }))
+    const conflict = yield* Effect.flip(
+      runtime.recordCommand(firstCommand, {
+        ...execution,
+        idempotencyKey: "different-key",
+      }),
+    )
     assert.instanceOf(conflict, ProcessStepConflict)
-  }))
+  }),
+)
 
 it.effect("pins the exact catalog version", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const checkpoint = yield* Schema.decodeUnknownEffect(ProcessCheckpoint)(checkpointInput)
     const runtime = makeProcessRuntime()
     const pinned = yield* runtime.pinCatalogVersion(checkpoint, 1)
@@ -89,10 +91,11 @@ it.effect("pins the exact catalog version", () =>
     assert.instanceOf(conflict, ProcessRuntimeVersionConflict)
     assert.strictEqual(conflict.pinnedCatalogVersion, 1)
     assert.strictEqual(conflict.requestedCatalogVersion, 2)
-  }))
+  }),
+)
 
 it.effect("validates the bounded Process IR node kinds", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const definition = yield* Schema.decodeUnknownEffect(ProcessDefinition)({
       id: checkpointInput.processDefinitionId,
       version: 1,
@@ -114,4 +117,5 @@ it.effect("validates the bounded Process IR node kinds", () =>
 
     assert.strictEqual(definition.nodes.length, 8)
     assert.strictEqual(definition.catalogVersion, 1)
-  }))
+  }),
+)

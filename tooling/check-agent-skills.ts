@@ -20,9 +20,9 @@ const requiredHeadings = [
 
 const unquote = (value: string) => {
   const trimmed = value.trim()
-  return trimmed.length >= 2
-      && ((trimmed.startsWith("\"") && trimmed.endsWith("\""))
-        || (trimmed.startsWith("'") && trimmed.endsWith("'")))
+  return trimmed.length >= 2 &&
+    ((trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+      (trimmed.startsWith("'") && trimmed.endsWith("'")))
     ? trimmed.slice(1, -1)
     : trimmed
 }
@@ -43,7 +43,8 @@ export const validateSkillDocument = (
 
   const frontmatter = lines.slice(1, frontmatterEnd)
   const name = frontmatter.find((line) => line.startsWith("name:"))?.slice("name:".length)
-  const description = frontmatter.find((line) => line.startsWith("description:"))
+  const description = frontmatter
+    .find((line) => line.startsWith("description:"))
     ?.slice("description:".length)
   const directoryName = normalizePath(dirname(path)).split("/").at(-1)
 
@@ -109,10 +110,7 @@ const validateLinks = async (path: string, content: string): Promise<readonly st
 }
 
 export const checkAgentSkills = async (): Promise<readonly string[]> => {
-  const externalSkills = new Set([
-    "constraint-validation-strategy",
-    "solidjs-2",
-  ])
+  const externalSkills = new Set(["constraint-validation-strategy", "solidjs-2"])
   const skillFiles = await collectSkillFiles(".agents/skills")
   const failures: string[] = []
   let repositoryNativeCount = 0
@@ -123,7 +121,7 @@ export const checkAgentSkills = async (): Promise<readonly string[]> => {
     const external = externalSkills.has(name)
     if (!external) repositoryNativeCount++
     failures.push(...validateSkillDocument(path, content, external))
-    failures.push(...await validateLinks(path, content))
+    failures.push(...(await validateLinks(path, content)))
   }
 
   if (repositoryNativeCount === 0) failures.push("no repository-native skills found")

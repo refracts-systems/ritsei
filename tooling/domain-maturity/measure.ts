@@ -140,11 +140,7 @@ const targets: readonly DomainTarget[] = [
     },
     publicationTest: {
       path: "modules/procurement/tests/procurement.postgres.test.ts",
-      markers: [
-        "ProcurementPurchaseOrderConfirmedEvent",
-        "event_outbox",
-        "assert.deepStrictEqual",
-      ],
+      markers: ["ProcurementPurchaseOrderConfirmedEvent", "event_outbox", "assert.deepStrictEqual"],
     },
     catalogMarker: "ProcurementTypedActionCatalog",
     catalogEventMarker: "ProcurementTypedEventCatalog",
@@ -158,11 +154,12 @@ const executableTestFiles = [
 ].filter((path, index, files) => files.indexOf(path) === index)
 
 const isCatalogEntry = (value: unknown): value is CatalogEntry =>
-  typeof value === "object" && value !== null
-  && typeof (value as { kind?: unknown }).kind === "string"
-  && typeof (value as { id?: unknown }).id === "string"
-  && typeof (value as { owningDomain?: unknown }).owningDomain === "string"
-  && typeof (value as { stability?: unknown }).stability === "string"
+  typeof value === "object" &&
+  value !== null &&
+  typeof (value as { kind?: unknown }).kind === "string" &&
+  typeof (value as { id?: unknown }).id === "string" &&
+  typeof (value as { owningDomain?: unknown }).owningDomain === "string" &&
+  typeof (value as { stability?: unknown }).stability === "string"
 
 const entries = (value: unknown): readonly CatalogEntry[] =>
   Array.isArray(value) ? value.filter(isCatalogEntry) : []
@@ -184,15 +181,11 @@ const contains = async (path: string, marker: string) => {
   }
 }
 
-const executableContractTestsProcess = spawnSync(
-  "pnpm",
-  ["run", "test", ...executableTestFiles],
-  {
-    encoding: "utf8",
-    stdio: ["ignore", "ignore", "pipe"],
-    shell: process.platform === "win32",
-  },
-)
+const executableContractTestsProcess = spawnSync("pnpm", ["run", "test", ...executableTestFiles], {
+  encoding: "utf8",
+  stdio: ["ignore", "ignore", "pipe"],
+  shell: process.platform === "win32",
+})
 const executableContractTests = executableContractTestsProcess.status === 0
 if (!executableContractTests) {
   console.error(executableContractTestsProcess.stderr ?? "")
@@ -200,69 +193,88 @@ if (!executableContractTests) {
 
 const results = []
 for (const target of targets) {
-  const moduleExports = await import(target.module) as Record<string, unknown>
+  const moduleExports = (await import(target.module)) as Record<string, unknown>
   const actions = entries(moduleExports[target.actionsExport])
   const events = entries(moduleExports[target.eventsExport])
-  const publicActionEntry = actions.find((entry) =>
-    entry.kind === "DomainAction" && entry.owningDomain === target.domain
-    && entry.stability === "PUBLIC"
+  const publicActionEntry = actions.find(
+    (entry) =>
+      entry.kind === "DomainAction" &&
+      entry.owningDomain === target.domain &&
+      entry.stability === "PUBLIC",
   )
-  const publicEventEntry = events.find((entry) =>
-    entry.kind === "DomainEvent" && entry.owningDomain === target.domain
-    && entry.stability === "PUBLIC"
+  const publicEventEntry = events.find(
+    (entry) =>
+      entry.kind === "DomainEvent" &&
+      entry.owningDomain === target.domain &&
+      entry.stability === "PUBLIC",
   )
   const publicAction = publicActionEntry !== undefined
   const publicEvent = publicEventEntry !== undefined
-  const actionContract = publicActionEntry !== undefined
-    && typeof publicActionEntry.version === "number"
-    && typeof publicActionEntry.compatibilityRange?.minimumVersion === "number"
-    && typeof publicActionEntry.compatibilityRange.maximumVersion === "number"
-    && publicActionEntry.compatibilityRange.minimumVersion <= publicActionEntry.version
-    && publicActionEntry.version <= publicActionEntry.compatibilityRange.maximumVersion
-    && publicActionEntry.inputSchema !== undefined
-    && publicActionEntry.outputSchema !== undefined
-    && publicActionEntry.requiredCapability === publicActionEntry.id
-    && publicActionEntry.scope?.includes("tenant") === true
-    && ["required", "inherent", "unsupported"].includes(publicActionEntry.idempotency ?? "")
-    && (publicActionEntry.retryPolicy?.maxAttempts ?? 0) >= 1
-    && publicActionEntry.preconditions?.includes("authorized") === true
-    && (publicActionEntry.effects?.length ?? 0) > 0
-    && (publicActionEntry.errorSchemas?.length ?? 0) > 0
-    && publicActionEntry.transactionSemantics === "local_atomic"
-    && (publicActionEntry.compensation?.kind === "action"
-      || publicActionEntry.compensation?.recovery === "manual")
-  const eventContract = publicEventEntry !== undefined
-    && typeof publicEventEntry.version === "number"
-    && typeof publicEventEntry.compatibilityRange?.minimumVersion === "number"
-    && typeof publicEventEntry.compatibilityRange.maximumVersion === "number"
-    && publicEventEntry.compatibilityRange.minimumVersion <= publicEventEntry.version
-    && publicEventEntry.version <= publicEventEntry.compatibilityRange.maximumVersion
-    && publicEventEntry.payloadSchema !== undefined
-    && publicEventEntry.id.startsWith(`${target.domain}.`)
-    && publicEventEntry.scope?.includes("tenant") === true
-    && publicEventEntry.occurredAtSemantics === "owner_commit_time"
-    && publicEventEntry.sensitivity === "business_internal_minimized"
-    && (publicEventEntry.correlationFields?.length ?? 0) > 0
-    && new Set(publicEventEntry.correlationFields).size
-      === publicEventEntry.correlationFields!.length
-    && (publicEventEntry.filterableFields?.length ?? 0) > 0
-    && publicEventEntry.correlationFields!.every((field) =>
-      publicEventEntry.filterableFields!.includes(field)
-    )
-    && publicEventEntry.deliveryExpectation === "at_least_once"
+  const actionContract =
+    publicActionEntry !== undefined &&
+    typeof publicActionEntry.version === "number" &&
+    typeof publicActionEntry.compatibilityRange?.minimumVersion === "number" &&
+    typeof publicActionEntry.compatibilityRange.maximumVersion === "number" &&
+    publicActionEntry.compatibilityRange.minimumVersion <= publicActionEntry.version &&
+    publicActionEntry.version <= publicActionEntry.compatibilityRange.maximumVersion &&
+    publicActionEntry.inputSchema !== undefined &&
+    publicActionEntry.outputSchema !== undefined &&
+    publicActionEntry.requiredCapability === publicActionEntry.id &&
+    publicActionEntry.scope?.includes("tenant") === true &&
+    ["required", "inherent", "unsupported"].includes(publicActionEntry.idempotency ?? "") &&
+    (publicActionEntry.retryPolicy?.maxAttempts ?? 0) >= 1 &&
+    publicActionEntry.preconditions?.includes("authorized") === true &&
+    (publicActionEntry.effects?.length ?? 0) > 0 &&
+    (publicActionEntry.errorSchemas?.length ?? 0) > 0 &&
+    publicActionEntry.transactionSemantics === "local_atomic" &&
+    (publicActionEntry.compensation?.kind === "action" ||
+      publicActionEntry.compensation?.recovery === "manual")
+  const eventContract =
+    publicEventEntry !== undefined &&
+    typeof publicEventEntry.version === "number" &&
+    typeof publicEventEntry.compatibilityRange?.minimumVersion === "number" &&
+    typeof publicEventEntry.compatibilityRange.maximumVersion === "number" &&
+    publicEventEntry.compatibilityRange.minimumVersion <= publicEventEntry.version &&
+    publicEventEntry.version <= publicEventEntry.compatibilityRange.maximumVersion &&
+    publicEventEntry.payloadSchema !== undefined &&
+    publicEventEntry.id.startsWith(`${target.domain}.`) &&
+    publicEventEntry.scope?.includes("tenant") === true &&
+    publicEventEntry.occurredAtSemantics === "owner_commit_time" &&
+    publicEventEntry.sensitivity === "business_internal_minimized" &&
+    (publicEventEntry.correlationFields?.length ?? 0) > 0 &&
+    new Set(publicEventEntry.correlationFields).size ===
+      publicEventEntry.correlationFields!.length &&
+    (publicEventEntry.filterableFields?.length ?? 0) > 0 &&
+    publicEventEntry.correlationFields!.every((field) =>
+      publicEventEntry.filterableFields!.includes(field),
+    ) &&
+    publicEventEntry.deliveryExpectation === "at_least_once"
   const tests = (await Promise.all(target.contractTests.map(exists))).every(Boolean)
-  const authorizationProof = (await Promise.all(
-    target.authorizationTest.markers.map((marker) =>
-      contains(target.authorizationTest.path, marker)
-    ),
-  )).every(Boolean)
-  const catalogCompatibility = await contains(catalogTest, target.catalogMarker)
-    && await contains(catalogTest, target.catalogEventMarker)
-  const publicationProof = (await Promise.all(
-    target.publicationTest.markers.map((marker) => contains(target.publicationTest.path, marker)),
-  )).every(Boolean)
-  const level3 = publicAction && publicEvent && actionContract && eventContract && tests
-    && executableContractTests && authorizationProof && catalogCompatibility && publicationProof
+  const authorizationProof = (
+    await Promise.all(
+      target.authorizationTest.markers.map((marker) =>
+        contains(target.authorizationTest.path, marker),
+      ),
+    )
+  ).every(Boolean)
+  const catalogCompatibility =
+    (await contains(catalogTest, target.catalogMarker)) &&
+    (await contains(catalogTest, target.catalogEventMarker))
+  const publicationProof = (
+    await Promise.all(
+      target.publicationTest.markers.map((marker) => contains(target.publicationTest.path, marker)),
+    )
+  ).every(Boolean)
+  const level3 =
+    publicAction &&
+    publicEvent &&
+    actionContract &&
+    eventContract &&
+    tests &&
+    executableContractTests &&
+    authorizationProof &&
+    catalogCompatibility &&
+    publicationProof
   results.push({
     target,
     level3,
@@ -277,11 +289,11 @@ for (const target of targets) {
     publicationProof,
   })
   console.log(
-    `${level3 ? "PASS" : "OPEN"} ${target.domain} `
-      + `action=${publicAction} event=${publicEvent} action_contract=${actionContract} `
-      + `event_contract=${eventContract} tests=${tests} executable=${executableContractTests} `
-      + `authorization=${authorizationProof} catalog=${catalogCompatibility} `
-      + `publication=${publicationProof}`,
+    `${level3 ? "PASS" : "OPEN"} ${target.domain} ` +
+      `action=${publicAction} event=${publicEvent} action_contract=${actionContract} ` +
+      `event_contract=${eventContract} tests=${tests} executable=${executableContractTests} ` +
+      `authorization=${authorizationProof} catalog=${catalogCompatibility} ` +
+      `publication=${publicationProof}`,
   )
 }
 

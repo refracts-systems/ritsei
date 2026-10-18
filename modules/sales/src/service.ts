@@ -32,7 +32,7 @@ import { SalesOrderConfirmedEvent, SalesOrderConfirmedEventPayload } from "./eve
 import type { SalesStore } from "./store.ts"
 
 export const makeSalesServiceFromStore = <R>(storeEffect: Effect.Effect<SalesStore, never, R>) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const store = yield* storeEffect
     const authorization = yield* AuthorizationService
     const messaging = yield* MessagingService
@@ -41,12 +41,12 @@ export const makeSalesServiceFromStore = <R>(storeEffect: Effect.Effect<SalesSto
       capability: string,
     ) =>
       authorization.authorize({ principal: input.principal, tenantId: input.tenantId, capability })
-    const listCustomers = Effect.fn("SalesService.listCustomers")(function*(input: unknown) {
+    const listCustomers = Effect.fn("SalesService.listCustomers")(function* (input: unknown) {
       const decoded = yield* Schema.decodeUnknownEffect(ListCustomersInput)(input)
       yield* authorize(decoded, SalesCapabilities.customerRead)
       return yield* store.listCustomers(decoded)
     })
-    const getCustomer = Effect.fn("SalesService.getCustomer")(function*(input: unknown) {
+    const getCustomer = Effect.fn("SalesService.getCustomer")(function* (input: unknown) {
       const decoded = yield* Schema.decodeUnknownEffect(GetCustomerInput)(input)
       yield* authorize(decoded, SalesCapabilities.customerRead)
       const customer = yield* store.getCustomer(decoded)
@@ -57,12 +57,12 @@ export const makeSalesServiceFromStore = <R>(storeEffect: Effect.Effect<SalesSto
       }
       return customer
     })
-    const listQuotations = Effect.fn("SalesService.listQuotations")(function*(input: unknown) {
+    const listQuotations = Effect.fn("SalesService.listQuotations")(function* (input: unknown) {
       const decoded = yield* Schema.decodeUnknownEffect(ListQuotationsInput)(input)
       yield* authorize(decoded, SalesCapabilities.quotationRead)
       return yield* store.listQuotations(decoded)
     })
-    const getQuotation = Effect.fn("SalesService.getQuotation")(function*(input: unknown) {
+    const getQuotation = Effect.fn("SalesService.getQuotation")(function* (input: unknown) {
       const decoded = yield* Schema.decodeUnknownEffect(GetQuotationInput)(input)
       yield* authorize(decoded, SalesCapabilities.quotationRead)
       const quotation = yield* store.getQuotation(decoded)
@@ -73,12 +73,12 @@ export const makeSalesServiceFromStore = <R>(storeEffect: Effect.Effect<SalesSto
       }
       return quotation
     })
-    const listOrders = Effect.fn("SalesService.listOrders")(function*(input: unknown) {
+    const listOrders = Effect.fn("SalesService.listOrders")(function* (input: unknown) {
       const decoded = yield* Schema.decodeUnknownEffect(ListOrdersInput)(input)
       yield* authorize(decoded, SalesCapabilities.orderRead)
       return yield* store.listOrders(decoded)
     })
-    const getOrder = Effect.fn("SalesService.getOrder")(function*(input: unknown) {
+    const getOrder = Effect.fn("SalesService.getOrder")(function* (input: unknown) {
       const decoded = yield* Schema.decodeUnknownEffect(GetOrderInput)(input)
       yield* authorize(decoded, SalesCapabilities.orderRead)
       const order = yield* store.getOrder(decoded)
@@ -89,24 +89,24 @@ export const makeSalesServiceFromStore = <R>(storeEffect: Effect.Effect<SalesSto
       }
       return order
     })
-    const createCustomer = Effect.fn("SalesService.createCustomer")(function*(input: unknown) {
+    const createCustomer = Effect.fn("SalesService.createCustomer")(function* (input: unknown) {
       const decoded = yield* Schema.decodeUnknownEffect(CreateCustomerInput)(input)
       yield* authorize(decoded, SalesCapabilities.customerCreate)
       return yield* store.createCustomer(decoded)
     })
-    const createQuotation = Effect.fn("SalesService.createQuotation")(function*(input: unknown) {
+    const createQuotation = Effect.fn("SalesService.createQuotation")(function* (input: unknown) {
       const decoded = yield* Schema.decodeUnknownEffect(CreateQuotationInput)(input)
       yield* authorize(decoded, SalesCapabilities.quotationCreate)
       return yield* store.createQuotation(decoded)
     })
-    const createOrder = Effect.fn("SalesService.createOrder")(function*(input: unknown) {
+    const createOrder = Effect.fn("SalesService.createOrder")(function* (input: unknown) {
       const decoded = yield* Schema.decodeUnknownEffect(CreateOrderInput)(input)
       yield* authorize(decoded, SalesCapabilities.orderCreate)
       const order = yield* store.createOrder(decoded)
       yield* Schema.decodeUnknownEffect(FinancialMajorAmount)(order.total)
       return order
     })
-    const confirmOrder = Effect.fn("SalesService.confirmOrder")(function*(input: unknown) {
+    const confirmOrder = Effect.fn("SalesService.confirmOrder")(function* (input: unknown) {
       const decoded = yield* Schema.decodeUnknownEffect(ConfirmOrderInput)(input)
       yield* authorize(decoded, SalesCapabilities.orderConfirm)
       const normalized = {
@@ -116,13 +116,12 @@ export const makeSalesServiceFromStore = <R>(storeEffect: Effect.Effect<SalesSto
         causationId: decoded.causationId?.trim() ?? null,
         idempotencyKey: decoded.idempotencyKey.trim(),
       }
-      const mutation = yield* store.confirmOrder(
-        normalized,
-        (order) =>
-          Schema.decodeUnknownEffect(SalesOrderConfirmedEventPayload)({
-            orderId: order.id,
-            total: order.total,
-          }).pipe(Effect.flatMap((payload) =>
+      const mutation = yield* store.confirmOrder(normalized, (order) =>
+        Schema.decodeUnknownEffect(SalesOrderConfirmedEventPayload)({
+          orderId: order.id,
+          total: order.total,
+        }).pipe(
+          Effect.flatMap((payload) =>
             messaging.append({
               eventId: uuidv7(),
               eventType: SalesOrderConfirmedEvent.id,
@@ -137,8 +136,9 @@ export const makeSalesServiceFromStore = <R>(storeEffect: Effect.Effect<SalesSto
               actorPrincipalId: normalized.principal.userAccountId,
               occurredAt: order.confirmedAt!,
               payload,
-            })
-          )),
+            }),
+          ),
+        ),
       )
       if (mutation._tag === "not-found") {
         return yield* Effect.fail(
@@ -165,50 +165,50 @@ export const makeSalesServiceFromStore = <R>(storeEffect: Effect.Effect<SalesSto
       }
       return mutation.order
     })
-    const cancelConfirmedOrder = Effect.fn("SalesService.cancelConfirmedOrder")(
-      function*(input: unknown) {
-        const decoded = yield* Schema.decodeUnknownEffect(CancelConfirmedOrderInput)(input)
-        yield* authorize(decoded, SalesCapabilities.orderCancel)
-        const result = yield* store.cancelConfirmedOrder(decoded)
-        if ("_tag" in result && result._tag === "not-found") {
-          return yield* Effect.fail(
-            new SalesOrderNotFound({ tenantId: decoded.tenantId, orderId: decoded.orderId }),
-          )
-        }
-        if ("_tag" in result && result._tag === "invalid-state") {
-          return yield* Effect.fail(
-            new SalesOrderInvalidState({
-              tenantId: decoded.tenantId,
-              orderId: decoded.orderId,
-              status: result.status,
-            }),
-          )
-        }
-        return result
-      },
-    )
-    const getConfirmedOrderTotal = Effect.fn("SalesService.getConfirmedOrderTotal")(
-      function*(input: unknown) {
-        const decoded = yield* Schema.decodeUnknownEffect(GetConfirmedOrderTotalInput)(input)
-        yield* authorize(decoded, SalesCapabilities.orderRead)
-        const result = yield* store.getConfirmedOrderTotal(decoded)
-        if (result._tag === "not-found") {
-          return yield* Effect.fail(
-            new SalesOrderNotFound({ tenantId: decoded.tenantId, orderId: decoded.orderId }),
-          )
-        }
-        if (result.status !== "confirmed" || result.confirmedAt === null) {
-          return yield* Effect.fail(
-            new SalesOrderInvalidState({
-              tenantId: decoded.tenantId,
-              orderId: decoded.orderId,
-              status: result.status,
-            }),
-          )
-        }
-        return result.total
-      },
-    )
+    const cancelConfirmedOrder = Effect.fn("SalesService.cancelConfirmedOrder")(function* (
+      input: unknown,
+    ) {
+      const decoded = yield* Schema.decodeUnknownEffect(CancelConfirmedOrderInput)(input)
+      yield* authorize(decoded, SalesCapabilities.orderCancel)
+      const result = yield* store.cancelConfirmedOrder(decoded)
+      if ("_tag" in result && result._tag === "not-found") {
+        return yield* Effect.fail(
+          new SalesOrderNotFound({ tenantId: decoded.tenantId, orderId: decoded.orderId }),
+        )
+      }
+      if ("_tag" in result && result._tag === "invalid-state") {
+        return yield* Effect.fail(
+          new SalesOrderInvalidState({
+            tenantId: decoded.tenantId,
+            orderId: decoded.orderId,
+            status: result.status,
+          }),
+        )
+      }
+      return result
+    })
+    const getConfirmedOrderTotal = Effect.fn("SalesService.getConfirmedOrderTotal")(function* (
+      input: unknown,
+    ) {
+      const decoded = yield* Schema.decodeUnknownEffect(GetConfirmedOrderTotalInput)(input)
+      yield* authorize(decoded, SalesCapabilities.orderRead)
+      const result = yield* store.getConfirmedOrderTotal(decoded)
+      if (result._tag === "not-found") {
+        return yield* Effect.fail(
+          new SalesOrderNotFound({ tenantId: decoded.tenantId, orderId: decoded.orderId }),
+        )
+      }
+      if (result.status !== "confirmed" || result.confirmedAt === null) {
+        return yield* Effect.fail(
+          new SalesOrderInvalidState({
+            tenantId: decoded.tenantId,
+            orderId: decoded.orderId,
+            status: result.status,
+          }),
+        )
+      }
+      return result.total
+    })
     return {
       listCustomers,
       getCustomer,

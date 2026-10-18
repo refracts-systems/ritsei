@@ -37,17 +37,17 @@ const makeAuthorization = (allow: boolean): AuthorizationServiceShape => ({
     const request = input as { readonly tenantId: string; readonly capability: string }
     return allow
       ? Effect.succeed({
-        allowed: true as const,
-        tenantId: request.tenantId,
-        capability: request.capability as CapabilityType,
-        grant: "membership" as const,
-      })
-      : Effect.fail(
-        new AuthorizationDenied({
+          allowed: true as const,
           tenantId: request.tenantId,
           capability: request.capability as CapabilityType,
-        }),
-      )
+          grant: "membership" as const,
+        })
+      : Effect.fail(
+          new AuthorizationDenied({
+            tenantId: request.tenantId,
+            capability: request.capability as CapabilityType,
+          }),
+        )
   },
   addMember: unused,
   getMember: unused,
@@ -69,7 +69,7 @@ const provideStudio = (allow: boolean) =>
 
 describe("Process Studio service", () => {
   it.effect("discovers public catalog entries and validates exact references", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const service = yield* provideStudio(true)
       const catalog = yield* service.listCatalog({
         principal,
@@ -92,17 +92,21 @@ describe("Process Studio service", () => {
       assert.deepStrictEqual(validation.references, [
         { kind: "DomainAction", id: "sales.order.confirm", version: 1 },
       ])
-    }))
+    }),
+  )
 
   it.effect("denies Process Studio reads before touching persistence", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const service = yield* provideStudio(false)
-      const error = yield* Effect.flip(service.listCatalog({
-        principal,
-        tenantId,
-        limit: 1,
-      }))
+      const error = yield* Effect.flip(
+        service.listCatalog({
+          principal,
+          tenantId,
+          limit: 1,
+        }),
+      )
       assert.instanceOf(error, AuthorizationDenied)
       assert.strictEqual(error.capability, ProcessCapabilities.catalogRead)
-    }))
+    }),
+  )
 })

@@ -132,10 +132,7 @@ function StockItemFields(props: {
   )
 }
 
-function ItemQuantityFields(props: {
-  options: InventoryLookupOptions
-  disabled: boolean
-}) {
+function ItemQuantityFields(props: { options: InventoryLookupOptions; disabled: boolean }) {
   return (
     <>
       <FormField label="Item" required>
@@ -192,8 +189,11 @@ function CreateWarehouseDialog(props: { reload: () => Promise<unknown> }) {
             const legalEntityId = requiredText(value.legalEntityId)
             const primaryBranchId = requiredText(value.primaryBranchId)
             const name = requiredText(value.name)
-            const valid = legalEntityId !== null && uuidPattern.test(legalEntityId)
-              && (primaryBranchId === null || uuidPattern.test(primaryBranchId)) && name !== null
+            const valid =
+              legalEntityId !== null &&
+              uuidPattern.test(legalEntityId) &&
+              (primaryBranchId === null || uuidPattern.test(primaryBranchId)) &&
+              name !== null
             if (!valid) {
               setInvalid(true)
               return
@@ -318,8 +318,7 @@ function CreateItemDialog(props: { reload: () => Promise<unknown> }) {
           success={mutation.isSuccess}
           successMessage="Item created."
           reload={props.reload}
-          reset={() =>
-            mutation.reset()}
+          reset={() => mutation.reset()}
         />
         <Button
           variant="primary"
@@ -375,9 +374,13 @@ function ReceiveStockDialog(props: {
             const warehouseId = requiredText(value.warehouseId)
             const itemId = requiredText(value.itemId)
             const quantity = requiredText(value.quantity)
-            const valid = warehouseId !== null && uuidPattern.test(warehouseId)
-              && itemId !== null && uuidPattern.test(itemId) && quantity !== null
-              && quantityPattern.test(quantity)
+            const valid =
+              warehouseId !== null &&
+              uuidPattern.test(warehouseId) &&
+              itemId !== null &&
+              uuidPattern.test(itemId) &&
+              quantity !== null &&
+              quantityPattern.test(quantity)
             if (!valid) {
               setInvalid(true)
               return
@@ -443,11 +446,8 @@ function AdjustStockDialog(props: {
     // fallow-ignore-next-line code-duplication
     <Dialog
       open={open()}
-      onOpenChange={createDialogOpenChange(
-        mutation,
-        setOpen,
-        setInvalid,
-        () => setKey(commandKey("adjust")),
+      onOpenChange={createDialogOpenChange(mutation, setOpen, setInvalid, () =>
+        setKey(commandKey("adjust")),
       )}
       trigger={<span>Adjust stock</span>}
       triggerVariant="secondary"
@@ -469,11 +469,19 @@ function AdjustStockDialog(props: {
             const idempotencyKey = requiredText(value.idempotencyKey)
             const commandId = requiredText(value.commandId)
             const correlationId = requiredText(value.correlationId)
-            const valid = warehouseId !== null && uuidPattern.test(warehouseId)
-              && itemId !== null && uuidPattern.test(itemId) && adjustment !== null
-              && signedQuantityPattern.test(adjustment) && unitOfMeasure !== null
-              && unitPattern.test(unitOfMeasure) && reason !== null && idempotencyKey !== null
-              && commandId !== null && correlationId !== null
+            const valid =
+              warehouseId !== null &&
+              uuidPattern.test(warehouseId) &&
+              itemId !== null &&
+              uuidPattern.test(itemId) &&
+              adjustment !== null &&
+              signedQuantityPattern.test(adjustment) &&
+              unitOfMeasure !== null &&
+              unitPattern.test(unitOfMeasure) &&
+              reason !== null &&
+              idempotencyKey !== null &&
+              commandId !== null &&
+              correlationId !== null
             if (!valid) {
               setInvalid(true)
               return
@@ -638,11 +646,8 @@ function ReserveStockDialog(props: {
     // fallow-ignore-next-line code-duplication
     <Dialog
       open={open()}
-      onOpenChange={createDialogOpenChange(
-        mutation,
-        setOpen,
-        setInvalid,
-        () => setKey(commandKey("reserve")),
+      onOpenChange={createDialogOpenChange(mutation, setOpen, setInvalid, () =>
+        setKey(commandKey("reserve")),
       )}
       trigger={<span>Reserve stock</span>}
       triggerVariant="secondary"
@@ -660,9 +665,14 @@ function ReserveStockDialog(props: {
             const itemId = requiredText(value.itemId)
             const quantity = requiredText(value.quantity)
             const idempotencyKey = requiredText(value.idempotencyKey)
-            const valid = warehouseId !== null && uuidPattern.test(warehouseId)
-              && itemId !== null && uuidPattern.test(itemId) && quantity !== null
-              && quantityPattern.test(quantity) && idempotencyKey !== null
+            const valid =
+              warehouseId !== null &&
+              uuidPattern.test(warehouseId) &&
+              itemId !== null &&
+              uuidPattern.test(itemId) &&
+              quantity !== null &&
+              quantityPattern.test(quantity) &&
+              idempotencyKey !== null
             if (!valid) {
               setInvalid(true)
               return
@@ -753,10 +763,16 @@ function CreateTransferDialog(props: {
             const destinationWarehouseId = requiredText(value.destinationWarehouseId)
             const itemId = requiredText(value.itemId)
             const quantity = requiredText(value.quantity)
-            const valid = sourceWarehouseId !== null && uuidPattern.test(sourceWarehouseId)
-              && destinationWarehouseId !== null && uuidPattern.test(destinationWarehouseId)
-              && sourceWarehouseId !== destinationWarehouseId && itemId !== null
-              && uuidPattern.test(itemId) && quantity !== null && quantityPattern.test(quantity)
+            const valid =
+              sourceWarehouseId !== null &&
+              uuidPattern.test(sourceWarehouseId) &&
+              destinationWarehouseId !== null &&
+              uuidPattern.test(destinationWarehouseId) &&
+              sourceWarehouseId !== destinationWarehouseId &&
+              itemId !== null &&
+              uuidPattern.test(itemId) &&
+              quantity !== null &&
+              quantityPattern.test(quantity)
             if (!valid) {
               setInvalid(true)
               return
@@ -829,9 +845,10 @@ function ReservationCommand(props: {
 }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
-  const mutation = props.kind === "release"
-    ? createReleaseReservationMutation(scope, () => setOpen(false))
-    : createFulfillReservationMutation(scope, () => setOpen(false))
+  const mutation =
+    props.kind === "release"
+      ? createReleaseReservationMutation(scope, () => setOpen(false))
+      : createFulfillReservationMutation(scope, () => setOpen(false))
   const label = props.kind === "release" ? "Release reservation" : "Fulfill reservation"
   return (
     <Dialog
@@ -873,9 +890,10 @@ function TransferCommand(props: {
 }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
-  const mutation = props.kind === "confirm"
-    ? createConfirmTransferMutation(scope, () => setOpen(false))
-    : createCompleteTransferMutation(scope, () => setOpen(false))
+  const mutation =
+    props.kind === "confirm"
+      ? createConfirmTransferMutation(scope, () => setOpen(false))
+      : createCompleteTransferMutation(scope, () => setOpen(false))
   const label = props.kind === "confirm" ? "Confirm transfer" : "Complete transfer"
   return (
     <Dialog
@@ -1012,9 +1030,10 @@ function BalanceTable(props: { balances: readonly StockBalance[] }) {
   )
 }
 
-function ReservationTable(
-  props: { reservations: readonly StockReservation[]; reload: () => Promise<unknown> },
-) {
+function ReservationTable(props: {
+  reservations: readonly StockReservation[]
+  reload: () => Promise<unknown>
+}) {
   return (
     <DataTable
       surface={false}
@@ -1073,20 +1092,19 @@ function ReservationTable(
   )
 }
 
-function TransferTable(
-  props: {
-    transfers: readonly StockTransfer[]
-    selectedTransferId?: string
-    reload: () => Promise<unknown>
-  },
-) {
+function TransferTable(props: {
+  transfers: readonly StockTransfer[]
+  selectedTransferId?: string
+  reload: () => Promise<unknown>
+}) {
   return (
     <DataTable
       surface={false}
       caption="Transfers · lifecycle-controlled warehouse movements"
       rows={props.transfers}
       getRowClass={(transfer) =>
-        transfer.id === props.selectedTransferId ? layout.tableRowSelected : undefined}
+        transfer.id === props.selectedTransferId ? layout.tableRowSelected : undefined
+      }
       columns={[
         {
           id: "id",
@@ -1147,9 +1165,7 @@ function MovementTable(props: { movements: readonly StockMovement[] }) {
           id: "kind",
           header: "Kind",
           cell: (movement) => (
-            <Badge tone={movement.kind === "issue" ? "warning" : "info"}>
-              {movement.kind}
-            </Badge>
+            <Badge tone={movement.kind === "issue" ? "warning" : "info"}>{movement.kind}</Badge>
           ),
         },
         {
@@ -1166,7 +1182,9 @@ function MovementTable(props: { movements: readonly StockMovement[] }) {
           id: "quantity",
           header: "Quantity",
           cell: (movement) => (
-            <span class={layout.code}>{movement.quantity} {movement.unitOfMeasure ?? ""}</span>
+            <span class={layout.code}>
+              {movement.quantity} {movement.unitOfMeasure ?? ""}
+            </span>
           ),
         },
         { id: "reason", header: "Reason", cell: (movement) => movement.reason ?? "—" },
@@ -1205,17 +1223,24 @@ function InventoryFilters(props: {
           if (itemId !== null) query.set("itemId", itemId)
           if (search !== null) query.set("search", search)
           if (
-            reservationStatus === "active" || reservationStatus === "released"
-            || reservationStatus === "fulfilled"
-          ) query.set("reservationStatus", reservationStatus)
+            reservationStatus === "active" ||
+            reservationStatus === "released" ||
+            reservationStatus === "fulfilled"
+          )
+            query.set("reservationStatus", reservationStatus)
           if (
-            transferStatus === "draft" || transferStatus === "confirmed"
-            || transferStatus === "completed"
-          ) query.set("transferStatus", transferStatus)
+            transferStatus === "draft" ||
+            transferStatus === "confirmed" ||
+            transferStatus === "completed"
+          )
+            query.set("transferStatus", transferStatus)
           if (
-            movementKind === "receipt" || movementKind === "issue"
-            || movementKind === "reservation" || movementKind === "release"
-          ) query.set("movementKind", movementKind)
+            movementKind === "receipt" ||
+            movementKind === "issue" ||
+            movementKind === "reservation" ||
+            movementKind === "release"
+          )
+            query.set("movementKind", movementKind)
           navigate(query.size === 0 ? "/inventory" : `/inventory?${query}`)
         }
       }
@@ -1263,10 +1288,14 @@ function InventoryFilters(props: {
           <Select
             {...fieldProps}
             name="reservationStatus"
-            options={[{ value: "active", label: "Active" }, {
-              value: "released",
-              label: "Released",
-            }, { value: "fulfilled", label: "Fulfilled" }]}
+            options={[
+              { value: "active", label: "Active" },
+              {
+                value: "released",
+                label: "Released",
+              },
+              { value: "fulfilled", label: "Fulfilled" },
+            ]}
             placeholder="All reservations"
             value={props.reservationStatus ?? ""}
           />
@@ -1277,10 +1306,14 @@ function InventoryFilters(props: {
           <Select
             {...fieldProps}
             name="transferStatus"
-            options={[{ value: "draft", label: "Draft" }, {
-              value: "confirmed",
-              label: "Confirmed",
-            }, { value: "completed", label: "Completed" }]}
+            options={[
+              { value: "draft", label: "Draft" },
+              {
+                value: "confirmed",
+                label: "Confirmed",
+              },
+              { value: "completed", label: "Completed" },
+            ]}
             placeholder="All transfers"
             value={props.transferStatus ?? ""}
           />
@@ -1291,16 +1324,23 @@ function InventoryFilters(props: {
           <Select
             {...fieldProps}
             name="movementKind"
-            options={[{ value: "receipt", label: "Receipt" }, { value: "issue", label: "Issue" }, {
-              value: "reservation",
-              label: "Reservation",
-            }, { value: "release", label: "Release" }]}
+            options={[
+              { value: "receipt", label: "Receipt" },
+              { value: "issue", label: "Issue" },
+              {
+                value: "reservation",
+                label: "Reservation",
+              },
+              { value: "release", label: "Release" },
+            ]}
             placeholder="All movements"
             value={props.movementKind ?? ""}
           />
         )}
       </FormField>
-      <Button variant="primary" type="submit">Apply filters</Button>
+      <Button variant="primary" type="submit">
+        Apply filters
+      </Button>
       <a href="/inventory">Clear filters</a>
     </Form>
   )
@@ -1311,7 +1351,9 @@ function TransferDetail(props: { transfer: StockTransfer; reload: () => Promise<
     <section class={layout.stack} aria-labelledby="inventory-transfer-detail-heading">
       <div class={layout.row}>
         <h2 id="inventory-transfer-detail-heading">Transfer detail</h2>
-        <Button type="button" onClick={() => void props.reload()}>Reload</Button>
+        <Button type="button" onClick={() => void props.reload()}>
+          Reload
+        </Button>
       </div>
       <dl class={layout.detailList}>
         <div class={layout.detailItem}>
@@ -1436,7 +1478,7 @@ export function Inventory(props: {
   const transferData = createMemo(() => transfers.data ?? [])
   const movementData = createMemo(() => movements.data ?? [])
   const selectedTransfer = createMemo(() =>
-    transferData().find((transfer) => transfer.id === props.selectedTransferId)
+    transferData().find((transfer) => transfer.id === props.selectedTransferId),
   )
   return (
     <QueryBoundary label="Inventory" retry={reload}>
@@ -1455,12 +1497,10 @@ export function Inventory(props: {
             <ReceiveStockDialog warehouses={warehouseData()} items={itemData()} reload={reload} />
             <AdjustStockDialog warehouses={warehouseData()} items={itemData()} reload={reload} />
             <ReserveStockDialog warehouses={warehouseData()} items={itemData()} reload={reload} />
-            <CreateTransferDialog
-              warehouses={warehouseData()}
-              items={itemData()}
-              reload={reload}
-            />
-            <Button type="button" onClick={() => void reload()}>Reload</Button>
+            <CreateTransferDialog warehouses={warehouseData()} items={itemData()} reload={reload} />
+            <Button type="button" onClick={() => void reload()}>
+              Reload
+            </Button>
           </div>
         }
         toolbar={
@@ -1475,9 +1515,11 @@ export function Inventory(props: {
             movementKind={props.movementKind}
           />
         }
-        aside={selectedTransfer()
-          ? <TransferDetail transfer={selectedTransfer()!} reload={reload} />
-          : undefined}
+        aside={
+          selectedTransfer() ? (
+            <TransferDetail transfer={selectedTransfer()!} reload={reload} />
+          ) : undefined
+        }
       >
         <section class={[surface(), layout.stack]} aria-labelledby="inventory-lookups-heading">
           <div class={layout.row}>
@@ -1516,10 +1558,7 @@ export function Inventory(props: {
             <BalanceTable balances={balanceData()} />
           </Show>
         </section>
-        <section
-          class={[surface(), layout.stack]}
-          aria-labelledby="inventory-reservations-heading"
-        >
+        <section class={[surface(), layout.stack]} aria-labelledby="inventory-reservations-heading">
           <h2 id="inventory-reservations-heading">Reservations</h2>
           <Show
             when={reservationData().length > 0}

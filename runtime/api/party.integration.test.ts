@@ -18,11 +18,9 @@ const otherTenantId = "018f0000-0000-7000-8000-000000000002"
 const userAccountId = "018f0000-0000-7000-8000-000000000003"
 const principal = { userAccountId: "party-api-admin", sessionId: "party-api-session" }
 
-const TestHttpServices = Layer.mergeAll(
-  Path.layer,
-  Etag.layerWeak,
-  HttpPlatform.layer,
-).pipe(Layer.provideMerge(FileSystem.layerNoop({})))
+const TestHttpServices = Layer.mergeAll(Path.layer, Etag.layerWeak, HttpPlatform.layer).pipe(
+  Layer.provideMerge(FileSystem.layerNoop({})),
+)
 
 const capabilities = [
   PartyCapabilities.partyRead,
@@ -40,26 +38,22 @@ const capabilities = [
 
 it.layer(TestHttpServices)("Party API", (it) => {
   it.effect("serves the complete active tenant administration surface", () =>
-    Effect.gen(function*() {
-      const authorization = makeAuthorizationTestLayer(capabilities.map((capability) => ({
-        userAccountId: principal.userAccountId,
-        tenantId,
-        capability,
-      })))
-      const party = makePartyTestLayer(new Set([userAccountId])).pipe(
-        Layer.provide(authorization),
+    Effect.gen(function* () {
+      const authorization = makeAuthorizationTestLayer(
+        capabilities.map((capability) => ({
+          userAccountId: principal.userAccountId,
+          tenantId,
+          capability,
+        })),
       )
+      const party = makePartyTestLayer(new Set([userAccountId])).pipe(Layer.provide(authorization))
       const bearer = Layer.succeed(BearerAuth, {
         bearer: (effect) => Effect.provideService(effect, CurrentPrincipal, principal),
       })
-      const bearerClient = HttpApiMiddleware.layerClient(
-        BearerAuth,
-        ({ request, next }) => next(HttpClientRequest.bearerToken(request, "test-token")),
+      const bearerClient = HttpApiMiddleware.layerClient(BearerAuth, ({ request, next }) =>
+        next(HttpClientRequest.bearerToken(request, "test-token")),
       )
-      const handlers = PartyHandlers.pipe(
-        Layer.provide(bearer),
-        Layer.provide(party),
-      )
+      const handlers = PartyHandlers.pipe(Layer.provide(bearer), Layer.provide(party))
       const client = yield* HttpApiTest.groups(RitseiApi, ["Parties"]).pipe(
         Effect.provide(Layer.mergeAll(handlers, bearerClient, bearer)),
       )
@@ -128,7 +122,10 @@ it.layer(TestHttpServices)("Party API", (it) => {
         headers: { "x-tenant-id": tenantId },
         query: { search: "wind", kind: "organization", limit: 10 },
       })
-      assert.deepStrictEqual(directory.map(({ party }) => party.id), [organization.id])
+      assert.deepStrictEqual(
+        directory.map(({ party }) => party.id),
+        [organization.id],
+      )
       assert.strictEqual(directory[0]?.legalEntityId, legalEntity.id)
 
       const detail = yield* client.Parties.get({
@@ -152,12 +149,18 @@ it.layer(TestHttpServices)("Party API", (it) => {
         headers: { "x-tenant-id": tenantId },
         query: { limit: 10 },
       })
-      assert.deepStrictEqual(related.map(({ targetPartyId }) => targetPartyId), [organization.id])
+      assert.deepStrictEqual(
+        related.map(({ targetPartyId }) => targetPartyId),
+        [organization.id],
+      )
 
-      const denied = yield* Effect.flip(client.Parties.list({
-        headers: { "x-tenant-id": otherTenantId },
-        query: {},
-      }))
+      const denied = yield* Effect.flip(
+        client.Parties.list({
+          headers: { "x-tenant-id": otherTenantId },
+          query: {},
+        }),
+      )
       assert.strictEqual(denied._tag, "ApiForbidden")
-    }))
+    }),
+  )
 })

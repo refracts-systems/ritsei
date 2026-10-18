@@ -106,10 +106,7 @@ const isValidActionInvocation = (input: InvokeExternalActionInput): boolean =>
   ].every(Boolean)
 
 const isValidEventRegistration = (input: IngestExternalEventInput): boolean =>
-  [
-    validateExternalEventDefinition(input.event),
-    validateTenant(input.tenantId),
-  ].every(Boolean)
+  [validateExternalEventDefinition(input.event), validateTenant(input.tenantId)].every(Boolean)
 
 export const makeExternalConnectorRuntime = (options: {
   readonly store?: ExternalConnectorStore
@@ -140,9 +137,9 @@ export const makeExternalConnectorRuntime = (options: {
       Effect.flatMap((result) => {
         if (Result.isSuccess(result)) return Effect.succeed(result.success)
         if (
-          result.failure instanceof ExternalProviderFailure
-          && result.failure.retryable
-          && attempt < input.action.retryPolicy.maxAttempts
+          result.failure instanceof ExternalProviderFailure &&
+          result.failure.retryable &&
+          attempt < input.action.retryPolicy.maxAttempts
         ) {
           return invokeWithBoundedRetry(input, attempt + 1)
         }
@@ -151,7 +148,7 @@ export const makeExternalConnectorRuntime = (options: {
     )
 
   const invokeAction: ExternalConnectorRuntime["invokeAction"] = (input) =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const identifier = catalogIdentifier(input.action, "external-action")
       if (!isValidActionInvocation(input)) {
         return yield* Effect.fail(
@@ -174,20 +171,20 @@ export const makeExternalConnectorRuntime = (options: {
         tenantId: input.tenantId,
         requiredScope: input.action.requiredScope,
       })
-      const decodedInput = yield* decodeExternalSchema(input.action.inputSchema, input.input)
-        .pipe(
-          Effect.mapError(() =>
+      const decodedInput = yield* decodeExternalSchema(input.action.inputSchema, input.input).pipe(
+        Effect.mapError(
+          () =>
             new ExternalPayloadInvalid({
               boundary: "external.action.input",
               identifier: input.action.id,
-            })
-          ),
-        )
+            }),
+        ),
+      )
       const existing = yield* store.getInvocation(input.tenantId, input.idempotencyKey)
       if (existing !== undefined) {
         if (
-          existing.actionId !== input.action.id
-          || existing.actionVersion !== input.action.version
+          existing.actionId !== input.action.id ||
+          existing.actionVersion !== input.action.version
         ) {
           return yield* Effect.fail(
             new ExternalIdempotencyConflict({
@@ -212,24 +209,24 @@ export const makeExternalConnectorRuntime = (options: {
         Effect.tapError((error) =>
           error instanceof ExternalUnknownOutcome
             ? store.putInvocation({
-              tenantId: input.tenantId,
-              actionId: input.action.id,
-              actionVersion: input.action.version,
-              idempotencyKey: input.idempotencyKey,
-              status: "unknown",
-            })
-            : Effect.succeed(undefined)
+                tenantId: input.tenantId,
+                actionId: input.action.id,
+                actionVersion: input.action.version,
+                idempotencyKey: input.idempotencyKey,
+                status: "unknown",
+              })
+            : Effect.succeed(undefined),
         ),
       )
-      const decodedOutput = yield* decodeExternalSchema(input.action.outputSchema, output)
-        .pipe(
-          Effect.mapError(() =>
+      const decodedOutput = yield* decodeExternalSchema(input.action.outputSchema, output).pipe(
+        Effect.mapError(
+          () =>
             new ExternalPayloadInvalid({
               boundary: "external.action.output",
               identifier: input.action.id,
-            })
-          ),
-        )
+            }),
+        ),
+      )
       yield* store.putInvocation({
         tenantId: input.tenantId,
         actionId: input.action.id,
@@ -241,14 +238,11 @@ export const makeExternalConnectorRuntime = (options: {
       return decodedOutput
     })
 
-  const deduplicateEvent = (
-    tenantId: string,
-    source: string,
-    providerEventId: string,
-  ) => store.getEvent(tenantId, source, providerEventId)
+  const deduplicateEvent = (tenantId: string, source: string, providerEventId: string) =>
+    store.getEvent(tenantId, source, providerEventId)
 
   const ingestEvent: ExternalConnectorRuntime["ingestEvent"] = (input) =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const identifier = catalogIdentifier(input.event, "external-event")
       if (!isValidEventRegistration(input) || input.event.stability !== "PUBLIC") {
         return yield* Effect.fail(
@@ -259,11 +253,12 @@ export const makeExternalConnectorRuntime = (options: {
         )
       }
       const envelope = yield* Schema.decodeUnknownEffect(WebhookIngestion)(input.envelope).pipe(
-        Effect.mapError(() =>
-          new ExternalPayloadInvalid({
-            boundary: "external.event.envelope",
-            identifier: input.event.id,
-          })
+        Effect.mapError(
+          () =>
+            new ExternalPayloadInvalid({
+              boundary: "external.event.envelope",
+              identifier: input.event.id,
+            }),
         ),
       )
       if (envelope.type !== input.event.id) {
@@ -282,15 +277,15 @@ export const makeExternalConnectorRuntime = (options: {
           }),
         )
       }
-      const payload = yield* decodeExternalSchema(input.event.payloadSchema, envelope.data)
-        .pipe(
-          Effect.mapError(() =>
+      const payload = yield* decodeExternalSchema(input.event.payloadSchema, envelope.data).pipe(
+        Effect.mapError(
+          () =>
             new ExternalPayloadInvalid({
               boundary: "external.event.payload",
               identifier: input.event.id,
-            })
-          ),
-        )
+            }),
+        ),
+      )
       const existing = yield* deduplicateEvent(input.tenantId, envelope.source, envelope.id)
       if (existing !== undefined) {
         return {

@@ -9,14 +9,11 @@ import { InstantString } from "../time/mod.ts"
 const Uuid = Schema.String.check(Schema.isUUID())
 const NonEmptyString = Schema.String.check(Schema.isPattern(/\S/))
 const Slug = Schema.String.check(
-  Schema.makeFilter(
-    (value) => /^[a-z][a-z0-9._-]*$/.test(value),
-    { expected: "a lowercase document slug" },
-  ),
+  Schema.makeFilter((value) => /^[a-z][a-z0-9._-]*$/.test(value), {
+    expected: "a lowercase document slug",
+  }),
 )
-const PositiveInteger = Schema.Int.check(
-  Schema.isBetween({ minimum: 1, maximum: 2_147_483_647 }),
-)
+const PositiveInteger = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 2_147_483_647 }))
 const NonNegativeInteger = Schema.Int.check(
   Schema.isBetween({ minimum: 0, maximum: 2_147_483_647 }),
 )
@@ -93,10 +90,11 @@ const DocumentTableNode = Schema.Struct({
   _tag: Schema.Literal("table"),
   headers: Schema.Array(NonEmptyString).check(Schema.isMinLength(1)),
   rows: Schema.Array(Schema.Array(NonEmptyString)),
-}).check(Schema.makeFilter(
-  (node) => node.rows.every((row) => row.length === node.headers.length),
-  { expected: "document table rows must match the header width" },
-))
+}).check(
+  Schema.makeFilter((node) => node.rows.every((row) => row.length === node.headers.length), {
+    expected: "document table rows must match the header width",
+  }),
+)
 const DocumentDividerNode = Schema.Struct({ _tag: Schema.Literal("divider") })
 const DocumentSpacerNode = Schema.Struct({
   _tag: Schema.Literal("spacer"),
@@ -200,11 +198,7 @@ export const DocumentRenderJobPayload = Schema.Struct({
 })
 export type DocumentRenderJobPayload = Schema.Schema.Type<typeof DocumentRenderJobPayload>
 
-export const DocumentArtifactStatus = Schema.Literals([
-  "ready",
-  "failed",
-  "manual_recovery",
-])
+export const DocumentArtifactStatus = Schema.Literals(["ready", "failed", "manual_recovery"])
 export type DocumentArtifactStatus = Schema.Schema.Type<typeof DocumentArtifactStatus>
 
 export const DocumentArtifact = Schema.Struct({
@@ -295,28 +289,24 @@ export class DocumentRendererFailure extends Schema.TaggedError<DocumentRenderer
   },
 ) {}
 
-export class UnsupportedDocumentCapability
-  extends Schema.TaggedError<UnsupportedDocumentCapability>()(
-    "UnsupportedDocumentCapability",
-    {
-      rendererFamily: DocumentRendererFamily,
-      capability: DocumentCapability,
-    },
-  )
-{}
+export class UnsupportedDocumentCapability extends Schema.TaggedError<UnsupportedDocumentCapability>()(
+  "UnsupportedDocumentCapability",
+  {
+    rendererFamily: DocumentRendererFamily,
+    capability: DocumentCapability,
+  },
+) {}
 
-export class DocumentRenderPolicyViolation
-  extends Schema.TaggedError<DocumentRenderPolicyViolation>()(
-    "DocumentRenderPolicyViolation",
-    {
-      reason: Schema.Literals([
-        "renderer_family_mismatch",
-        "javascript_disabled",
-        "network_disabled",
-      ]),
-    },
-  )
-{}
+export class DocumentRenderPolicyViolation extends Schema.TaggedError<DocumentRenderPolicyViolation>()(
+  "DocumentRenderPolicyViolation",
+  {
+    reason: Schema.Literals([
+      "renderer_family_mismatch",
+      "javascript_disabled",
+      "network_disabled",
+    ]),
+  },
+) {}
 
 export class DocumentRenderLimitExceeded extends Schema.TaggedError<DocumentRenderLimitExceeded>()(
   "DocumentRenderLimitExceeded",
@@ -345,15 +335,13 @@ export class DocumentArtifactStaleWriter extends Schema.TaggedError<DocumentArti
   },
 ) {}
 
-export class DocumentArtifactInvalidContent
-  extends Schema.TaggedError<DocumentArtifactInvalidContent>()(
-    "DocumentArtifactInvalidContent",
-    {
-      artifactId: NonEmptyString,
-      reason: NonEmptyString,
-    },
-  )
-{}
+export class DocumentArtifactInvalidContent extends Schema.TaggedError<DocumentArtifactInvalidContent>()(
+  "DocumentArtifactInvalidContent",
+  {
+    artifactId: NonEmptyString,
+    reason: NonEmptyString,
+  },
+) {}
 
 export const DocumentRenderPolicy = Schema.Struct({
   rendererFamily: DocumentRendererFamily,
@@ -373,9 +361,9 @@ export const canonicalizeJson = (value: Schema.Schema.Type<typeof Schema.Json>):
   }
   if (Array.isArray(value)) return `[${value.map(canonicalizeJson).join(",")}]`
   const entries = Object.entries(value).sort(([left], [right]) => left.localeCompare(right))
-  return `{${
-    entries.map(([key, entry]) => `${JSON.stringify(key)}:${canonicalizeJson(entry)}`).join(",")
-  }}`
+  return `{${entries
+    .map(([key, entry]) => `${JSON.stringify(key)}:${canonicalizeJson(entry)}`)
+    .join(",")}}`
 }
 
 export const sha256Hex = (input: string | Uint8Array) =>
@@ -391,13 +379,13 @@ export const sha256Hex = (input: string | Uint8Array) =>
   })
 
 export const hashJson = (input: unknown) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const decoded = yield* Schema.decodeUnknownEffect(Schema.Json)(input)
     return yield* sha256Hex(canonicalizeJson(decoded))
   })
 
 export const makeDocumentSnapshot = (input: unknown) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const decoded = yield* Schema.decodeUnknownEffect(DocumentSnapshotInput)(input)
     const checksum = yield* hashJson({
       tenantId: decoded.tenantId,
@@ -423,7 +411,7 @@ export const documentContextFromSnapshot = (snapshot: DocumentSnapshot): Documen
 })
 
 export const makeDocumentAst = (input: unknown) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const decoded = yield* Schema.decodeUnknownEffect(DocumentAstInput)(input)
     const checksum = yield* hashJson({
       snapshotId: decoded.snapshotId,
@@ -439,7 +427,7 @@ export const makeDocumentAst = (input: unknown) =>
   })
 
 export const makeDocumentRenderRequest = (input: unknown) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const decoded = yield* Schema.decodeUnknownEffect(DocumentRenderRequestInput)(input)
     const renderFingerprint = yield* hashJson({
       tenantId: decoded.tenantId,
@@ -466,14 +454,11 @@ export const makeDocumentRenderRequest = (input: unknown) =>
   })
 
 export const documentRenderIdempotencyKey = (
-  request: Pick<
-    DocumentRenderRequest,
-    "tenantId" | "renderFingerprint"
-  >,
+  request: Pick<DocumentRenderRequest, "tenantId" | "renderFingerprint">,
 ) => `document-render:${request.tenantId}:${request.renderFingerprint}`
 
 export const makeDocumentRenderJobPayload = (input: unknown) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const request = yield* Schema.decodeUnknownEffect(DocumentRenderRequest)(input)
     return {
       jobVersion: 1,
@@ -514,23 +499,26 @@ const validateRequiredCapabilities = (
   const unsupported = requirements.capabilities.find(
     (capability) => !policy.capabilities.includes(capability),
   )
-  return unsupported === undefined ? Effect.succeed<void>(undefined) : Effect.fail(
-    new UnsupportedDocumentCapability({
-      rendererFamily: requirements.rendererFamily,
-      capability: unsupported,
-    }),
-  )
+  return unsupported === undefined
+    ? Effect.succeed<void>(undefined)
+    : Effect.fail(
+        new UnsupportedDocumentCapability({
+          rendererFamily: requirements.rendererFamily,
+          capability: unsupported,
+        }),
+      )
 }
 
 const validatePolicyFlags = (
   requirements: DocumentRenderRequestInput,
   policy: DocumentRenderPolicy,
 ) => {
-  const reason = requirements.capabilities.includes("javascript") && !policy.allowJavaScript
-    ? "javascript_disabled" as const
-    : requirements.capabilities.includes("remote-assets") && !policy.allowNetwork
-    ? "network_disabled" as const
-    : undefined
+  const reason =
+    requirements.capabilities.includes("javascript") && !policy.allowJavaScript
+      ? ("javascript_disabled" as const)
+      : requirements.capabilities.includes("remote-assets") && !policy.allowNetwork
+        ? ("network_disabled" as const)
+        : undefined
   return reason === undefined
     ? Effect.succeed<void>(undefined)
     : Effect.fail(new DocumentRenderPolicyViolation({ reason }))
@@ -556,7 +544,7 @@ const validateRenderLimits = (
 }
 
 export const validateDocumentRenderPolicy = (requirements: unknown, policy: unknown) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const decodedRequirements = yield* Schema.decodeUnknownEffect(DocumentRenderRequestInput)(
       requirements,
     )

@@ -33,10 +33,7 @@ export function RitseiVirtualList<Item>(props: RitseiVirtualListProps<Item>) {
   const overscan = () => Math.max(0, props.overscan ?? 4)
   const start = () => Math.max(0, Math.floor(scrollTop() / rowHeight()) - overscan())
   const end = () =>
-    Math.min(
-      props.items.length,
-      Math.ceil((scrollTop() + 480) / rowHeight()) + overscan(),
-    )
+    Math.min(props.items.length, Math.ceil((scrollTop() + 480) / rowHeight()) + overscan())
   const visibleItems = () => props.items.slice(start(), end())
   let root: HTMLDivElement | undefined
   let handleScroll: (() => void) | undefined

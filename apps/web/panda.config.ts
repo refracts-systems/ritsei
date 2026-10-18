@@ -52,10 +52,10 @@ export default defineConfig({
         fonts: {
           body: {
             value:
-              "\"Pretendard Variable\", \"Pretendard\", system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+              '"Pretendard Variable", "Pretendard", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
           },
           mono: {
-            value: "\"IBM Plex Mono\", ui-monospace, \"SFMono-Regular\", Consolas, monospace",
+            value: '"IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace',
           },
         },
         fontSizes: {
@@ -370,15 +370,15 @@ export default defineConfig({
   },
   staticCss: { recipes: { control: ["*"], surface: ["*"] } },
   globalCss: {
-    "html": {
+    html: {
       bg: "canvas",
       color: "text",
       textStyle: "body",
     },
-    "body": { margin: "0" },
-    "h1": { textStyle: "pageTitle" },
-    "h2": { textStyle: "sectionTitle" },
-    "a": {
+    body: { margin: "0" },
+    h1: { textStyle: "pageTitle" },
+    h2: { textStyle: "sectionTitle" },
+    a: {
       color: "action",
       textDecoration: "underline",
       textUnderlineOffset: "3px",
@@ -389,7 +389,7 @@ export default defineConfig({
       outlineOffset: "3px",
     },
     "button:disabled": { opacity: "0.6" },
-    "table": {
+    table: {
       width: "full",
       borderCollapse: "collapse",
       fontVariantNumeric: "tabular-nums",
@@ -402,9 +402,9 @@ export default defineConfig({
       verticalAlign: "top",
       overflowWrap: "anywhere",
     },
-    "th": { textStyle: "tableHeader" },
-    "td": { textStyle: "tableCell" },
-    "caption": { textAlign: "left", color: "muted", pb: "3" },
+    th: { textStyle: "tableHeader" },
+    td: { textStyle: "tableCell" },
+    caption: { textAlign: "left", color: "muted", pb: "3" },
     "[role=alert]": { color: "danger" },
     "@media (forced-colors: active)": {
       "button, input": { border: "1px solid ButtonText" },

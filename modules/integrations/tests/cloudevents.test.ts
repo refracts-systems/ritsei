@@ -17,7 +17,7 @@ const envelope = {
 }
 
 it.effect("validates a separate envelope and normalized ExternalEvent payload", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const event = yield* normalizeCloudEvent({
       tenantId: "018f3f77-0c5a-7cc0-8b62-6a163d214123",
       connectorId: "payments",
@@ -28,45 +28,56 @@ it.effect("validates a separate envelope and normalized ExternalEvent payload", 
     assert.strictEqual(event.kind, "ExternalEvent")
     assert.strictEqual(event.envelope, "CloudEvents 1.0.x")
     assert.deepStrictEqual(event.payload, { paymentId: "pay-1", amount: 12.5 })
-  }))
+  }),
+)
 
 it.effect("rejects malformed or oversized CloudEvents fields", () =>
-  Effect.gen(function*() {
-    const malformedTime = yield* Effect.flip(normalizeCloudEvent({
-      tenantId: "018f3f77-0c5a-7cc0-8b62-6a163d214123",
-      connectorId: "payments",
-      expectedType: "payments.settled",
-      envelope: { ...envelope, time: "not-a-timestamp" },
-      payloadSchema: PaymentPayload,
-    }))
-    const oversizedId = yield* Effect.flip(normalizeCloudEvent({
-      tenantId: "018f3f77-0c5a-7cc0-8b62-6a163d214123",
-      connectorId: "payments",
-      expectedType: "payments.settled",
-      envelope: { ...envelope, id: "x".repeat(257) },
-      payloadSchema: PaymentPayload,
-    }))
+  Effect.gen(function* () {
+    const malformedTime = yield* Effect.flip(
+      normalizeCloudEvent({
+        tenantId: "018f3f77-0c5a-7cc0-8b62-6a163d214123",
+        connectorId: "payments",
+        expectedType: "payments.settled",
+        envelope: { ...envelope, time: "not-a-timestamp" },
+        payloadSchema: PaymentPayload,
+      }),
+    )
+    const oversizedId = yield* Effect.flip(
+      normalizeCloudEvent({
+        tenantId: "018f3f77-0c5a-7cc0-8b62-6a163d214123",
+        connectorId: "payments",
+        expectedType: "payments.settled",
+        envelope: { ...envelope, id: "x".repeat(257) },
+        payloadSchema: PaymentPayload,
+      }),
+    )
 
     assert.instanceOf(malformedTime, ExternalPayloadInvalid)
     assert.instanceOf(oversizedId, ExternalPayloadInvalid)
-  }))
+  }),
+)
 
 it.effect("rejects a mismatched event type or payload", () =>
-  Effect.gen(function*() {
-    const typeFailure = yield* Effect.flip(normalizeCloudEvent({
-      tenantId: "018f3f77-0c5a-7cc0-8b62-6a163d214123",
-      connectorId: "payments",
-      expectedType: "payments.refunded",
-      envelope,
-      payloadSchema: PaymentPayload,
-    }))
-    const payloadFailure = yield* Effect.flip(normalizeCloudEvent({
-      tenantId: "018f3f77-0c5a-7cc0-8b62-6a163d214123",
-      connectorId: "payments",
-      expectedType: "payments.settled",
-      envelope: { ...envelope, data: { paymentId: 42, amount: "bad" } },
-      payloadSchema: PaymentPayload,
-    }))
+  Effect.gen(function* () {
+    const typeFailure = yield* Effect.flip(
+      normalizeCloudEvent({
+        tenantId: "018f3f77-0c5a-7cc0-8b62-6a163d214123",
+        connectorId: "payments",
+        expectedType: "payments.refunded",
+        envelope,
+        payloadSchema: PaymentPayload,
+      }),
+    )
+    const payloadFailure = yield* Effect.flip(
+      normalizeCloudEvent({
+        tenantId: "018f3f77-0c5a-7cc0-8b62-6a163d214123",
+        connectorId: "payments",
+        expectedType: "payments.settled",
+        envelope: { ...envelope, data: { paymentId: 42, amount: "bad" } },
+        payloadSchema: PaymentPayload,
+      }),
+    )
     assert.instanceOf(typeFailure, ExternalPayloadInvalid)
     assert.instanceOf(payloadFailure, ExternalPayloadInvalid)
-  }))
+  }),
+)

@@ -30,13 +30,13 @@ export const makePartyServiceFromStore = <R>(
   never,
   R | import("../../authorization/mod.ts").AuthorizationService
 > =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const partyStore = yield* store
     const authorization = yield* AuthorizationService
     const databaseOption = yield* Effect.serviceOption(Database)
     const publisherOption = yield* Effect.serviceOption(PartyEventPublisher)
 
-    const list = Effect.fn("PartyService.list")(function*(input: unknown) {
+    const list = Effect.fn("PartyService.list")(function* (input: unknown) {
       const decoded = yield* Schema.decodeUnknownEffect(ListPartiesInput)(input)
       yield* authorization.authorize({
         principal: decoded.principal,
@@ -50,7 +50,7 @@ export const makePartyServiceFromStore = <R>(
         decoded.limit ?? 200,
       )
     })
-    const getDetail = Effect.fn("PartyService.getDetail")(function*(input: unknown) {
+    const getDetail = Effect.fn("PartyService.getDetail")(function* (input: unknown) {
       const decoded = yield* Schema.decodeUnknownEffect(GetPartyDetailInput)(input)
       yield* authorization.authorize({
         principal: decoded.principal,
@@ -59,14 +59,14 @@ export const makePartyServiceFromStore = <R>(
       })
       return yield* partyStore.getDetail(decoded.tenantId, decoded.partyId)
     })
-    const create = Effect.fn("PartyService.create")(function*(input: unknown) {
+    const create = Effect.fn("PartyService.create")(function* (input: unknown) {
       const decoded = yield* Schema.decodeUnknownEffect(CreatePartyInput)(input)
       yield* authorization.authorize({
         principal: decoded.principal,
         tenantId: decoded.tenantId,
         capability: PartyCapabilities.partyCreate,
       })
-      const createAndPublish = Effect.gen(function*() {
+      const createAndPublish = Effect.gen(function* () {
         const party = yield* partyStore.create(decoded.tenantId, decoded.kind, decoded.name.trim())
         if (Option.isNone(publisherOption)) return party
         const payload = yield* Schema.decodeUnknownEffect(PartyCreatedEventPayload)({
@@ -94,18 +94,18 @@ export const makePartyServiceFromStore = <R>(
         ? yield* databaseOption.value.withTransaction(createAndPublish, "party.create.atomic")
         : yield* createAndPublish
     })
-    const createLegalEntity = Effect.fn("PartyService.createLegalEntity")(
-      function*(input: unknown) {
-        const decoded = yield* Schema.decodeUnknownEffect(CreateLegalEntityInput)(input)
-        yield* authorization.authorize({
-          principal: decoded.principal,
-          tenantId: decoded.tenantId,
-          capability: PartyCapabilities.legalEntityCreate,
-        })
-        return yield* partyStore.createLegalEntity(decoded.tenantId, decoded.organizationId)
-      },
-    )
-    const createBranch = Effect.fn("PartyService.createBranch")(function*(input: unknown) {
+    const createLegalEntity = Effect.fn("PartyService.createLegalEntity")(function* (
+      input: unknown,
+    ) {
+      const decoded = yield* Schema.decodeUnknownEffect(CreateLegalEntityInput)(input)
+      yield* authorization.authorize({
+        principal: decoded.principal,
+        tenantId: decoded.tenantId,
+        capability: PartyCapabilities.legalEntityCreate,
+      })
+      return yield* partyStore.createLegalEntity(decoded.tenantId, decoded.organizationId)
+    })
+    const createBranch = Effect.fn("PartyService.createBranch")(function* (input: unknown) {
       const decoded = yield* Schema.decodeUnknownEffect(CreateBranchInput)(input)
       yield* authorization.authorize({
         principal: decoded.principal,
@@ -122,7 +122,7 @@ export const makePartyServiceFromStore = <R>(
       )
     })
     const createPartyRepresentation = Effect.fn("PartyService.createPartyRepresentation")(
-      function*(input: unknown) {
+      function* (input: unknown) {
         const decoded = yield* Schema.decodeUnknownEffect(CreatePartyRepresentationInput)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -138,7 +138,7 @@ export const makePartyServiceFromStore = <R>(
       },
     )
     const setPartyRepresentationActive = Effect.fn("PartyService.setPartyRepresentationActive")(
-      function*(input: unknown) {
+      function* (input: unknown) {
         const decoded = yield* Schema.decodeUnknownEffect(SetPartyRepresentationActiveInput)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -154,7 +154,7 @@ export const makePartyServiceFromStore = <R>(
         )
       },
     )
-    const assignRole = Effect.fn("PartyService.assignRole")(function*(input: unknown) {
+    const assignRole = Effect.fn("PartyService.assignRole")(function* (input: unknown) {
       const decoded = yield* Schema.decodeUnknownEffect(AssignPartyRoleInput)(input)
       yield* authorization.authorize({
         principal: decoded.principal,
@@ -163,23 +163,23 @@ export const makePartyServiceFromStore = <R>(
       })
       return yield* partyStore.assignRole(decoded.tenantId, decoded.partyId, decoded.role)
     })
-    const createRelationship = Effect.fn("PartyService.createRelationship")(
-      function*(input: unknown) {
-        const decoded = yield* Schema.decodeUnknownEffect(CreatePartyRelationshipInput)(input)
-        yield* authorization.authorize({
-          principal: decoded.principal,
-          tenantId: decoded.tenantId,
-          capability: PartyCapabilities.partyRelationshipCreate,
-        })
-        return yield* partyStore.createRelationship(
-          decoded.tenantId,
-          decoded.partyId,
-          decoded.legalEntityId,
-          decoded.kind,
-        )
-      },
-    )
-    const getRelationship = Effect.fn("PartyService.getRelationship")(function*(input: unknown) {
+    const createRelationship = Effect.fn("PartyService.createRelationship")(function* (
+      input: unknown,
+    ) {
+      const decoded = yield* Schema.decodeUnknownEffect(CreatePartyRelationshipInput)(input)
+      yield* authorization.authorize({
+        principal: decoded.principal,
+        tenantId: decoded.tenantId,
+        capability: PartyCapabilities.partyRelationshipCreate,
+      })
+      return yield* partyStore.createRelationship(
+        decoded.tenantId,
+        decoded.partyId,
+        decoded.legalEntityId,
+        decoded.kind,
+      )
+    })
+    const getRelationship = Effect.fn("PartyService.getRelationship")(function* (input: unknown) {
       const decoded = yield* Schema.decodeUnknownEffect(GetPartyRelationshipInput)(input)
       yield* authorization.authorize({
         principal: decoded.principal,
@@ -188,22 +188,22 @@ export const makePartyServiceFromStore = <R>(
       })
       return yield* partyStore.getRelationship(decoded.tenantId, decoded.relationshipId)
     })
-    const findRelatedPartyPaths = Effect.fn("PartyService.findRelatedPartyPaths")(
-      function*(input: unknown) {
-        const decoded = yield* Schema.decodeUnknownEffect(FindRelatedPartyPathsInput)(input)
-        yield* authorization.authorize({
-          principal: decoded.principal,
-          tenantId: decoded.tenantId,
-          capability: PartyCapabilities.partyRelationshipRead,
-        })
-        return yield* partyStore.findRelatedPartyPaths(
-          decoded.tenantId,
-          decoded.sourcePartyId,
-          decoded.limit ?? 100,
-        )
-      },
-    )
-    const attachIdentifier = Effect.fn("PartyService.attachIdentifier")(function*(input: unknown) {
+    const findRelatedPartyPaths = Effect.fn("PartyService.findRelatedPartyPaths")(function* (
+      input: unknown,
+    ) {
+      const decoded = yield* Schema.decodeUnknownEffect(FindRelatedPartyPathsInput)(input)
+      yield* authorization.authorize({
+        principal: decoded.principal,
+        tenantId: decoded.tenantId,
+        capability: PartyCapabilities.partyRelationshipRead,
+      })
+      return yield* partyStore.findRelatedPartyPaths(
+        decoded.tenantId,
+        decoded.sourcePartyId,
+        decoded.limit ?? 100,
+      )
+    })
+    const attachIdentifier = Effect.fn("PartyService.attachIdentifier")(function* (input: unknown) {
       const decoded = yield* Schema.decodeUnknownEffect(AttachExternalIdentifierInput)(input)
       yield* authorization.authorize({
         principal: decoded.principal,

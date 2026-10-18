@@ -8,7 +8,6 @@ overrides:
 
 allowBuilds:
   '@ast-grep/cli': true
-  dprint: true
   esbuild: true
   lefthook: true
 

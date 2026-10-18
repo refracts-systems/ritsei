@@ -43,27 +43,27 @@ const asyncWork = {
 
 describe("workload classification", () => {
   it.effect("accepts command, query, and async metadata", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       for (const metadata of [command, query, asyncWork]) {
         assert.deepStrictEqual(yield* classifyWorkload(metadata), metadata)
       }
-    }))
+    }),
+  )
 
   it.effect("rejects unbounded or topology-shaped metadata", () =>
-    Effect.gen(function*() {
-      for (
-        const invalid of [
-          { ...command, deadlineMs: 0 },
-          { ...query, maxQueueDepth: 1_000_001 },
-          { ...asyncWork, maxInFlight: 0 },
-          { ...command, workloadClass: "workload-cell" },
-          { ...query, pool: "command" },
-        ]
-      ) {
+    Effect.gen(function* () {
+      for (const invalid of [
+        { ...command, deadlineMs: 0 },
+        { ...query, maxQueueDepth: 1_000_001 },
+        { ...asyncWork, maxInFlight: 0 },
+        { ...command, workloadClass: "workload-cell" },
+        { ...query, pool: "command" },
+      ]) {
         const result = yield* Effect.result(classifyWorkload(invalid))
         assert.isTrue(result._tag === "Failure")
       }
-    }))
+    }),
+  )
 
   it("keeps selected entry limits finite and the command reserve non-zero", () => {
     assert.isAbove(EntryWorkloadLimits.commandReserve, 0)

@@ -24,9 +24,8 @@ const samplePng = Uint8Array.from(
   (character) => character.charCodeAt(0),
 )
 const parsedIterations = Number(process.argv.slice(2)[0] ?? "10")
-const iterations = Number.isInteger(parsedIterations) && parsedIterations > 0
-  ? parsedIterations
-  : 10
+const iterations =
+  Number.isInteger(parsedIterations) && parsedIterations > 0 ? parsedIterations : 10
 
 const policy: DocumentRenderPolicy = {
   rendererFamily: "native-transactional",
@@ -49,79 +48,80 @@ type BenchmarkFixture = (typeof documentBenchmarkCorpus)[number]
 const benchmarkFixture = (fixture: BenchmarkFixture) =>
   fixture.capabilities.includes("paged-media")
     ? Effect.succeed({
-      name: fixture.name,
-      skipped: true,
-      reason: "publishing capability is outside the pdfnative transactional adapter",
-    })
-    : Effect.gen(function*() {
-      const snapshot = yield* makeDocumentSnapshot({
-        snapshotId,
-        tenantId,
-        source: { owner: "benchmark", type: "document_fixture", id: sourceId },
-        capturedAt: timestamp,
-        schemaVersion: 1,
-        payload: { fixture: fixture.name, version: 1 },
-      })
-      const context = documentContextFromSnapshot(snapshot)
-      const startedAt = performance.now()
-      let lastBytes = 0
-      let lastPages = 0
-      let lastFingerprint = ""
-
-      for (let index = 0; index < iterations; index += 1) {
-        const ast = yield* makeDocumentAst({
-          astId,
-          snapshotId,
-          documentType: fixture.name,
-          astVersion: 1,
-          nodes: fixture.nodes,
-        })
-        const request = yield* makeDocumentRenderRequest({
-          tenantId,
-          snapshotId,
-          snapshotChecksum: snapshot.checksum,
-          astId: ast.astId,
-          astChecksum: ast.checksum,
-          templateId: "benchmark-default",
-          templateVersion: 1,
-          documentSchemaVersion: 1,
-          rendererFamily: "native-transactional",
-          rendererVersion: "pdfnative@1.7.0",
-          assetVersions: fixture.assetBytes > 0 ? ["sample-assets@1"] : [],
-          capabilities: fixture.capabilities,
-          astNodeCount: ast.nodes.length,
-          pageCount: fixture.pageCount,
-          assetBytes: fixture.assetBytes,
-          correlationId: `document-benchmark:${fixture.name}:${index}`,
-        })
-        const output = yield* renderer.render({ context, ast, request })
-        lastBytes = output.bytes.byteLength
-        lastPages = output.metadata.pageCount
-        lastFingerprint = output.metadata.renderFingerprint
-      }
-
-      const elapsedMs = Number((performance.now() - startedAt).toFixed(3))
-      return {
         name: fixture.name,
-        iterations,
-        elapsedMs,
-        averageMs: Number((elapsedMs / iterations).toFixed(3)),
-        outputBytes: lastBytes,
-        pages: lastPages,
-        renderFingerprint: lastFingerprint,
-      }
-    })
+        skipped: true,
+        reason: "publishing capability is outside the pdfnative transactional adapter",
+      })
+    : Effect.gen(function* () {
+        const snapshot = yield* makeDocumentSnapshot({
+          snapshotId,
+          tenantId,
+          source: { owner: "benchmark", type: "document_fixture", id: sourceId },
+          capturedAt: timestamp,
+          schemaVersion: 1,
+          payload: { fixture: fixture.name, version: 1 },
+        })
+        const context = documentContextFromSnapshot(snapshot)
+        const startedAt = performance.now()
+        let lastBytes = 0
+        let lastPages = 0
+        let lastFingerprint = ""
+
+        for (let index = 0; index < iterations; index += 1) {
+          const ast = yield* makeDocumentAst({
+            astId,
+            snapshotId,
+            documentType: fixture.name,
+            astVersion: 1,
+            nodes: fixture.nodes,
+          })
+          const request = yield* makeDocumentRenderRequest({
+            tenantId,
+            snapshotId,
+            snapshotChecksum: snapshot.checksum,
+            astId: ast.astId,
+            astChecksum: ast.checksum,
+            templateId: "benchmark-default",
+            templateVersion: 1,
+            documentSchemaVersion: 1,
+            rendererFamily: "native-transactional",
+            rendererVersion: "pdfnative@1.7.0",
+            assetVersions: fixture.assetBytes > 0 ? ["sample-assets@1"] : [],
+            capabilities: fixture.capabilities,
+            astNodeCount: ast.nodes.length,
+            pageCount: fixture.pageCount,
+            assetBytes: fixture.assetBytes,
+            correlationId: `document-benchmark:${fixture.name}:${index}`,
+          })
+          const output = yield* renderer.render({ context, ast, request })
+          lastBytes = output.bytes.byteLength
+          lastPages = output.metadata.pageCount
+          lastFingerprint = output.metadata.renderFingerprint
+        }
+
+        const elapsedMs = Number((performance.now() - startedAt).toFixed(3))
+        return {
+          name: fixture.name,
+          iterations,
+          elapsedMs,
+          averageMs: Number((elapsedMs / iterations).toFixed(3)),
+          outputBytes: lastBytes,
+          pages: lastPages,
+          renderFingerprint: lastFingerprint,
+        }
+      })
 
 const benchmark = Effect.all(documentBenchmarkCorpus.map(benchmarkFixture))
 
 if (isMain(import.meta.url)) {
   const results = await Effect.runPromise(benchmark)
-  console.log(JSON.stringify({
-    benchmark: "pdfnative-document-render",
-    renderer: "pdfnative@1.7.0",
-    activation: "evaluation-only",
-    fixtures: results,
-    note:
-      "This measures the RITSEI native adapter; publishing and browser profiles remain separate.",
-  }))
+  console.log(
+    JSON.stringify({
+      benchmark: "pdfnative-document-render",
+      renderer: "pdfnative@1.7.0",
+      activation: "evaluation-only",
+      fixtures: results,
+      note: "This measures the RITSEI native adapter; publishing and browser profiles remain separate.",
+    }),
+  )
 }

@@ -68,22 +68,19 @@ const salesService = (observedInput: { value?: unknown }): SalesServiceContract 
   getConfirmedOrderTotal: () => Effect.succeed("10.00"),
 })
 
-const TestHttpServices = Layer.mergeAll(
-  Path.layer,
-  Etag.layerWeak,
-  HttpPlatform.layer,
-).pipe(Layer.provideMerge(FileSystem.layerNoop({})))
+const TestHttpServices = Layer.mergeAll(Path.layer, Etag.layerWeak, HttpPlatform.layer).pipe(
+  Layer.provideMerge(FileSystem.layerNoop({})),
+)
 
 it.layer(TestHttpServices)("sales API contracts", (it) => {
   it.effect("forwards tenant and bearer context across Sales reads and commands", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const observedInput: { value?: unknown } = {}
       const bearer = Layer.succeed(BearerAuth, {
         bearer: (effect) => Effect.provideService(effect, CurrentPrincipal, principal),
       })
-      const bearerClient = HttpApiMiddleware.layerClient(
-        BearerAuth,
-        ({ request, next }) => next(HttpClientRequest.bearerToken(request, "sales-token")),
+      const bearerClient = HttpApiMiddleware.layerClient(BearerAuth, ({ request, next }) =>
+        next(HttpClientRequest.bearerToken(request, "sales-token")),
       )
       const handlers = SalesHandlers.pipe(
         Layer.provide(bearer),
@@ -165,5 +162,6 @@ it.layer(TestHttpServices)("sales API contracts", (it) => {
         yield* client.Sales.cancelOrder({ params: { id: orderId }, headers }),
         cancelledOrder,
       )
-    }))
+    }),
+  )
 })

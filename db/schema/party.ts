@@ -25,21 +25,25 @@ export const partyRole = partySchema.enum("party_role", [
   "partner",
 ])
 
-export const parties = partySchema.table("parties", {
-  id: id(),
-  tenantId: uuid("tenant_id").notNull(),
-  kind: partyKind("kind").notNull(),
-  name: text("name").notNull(),
-  createdAt: createdAt(),
-  updatedAt: updatedAt(),
-}, (table) => [
-  unique("parties_tenant_id_id_key").on(table.tenantId, table.id),
-  foreignKey({
-    columns: [table.tenantId],
-    foreignColumns: [tenants.id],
-    name: "parties_tenant_id_fkey",
-  }).onDelete("cascade"),
-])
+export const parties = partySchema.table(
+  "parties",
+  {
+    id: id(),
+    tenantId: uuid("tenant_id").notNull(),
+    kind: partyKind("kind").notNull(),
+    name: text("name").notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    unique("parties_tenant_id_id_key").on(table.tenantId, table.id),
+    foreignKey({
+      columns: [table.tenantId],
+      foreignColumns: [tenants.id],
+      name: "parties_tenant_id_fkey",
+    }).onDelete("cascade"),
+  ],
+)
 
 export const partyRepresentations = partySchema.table(
   "party_representations",
@@ -76,168 +80,183 @@ export const partyRepresentations = partySchema.table(
       foreignColumns: [parties.tenantId, parties.id],
       name: "party_representations_party_fkey",
     }).onDelete("cascade"),
-    check(
-      "party_representations_kind_check",
-      sql`${table.kind} ~ '[^[:space:]]'`,
-    ),
+    check("party_representations_kind_check", sql`${table.kind} ~ '[^[:space:]]'`),
   ],
 )
 
-export const legalEntities = partySchema.table("legal_entities", {
-  id: id(),
-  tenantId: uuid("tenant_id").notNull(),
-  organizationPartyId: uuid("organization_party_id").notNull(),
-  createdAt: createdAt(),
-  updatedAt: updatedAt(),
-}, (table) => [
-  unique("legal_entities_tenant_id_id_key").on(table.tenantId, table.id),
-  unique("legal_entities_tenant_organization_party_key").on(
-    table.tenantId,
-    table.organizationPartyId,
-  ),
-  foreignKey({
-    columns: [table.tenantId, table.organizationPartyId],
-    foreignColumns: [parties.tenantId, parties.id],
-    name: "legal_entities_tenant_organization_party_fkey",
-  }),
-])
-
-export const branches = partySchema.table("branches", {
-  id: id(),
-  tenantId: uuid("tenant_id").notNull(),
-  legalEntityId: uuid("legal_entity_id").notNull(),
-  name: text("name").notNull(),
-  timezone: text("timezone"),
-  localTaxRegistration: text("local_tax_registration"),
-  dedicatedJournalCode: text("dedicated_journal_code"),
-  createdAt: createdAt(),
-  updatedAt: updatedAt(),
-}, (table) => [
-  unique("branches_tenant_id_id_key").on(table.tenantId, table.id),
-  unique("branches_tenant_legal_entity_name_key").on(
-    table.tenantId,
-    table.legalEntityId,
-    table.name,
-  ),
-  unique("branches_tenant_legal_entity_id_key").on(
-    table.tenantId,
-    table.legalEntityId,
-    table.id,
-  ),
-  foreignKey({
-    columns: [table.tenantId, table.legalEntityId],
-    foreignColumns: [legalEntities.tenantId, legalEntities.id],
-    name: "branches_tenant_legal_entity_fkey",
-  }),
-])
-
-export const partyRoles = partySchema.table("party_roles", {
-  tenantId: uuid("tenant_id").notNull(),
-  partyId: uuid("party_id").notNull(),
-  role: partyRole("role").notNull(),
-  createdAt: createdAt(),
-}, (table) => [
-  primaryKey({ columns: [table.tenantId, table.partyId, table.role] }),
-  foreignKey({
-    columns: [table.tenantId, table.partyId],
-    foreignColumns: [parties.tenantId, parties.id],
-    name: "party_roles_tenant_party_fkey",
-  }).onDelete("cascade"),
-])
-
-export const partyRelationships = partySchema.table("party_relationships", {
-  id: id(),
-  tenantId: uuid("tenant_id").notNull(),
-  partyId: uuid("party_id").notNull(),
-  legalEntityId: uuid("legal_entity_id").notNull(),
-  kind: partyRole("kind").notNull(),
-  active: boolean("active").notNull().default(true),
-  createdAt: createdAt(),
-  updatedAt: updatedAt(),
-}, (table) => [
-  unique("party_relationships_tenant_id_id_key").on(table.tenantId, table.id),
-  unique("party_relationships_tenant_party_legal_entity_kind_key").on(
-    table.tenantId,
-    table.partyId,
-    table.legalEntityId,
-    table.kind,
-  ),
-  foreignKey({
-    columns: [table.tenantId, table.partyId],
-    foreignColumns: [parties.tenantId, parties.id],
-    name: "party_relationships_tenant_party_fkey",
-  }).onDelete("cascade"),
-  foreignKey({
-    columns: [table.tenantId, table.legalEntityId],
-    foreignColumns: [legalEntities.tenantId, legalEntities.id],
-    name: "party_relationships_tenant_legal_entity_fkey",
-  }).onDelete("cascade"),
-  foreignKey({
-    columns: [table.tenantId, table.partyId, table.kind],
-    foreignColumns: [partyRoles.tenantId, partyRoles.partyId, partyRoles.role],
-    name: "party_relationships_tenant_party_role_fkey",
-  }).onDelete("cascade"),
-])
-
-export const relatedPartyPaths = partySchema.view("related_party_paths", {
-  tenantId: uuid("tenant_id").notNull(),
-  sourcePartyId: uuid("source_party_id").notNull(),
-  targetPartyId: uuid("target_party_id").notNull(),
-  legalEntityId: uuid("legal_entity_id").notNull(),
-  relationshipId: uuid("relationship_id").notNull(),
-  relationshipKind: partyRole("relationship_kind").notNull(),
-  depth: integer("depth").notNull(),
-}).existing()
-
-export const partyIdentifiers = partySchema.table("party_identifiers", {
-  id: id(),
-  tenantId: uuid("tenant_id").notNull(),
-  partyId: uuid("party_id").notNull(),
-  provider: text("provider").notNull(),
-  scheme: text("scheme").notNull(),
-  scope: text("scope").notNull(),
-  legalEntityId: uuid("legal_entity_id"),
-  value: text("value").notNull(),
-  createdAt: createdAt(),
-  updatedAt: updatedAt(),
-}, (table) => [
-  uniqueIndex("party_identifiers_tenant_provider_scope_value_uq")
-    .on(table.tenantId, table.provider, table.scheme, table.scope, table.value)
-    .where(sql`${table.legalEntityId} is null`),
-  uniqueIndex("party_identifiers_tenant_provider_entity_scope_value_uq")
-    .on(
+export const legalEntities = partySchema.table(
+  "legal_entities",
+  {
+    id: id(),
+    tenantId: uuid("tenant_id").notNull(),
+    organizationPartyId: uuid("organization_party_id").notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    unique("legal_entities_tenant_id_id_key").on(table.tenantId, table.id),
+    unique("legal_entities_tenant_organization_party_key").on(
       table.tenantId,
-      table.provider,
+      table.organizationPartyId,
+    ),
+    foreignKey({
+      columns: [table.tenantId, table.organizationPartyId],
+      foreignColumns: [parties.tenantId, parties.id],
+      name: "legal_entities_tenant_organization_party_fkey",
+    }),
+  ],
+)
+
+export const branches = partySchema.table(
+  "branches",
+  {
+    id: id(),
+    tenantId: uuid("tenant_id").notNull(),
+    legalEntityId: uuid("legal_entity_id").notNull(),
+    name: text("name").notNull(),
+    timezone: text("timezone"),
+    localTaxRegistration: text("local_tax_registration"),
+    dedicatedJournalCode: text("dedicated_journal_code"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    unique("branches_tenant_id_id_key").on(table.tenantId, table.id),
+    unique("branches_tenant_legal_entity_name_key").on(
+      table.tenantId,
       table.legalEntityId,
-      table.scheme,
-      table.scope,
-      table.value,
-    )
-    .where(sql`${table.legalEntityId} is not null`),
-  foreignKey({
-    columns: [table.tenantId, table.partyId],
-    foreignColumns: [parties.tenantId, parties.id],
-    name: "party_identifiers_tenant_party_fkey",
-  }).onDelete("cascade"),
-  foreignKey({
-    columns: [table.tenantId, table.legalEntityId],
-    foreignColumns: [legalEntities.tenantId, legalEntities.id],
-    name: "party_identifiers_tenant_legal_entity_fkey",
-  }).onDelete("cascade"),
-  check(
-    "party_identifiers_provider_check",
-    sql`${table.provider} <> '' and ${table.provider} = upper(trim(${table.provider}))`,
-  ),
-  check(
-    "party_identifiers_scheme_check",
-    sql`${table.scheme} <> '' and ${table.scheme} = upper(trim(${table.scheme}))`,
-  ),
-  check(
-    "party_identifiers_scope_check",
-    sql`${table.scope} <> '' and ${table.scope} = trim(${table.scope})`,
-  ),
-  check(
-    "party_identifiers_value_check",
-    sql`${table.value} <> '' and ${table.value} = trim(${table.value})`,
-  ),
-])
+      table.name,
+    ),
+    unique("branches_tenant_legal_entity_id_key").on(table.tenantId, table.legalEntityId, table.id),
+    foreignKey({
+      columns: [table.tenantId, table.legalEntityId],
+      foreignColumns: [legalEntities.tenantId, legalEntities.id],
+      name: "branches_tenant_legal_entity_fkey",
+    }),
+  ],
+)
+
+export const partyRoles = partySchema.table(
+  "party_roles",
+  {
+    tenantId: uuid("tenant_id").notNull(),
+    partyId: uuid("party_id").notNull(),
+    role: partyRole("role").notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.tenantId, table.partyId, table.role] }),
+    foreignKey({
+      columns: [table.tenantId, table.partyId],
+      foreignColumns: [parties.tenantId, parties.id],
+      name: "party_roles_tenant_party_fkey",
+    }).onDelete("cascade"),
+  ],
+)
+
+export const partyRelationships = partySchema.table(
+  "party_relationships",
+  {
+    id: id(),
+    tenantId: uuid("tenant_id").notNull(),
+    partyId: uuid("party_id").notNull(),
+    legalEntityId: uuid("legal_entity_id").notNull(),
+    kind: partyRole("kind").notNull(),
+    active: boolean("active").notNull().default(true),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    unique("party_relationships_tenant_id_id_key").on(table.tenantId, table.id),
+    unique("party_relationships_tenant_party_legal_entity_kind_key").on(
+      table.tenantId,
+      table.partyId,
+      table.legalEntityId,
+      table.kind,
+    ),
+    foreignKey({
+      columns: [table.tenantId, table.partyId],
+      foreignColumns: [parties.tenantId, parties.id],
+      name: "party_relationships_tenant_party_fkey",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.tenantId, table.legalEntityId],
+      foreignColumns: [legalEntities.tenantId, legalEntities.id],
+      name: "party_relationships_tenant_legal_entity_fkey",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.tenantId, table.partyId, table.kind],
+      foreignColumns: [partyRoles.tenantId, partyRoles.partyId, partyRoles.role],
+      name: "party_relationships_tenant_party_role_fkey",
+    }).onDelete("cascade"),
+  ],
+)
+
+export const relatedPartyPaths = partySchema
+  .view("related_party_paths", {
+    tenantId: uuid("tenant_id").notNull(),
+    sourcePartyId: uuid("source_party_id").notNull(),
+    targetPartyId: uuid("target_party_id").notNull(),
+    legalEntityId: uuid("legal_entity_id").notNull(),
+    relationshipId: uuid("relationship_id").notNull(),
+    relationshipKind: partyRole("relationship_kind").notNull(),
+    depth: integer("depth").notNull(),
+  })
+  .existing()
+
+export const partyIdentifiers = partySchema.table(
+  "party_identifiers",
+  {
+    id: id(),
+    tenantId: uuid("tenant_id").notNull(),
+    partyId: uuid("party_id").notNull(),
+    provider: text("provider").notNull(),
+    scheme: text("scheme").notNull(),
+    scope: text("scope").notNull(),
+    legalEntityId: uuid("legal_entity_id"),
+    value: text("value").notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    uniqueIndex("party_identifiers_tenant_provider_scope_value_uq")
+      .on(table.tenantId, table.provider, table.scheme, table.scope, table.value)
+      .where(sql`${table.legalEntityId} is null`),
+    uniqueIndex("party_identifiers_tenant_provider_entity_scope_value_uq")
+      .on(
+        table.tenantId,
+        table.provider,
+        table.legalEntityId,
+        table.scheme,
+        table.scope,
+        table.value,
+      )
+      .where(sql`${table.legalEntityId} is not null`),
+    foreignKey({
+      columns: [table.tenantId, table.partyId],
+      foreignColumns: [parties.tenantId, parties.id],
+      name: "party_identifiers_tenant_party_fkey",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.tenantId, table.legalEntityId],
+      foreignColumns: [legalEntities.tenantId, legalEntities.id],
+      name: "party_identifiers_tenant_legal_entity_fkey",
+    }).onDelete("cascade"),
+    check(
+      "party_identifiers_provider_check",
+      sql`${table.provider} <> '' and ${table.provider} = upper(trim(${table.provider}))`,
+    ),
+    check(
+      "party_identifiers_scheme_check",
+      sql`${table.scheme} <> '' and ${table.scheme} = upper(trim(${table.scheme}))`,
+    ),
+    check(
+      "party_identifiers_scope_check",
+      sql`${table.scope} <> '' and ${table.scope} = trim(${table.scope})`,
+    ),
+    check(
+      "party_identifiers_value_check",
+      sql`${table.value} <> '' and ${table.value} = trim(${table.value})`,
+    ),
+  ],
+)

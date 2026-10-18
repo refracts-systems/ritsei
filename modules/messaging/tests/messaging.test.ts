@@ -30,7 +30,7 @@ const event = (overrides: Record<string, unknown> = {}) => ({
 })
 
 it.effect("bounds public JSON payload resources", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const oversizedString = yield* Effect.flip(
       Schema.decodeUnknownEffect(EventEnvelope)({ ...event(), payload: "x".repeat(64 * 1024 + 1) }),
     )
@@ -46,10 +46,11 @@ it.effect("bounds public JSON payload resources", () =>
     assert.strictEqual(oversizedString._tag, "SchemaError")
     assert.strictEqual(oversizedArray._tag, "SchemaError")
     assert.strictEqual(oversizedDepth._tag, "SchemaError")
-  }))
+  }),
+)
 
 it.effect("rejects malformed envelope and receipt timestamps", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const invalidEnvelope = yield* Effect.flip(
       Schema.decodeUnknownEffect(EventEnvelope)({
         ...event(),
@@ -97,10 +98,11 @@ it.effect("rejects malformed envelope and receipt timestamps", () =>
     assert.strictEqual(invalidAttempts._tag, "SchemaError")
     assert.strictEqual(overflowingAttempts._tag, "SchemaError")
     assert.strictEqual(invalidReceipt._tag, "SchemaError")
-  }))
+  }),
+)
 
 it.effect("rejects malformed idempotency-conflict identities", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const invalid = yield* Effect.flip(
       Schema.decodeUnknownEffect(EventIdempotencyConflict)({
         _tag: "EventIdempotencyConflict",
@@ -112,10 +114,11 @@ it.effect("rejects malformed idempotency-conflict identities", () =>
       }),
     )
     assert.strictEqual(invalid._tag, "SchemaError")
-  }))
+  }),
+)
 
 it.effect("appends idempotently and rejects a mismatched envelope", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const messaging = yield* MessagingService
     const first = yield* messaging.append(event())
     const duplicate = yield* messaging.append(event())
@@ -123,10 +126,11 @@ it.effect("appends idempotently and rejects a mismatched envelope", () =>
     assert.deepStrictEqual(duplicate, first)
     const failure = yield* Effect.flip(messaging.append(event({ payload: { orderId: "other" } })))
     assert.instanceOf(failure, EventIdempotencyConflict)
-  }).pipe(Effect.provide(makeMessagingTestLayer())))
+  }).pipe(Effect.provide(makeMessagingTestLayer())),
+)
 
 it.effect("loads events through a tenant-scoped public query", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const messaging = yield* MessagingService
     const source = yield* messaging.append(event())
 
@@ -150,10 +154,11 @@ it.effect("loads events through a tenant-scoped public query", () =>
       messaging.getEvent({ tenantId: "not-a-uuid", eventId: source.eventId }),
     )
     assert.strictEqual(invalidGetEvent._tag, "SchemaError")
-  }).pipe(Effect.provide(makeMessagingTestLayer())))
+  }).pipe(Effect.provide(makeMessagingTestLayer())),
+)
 
 it.effect("suppresses a duplicate event consumer effect with one consumer receipt", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const messaging = yield* MessagingService
     yield* messaging.append(event())
     const input = {
@@ -177,10 +182,11 @@ it.effect("suppresses a duplicate event consumer effect with one consumer receip
     assert.strictEqual(first.receipt.eventType, event().eventType)
     assert.strictEqual(first.receipt.eventVersion, event().eventVersion)
     assert.strictEqual(first.receipt.idempotencyKey, event().idempotencyKey)
-  }).pipe(Effect.provide(makeMessagingTestLayer())))
+  }).pipe(Effect.provide(makeMessagingTestLayer())),
+)
 
 it.effect("suppresses concurrent duplicate consumer effects in the test layer", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const messaging = yield* MessagingService
     yield* messaging.append(event())
     const input = {
@@ -189,24 +195,34 @@ it.effect("suppresses concurrent duplicate consumer effects in the test layer", 
       eventId: event().eventId,
     }
     let executions = 0
-    const results = yield* Effect.all([
-      messaging.consumeOnce(
-        input,
-        Effect.andThen(Effect.yieldNow, Effect.sync(() => ++executions)),
-      ),
-      messaging.consumeOnce(
-        input,
-        Effect.andThen(Effect.yieldNow, Effect.sync(() => ++executions)),
-      ),
-    ], { concurrency: "unbounded" })
+    const results = yield* Effect.all(
+      [
+        messaging.consumeOnce(
+          input,
+          Effect.andThen(
+            Effect.yieldNow,
+            Effect.sync(() => ++executions),
+          ),
+        ),
+        messaging.consumeOnce(
+          input,
+          Effect.andThen(
+            Effect.yieldNow,
+            Effect.sync(() => ++executions),
+          ),
+        ),
+      ],
+      { concurrency: "unbounded" },
+    )
 
     assert.strictEqual(results.filter((result) => result.duplicate).length, 1)
     assert.strictEqual(results.filter((result) => !result.duplicate).length, 1)
     assert.strictEqual(executions, 1)
-  }).pipe(Effect.provide(makeMessagingTestLayer())))
+  }).pipe(Effect.provide(makeMessagingTestLayer())),
+)
 
 it.effect("rolls back the consumer receipt when the consumer effect fails", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const messaging = yield* MessagingService
     yield* messaging.append(event())
     const input = {
@@ -222,10 +238,11 @@ it.effect("rolls back the consumer receipt when the consumer effect fails", () =
     const retried = yield* messaging.consumeOnce(input, Effect.succeed("completed"))
     assert.strictEqual(retried.duplicate, false)
     if (!retried.duplicate) assert.strictEqual(retried.value, "completed")
-  }).pipe(Effect.provide(makeMessagingTestLayer())))
+  }).pipe(Effect.provide(makeMessagingTestLayer())),
+)
 
 it.effect("requires a tenant-matching source event and rolls back the consumer effect", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const messaging = yield* MessagingService
     const source = event()
     const foreignTenantId = "018f3f77-0c5a-7cc0-8b62-6a163d214126"
@@ -240,15 +257,17 @@ it.effect("requires a tenant-matching source event and rolls back the consumer e
     let executions = 0
     const consume = messaging.consumeOnce(
       input,
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         executions++
-        return yield* messaging.append(event({
-          eventId: derivedEventId,
-          tenantId: foreignTenantId,
-          eventType: "accounting.order.projected",
-          idempotencyKey: "project-order-1",
-          payload: { attempt: executions },
-        }))
+        return yield* messaging.append(
+          event({
+            eventId: derivedEventId,
+            tenantId: foreignTenantId,
+            eventType: "accounting.order.projected",
+            idempotencyKey: "project-order-1",
+            payload: { attempt: executions },
+          }),
+        )
       }),
     )
 
@@ -259,4 +278,5 @@ it.effect("requires a tenant-matching source event and rolls back the consumer e
     const retried = yield* consume
     assert.strictEqual(retried.duplicate, false)
     assert.strictEqual(executions, 1)
-  }).pipe(Effect.provide(makeMessagingTestLayer())))
+  }).pipe(Effect.provide(makeMessagingTestLayer())),
+)

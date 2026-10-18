@@ -26,9 +26,7 @@ function Results(props: { results: () => Package[]; query: string }) {
         when={list().length > 0}
         fallback={
           <p class="empty">
-            {isPending(props.results)
-              ? "Searching…"
-              : `No packages match “${props.query}”.`}
+            {isPending(props.results) ? "Searching…" : `No packages match “${props.query}”.`}
           </p>
         }
       >
@@ -40,9 +38,7 @@ function Results(props: { results: () => Package[]; query: string }) {
                   <span class="pkg-name">{pkg.name}</span>
                   <span class="pkg-desc">{pkg.description}</span>
                 </div>
-                <span class="pkg-downloads">
-                  {formatDownloads(pkg.downloads)}/wk
-                </span>
+                <span class="pkg-downloads">{formatDownloads(pkg.downloads)}/wk</span>
               </li>
             )}
           </For>
@@ -70,9 +66,8 @@ export function Typeahead() {
         <h2>Typeahead search</h2>
         <p>
           Each keystroke starts an Effect fiber (retry ×3 w/ exponential backoff, 4s timeout, ~35%
-          transient failure rate). Superseded flights are{" "}
-          <em>interrupted</em>, not ignored — Solid closes the stale iterator,{" "}
-          <code>runEffect</code> interrupts the fiber.
+          transient failure rate). Superseded flights are <em>interrupted</em>, not ignored — Solid
+          closes the stale iterator, <code>runEffect</code> interrupts the fiber.
         </p>
       </header>
       <input

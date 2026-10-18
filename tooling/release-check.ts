@@ -1,9 +1,7 @@
 import { spawnSync } from "node:child_process"
 import { readFile } from "node:fs/promises"
 
-const tag = process.argv.slice(2)[0]
-  ?? process.env["RELEASE_TAG"]
-  ?? process.env["GITHUB_REF_NAME"]
+const tag = process.argv.slice(2)[0] ?? process.env["RELEASE_TAG"] ?? process.env["GITHUB_REF_NAME"]
 
 if (!tag || !/^v(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/.test(tag)) {
   throw new Error("release tag must match vX.Y.Z")
@@ -12,9 +10,7 @@ if (!tag || !/^v(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/.test(tag)) {
 const runGit = async (...args: string[]) => {
   const result = spawnSync("git", args, { encoding: "utf8" })
   if (result.status !== 0) {
-    throw new Error(
-      (result.stderr ?? "").trim() || `git ${args.join(" ")} failed`,
-    )
+    throw new Error((result.stderr ?? "").trim() || `git ${args.join(" ")} failed`)
   }
   return result.stdout.trim()
 }
@@ -37,16 +33,17 @@ if (expectedTarget && target !== expectedTarget) {
 const releaseBaseRef = process.env["RELEASE_BASE_REF"]
 if (releaseBaseRef !== undefined) {
   const base = await runGit("rev-parse", "--verify", releaseBaseRef)
-  if (await runGit("merge-base", base, target) !== target) {
+  if ((await runGit("merge-base", base, target)) !== target) {
     throw new Error(`${tag} target ${target} is not contained in ${releaseBaseRef}`)
   }
 }
 
 const releaseNotes = `.github/release-notes/${tag}.md`
 const notesRef = process.env["RELEASE_NOTES_REF"]
-const notes = notesRef === undefined
-  ? await readFile(releaseNotes, "utf8")
-  : await runGit("show", `${notesRef}:${releaseNotes}`)
+const notes =
+  notesRef === undefined
+    ? await readFile(releaseNotes, "utf8")
+    : await runGit("show", `${notesRef}:${releaseNotes}`)
 
 if (!notes.trim()) {
   throw new Error(`${releaseNotes} must not be empty`)

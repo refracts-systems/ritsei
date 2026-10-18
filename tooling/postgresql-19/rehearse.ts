@@ -77,20 +77,20 @@ if (isMain(import.meta.url)) {
     const before = await checksum()
     const beforeIndex = await indexState()
     const startedAt = new Date().toISOString()
-    await sql.unsafe(
-      "REPACK (CONCURRENTLY true, ANALYZE true) ritsei_pg19_rehearsal.repack_target",
-    )
+    await sql.unsafe("REPACK (CONCURRENTLY true, ANALYZE true) ritsei_pg19_rehearsal.repack_target")
     const finishedAt = new Date().toISOString()
     const after = await checksum()
     const afterIndex = await indexState()
     const [settings] = await sql<
-      [{
-        data_checksums: string
-        autovacuum: string
-        reserved_connections: string
-        superuser_reserved_connections: string
-        max_repack_replication_slots: string
-      }]
+      [
+        {
+          data_checksums: string
+          autovacuum: string
+          reserved_connections: string
+          superuser_reserved_connections: string
+          max_repack_replication_slots: string
+        },
+      ]
     >`
       select current_setting('data_checksums') as data_checksums,
              current_setting('autovacuum') as autovacuum,

@@ -26,15 +26,13 @@ const userAccountId = "018f0000-0000-7000-8000-000000000003"
 const principal = { userAccountId: "authorization-api-admin", sessionId: "api-session" }
 const unused = () => Effect.die(new Error("unused authorization endpoint in API integration test"))
 
-const TestHttpServices = Layer.mergeAll(
-  Path.layer,
-  Etag.layerWeak,
-  HttpPlatform.layer,
-).pipe(Layer.provideMerge(FileSystem.layerNoop({})))
+const TestHttpServices = Layer.mergeAll(Path.layer, Etag.layerWeak, HttpPlatform.layer).pipe(
+  Layer.provideMerge(FileSystem.layerNoop({})),
+)
 
 it.layer(TestHttpServices)("Authorization API", (it) => {
   it.effect("enforces tenant scope and the exact read capabilities", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const allowed = new Set<CapabilityType>([
         AuthorizationCapabilities.tenantMembershipRead,
         AuthorizationCapabilities.capabilityGrant,
@@ -57,11 +55,11 @@ it.layer(TestHttpServices)("Authorization API", (it) => {
           observed.push(request)
           return request.tenantId === tenantId && allowed.has(request.capability)
             ? Effect.succeed({
-              allowed: true as const,
-              tenantId: request.tenantId,
-              capability: request.capability,
-              grant: "membership" as const,
-            })
+                allowed: true as const,
+                tenantId: request.tenantId,
+                capability: request.capability,
+                grant: "membership" as const,
+              })
             : Effect.fail(new AuthorizationDenied(request))
         },
         getMember: () => Effect.succeed(membership),
@@ -80,9 +78,8 @@ it.layer(TestHttpServices)("Authorization API", (it) => {
       const bearer = Layer.succeed(BearerAuth, {
         bearer: (effect) => Effect.provideService(effect, CurrentPrincipal, principal),
       })
-      const bearerClient = HttpApiMiddleware.layerClient(
-        BearerAuth,
-        ({ request, next }) => next(HttpClientRequest.bearerToken(request, "test-token")),
+      const bearerClient = HttpApiMiddleware.layerClient(BearerAuth, ({ request, next }) =>
+        next(HttpClientRequest.bearerToken(request, "test-token")),
       )
       const handlers = AuthorizationHandlers.pipe(
         Layer.provide(bearer),
@@ -130,41 +127,53 @@ it.layer(TestHttpServices)("Authorization API", (it) => {
         }),
         CapabilityDefinitions,
       )
-      assert.deepStrictEqual(observed.map(({ capability }) => capability), [
-        AuthorizationCapabilities.tenantMembershipRead,
-        AuthorizationCapabilities.tenantMembershipRead,
-        AuthorizationCapabilities.tenantMembershipRead,
-        AuthorizationCapabilities.tenantMembershipRead,
-        AuthorizationCapabilities.capabilityGrant,
-        AuthorizationCapabilities.capabilityGrant,
-      ])
+      assert.deepStrictEqual(
+        observed.map(({ capability }) => capability),
+        [
+          AuthorizationCapabilities.tenantMembershipRead,
+          AuthorizationCapabilities.tenantMembershipRead,
+          AuthorizationCapabilities.tenantMembershipRead,
+          AuthorizationCapabilities.tenantMembershipRead,
+          AuthorizationCapabilities.capabilityGrant,
+          AuthorizationCapabilities.capabilityGrant,
+        ],
+      )
 
       allowed.delete(AuthorizationCapabilities.capabilityGrant)
-      const missingGrant = yield* Effect.flip(client.Authorization.listDirectGrants({
-        params: { userAccountId },
-        headers: { "x-tenant-id": tenantId },
-      }))
+      const missingGrant = yield* Effect.flip(
+        client.Authorization.listDirectGrants({
+          params: { userAccountId },
+          headers: { "x-tenant-id": tenantId },
+        }),
+      )
       assert.strictEqual(missingGrant._tag, "ApiForbidden")
 
       allowed.clear()
       allowed.add(AuthorizationCapabilities.capabilityGrant)
-      const missingRead = yield* Effect.flip(client.Authorization.listDirectGrants({
-        params: { userAccountId },
-        headers: { "x-tenant-id": tenantId },
-      }))
+      const missingRead = yield* Effect.flip(
+        client.Authorization.listDirectGrants({
+          params: { userAccountId },
+          headers: { "x-tenant-id": tenantId },
+        }),
+      )
       assert.strictEqual(missingRead._tag, "ApiForbidden")
 
       allowed.clear()
-      const defaultDenied = yield* Effect.flip(client.Authorization.listCapabilityDefinitions({
-        headers: { "x-tenant-id": tenantId },
-      }))
+      const defaultDenied = yield* Effect.flip(
+        client.Authorization.listCapabilityDefinitions({
+          headers: { "x-tenant-id": tenantId },
+        }),
+      )
       assert.strictEqual(defaultDenied._tag, "ApiForbidden")
 
       allowed.add(AuthorizationCapabilities.tenantMembershipRead)
-      const crossTenant = yield* Effect.flip(client.Authorization.getMember({
-        params: { userAccountId },
-        headers: { "x-tenant-id": otherTenantId },
-      }))
+      const crossTenant = yield* Effect.flip(
+        client.Authorization.getMember({
+          params: { userAccountId },
+          headers: { "x-tenant-id": otherTenantId },
+        }),
+      )
       assert.strictEqual(crossTenant._tag, "ApiForbidden")
-    }))
+    }),
+  )
 })

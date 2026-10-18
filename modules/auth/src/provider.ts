@@ -22,6 +22,4 @@ export interface IdentityProvider {
   >
 }
 
-export const IdentityProvider = Context.Service<IdentityProvider>(
-  "RITSEI/IdentityProvider",
-)
+export const IdentityProvider = Context.Service<IdentityProvider>("RITSEI/IdentityProvider")

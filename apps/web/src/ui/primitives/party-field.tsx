@@ -9,10 +9,8 @@ interface PartyOption {
   readonly disabled?: boolean
 }
 
-type PartyFieldProps =
-  & Omit<JSX.SelectHTMLAttributes<HTMLSelectElement>, "class" | "children">
-  & FieldProps
-  & {
+type PartyFieldProps = Omit<JSX.SelectHTMLAttributes<HTMLSelectElement>, "class" | "children"> &
+  FieldProps & {
     readonly options: readonly PartyOption[]
     readonly placeholder?: string
   }

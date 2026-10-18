@@ -117,7 +117,7 @@ const makePreparedEmail = (
   headers: [{ name: "X-RITSEI-Communication-ID", value: artifact.communicationId }],
 })
 
-export const makeCommunicationService = Effect.gen(function*() {
+export const makeCommunicationService = Effect.gen(function* () {
   const messaging = yield* MessagingServiceTag
   const configuration = yield* CommunicationConfiguration
   const policy = yield* CommunicationPolicy
@@ -131,7 +131,7 @@ export const makeCommunicationService = Effect.gen(function*() {
   const byCommunicationId = new Map<string, StoredCommunication>()
 
   const processEvent = (event: EventEnvelope) =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const intent = yield* policy.derivePurchaseOrderConfirmed(event)
       const payload = yield* Schema.decodeUnknownEffect(PurchaseOrderConfirmedEventPayload)(
         event.payload,
@@ -151,14 +151,12 @@ export const makeCommunicationService = Effect.gen(function*() {
       const recipients = yield* recipientResolver.resolve(intent)
       const context = yield* contextBuilder.build({ intent, data: payload })
       const message = makeEmailMessage(event, payload)
-      const artifact = yield* renderer.render(
-        {
-          intent,
-          context,
-          template: purchaseOrderTemplate,
-          message,
-        } satisfies EmailRenderInput,
-      )
+      const artifact = yield* renderer.render({
+        intent,
+        context,
+        template: purchaseOrderTemplate,
+        message,
+      } satisfies EmailRenderInput)
       const communication: Communication = {
         communicationId: intent.communicationId,
         tenantId: intent.tenantId,
@@ -197,7 +195,7 @@ export const makeCommunicationService = Effect.gen(function*() {
 
   const processPurchaseOrderConfirmed = Effect.fn(
     "CommunicationService.processPurchaseOrderConfirmed",
-  )(function*(input: unknown) {
+  )(function* (input: unknown) {
     const decoded = yield* Schema.decodeUnknownEffect(ProcessPurchaseOrderConfirmedInput)(input)
     const event = decoded.event
     const consumed = yield* messaging.consumeOnce(
@@ -211,9 +209,8 @@ export const makeCommunicationService = Effect.gen(function*() {
     if (!consumed.duplicate) return consumed.value
 
     const communicationId = byEvent.get(eventKey(event))
-    const stored = communicationId === undefined
-      ? undefined
-      : byCommunicationId.get(communicationId)
+    const stored =
+      communicationId === undefined ? undefined : byCommunicationId.get(communicationId)
     if (stored === undefined) {
       return yield* Effect.fail(
         new CommunicationStateFailure({ reason: "consumer receipt has no communication" }),
@@ -223,7 +220,7 @@ export const makeCommunicationService = Effect.gen(function*() {
   })
 
   const send = (communicationId: string, retry: boolean) =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const stored = byCommunicationId.get(communicationId)
       if (stored === undefined) {
         return yield* Effect.fail(new CommunicationNotFound({ communicationId }))
@@ -258,12 +255,12 @@ export const makeCommunicationService = Effect.gen(function*() {
       return result
     })
 
-  const deliver = Effect.fn("CommunicationService.deliver")(function*(input: unknown) {
+  const deliver = Effect.fn("CommunicationService.deliver")(function* (input: unknown) {
     const decoded = yield* Schema.decodeUnknownEffect(RetryCommunicationInput)(input)
     return yield* send(decoded.communicationId, false)
   })
 
-  const retry = Effect.fn("CommunicationService.retry")(function*(input: unknown) {
+  const retry = Effect.fn("CommunicationService.retry")(function* (input: unknown) {
     const decoded = yield* Schema.decodeUnknownEffect(RetryCommunicationInput)(input)
     return yield* send(decoded.communicationId, true)
   })

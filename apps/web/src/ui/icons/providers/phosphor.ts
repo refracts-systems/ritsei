@@ -11,7 +11,5 @@ const variantClasses: Record<IconVariant, string> = {
   duotone: "ph-duotone",
 }
 
-export const phosphorClass = (
-  name: IconName,
-  variant: IconVariant,
-): string => `${variantClasses[variant]} ph-${iconRegistry[name]}`
+export const phosphorClass = (name: IconName, variant: IconVariant): string =>
+  `${variantClasses[variant]} ph-${iconRegistry[name]}`

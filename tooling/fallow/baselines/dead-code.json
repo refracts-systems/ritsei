@@ -73,9 +73,7 @@
   "re_export_cycles": [],
   "unused_optional_dependencies": [],
   "unused_enum_members": [],
-  "unused_class_members": [
-    "foundation/database/contract.ts:UnsupportedPostgresVersion.message"
-  ],
+  "unused_class_members": ["foundation/database/contract.ts:UnsupportedPostgresVersion.message"],
   "unused_store_members": [],
   "unprovided_injects": [],
   "unrendered_components": [],

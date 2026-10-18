@@ -80,26 +80,29 @@ it.effect.skipIf(databaseUrl === undefined)(
   "rejects contradictory workflow state metadata in PostgreSQL",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         yield* runMigrations(client)
-        const [tenant] = yield* Effect.promise(() =>
-          client<{ id: string }[]>`
+        const [tenant] = yield* Effect.promise(
+          () =>
+            client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
-          `
+          `,
         )
         const aggregateId = uuidv7()
-        const nonRunningWorkflow = yield* postgresFailure(() =>
-          client`
+        const nonRunningWorkflow = yield* postgresFailure(
+          () =>
+            client`
             insert into process.workflow_runs
               (tenant_id, workflow_type, idempotency_key, aggregate_id, status, payload,
                result, completed_at)
             values
               (${tenant!.id}, 'sales.order.confirmation', 'invalid-initial-workflow',
                ${aggregateId}, 'succeeded', '{}'::jsonb, '{}'::jsonb, now())
-          `
+          `,
         )
-        const nonPendingJob = yield* postgresFailure(() =>
-          client`
+        const nonPendingJob = yield* postgresFailure(
+          () =>
+            client`
             insert into process.jobs
               (tenant_id, job_type, idempotency_key, status, lease_until, lease_owner,
                lease_token, payload, correlation_id)
@@ -107,94 +110,104 @@ it.effect.skipIf(databaseUrl === undefined)(
               (${tenant!.id}, 'process.order_confirmation.post_commit', 'invalid-initial-job',
                'leased', now() + interval '1 minute', 'initial-worker', ${uuidv7()},
                '{}'::jsonb, 'initial-correlation')
-          `
+          `,
         )
 
-        const unknownWorkflowType = yield* postgresFailure(() =>
-          client`
+        const unknownWorkflowType = yield* postgresFailure(
+          () =>
+            client`
             insert into process.workflow_runs
               (tenant_id, workflow_type, idempotency_key, aggregate_id, status, payload)
             values
               (${tenant!.id}, 'sales.order.unknown', 'invalid-workflow-type',
                ${aggregateId}, 'running', '{}'::jsonb)
-          `
+          `,
         )
-        const emptyWorkflowIdempotency = yield* postgresFailure(() =>
-          client`
+        const emptyWorkflowIdempotency = yield* postgresFailure(
+          () =>
+            client`
             insert into process.workflow_runs
               (tenant_id, workflow_type, idempotency_key, aggregate_id, status, payload)
             values
               (${tenant!.id}, 'sales.order.confirmation', '   ', ${aggregateId}, 'running',
                '{}'::jsonb)
-          `
+          `,
         )
-        const unknownJobType = yield* postgresFailure(() =>
-          client`
+        const unknownJobType = yield* postgresFailure(
+          () =>
+            client`
             insert into process.jobs
               (tenant_id, job_type, idempotency_key, payload, correlation_id)
             values
               (${tenant!.id}, 'process.unknown.post_commit', 'invalid-job-type', '{}'::jsonb,
                'invalid-job-type')
-          `
+          `,
         )
-        const emptyJobIdempotency = yield* postgresFailure(() =>
-          client`
+        const emptyJobIdempotency = yield* postgresFailure(
+          () =>
+            client`
             insert into process.jobs
               (tenant_id, job_type, idempotency_key, payload, correlation_id)
             values
               (${tenant!.id}, 'process.order_confirmation.post_commit', '   ', '{}'::jsonb,
                'correlation')
-          `
+          `,
         )
-        const emptyJobCorrelation = yield* postgresFailure(() =>
-          client`
+        const emptyJobCorrelation = yield* postgresFailure(
+          () =>
+            client`
             insert into process.jobs
               (tenant_id, job_type, idempotency_key, payload, correlation_id)
             values
               (${tenant!.id}, 'process.order_confirmation.post_commit',
                'empty-job-correlation', '{}'::jsonb, '   ')
-          `
+          `,
         )
-        const invalidJobLease = yield* postgresFailure(() =>
-          client`
+        const invalidJobLease = yield* postgresFailure(
+          () =>
+            client`
             insert into process.jobs
               (tenant_id, job_type, idempotency_key, status, lease_until, payload, correlation_id)
             values
               (${tenant!.id}, 'process.order_confirmation.post_commit', 'invalid-job-lease',
                'pending', now(), '{}'::jsonb, 'correlation')
-          `
+          `,
         )
-        const invalidJobCompletion = yield* postgresFailure(() =>
-          client`
+        const invalidJobCompletion = yield* postgresFailure(
+          () =>
+            client`
             insert into process.jobs
               (tenant_id, job_type, idempotency_key, status, completed_at, payload, correlation_id)
             values
               (${tenant!.id}, 'process.order_confirmation.post_commit', 'invalid-job-completion',
                'pending', now(), '{}'::jsonb, 'correlation')
-          `
+          `,
         )
-        const runningRecovery = yield* postgresFailure(() =>
-          client`
+        const runningRecovery = yield* postgresFailure(
+          () =>
+            client`
             insert into process.workflow_runs
               (tenant_id, workflow_type, idempotency_key, aggregate_id, status, payload,
                recovery_reason)
             values
               (${tenant!.id}, 'sales.order.confirmation', 'invalid-running-recovery',
                ${aggregateId}, 'running', '{}'::jsonb, 'unexpected')
-          `
+          `,
         )
-        const succeededRecovery = yield* postgresFailure(() =>
-          client`
+        const succeededRecovery = yield* postgresFailure(
+          () =>
+            client`
             insert into process.workflow_runs
               (tenant_id, workflow_type, idempotency_key, aggregate_id, status, payload,
                result, recovery_reason, completed_at)
             values
               (${tenant!.id}, 'sales.order.confirmation', 'invalid-succeeded-recovery',
                ${aggregateId}, 'succeeded', '{}'::jsonb, '{}'::jsonb, 'unexpected', now())
-          `
+          `,
         )
-        const completedRecovery = yield* postgresFailure(() =>
-          client`
+        const completedRecovery = yield* postgresFailure(
+          () =>
+            client`
             insert into process.workflow_runs
               (tenant_id, workflow_type, idempotency_key, aggregate_id, status, payload,
                recovery_reason, completed_at)
@@ -202,7 +215,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               (${tenant!.id}, 'sales.order.confirmation', 'invalid-completed-recovery',
                ${aggregateId}, 'manual_recovery', '{}'::jsonb,
                'operator review required', now())
-          `
+          `,
         )
 
         assert.strictEqual((nonRunningWorkflow as { code?: string }).code, "23514")
@@ -262,44 +275,49 @@ it.effect.skipIf(databaseUrl === undefined)(
             "workflow_runs_state_transition_check",
           )
         }
-      })),
+      }),
+    ),
 )
 
 it.effect.skipIf(databaseUrl === undefined)(
   "enforces Process workflow and job state transitions in PostgreSQL",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         yield* runMigrations(client)
-        const [tenant] = yield* Effect.promise(() =>
-          client<{ id: string }[]>`
+        const [tenant] = yield* Effect.promise(
+          () =>
+            client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
-          `
+          `,
         )
         const aggregateId = uuidv7()
-        const [workflow] = yield* Effect.promise(() =>
-          client<{ id: string }[]>`
+        const [workflow] = yield* Effect.promise(
+          () =>
+            client<{ id: string }[]>`
             insert into process.workflow_runs
               (tenant_id, workflow_type, idempotency_key, aggregate_id, payload)
             values
               (${tenant!.id}, 'sales.order.confirmation', 'transition-workflow',
                ${aggregateId}, '{}'::jsonb)
             returning id
-          `
+          `,
         )
-        yield* Effect.promise(() =>
-          client`
+        yield* Effect.promise(
+          () =>
+            client`
             update process.workflow_runs
             set status = 'succeeded', result = '{}'::jsonb, completed_at = now()
             where id = ${workflow!.id}
-          `
+          `,
         )
-        const workflowTerminalFailure = yield* postgresFailure(() =>
-          client`
+        const workflowTerminalFailure = yield* postgresFailure(
+          () =>
+            client`
             update process.workflow_runs
             set status = 'running', result = null, completed_at = null
             where id = ${workflow!.id}
-          `
+          `,
         )
         assert.strictEqual((workflowTerminalFailure as { code?: string }).code, "23514")
         assert.strictEqual(
@@ -307,85 +325,94 @@ it.effect.skipIf(databaseUrl === undefined)(
           "workflow_runs_state_transition_check",
         )
 
-        const [job] = yield* Effect.promise(() =>
-          client<{ id: string }[]>`
+        const [job] = yield* Effect.promise(
+          () =>
+            client<{ id: string }[]>`
             insert into process.jobs
               (tenant_id, job_type, idempotency_key, payload, correlation_id)
             values
               (${tenant!.id}, 'process.order_confirmation.post_commit',
                'transition-job', '{}'::jsonb, 'transition-correlation')
             returning id
-          `
+          `,
         )
         const leaseToken = uuidv7()
-        yield* Effect.promise(() =>
-          client`
+        yield* Effect.promise(
+          () =>
+            client`
             update process.jobs
             set status = 'leased', lease_until = now() + interval '1 minute',
                 lease_owner = 'transition-worker', lease_token = ${leaseToken}
             where id = ${job!.id}
-          `
+          `,
         )
-        yield* Effect.promise(() =>
-          client`
+        yield* Effect.promise(
+          () =>
+            client`
             update process.jobs
             set status = 'pending', scheduled_at = now(), lease_until = null,
                 lease_owner = null, lease_token = null
             where id = ${job!.id}
-          `
+          `,
         )
-        const invalidJobTransition = yield* postgresFailure(() =>
-          client`
+        const invalidJobTransition = yield* postgresFailure(
+          () =>
+            client`
             update process.jobs set status = 'completed' where id = ${job!.id}
-          `
+          `,
         )
         assert.strictEqual((invalidJobTransition as { code?: string }).code, "23514")
         assert.strictEqual(
           (invalidJobTransition as { constraint_name?: string }).constraint_name,
           "process_jobs_state_transition_check",
         )
-        yield* Effect.promise(() =>
-          client`
+        yield* Effect.promise(
+          () =>
+            client`
             update process.jobs
             set status = 'leased', lease_until = now() + interval '1 minute',
                 lease_owner = 'transition-worker', lease_token = ${leaseToken}
             where id = ${job!.id}
-          `
+          `,
         )
-        yield* Effect.promise(() =>
-          client`
+        yield* Effect.promise(
+          () =>
+            client`
             update process.jobs
             set status = 'completed', lease_until = null, lease_owner = null,
                 lease_token = null, completed_at = now()
             where id = ${job!.id}
-          `
+          `,
         )
-        const jobTerminalFailure = yield* postgresFailure(() =>
-          client`
+        const jobTerminalFailure = yield* postgresFailure(
+          () =>
+            client`
             update process.jobs
             set status = 'pending', completed_at = null
             where id = ${job!.id}
-          `
+          `,
         )
         assert.strictEqual((jobTerminalFailure as { code?: string }).code, "23514")
         assert.strictEqual(
           (jobTerminalFailure as { constraint_name?: string }).constraint_name,
           "process_jobs_state_transition_check",
         )
-      })),
+      }),
+    ),
 )
 
 it.effect.skipIf(databaseUrl === undefined)(
   "commits order confirmation, event, job, and idempotent retries atomically",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
-        const [tenant] = yield* Effect.promise(() =>
-          client<{ id: string }[]>`
+        const [tenant] = yield* Effect.promise(
+          () =>
+            client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
-          `
+          `,
         )
         const authorizationLayer = makeAuthorizationTestLayer(
           capabilities.map((capability) => ({
@@ -395,7 +422,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           })),
         )
 
-        yield* Effect.gen(function*() {
+        yield* Effect.gen(function* () {
           const authorization = yield* AuthorizationService
           const requirements = Layer.merge(
             Layer.succeed(Database, database),
@@ -469,7 +496,8 @@ it.effect.skipIf(databaseUrl === undefined)(
               warehouseId: warehouse.id,
               itemId: item.id,
               quantity: "10",
-            }))
+            }),
+          )
           const receivable = yield* accounting.createAccount({
             principal,
             tenantId: tenant!.id,
@@ -540,16 +568,14 @@ it.effect.skipIf(databaseUrl === undefined)(
             userAccountId: principal.userAccountId,
             tenantId: tenant!.id,
           })
-          assert.instanceOf(
-            yield* Effect.flip(process.confirmOrder(input)),
-            AuthorizationDenied,
-          )
+          assert.instanceOf(yield* Effect.flip(process.confirmOrder(input)), AuthorizationDenied)
           yield* authorization.activateMember({
             userAccountId: principal.userAccountId,
             tenantId: tenant!.id,
           })
-          const [storedWorkflow] = yield* Effect.promise(() =>
-            client<Record<string, unknown>[]>`
+          const [storedWorkflow] = yield* Effect.promise(
+            () =>
+              client<Record<string, unknown>[]>`
               select
                 id, tenant_id as "tenantId", workflow_type as "workflowType",
                 idempotency_key as "idempotencyKey", aggregate_id as "aggregateId", status,
@@ -557,7 +583,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                 recovery_reason as "recoveryReason", to_json(completed_at) as "completedAt"
               from process.workflow_runs
               where id = ${result.workflowRunId}
-            `
+            `,
           )
           const decodedWorkflow = yield* Schema.decodeUnknownEffect(WorkflowRun)(storedWorkflow)
           assert.strictEqual(decodedWorkflow.id, result.workflowRunId)
@@ -592,24 +618,28 @@ it.effect.skipIf(databaseUrl === undefined)(
           assert.strictEqual(counts.workflow_runs, "1")
           assert.strictEqual(counts.events, "3")
           assert.strictEqual(counts.jobs, "1")
-          const [event] = yield* Effect.promise(() =>
-            client<{
-              command_id: string
-              correlation_id: string
-              causation_id: string | null
-              idempotency_key: string
-              payload: unknown
-            }[]>`
+          const [event] = yield* Effect.promise(
+            () =>
+              client<
+                {
+                  command_id: string
+                  correlation_id: string
+                  causation_id: string | null
+                  idempotency_key: string
+                  payload: unknown
+                }[]
+              >`
               select command_id, correlation_id, causation_id, idempotency_key, payload
               from messaging.event_outbox
               where id = ${result.eventId}
-            `
+            `,
           )
           const eventPayload = yield* Schema.decodeUnknownEffect(
             OrderConfirmationCompletedEventPayload,
           )(event?.payload)
-          const [storedEvent] = yield* Effect.promise(() =>
-            client<Record<string, unknown>[]>`
+          const [storedEvent] = yield* Effect.promise(
+            () =>
+              client<Record<string, unknown>[]>`
               select
                 id as "eventId", event_type as "eventType", event_version as "eventVersion",
                 tenant_id as "tenantId", aggregate_type as "aggregateType",
@@ -620,7 +650,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                 to_json(published_at) as "publishedAt", attempts
               from messaging.event_outbox
               where id = ${result.eventId}
-            `
+            `,
           )
           const decodedEvent = yield* Schema.decodeUnknownEffect(EventEnvelope)(storedEvent)
           assert.strictEqual(decodedEvent.eventType, ProcessOrderConfirmationCompletedEvent.id)
@@ -662,18 +692,8 @@ it.effect.skipIf(databaseUrl === undefined)(
           )
           assert.strictEqual(eventPayload.journalId, result.journal.id)
           assert.deepStrictEqual(
-            [
-              event?.command_id,
-              event?.correlation_id,
-              event?.causation_id,
-              event?.idempotency_key,
-            ],
-            [
-              input.commandId,
-              input.correlationId,
-              input.causationId,
-              input.idempotencyKey,
-            ],
+            [event?.command_id, event?.correlation_id, event?.causation_id, event?.idempotency_key],
+            [input.commandId, input.correlationId, input.causationId, input.idempotencyKey],
           )
           assert.strictEqual(
             new Set([
@@ -684,27 +704,31 @@ it.effect.skipIf(databaseUrl === undefined)(
             ]).size,
             4,
           )
-          const [job] = yield* Effect.promise(() =>
-            client<{
-              correlation_id: string
-              idempotency_key: string
-              payload: {
-                eventId: string
-                workflowRunId: string
-                commandId: string
-                correlationId: string
-                causationId: string | null
-                idempotencyKey: string
-              }
-            }[]>`
+          const [job] = yield* Effect.promise(
+            () =>
+              client<
+                {
+                  correlation_id: string
+                  idempotency_key: string
+                  payload: {
+                    eventId: string
+                    workflowRunId: string
+                    commandId: string
+                    correlationId: string
+                    causationId: string | null
+                    idempotencyKey: string
+                  }
+                }[]
+              >`
               select correlation_id, idempotency_key, payload
               from process.jobs
               where id = ${result.jobId}
-            `
+            `,
           )
           yield* Schema.decodeUnknownEffect(ProcessPostCommitJobPayload)(job?.payload)
-          const [storedJob] = yield* Effect.promise(() =>
-            client<Record<string, unknown>[]>`
+          const [storedJob] = yield* Effect.promise(
+            () =>
+              client<Record<string, unknown>[]>`
               select
                 id as "jobId", tenant_id as "tenantId", fence_scope as "fenceScope",
                 lease_generation as "leaseGeneration", job_type as "jobType",
@@ -713,7 +737,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                 attempts, payload, correlation_id as "correlationId"
               from process.jobs
               where id = ${result.jobId}
-            `
+            `,
           )
           const decodedJob = yield* Schema.decodeUnknownEffect(ProcessJob)(storedJob)
           assert.deepStrictEqual(
@@ -757,14 +781,15 @@ it.effect.skipIf(databaseUrl === undefined)(
             },
           })
 
-          const balances = yield* Effect.promise(() =>
-            client<{ item_id: string; on_hand: string; reserved: string }[]>`
+          const balances = yield* Effect.promise(
+            () =>
+              client<{ item_id: string; on_hand: string; reserved: string }[]>`
               select item_id, on_hand::text, reserved::text
               from inventory.stock_balances
               where tenant_id = ${tenant!.id}
                 and warehouse_id = ${warehouse.id}
               order by item_id
-            `
+            `,
           )
           assert.deepStrictEqual(
             balances,
@@ -774,63 +799,70 @@ it.effect.skipIf(databaseUrl === undefined)(
             ].toSorted((a, b) => a.item_id.localeCompare(b.item_id)),
           )
           const crossLinkedJobResult = { ...result, jobId: uuidv7() }
-          yield* Effect.promise(() =>
-            client`
+          yield* Effect.promise(
+            () =>
+              client`
               update process.workflow_runs
               set result = ${JSON.stringify(crossLinkedJobResult)}::jsonb
               where id = ${result.workflowRunId}
-            `
+            `,
           )
           assert.instanceOf(yield* Effect.flip(process.confirmOrder(input)), WorkflowResultCorrupt)
-          yield* Effect.promise(() =>
-            client`
+          yield* Effect.promise(
+            () =>
+              client`
               update process.jobs
               set priority = 999
               where id = ${result.jobId}
-            `
+            `,
           )
           assert.instanceOf(yield* Effect.flip(process.confirmOrder(input)), WorkflowResultCorrupt)
-          yield* Effect.promise(() =>
-            client`
+          yield* Effect.promise(
+            () =>
+              client`
               update process.jobs
               set priority = ${ProcessLifecycleJobPriority}
               where id = ${result.jobId}
-            `
+            `,
           )
           const mismatchedActorPrincipalId = uuidv7()
-          yield* Effect.promise(() =>
-            client`
+          yield* Effect.promise(
+            () =>
+              client`
               update messaging.event_outbox
               set actor_principal_id = ${mismatchedActorPrincipalId}
               where id = ${result.eventId}
-            `
+            `,
           )
           assert.instanceOf(yield* Effect.flip(process.confirmOrder(input)), WorkflowResultCorrupt)
-          yield* Effect.promise(() =>
-            client`
+          yield* Effect.promise(
+            () =>
+              client`
               update messaging.event_outbox
               set actor_principal_id = ${input.principal.userAccountId}
               where id = ${result.eventId}
-            `
+            `,
           )
           const mismatchedConfirmationJobPayload = {
             ...job!.payload,
             commandId: "mismatched-job-command",
           }
-          yield* Effect.promise(() =>
-            client`
+          yield* Effect.promise(
+            () =>
+              client`
               update process.jobs
               set payload = ${JSON.stringify(mismatchedConfirmationJobPayload)}::jsonb
               where id = ${result.jobId}
-            `
+            `,
           )
           assert.instanceOf(yield* Effect.flip(process.confirmOrder(input)), WorkflowResultCorrupt)
-          yield* Effect.promise(() =>
-            client`
+          yield* Effect.promise(
+            () =>
+              client`
               update process.jobs
               set payload = ${JSON.stringify(job!.payload)}::jsonb
               where id = ${result.jobId}
-            `
+            `,
           )
           const mismatchedConfirmationEventPayload = {
             workflowRunId: result.workflowRunId,
@@ -838,38 +870,38 @@ it.effect.skipIf(databaseUrl === undefined)(
             reservationIds: result.reservations.map(({ id }) => id),
             journalId: uuidv7(),
           }
-          yield* Effect.promise(() =>
-            client`
+          yield* Effect.promise(
+            () =>
+              client`
               update messaging.event_outbox
               set payload = ${JSON.stringify(mismatchedConfirmationEventPayload)}::jsonb
               where id = ${result.eventId}
-            `
+            `,
           )
-          assert.instanceOf(
-            yield* Effect.flip(process.confirmOrder(input)),
-            WorkflowResultCorrupt,
-          )
+          assert.instanceOf(yield* Effect.flip(process.confirmOrder(input)), WorkflowResultCorrupt)
           const crossLinkedEventResult = { ...result, eventId: uuidv7() }
-          yield* Effect.promise(() =>
-            client`
+          yield* Effect.promise(
+            () =>
+              client`
               update process.workflow_runs
               set result = ${JSON.stringify(crossLinkedEventResult)}::jsonb
               where id = ${result.workflowRunId}
-            `
+            `,
           )
           assert.instanceOf(yield* Effect.flip(process.confirmOrder(input)), WorkflowResultCorrupt)
           const inactiveReservationResult = {
             ...result,
             reservations: result.reservations.map((reservation, index) =>
-              index === 0 ? { ...reservation, status: "fulfilled" as const } : reservation
+              index === 0 ? { ...reservation, status: "fulfilled" as const } : reservation,
             ),
           }
-          yield* Effect.promise(() =>
-            client`
+          yield* Effect.promise(
+            () =>
+              client`
               update process.workflow_runs
               set result = ${JSON.stringify(inactiveReservationResult)}::jsonb
               where id = ${result.workflowRunId}
-            `
+            `,
           )
           assert.instanceOf(yield* Effect.flip(process.confirmOrder(input)), WorkflowResultCorrupt)
           const corruptJournalResult = {
@@ -880,50 +912,54 @@ it.effect.skipIf(databaseUrl === undefined)(
               reversesEntryId: uuidv7(),
             },
           }
-          yield* Effect.promise(() =>
-            client`
+          yield* Effect.promise(
+            () =>
+              client`
               update process.workflow_runs
               set result = ${JSON.stringify(corruptJournalResult)}::jsonb
               where id = ${result.workflowRunId}
-            `
+            `,
           )
           assert.instanceOf(yield* Effect.flip(process.confirmOrder(input)), WorkflowResultCorrupt)
           const cancelledOrderResult = {
             ...result,
             order: { ...result.order, status: "cancelled" as const },
           }
-          yield* Effect.promise(() =>
-            client`
+          yield* Effect.promise(
+            () =>
+              client`
               update process.workflow_runs
               set result = ${JSON.stringify(cancelledOrderResult)}::jsonb
               where id = ${result.workflowRunId}
-            `
+            `,
           )
           assert.instanceOf(yield* Effect.flip(process.confirmOrder(input)), WorkflowResultCorrupt)
           const duplicateReservationIdResult = {
             ...result,
             reservations: result.reservations.map((reservation, index) =>
-              index === 1 ? { ...reservation, id: result.reservations[0]!.id } : reservation
+              index === 1 ? { ...reservation, id: result.reservations[0]!.id } : reservation,
             ),
           }
-          yield* Effect.promise(() =>
-            client`
+          yield* Effect.promise(
+            () =>
+              client`
               update process.workflow_runs
               set result = ${JSON.stringify(duplicateReservationIdResult)}::jsonb
               where id = ${result.workflowRunId}
-            `
+            `,
           )
           assert.instanceOf(yield* Effect.flip(process.confirmOrder(input)), WorkflowResultCorrupt)
           const missingConfirmationTimestampResult = {
             ...result,
             order: { ...result.order, confirmedAt: null },
           }
-          yield* Effect.promise(() =>
-            client`
+          yield* Effect.promise(
+            () =>
+              client`
               update process.workflow_runs
               set result = ${JSON.stringify(missingConfirmationTimestampResult)}::jsonb
               where id = ${result.workflowRunId}
-            `
+            `,
           )
           assert.instanceOf(yield* Effect.flip(process.confirmOrder(input)), WorkflowResultCorrupt)
           const mismatchedReservationIdempotencyResult = {
@@ -931,15 +967,16 @@ it.effect.skipIf(databaseUrl === undefined)(
             reservations: result.reservations.map((reservation, index) =>
               index === 0
                 ? { ...reservation, idempotencyKey: `${input.idempotencyKey}:line:99` }
-                : reservation
+                : reservation,
             ),
           }
-          yield* Effect.promise(() =>
-            client`
+          yield* Effect.promise(
+            () =>
+              client`
               update process.workflow_runs
               set result = ${JSON.stringify(mismatchedReservationIdempotencyResult)}::jsonb
               where id = ${result.workflowRunId}
-            `
+            `,
           )
           assert.instanceOf(yield* Effect.flip(process.confirmOrder(input)), WorkflowResultCorrupt)
           const mismatchedJournalLinesResult = {
@@ -947,16 +984,17 @@ it.effect.skipIf(databaseUrl === undefined)(
             journal: {
               ...result.journal,
               lines: result.journal.lines.map((line, index) =>
-                index === 0 ? { ...line, debit: "124.00" } : line
+                index === 0 ? { ...line, debit: "124.00" } : line,
               ),
             },
           }
-          yield* Effect.promise(() =>
-            client`
+          yield* Effect.promise(
+            () =>
+              client`
               update process.workflow_runs
               set result = ${JSON.stringify(mismatchedJournalLinesResult)}::jsonb
               where id = ${result.workflowRunId}
-            `
+            `,
           )
           assert.instanceOf(yield* Effect.flip(process.confirmOrder(input)), WorkflowResultCorrupt)
           const mismatchedOrderLinePriceResult = {
@@ -964,16 +1002,17 @@ it.effect.skipIf(databaseUrl === undefined)(
             order: {
               ...result.order,
               lines: result.order.lines.map((line, index) =>
-                index === 0 ? { ...line, unitPrice: "1.00" } : line
+                index === 0 ? { ...line, unitPrice: "1.00" } : line,
               ),
             },
           }
-          yield* Effect.promise(() =>
-            client`
+          yield* Effect.promise(
+            () =>
+              client`
               update process.workflow_runs
               set result = ${JSON.stringify(mismatchedOrderLinePriceResult)}::jsonb
               where id = ${result.workflowRunId}
-            `
+            `,
           )
           assert.instanceOf(yield* Effect.flip(process.confirmOrder(input)), WorkflowResultCorrupt)
           const invalidJournalLineResult = {
@@ -986,33 +1025,36 @@ it.effect.skipIf(databaseUrl === undefined)(
               ],
             },
           }
-          yield* Effect.promise(() =>
-            client`
+          yield* Effect.promise(
+            () =>
+              client`
               update process.workflow_runs
               set result = ${JSON.stringify(invalidJournalLineResult)}::jsonb
               where id = ${result.workflowRunId}
-            `
+            `,
           )
           assert.instanceOf(yield* Effect.flip(process.confirmOrder(input)), WorkflowResultCorrupt)
           const detachedOrderResult = {
             ...result,
             order: { ...result.order, id: uuidv7() },
           }
-          yield* Effect.promise(() =>
-            client`
+          yield* Effect.promise(
+            () =>
+              client`
               update process.workflow_runs
               set result = ${JSON.stringify(detachedOrderResult)}::jsonb
               where id = ${result.workflowRunId}
-            `
+            `,
           )
           assert.instanceOf(yield* Effect.flip(process.confirmOrder(input)), WorkflowResultCorrupt)
           const crossLinkedResult = { ...result, workflowRunId: uuidv7() }
-          yield* Effect.promise(() =>
-            client`
+          yield* Effect.promise(
+            () =>
+              client`
               update process.workflow_runs
               set result = ${JSON.stringify(crossLinkedResult)}::jsonb
               where id = ${result.workflowRunId}
-            `
+            `,
           )
           assert.instanceOf(yield* Effect.flip(process.confirmOrder(input)), WorkflowResultCorrupt)
           yield* authorization.removeMember({
@@ -1035,10 +1077,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           })
           const authorizationFailure = yield* Effect.flip(process.confirmOrder(input))
           assert.instanceOf(authorizationFailure, AuthorizationDenied)
-          assert.strictEqual(
-            authorizationFailure.capability,
-            InventoryCapabilities.stockReserve,
-          )
+          assert.strictEqual(authorizationFailure.capability, InventoryCapabilities.stockReserve)
           yield* authorization.grant({
             userAccountId: principal.userAccountId,
             tenantId: tenant!.id,
@@ -1051,20 +1090,22 @@ it.effect.skipIf(databaseUrl === undefined)(
             AccountingCapabilities.revenuePost,
           )
         }).pipe(Effect.provide(authorizationLayer))
-      })),
+      }),
+    ),
 )
 
 it.effect.skipIf(databaseUrl === undefined)(
   "rolls back order, reservation, journal, event, and job on stock failure",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
-        const [tenant] = yield* Effect.promise(() =>
-          client<{ id: string }[]>`
+        const [tenant] = yield* Effect.promise(
+          () =>
+            client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
-          `
+          `,
         )
         const authorizationLayer = makeAuthorizationTestLayer(
           capabilities.map((capability) => ({
@@ -1074,7 +1115,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           })),
         )
 
-        yield* Effect.gen(function*() {
+        yield* Effect.gen(function* () {
           const authorization = yield* AuthorizationService
           const requirements = Layer.merge(
             Layer.succeed(Database, database),
@@ -1153,61 +1194,70 @@ it.effect.skipIf(databaseUrl === undefined)(
             customerId: customer.id,
             lines: [{ itemId: item.id, quantity: "2", unitPrice: "100.00" }],
           })
-          const error = yield* Effect.flip(process.confirmOrder({
-            principal,
-            tenantId: tenant!.id,
-            orderId: order.id,
-            warehouseId: warehouse.id,
-            legalEntityId: legalEntity.id,
-            commandId: "command-rollback-confirmation-1",
-            correlationId: "correlation-rollback-confirmation-1",
-            idempotencyKey: "rollback-confirmation-1",
-          }))
+          const error = yield* Effect.flip(
+            process.confirmOrder({
+              principal,
+              tenantId: tenant!.id,
+              orderId: order.id,
+              warehouseId: warehouse.id,
+              legalEntityId: legalEntity.id,
+              commandId: "command-rollback-confirmation-1",
+              correlationId: "correlation-rollback-confirmation-1",
+              idempotencyKey: "rollback-confirmation-1",
+            }),
+          )
           assert.strictEqual(error._tag, "StockUnavailable")
-          const [storedOrder] = yield* Effect.promise(() =>
-            client<{ status: string }[]>`
+          const [storedOrder] = yield* Effect.promise(
+            () =>
+              client<{ status: string }[]>`
               select status from sales.orders where id = ${order.id}
-            `
+            `,
           )
           assert.strictEqual(storedOrder?.status, "draft")
           const counts = (yield* Effect.promise(() => readCounts(client, tenant!.id)))[0]!
           assert.deepStrictEqual(counts, { workflow_runs: "0", events: "0", jobs: "0" })
-          const legalEntityMismatch = yield* Effect.flip(process.confirmOrder({
-            principal,
-            tenantId: tenant!.id,
-            orderId: order.id,
-            warehouseId: warehouse.id,
-            legalEntityId: uuidv7(),
-            commandId: "command-legal-entity-mismatch-1",
-            correlationId: "correlation-legal-entity-mismatch-1",
-            idempotencyKey: "legal-entity-mismatch-1",
-          }))
+          const legalEntityMismatch = yield* Effect.flip(
+            process.confirmOrder({
+              principal,
+              tenantId: tenant!.id,
+              orderId: order.id,
+              warehouseId: warehouse.id,
+              legalEntityId: uuidv7(),
+              commandId: "command-legal-entity-mismatch-1",
+              correlationId: "correlation-legal-entity-mismatch-1",
+              idempotencyKey: "legal-entity-mismatch-1",
+            }),
+          )
           assert.strictEqual(legalEntityMismatch._tag, "StockReservationLegalEntityMismatch")
-          const [mismatchedOrder] = yield* Effect.promise(() =>
-            client<{ status: string }[]>`
+          const [mismatchedOrder] = yield* Effect.promise(
+            () =>
+              client<{ status: string }[]>`
               select status from sales.orders where id = ${order.id}
-            `
+            `,
           )
           assert.strictEqual(mismatchedOrder?.status, "draft")
-          assert.deepStrictEqual(
-            (yield* Effect.promise(() => readCounts(client, tenant!.id)))[0],
-            { workflow_runs: "0", events: "0", jobs: "0" },
-          )
+          assert.deepStrictEqual((yield* Effect.promise(() => readCounts(client, tenant!.id)))[0], {
+            workflow_runs: "0",
+            events: "0",
+            jobs: "0",
+          })
         }).pipe(Effect.provide(authorizationLayer))
-      })),
+      }),
+    ),
 )
 
 it.effect.skipIf(databaseUrl === undefined)(
   "supports concurrent retries and explicit manual recovery state",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
-        const [tenant] = yield* Effect.promise(() =>
-          client<{ id: string }[]>`
+        const [tenant] = yield* Effect.promise(
+          () =>
+            client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
-          `
+          `,
         )
         const authorizationLayer = makeAuthorizationTestLayer(
           capabilities.map((capability) => ({
@@ -1217,7 +1267,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           })),
         )
 
-        yield* Effect.gen(function*() {
+        yield* Effect.gen(function* () {
           const authorization = yield* AuthorizationService
           const requirements = Layer.merge(
             Layer.succeed(Database, database),
@@ -1350,24 +1400,23 @@ it.effect.skipIf(databaseUrl === undefined)(
           )
           assert.strictEqual(results[0].workflowRunId, results[1].workflowRunId)
 
-          yield* Effect.promise(() =>
-            client`
+          yield* Effect.promise(
+            () =>
+              client`
               insert into process.workflow_runs
                 (tenant_id, workflow_type, idempotency_key, aggregate_id, status, payload)
               values
                 (${tenant!.id}, 'sales.order.confirmation', 'manual-confirmation-1', ${order.id},
-                 'running', ${
-              JSON.stringify({
-                orderId: order.id,
-                warehouseId: warehouse.id,
-                legalEntityId: legalEntity.id,
-                commandId: "command-manual-confirmation-1",
-                correlationId: "correlation-manual-confirmation-1",
-                causationId: null,
-                idempotencyKey: "manual-confirmation-1",
-              })
-            }::jsonb)
-            `
+                 'running', ${JSON.stringify({
+                   orderId: order.id,
+                   warehouseId: warehouse.id,
+                   legalEntityId: legalEntity.id,
+                   commandId: "command-manual-confirmation-1",
+                   correlationId: "correlation-manual-confirmation-1",
+                   causationId: null,
+                   idempotencyKey: "manual-confirmation-1",
+                 })}::jsonb)
+            `,
           )
           const manual = yield* process.markManualRecovery({
             principal,
@@ -1376,18 +1425,21 @@ it.effect.skipIf(databaseUrl === undefined)(
             reason: "operator review required",
           })
           assert.strictEqual(manual.status, "manual_recovery")
-          const recovery = yield* Effect.flip(process.recoverOrder({
-            principal,
-            tenantId: tenant!.id,
-            orderId: order.id,
-            warehouseId: warehouse.id,
-            legalEntityId: legalEntity.id,
-            commandId: "command-manual-confirmation-1",
-            correlationId: "correlation-manual-confirmation-1",
-            causationId: null,
-            idempotencyKey: "manual-confirmation-1",
-          }))
+          const recovery = yield* Effect.flip(
+            process.recoverOrder({
+              principal,
+              tenantId: tenant!.id,
+              orderId: order.id,
+              warehouseId: warehouse.id,
+              legalEntityId: legalEntity.id,
+              commandId: "command-manual-confirmation-1",
+              correlationId: "correlation-manual-confirmation-1",
+              causationId: null,
+              idempotencyKey: "manual-confirmation-1",
+            }),
+          )
           assert.instanceOf(recovery, WorkflowManualRecoveryRequired)
         }).pipe(Effect.provide(authorizationLayer))
-      })),
+      }),
+    ),
 )

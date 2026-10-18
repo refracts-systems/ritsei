@@ -19,22 +19,23 @@ import {
 } from "./financial-store-contract.ts"
 
 const NonEmptyString = Schema.String.check(Schema.isPattern(/\S/))
-const TrimmedNonEmptyString = Schema.String.check(Schema.makeFilter(
-  (value) => /\S/.test(value) && value === value.trim(),
-  { expected: "a trimmed nonblank string" },
-))
-const UpperNonEmptyString = Schema.String.check(Schema.makeFilter(
-  (value) => /\S/.test(value) && value === value.trim() && value === value.toUpperCase(),
-  { expected: "a trimmed uppercase nonblank string" },
-))
-const Uuid = Schema.String.check(Schema.isUUID())
-const Uuidv7 = Schema.String.check(Schema.isPattern(
-  /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-))
-const Hash = Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/))
-const NonNegativeInt = Schema.Int.check(
-  Schema.isBetween({ minimum: 0, maximum: 0x7fffffff }),
+const TrimmedNonEmptyString = Schema.String.check(
+  Schema.makeFilter((value) => /\S/.test(value) && value === value.trim(), {
+    expected: "a trimmed nonblank string",
+  }),
 )
+const UpperNonEmptyString = Schema.String.check(
+  Schema.makeFilter(
+    (value) => /\S/.test(value) && value === value.trim() && value === value.toUpperCase(),
+    { expected: "a trimmed uppercase nonblank string" },
+  ),
+)
+const Uuid = Schema.String.check(Schema.isUUID())
+const Uuidv7 = Schema.String.check(
+  Schema.isPattern(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i),
+)
+const Hash = Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/))
+const NonNegativeInt = Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: 0x7fffffff }))
 const Money = FinancialMajorAmount
 const CurrencyCode = Schema.String.check(Schema.isPattern(/^[A-Za-z]{3}$/))
 const UpperCurrencyCode = Schema.String.check(Schema.isPattern(/^[A-Z]{3}$/))
@@ -49,14 +50,16 @@ const FinancialCutoverStatus = Schema.Literals([
 ])
 const Precision = Schema.Literal(2)
 const FiscalYearStartMonth = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 12 }))
-const IsoDate = Schema.String.check(Schema.makeFilter(
-  (value) => {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
-    const date = new Date(`${value}T00:00:00.000Z`)
-    return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
-  },
-  { expected: "a valid ISO calendar date" },
-))
+const IsoDate = Schema.String.check(
+  Schema.makeFilter(
+    (value) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+      const date = new Date(`${value}T00:00:00.000Z`)
+      return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
+    },
+    { expected: "a valid ISO calendar date" },
+  ),
+)
 const InstantString = EventEnvelope.fields.occurredAt
 
 export const AccountingConfiguration = Schema.Struct({
@@ -81,14 +84,16 @@ export const JournalLine = Schema.Struct({
   accountId: Uuid,
   debit: Money,
   credit: Money,
-}).check(Schema.makeFilter(
-  (line) => {
-    const debit = requireExactMajorToMinor(line.debit, 2)
-    const credit = requireExactMajorToMinor(line.credit, 2)
-    return (debit > 0n && credit === 0n) || (credit > 0n && debit === 0n)
-  },
-  { expected: "exactly one journal line amount must be positive" },
-))
+}).check(
+  Schema.makeFilter(
+    (line) => {
+      const debit = requireExactMajorToMinor(line.debit, 2)
+      const credit = requireExactMajorToMinor(line.credit, 2)
+      return (debit > 0n && credit === 0n) || (credit > 0n && debit === 0n)
+    },
+    { expected: "exactly one journal line amount must be positive" },
+  ),
+)
 
 export const JournalEntry = Schema.Struct({
   id: Uuid,
@@ -98,25 +103,31 @@ export const JournalEntry = Schema.Struct({
   postedAt: InstantString,
   reversesEntryId: Schema.optional(Uuid),
   lines: Schema.Array(JournalLine).check(Schema.isMinLength(2)),
-}).check(Schema.makeFilter(
-  (entry) =>
-    entry.status === "reversed"
-      ? entry.reversesEntryId !== undefined
-      : entry.reversesEntryId === undefined,
-  { expected: "journal reversal state consistent with its status" },
-)).check(Schema.makeFilter(
-  (entry) => {
-    const totals = entry.lines.reduce(
-      (sum, line) => ({
-        debit: sum.debit + requireExactMajorToMinor(line.debit, 2),
-        credit: sum.credit + requireExactMajorToMinor(line.credit, 2),
-      }),
-      { debit: 0n, credit: 0n },
-    )
-    return totals.debit === totals.credit
-  },
-  { expected: "journal entry debits and credits must balance" },
-))
+})
+  .check(
+    Schema.makeFilter(
+      (entry) =>
+        entry.status === "reversed"
+          ? entry.reversesEntryId !== undefined
+          : entry.reversesEntryId === undefined,
+      { expected: "journal reversal state consistent with its status" },
+    ),
+  )
+  .check(
+    Schema.makeFilter(
+      (entry) => {
+        const totals = entry.lines.reduce(
+          (sum, line) => ({
+            debit: sum.debit + requireExactMajorToMinor(line.debit, 2),
+            credit: sum.credit + requireExactMajorToMinor(line.credit, 2),
+          }),
+          { debit: 0n, credit: 0n },
+        )
+        return totals.debit === totals.credit
+      },
+      { expected: "journal entry debits and credits must balance" },
+    ),
+  )
 
 export const AccountingPeriod = Schema.Struct({
   id: Uuid,
@@ -125,20 +136,22 @@ export const AccountingPeriod = Schema.Struct({
   startsOn: IsoDate,
   endsOn: IsoDate,
   status: Schema.Literals(["open", "closed"]),
-}).check(Schema.makeFilter(
-  (period) => period.startsOn <= period.endsOn,
-  { expected: "accounting periods must end on or after they start" },
-))
+}).check(
+  Schema.makeFilter((period) => period.startsOn <= period.endsOn, {
+    expected: "accounting periods must end on or after they start",
+  }),
+)
 
 export const RevenuePostingProfile = Schema.Struct({
   tenantId: Uuid,
   legalEntityId: Uuid,
   receivableAccountId: Uuid,
   revenueAccountId: Uuid,
-}).check(Schema.makeFilter(
-  (profile) => profile.receivableAccountId !== profile.revenueAccountId,
-  { expected: "revenue posting accounts must be distinct" },
-))
+}).check(
+  Schema.makeFilter((profile) => profile.receivableAccountId !== profile.revenueAccountId, {
+    expected: "revenue posting accounts must be distinct",
+  }),
+)
 
 export type AccountingConfiguration = Schema.Schema.Type<typeof AccountingConfiguration>
 export type Account = Schema.Schema.Type<typeof Account>
@@ -168,28 +181,32 @@ export const FinancialCutoverControl = Schema.Struct({
   activatedBy: Schema.NullOr(NonEmptyString),
   activatedAt: Schema.NullOr(InstantString),
   lastError: Schema.NullOr(NonEmptyString),
-}).check(Schema.makeFilter(
-  (control) =>
-    !["approved", "activating", "tigerbeetle"].includes(control.status)
-    || (
-      control.openingBalanceVerified
-      && control.historicalBoundaryVerified
-      && control.reconciliationHealthy
-      && control.backupRecoveryVerified
-      && control.unresolvedAcceptedOperations === 0
-      && control.cutoverWatermark !== null
-      && control.verificationHash !== null
-      && control.evidenceArtifactId !== null
-      && control.approvedBy !== null
-      && control.approvedAt !== null
+})
+  .check(
+    Schema.makeFilter(
+      (control) =>
+        !["approved", "activating", "tigerbeetle"].includes(control.status) ||
+        (control.openingBalanceVerified &&
+          control.historicalBoundaryVerified &&
+          control.reconciliationHealthy &&
+          control.backupRecoveryVerified &&
+          control.unresolvedAcceptedOperations === 0 &&
+          control.cutoverWatermark !== null &&
+          control.verificationHash !== null &&
+          control.evidenceArtifactId !== null &&
+          control.approvedBy !== null &&
+          control.approvedAt !== null),
+      { expected: "cutover approval metadata consistent with status" },
     ),
-  { expected: "cutover approval metadata consistent with status" },
-)).check(Schema.makeFilter(
-  (control) =>
-    control.status !== "tigerbeetle"
-    || (control.activatedBy !== null && control.activatedAt !== null),
-  { expected: "cutover activation metadata consistent with status" },
-))
+  )
+  .check(
+    Schema.makeFilter(
+      (control) =>
+        control.status !== "tigerbeetle" ||
+        (control.activatedBy !== null && control.activatedAt !== null),
+      { expected: "cutover activation metadata consistent with status" },
+    ),
+  )
 export type FinancialCutoverControl = Schema.Schema.Type<typeof FinancialCutoverControl>
 
 export const FinancialVerificationArtifact = Schema.Struct({
@@ -205,9 +222,7 @@ export const FinancialVerificationArtifact = Schema.Struct({
   producerPrincipalId: NonEmptyString,
   createdAt: InstantString,
 })
-export type FinancialVerificationArtifact = Schema.Schema.Type<
-  typeof FinancialVerificationArtifact
->
+export type FinancialVerificationArtifact = Schema.Schema.Type<typeof FinancialVerificationArtifact>
 
 export const FinancialStagingEvidenceRecord = Schema.Struct({
   recordId: Uuidv7,
@@ -229,9 +244,7 @@ export type FinancialStagingEvidenceRecord = Schema.Schema.Type<
 export const RecordFinancialStagingEvidenceInput = Schema.Struct({
   ...ScopedInput,
   evidence: KernelFinancialStagingEvidence,
-  canonicalizationVersion: Schema.Literal(
-    FINANCIAL_STAGING_EVIDENCE_CANONICALIZATION_VERSION,
-  ),
+  canonicalizationVersion: Schema.Literal(FINANCIAL_STAGING_EVIDENCE_CANONICALIZATION_VERSION),
   evidenceHash: Hash,
 })
 
@@ -242,12 +255,15 @@ export const ListFinancialStagingEvidenceInput = Schema.Struct({
   cohortId: Schema.optionalKey(NonEmptyString),
   deploymentRevision: Schema.optionalKey(NonEmptyString),
   limit: Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 1_000 })),
-}).check(Schema.makeFilter(
-  (input) =>
-    input.gateId !== undefined || input.cohortId !== undefined
-    || input.deploymentRevision !== undefined,
-  { expected: "staging evidence lookup requires gate, cohort, or deployment scope" },
-))
+}).check(
+  Schema.makeFilter(
+    (input) =>
+      input.gateId !== undefined ||
+      input.cohortId !== undefined ||
+      input.deploymentRevision !== undefined,
+    { expected: "staging evidence lookup requires gate, cohort, or deployment scope" },
+  ),
+)
 
 export const RecordFinancialVerificationArtifactInput = Schema.Struct({
   ...ScopedInput,
@@ -300,20 +316,22 @@ export const ConfigureRevenuePostingInput = Schema.Struct({
   legalEntityId: Uuid,
   receivableAccountId: Uuid,
   revenueAccountId: Uuid,
-}).check(Schema.makeFilter(
-  (profile) => profile.receivableAccountId !== profile.revenueAccountId,
-  { expected: "revenue posting accounts must be distinct" },
-))
+}).check(
+  Schema.makeFilter((profile) => profile.receivableAccountId !== profile.revenueAccountId, {
+    expected: "revenue posting accounts must be distinct",
+  }),
+)
 
 export const OpenPeriodInput = Schema.Struct({
   ...ScopedInput,
   legalEntityId: Uuid,
   startsOn: IsoDate,
   endsOn: IsoDate,
-}).check(Schema.makeFilter(
-  (period) => period.startsOn <= period.endsOn,
-  { expected: "accounting periods must end on or after they start" },
-))
+}).check(
+  Schema.makeFilter((period) => period.startsOn <= period.endsOn, {
+    expected: "accounting periods must end on or after they start",
+  }),
+)
 
 export const ClosePeriodInput = Schema.Struct({
   ...ScopedInput,
@@ -454,9 +472,7 @@ export interface AccountingService {
   readonly listAccountingConfigurations: (
     input: unknown,
   ) => Effect.Effect<readonly AccountingConfiguration[], CommonFailure>
-  readonly listAccounts: (
-    input: unknown,
-  ) => Effect.Effect<readonly Account[], CommonFailure>
+  readonly listAccounts: (input: unknown) => Effect.Effect<readonly Account[], CommonFailure>
   readonly listAccountingPeriods: (
     input: unknown,
   ) => Effect.Effect<readonly AccountingPeriod[], CommonFailure>
@@ -527,6 +543,4 @@ export interface AccountingService {
   >
 }
 
-export const AccountingService = Context.Service<AccountingService>(
-  "RITSEI/AccountingService",
-)
+export const AccountingService = Context.Service<AccountingService>("RITSEI/AccountingService")

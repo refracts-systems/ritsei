@@ -32,7 +32,8 @@ const styles = {
   end: css({ textAlign: "end" }),
 }
 
-const cellClass = (align: DataColumn<unknown>["align"]) => align === "end" ? styles.end : undefined
+const cellClass = (align: DataColumn<unknown>["align"]) =>
+  align === "end" ? styles.end : undefined
 
 /**
  * Semantic table markup. Sorting, pagination, and selection stay outside this renderer until the
@@ -47,10 +48,7 @@ export function DataTable<Row>(props: DataTableProps<Row>) {
           <tr>
             <For each={props.columns}>
               {(column) => (
-                <th
-                  scope="col"
-                  class={[props.cellClass, cellClass(column.align)]}
-                >
+                <th scope="col" class={[props.cellClass, cellClass(column.align)]}>
                   {column.header}
                 </th>
               )}
@@ -86,10 +84,7 @@ export function DataTable<Row>(props: DataTableProps<Row>) {
                           </td>
                         }
                       >
-                        <th
-                          scope="row"
-                          class={[props.cellClass, cellClass(column.align)]}
-                        >
+                        <th scope="row" class={[props.cellClass, cellClass(column.align)]}>
                           {column.cell(row, index())}
                         </th>
                       </Show>

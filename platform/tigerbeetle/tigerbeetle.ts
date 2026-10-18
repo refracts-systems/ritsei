@@ -82,73 +82,73 @@ type FinancialAccountConstraint = Schema.Schema.Type<typeof FinancialAccountCons
 
 type ExecutionAccountOutcome =
   | {
-    readonly _tag: "accepted"
-    readonly accountId: string
-    readonly mappingVersion: number
-    readonly acceptedAt: string
-  }
+      readonly _tag: "accepted"
+      readonly accountId: string
+      readonly mappingVersion: number
+      readonly acceptedAt: string
+    }
   | {
-    readonly _tag: "rejected"
-    readonly accountId: string
-    readonly reason: "invalid_account" | "invalid_amount" | "unbalanced" | "constraint_violation"
-  }
+      readonly _tag: "rejected"
+      readonly accountId: string
+      readonly reason: "invalid_account" | "invalid_amount" | "unbalanced" | "constraint_violation"
+    }
   | {
-    readonly _tag: "unknown"
-    readonly accountId: string
-    readonly reason: "unavailable" | "response_lost"
-  }
+      readonly _tag: "unknown"
+      readonly accountId: string
+      readonly reason: "unavailable" | "response_lost"
+    }
   | {
-    readonly _tag: "manual_recovery"
-    readonly accountId: string
-    readonly reason: "mapping_mismatch" | "conflicting_replay" | "reconciliation_required"
-  }
+      readonly _tag: "manual_recovery"
+      readonly accountId: string
+      readonly reason: "mapping_mismatch" | "conflicting_replay" | "reconciliation_required"
+    }
 
 type FinancialExecutionOutcome =
   | {
-    readonly _tag: "accepted"
-    readonly operationId: string
-    readonly mappingVersion: number
-    readonly acceptedAt: string
-    readonly transferCount: number
-    readonly transferIds: readonly string[]
-  }
+      readonly _tag: "accepted"
+      readonly operationId: string
+      readonly mappingVersion: number
+      readonly acceptedAt: string
+      readonly transferCount: number
+      readonly transferIds: readonly string[]
+    }
   | {
-    readonly _tag: "rejected"
-    readonly operationId: string
-    readonly reason: "invalid_account" | "invalid_amount" | "unbalanced" | "constraint_violation"
-  }
+      readonly _tag: "rejected"
+      readonly operationId: string
+      readonly reason: "invalid_account" | "invalid_amount" | "unbalanced" | "constraint_violation"
+    }
   | {
-    readonly _tag: "unknown"
-    readonly operationId: string
-    readonly reason: "unavailable" | "response_lost" | "not_found"
-  }
+      readonly _tag: "unknown"
+      readonly operationId: string
+      readonly reason: "unavailable" | "response_lost" | "not_found"
+    }
   | {
-    readonly _tag: "manual_recovery"
-    readonly operationId: string
-    readonly reason: "mapping_mismatch" | "conflicting_replay" | "reconciliation_required"
-  }
+      readonly _tag: "manual_recovery"
+      readonly operationId: string
+      readonly reason: "mapping_mismatch" | "conflicting_replay" | "reconciliation_required"
+    }
 
 type FinancialBalanceOutcome =
   | {
-    readonly _tag: "available"
-    readonly accountId: string
-    readonly mappingVersion: number
-    readonly debitsPendingMinor: string
-    readonly debitsPostedMinor: string
-    readonly creditsPendingMinor: string
-    readonly creditsPostedMinor: string
-  }
+      readonly _tag: "available"
+      readonly accountId: string
+      readonly mappingVersion: number
+      readonly debitsPendingMinor: string
+      readonly debitsPostedMinor: string
+      readonly creditsPendingMinor: string
+      readonly creditsPostedMinor: string
+    }
   | { readonly _tag: "not_found"; readonly accountId: string }
   | {
-    readonly _tag: "unknown"
-    readonly accountId: string
-    readonly reason: "unavailable" | "response_lost"
-  }
+      readonly _tag: "unknown"
+      readonly accountId: string
+      readonly reason: "unavailable" | "response_lost"
+    }
   | {
-    readonly _tag: "manual_recovery"
-    readonly accountId: string
-    readonly reason: "mapping_mismatch" | "conflicting_replay" | "reconciliation_required"
-  }
+      readonly _tag: "manual_recovery"
+      readonly accountId: string
+      readonly reason: "mapping_mismatch" | "conflicting_replay" | "reconciliation_required"
+    }
 
 export interface TigerBeetleFinancialLedgerConfig {
   readonly clusterId: bigint
@@ -158,14 +158,12 @@ export interface TigerBeetleFinancialLedgerConfig {
   readonly currency: string
 }
 
-export class TigerBeetleConfigurationFailure
-  extends Schema.TaggedError<TigerBeetleConfigurationFailure>()(
-    "TigerBeetleConfigurationFailure",
-    {
-      reason: Schema.Literals(["invalid_configuration", "client_initialization_failed"]),
-    },
-  )
-{}
+export class TigerBeetleConfigurationFailure extends Schema.TaggedError<TigerBeetleConfigurationFailure>()(
+  "TigerBeetleConfigurationFailure",
+  {
+    reason: Schema.Literals(["invalid_configuration", "client_initialization_failed"]),
+  },
+) {}
 
 export interface TigerBeetleFinancialLedger {
   readonly authority: "tigerbeetle"
@@ -195,16 +193,20 @@ const makeConfigurationFailure = (
 ) => new TigerBeetleConfigurationFailure({ reason })
 
 const isValidConfig = (config: TigerBeetleFinancialLedgerConfig) =>
-  config.clusterId >= 0n && config.clusterId <= U128_MAX && config.replicaAddresses.length > 0
-  && Number.isInteger(config.ledger) && config.ledger > 0 && config.ledger <= 0xffff_ffff
-  && Number.isInteger(config.code) && config.code > 0 && config.code <= 0xffff_ffff
-  && /^[A-Z]{3}$/.test(config.currency)
+  config.clusterId >= 0n &&
+  config.clusterId <= U128_MAX &&
+  config.replicaAddresses.length > 0 &&
+  Number.isInteger(config.ledger) &&
+  config.ledger > 0 &&
+  config.ledger <= 0xffff_ffff &&
+  Number.isInteger(config.code) &&
+  config.code > 0 &&
+  config.code <= 0xffff_ffff &&
+  /^[A-Z]{3}$/.test(config.currency)
 
 const digestId = (parts: readonly string[]) =>
   Effect.promise(async () => {
-    const data = new TextEncoder().encode(
-      JSON.stringify(["ritsei/tigerbeetle", "v1", ...parts]),
-    )
+    const data = new TextEncoder().encode(JSON.stringify(["ritsei/tigerbeetle", "v1", ...parts]))
     const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", data))
     let value = 0n
     for (const byte of digest.slice(0, 16)) value = (value << 8n) | BigInt(byte)
@@ -251,7 +253,7 @@ const makeTigerBeetleClient = (
   config: TigerBeetleFinancialLedgerConfig,
   clientFactory?: TigerBeetleClientFactory,
 ) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const runtime = yield* Effect.tryPromise({
       try: () => import("tigerbeetle-node"),
       catch: () => makeConfigurationFailure("client_initialization_failed"),
@@ -276,8 +278,8 @@ const accountOutcome = (
   runtime: TigerBeetleRuntime,
 ): ExecutionAccountOutcome => {
   if (
-    result.status === runtime.CreateAccountStatus.created
-    || result.status === runtime.CreateAccountStatus.exists
+    result.status === runtime.CreateAccountStatus.created ||
+    result.status === runtime.CreateAccountStatus.exists
   ) {
     return {
       _tag: "accepted",
@@ -287,12 +289,12 @@ const accountOutcome = (
     }
   }
   if (
-    result.status === runtime.CreateAccountStatus.exists_with_different_flags
-    || result.status === runtime.CreateAccountStatus.exists_with_different_user_data_128
-    || result.status === runtime.CreateAccountStatus.exists_with_different_user_data_64
-    || result.status === runtime.CreateAccountStatus.exists_with_different_user_data_32
-    || result.status === runtime.CreateAccountStatus.exists_with_different_ledger
-    || result.status === runtime.CreateAccountStatus.exists_with_different_code
+    result.status === runtime.CreateAccountStatus.exists_with_different_flags ||
+    result.status === runtime.CreateAccountStatus.exists_with_different_user_data_128 ||
+    result.status === runtime.CreateAccountStatus.exists_with_different_user_data_64 ||
+    result.status === runtime.CreateAccountStatus.exists_with_different_user_data_32 ||
+    result.status === runtime.CreateAccountStatus.exists_with_different_ledger ||
+    result.status === runtime.CreateAccountStatus.exists_with_different_code
   ) {
     return { _tag: "manual_recovery", accountId: input.accountId, reason: "mapping_mismatch" }
   }
@@ -361,7 +363,7 @@ const journalValidation = (
     if (lineDebit > U128_MAX || lineCredit > U128_MAX) {
       return { _tag: "rejected", operationId: input.operationId, reason: "invalid_amount" }
     }
-    if ((lineDebit > 0n) === (lineCredit > 0n)) {
+    if (lineDebit > 0n === lineCredit > 0n) {
       return { _tag: "rejected", operationId: input.operationId, reason: "invalid_amount" }
     }
     debit += lineDebit
@@ -409,7 +411,7 @@ const pairLines = (lines: readonly FinancialJournalLine[]): readonly TransferPai
 }
 
 const maxTimestamp = (results: readonly { timestamp: bigint }[]) =>
-  results.reduce((max, result) => result.timestamp > max ? result.timestamp : max, 0n)
+  results.reduce((max, result) => (result.timestamp > max ? result.timestamp : max), 0n)
 
 const makeAdapter = (
   client: TigerBeetleClient,
@@ -418,7 +420,7 @@ const makeAdapter = (
 ): TigerBeetleFinancialLedger => ({
   authority: "tigerbeetle",
   createExecutionAccount: (input) =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(CreateExecutionAccountInput)(input)
       if (decoded.currency.toUpperCase() !== config.currency.toUpperCase()) {
         return {
@@ -440,8 +442,8 @@ const makeAdapter = (
         reserved: 0,
         ledger: config.ledger,
         code: config.code,
-        flags: runtime.AccountFlags.history
-          | balanceConstraintFlags(decoded.balanceConstraint, runtime),
+        flags:
+          runtime.AccountFlags.history | balanceConstraintFlags(decoded.balanceConstraint, runtime),
         timestamp: 0n,
       }
       const results = yield* Effect.tryPromise({
@@ -464,14 +466,14 @@ const makeAdapter = (
         const existing = existingAccounts?.find((candidate) => candidate.id === id)
         const expectedFlags = account.flags
         if (
-          existing === undefined
-          || existing.ledger !== account.ledger
-          || existing.code !== account.code
-          || existing.user_data_128 !== account.user_data_128
-          || existing.user_data_64 !== account.user_data_64
-          || existing.user_data_32 !== account.user_data_32
-          || existing.reserved !== account.reserved
-          || existing.flags !== expectedFlags
+          existing === undefined ||
+          existing.ledger !== account.ledger ||
+          existing.code !== account.code ||
+          existing.user_data_128 !== account.user_data_128 ||
+          existing.user_data_64 !== account.user_data_64 ||
+          existing.user_data_32 !== account.user_data_32 ||
+          existing.reserved !== account.reserved ||
+          existing.flags !== expectedFlags
         ) {
           return {
             _tag: "manual_recovery" as const,
@@ -483,7 +485,7 @@ const makeAdapter = (
       return accountOutcome(decoded, result, runtime)
     }),
   expectedTransferIds: (input) =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(PostFinancialJournalInput)(input)
       const pairs = pairLines(decoded.lines)
       return yield* Effect.all(pairs.map((_, index) => transferId(decoded, index))).pipe(
@@ -491,7 +493,7 @@ const makeAdapter = (
       )
     }),
   postJournal: (input) =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(PostFinancialJournalInput)(input)
       if (decoded.currency.toUpperCase() !== config.currency.toUpperCase()) {
         return {
@@ -504,7 +506,8 @@ const makeAdapter = (
       if (validation !== undefined) return validation
       const pairs = pairLines(decoded.lines)
       if (
-        pairs.length === 0 || pairs.some((pair) => pair.debitAccountId === pair.creditAccountId)
+        pairs.length === 0 ||
+        pairs.some((pair) => pair.debitAccountId === pair.creditAccountId)
       ) {
         return {
           _tag: "rejected" as const,
@@ -543,9 +546,8 @@ const makeAdapter = (
           timeout: 0,
           ledger: config.ledger,
           code: config.code,
-          flags: index < pairs.length - 1
-            ? runtime.TransferFlags.linked
-            : runtime.TransferFlags.none,
+          flags:
+            index < pairs.length - 1 ? runtime.TransferFlags.linked : runtime.TransferFlags.none,
           timestamp: 0n,
         })
       }
@@ -568,9 +570,10 @@ const makeAdapter = (
           reason: "conflicting_replay" as const,
         }
       }
-      const rejection = results.find((result) =>
-        result.status !== runtime.CreateTransferStatus.created
-        && result.status !== runtime.CreateTransferStatus.exists
+      const rejection = results.find(
+        (result) =>
+          result.status !== runtime.CreateTransferStatus.created &&
+          result.status !== runtime.CreateTransferStatus.exists,
       )
       if (rejection !== undefined) {
         return {
@@ -589,7 +592,7 @@ const makeAdapter = (
       }
     }),
   reconcileJournal: (input) =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(PostFinancialJournalInput)(input)
       if (decoded.currency.toUpperCase() !== config.currency.toUpperCase()) {
         return {
@@ -602,7 +605,8 @@ const makeAdapter = (
       if (validation !== undefined) return validation
       const pairs = pairLines(decoded.lines)
       if (
-        pairs.length === 0 || pairs.some((pair) => pair.debitAccountId === pair.creditAccountId)
+        pairs.length === 0 ||
+        pairs.some((pair) => pair.debitAccountId === pair.creditAccountId)
       ) {
         return {
           _tag: "rejected" as const,
@@ -628,12 +632,14 @@ const makeAdapter = (
               mappingVersion: decoded.mappingVersion,
             }),
             transferId(decoded, index),
-          ]).pipe(Effect.map(([debitId, creditId, id]) => ({
-            debitId,
-            creditId,
-            id,
-            amount: pair.amount,
-          })))
+          ]).pipe(
+            Effect.map(([debitId, creditId, id]) => ({
+              debitId,
+              creditId,
+              id,
+              amount: pair.amount,
+            })),
+          ),
         ),
       )
       const transfers = yield* Effect.tryPromise({
@@ -665,20 +671,21 @@ const makeAdapter = (
       const mismatch = expected.some((expectedTransfer, index) => {
         const actual = byId.get(expectedTransfer.id.toString())
         if (actual === undefined) return true
-        const expectedFlags = index < expected.length - 1
-          ? runtime.TransferFlags.linked
-          : runtime.TransferFlags.none
-        return actual.debit_account_id !== expectedTransfer.debitId
-          || actual.credit_account_id !== expectedTransfer.creditId
-          || actual.amount !== expectedTransfer.amount
-          || actual.pending_id !== 0n
-          || actual.user_data_128 !== 0n
-          || actual.user_data_64 !== 0n
-          || actual.timeout !== 0
-          || actual.ledger !== config.ledger
-          || actual.code !== config.code
-          || actual.user_data_32 !== decoded.mappingVersion
-          || actual.flags !== expectedFlags
+        const expectedFlags =
+          index < expected.length - 1 ? runtime.TransferFlags.linked : runtime.TransferFlags.none
+        return (
+          actual.debit_account_id !== expectedTransfer.debitId ||
+          actual.credit_account_id !== expectedTransfer.creditId ||
+          actual.amount !== expectedTransfer.amount ||
+          actual.pending_id !== 0n ||
+          actual.user_data_128 !== 0n ||
+          actual.user_data_64 !== 0n ||
+          actual.timeout !== 0 ||
+          actual.ledger !== config.ledger ||
+          actual.code !== config.code ||
+          actual.user_data_32 !== decoded.mappingVersion ||
+          actual.flags !== expectedFlags
+        )
       })
       if (mismatch) {
         return {
@@ -697,7 +704,7 @@ const makeAdapter = (
       }
     }),
   getBalance: (input) =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(GetFinancialBalanceInput)(input)
       if (decoded.currency.toUpperCase() !== config.currency.toUpperCase()) {
         return {
@@ -724,10 +731,13 @@ const makeAdapter = (
       }
       const requiredHistoryFlag = runtime.AccountFlags.history
       if (
-        account.ledger !== config.ledger || account.code !== config.code
-        || account.user_data_128 !== 0n || account.user_data_64 !== 0n
-        || account.user_data_32 !== decoded.mappingVersion || account.reserved !== 0
-        || (account.flags & requiredHistoryFlag) !== requiredHistoryFlag
+        account.ledger !== config.ledger ||
+        account.code !== config.code ||
+        account.user_data_128 !== 0n ||
+        account.user_data_64 !== 0n ||
+        account.user_data_32 !== decoded.mappingVersion ||
+        account.reserved !== 0 ||
+        (account.flags & requiredHistoryFlag) !== requiredHistoryFlag
       ) {
         return {
           _tag: "manual_recovery" as const,
@@ -754,7 +764,7 @@ export const makeTigerBeetleFinancialLedger = (
   if (!isValidConfig(config)) {
     return Effect.fail(makeConfigurationFailure("invalid_configuration"))
   }
-  return Effect.gen(function*() {
+  return Effect.gen(function* () {
     const { client, runtime } = yield* makeTigerBeetleClient(config, clientFactory)
     return makeAdapter(client, config, runtime)
   })
@@ -772,12 +782,12 @@ const financialStoreObservation = (
   clientFactory: TigerBeetleClientFactory | undefined,
   now: () => Date,
 ) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const { client, runtime } = yield* makeTigerBeetleClient(config, clientFactory)
     const query = <A>(scope: string, run: () => Promise<A[]>) =>
       Effect.tryPromise({ try: run, catch: () => observationFailure(scope, "unavailable") })
     const scan = (scope: string, maxRecords: number) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         if (!/^provider:tigerbeetle(?::[^:]+(?::[^:]+)*)?$/.test(scope)) {
           return yield* Effect.fail(observationFailure(scope, "unsupported"))
         }
@@ -802,30 +812,46 @@ const financialStoreObservation = (
         }
         const accountFlags = runtime.AccountFlags
         const transferFlags = runtime.TransferFlags
-        const allowedAccountFlags = accountFlags.linked
-          | accountFlags.debits_must_not_exceed_credits
-          | accountFlags.credits_must_not_exceed_debits | accountFlags.history
-          | accountFlags.imported
-          | accountFlags.closed
-        const allowedTransferFlags = transferFlags.linked | transferFlags.pending
-          | transferFlags.post_pending_transfer | transferFlags.void_pending_transfer
-          | transferFlags.balancing_debit | transferFlags.balancing_credit
-          | transferFlags.closing_debit | transferFlags.closing_credit | transferFlags.imported
+        const allowedAccountFlags =
+          accountFlags.linked |
+          accountFlags.debits_must_not_exceed_credits |
+          accountFlags.credits_must_not_exceed_debits |
+          accountFlags.history |
+          accountFlags.imported |
+          accountFlags.closed
+        const allowedTransferFlags =
+          transferFlags.linked |
+          transferFlags.pending |
+          transferFlags.post_pending_transfer |
+          transferFlags.void_pending_transfer |
+          transferFlags.balancing_debit |
+          transferFlags.balancing_credit |
+          transferFlags.closing_debit |
+          transferFlags.closing_credit |
+          transferFlags.imported
         if (
-          providerAccounts.some((account) =>
-            account.user_data_128 !== 0n || account.user_data_64 !== 0n
-            || account.user_data_32 < 1
-            || account.reserved !== 0 || account.ledger !== config.ledger
-            || account.code !== config.code
-            || (account.flags & ~allowedAccountFlags) !== 0
-            || (account.flags & accountFlags.history) !== accountFlags.history
-          )
-          || providerTransfers.some((transfer) =>
-            transfer.user_data_128 !== 0n || transfer.user_data_64 !== 0n
-            || transfer.user_data_32 < 1 || transfer.ledger !== config.ledger
-            || transfer.code !== config.code || transfer.amount <= 0n
-            || transfer.debit_account_id === transfer.credit_account_id || transfer.timeout !== 0
-            || (transfer.flags & ~allowedTransferFlags) !== 0
+          providerAccounts.some(
+            (account) =>
+              account.user_data_128 !== 0n ||
+              account.user_data_64 !== 0n ||
+              account.user_data_32 < 1 ||
+              account.reserved !== 0 ||
+              account.ledger !== config.ledger ||
+              account.code !== config.code ||
+              (account.flags & ~allowedAccountFlags) !== 0 ||
+              (account.flags & accountFlags.history) !== accountFlags.history,
+          ) ||
+          providerTransfers.some(
+            (transfer) =>
+              transfer.user_data_128 !== 0n ||
+              transfer.user_data_64 !== 0n ||
+              transfer.user_data_32 < 1 ||
+              transfer.ledger !== config.ledger ||
+              transfer.code !== config.code ||
+              transfer.amount <= 0n ||
+              transfer.debit_account_id === transfer.credit_account_id ||
+              transfer.timeout !== 0 ||
+              (transfer.flags & ~allowedTransferFlags) !== 0,
           )
         ) {
           return yield* Effect.fail(observationFailure(scope, "invalid_fact"))
@@ -840,29 +866,30 @@ const financialStoreObservation = (
           creditsPostedMinor: account.credits_posted.toString(),
           observedAt: account.timestamp.toString(),
         }))
-        const transfers: FinancialStoreTransferObservation[] = providerTransfers.map((
-          transfer,
-        ) => ({
-          transferRef: transfer.id.toString(),
-          debitAccountRef: transfer.debit_account_id.toString(),
-          creditAccountRef: transfer.credit_account_id.toString(),
-          amountMinor: transfer.amount.toString(),
-          currency: config.currency.toUpperCase(),
-          mappingVersion: transfer.user_data_32,
-          status: flagIsSet(transfer.flags, runtime.TransferFlags.void_pending_transfer)
-            ? "voided"
-            : flagIsSet(transfer.flags, runtime.TransferFlags.pending)
-            ? "pending"
-            : "accepted",
-          observedAt: transfer.timestamp.toString(),
-        }))
+        const transfers: FinancialStoreTransferObservation[] = providerTransfers.map(
+          (transfer) => ({
+            transferRef: transfer.id.toString(),
+            debitAccountRef: transfer.debit_account_id.toString(),
+            creditAccountRef: transfer.credit_account_id.toString(),
+            amountMinor: transfer.amount.toString(),
+            currency: config.currency.toUpperCase(),
+            mappingVersion: transfer.user_data_32,
+            status: flagIsSet(transfer.flags, runtime.TransferFlags.void_pending_transfer)
+              ? "voided"
+              : flagIsSet(transfer.flags, runtime.TransferFlags.pending)
+                ? "pending"
+                : "accepted",
+            observedAt: transfer.timestamp.toString(),
+          }),
+        )
         const hash = yield* hashFinancialStoreFacts({ accounts, transfers })
         const watermark: FinancialStoreWatermark = {
           authority: "tigerbeetle",
           scope,
-          value: `timestamp:${
-            maxTimestamp([...providerAccounts, ...providerTransfers])
-          };accounts:${accounts.length};transfers:${transfers.length}`,
+          value: `timestamp:${maxTimestamp([
+            ...providerAccounts,
+            ...providerTransfers,
+          ])};accounts:${accounts.length};transfers:${transfers.length}`,
           snapshotRef: `sha256:${hash}`,
           consistency: "bounded",
           capturedAt: now().toISOString(),
@@ -880,23 +907,23 @@ const financialStoreObservation = (
       })
     const collector: FinancialStoreWatermarkCollectorService = {
       collect: (input) =>
-        Effect.gen(function*() {
+        Effect.gen(function* () {
           const decoded = yield* Schema.decodeUnknownEffect(FinancialStoreWatermarkInput)(input)
           return (yield* scan(decoded.scope, decoded.maxRecords)).watermark
         }),
     }
     const scanner: FinancialStoreInventoryScannerService = {
       scan: (input) =>
-        Effect.gen(function*() {
+        Effect.gen(function* () {
           const decoded = yield* Schema.decodeUnknownEffect(FinancialStoreInventoryRequest)(input)
           if (decoded.watermark.authority !== "tigerbeetle") {
             return yield* Effect.fail(observationFailure(decoded.scope, "invalid_watermark"))
           }
           const observed = yield* scan(decoded.scope, decoded.maxRecords)
           if (
-            observed.watermark.value !== decoded.watermark.value
-            || observed.watermark.snapshotRef !== decoded.watermark.snapshotRef
-            || observed.watermark.consistency !== decoded.watermark.consistency
+            observed.watermark.value !== decoded.watermark.value ||
+            observed.watermark.snapshotRef !== decoded.watermark.snapshotRef ||
+            observed.watermark.consistency !== decoded.watermark.consistency
           ) {
             return yield* Effect.fail(observationFailure(decoded.scope, "invalid_watermark"))
           }

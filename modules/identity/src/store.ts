@@ -7,10 +7,7 @@ import type {
   UserAccountNotFound,
 } from "./errors.ts"
 
-export type UserAccountStoreError =
-  | UserAccountAlreadyExists
-  | UserAccountNotFound
-  | DatabaseFailure
+export type UserAccountStoreError = UserAccountAlreadyExists | UserAccountNotFound | DatabaseFailure
 
 export interface UserAccountStore {
   readonly resolveExternalSubject: (

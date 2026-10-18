@@ -38,7 +38,7 @@ const policy: DocumentRenderPolicy = {
 }
 
 const renderInput = () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const snapshot = yield* makeDocumentSnapshot({
       snapshotId,
       tenantId,
@@ -59,11 +59,7 @@ const renderInput = () =>
         {
           _tag: "table",
           headers: ["Item", "Quantity", "Unit Price"],
-          rows: Array.from({ length: 80 }, (_, index) => [
-            `ITEM-${index + 1}`,
-            "2",
-            "12.50",
-          ]),
+          rows: Array.from({ length: 80 }, (_, index) => [`ITEM-${index + 1}`, "2", "12.50"]),
         },
         { _tag: "divider" },
         { _tag: "image", assetId: "logo-v1", alt: "Company logo" },
@@ -101,7 +97,7 @@ const renderer = makePdfNativeDocumentRenderer({
 
 describe("pdfnative document renderer", () => {
   it.effect("renders the AST corpus with deterministic PDF bytes", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const input = yield* renderInput()
       const first = yield* renderer.render(input)
       const second = yield* renderer.render(input)
@@ -115,23 +111,29 @@ describe("pdfnative document renderer", () => {
       assert.isAbove(first.metadata.pageCount, 1)
       assert.strictEqual(String.fromCharCode(...first.bytes.slice(0, 5)), "%PDF-")
 
-      const text = extractText(first.bytes).map((page) => page.text).join("\n")
+      const text = extractText(first.bytes)
+        .map((page) => page.text)
+        .join("\n")
       assert.include(text, "PURCHASE ORDER")
       assert.isTrue(validatePdfUA(first.bytes).valid)
-    }))
+    }),
+  )
 
   it.effect("fails closed when the native policy does not support a capability", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const input = yield* renderInput()
-      const unsupported = yield* Effect.flip(renderer.render({
-        ...input,
-        request: { ...input.request, capabilities: ["paged-media"] },
-      }))
+      const unsupported = yield* Effect.flip(
+        renderer.render({
+          ...input,
+          request: { ...input.request, capabilities: ["paged-media"] },
+        }),
+      )
       assert.instanceOf(unsupported, UnsupportedDocumentCapability)
-    }))
+    }),
+  )
 
   it.effect("reports a missing asset as a typed failure", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const input = yield* renderInput()
       const missingAssetRenderer = makePdfNativeDocumentRenderer({
         policy,
@@ -139,5 +141,6 @@ describe("pdfnative document renderer", () => {
       })
       const missing = yield* Effect.flip(missingAssetRenderer.render(input))
       assert.instanceOf(missing, DocumentAssetUnavailable)
-    }))
+    }),
+  )
 })

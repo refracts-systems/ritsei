@@ -47,7 +47,7 @@ const draftConnector = {
 }
 
 it.effect("rejects an unreviewed operation and retired connector", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const unreviewed = yield* Effect.flip(validateExternalOperation(draftConnector, createPayment))
     assert.instanceOf(unreviewed, ExternalConnectorNotReviewed)
 
@@ -62,10 +62,11 @@ it.effect("rejects an unreviewed operation and retired connector", () =>
 
     assert.strictEqual(active.status, "active")
     assert.instanceOf(retiredFailure, ExternalConnectorRetired)
-  }))
+  }),
+)
 
 it.effect("preserves connector version compatibility and delivery controls", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const reviewed = yield* reviewExternalConnector(
       draftConnector,
       "reviewer-1",
@@ -78,12 +79,15 @@ it.effect("preserves connector version compatibility and delivery controls", () 
       operationId: valid.operationId,
       reason: "provider recovered",
     })
-    const versionConflict = yield* Effect.flip(validateExternalOperation(active, {
-      ...createPayment,
-      version: 2,
-    }))
+    const versionConflict = yield* Effect.flip(
+      validateExternalOperation(active, {
+        ...createPayment,
+        version: 2,
+      }),
+    )
 
     assert.strictEqual(valid.id, createPayment.id)
     assert.strictEqual(control.kind, "retry")
     assert.instanceOf(versionConflict, ExternalConnectorVersionConflict)
-  }))
+  }),
+)

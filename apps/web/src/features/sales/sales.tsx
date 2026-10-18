@@ -58,8 +58,8 @@ const quotationTone = (status: QuotationStatus): "neutral" | "success" | "warnin
   status === "accepted"
     ? "success"
     : status === "rejected" || status === "expired"
-    ? "warning"
-    : "neutral"
+      ? "warning"
+      : "neutral"
 const orderTone = (status: SalesOrderStatus): "neutral" | "success" | "warning" =>
   status === "confirmed" ? "success" : status === "cancelled" ? "warning" : "neutral"
 
@@ -183,8 +183,10 @@ function CreateQuotationDialog(props: {
               const customerId = requiredText(value.customerId)
               const total = requiredText(value.total)
               if (
-                customerId === null || !uuidPattern.test(customerId) || total === null
-                || !moneyPattern.test(total)
+                customerId === null ||
+                !uuidPattern.test(customerId) ||
+                total === null ||
+                !moneyPattern.test(total)
               ) {
                 setInvalid(true)
                 return
@@ -291,11 +293,16 @@ function CreateOrderDialog(props: {
               const itemId = requiredText(form.get("itemId"))
               const quantity = requiredText(form.get("quantity"))
               const unitPrice = requiredText(form.get("unitPrice"))
-              const valid = customerId !== null && uuidPattern.test(customerId)
-                && (quotationId === null || uuidPattern.test(quotationId))
-                && itemId !== null && uuidPattern.test(itemId)
-                && quantity !== null && quantityPattern.test(quantity)
-                && unitPrice !== null && moneyPattern.test(unitPrice)
+              const valid =
+                customerId !== null &&
+                uuidPattern.test(customerId) &&
+                (quotationId === null || uuidPattern.test(quotationId)) &&
+                itemId !== null &&
+                uuidPattern.test(itemId) &&
+                quantity !== null &&
+                quantityPattern.test(quantity) &&
+                unitPrice !== null &&
+                moneyPattern.test(unitPrice)
               if (!valid) {
                 setInvalid(true)
                 return
@@ -425,8 +432,8 @@ function ConfirmOrderDialog(props: { order: SalesOrder; reload: () => Promise<un
     >
       <div class={layout.stack}>
         <p>
-          Confirm order <code>{props.order.id}</code> for total{" "}
-          <strong>{props.order.total}</strong>?
+          Confirm order <code>{props.order.id}</code> for total <strong>{props.order.total}</strong>
+          ?
         </p>
         <CommandFeedback
           error={mutation.error}
@@ -450,7 +457,8 @@ function ConfirmOrderDialog(props: { order: SalesOrder; reload: () => Promise<un
                 causationId: null,
                 idempotencyKey: key(),
               },
-            })}
+            })
+          }
         >
           Confirm order
         </Button>
@@ -513,9 +521,7 @@ function CustomerTable(props: { customers: readonly Customer[] }) {
           header: "Customer",
           rowHeader: true,
           cell: (customer) => (
-            <a href={`/sales/customers/${encodeURIComponent(customer.id)}`}>
-              {customer.name}
-            </a>
+            <a href={`/sales/customers/${encodeURIComponent(customer.id)}`}>{customer.name}</a>
           ),
         },
         { id: "email", header: "Email", cell: (customer) => customer.email },
@@ -571,7 +577,8 @@ function OrderTable(props: { orders: readonly SalesOrder[]; selectedOrderId?: st
       captionClass="sr-only"
       rows={props.orders}
       getRowClass={(order) =>
-        order.id === props.selectedOrderId ? layout.tableRowSelected : undefined}
+        order.id === props.selectedOrderId ? layout.tableRowSelected : undefined
+      }
       columns={[
         {
           id: "id",
@@ -608,7 +615,9 @@ function CustomerDetail(props: { id: string }) {
     <section class={layout.stack} aria-labelledby="sales-customer-detail-heading">
       <div class={layout.row}>
         <h2 id="sales-customer-detail-heading">Customer detail</h2>
-        <Button type="button" onClick={() => void query.refetch()}>Reload customer</Button>
+        <Button type="button" onClick={() => void query.refetch()}>
+          Reload customer
+        </Button>
       </div>
       <QueryBoundary label="customer" retry={() => query.refetch()}>
         <Show when={query.data} keyed>
@@ -650,7 +659,9 @@ function QuotationDetail(props: { id: string }) {
     <section class={layout.stack} aria-labelledby="sales-quotation-detail-heading">
       <div class={layout.row}>
         <h2 id="sales-quotation-detail-heading">Quotation detail</h2>
-        <Button type="button" onClick={() => void query.refetch()}>Reload quotation</Button>
+        <Button type="button" onClick={() => void query.refetch()}>
+          Reload quotation
+        </Button>
       </div>
       <QueryBoundary label="quotation" retry={() => query.refetch()}>
         <Show when={query.data} keyed>
@@ -697,7 +708,9 @@ function OrderDetail(props: { id: string; reloadLists: () => Promise<unknown> })
     <section class={layout.stack} aria-labelledby="sales-order-detail-heading">
       <div class={layout.row}>
         <h2 id="sales-order-detail-heading">Sales order detail</h2>
-        <Button type="button" onClick={() => void reload()}>Reload order</Button>
+        <Button type="button" onClick={() => void reload()}>
+          Reload order
+        </Button>
       </div>
       <QueryBoundary label="sales order" retry={() => query.refetch()}>
         <Show when={query.data} keyed>
@@ -918,7 +931,9 @@ export function Sales(props: {
           <CreateCustomerDialog reload={() => customers.refetch()} />
           <CreateQuotationDialog customers={customerData} reload={() => quotations.refetch()} />
           <CreateOrderDialog customers={customerData} reload={() => orders.refetch()} />
-          <Button type="button" onClick={() => void reload()}>Reload Sales</Button>
+          <Button type="button" onClick={() => void reload()}>
+            Reload Sales
+          </Button>
         </div>
       }
       toolbar={
@@ -930,13 +945,15 @@ export function Sales(props: {
           search={props.search}
         />
       }
-      aside={props.selectedOrderId
-        ? <OrderDetail id={props.selectedOrderId} reloadLists={reload} />
-        : props.selectedQuotationId
-        ? <QuotationDetail id={props.selectedQuotationId} />
-        : props.selectedCustomerId
-        ? <CustomerDetail id={props.selectedCustomerId} />
-        : undefined}
+      aside={
+        props.selectedOrderId ? (
+          <OrderDetail id={props.selectedOrderId} reloadLists={reload} />
+        ) : props.selectedQuotationId ? (
+          <QuotationDetail id={props.selectedQuotationId} />
+        ) : props.selectedCustomerId ? (
+          <CustomerDetail id={props.selectedCustomerId} />
+        ) : undefined
+      }
     >
       <QueryBoundary label="Sales" retry={reload}>
         <section class={[surface(), layout.stack]} aria-labelledby="sales-customers-heading">

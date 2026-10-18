@@ -47,21 +47,23 @@ const styles = {
 }
 
 const statusTone = (status: string): "neutral" | "success" | "warning" | "danger" | "info" =>
-  ({
-    completed: "success",
-    succeeded: "success",
-    failed: "danger",
-    manual_recovery: "danger",
-    running: "info",
-    leased: "info",
-  } as const)[status] ?? "warning"
+  (
+    {
+      completed: "success",
+      succeeded: "success",
+      failed: "danger",
+      manual_recovery: "danger",
+      running: "info",
+      leased: "info",
+    } as const
+  )[status] ?? "warning"
 
 const actionLabel = (action: OperateRuntimeInput["action"]): string =>
   action === "manual_recovery"
     ? "Mark manual recovery"
     : action === "compensate"
-    ? "Start compensation"
-    : "Retry runtime"
+      ? "Start compensation"
+      : "Retry runtime"
 
 const formatTime = (value: string): string => {
   const date = new Date(value)
@@ -85,7 +87,9 @@ function CatalogTable(props: { entries: readonly ProcessCatalogDescriptor[] }) {
           cell: (entry) => (
             <>
               <strong>{entry.title}</strong>
-              <div class={styles.code}>{entry.kind} · {entry.id} · v{entry.version}</div>
+              <div class={styles.code}>
+                {entry.kind} · {entry.id} · v{entry.version}
+              </div>
               <div class={styles.muted}>{entry.description}</div>
             </>
           ),
@@ -100,8 +104,8 @@ function CatalogTable(props: { entries: readonly ProcessCatalogDescriptor[] }) {
                 {entry.stability}
               </Badge>
               <div>
-                Catalog {entry.compatibilityRange.minimumVersion}–{entry.compatibilityRange
-                  .maximumVersion}
+                Catalog {entry.compatibilityRange.minimumVersion}–
+                {entry.compatibilityRange.maximumVersion}
               </div>
             </>
           ),
@@ -110,19 +114,19 @@ function CatalogTable(props: { entries: readonly ProcessCatalogDescriptor[] }) {
           id: "runtime",
           header: "Runtime contract",
           cell: (entry) =>
-            entry.kind === "DomainAction"
-              ? (
-                <>
-                  {entry.requiredCapability}
-                  <div>{entry.transactionSemantics} · {entry.idempotency}</div>
-                </>
-              )
-              : (
-                <>
-                  {entry.aggregateType}
-                  <div>{entry.deliveryExpectation}</div>
-                </>
-              ),
+            entry.kind === "DomainAction" ? (
+              <>
+                {entry.requiredCapability}
+                <div>
+                  {entry.transactionSemantics} · {entry.idempotency}
+                </div>
+              </>
+            ) : (
+              <>
+                {entry.aggregateType}
+                <div>{entry.deliveryExpectation}</div>
+              </>
+            ),
         },
       ]}
     />
@@ -341,9 +345,8 @@ function RuntimeActionDialog(props: {
           // fallow-ignore-next-line complexity
           (value) => {
             if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
-            const idempotencyKey = typeof value.idempotencyKey === "string"
-              ? value.idempotencyKey.trim()
-              : ""
+            const idempotencyKey =
+              typeof value.idempotencyKey === "string" ? value.idempotencyKey.trim() : ""
             const reason = typeof value.reason === "string" ? value.reason.trim() : ""
             if (!/\S/.test(idempotencyKey) || !/\S/.test(reason)) {
               setInvalid(true)
@@ -377,8 +380,7 @@ function RuntimeActionDialog(props: {
           successMessage="Runtime control recorded."
           area="Process Studio"
           reload={props.reload}
-          reset={() =>
-            mutation.reset()}
+          reset={() => mutation.reset()}
         />
         <Button
           type="submit"
@@ -414,7 +416,7 @@ function DesignPanel(props: {
           return
         }
         const references = model.nodes.flatMap((node) =>
-          node.capability === undefined ? [] : [node.capability]
+          node.capability === undefined ? [] : [node.capability],
         )
         setFeedback("Checking the draft against the active backend catalog…")
         props.validation.mutate({
@@ -610,12 +612,7 @@ export function ProcessStudio() {
         </div>
         <Badge tone="info">{(controls.data ?? []).length} records</Badge>
       </div>
-      <QueryBoundary
-        variant="retry"
-        label="operator history"
-        retry={() =>
-          controls.refetch()}
-      >
+      <QueryBoundary variant="retry" label="operator history" retry={() => controls.refetch()}>
         <Show
           when={(controls.data ?? []).length > 0}
           fallback={<EmptyState>No operator controls have been recorded.</EmptyState>}
@@ -637,7 +634,9 @@ export function ProcessStudio() {
       }
       headerActions={
         <div class={styles.actionRow}>
-          <Button type="button" onClick={() => void reload()}>Refresh Process Studio</Button>
+          <Button type="button" onClick={() => void reload()}>
+            Refresh Process Studio
+          </Button>
         </div>
       }
       aside={

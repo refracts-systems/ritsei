@@ -49,7 +49,7 @@ const request = async (path: string, init?: RequestInit): Promise<Response> => {
       credentials: "omit",
       cache: "no-store",
       redirect: "error",
-      headers: { Accept: "application/json", ...(init?.headers ?? {}) },
+      headers: { Accept: "application/json", ...init?.headers },
       signal: init?.signal ?? AbortSignal.timeout(10_000),
     })
   } catch {
@@ -61,10 +61,7 @@ export const getAuthConfiguration = async () =>
   decodeJson(AuthConfiguration, await request(authRoutes.config))
 
 export const devLogin = async () =>
-  decodeJson(
-    AuthLoginResult,
-    await request(authRoutes.devLogin, { method: "POST" }),
-  )
+  decodeJson(AuthLoginResult, await request(authRoutes.devLogin, { method: "POST" }))
 
 export const getAuthSession = async (token: string, tenantId?: string) =>
   decodeJson(
@@ -85,7 +82,10 @@ export const logout = async (token: string) => {
 }
 
 const encodeBase64Url = (bytes: Uint8Array) =>
-  btoa(String.fromCharCode(...bytes)).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "")
+  btoa(String.fromCharCode(...bytes))
+    .replaceAll("+", "-")
+    .replaceAll("/", "_")
+    .replace(/=+$/, "")
 
 const randomBase64Url = (size: number) => {
   const bytes = new Uint8Array(size)
@@ -100,9 +100,12 @@ const sha256Base64Url = async (value: string) =>
 
 export const beginOidcLogin = async (configuration: AuthConfiguration) => {
   if (
-    configuration.profile !== "oidc" || configuration.authorizationEndpoint === undefined
-    || configuration.clientId === undefined || configuration.redirectUri === undefined
-  ) throw new AuthClientFailure("invalid-response")
+    configuration.profile !== "oidc" ||
+    configuration.authorizationEndpoint === undefined ||
+    configuration.clientId === undefined ||
+    configuration.redirectUri === undefined
+  )
+    throw new AuthClientFailure("invalid-response")
   const state = randomBase64Url(24)
   const verifier = randomBase64Url(48)
   sessionStorage.setItem("ritsei.auth.state", state)
@@ -121,9 +124,12 @@ export const beginOidcLogin = async (configuration: AuthConfiguration) => {
 
 export const finishOidcLogin = async (configuration: AuthConfiguration) => {
   if (
-    configuration.profile !== "oidc" || configuration.tokenEndpoint === undefined
-    || configuration.clientId === undefined || configuration.redirectUri === undefined
-  ) throw new AuthClientFailure("invalid-response")
+    configuration.profile !== "oidc" ||
+    configuration.tokenEndpoint === undefined ||
+    configuration.clientId === undefined ||
+    configuration.redirectUri === undefined
+  )
+    throw new AuthClientFailure("invalid-response")
   const query = new URLSearchParams(globalThis.location.search)
   const code = query.get("code")
   const state = query.get("state")
@@ -132,8 +138,11 @@ export const finishOidcLogin = async (configuration: AuthConfiguration) => {
   sessionStorage.removeItem("ritsei.auth.state")
   sessionStorage.removeItem("ritsei.auth.verifier")
   if (
-    code === null || state === null || expectedState === null || state !== expectedState
-    || verifier === null
+    code === null ||
+    state === null ||
+    expectedState === null ||
+    state !== expectedState ||
+    verifier === null
   ) {
     throw new AuthClientFailure("invalid-response")
   }

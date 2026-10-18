@@ -16,14 +16,17 @@ import {
 } from "./errors.ts"
 
 const NonEmptyString = Schema.String.check(Schema.isPattern(/\S/))
-const TrimmedNonEmptyString = Schema.String.check(Schema.makeFilter(
-  (value) => /\S/.test(value) && value === value.trim(),
-  { expected: "a trimmed nonblank string" },
-))
-const LowercaseTrimmedNonEmptyString = Schema.String.check(Schema.makeFilter(
-  (value) => /\S/.test(value) && value === value.trim() && value === value.toLowerCase(),
-  { expected: "a trimmed lowercase nonblank string" },
-))
+const TrimmedNonEmptyString = Schema.String.check(
+  Schema.makeFilter((value) => /\S/.test(value) && value === value.trim(), {
+    expected: "a trimmed nonblank string",
+  }),
+)
+const LowercaseTrimmedNonEmptyString = Schema.String.check(
+  Schema.makeFilter(
+    (value) => /\S/.test(value) && value === value.trim() && value === value.toLowerCase(),
+    { expected: "a trimmed lowercase nonblank string" },
+  ),
+)
 const Uuid = Schema.String.check(Schema.isUUID())
 const Money = FinancialMajorAmount
 const Quantity = Schema.String.check(
@@ -63,21 +66,28 @@ export const SalesOrder = Schema.Struct({
   confirmedAt: Schema.NullOr(InstantString),
   total: Money,
   lines: Schema.Array(SalesOrderLine).check(Schema.isMinLength(1)),
-}).check(Schema.makeFilter(
-  (order) =>
-    (order.status === "draft" && order.confirmedAt === null)
-    || (order.status !== "draft" && order.confirmedAt !== null),
-  { expected: "sales order confirmation metadata consistent with status" },
-)).check(Schema.makeFilter(
-  (order) => {
-    const lineTotal = order.lines.reduce(
-      (total, line) => total + requireExactMajorToMinor(line.unitPrice, 2) * BigInt(line.quantity),
-      0n,
-    )
-    return lineTotal === requireExactMajorToMinor(order.total, 2)
-  },
-  { expected: "sales order total must equal its line totals" },
-))
+})
+  .check(
+    Schema.makeFilter(
+      (order) =>
+        (order.status === "draft" && order.confirmedAt === null) ||
+        (order.status !== "draft" && order.confirmedAt !== null),
+      { expected: "sales order confirmation metadata consistent with status" },
+    ),
+  )
+  .check(
+    Schema.makeFilter(
+      (order) => {
+        const lineTotal = order.lines.reduce(
+          (total, line) =>
+            total + requireExactMajorToMinor(line.unitPrice, 2) * BigInt(line.quantity),
+          0n,
+        )
+        return lineTotal === requireExactMajorToMinor(order.total, 2)
+      },
+      { expected: "sales order total must equal its line totals" },
+    ),
+  )
 
 export type Customer = Schema.Schema.Type<typeof Customer>
 export type QuotationStatus = Schema.Schema.Type<typeof QuotationStatus>
@@ -164,9 +174,7 @@ type CommonFailure =
   | import("../../../foundation/mod.ts").DatabaseFailure
   | Schema.SchemaError
 export interface SalesService {
-  readonly listCustomers: (
-    input: unknown,
-  ) => Effect.Effect<ReadonlyArray<Customer>, CommonFailure>
+  readonly listCustomers: (input: unknown) => Effect.Effect<ReadonlyArray<Customer>, CommonFailure>
   readonly getCustomer: (
     input: unknown,
   ) => Effect.Effect<Customer, CustomerNotFound | CommonFailure>
@@ -176,9 +184,7 @@ export interface SalesService {
   readonly getQuotation: (
     input: unknown,
   ) => Effect.Effect<Quotation, QuotationNotFound | CommonFailure>
-  readonly listOrders: (
-    input: unknown,
-  ) => Effect.Effect<ReadonlyArray<SalesOrder>, CommonFailure>
+  readonly listOrders: (input: unknown) => Effect.Effect<ReadonlyArray<SalesOrder>, CommonFailure>
   readonly getOrder: (
     input: unknown,
   ) => Effect.Effect<SalesOrder, SalesOrderNotFound | CommonFailure>

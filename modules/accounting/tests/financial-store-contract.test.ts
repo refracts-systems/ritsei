@@ -16,9 +16,10 @@ import {
 
 const watermark = (authority: "postgresql" | "tigerbeetle", value: string) => ({
   authority,
-  scope: authority === "postgresql"
-    ? "tenant:00000000-0000-7000-8000-000000000001/legal-entity:00000000-0000-7000-8000-000000000002"
-    : "provider:tigerbeetle",
+  scope:
+    authority === "postgresql"
+      ? "tenant:00000000-0000-7000-8000-000000000001/legal-entity:00000000-0000-7000-8000-000000000002"
+      : "provider:tigerbeetle",
   value,
   snapshotRef: `sha256:${value}`,
   consistency: "bounded" as const,
@@ -27,7 +28,7 @@ const watermark = (authority: "postgresql" | "tigerbeetle", value: string) => ({
 
 describe("financial readiness contracts", () => {
   it.effect("routes observations by authority and hashes both boundaries", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const source = watermark("postgresql", "source")
       const target = watermark("tigerbeetle", "target")
       const registry = makeFinancialStoreObservationRegistry([
@@ -69,20 +70,22 @@ describe("financial readiness contracts", () => {
         yield* registry.collect("tigerbeetle", { scope: target.scope, maxRecords: 1 }),
         target,
       )
-      const missingRegistry = makeFinancialStoreObservationRegistry([{
-        authority: "postgresql",
-        collector: { collect: () => Effect.succeed(source) },
-        scanner: {
-          scan: () =>
-            Effect.succeed({
-              authority: "postgresql" as const,
-              scope: source.scope,
-              watermark: source,
-              accounts: [],
-              transfers: [],
-            }),
+      const missingRegistry = makeFinancialStoreObservationRegistry([
+        {
+          authority: "postgresql",
+          collector: { collect: () => Effect.succeed(source) },
+          scanner: {
+            scan: () =>
+              Effect.succeed({
+                authority: "postgresql" as const,
+                scope: source.scope,
+                watermark: source,
+                accounts: [],
+                transfers: [],
+              }),
+          },
         },
-      }])
+      ])
       const missing = yield* Effect.flip(
         missingRegistry.collect("tigerbeetle", { scope: "missing", maxRecords: 1 }),
       )
@@ -99,23 +102,28 @@ describe("financial readiness contracts", () => {
         scope: target.scope,
         watermark: target,
         accounts: [],
-        transfers: [{
-          transferRef: "transfer-1",
-          debitAccountRef: "account-1",
-          creditAccountRef: "account-2",
-          amountMinor: "1",
-          currency: "USD",
-          mappingVersion: 1,
-          status: "accepted" as const,
-          observedAt: "1",
-        }],
+        transfers: [
+          {
+            transferRef: "transfer-1",
+            debitAccountRef: "account-1",
+            creditAccountRef: "account-2",
+            amountMinor: "1",
+            currency: "USD",
+            mappingVersion: 1,
+            status: "accepted" as const,
+            observedAt: "1",
+          },
+        ],
       }
       const inventoryMismatch = compareFinancialStoreInventories(inventory, {
         ...inventory,
-        transfers: [...inventory.transfers, {
-          ...inventory.transfers[0]!,
-          transferRef: "transfer-2",
-        }],
+        transfers: [
+          ...inventory.transfers,
+          {
+            ...inventory.transfers[0]!,
+            transferRef: "transfer-2",
+          },
+        ],
       })
       assert.isFalse(inventoryMismatch.ok)
       assert.strictEqual(inventoryMismatch.mismatches[0]!.kind, "unexpected_transfer")
@@ -229,5 +237,6 @@ describe("financial readiness contracts", () => {
         }),
       )
       assert.strictEqual(invalidEvidence._tag, "SchemaError")
-    }))
+    }),
+  )
 })

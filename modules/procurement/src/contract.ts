@@ -31,10 +31,11 @@ import {
 
 const Uuid = Schema.String.check(Schema.isUUID())
 const NonEmptyString = Schema.String.check(Schema.isPattern(/\S/))
-const TrimmedNonEmptyString = Schema.String.check(Schema.makeFilter(
-  (value) => /\S/.test(value) && value === value.trim(),
-  { expected: "a trimmed nonblank string" },
-))
+const TrimmedNonEmptyString = Schema.String.check(
+  Schema.makeFilter((value) => /\S/.test(value) && value === value.trim(), {
+    expected: "a trimmed nonblank string",
+  }),
+)
 const Quantity = Schema.String.check(
   Schema.makeFilter(
     (value) => /^[1-9]\d*$/.test(value) && BigInt(value) <= 9_223_372_036_854_775_807n,
@@ -73,24 +74,34 @@ export const PurchaseOrder = Schema.Struct({
   confirmedAt: Schema.NullOr(InstantString),
   total: FinancialMajorAmount,
   lines: Schema.Array(PurchaseOrderLineSnapshot).check(Schema.isMinLength(1)),
-}).check(Schema.makeFilter(
-  (order) =>
-    (order.status === "draft" && order.confirmedAt === null)
-    || (order.status !== "draft" && order.confirmedAt !== null),
-  { expected: "purchase order confirmation metadata consistent with status" },
-)).check(Schema.makeFilter(
-  (order) => {
-    const lineTotal = order.lines.reduce(
-      (total, line) => total + requireExactMajorToMinor(line.unitPrice, 2) * BigInt(line.quantity),
-      0n,
-    )
-    return lineTotal === requireExactMajorToMinor(order.total, 2)
-  },
-  { expected: "purchase order total must equal its line totals" },
-)).check(Schema.makeFilter(
-  (order) => new Set(order.lines.map((line) => line.id)).size === order.lines.length,
-  { expected: "purchase order line identities must be unique" },
-))
+})
+  .check(
+    Schema.makeFilter(
+      (order) =>
+        (order.status === "draft" && order.confirmedAt === null) ||
+        (order.status !== "draft" && order.confirmedAt !== null),
+      { expected: "purchase order confirmation metadata consistent with status" },
+    ),
+  )
+  .check(
+    Schema.makeFilter(
+      (order) => {
+        const lineTotal = order.lines.reduce(
+          (total, line) =>
+            total + requireExactMajorToMinor(line.unitPrice, 2) * BigInt(line.quantity),
+          0n,
+        )
+        return lineTotal === requireExactMajorToMinor(order.total, 2)
+      },
+      { expected: "purchase order total must equal its line totals" },
+    ),
+  )
+  .check(
+    Schema.makeFilter(
+      (order) => new Set(order.lines.map((line) => line.id)).size === order.lines.length,
+      { expected: "purchase order line identities must be unique" },
+    ),
+  )
 
 export type SupplierAccount = Schema.Schema.Type<typeof SupplierAccount>
 export type PurchaseOrderLine = Schema.Schema.Type<typeof PurchaseOrderLine>
@@ -167,12 +178,14 @@ export const ReceivePurchaseOrderInput = Schema.Struct({
   purchaseOrderId: Uuid,
   warehouseId: Uuid,
   idempotencyKey: NonEmptyString,
-  lines: Schema.Array(PurchaseReceiptLineInput).check(Schema.isMinLength(1)).check(
-    Schema.makeFilter(
-      (lines) => new Set(lines.map((line) => line.purchaseOrderLineId)).size === lines.length,
-      { expected: "purchase receipt lines must reference unique purchase-order lines" },
+  lines: Schema.Array(PurchaseReceiptLineInput)
+    .check(Schema.isMinLength(1))
+    .check(
+      Schema.makeFilter(
+        (lines) => new Set(lines.map((line) => line.purchaseOrderLineId)).size === lines.length,
+        { expected: "purchase receipt lines must reference unique purchase-order lines" },
+      ),
     ),
-  ),
 })
 
 export const GoodsReceiptLine = Schema.Struct({
@@ -191,14 +204,21 @@ export const GoodsReceipt = Schema.Struct({
   idempotencyKey: TrimmedNonEmptyString,
   receivedAt: InstantString,
   lines: Schema.Array(GoodsReceiptLine).check(Schema.isMinLength(1)),
-}).check(Schema.makeFilter(
-  (receipt) =>
-    new Set(receipt.lines.map((line) => line.purchaseOrderLineId)).size === receipt.lines.length,
-  { expected: "goods receipt lines must reference unique purchase-order lines" },
-)).check(Schema.makeFilter(
-  (receipt) => new Set(receipt.lines.map((line) => line.id)).size === receipt.lines.length,
-  { expected: "goods receipt line identities must be unique" },
-))
+})
+  .check(
+    Schema.makeFilter(
+      (receipt) =>
+        new Set(receipt.lines.map((line) => line.purchaseOrderLineId)).size ===
+        receipt.lines.length,
+      { expected: "goods receipt lines must reference unique purchase-order lines" },
+    ),
+  )
+  .check(
+    Schema.makeFilter(
+      (receipt) => new Set(receipt.lines.map((line) => line.id)).size === receipt.lines.length,
+      { expected: "goods receipt line identities must be unique" },
+    ),
+  )
 
 export type PurchaseReceiptLineInput = Schema.Schema.Type<typeof PurchaseReceiptLineInput>
 export type ReceivePurchaseOrder = Schema.Schema.Type<typeof ReceivePurchaseOrderInput>

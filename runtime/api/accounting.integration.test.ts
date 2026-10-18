@@ -86,21 +86,18 @@ const accountingService: AccountingServiceContract = {
 } as unknown as AccountingServiceContract
 
 const financialOperations = {} as FinancialOperationServiceContract
-const TestHttpServices = Layer.mergeAll(
-  Path.layer,
-  Etag.layerWeak,
-  HttpPlatform.layer,
-).pipe(Layer.provideMerge(FileSystem.layerNoop({})))
+const TestHttpServices = Layer.mergeAll(Path.layer, Etag.layerWeak, HttpPlatform.layer).pipe(
+  Layer.provideMerge(FileSystem.layerNoop({})),
+)
 
 it.layer(TestHttpServices)("Accounting API contracts", (it) => {
   it.effect("forwards tenant and bearer context across Accounting reads and commands", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const bearer = Layer.succeed(BearerAuth, {
         bearer: (effect) => Effect.provideService(effect, CurrentPrincipal, principal),
       })
-      const bearerClient = HttpApiMiddleware.layerClient(
-        BearerAuth,
-        ({ request, next }) => next(HttpClientRequest.bearerToken(request, "accounting-token")),
+      const bearerClient = HttpApiMiddleware.layerClient(BearerAuth, ({ request, next }) =>
+        next(HttpClientRequest.bearerToken(request, "accounting-token")),
       )
       const handlers = AccountingHandlers.pipe(
         Layer.provide(bearer),
@@ -194,5 +191,6 @@ it.layer(TestHttpServices)("Accounting API contracts", (it) => {
       const captured = observedInput.value as { tenantId: string; principal: typeof principal }
       assert.strictEqual(captured.tenantId, tenantId)
       assert.deepStrictEqual(captured.principal, principal)
-    }))
+    }),
+  )
 })

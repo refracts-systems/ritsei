@@ -23,7 +23,11 @@ export function ExceptionInvestigation(props: ExceptionInvestigationProps) {
       </header>
       <div class={layout.row}>
         <div class={layout.stack}>{props.children}</div>
-        {props.evidence && <aside class={surface()} aria-label="Evidence">{props.evidence}</aside>}
+        {props.evidence && (
+          <aside class={surface()} aria-label="Evidence">
+            {props.evidence}
+          </aside>
+        )}
       </div>
     </section>
   )

@@ -11,11 +11,7 @@ export const ExternalProviderStatus = Schema.Literals([
   "unknown",
 ])
 
-export const ExternalDeliveryState = Schema.Literals([
-  "accepted",
-  "retry",
-  "dead_letter",
-])
+export const ExternalDeliveryState = Schema.Literals(["accepted", "retry", "dead_letter"])
 
 export type ExternalReliabilityInput = {
   readonly connectorId: string
@@ -46,7 +42,7 @@ export type ExternalReliabilityDecision = {
 
 const sensitiveField = (key: string): boolean =>
   ["authorization", "client_secret", "password", "secret", "token"].some((part) =>
-    key.toLowerCase().includes(part)
+    key.toLowerCase().includes(part),
   )
 
 // redaction removes credentials before a delivery record is exposed or retained.
@@ -68,8 +64,8 @@ export const assessExternalDelivery = (
   ExternalCompatibilityMismatch | ExternalPayloadLimitExceeded
 > => {
   if (
-    input.connectorVersion < input.compatibilityRange.minimumVersion
-    || input.connectorVersion > input.compatibilityRange.maximumVersion
+    input.connectorVersion < input.compatibilityRange.minimumVersion ||
+    input.connectorVersion > input.compatibilityRange.maximumVersion
   ) {
     return Effect.fail(
       new ExternalCompatibilityMismatch({
@@ -82,9 +78,8 @@ export const assessExternalDelivery = (
   }
 
   const encoded = JSON.stringify(input.payload)
-  const actualPayloadBytes = encoded === undefined
-    ? Number.POSITIVE_INFINITY
-    : new TextEncoder().encode(encoded).byteLength
+  const actualPayloadBytes =
+    encoded === undefined ? Number.POSITIVE_INFINITY : new TextEncoder().encode(encoded).byteLength
   if (actualPayloadBytes > input.maxPayloadBytes) {
     return Effect.fail(
       new ExternalPayloadLimitExceeded({
@@ -97,11 +92,12 @@ export const assessExternalDelivery = (
   }
 
   // dead letter policy is selected after the provider status and bounded attempts are known.
-  const state = input.providerStatus === "accepted"
-    ? "accepted"
-    : input.attempts >= input.maxAttempts
-    ? "dead_letter"
-    : "retry"
+  const state =
+    input.providerStatus === "accepted"
+      ? "accepted"
+      : input.attempts >= input.maxAttempts
+        ? "dead_letter"
+        : "retry"
   return Effect.succeed({
     state,
     connectorId: input.connectorId,

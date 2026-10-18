@@ -21,7 +21,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "bootstraps the tenant scope vertical slice against PostgreSQL",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
         const databaseLayer = Layer.succeed(Database, database)
@@ -91,5 +91,6 @@ it.effect.skipIf(databaseUrl === undefined)(
           yield* Effect.flip(Effect.provide(bootstrapTenant(input), services)),
           TenantAlreadyExists,
         )
-      })),
+      }),
+    ),
 )

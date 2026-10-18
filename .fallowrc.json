@@ -29,12 +29,7 @@
     "db/schema/index.ts",
     "drizzle.config.ts"
   ],
-  "ignorePatterns": [
-    "vendor/**",
-    "db/migrations/**",
-    "**/*.d.ts",
-    ".auto/**"
-  ],
+  "ignorePatterns": ["vendor/**", "db/migrations/**", "**/*.d.ts", ".auto/**"],
   "ignoreDependencies": [
     "@axe-core/playwright",
     "@effect/vitest",
@@ -234,12 +229,7 @@
       },
       {
         "from": "apps-web",
-        "allow": [
-          "modules",
-          "foundation",
-          "apps-web-ui-public",
-          "apps-web-ui-bootstrap"
-        ]
+        "allow": ["modules", "foundation", "apps-web-ui-public", "apps-web-ui-bootstrap"]
       },
       {
         "from": "runtime-adapters",

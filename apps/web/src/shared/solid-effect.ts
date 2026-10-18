@@ -50,14 +50,9 @@ export class MissingRuntimeContextError extends Error {
  * becoming a global registry; their service overrides still remain subtree-
  * scoped. The runtime is disposed automatically when this owner unmounts.
  */
-export function createRuntime<R>(
-  layer: Layer.Layer<R>,
-): ManagedRuntime.ManagedRuntime<R, never> {
+export function createRuntime<R>(layer: Layer.Layer<R>): ManagedRuntime.ManagedRuntime<R, never> {
   const parent = useContext(RuntimeContext)
-  const runtime = ManagedRuntime.make(
-    layer,
-    parent ? { memoMap: parent.memoMap } : undefined,
-  )
+  const runtime = ManagedRuntime.make(layer, parent ? { memoMap: parent.memoMap } : undefined)
   onCleanup(() => void runtime.dispose())
   return runtime
 }
@@ -89,9 +84,7 @@ function resolveFork() {
  * lifecycle hook: supersession/disposal calls `return()`, which interrupts the
  * fiber and waits for its finalizers before the iterator closes.
  */
-export function runEffect<A, E, R = never>(
-  effect: Effect.Effect<A, E, R>,
-): AsyncIterable<A> {
+export function runEffect<A, E, R = never>(effect: Effect.Effect<A, E, R>): AsyncIterable<A> {
   const fork = resolveFork()
   return {
     [Symbol.asyncIterator]() {
@@ -172,15 +165,13 @@ export function effectAction<Args extends unknown[], A, R = never>(
 
   // Solid's action transaction provides the optimistic UI boundary; each
   // yielded Effect below provides the interruptible application step.
-  const base = action(function*(...args: Args) {
+  const base = action(function* (...args: Args) {
     const iterator = genFn(...args)
     let step = iterator.next()
     while (!step.done) {
       const fiber = fork(step.value)
       inFlight = fiber
-      const exit: Exit.Exit<unknown, unknown> = yield Effect.runPromise(
-        Fiber.await(fiber),
-      )
+      const exit: Exit.Exit<unknown, unknown> = yield Effect.runPromise(Fiber.await(fiber))
       if (inFlight === fiber) inFlight = null
       if (Exit.isSuccess(exit)) {
         step = iterator.next(exit.value as never)

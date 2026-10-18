@@ -38,24 +38,24 @@ const order = {
   status: "draft" as const,
   confirmedAt: null,
   total: "12.50",
-  lines: [{
-    id: lineId,
-    itemId: "018f0000-0000-7000-8000-000000000005",
-    quantity: "1",
-    unitPrice: "12.50",
-  }],
+  lines: [
+    {
+      id: lineId,
+      itemId: "018f0000-0000-7000-8000-000000000005",
+      quantity: "1",
+      unitPrice: "12.50",
+    },
+  ],
 }
 
 const unused = () => Effect.die(new Error("unused procurement endpoint in API integration test"))
 
-const makeProcurementStub = (
-  observedToken: { value?: string },
-): ProcurementServiceContract => ({
+const makeProcurementStub = (observedToken: { value?: string }): ProcurementServiceContract => ({
   createSupplierAccount: unused,
   listSupplierAccounts: () => Effect.succeed([]),
   createPurchaseOrder: () => Effect.succeed(order),
   getPurchaseOrder: () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       observedToken.value = yield* CurrentConsistencyToken
       return order
     }),
@@ -85,19 +85,17 @@ const inventoryService: InventoryServiceContract = {
   completeTransfer: unused,
 }
 
-const provideInventory = HttpRouter.middleware<{ provides: InventoryService }>()(
-  (httpEffect) => Effect.provideService(httpEffect, InventoryService, inventoryService),
+const provideInventory = HttpRouter.middleware<{ provides: InventoryService }>()((httpEffect) =>
+  Effect.provideService(httpEffect, InventoryService, inventoryService),
 )
 
-const TestHttpServices = Layer.mergeAll(
-  Path.layer,
-  Etag.layerWeak,
-  HttpPlatform.layer,
-).pipe(Layer.provideMerge(FileSystem.layerNoop({})))
+const TestHttpServices = Layer.mergeAll(Path.layer, Etag.layerWeak, HttpPlatform.layer).pipe(
+  Layer.provideMerge(FileSystem.layerNoop({})),
+)
 
 it.layer(TestHttpServices)("procurement API consistency headers", (it) => {
   it.effect("captures on create and forwards the token on read", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const observedToken: { value?: string } = {}
       let capturedTenantId: string | undefined
       const readYourWrites: PostgresReadYourWritesService = {
@@ -110,9 +108,8 @@ it.layer(TestHttpServices)("procurement API consistency headers", (it) => {
       const bearer = Layer.succeed(BearerAuth, {
         bearer: (effect) => Effect.provideService(effect, CurrentPrincipal, principal),
       })
-      const bearerClient = HttpApiMiddleware.layerClient(
-        BearerAuth,
-        ({ request, next }) => next(HttpClientRequest.bearerToken(request, "test-token")),
+      const bearerClient = HttpApiMiddleware.layerClient(BearerAuth, ({ request, next }) =>
+        next(HttpClientRequest.bearerToken(request, "test-token")),
       )
       const handlers = ProcurementHandlers.pipe(
         Layer.provide(bearer),
@@ -169,5 +166,6 @@ it.layer(TestHttpServices)("procurement API consistency headers", (it) => {
       })
       assert.deepStrictEqual(read, order)
       assert.strictEqual(observedToken.value, consistencyToken)
-    }))
+    }),
+  )
 })

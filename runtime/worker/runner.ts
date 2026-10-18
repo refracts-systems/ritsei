@@ -43,9 +43,8 @@ export class WorkerInjectedFailure extends Schema.TaggedError<WorkerInjectedFail
 export interface WorkerFailpointService {
   readonly hit: (point: WorkerFailpointName) => Effect.Effect<void, WorkerInjectedFailure>
 }
-export const WorkerFailpointService = Context.Service<WorkerFailpointService>(
-  "RITSEI/WorkerFailpoint",
-)
+export const WorkerFailpointService =
+  Context.Service<WorkerFailpointService>("RITSEI/WorkerFailpoint")
 export const makeWorkerFailpointLayer = (points: Iterable<WorkerFailpointName>) => {
   const remaining = new Set(points)
   return Layer.succeed(WorkerFailpointService, {
@@ -80,7 +79,7 @@ const isPermanentFinancialOperationFailure = (error: FinancialOperationFailure):
 const retryAfter = (milliseconds: number) => new Date(Date.now() + milliseconds).toISOString()
 
 export const runFinancialOperationOnce = (input: unknown) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const decoded = yield* Schema.decodeUnknownEffect(FinancialWorkerInput)(input)
     const process = yield* ProcessService
     const accounting = yield* FinancialOperationService
@@ -103,29 +102,31 @@ export const runFinancialOperationOnce = (input: unknown) =>
     yield* hit("after_lease_before_accounting")
 
     const payload = yield* Schema.decodeUnknownEffect(FinancialOperationJobPayload)(job.payload)
-    const operation = job.jobType === ProcessFinancialJobTypes.reconcile
-      ? accounting.reconcileFinancialOperation(payload)
-      : accounting.submitFinancialOperation(payload)
-    const fencedOperation = operation.pipe(Effect.provideService(FencingContextService, {
-      scope: job.fenceScope,
-      generation: job.leaseGeneration,
-    }))
+    const operation =
+      job.jobType === ProcessFinancialJobTypes.reconcile
+        ? accounting.reconcileFinancialOperation(payload)
+        : accounting.submitFinancialOperation(payload)
+    const fencedOperation = operation.pipe(
+      Effect.provideService(FencingContextService, {
+        scope: job.fenceScope,
+        generation: job.leaseGeneration,
+      }),
+    )
     const heartbeat = Effect.forever(
       Effect.sleep("1 minute").pipe(
-        Effect.andThen(process.renewJob({
-          tenantId: decoded.tenantId,
-          workerId: decoded.workerId,
-          jobId: job.jobId,
-          leaseToken: job.leaseToken,
-          leaseGeneration: job.leaseGeneration,
-        })),
+        Effect.andThen(
+          process.renewJob({
+            tenantId: decoded.tenantId,
+            workerId: decoded.workerId,
+            jobId: job.jobId,
+            leaseToken: job.leaseToken,
+            leaseGeneration: job.leaseGeneration,
+          }),
+        ),
         Effect.asVoid,
       ),
     )
-    const result = yield* Effect.raceAllFirst([
-      Effect.result(fencedOperation),
-      heartbeat,
-    ])
+    const result = yield* Effect.raceAllFirst([Effect.result(fencedOperation), heartbeat])
 
     if (Result.isSuccess(result)) {
       const value = result.success
@@ -148,8 +149,10 @@ export const runFinancialOperationOnce = (input: unknown) =>
         }
       }
       if (
-        value.status === "reconciled" || value.status === "rejected"
-        || value.status === "manual_recovery" || value.status === "unknown"
+        value.status === "reconciled" ||
+        value.status === "rejected" ||
+        value.status === "manual_recovery" ||
+        value.status === "unknown"
       ) {
         yield* hit("before_job_completion")
         yield* process.completeJob({
@@ -160,7 +163,7 @@ export const runFinancialOperationOnce = (input: unknown) =>
           leaseGeneration: job.leaseGeneration,
         })
         return {
-          status: value.status === "unknown" ? "retrying" as const : "completed" as const,
+          status: value.status === "unknown" ? ("retrying" as const) : ("completed" as const),
           jobId: job.jobId,
           operationId: value.operationId,
         }
@@ -195,7 +198,7 @@ export const runFinancialOperationOnce = (input: unknown) =>
       retryAt: permanent ? null : retryAfter(5_000),
     })
     return {
-      status: permanent ? "failed" as const : "retrying" as const,
+      status: permanent ? ("failed" as const) : ("retrying" as const),
       jobId: job.jobId,
       operationId: payload.operationId,
     }

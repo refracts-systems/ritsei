@@ -30,7 +30,7 @@ const connectAndOpenAccounting = async (page: Page, url: string) => {
 it.effect(
   "connects Accounting configuration, account, and journal workflows through the backend surface",
   () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const { page, url, errors } = yield* builtApp
       let configurations: AccountingConfiguration[] = []
       let accounts: Account[] = []
@@ -72,18 +72,20 @@ it.effect(
             return fulfillJson(route, 200, journals)
           }
           if (
-            path === `/accounting/legal-entities/${legalEntityId}/configuration`
-            && method === "POST"
+            path === `/accounting/legal-entities/${legalEntityId}/configuration` &&
+            method === "POST"
           ) {
-            configurations = [{
-              tenantId,
-              legalEntityId,
-              baseCurrency: body.baseCurrency,
-              precision: 2,
-              fiscalYearStartMonth: body.fiscalYearStartMonth,
-              postingEnabled: body.postingEnabled,
-              financialEngine: "postgresql",
-            }]
+            configurations = [
+              {
+                tenantId,
+                legalEntityId,
+                baseCurrency: body.baseCurrency,
+                precision: 2,
+                fiscalYearStartMonth: body.fiscalYearStartMonth,
+                postingEnabled: body.postingEnabled,
+                financialEngine: "postgresql",
+              },
+            ]
             return fulfillJson(route, 201, configurations[0])
           }
           if (path === "/accounting/accounts" && method === "POST") {
@@ -125,7 +127,7 @@ it.effect(
               return fulfillJson(route, 404, { _tag: "ApiNotFound", code: "not_found" })
             }
             const closed: AccountingPeriod = { ...period, status: "closed" }
-            periods = periods.map((candidate) => candidate.id === periodId ? closed : candidate)
+            periods = periods.map((candidate) => (candidate.id === periodId ? closed : candidate))
             return fulfillJson(route, 200, closed)
           }
           if (path === "/accounting/journals" && method === "POST") {
@@ -148,19 +150,20 @@ it.effect(
         assert.equal(accountingRequest?.headers.authorization, "Bearer accounting-session")
         assert.equal(accountingRequest?.headers["x-tenant-id"], tenantId)
         assert.deepEqual(
-          await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze().then((result) =>
-            result.violations
-          ),
+          await new AxeBuilder({ page })
+            .withTags(["wcag2a", "wcag2aa"])
+            .analyze()
+            .then((result) => result.violations),
           [],
         )
 
         await page.getByRole("button", { name: "Configure legal entity", exact: true }).click()
         const configurationDialog = page.getByRole("dialog", { name: "Configure legal entity" })
-        await configurationDialog.getByRole("textbox", { name: "Legal entity ID", exact: true })
-          .fill(
-            legalEntityId,
-          )
-        await configurationDialog.getByRole("button", { name: "Save configuration", exact: true })
+        await configurationDialog
+          .getByRole("textbox", { name: "Legal entity ID", exact: true })
+          .fill(legalEntityId)
+        await configurationDialog
+          .getByRole("button", { name: "Save configuration", exact: true })
           .click()
         await configurationDialog.waitFor({ state: "hidden" })
         await page.getByText(legalEntityId, { exact: true }).first().waitFor()
@@ -169,19 +172,20 @@ it.effect(
         const cashDialog = page.getByRole("dialog", { name: "Create account" })
         await cashDialog.getByRole("textbox", { name: "Account code", exact: true }).fill("1000")
         await cashDialog.getByRole("textbox", { name: "Account name", exact: true }).fill("Cash")
-        await cashDialog.getByRole("combobox", { name: "Account type", exact: true }).selectOption(
-          "asset",
-        )
+        await cashDialog
+          .getByRole("combobox", { name: "Account type", exact: true })
+          .selectOption("asset")
         await cashDialog.getByRole("button", { name: "Create account", exact: true }).click()
         await cashDialog.waitFor({ state: "hidden" })
 
         await page.getByRole("button", { name: "Create account", exact: true }).click()
         const revenueDialog = page.getByRole("dialog", { name: "Create account" })
         await revenueDialog.getByRole("textbox", { name: "Account code", exact: true }).fill("4000")
-        await revenueDialog.getByRole("textbox", { name: "Account name", exact: true }).fill(
-          "Revenue",
-        )
-        await revenueDialog.getByRole("combobox", { name: "Account type", exact: true })
+        await revenueDialog
+          .getByRole("textbox", { name: "Account name", exact: true })
+          .fill("Revenue")
+        await revenueDialog
+          .getByRole("combobox", { name: "Account type", exact: true })
           .selectOption("revenue")
         await revenueDialog.getByRole("button", { name: "Create account", exact: true }).click()
         await revenueDialog.waitFor({ state: "hidden" })
@@ -191,33 +195,36 @@ it.effect(
         const profileDialog = page.getByRole("dialog", {
           name: "Configure revenue posting profile",
         })
-        await profileDialog.getByRole("textbox", { name: "Legal entity ID", exact: true }).fill(
-          legalEntityId,
-        )
-        await profileDialog.getByRole("combobox", { name: "Receivable account", exact: true })
+        await profileDialog
+          .getByRole("textbox", { name: "Legal entity ID", exact: true })
+          .fill(legalEntityId)
+        await profileDialog
+          .getByRole("combobox", { name: "Receivable account", exact: true })
           .selectOption(cashId)
-        await profileDialog.getByRole("combobox", { name: "Revenue account", exact: true })
+        await profileDialog
+          .getByRole("combobox", { name: "Revenue account", exact: true })
           .selectOption(revenueId)
-        await profileDialog.getByRole("button", { name: "Save revenue profile", exact: true })
+        await profileDialog
+          .getByRole("button", { name: "Save revenue profile", exact: true })
           .click()
         await profileDialog.waitFor({ state: "hidden" })
 
         await page.getByRole("button", { name: "Open period", exact: true }).click()
         const periodDialog = page.getByRole("dialog", { name: "Open accounting period" })
-        await periodDialog.getByRole("textbox", { name: "Legal entity ID", exact: true }).fill(
-          legalEntityId,
-        )
-        await periodDialog.locator("input[name=\"startsOn\"]").fill("2026-01-01")
-        await periodDialog.locator("input[name=\"endsOn\"]").fill("2026-12-31")
+        await periodDialog
+          .getByRole("textbox", { name: "Legal entity ID", exact: true })
+          .fill(legalEntityId)
+        await periodDialog.locator('input[name="startsOn"]').fill("2026-01-01")
+        await periodDialog.locator('input[name="endsOn"]').fill("2026-12-31")
         await periodDialog.getByRole("button", { name: "Open period", exact: true }).click()
         await periodDialog.waitFor({ state: "hidden" })
         await page.getByText("2026-01-01", { exact: true }).waitFor()
 
         await page.getByRole("button", { name: "Post journal", exact: true }).click()
         const journalDialog = page.getByRole("dialog", { name: "Post journal" })
-        await journalDialog.getByRole("textbox", { name: "Reference", exact: true }).fill(
-          "opening-entry",
-        )
+        await journalDialog
+          .getByRole("textbox", { name: "Reference", exact: true })
+          .fill("opening-entry")
         const accountFields = journalDialog.getByRole("combobox", { name: "Account", exact: true })
         await accountFields.nth(0).selectOption(cashId)
         await accountFields.nth(1).selectOption(revenueId)
@@ -242,9 +249,10 @@ it.effect(
         await page.getByText("closed", { exact: true }).waitFor()
 
         assert.deepEqual(
-          requests.find((request) =>
-            request.path === `/accounting/legal-entities/${legalEntityId}/configuration`
-            && request.method === "POST"
+          requests.find(
+            (request) =>
+              request.path === `/accounting/legal-entities/${legalEntityId}/configuration` &&
+              request.method === "POST",
           )?.body,
           {
             baseCurrency: "USD",
@@ -254,9 +262,10 @@ it.effect(
           },
         )
         assert.deepEqual(
-          requests.filter((request) =>
-            request.path === "/accounting/accounts" && request.method === "POST"
-          )
+          requests
+            .filter(
+              (request) => request.path === "/accounting/accounts" && request.method === "POST",
+            )
             .map((request) => request.body),
           [
             { code: "1000", name: "Cash", type: "asset" },
@@ -264,8 +273,9 @@ it.effect(
           ],
         )
         assert.deepEqual(
-          requests.find((request) =>
-            request.path === "/accounting/revenue-posting-profiles" && request.method === "POST"
+          requests.find(
+            (request) =>
+              request.path === "/accounting/revenue-posting-profiles" && request.method === "POST",
           )?.body,
           {
             legalEntityId,
@@ -274,22 +284,22 @@ it.effect(
           },
         )
         assert.deepEqual(
-          requests.find((request) =>
-            request.path === "/accounting/periods" && request.method === "POST"
+          requests.find(
+            (request) => request.path === "/accounting/periods" && request.method === "POST",
           )?.body,
           { legalEntityId, startsOn: "2026-01-01", endsOn: "2026-12-31" },
         )
         assert.deepEqual(
-          requests.find((request) =>
-            request.path === `/accounting/periods/${periodId}/close` && request.method === "POST"
+          requests.find(
+            (request) =>
+              request.path === `/accounting/periods/${periodId}/close` && request.method === "POST",
           )?.body,
           { legalEntityId },
         )
         assert.deepEqual(
-          requests.find((request) =>
-            request.path === "/accounting/journals" && request.method === "POST"
-          )
-            ?.body,
+          requests.find(
+            (request) => request.path === "/accounting/journals" && request.method === "POST",
+          )?.body,
           {
             reference: "opening-entry",
             lines: [
@@ -300,8 +310,8 @@ it.effect(
         )
         assert.isTrue(requests.some((request) => request.path === "/accounting/configurations"))
         assert.isTrue(
-          requests.some((request) =>
-            request.path === "/accounting/accounts" && request.method === "GET"
+          requests.some(
+            (request) => request.path === "/accounting/accounts" && request.method === "GET",
           ),
         )
         assert.isTrue(requests.some((request) => request.path === "/accounting/periods"))
@@ -309,15 +319,16 @@ it.effect(
           requests.some((request) => request.path === "/accounting/revenue-posting-profiles"),
         )
         assert.isTrue(
-          requests.some((request) =>
-            request.path === "/accounting/journals" && request.method === "GET"
+          requests.some(
+            (request) => request.path === "/accounting/journals" && request.method === "GET",
           ),
         )
         assert.deepEqual(errors, [])
         assert.deepEqual(
-          await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze().then((result) =>
-            result.violations
-          ),
+          await new AxeBuilder({ page })
+            .withTags(["wcag2a", "wcag2aa"])
+            .analyze()
+            .then((result) => result.violations),
           [],
         )
       })
@@ -328,7 +339,7 @@ it.effect(
 it.effect(
   "keeps Accounting authorization, malformed responses, conflicts, and unknown outcomes explicit",
   () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const { page, url, errors } = yield* builtApp
       const accounts: Account[] = [
         {
@@ -403,17 +414,19 @@ it.effect(
               }
               if (path === "/accounting/journals") {
                 if (mode === "malformed-journal") {
-                  return fulfillJson(route, 200, [{
-                    id: journalId,
-                    tenantId,
-                    reference: "invalid-balance",
-                    status: "posted",
-                    postedAt: "2026-09-13T12:00:00.000Z",
-                    lines: [
-                      { accountId: cashId, debit: "125.00", credit: "0.00" },
-                      { accountId: revenueId, debit: "0.00", credit: "124.00" },
-                    ],
-                  }])
+                  return fulfillJson(route, 200, [
+                    {
+                      id: journalId,
+                      tenantId,
+                      reference: "invalid-balance",
+                      status: "posted",
+                      postedAt: "2026-09-13T12:00:00.000Z",
+                      lines: [
+                        { accountId: cashId, debit: "125.00", credit: "0.00" },
+                        { accountId: revenueId, debit: "0.00", credit: "124.00" },
+                      ],
+                    },
+                  ])
                 }
                 return fulfillJson(route, 200, [])
               }
@@ -437,31 +450,39 @@ it.effect(
         await page.getByRole("button", { name: "Reload Finance", exact: true }).click()
         await page.getByRole("alert").filter({ hasText: "invalid or oversized response" }).waitFor()
         mode = "loaded"
-        await page.getByRole("button", {
-          name: "Try loading journal history again",
-          exact: true,
-        }).click()
-        await page.getByText("No posted or reversed journals match the current filter.", {
-          exact: true,
-        }).waitFor()
+        await page
+          .getByRole("button", {
+            name: "Try loading journal history again",
+            exact: true,
+          })
+          .click()
+        await page
+          .getByText("No posted or reversed journals match the current filter.", {
+            exact: true,
+          })
+          .waitFor()
 
         mode = "profile-conflict"
         await page.getByRole("button", { name: "Configure revenue profile", exact: true }).click()
         const profileDialog = page.getByRole("dialog", {
           name: "Configure revenue posting profile",
         })
-        await profileDialog.getByRole("textbox", { name: "Legal entity ID", exact: true }).fill(
-          legalEntityId,
-        )
-        await profileDialog.getByRole("combobox", { name: "Receivable account", exact: true })
+        await profileDialog
+          .getByRole("textbox", { name: "Legal entity ID", exact: true })
+          .fill(legalEntityId)
+        await profileDialog
+          .getByRole("combobox", { name: "Receivable account", exact: true })
           .selectOption(cashId)
-        await profileDialog.getByRole("combobox", { name: "Revenue account", exact: true })
+        await profileDialog
+          .getByRole("combobox", { name: "Revenue account", exact: true })
           .selectOption(revenueId)
-        await profileDialog.getByRole("button", { name: "Save revenue profile", exact: true })
+        await profileDialog
+          .getByRole("button", { name: "Save revenue profile", exact: true })
           .click()
         await profileDialog.getByRole("alert").filter({ hasText: "conflicts" }).waitFor()
         assert.isTrue(
-          await profileDialog.getByRole("button", { name: "Save revenue profile", exact: true })
+          await profileDialog
+            .getByRole("button", { name: "Save revenue profile", exact: true })
             .isEnabled(),
         )
         await profileDialog.getByRole("button", { name: "Close", exact: true }).click()
@@ -469,11 +490,11 @@ it.effect(
         mode = "period-unknown"
         await page.getByRole("button", { name: "Open period", exact: true }).click()
         const periodDialog = page.getByRole("dialog", { name: "Open accounting period" })
-        await periodDialog.getByRole("textbox", { name: "Legal entity ID", exact: true }).fill(
-          legalEntityId,
-        )
-        await periodDialog.locator("input[name=\"startsOn\"]").fill("2026-01-01")
-        await periodDialog.locator("input[name=\"endsOn\"]").fill("2026-12-31")
+        await periodDialog
+          .getByRole("textbox", { name: "Legal entity ID", exact: true })
+          .fill(legalEntityId)
+        await periodDialog.locator('input[name="startsOn"]').fill("2026-01-01")
+        await periodDialog.locator('input[name="endsOn"]').fill("2026-12-31")
         await periodDialog.getByRole("button", { name: "Open period", exact: true }).click()
         await periodDialog.getByRole("alert").filter({ hasText: "may have saved" }).waitFor()
         assert.isFalse(

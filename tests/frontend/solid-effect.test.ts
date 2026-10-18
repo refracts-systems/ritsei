@@ -7,17 +7,14 @@ import { preview } from "vite"
 
 const experimentRoot = "apps/web/src/experiments/solid-effect"
 
-const builtSolidEffect = Effect.gen(function*() {
+const builtSolidEffect = Effect.gen(function* () {
   const output = yield* Effect.sync(() =>
     spawnSync("pnpm", ["--dir", experimentRoot, "build"], {
       encoding: "utf8",
       shell: process.platform === "win32",
-    })
+    }),
   )
-  assert.isTrue(
-    output.status === 0,
-    output.stdout + output.stderr,
-  )
+  assert.isTrue(output.status === 0, output.stdout + output.stderr)
 
   const server = yield* Effect.acquireRelease(
     Effect.promise(() =>
@@ -26,15 +23,13 @@ const builtSolidEffect = Effect.gen(function*() {
         root: experimentRoot,
         build: { outDir: "dist" },
         preview: { host: "127.0.0.1", port: 0, strictPort: true },
-      })
+      }),
     ),
     (server) =>
       Effect.promise(
         () =>
           new Promise<void>((resolve, reject) => {
-            server.httpServer.close((
-              error,
-            ) => (error ? reject(error) : resolve()))
+            server.httpServer.close((error) => (error ? reject(error) : resolve()))
           }),
       ),
   )
@@ -63,7 +58,7 @@ const builtSolidEffect = Effect.gen(function*() {
 it.effect(
   "proves effectAction cancellation, compensation, focus restoration, and accessibility",
   () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const { page, errors, url } = yield* builtSolidEffect
       yield* Effect.promise(async () => {
         await page.goto(url)
@@ -73,35 +68,32 @@ it.effect(
         const placeOrder = page.getByRole("button", { name: /Place order/ })
         await placeOrder.focus()
         await placeOrder.click()
-        await page.locator("li[aria-current=\"step\"]", { hasText: "Charge card" })
-          .waitFor()
+        await page.locator('li[aria-current="step"]', { hasText: "Charge card" }).waitFor()
 
         const cancel = page.getByRole("button", { name: "Cancel checkout" })
         await cancel.focus()
         await cancel.click()
-        await page.getByText(
-          "Checkout cancelled — compensations ran, cart untouched",
-          {
+        await page
+          .getByText("Checkout cancelled — compensations ran, cart untouched", {
             exact: true,
-          },
-        ).waitFor()
+          })
+          .waitFor()
         assert.isTrue(
-          await page.getByRole("button", { name: /Place order/ }).evaluate(
-            (element) => element === document.activeElement,
-          ),
+          await page
+            .getByRole("button", { name: /Place order/ })
+            .evaluate((element) => element === document.activeElement),
         )
         assert.isTrue(
-          await page.getByText(
-            "chargeCard interrupted — voiding card authorization",
-            {
+          await page
+            .getByText("chargeCard interrupted — voiding card authorization", {
               exact: true,
-            },
-          ).isVisible(),
+            })
+            .isVisible(),
         )
         assert.isTrue(
-          await page.getByText(
-            /releaseReservation → .* released \(saga compensation\)/,
-          ).isVisible(),
+          await page
+            .getByText(/releaseReservation → .* released \(saga compensation\)/)
+            .isVisible(),
         )
 
         await page.getByLabel("Simulate card decline").check()
@@ -109,19 +101,16 @@ it.effect(
         await page.getByRole("alert").waitFor()
         assert.isTrue(await page.getByText(/Card declined for/).isVisible())
         assert.isTrue(
-          await page.getByRole("button", { name: /Place order/ }).evaluate(
-            (element) => element === document.activeElement,
-          ),
+          await page
+            .getByRole("button", { name: /Place order/ })
+            .evaluate((element) => element === document.activeElement),
         )
 
         await page.emulateMedia({
           reducedMotion: "reduce",
           forcedColors: "active",
         })
-        const results = await new AxeBuilder({ page }).withTags([
-          "wcag2a",
-          "wcag2aa",
-        ]).analyze()
+        const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()
         assert.deepEqual(results.violations, [])
         assert.deepEqual(errors, [])
       })

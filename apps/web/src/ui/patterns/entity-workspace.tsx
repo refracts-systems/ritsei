@@ -26,7 +26,9 @@ export function EntityWorkspace(props: EntityWorkspaceProps) {
       <div class={layout.workspaceSplit}>
         <div class={layout.stack}>{props.children}</div>
         {props.aside && (
-          <aside class={surface()} aria-label="Related information">{props.aside}</aside>
+          <aside class={surface()} aria-label="Related information">
+            {props.aside}
+          </aside>
         )}
       </div>
     </section>

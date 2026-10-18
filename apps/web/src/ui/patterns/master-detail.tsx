@@ -13,7 +13,9 @@ export interface MasterDetailProps {
 export function MasterDetail(props: MasterDetailProps) {
   return (
     <div class={[layout.row, props.class]}>
-      <section class={surface()} aria-label={props.masterLabel ?? "Items"}>{props.master}</section>
+      <section class={surface()} aria-label={props.masterLabel ?? "Items"}>
+        {props.master}
+      </section>
       <section class={surface()} aria-label={props.detailLabel ?? "Details"}>
         {props.detail}
       </section>

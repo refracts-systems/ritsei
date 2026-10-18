@@ -64,7 +64,7 @@ it("projects only public catalog entries and omits transport metadata", () => {
 })
 
 it.effect("keeps a separate OAuth scope, typed mapping, and no provider side effect", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const mapping = makeExternalProcessActionMapping(createPayment, { amount: "10.00" })
     const result = yield* simulateProcessExternalAction({
       tenantId: "018f3f77-0c5a-7cc0-8b62-6a163d214123",
@@ -77,7 +77,8 @@ it.effect("keeps a separate OAuth scope, typed mapping, and no provider side eff
     assert.strictEqual(result.catalog.requiredScope, "payments:create")
     assert.strictEqual(result.simulated, true)
     assert.strictEqual(result.sideEffect, false)
-  }))
+  }),
+)
 
 it("does not expose private or unallowlisted capabilities to Process Studio", () => {
   assert.isUndefined(toProcessExternalCatalogEntry({ ...createPayment, stability: "PRIVATE" }))

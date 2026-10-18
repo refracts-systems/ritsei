@@ -42,6 +42,4 @@ export interface DurableJobEnqueuer {
   ) => Effect.Effect<DurableJob, DatabaseFailure | Schema.SchemaError>
 }
 
-export const DurableJobEnqueuer = Context.Service<DurableJobEnqueuer>(
-  "RITSEI/DurableJobEnqueuer",
-)
+export const DurableJobEnqueuer = Context.Service<DurableJobEnqueuer>("RITSEI/DurableJobEnqueuer")

@@ -89,10 +89,7 @@ export type ExternalEventCatalogEntry = {
 export const ExternalProblemDetails = Schema.Struct({
   type: ProblemText,
   title: ProblemText,
-  status: Schema.Int.check(
-    Schema.isGreaterThanOrEqualTo(400),
-    Schema.isLessThanOrEqualTo(599),
-  ),
+  status: Schema.Int.check(Schema.isGreaterThanOrEqualTo(400), Schema.isLessThanOrEqualTo(599)),
   detail: ProblemText,
 })
 
@@ -113,14 +110,10 @@ const FilterableFields = Schema.Array(Identifier).check(
   Schema.isMaxLength(ExternalCatalogLimits.maxFilterableFields),
 )
 const TimeoutPolicySchema = Schema.Struct({
-  timeoutMs: PositiveInteger.check(
-    Schema.isLessThanOrEqualTo(ExternalCatalogLimits.maxTimeoutMs),
-  ),
+  timeoutMs: PositiveInteger.check(Schema.isLessThanOrEqualTo(ExternalCatalogLimits.maxTimeoutMs)),
 })
 const RetryPolicySchema = Schema.Struct({
-  maxAttempts: PositiveInteger.check(
-    Schema.isLessThanOrEqualTo(ExternalCatalogLimits.maxAttempts),
-  ),
+  maxAttempts: PositiveInteger.check(Schema.isLessThanOrEqualTo(ExternalCatalogLimits.maxAttempts)),
 })
 
 export const ExternalActionDefinitionSchema = Schema.Struct({
@@ -140,16 +133,17 @@ export const ExternalActionDefinitionSchema = Schema.Struct({
   retryPolicy: RetryPolicySchema,
   compensation: ActionCompensationSchema,
   allowlisted: Schema.Boolean,
-}).check(Schema.makeFilter(
-  (entry) =>
-    entry.version >= entry.compatibilityRange.minimumVersion
-      && entry.version <= entry.compatibilityRange.maximumVersion
+}).check(
+  Schema.makeFilter((entry) =>
+    entry.version >= entry.compatibilityRange.minimumVersion &&
+    entry.version <= entry.compatibilityRange.maximumVersion
       ? undefined
       : {
-        path: ["compatibilityRange"],
-        issue: "version must be within compatibilityRange",
-      },
-))
+          path: ["compatibilityRange"],
+          issue: "version must be within compatibilityRange",
+        },
+  ),
+)
 
 export const ExternalEventDefinitionSchema = Schema.Struct({
   kind: Schema.Literal("ExternalEvent"),
@@ -167,16 +161,17 @@ export const ExternalEventDefinitionSchema = Schema.Struct({
   filterableFields: FilterableFields,
   deduplicationKey: Identifier,
   occurredAtSemantics: Schema.Literals(["provider_time", "ingest_time"]),
-}).check(Schema.makeFilter(
-  (entry) =>
-    entry.version >= entry.compatibilityRange.minimumVersion
-      && entry.version <= entry.compatibilityRange.maximumVersion
+}).check(
+  Schema.makeFilter((entry) =>
+    entry.version >= entry.compatibilityRange.minimumVersion &&
+    entry.version <= entry.compatibilityRange.maximumVersion
       ? undefined
       : {
-        path: ["compatibilityRange"],
-        issue: "version must be within compatibilityRange",
-      },
-))
+          path: ["compatibilityRange"],
+          issue: "version must be within compatibilityRange",
+        },
+  ),
+)
 
 export const decodeExternalActionDefinition = Schema.decodeUnknownResult(
   ExternalActionDefinitionSchema,
@@ -201,6 +196,5 @@ export const defineExternalEvent = <const Entry extends ExternalEventCatalogEntr
   entry: Entry,
 ): Entry => entry
 
-export const isAllowlistedExternalAction = (
-  entry: ExternalActionCatalogEntry,
-): boolean => entry.allowlisted
+export const isAllowlistedExternalAction = (entry: ExternalActionCatalogEntry): boolean =>
+  entry.allowlisted

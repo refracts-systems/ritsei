@@ -22,10 +22,7 @@ import type {
 } from "./errors.ts"
 
 const NonBlankString = Schema.String.check(Schema.isPattern(/\S/))
-const TrimmedNonBlankString = Schema.String.check(
-  Schema.isPattern(/\S/),
-  Schema.isTrimmed(),
-)
+const TrimmedNonBlankString = Schema.String.check(Schema.isPattern(/\S/), Schema.isTrimmed())
 const UpperTrimmedNonBlankString = Schema.String.check(
   Schema.isPattern(/\S/),
   Schema.isTrimmed(),
@@ -244,10 +241,7 @@ export interface PartyService {
     input: unknown,
   ) => Effect.Effect<
     Party,
-    | AuthorizationDenied
-    | DatabaseFailure
-    | EventIdempotencyConflict
-    | Schema.SchemaError
+    AuthorizationDenied | DatabaseFailure | EventIdempotencyConflict | Schema.SchemaError
   >
   readonly createLegalEntity: (
     input: unknown,

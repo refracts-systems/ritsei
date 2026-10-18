@@ -87,21 +87,23 @@ function CreateSupplierAccountDialog(props: { reload: () => Promise<unknown> }) 
         }
       >
         <p>
-          Create the supplier relationship in <a href="/parties">Parties</a>{" "}
-          first. Procurement does not create or rename Party records.
+          Create the supplier relationship in <a href="/parties">Parties</a> first. Procurement does
+          not create or rename Party records.
         </p>
         <FormField
           label="Supplier relationship ID"
           required
           helperText="Copy the UUID from the supplier relationship in Party detail."
-          error={invalid() || mutation.error?.kind === "validation"
-            ? "Enter a valid supplier relationship UUID."
-            : undefined}
+          error={
+            invalid() || mutation.error?.kind === "validation"
+              ? "Enter a valid supplier relationship UUID."
+              : undefined
+          }
         >
           {(fieldProps) => (
             <Input
               {...fieldProps}
-              ref={(element) => relationshipInput = element}
+              ref={(element) => (relationshipInput = element)}
               name="supplierRelationshipId"
               autocomplete="off"
               spellcheck={false}
@@ -147,11 +149,8 @@ function CreatePurchaseOrderDialog(props: {
   return (
     <Dialog
       open={open()}
-      onOpenChange={createDialogOpenChange(
-        mutation,
-        setOpen,
-        setInvalid,
-        () => setLineIndexes([0]),
+      onOpenChange={createDialogOpenChange(mutation, setOpen, setInvalid, () =>
+        setLineIndexes([0]),
       )}
       trigger={<span>Create purchase order</span>}
       triggerVariant="primary"
@@ -184,15 +183,21 @@ function CreatePurchaseOrderDialog(props: {
                 return [{ itemId, quantity, unitPrice }]
               })
               // Fallow: purchase-order line validation intentionally remains adjacent to submission.
-              // fallow-ignore-next-line complexity
-              const validLines = lines.every((line) =>
-                line.itemId !== null && uuidPattern.test(line.itemId)
-                && line.quantity !== null && quantityPattern.test(line.quantity)
-                && line.unitPrice !== null && moneyPattern.test(line.unitPrice)
+              const validLines = lines.every(
+                // fallow-ignore-next-line complexity
+                (line) =>
+                  line.itemId !== null &&
+                  uuidPattern.test(line.itemId) &&
+                  line.quantity !== null &&
+                  quantityPattern.test(line.quantity) &&
+                  line.unitPrice !== null &&
+                  moneyPattern.test(line.unitPrice),
               )
               if (
-                supplierAccountId === null || !uuidPattern.test(supplierAccountId)
-                || lines.length === 0 || !validLines
+                supplierAccountId === null ||
+                !uuidPattern.test(supplierAccountId) ||
+                lines.length === 0 ||
+                !validLines
               ) {
                 setInvalid(true)
                 return
@@ -291,7 +296,8 @@ function CreatePurchaseOrderDialog(props: {
                     <Button
                       type="button"
                       onClick={() =>
-                        setLineIndexes(lineIndexes().filter((lineIndex) => lineIndex !== index))}
+                        setLineIndexes(lineIndexes().filter((lineIndex) => lineIndex !== index))
+                      }
                       disabled={mutation.isPending}
                     >
                       Remove line
@@ -469,9 +475,12 @@ function ReceivePurchaseOrderDialog(props: {
               const quantity = requiredText(form.get(`receipt-quantity-${line.id}`))
               return quantity === null ? [] : [{ purchaseOrderLineId: line.id, quantity }]
             })
-            const valid = warehouseId !== null && uuidPattern.test(warehouseId)
-              && idempotencyKey !== null && lines.length > 0
-              && lines.every((line) => quantityPattern.test(line.quantity))
+            const valid =
+              warehouseId !== null &&
+              uuidPattern.test(warehouseId) &&
+              idempotencyKey !== null &&
+              lines.length > 0 &&
+              lines.every((line) => quantityPattern.test(line.quantity))
             if (!valid) {
               setInvalid(true)
               return
@@ -605,7 +614,8 @@ function PurchaseOrderTable(props: {
       caption="Purchase orders · first 200 matching records"
       rows={props.orders}
       getRowClass={(order) =>
-        order.id === props.selectedPurchaseOrderId ? layout.tableRowSelected : undefined}
+        order.id === props.selectedPurchaseOrderId ? layout.tableRowSelected : undefined
+      }
       columns={[
         {
           id: "id",
@@ -699,7 +709,9 @@ function ProcurementFilters(props: {
           />
         )}
       </FormField>
-      <Button variant="primary" type="submit">Apply filters</Button>
+      <Button variant="primary" type="submit">
+        Apply filters
+      </Button>
       <a href="/procurement">Clear filters</a>
     </Form>
   )
@@ -806,7 +818,9 @@ function PurchaseOrderDetail(props: { id: string }) {
     <section class={layout.stack} aria-labelledby="purchase-order-detail-heading">
       <div class={layout.row}>
         <h2 id="purchase-order-detail-heading">Purchase order detail</h2>
-        <Button type="button" onClick={() => void reload()}>Reload detail</Button>
+        <Button type="button" onClick={() => void reload()}>
+          Reload detail
+        </Button>
       </div>
       <QueryBoundary label="purchase order" retry={() => query.refetch()}>
         <Show when={query.data} keyed>
@@ -854,7 +868,9 @@ function SupplierAccountsSection(props: {
           <h2 id="supplier-accounts-heading">Supplier accounts</h2>
           <p>Tenant-local Procurement identities backed by active Party supplier relationships.</p>
         </div>
-        <Button type="button" onClick={() => void props.reload()}>Reload accounts</Button>
+        <Button type="button" onClick={() => void props.reload()}>
+          Reload accounts
+        </Button>
       </div>
       <Show
         when={props.accounts.length > 0}
@@ -896,7 +912,9 @@ export function Procurement(props: {
             supplierAccounts={() => supplierAccounts.data}
             reload={() => orders.refetch()}
           />
-          <Button type="button" onClick={() => void orders.refetch()}>Reload orders</Button>
+          <Button type="button" onClick={() => void orders.refetch()}>
+            Reload orders
+          </Button>
         </div>
       }
       toolbar={
@@ -906,9 +924,11 @@ export function Procurement(props: {
           status={props.status}
         />
       }
-      aside={props.selectedPurchaseOrderId
-        ? <PurchaseOrderDetail id={props.selectedPurchaseOrderId} />
-        : undefined}
+      aside={
+        props.selectedPurchaseOrderId ? (
+          <PurchaseOrderDetail id={props.selectedPurchaseOrderId} />
+        ) : undefined
+      }
     >
       <QueryBoundary label="procurement" retry={() => orders.refetch()}>
         <SupplierAccountsSection

@@ -7,7 +7,10 @@ export const uuidv7 = customType<{ data: string; notNull: true; default: true }>
   },
 })
 
-export const id = () => uuidv7("id").default(sql`uuidv7()`).primaryKey()
+export const id = () =>
+  uuidv7("id")
+    .default(sql`uuidv7()`)
+    .primaryKey()
 export const createdAt = () =>
   timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
 export const updatedAt = () =>

@@ -8,44 +8,32 @@ import { InstantString } from "../time/mod.ts"
 const Uuid = Schema.String.check(Schema.isUUID())
 const NonEmptyString = Schema.String.check(Schema.isPattern(/\S/))
 const Slug = Schema.String.check(
-  Schema.makeFilter(
-    (value) => /^[a-z][a-z0-9._-]*$/.test(value),
-    { expected: "a lowercase communication slug" },
-  ),
+  Schema.makeFilter((value) => /^[a-z][a-z0-9._-]*$/.test(value), {
+    expected: "a lowercase communication slug",
+  }),
 )
-const PositiveInteger = Schema.Int.check(
-  Schema.isBetween({ minimum: 1, maximum: 2_147_483_647 }),
-)
+const PositiveInteger = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 2_147_483_647 }))
 const NonNegativeInteger = Schema.Int.check(
   Schema.isBetween({ minimum: 0, maximum: 2_147_483_647 }),
 )
 const Sha256 = Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/))
 const EmailAddress = Schema.String.check(
-  Schema.makeFilter(
-    (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
-    { expected: "an email address" },
-  ),
+  Schema.makeFilter((value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value), {
+    expected: "an email address",
+  }),
 )
 const SafeEmailLink = Schema.String.check(
-  Schema.makeFilter(
-    (value) => /^(?:https:\/\/|app:\/\/|\/)/i.test(value),
-    { expected: "an https, app, or relative email link" },
-  ),
+  Schema.makeFilter((value) => /^(?:https:\/\/|app:\/\/|\/)/i.test(value), {
+    expected: "an https, app, or relative email link",
+  }),
 )
 const Locale = Schema.String.check(
-  Schema.makeFilter(
-    (value) => /^[a-z]{2,3}(?:-[A-Z][a-z]{2})?(?:-[A-Z]{2})?$/.test(value),
-    { expected: "a BCP-47 locale" },
-  ),
+  Schema.makeFilter((value) => /^[a-z]{2,3}(?:-[A-Z][a-z]{2})?(?:-[A-Z]{2})?$/.test(value), {
+    expected: "a BCP-47 locale",
+  }),
 )
 
-export const CommunicationChannel = Schema.Literals([
-  "email",
-  "in_app",
-  "sms",
-  "push",
-  "whatsapp",
-])
+export const CommunicationChannel = Schema.Literals(["email", "in_app", "sms", "push", "whatsapp"])
 export type CommunicationChannel = Schema.Schema.Type<typeof CommunicationChannel>
 
 export const CommunicationPriority = Schema.Literals(["critical", "high", "normal", "low"])
@@ -204,19 +192,22 @@ const EmailSpacerNode = Schema.Struct({
 })
 const EmailKeyValueNode = Schema.Struct({
   _tag: Schema.Literal("key_value"),
-  entries: Schema.Array(Schema.Struct({
-    label: NonEmptyString,
-    value: NonEmptyString,
-  })).check(Schema.isMinLength(1)),
+  entries: Schema.Array(
+    Schema.Struct({
+      label: NonEmptyString,
+      value: NonEmptyString,
+    }),
+  ).check(Schema.isMinLength(1)),
 })
 const EmailTableNode = Schema.Struct({
   _tag: Schema.Literal("table"),
   headers: Schema.Array(NonEmptyString).check(Schema.isMinLength(1)),
   rows: Schema.Array(Schema.Array(NonEmptyString)),
-}).check(Schema.makeFilter(
-  (node) => node.rows.every((row) => row.length === node.headers.length),
-  { expected: "email table rows must match the header width" },
-))
+}).check(
+  Schema.makeFilter((node) => node.rows.every((row) => row.length === node.headers.length), {
+    expected: "email table rows must match the header width",
+  }),
+)
 
 export const EmailMessageNode = Schema.Union([
   EmailHeadingNode,
@@ -324,12 +315,10 @@ export const Communication = Schema.Struct({
 })
 export type Communication = Schema.Schema.Type<typeof Communication>
 
-export class CommunicationRecipientResolutionFailure
-  extends Schema.TaggedError<CommunicationRecipientResolutionFailure>()(
-    "CommunicationRecipientResolutionFailure",
-    { reason: NonEmptyString },
-  )
-{}
+export class CommunicationRecipientResolutionFailure extends Schema.TaggedError<CommunicationRecipientResolutionFailure>()(
+  "CommunicationRecipientResolutionFailure",
+  { reason: NonEmptyString },
+) {}
 
 export class CommunicationContextFailure extends Schema.TaggedError<CommunicationContextFailure>()(
   "CommunicationContextFailure",
@@ -341,17 +330,15 @@ export class CommunicationRenderFailure extends Schema.TaggedError<Communication
   { reason: NonEmptyString, cause: Schema.Unknown },
 ) {}
 
-export class CommunicationTransportFailure
-  extends Schema.TaggedError<CommunicationTransportFailure>()(
-    "CommunicationTransportFailure",
-    {
-      providerId: Slug,
-      kind: Schema.Literals(["temporary", "permanent", "rate_limited", "unknown"]),
-      reason: NonEmptyString,
-      cause: Schema.Unknown,
-    },
-  )
-{}
+export class CommunicationTransportFailure extends Schema.TaggedError<CommunicationTransportFailure>()(
+  "CommunicationTransportFailure",
+  {
+    providerId: Slug,
+    kind: Schema.Literals(["temporary", "permanent", "rate_limited", "unknown"]),
+    reason: NonEmptyString,
+    cause: Schema.Unknown,
+  },
+) {}
 
 export interface CommunicationRecipientResolver {
   readonly resolve: (
@@ -387,16 +374,13 @@ export const EmailRenderer = Context.Service<EmailRenderer>("RITSEI/EmailRendere
 export interface EmailTransport {
   readonly send: (
     input: unknown,
-  ) => Effect.Effect<
-    DeliveryReceipt,
-    CommunicationTransportFailure | Schema.SchemaError
-  >
+  ) => Effect.Effect<DeliveryReceipt, CommunicationTransportFailure | Schema.SchemaError>
 }
 
 export const EmailTransport = Context.Service<EmailTransport>("RITSEI/EmailTransport")
 
 export const makeCommunicationIntent = (input: unknown) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const decoded = yield* Schema.decodeUnknownEffect(CommunicationIntentInput)(input)
     return {
       ...decoded,

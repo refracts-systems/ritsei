@@ -95,22 +95,21 @@ export type ProcessCheckpoint = Schema.Schema.Type<typeof ProcessCheckpoint>
 export type ProcessStepExecution = Schema.Schema.Type<typeof ProcessStepExecution>
 export type ProcessFailureKind = Schema.Schema.Type<typeof ProcessFailureKind>
 
-export class ProcessCheckpointInvalid
-  extends Schema.TaggedError<ProcessCheckpointInvalid>()("ProcessCheckpointInvalid", {
+export class ProcessCheckpointInvalid extends Schema.TaggedError<ProcessCheckpointInvalid>()(
+  "ProcessCheckpointInvalid",
+  {
     reason: NonEmptyString,
-  })
-{}
+  },
+) {}
 
-export class ProcessRuntimeVersionConflict
-  extends Schema.TaggedError<ProcessRuntimeVersionConflict>()(
-    "ProcessRuntimeVersionConflict",
-    {
-      instanceId: Uuid,
-      pinnedCatalogVersion: PositiveInt,
-      requestedCatalogVersion: PositiveInt,
-    },
-  )
-{}
+export class ProcessRuntimeVersionConflict extends Schema.TaggedError<ProcessRuntimeVersionConflict>()(
+  "ProcessRuntimeVersionConflict",
+  {
+    instanceId: Uuid,
+    pinnedCatalogVersion: PositiveInt,
+    requestedCatalogVersion: PositiveInt,
+  },
+) {}
 
 export class ProcessStepConflict extends Schema.TaggedError<ProcessStepConflict>()(
   "ProcessStepConflict",
@@ -147,35 +146,38 @@ const nextRevision = (checkpoint: ProcessCheckpoint): number => checkpoint.revis
 
 export const recoverCheckpoint = (input: unknown) =>
   Schema.decodeUnknownEffect(ProcessCheckpoint)(input).pipe(
-    Effect.mapError(() =>
-      new ProcessCheckpointInvalid({
-        reason: "checkpoint does not match the durable runtime contract",
-      })
+    Effect.mapError(
+      () =>
+        new ProcessCheckpointInvalid({
+          reason: "checkpoint does not match the durable runtime contract",
+        }),
     ),
   )
 
 export const makeProcessRuntime = (): ProcessRuntime => ({
   pinCatalogVersion: (checkpoint, catalogVersion) =>
-    checkpoint.catalogVersion === catalogVersion ? Effect.succeed(checkpoint) : Effect.fail(
-      new ProcessRuntimeVersionConflict({
-        instanceId: checkpoint.instanceId,
-        pinnedCatalogVersion: checkpoint.catalogVersion,
-        requestedCatalogVersion: catalogVersion,
-      }),
-    ),
+    checkpoint.catalogVersion === catalogVersion
+      ? Effect.succeed(checkpoint)
+      : Effect.fail(
+          new ProcessRuntimeVersionConflict({
+            instanceId: checkpoint.instanceId,
+            pinnedCatalogVersion: checkpoint.catalogVersion,
+            requestedCatalogVersion: catalogVersion,
+          }),
+        ),
 
   recoverCheckpoint,
 
   recordCommand: (checkpoint, execution) => {
-    const existingByStep = checkpoint.stepExecutions.find((current) =>
-      current.stepId === execution.stepId
+    const existingByStep = checkpoint.stepExecutions.find(
+      (current) => current.stepId === execution.stepId,
     )
-    const existingByKey = checkpoint.stepExecutions.find((current) =>
-      current.idempotencyKey === execution.idempotencyKey
+    const existingByKey = checkpoint.stepExecutions.find(
+      (current) => current.idempotencyKey === execution.idempotencyKey,
     )
     if (
-      existingByStep !== undefined
-      && existingByStep.idempotencyKey === execution.idempotencyKey
+      existingByStep !== undefined &&
+      existingByStep.idempotencyKey === execution.idempotencyKey
     ) {
       return Effect.succeed(checkpoint)
     }
@@ -191,9 +193,10 @@ export const makeProcessRuntime = (): ProcessRuntime => ({
       ...checkpoint,
       revision: nextRevision(checkpoint),
       stepExecutions: [...checkpoint.stepExecutions, execution],
-      completedStepIds: execution.status === "command_succeeded"
-        ? [...checkpoint.completedStepIds, execution.stepId]
-        : checkpoint.completedStepIds,
+      completedStepIds:
+        execution.status === "command_succeeded"
+          ? [...checkpoint.completedStepIds, execution.stepId]
+          : checkpoint.completedStepIds,
     })
   },
 
@@ -202,11 +205,13 @@ export const makeProcessRuntime = (): ProcessRuntime => ({
       return Effect.fail(new ProcessCheckpointInvalid({ reason: "event ID is not a UUID" }))
     }
     return Effect.succeed(
-      has(checkpoint.consumedEventIds, eventId) ? checkpoint : {
-        ...checkpoint,
-        revision: nextRevision(checkpoint),
-        consumedEventIds: [...checkpoint.consumedEventIds, eventId],
-      },
+      has(checkpoint.consumedEventIds, eventId)
+        ? checkpoint
+        : {
+            ...checkpoint,
+            revision: nextRevision(checkpoint),
+            consumedEventIds: [...checkpoint.consumedEventIds, eventId],
+          },
     )
   },
 
@@ -215,11 +220,13 @@ export const makeProcessRuntime = (): ProcessRuntime => ({
       return Effect.fail(new ProcessCheckpointInvalid({ reason: "timer ID is blank" }))
     }
     return Effect.succeed(
-      has(checkpoint.scheduledTimerIds, timerId) ? checkpoint : {
-        ...checkpoint,
-        revision: nextRevision(checkpoint),
-        scheduledTimerIds: [...checkpoint.scheduledTimerIds, timerId],
-      },
+      has(checkpoint.scheduledTimerIds, timerId)
+        ? checkpoint
+        : {
+            ...checkpoint,
+            revision: nextRevision(checkpoint),
+            scheduledTimerIds: [...checkpoint.scheduledTimerIds, timerId],
+          },
     )
   },
 })

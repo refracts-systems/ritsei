@@ -47,7 +47,7 @@ const connectAndOpenProcurement = async (page: Page, url: string) => {
 it.effect(
   "administers supplier accounts and runs the purchase-order lifecycle",
   () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const { page, url, errors } = yield* builtApp
       const accounts = [supplierAccount]
       let order: PurchaseOrder = draftOrder
@@ -79,9 +79,10 @@ it.effect(
           if (path === "/procurement/purchase-orders" && method === "GET") {
             const status = requestUrl.searchParams.get("status")
             const supplier = requestUrl.searchParams.get("supplierAccountId")
-            const matches = [order].filter((candidate) =>
-              (status === null || candidate.status === status)
-              && (supplier === null || candidate.supplierAccountId === supplier)
+            const matches = [order].filter(
+              (candidate) =>
+                (status === null || candidate.status === status) &&
+                (supplier === null || candidate.supplierAccountId === supplier),
             )
             return fulfillJson(route, 200, matches)
           }
@@ -110,13 +111,15 @@ it.effect(
               warehouseId,
               idempotencyKey: "receipt:one",
               receivedAt: "2026-09-13T12:01:00.000Z",
-              lines: [{
-                id: receiptLineId,
-                purchaseOrderLineId: orderLineId,
-                itemId,
-                quantity: "2",
-                unitOfMeasure: "EA",
-              }],
+              lines: [
+                {
+                  id: receiptLineId,
+                  purchaseOrderLineId: orderLineId,
+                  itemId,
+                  quantity: "2",
+                  unitOfMeasure: "EA",
+                },
+              ],
             }
             receipts = [receipt]
             return fulfillJson(route, 201, receipt)
@@ -129,12 +132,13 @@ it.effect(
           timeout: 5_000,
         })
         assert.isTrue(
-          requests.some((request) =>
-            request.path === "/procurement/purchase-orders" && request.method === "GET"
+          requests.some(
+            (request) =>
+              request.path === "/procurement/purchase-orders" && request.method === "GET",
           ),
         )
         const procurementRequest = requests.find((request) =>
-          request.path.startsWith("/procurement")
+          request.path.startsWith("/procurement"),
         )
         assert.equal(procurementRequest?.headers.authorization, "Bearer procurement-session")
         assert.equal(procurementRequest?.headers["x-tenant-id"], tenantId)
@@ -150,21 +154,25 @@ it.effect(
           (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()).violations,
           [],
         )
-        await accountDialog.getByRole("textbox", { name: "Supplier relationship ID", exact: true })
+        await accountDialog
+          .getByRole("textbox", { name: "Supplier relationship ID", exact: true })
           .fill(relationshipId)
-        await accountDialog.getByRole("button", { name: "Create supplier account", exact: true })
+        await accountDialog
+          .getByRole("button", { name: "Create supplier account", exact: true })
           .click()
         await accountDialog.waitFor({ state: "hidden" })
         assert.deepEqual(supplierAccountBody, { supplierRelationshipId: relationshipId })
 
         await page.getByRole("button", { name: "Create purchase order", exact: true }).click()
         const orderDialog = page.getByRole("dialog", { name: "Create purchase order" })
-        await orderDialog.getByRole("combobox", { name: "Supplier account", exact: true })
+        await orderDialog
+          .getByRole("combobox", { name: "Supplier account", exact: true })
           .selectOption(supplierAccountId)
         await orderDialog.getByRole("textbox", { name: "Item ID", exact: true }).fill(itemId)
         await orderDialog.getByRole("textbox", { name: "Quantity", exact: true }).fill("2")
         await orderDialog.getByRole("textbox", { name: "Unit price", exact: true }).fill("12.50")
-        await orderDialog.getByRole("button", { name: "Create purchase order", exact: true })
+        await orderDialog
+          .getByRole("button", { name: "Create purchase order", exact: true })
           .click()
         await page.getByRole("heading", { name: "Purchase order detail", exact: true }).waitFor()
         assert.equal(new URL(page.url()).pathname, `/procurement/${orderId}`)
@@ -175,20 +183,22 @@ it.effect(
 
         await page.getByRole("button", { name: "Confirm purchase order", exact: true }).click()
         const confirmDialog = page.getByRole("dialog", { name: "Confirm purchase order" })
-        await confirmDialog.getByRole("button", { name: "Confirm purchase order", exact: true })
+        await confirmDialog
+          .getByRole("button", { name: "Confirm purchase order", exact: true })
           .click()
         await page.getByText("confirmed", { exact: true }).first().waitFor()
         assert.deepEqual(confirmBody, { idempotencyKey: `confirm:${orderId}` })
 
         await page.getByRole("button", { name: "Receive goods", exact: true }).click()
         const receiveDialog = page.getByRole("dialog", { name: "Receive goods" })
-        await receiveDialog.getByRole("textbox", { name: "Warehouse ID", exact: true }).fill(
-          warehouseId,
-        )
-        await receiveDialog.getByRole("textbox", {
-          name: `Item ${itemId} · ordered 2`,
-          exact: true,
-        })
+        await receiveDialog
+          .getByRole("textbox", { name: "Warehouse ID", exact: true })
+          .fill(warehouseId)
+        await receiveDialog
+          .getByRole("textbox", {
+            name: `Item ${itemId} · ordered 2`,
+            exact: true,
+          })
           .fill("2")
         await receiveDialog.getByRole("button", { name: "Receive goods", exact: true }).click()
         await page.getByText(receiptId, { exact: true }).waitFor()

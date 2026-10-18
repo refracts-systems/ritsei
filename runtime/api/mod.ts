@@ -52,14 +52,15 @@ export const makeApiLayer = (
 
 export const startApi = (url: string, port = 8000) =>
   Effect.scoped(
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const configuration = yield* readRuntimeConfiguration()
       const client = postgres(url)
       yield* Effect.addFinalizer(() => Effect.promise(() => client.end()))
       yield* validatePostgresVersion(client as unknown as PostgresClient)
-      const replicaClient = configuration.postgresReadYourWrites === undefined
-        ? undefined
-        : postgres(configuration.postgresReadYourWrites.replicaUrl)
+      const replicaClient =
+        configuration.postgresReadYourWrites === undefined
+          ? undefined
+          : postgres(configuration.postgresReadYourWrites.replicaUrl)
       if (replicaClient !== undefined) {
         yield* Effect.addFinalizer(() => Effect.promise(() => replicaClient.end()))
         yield* validatePostgresVersion(replicaClient as unknown as PostgresClient)

@@ -46,9 +46,7 @@ export interface RelationshipEngine {
   >
 }
 
-export const RelationshipEngine = Context.Service<RelationshipEngine>(
-  "RITSEI/RelationshipEngine",
-)
+export const RelationshipEngine = Context.Service<RelationshipEngine>("RITSEI/RelationshipEngine")
 
 const denied = (input: RelationshipInput, reason: string): RelationshipDecision => ({
   allowed: false,
@@ -83,7 +81,7 @@ export const makeMemoryRelationshipEngine = (
 ): RelationshipEngine => {
   const allowed = new Set(allowedRelationships.map((input) => relationshipKey(input)))
   return {
-    evaluate: Effect.fn("RelationshipEngine.evaluate")(function*(input: unknown) {
+    evaluate: Effect.fn("RelationshipEngine.evaluate")(function* (input: unknown) {
       const decoded = yield* Schema.decodeUnknownEffect(RelationshipInput)(input)
       if (defaultResult === "stale" || defaultResult === "unavailable") {
         return unavailable(decoded, defaultResult)
@@ -93,51 +91,58 @@ export const makeMemoryRelationshipEngine = (
       }
       return allowed.has(relationshipKey(decoded))
         ? {
-          allowed: true,
-          result: "allowed",
-          ...decoded,
-          reason: "RELATIONSHIP_ALLOWED",
-          consistency: "current",
-        }
+            allowed: true,
+            result: "allowed",
+            ...decoded,
+            reason: "RELATIONSHIP_ALLOWED",
+            consistency: "current",
+          }
         : denied(decoded, "RELATIONSHIP_DENIED")
     }),
   }
 }
 
 export const makePostgresRelationshipEngine = (database: DatabaseService): RelationshipEngine => ({
-  evaluate: Effect.fn("RelationshipEngine.evaluate")(function*(input: unknown) {
+  evaluate: Effect.fn("RelationshipEngine.evaluate")(function* (input: unknown) {
     const decoded = yield* Schema.decodeUnknownEffect(RelationshipInput)(input)
     if (decoded.resourceType !== "tenant" || decoded.relationship !== "member") {
       return unknown(decoded)
     }
     if (decoded.resourceId !== decoded.tenantId) return denied(decoded, "RELATIONSHIP_DENIED")
-    const member = yield* database.query(
-      (db) =>
-        db.select({ userAccountId: tenantMemberships.userAccountId })
-          .from(tenantMemberships)
-          .where(and(
-            eq(tenantMemberships.userAccountId, decoded.principal.userAccountId),
-            eq(tenantMemberships.tenantId, decoded.tenantId),
-            eq(tenantMemberships.status, "active"),
-          )),
-      "authorization.relationship.check",
-    ).pipe(
-      Effect.map((rows) => rows[0]),
-      Effect.catchTag("DatabaseFailure", () => Effect.succeed(undefined)),
-    )
-    return member === undefined ? denied(decoded, "RELATIONSHIP_DENIED") : {
-      allowed: true,
-      result: "allowed",
-      ...decoded,
-      reason: "RELATIONSHIP_ALLOWED",
-      consistency: "current",
-    }
+    const member = yield* database
+      .query(
+        (db) =>
+          db
+            .select({ userAccountId: tenantMemberships.userAccountId })
+            .from(tenantMemberships)
+            .where(
+              and(
+                eq(tenantMemberships.userAccountId, decoded.principal.userAccountId),
+                eq(tenantMemberships.tenantId, decoded.tenantId),
+                eq(tenantMemberships.status, "active"),
+              ),
+            ),
+        "authorization.relationship.check",
+      )
+      .pipe(
+        Effect.map((rows) => rows[0]),
+        Effect.catchTag("DatabaseFailure", () => Effect.succeed(undefined)),
+      )
+    return member === undefined
+      ? denied(decoded, "RELATIONSHIP_DENIED")
+      : {
+          allowed: true,
+          result: "allowed",
+          ...decoded,
+          reason: "RELATIONSHIP_ALLOWED",
+          consistency: "current",
+        }
   }),
 })
 
 const relationshipKey = (input: RelationshipInput) =>
   `${input.principal.userAccountId}:${input.tenantId}:${input.resourceType}:${input.resourceId}:${input.relationship}`
 
-export const makeRelationshipEngine = Effect.gen(function*() {
+export const makeRelationshipEngine = Effect.gen(function* () {
   return makePostgresRelationshipEngine(yield* Database)
 })

@@ -72,18 +72,15 @@ export const makeFinancialVerificationKeyring = (
   verifiers: readonly FinancialVerificationVerifierService[],
 ) => {
   const byKeyId = new Map(verifiers.map((verifier) => [verifier.keyId, verifier]))
-  return Layer.succeed(
-    FinancialVerificationKeyring,
-    {
-      verify: (keyId, payload, signature) => {
-        const verifier = byKeyId.get(keyId)
-        if (verifier === undefined) {
-          return Effect.fail(new FinancialVerificationKeyNotFound({ keyId }))
-        }
-        return verifier.verify(payload, signature)
-      },
-    } satisfies FinancialVerificationKeyringService,
-  )
+  return Layer.succeed(FinancialVerificationKeyring, {
+    verify: (keyId, payload, signature) => {
+      const verifier = byKeyId.get(keyId)
+      if (verifier === undefined) {
+        return Effect.fail(new FinancialVerificationKeyNotFound({ keyId }))
+      }
+      return verifier.verify(payload, signature)
+    },
+  } satisfies FinancialVerificationKeyringService)
 }
 
 const makeFinancialVerificationSignerLayer = (signer: FinancialVerificationSignerService) =>
@@ -110,11 +107,10 @@ export const makeEd25519FinancialVerificationSigner = (
 export const generateEd25519FinancialVerificationSigner = (keyId: string) =>
   Effect.tryPromise({
     try: async () => {
-      const pair = await globalThis.crypto.subtle.generateKey(
-        ed25519,
-        false,
-        ["sign", "verify"],
-      ) as CryptoKeyPair
+      const pair = (await globalThis.crypto.subtle.generateKey(ed25519, false, [
+        "sign",
+        "verify",
+      ])) as CryptoKeyPair
       const signer = makeEd25519FinancialVerificationSignerService(
         keyId,
         pair.privateKey,
@@ -143,7 +139,4 @@ const digest: Crypto.Crypto["digest"] = (algorithm, data) =>
       }),
   })
 
-export const WebCryptoLive = Layer.succeed(
-  Crypto.Crypto,
-  Crypto.make({ randomBytes, digest }),
-)
+export const WebCryptoLive = Layer.succeed(Crypto.Crypto, Crypto.make({ randomBytes, digest }))

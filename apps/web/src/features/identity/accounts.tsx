@@ -126,9 +126,11 @@ function CreateAccountDialog(props: { reload: () => Promise<unknown> }) {
           label="Email"
           required
           helperText="This email identifies the account across tenants."
-          error={invalid() || mutation.error?.kind === "validation"
-            ? "Enter a nonblank email."
-            : undefined}
+          error={
+            invalid() || mutation.error?.kind === "validation"
+              ? "Enter a nonblank email."
+              : undefined
+          }
         >
           {(fieldProps) => (
             <Input
@@ -167,14 +169,12 @@ function CreateAccountDialog(props: { reload: () => Promise<unknown> }) {
   )
 }
 
-function EmailEditor(
-  props: {
-    account: UserAccount
-    close: () => void
-    reload: () => Promise<unknown>
-    saved: () => void
-  },
-) {
+function EmailEditor(props: {
+  account: UserAccount
+  close: () => void
+  reload: () => Promise<unknown>
+  saved: () => void
+}) {
   const scope = useContext(ApiRuntime)
   const account = untrack(() => props.account)
   const [invalid, setInvalid] = createSignal(false)
@@ -205,9 +205,11 @@ function EmailEditor(
           label="Email"
           required
           helperText="Account changes are not retried automatically."
-          error={invalid() || mutation.error?.kind === "validation"
-            ? "Enter a nonblank email."
-            : undefined}
+          error={
+            invalid() || mutation.error?.kind === "validation"
+              ? "Enter a nonblank email."
+              : undefined
+          }
         >
           {(fieldProps) => (
             <Input
@@ -232,8 +234,8 @@ function EmailEditor(
           {mutation.isPending
             ? "Saving email…"
             : mutation.isSuccess
-            ? "Email saved. The tenant account views are refreshing."
-            : ""}
+              ? "Email saved. The tenant account views are refreshing."
+              : ""}
         </p>
         <div class={layout.formActions}>
           <Button
@@ -276,7 +278,9 @@ function AccountDetail(props: { id: string }) {
   }
   return (
     <section class={layout.stack} aria-label="User account">
-      <a class={layout.quietLink} href="/user-accounts">← All accounts</a>
+      <a class={layout.quietLink} href="/user-accounts">
+        ← All accounts
+      </a>
       <header class={layout.workspaceHeading}>
         <div class={layout.workspaceTitle}>
           <span class={layout.resultCount}>Global account</span>
@@ -297,7 +301,7 @@ function AccountDetail(props: { id: string }) {
         <Show when={query.data && !editing()}>
           <div class={layout.row}>
             <Button
-              ref={(element) => editTrigger = element}
+              ref={(element) => (editTrigger = element)}
               variant="primary"
               type="button"
               onClick={() => {
@@ -307,12 +311,16 @@ function AccountDetail(props: { id: string }) {
             >
               Edit email
             </Button>
-            <Button type="button" onClick={() => void query.refetch()}>Reload detail</Button>
+            <Button type="button" onClick={() => void query.refetch()}>
+              Reload detail
+            </Button>
           </div>
         </Show>
       </header>
       <Show when={saved()}>
-        <p role="status" class={layout.statusActive}>Email saved.</p>
+        <p role="status" class={layout.statusActive}>
+          Email saved.
+        </p>
       </Show>
       <QueryBoundary label="account detail" retry={() => query.refetch()}>
         <Show when={query.data} keyed>
@@ -370,10 +378,11 @@ function AccountCollection() {
   const [status, setStatus] = createSignal("all")
   const filtered = createMemo(() => {
     const term = search().trim().toLocaleLowerCase()
-    return (query.data ?? []).filter((account) =>
-      (status() === "all" || account.status === status())
-      && (account.email.toLocaleLowerCase().includes(term)
-        || account.id.toLocaleLowerCase().includes(term))
+    return (query.data ?? []).filter(
+      (account) =>
+        (status() === "all" || account.status === status()) &&
+        (account.email.toLocaleLowerCase().includes(term) ||
+          account.id.toLocaleLowerCase().includes(term)),
     )
   })
   return (
@@ -418,7 +427,9 @@ function AccountCollection() {
                 <option value="disabled">Disabled</option>
               </select>
             </label>
-            <Button type="button" onClick={() => void query.refetch()}>Reload accounts</Button>
+            <Button type="button" onClick={() => void query.refetch()}>
+              Reload accounts
+            </Button>
           </div>
         </div>
         <Show

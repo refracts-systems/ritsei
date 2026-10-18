@@ -48,21 +48,23 @@ const SignedQuantity = Schema.String.check(
     (value) => {
       if (!/^-?[1-9]\d*$/.test(value)) return false
       const quantity = BigInt(value)
-      return quantity >= -9_223_372_036_854_775_808n
-        && quantity <= 9_223_372_036_854_775_807n
+      return quantity >= -9_223_372_036_854_775_808n && quantity <= 9_223_372_036_854_775_807n
     },
     { expected: "a non-zero PostgreSQL bigint quantity" },
   ),
 )
 const NonEmptyString = Schema.String.check(Schema.isPattern(/\S/))
-const TrimmedNonEmptyString = Schema.String.check(Schema.makeFilter(
-  (value) => /\S/.test(value) && value === value.trim(),
-  { expected: "a trimmed nonblank string" },
-))
-const UpperNonEmptyString = Schema.String.check(Schema.makeFilter(
-  (value) => /\S/.test(value) && value === value.trim() && value === value.toUpperCase(),
-  { expected: "a trimmed uppercase nonblank string" },
-))
+const TrimmedNonEmptyString = Schema.String.check(
+  Schema.makeFilter((value) => /\S/.test(value) && value === value.trim(), {
+    expected: "a trimmed nonblank string",
+  }),
+)
+const UpperNonEmptyString = Schema.String.check(
+  Schema.makeFilter(
+    (value) => /\S/.test(value) && value === value.trim() && value === value.toUpperCase(),
+    { expected: "a trimmed uppercase nonblank string" },
+  ),
+)
 const InstantString = EventEnvelope.fields.occurredAt
 export const UnitOfMeasure = Schema.String.check(Schema.isPattern(/^[A-Z][A-Z0-9_-]*$/))
 const UnitOfMeasureInput = NonEmptyString
@@ -91,10 +93,11 @@ export const StockBalance = Schema.Struct({
   onHand: NonNegativeQuantity,
   reserved: NonNegativeQuantity,
   unitOfMeasure: UnitOfMeasure,
-}).check(Schema.makeFilter(
-  (balance) => BigInt(balance.reserved) <= BigInt(balance.onHand),
-  { expected: "reserved stock cannot exceed on-hand stock" },
-))
+}).check(
+  Schema.makeFilter((balance) => BigInt(balance.reserved) <= BigInt(balance.onHand), {
+    expected: "reserved stock cannot exceed on-hand stock",
+  }),
+)
 export const StockCorrection = Schema.Struct({
   id: Uuid,
   tenantId: Uuid,
@@ -143,23 +146,30 @@ export const StockTransfer = Schema.Struct({
   confirmedAt: Schema.NullOr(InstantString),
   completedAt: Schema.NullOr(InstantString),
   lines: Schema.Array(StockTransferLine).check(Schema.isMinLength(1)),
-}).check(Schema.makeFilter(
-  (transfer) =>
-    transfer.sourceWarehouseId !== transfer.destinationWarehouseId
-    && ((transfer.status === "draft"
-      && transfer.confirmedAt === null
-      && transfer.completedAt === null)
-      || (transfer.status === "confirmed"
-        && transfer.confirmedAt !== null
-        && transfer.completedAt === null)
-      || (transfer.status === "completed"
-        && transfer.confirmedAt !== null
-        && transfer.completedAt !== null)),
-  { expected: "stock transfer identity, status, and dates are consistent" },
-)).check(Schema.makeFilter(
-  (transfer) => new Set(transfer.lines.map((line) => line.itemId)).size === transfer.lines.length,
-  { expected: "stock transfer items must be unique" },
-))
+})
+  .check(
+    Schema.makeFilter(
+      (transfer) =>
+        transfer.sourceWarehouseId !== transfer.destinationWarehouseId &&
+        ((transfer.status === "draft" &&
+          transfer.confirmedAt === null &&
+          transfer.completedAt === null) ||
+          (transfer.status === "confirmed" &&
+            transfer.confirmedAt !== null &&
+            transfer.completedAt === null) ||
+          (transfer.status === "completed" &&
+            transfer.confirmedAt !== null &&
+            transfer.completedAt !== null)),
+      { expected: "stock transfer identity, status, and dates are consistent" },
+    ),
+  )
+  .check(
+    Schema.makeFilter(
+      (transfer) =>
+        new Set(transfer.lines.map((line) => line.itemId)).size === transfer.lines.length,
+      { expected: "stock transfer items must be unique" },
+    ),
+  )
 
 export type Warehouse = Schema.Schema.Type<typeof Warehouse>
 export type Item = Schema.Schema.Type<typeof Item>
@@ -181,12 +191,14 @@ export const ListWarehousesInput = Schema.Struct({
 })
 export const ListItemsInput = Schema.Struct({
   ...ScopedInput,
-  search: Schema.optionalKey(Schema.String.check(
-    Schema.makeFilter(
-      (value) => value === value.trim() && value.length > 0 && value.length <= 256,
-      { expected: "a trimmed item search up to 256 characters" },
+  search: Schema.optionalKey(
+    Schema.String.check(
+      Schema.makeFilter(
+        (value) => value === value.trim() && value.length > 0 && value.length <= 256,
+        { expected: "a trimmed item search up to 256 characters" },
+      ),
     ),
-  )),
+  ),
   limit: Schema.optionalKey(ListLimit),
 })
 export const ListStockBalancesInput = Schema.Struct({
@@ -266,14 +278,19 @@ export const CreateStockTransferInput = Schema.Struct({
   ...ScopedInput,
   sourceWarehouseId: Uuid,
   destinationWarehouseId: Uuid,
-  lines: Schema.Array(StockTransferLine).check(Schema.isMinLength(1)).check(Schema.makeFilter(
-    (lines) => new Set(lines.map((line) => line.itemId)).size === lines.length,
-    { expected: "stock transfer items must be unique" },
-  )),
-}).check(Schema.makeFilter(
-  (transfer) => transfer.sourceWarehouseId !== transfer.destinationWarehouseId,
-  { expected: "stock transfer warehouses must be distinct" },
-))
+  lines: Schema.Array(StockTransferLine)
+    .check(Schema.isMinLength(1))
+    .check(
+      Schema.makeFilter(
+        (lines) => new Set(lines.map((line) => line.itemId)).size === lines.length,
+        { expected: "stock transfer items must be unique" },
+      ),
+    ),
+}).check(
+  Schema.makeFilter((transfer) => transfer.sourceWarehouseId !== transfer.destinationWarehouseId, {
+    expected: "stock transfer warehouses must be distinct",
+  }),
+)
 export const ConfirmStockTransferInput = Schema.Struct({
   ...ScopedInput,
   transferId: Uuid,
@@ -286,9 +303,7 @@ export interface InventoryService {
   readonly listWarehouses: (
     input: unknown,
   ) => Effect.Effect<ReadonlyArray<Warehouse>, CommonFailure>
-  readonly listItems: (
-    input: unknown,
-  ) => Effect.Effect<ReadonlyArray<Item>, CommonFailure>
+  readonly listItems: (input: unknown) => Effect.Effect<ReadonlyArray<Item>, CommonFailure>
   readonly listStockBalances: (
     input: unknown,
   ) => Effect.Effect<ReadonlyArray<StockBalance>, CommonFailure>
@@ -359,19 +374,12 @@ export interface InventoryService {
   >
   readonly confirmTransfer: (
     input: unknown,
-  ) => Effect.Effect<
-    StockTransfer,
-    | StockUnavailable
-    | StockTransferNotFound
-    | CommonFailure
-  >
+  ) => Effect.Effect<StockTransfer, StockUnavailable | StockTransferNotFound | CommonFailure>
   readonly completeTransfer: (
     input: unknown,
   ) => Effect.Effect<
     StockTransfer,
-    | StockTransferInvalidState
-    | StockTransferNotFound
-    | CommonFailure
+    StockTransferInvalidState | StockTransferNotFound | CommonFailure
   >
 }
 

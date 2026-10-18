@@ -30,15 +30,19 @@ const capabilities = [
 ] as const
 
 const PartyTest = makePartyTestLayer().pipe(
-  Layer.provide(makeAuthorizationTestLayer(capabilities.map((capability) => ({
-    userAccountId: principal.userAccountId,
-    tenantId,
-    capability,
-  })))),
+  Layer.provide(
+    makeAuthorizationTestLayer(
+      capabilities.map((capability) => ({
+        userAccountId: principal.userAccountId,
+        tenantId,
+        capability,
+      })),
+    ),
+  ),
 )
 
 it.effect("lists and composes tenant-scoped Party administration facts", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const service = yield* PartyService
     const organization = yield* service.create({
       principal,
@@ -98,20 +102,17 @@ it.effect("lists and composes tenant-scoped Party administration facts", () =>
     assert.strictEqual(directory.length, 2)
     assert.strictEqual(directory[0]?.party.name, "Ada Lovelace")
     assert.strictEqual(directory[1]?.legalEntityId, legalEntity.id)
-    yield* Effect.forEach(
-      directory,
-      (entry) => Schema.decodeUnknownEffect(PartyDirectoryEntry)(entry),
+    yield* Effect.forEach(directory, (entry) =>
+      Schema.decodeUnknownEffect(PartyDirectoryEntry)(entry),
     )
 
     assert.deepStrictEqual(
-      (yield* service.list({ principal, tenantId, search: "wind", kind: "organization" }))
-        .map(({ party }) => party.id),
+      (yield* service.list({ principal, tenantId, search: "wind", kind: "organization" })).map(
+        ({ party }) => party.id,
+      ),
       [organization.id],
     )
-    assert.strictEqual(
-      (yield* service.list({ principal, tenantId, limit: 1 })).length,
-      1,
-    )
+    assert.strictEqual((yield* service.list({ principal, tenantId, limit: 1 })).length, 1)
 
     const detail = yield* service.getDetail({ principal, tenantId, partyId: person.id })
     yield* Schema.decodeUnknownEffect(PartyDetail)(detail)
@@ -135,11 +136,14 @@ it.effect("lists and composes tenant-scoped Party administration facts", () =>
       AuthorizationDenied,
     )
     assert.instanceOf(
-      yield* Effect.flip(service.getDetail({
-        principal,
-        tenantId,
-        partyId: "00000000-0000-4000-8000-000000000099",
-      })),
+      yield* Effect.flip(
+        service.getDetail({
+          principal,
+          tenantId,
+          partyId: "00000000-0000-4000-8000-000000000099",
+        }),
+      ),
       PartyNotFound,
     )
-  }).pipe(Effect.provide(PartyTest)))
+  }).pipe(Effect.provide(PartyTest)),
+)

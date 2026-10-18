@@ -46,15 +46,18 @@ export type ConfirmationMutation =
   | { readonly _tag: "idempotency-conflict" }
   | { readonly _tag: "invalid-state"; readonly status: "draft" | "confirmed" | "cancelled" }
 
-export const toSalesOrder = (row: {
-  readonly id: string
-  readonly tenantId: string
-  readonly customerId: string
-  readonly quotationId: string | null
-  readonly status: "draft" | "confirmed" | "cancelled"
-  readonly confirmedAt: Date | null
-  readonly total: string
-}, lines: ReadonlyArray<SalesOrderLine>): SalesOrder => ({
+export const toSalesOrder = (
+  row: {
+    readonly id: string
+    readonly tenantId: string
+    readonly customerId: string
+    readonly quotationId: string | null
+    readonly status: "draft" | "confirmed" | "cancelled"
+    readonly confirmedAt: Date | null
+    readonly total: string
+  },
+  lines: ReadonlyArray<SalesOrderLine>,
+): SalesOrder => ({
   id: row.id,
   tenantId: row.tenantId,
   customerId: row.customerId,
@@ -108,24 +111,23 @@ export interface SalesStore {
     | Schema.SchemaError
     | SalesOrderConfirmationIdempotencyConflict
   >
-  readonly cancelConfirmedOrder: (
-    input: CancelConfirmedOrderCommand,
-  ) => Effect.Effect<
-    SalesOrder | { readonly _tag: "not-found" } | {
-      readonly _tag: "invalid-state"
-      readonly status: "draft" | "confirmed" | "cancelled"
-    },
+  readonly cancelConfirmedOrder: (input: CancelConfirmedOrderCommand) => Effect.Effect<
+    | SalesOrder
+    | { readonly _tag: "not-found" }
+    | {
+        readonly _tag: "invalid-state"
+        readonly status: "draft" | "confirmed" | "cancelled"
+      },
     DatabaseFailure
   >
-  readonly getConfirmedOrderTotal: (
-    input: GetConfirmedOrderTotalCommand,
-  ) => Effect.Effect<
-    {
-      readonly _tag: "found"
-      readonly total: string
-      readonly status: "draft" | "confirmed" | "cancelled"
-      readonly confirmedAt: string | null
-    } | { readonly _tag: "not-found" },
+  readonly getConfirmedOrderTotal: (input: GetConfirmedOrderTotalCommand) => Effect.Effect<
+    | {
+        readonly _tag: "found"
+        readonly total: string
+        readonly status: "draft" | "confirmed" | "cancelled"
+        readonly confirmedAt: string | null
+      }
+    | { readonly _tag: "not-found" },
     DatabaseFailure
   >
 }

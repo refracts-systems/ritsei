@@ -31,9 +31,7 @@ type NavigationSection = Readonly<{
 const navigationSections: readonly NavigationSection[] = [
   {
     label: "Work",
-    items: [
-      { label: "My work", marker: "MW", href: "/" },
-    ],
+    items: [{ label: "My work", marker: "MW", href: "/" }],
   },
   {
     label: "Operations",
@@ -46,9 +44,7 @@ const navigationSections: readonly NavigationSection[] = [
   },
   {
     label: "Processes",
-    items: [
-      { label: "Process Studio", marker: "PR", href: "/processes" },
-    ],
+    items: [{ label: "Process Studio", marker: "PR", href: "/processes" }],
   },
   {
     label: "Administration",
@@ -99,21 +95,13 @@ const compactTenantId = (tenantId: string): string =>
   `${tenantId.slice(0, 8)}…${tenantId.slice(-4)}`
 
 const isEditableTarget = (target: EventTarget | null): boolean =>
-  target instanceof HTMLInputElement
-  || target instanceof HTMLTextAreaElement
-  || (target instanceof HTMLElement && target.isContentEditable)
+  target instanceof HTMLInputElement ||
+  target instanceof HTMLTextAreaElement ||
+  (target instanceof HTMLElement && target.isContentEditable)
 
-function ContextItem(props: {
-  label: string
-  value: string
-  title?: string
-  code?: boolean
-}) {
+function ContextItem(props: { label: string; value: string; title?: string; code?: boolean }) {
   return (
-    <span
-      class={layout.contextItem}
-      title={props.title}
-    >
+    <span class={layout.contextItem} title={props.title}>
       <span class={layout.contextLabel}>{props.label}</span>
       <span class={[layout.contextValue, props.code && layout.contextCode]}>{props.value}</span>
     </span>
@@ -130,8 +118,10 @@ function NavigationEntry(props: {
   const item = untrack(() => props.item)
   const closeMobile = untrack(() => props.closeMobile)
   const captureFirst = untrack(() => props.captureFirst)
-  const labelClass =
-    () => [layout.navigationLabel, props.collapsed && layout.navigationLabelCollapsed]
+  const labelClass = () => [
+    layout.navigationLabel,
+    props.collapsed && layout.navigationLabelCollapsed,
+  ]
   return (
     <a
       ref={(element) => captureFirst?.(element)}
@@ -143,7 +133,9 @@ function NavigationEntry(props: {
       title={props.collapsed ? item.label : undefined}
       onClick={closeMobile}
     >
-      <span class={layout.navigationMarker} aria-hidden="true">{item.marker}</span>
+      <span class={layout.navigationMarker} aria-hidden="true">
+        {item.marker}
+      </span>
       <span class={labelClass()}>{item.label}</span>
     </a>
   )
@@ -165,8 +157,8 @@ export function ApplicationShell(props: { children: JSX.Element }) {
   let navigationToggle: HTMLButtonElement | undefined
   let firstNavigationLink: HTMLAnchorElement | undefined
 
-  const navigationExpanded = () => compact() ? mobileOpen() : !collapsed()
-  const toggleLabel = () => navigationExpanded() ? "Collapse navigation" : "Open navigation"
+  const navigationExpanded = () => (compact() ? mobileOpen() : !collapsed())
+  const toggleLabel = () => (navigationExpanded() ? "Collapse navigation" : "Open navigation")
 
   const toggleNavigation = () => {
     if (compact()) {
@@ -203,9 +195,9 @@ export function ApplicationShell(props: { children: JSX.Element }) {
         return
       }
       if (
-        (event.metaKey || event.ctrlKey)
-        && event.key.toLowerCase() === "b"
-        && !isEditableTarget(event.target)
+        (event.metaKey || event.ctrlKey) &&
+        event.key.toLowerCase() === "b" &&
+        !isEditableTarget(event.target)
       ) {
         event.preventDefault()
         toggleNavigation()
@@ -221,13 +213,15 @@ export function ApplicationShell(props: { children: JSX.Element }) {
 
   return (
     <div data-theme={dark() ? "dark" : "light"} class={layout.page}>
-      <a class={layout.skip} href="#main">Skip to content</a>
+      <a class={layout.skip} href="#main">
+        Skip to content
+      </a>
       <header class={layout.topbar}>
         <a href="/" aria-label="RITSEI home" class={layout.brand}>
           <img src="/logo.svg" alt="" class={layout.brandLogo} />
         </a>
         <Button
-          ref={(element) => navigationToggle = element}
+          ref={(element) => (navigationToggle = element)}
           iconOnly
           type="button"
           class={layout.navigationToggle}
@@ -339,15 +333,19 @@ export function ApplicationShell(props: { children: JSX.Element }) {
                       {(item, itemIndex) => (
                         <NavigationEntry
                           item={item}
-                          active={item.href === "/"
-                            ? location.pathname === "/"
-                            : location.pathname === item.href
-                              || location.pathname.startsWith(`${item.href}/`)}
+                          active={
+                            item.href === "/"
+                              ? location.pathname === "/"
+                              : location.pathname === item.href ||
+                                location.pathname.startsWith(`${item.href}/`)
+                          }
                           collapsed={collapsed()}
                           closeMobile={closeMobileNavigation}
-                          captureFirst={sectionIndex() === 0 && itemIndex() === 0
-                            ? (element) => firstNavigationLink = element
-                            : undefined}
+                          captureFirst={
+                            sectionIndex() === 0 && itemIndex() === 0
+                              ? (element) => (firstNavigationLink = element)
+                              : undefined
+                          }
                         />
                       )}
                     </For>
@@ -369,10 +367,12 @@ export function ApplicationShell(props: { children: JSX.Element }) {
                 {(item) => (
                   <a
                     href={item.href}
-                    data-active={location.pathname === item.href
-                        || location.pathname.startsWith(`${item.href}/`)
-                      ? ""
-                      : undefined}
+                    data-active={
+                      location.pathname === item.href ||
+                      location.pathname.startsWith(`${item.href}/`)
+                        ? ""
+                        : undefined
+                    }
                     aria-current={location.pathname === item.href ? "page" : undefined}
                   >
                     {item.label}
@@ -400,9 +400,7 @@ export function ApplicationShell(props: { children: JSX.Element }) {
                 </section>
               }
             >
-              <Loading fallback={<p role="status">Loading workspace…</p>}>
-                {props.children}
-              </Loading>
+              <Loading fallback={<p role="status">Loading workspace…</p>}>{props.children}</Loading>
             </Errored>
           </main>
         </div>

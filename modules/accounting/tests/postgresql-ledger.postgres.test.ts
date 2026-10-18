@@ -17,64 +17,73 @@ it.effect.skipIf(databaseUrl === undefined)(
   "keeps PostgreSQL ledger operations idempotent and tenant-scoped",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
-        const [tenant] = yield* Effect.promise(() =>
-          client<{ id: string }[]>`
+        const [tenant] = yield* Effect.promise(
+          () =>
+            client<{ id: string }[]>`
           insert into auth.tenants (slug) values (${`pg-ledger-${uuidv7()}`}) returning id
-        `
+        `,
         )
-        const [party] = yield* Effect.promise(() =>
-          client<{ id: string }[]>`
+        const [party] = yield* Effect.promise(
+          () =>
+            client<{ id: string }[]>`
           insert into party.parties (tenant_id, kind, name)
           values (${tenant!.id}, 'organization', 'PostgreSQL Ledger Test') returning id
-        `
+        `,
         )
-        const [legalEntity] = yield* Effect.promise(() =>
-          client<{ id: string }[]>`
+        const [legalEntity] = yield* Effect.promise(
+          () =>
+            client<{ id: string }[]>`
           insert into party.legal_entities (tenant_id, organization_party_id)
           values (${tenant!.id}, ${party!.id}) returning id
-        `
+        `,
         )
-        const [period] = yield* Effect.promise(() =>
-          client<{ id: string }[]>`
+        const [period] = yield* Effect.promise(
+          () =>
+            client<{ id: string }[]>`
           insert into accounting.accounting_periods
             (tenant_id, legal_entity_id, starts_on, ends_on, status)
           values (${tenant!.id}, ${legalEntity!.id}, '1900-01-01', '2100-12-31', 'open')
           returning id
-        `
+        `,
         )
-        const [cash] = yield* Effect.promise(() =>
-          client<{ id: string }[]>`
+        const [cash] = yield* Effect.promise(
+          () =>
+            client<{ id: string }[]>`
           insert into accounting.accounts (tenant_id, code, name, type)
           values (${tenant!.id}, '1000', 'Cash', 'asset') returning id
-        `
+        `,
         )
-        const [revenue] = yield* Effect.promise(() =>
-          client<{ id: string }[]>`
+        const [revenue] = yield* Effect.promise(
+          () =>
+            client<{ id: string }[]>`
           insert into accounting.accounts (tenant_id, code, name, type)
           values (${tenant!.id}, '4000', 'Revenue', 'revenue') returning id
-        `
+        `,
         )
-        const [journal] = yield* Effect.promise(() =>
-          client<{ id: string }[]>`
+        const [journal] = yield* Effect.promise(
+          () =>
+            client<{ id: string }[]>`
           insert into accounting.journal_entries (tenant_id, reference, status, posted_at)
           values (${tenant!.id}, 'PG-LEDGER-1', 'draft', null) returning id
-        `
+        `,
         )
-        yield* Effect.promise(() =>
-          client`
+        yield* Effect.promise(
+          () =>
+            client`
           insert into accounting.journal_lines
             (tenant_id, entry_id, account_id, debit, credit)
           values
             (${tenant!.id}, ${journal!.id}, ${cash!.id}, ${LARGE_FINANCIAL_MAJOR}, '0'),
             (${tenant!.id}, ${journal!.id}, ${revenue!.id}, '0', ${LARGE_FINANCIAL_MAJOR})
-        `
+        `,
         )
         const operationId = `pg-operation-${uuidv7()}`
-        const [operation] = yield* Effect.promise(() =>
-          client<{ id: string }[]>`
+        const [operation] = yield* Effect.promise(
+          () =>
+            client<{ id: string }[]>`
           insert into accounting.financial_operations (
             tenant_id, legal_entity_id, period_id, operation_id, operation_type, journal_id,
             reference, currency, mapping_version, engine, engine_verified, request_fingerprint,
@@ -84,16 +93,17 @@ it.effect.skipIf(databaseUrl === undefined)(
             ${journal!.id}, 'PG-LEDGER-1', 'USD', 1, 'postgresql', true, 'fingerprint-1',
             'test-principal', 'test-session', 'intent', 0, now()
           ) returning id
-        `
+        `,
         )
-        yield* Effect.promise(() =>
-          client`
+        yield* Effect.promise(
+          () =>
+            client`
           insert into accounting.financial_operation_transfers (
             tenant_id, operation_id, position, debit_account_id, credit_account_id, amount_minor
           ) values (${tenant!.id}, ${operation!.id}, 0, ${cash!.id}, ${
             revenue!.id
           }, ${LARGE_FINANCIAL_MINOR})
-        `
+        `,
         )
 
         const ledger = yield* makePostgresqlFinancialLedger.pipe(
@@ -199,14 +209,15 @@ it.effect.skipIf(databaseUrl === undefined)(
           { _tag: "not_found", accountId: cash!.id },
         )
 
-        const [storedOperation] = yield* Effect.promise(() =>
-          client<
-            { status: string; engine: string; observed_engine: string | null; attempts: number }[]
-          >`
+        const [storedOperation] = yield* Effect.promise(
+          () =>
+            client<
+              { status: string; engine: string; observed_engine: string | null; attempts: number }[]
+            >`
           select status, engine, observed_engine, attempts
           from accounting.financial_operations
           where tenant_id = ${tenant!.id} and id = ${operation!.id}
-        `
+        `,
         )
         assert.deepStrictEqual(storedOperation, {
           status: "accepted",
@@ -214,13 +225,15 @@ it.effect.skipIf(databaseUrl === undefined)(
           observed_engine: "postgresql",
           attempts: 1,
         })
-        const [storedJournal] = yield* Effect.promise(() =>
-          client<{ status: string }[]>`
+        const [storedJournal] = yield* Effect.promise(
+          () =>
+            client<{ status: string }[]>`
           select status from accounting.journal_entries where tenant_id = ${tenant!.id} and id = ${
             journal!.id
           }
-        `
+        `,
         )
         assert.deepStrictEqual(storedJournal, { status: "posted" })
-      })),
+      }),
+    ),
 )

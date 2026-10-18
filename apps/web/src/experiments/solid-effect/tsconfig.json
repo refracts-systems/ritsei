@@ -2,21 +2,13 @@
   "compilerOptions": {
     "target": "esnext",
     "noEmit": true,
-    "lib": [
-      "ESNext",
-      "DOM"
-    ],
+    "lib": ["ESNext", "DOM"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "jsx": "preserve",
     "jsxImportSource": "@solidjs/web",
     "esModuleInterop": true,
-    "types": [
-      "vite/client"
-    ]
+    "types": ["vite/client"]
   },
-  "include": [
-    "src/**/*",
-    "vite.config.mjs"
-  ]
+  "include": ["src/**/*", "vite.config.mjs"]
 }

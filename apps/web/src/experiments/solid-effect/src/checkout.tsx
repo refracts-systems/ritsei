@@ -63,13 +63,8 @@ const INITIAL_CART: CartItem[] = [
 ]
 
 export function Checkout() {
-  const [cart, setCart] = createStore<CartItem[]>(
-    INITIAL_CART.map((i) => ({ ...i })),
-  )
-  const [orders] = createOptimisticStore<Order[]>(
-    async () => fetchOrders(),
-    [],
-  )
+  const [cart, setCart] = createStore<CartItem[]>(INITIAL_CART.map((i) => ({ ...i })))
+  const [orders] = createOptimisticStore<Order[]>(async () => fetchOrders(), [])
 
   // Transition-scoped: writes inside the action revert automatically when it
   // settles — success, failure, or cancellation.
@@ -80,50 +75,48 @@ export function Checkout() {
 
   const total = () => cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
-  const placeOrder = effectAction(
-    function*(items: CartItem[], decline: boolean) {
-      let reservation: Reservation | undefined
-      let charge: Charge | undefined
-      setNotice(null)
-      try {
-        setPhase("reserving")
-        reservation = yield reserveInventory(items)
-        setPhase("charging")
-        charge = yield chargeCard(
-          items.reduce((sum, item) => sum + item.price * item.quantity, 0),
-          decline,
-        )
-        setPhase("finalizing")
-        const order = yield createOrder(items, reservation, charge)
+  const placeOrder = effectAction(function* (items: CartItem[], decline: boolean) {
+    let reservation: Reservation | undefined
+    let charge: Charge | undefined
+    setNotice(null)
+    try {
+      setPhase("reserving")
+      reservation = yield reserveInventory(items)
+      setPhase("charging")
+      charge = yield chargeCard(
+        items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+        decline,
+      )
+      setPhase("finalizing")
+      const order = yield createOrder(items, reservation, charge)
+      setNotice({
+        kind: "success",
+        text: `Order ${order.id} confirmed — $${order.total.toFixed(2)}`,
+      })
+      refresh(orders)
+      return order
+    } catch (e) {
+      // Saga compensation, in reverse order of what committed. Mid-step
+      // cleanup (voiding a half-done authorization) already ran via the
+      // interrupted step's own finalizers.
+      if (charge) yield refundCharge(charge)
+      if (reservation) yield releaseReservation(reservation)
+      if (e instanceof CardDeclinedError) {
         setNotice({
-          kind: "success",
-          text: `Order ${order.id} confirmed — $${order.total.toFixed(2)}`,
+          kind: "error",
+          text: `Card declined for $${e.amount.toFixed(
+            2,
+          )} — refunds/releases applied, cart untouched`,
         })
-        refresh(orders)
-        return order
-      } catch (e) {
-        // Saga compensation, in reverse order of what committed. Mid-step
-        // cleanup (voiding a half-done authorization) already ran via the
-        // interrupted step's own finalizers.
-        if (charge) yield refundCharge(charge)
-        if (reservation) yield releaseReservation(reservation)
-        if (e instanceof CardDeclinedError) {
-          setNotice({
-            kind: "error",
-            text: `Card declined for $${
-              e.amount.toFixed(2)
-            } — refunds/releases applied, cart untouched`,
-          })
-        } else if (e instanceof ActionInterruptedError) {
-          setNotice({
-            kind: "info",
-            text: "Checkout cancelled — compensations ran, cart untouched",
-          })
-        }
-        throw e // reject the action → optimistic phase reverts to "idle"
+      } else if (e instanceof ActionInterruptedError) {
+        setNotice({
+          kind: "info",
+          text: "Checkout cancelled — compensations ran, cart untouched",
+        })
       }
-    },
-  )
+      throw e // reject the action → optimistic phase reverts to "idle"
+    }
+  })
 
   let placeOrderButton: HTMLButtonElement | undefined
   const restorePlaceOrderFocus = () => {
@@ -133,7 +126,9 @@ export function Checkout() {
     placeOrder(
       cart.map((item) => ({ ...item })),
       declineCard(),
-    ).catch(() => {}).finally(restorePlaceOrderFocus)
+    )
+      .catch(() => {})
+      .finally(restorePlaceOrderFocus)
   }
 
   const inFlight = () => phase() !== "idle"
@@ -168,7 +163,8 @@ export function Checkout() {
                   onClick={() =>
                     setCart((c) => {
                       c[i()].quantity--
-                    })}
+                    })
+                  }
                 >
                   −
                 </button>
@@ -179,14 +175,13 @@ export function Checkout() {
                   onClick={() =>
                     setCart((c) => {
                       c[i()].quantity++
-                    })}
+                    })
+                  }
                 >
                   +
                 </button>
               </span>
-              <span class="cart-price">
-                ${(item.price * item.quantity).toFixed(2)}
-              </span>
+              <span class="cart-price">${(item.price * item.quantity).toFixed(2)}</span>
             </div>
           )}
         </For>
@@ -211,7 +206,9 @@ export function Checkout() {
           when={inFlight()}
           fallback={
             <button
-              ref={placeOrderButton}
+              ref={(element) => {
+                placeOrderButton = element
+              }}
               class="primary"
               onClick={submitOrder}
             >
@@ -229,9 +226,7 @@ export function Checkout() {
         <For each={STEPS}>
           {(step) => (
             <li
-              aria-current={stepState(step.phase) === "active"
-                ? "step"
-                : undefined}
+              aria-current={stepState(step.phase) === "active" ? "step" : undefined}
               class={{
                 done: stepState(step.phase) === "done",
                 active: stepState(step.phase) === "active",
@@ -257,10 +252,7 @@ export function Checkout() {
 
       <h3>Your orders</h3>
       <Loading fallback={<p class="loading">Loading orders…</p>}>
-        <Show
-          when={orders.length > 0}
-          fallback={<p class="empty">No orders yet.</p>}
-        >
+        <Show when={orders.length > 0} fallback={<p class="empty">No orders yet.</p>}>
           <ul class="orders">
             <For each={orders}>
               {(order) => (

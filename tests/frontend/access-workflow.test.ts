@@ -70,7 +70,7 @@ const connectAndOpenAccess = async (page: Page, url: string) => {
 it.effect(
   "administers tenant memberships and direct capability grants with explicit impact confirmation",
   () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const { page, url, errors } = yield* builtApp
       const memberships: Membership[] = [
         { userAccountId: activeMemberId, tenantId, status: "active" },
@@ -102,10 +102,12 @@ it.effect(
             return fulfillJson(
               route,
               200,
-              memberships.filter((membership) =>
-                (search === undefined || search === null
-                  || membership.userAccountId.toLocaleLowerCase().includes(search))
-                && (status === null || membership.status === status)
+              memberships.filter(
+                (membership) =>
+                  (search === undefined ||
+                    search === null ||
+                    membership.userAccountId.toLocaleLowerCase().includes(search)) &&
+                  (status === null || membership.status === status),
               ),
             )
           }
@@ -158,9 +160,7 @@ it.effect(
             )
           }
 
-          const transition = path.match(
-            /^\/tenant-memberships\/([^/]+)\/(suspend|activate)$/,
-          )
+          const transition = path.match(/^\/tenant-memberships\/([^/]+)\/(suspend|activate)$/)
           if (transition && method === "POST") {
             const userAccountId = decodeURIComponent(transition[1]!)
             const membership = memberships.find((item) => item.userAccountId === userAccountId)
@@ -179,7 +179,9 @@ it.effect(
         assert.equal(accessHeaders?.authorization, "Bearer access-session")
         assert.equal(accessHeaders?.["x-tenant-id"], tenantId)
         assert.isNotNull(
-          await page.getByRole("link", { name: "Access", exact: true }).first()
+          await page
+            .getByRole("link", { name: "Access", exact: true })
+            .first()
             .getAttribute("data-active"),
         )
         assert.deepEqual(
@@ -195,9 +197,9 @@ it.effect(
         await addDialog.waitFor({ state: "hidden" })
         assert.isTrue(await addTrigger.evaluate((node) => document.activeElement === node))
         await addTrigger.click()
-        await addDialog.getByRole("textbox", { name: "User account ID", exact: true }).fill(
-          addedMemberId,
-        )
+        await addDialog
+          .getByRole("textbox", { name: "User account ID", exact: true })
+          .fill(addedMemberId)
         await addDialog.getByRole("button", { name: "Add membership", exact: true }).click()
         await page.getByRole("heading", { name: "Access detail", exact: true }).waitFor()
         assert.equal(new URL(page.url()).pathname, `/access/${addedMemberId}`)
@@ -205,9 +207,9 @@ it.effect(
 
         await page.getByRole("button", { name: "Grant capability", exact: true }).click()
         const grantDialog = page.getByRole("dialog", { name: "Grant tenant capability" })
-        await grantDialog.getByRole("combobox", { name: "Capability", exact: true }).selectOption(
-          "party.read",
-        )
+        await grantDialog
+          .getByRole("combobox", { name: "Capability", exact: true })
+          .selectOption("party.read")
         const grantButton = grantDialog.getByRole("button", {
           name: "Grant capability",
           exact: true,
@@ -218,7 +220,8 @@ it.effect(
         await grantButton.click()
         await page.getByRole("cell", { name: "party.read", exact: true }).waitFor()
         assert.deepEqual(grantBody, { userAccountId: addedMemberId, capability: "party.read" })
-        await page.locator("section[aria-labelledby=\"permission-summary-heading\"]")
+        await page
+          .locator('section[aria-labelledby="permission-summary-heading"]')
           .getByText("Direct tenant grants", { exact: true })
           .waitFor()
         await page.getByText(/individual grant revocation/).waitFor()
@@ -237,17 +240,21 @@ it.effect(
         await suspendDialog.getByRole("checkbox").check()
         await suspendButton.click()
         await page.locator("aside").getByText("Suspended", { exact: true }).waitFor()
-        await page.getByText("Activate this membership before granting another capability.", {
-          exact: true,
-        }).waitFor()
+        await page
+          .getByText("Activate this membership before granting another capability.", {
+            exact: true,
+          })
+          .waitFor()
 
         await page.getByRole("button", { name: "Activate membership", exact: true }).click()
         const activateDialog = page.getByRole("dialog", { name: "Activate tenant membership" })
         await activateDialog.getByRole("checkbox").check()
-        await activateDialog.getByRole("button", {
-          name: "Activate membership",
-          exact: true,
-        }).click()
+        await activateDialog
+          .getByRole("button", {
+            name: "Activate membership",
+            exact: true,
+          })
+          .click()
         await page.locator("aside").getByText("Active", { exact: true }).waitFor()
 
         await page.getByRole("button", { name: "Remove membership", exact: true }).click()
@@ -281,7 +288,7 @@ it.effect(
 it.effect(
   "keeps denied, malformed, and unknown authorization outcomes recoverable",
   () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const { page, url, errors } = yield* builtApp
       const membership = { userAccountId: activeMemberId, tenantId, status: "active" as const }
       let mode: "forbidden" | "malformed" | "loaded" | "unknown-grant" = "forbidden"
@@ -317,13 +324,14 @@ it.effect(
         await page.getByRole("alert").filter({ hasText: "permission" }).waitFor()
 
         mode = "malformed"
-        await page.getByRole("button", { name: "Try loading memberships again", exact: true })
+        await page
+          .getByRole("button", { name: "Try loading memberships again", exact: true })
           .click()
-        await page.getByRole("alert").filter({ hasText: "invalid or oversized response" })
-          .waitFor()
+        await page.getByRole("alert").filter({ hasText: "invalid or oversized response" }).waitFor()
 
         mode = "loaded"
-        await page.getByRole("button", { name: "Try loading memberships again", exact: true })
+        await page
+          .getByRole("button", { name: "Try loading memberships again", exact: true })
           .click()
         await page.getByRole("cell", { name: activeMemberId, exact: true }).waitFor()
         await page.getByRole("link", { name: `Open access for account ${activeMemberId}` }).click()
@@ -332,9 +340,9 @@ it.effect(
         mode = "unknown-grant"
         await page.getByRole("button", { name: "Grant capability", exact: true }).click()
         const dialog = page.getByRole("dialog", { name: "Grant tenant capability" })
-        await dialog.getByRole("combobox", { name: "Capability", exact: true }).selectOption(
-          "party.read",
-        )
+        await dialog
+          .getByRole("combobox", { name: "Capability", exact: true })
+          .selectOption("party.read")
         await dialog.getByRole("checkbox").check()
         await dialog.getByRole("button", { name: "Grant capability", exact: true }).click()
         await dialog.getByRole("alert").filter({ hasText: "may have saved" }).waitFor()
@@ -342,10 +350,12 @@ it.effect(
           await dialog.getByRole("button", { name: "Grant capability", exact: true }).isEnabled(),
         )
         mode = "loaded"
-        await dialog.getByRole("button", {
-          name: "Reload permissions before retrying",
-          exact: true,
-        }).click()
+        await dialog
+          .getByRole("button", {
+            name: "Reload permissions before retrying",
+            exact: true,
+          })
+          .click()
         await dialog.waitFor({ state: "hidden" })
         assert.deepEqual(errors, [])
       })

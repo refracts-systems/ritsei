@@ -43,12 +43,13 @@ it.effect.skipIf(databaseUrl === undefined)(
   "proves durable replay protection, redaction, compatibility, payload limit, dead letter, and health metric",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         yield* runMigrations(client)
-        const [tenant] = yield* Effect.promise(() =>
-          client<{ id: string }[]>`
+        const [tenant] = yield* Effect.promise(
+          () =>
+            client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${"integration-reliability-${sentAtMs}"}) returning id
-          `
+          `,
         )
         const database = makePostgresDatabase(client)
         const store = yield* makePostgresExternalReliabilityStore.pipe(
@@ -83,24 +84,30 @@ it.effect.skipIf(databaseUrl === undefined)(
         assert.strictEqual(recovered?.state, "accepted")
         assert.deepStrictEqual(recovered?.payload, first.record.payload)
 
-        const conflict = yield* Effect.flip(restartedStore.record({
-          ...input,
-          reliability: { ...input.reliability, operationId: "payments.refund" },
-        }))
+        const conflict = yield* Effect.flip(
+          restartedStore.record({
+            ...input,
+            reliability: { ...input.reliability, operationId: "payments.refund" },
+          }),
+        )
         assert.instanceOf(conflict, ExternalIdempotencyConflict)
 
-        const incompatible = yield* Effect.flip(restartedStore.record({
-          ...input,
-          replayKey: "event:payments:incompatible",
-          reliability: { ...input.reliability, connectorVersion: 2 },
-        }))
+        const incompatible = yield* Effect.flip(
+          restartedStore.record({
+            ...input,
+            replayKey: "event:payments:incompatible",
+            reliability: { ...input.reliability, connectorVersion: 2 },
+          }),
+        )
         assert.instanceOf(incompatible, ExternalCompatibilityMismatch)
 
-        const tooLarge = yield* Effect.flip(restartedStore.record({
-          ...input,
-          replayKey: "event:payments:too-large",
-          reliability: { ...input.reliability, maxPayloadBytes: 1 },
-        }))
+        const tooLarge = yield* Effect.flip(
+          restartedStore.record({
+            ...input,
+            replayKey: "event:payments:too-large",
+            reliability: { ...input.reliability, maxPayloadBytes: 1 },
+          }),
+        )
         assert.instanceOf(tooLarge, ExternalPayloadLimitExceeded)
 
         const deadLetter = yield* restartedStore.record({
@@ -121,5 +128,6 @@ it.effect.skipIf(databaseUrl === undefined)(
         assert.strictEqual(health.unknownProviderStatus, 0)
         assert.strictEqual(health.maxLagMs, 45)
         assert.strictEqual(health.averageLagMs, 45)
-      })),
+      }),
+    ),
 )

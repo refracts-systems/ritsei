@@ -27,7 +27,10 @@ import {
 import { makePostgresAuthStore } from "./postgres.ts"
 
 const encodeToken = (bytes: Uint8Array) =>
-  btoa(String.fromCharCode(...bytes)).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "")
+  btoa(String.fromCharCode(...bytes))
+    .replaceAll("+", "-")
+    .replaceAll("/", "_")
+    .replace(/=+$/, "")
 
 const makeToken = (crypto: Crypto.Crypto) =>
   crypto.randomBytes(32).pipe(
@@ -38,7 +41,7 @@ const makeToken = (crypto: Crypto.Crypto) =>
 const hashToken = (crypto: Crypto.Crypto, token: string) =>
   crypto.digest("SHA-256", new TextEncoder().encode(token)).pipe(
     Effect.map((digest) =>
-      Array.from(digest, (byte) => byte.toString(16).padStart(2, "0")).join("")
+      Array.from(digest, (byte) => byte.toString(16).padStart(2, "0")).join(""),
     ),
     Effect.mapError((cause) => new DatabaseFailure({ operation: "session-token-hash", cause })),
   )
@@ -48,7 +51,7 @@ const normalizeTenant = (input: Schema.Schema.Type<typeof CreateTenantInput>) =>
   timezone: input.timezone?.trim() ?? "UTC",
 })
 
-export const makeAuthService = Effect.gen(function*() {
+export const makeAuthService = Effect.gen(function* () {
   const store = yield* makePostgresAuthStore
   const userAccounts = yield* UserAccountService
   const crypto = yield* Crypto.Crypto
@@ -56,30 +59,36 @@ export const makeAuthService = Effect.gen(function*() {
   const identityProvider = yield* Effect.serviceOption(IdentityProvider)
   const now = () => new Date(clock.currentTimeMillisUnsafe())
 
-  const findTenantBySlug = Effect.fn("auth.findTenantBySlug")(function*(slug: string) {
+  const findTenantBySlug = Effect.fn("auth.findTenantBySlug")(function* (slug: string) {
     const normalized = slug.trim().toLowerCase()
-    return yield* store.findTenantBySlug(normalized).pipe(
-      Effect.map((tenant) => tenant === undefined ? undefined : { ...tenant } satisfies Tenant),
-    )
+    return yield* store
+      .findTenantBySlug(normalized)
+      .pipe(
+        Effect.map((tenant) =>
+          tenant === undefined ? undefined : ({ ...tenant } satisfies Tenant),
+        ),
+      )
   })
 
-  const createTenant = Effect.fn("auth.createTenant")(function*(input: unknown) {
+  const createTenant = Effect.fn("auth.createTenant")(function* (input: unknown) {
     const decoded = yield* Schema.decodeUnknownEffect(CreateTenantInput)(input)
     const { slug, timezone } = normalizeTenant(decoded)
-    return yield* store.createTenant(slug, timezone).pipe(
-      Effect.map((tenant) => ({ ...tenant } satisfies Tenant)),
-    )
+    return yield* store
+      .createTenant(slug, timezone)
+      .pipe(Effect.map((tenant) => ({ ...tenant }) satisfies Tenant))
   })
 
-  const issueSession = Effect.fn("auth.issueSession")(function*(input: unknown) {
+  const issueSession = Effect.fn("auth.issueSession")(function* (input: unknown) {
     const decoded = yield* Schema.decodeUnknownEffect(IssueSessionInput)(input)
-    const account = yield* userAccounts.getAuthenticationState(decoded.userAccountId).pipe(
-      Effect.mapError((error) =>
-        error instanceof UserAccountNotFound || error instanceof Schema.SchemaError
-          ? new SessionUserAccountNotFound({ userAccountId: decoded.userAccountId })
-          : error
-      ),
-    )
+    const account = yield* userAccounts
+      .getAuthenticationState(decoded.userAccountId)
+      .pipe(
+        Effect.mapError((error) =>
+          error instanceof UserAccountNotFound || error instanceof Schema.SchemaError
+            ? new SessionUserAccountNotFound({ userAccountId: decoded.userAccountId })
+            : error,
+        ),
+      )
     if (account.status === "disabled") {
       return yield* Effect.fail(
         new SessionUserAccountDisabled({ userAccountId: decoded.userAccountId }),
@@ -102,23 +111,26 @@ export const makeAuthService = Effect.gen(function*() {
     } satisfies IssuedSession
   })
 
-  const authenticate = Effect.fn("auth.authenticate")(function*(token: string) {
+  const authenticate = Effect.fn("auth.authenticate")(function* (token: string) {
     if (Option.isNone(identityProvider)) {
       const tokenHash = yield* hashToken(crypto, token)
       const row = yield* store.findActiveSession(tokenHash, now())
       if (row === undefined) return yield* Effect.fail(new InvalidSessionToken({}))
-      const account = yield* userAccounts.getAuthenticationState(row.userAccountId).pipe(
-        Effect.mapError((error) =>
-          error instanceof UserAccountNotFound || error instanceof Schema.SchemaError
-            ? new InvalidSessionToken({})
-            : error
-        ),
-      )
+      const account = yield* userAccounts
+        .getAuthenticationState(row.userAccountId)
+        .pipe(
+          Effect.mapError((error) =>
+            error instanceof UserAccountNotFound || error instanceof Schema.SchemaError
+              ? new InvalidSessionToken({})
+              : error,
+          ),
+        )
       if (
-        account.status === "disabled"
-        || (account.sessionInvalidatedAt !== null
-          && row.createdAt.getTime() <= Date.parse(account.sessionInvalidatedAt))
-      ) return yield* Effect.fail(new InvalidSessionToken({}))
+        account.status === "disabled" ||
+        (account.sessionInvalidatedAt !== null &&
+          row.createdAt.getTime() <= Date.parse(account.sessionInvalidatedAt))
+      )
+        return yield* Effect.fail(new InvalidSessionToken({}))
       return {
         userAccountId: row.userAccountId,
         sessionId: row.id,
@@ -127,28 +139,33 @@ export const makeAuthService = Effect.gen(function*() {
     }
 
     const external = yield* identityProvider.value.authenticate(token)
-    const account = yield* userAccounts.resolveExternalSubject({
-      issuer: external.issuer,
-      subject: external.subject,
-    }).pipe(
-      Effect.mapError((error) =>
-        error instanceof ExternalSubjectNotFound || error instanceof Schema.SchemaError
-          ? new InvalidSessionToken({})
-          : error
-      ),
-    )
-    const state = yield* userAccounts.getAuthenticationState(account.id).pipe(
-      Effect.mapError((error) =>
-        error instanceof UserAccountNotFound || error instanceof Schema.SchemaError
-          ? new InvalidSessionToken({})
-          : error
-      ),
-    )
+    const account = yield* userAccounts
+      .resolveExternalSubject({
+        issuer: external.issuer,
+        subject: external.subject,
+      })
+      .pipe(
+        Effect.mapError((error) =>
+          error instanceof ExternalSubjectNotFound || error instanceof Schema.SchemaError
+            ? new InvalidSessionToken({})
+            : error,
+        ),
+      )
+    const state = yield* userAccounts
+      .getAuthenticationState(account.id)
+      .pipe(
+        Effect.mapError((error) =>
+          error instanceof UserAccountNotFound || error instanceof Schema.SchemaError
+            ? new InvalidSessionToken({})
+            : error,
+        ),
+      )
     if (
-      state.status === "disabled"
-      || (state.sessionInvalidatedAt !== null
-        && external.issuedAt * 1_000 <= Date.parse(state.sessionInvalidatedAt))
-    ) return yield* Effect.fail(new InvalidSessionToken({}))
+      state.status === "disabled" ||
+      (state.sessionInvalidatedAt !== null &&
+        external.issuedAt * 1_000 <= Date.parse(state.sessionInvalidatedAt))
+    )
+      return yield* Effect.fail(new InvalidSessionToken({}))
     const sessionId = yield* hashToken(crypto, `${external.issuer}\u0000${external.subject}`).pipe(
       Effect.map((hash) => `external:${hash}`),
     )
@@ -161,7 +178,7 @@ export const makeAuthService = Effect.gen(function*() {
     } satisfies Schema.Schema.Type<typeof Principal>
   })
 
-  const revoke = Effect.fn("auth.revoke")(function*(sessionId: string) {
+  const revoke = Effect.fn("auth.revoke")(function* (sessionId: string) {
     if (sessionId.startsWith("external:")) return
     if (!(yield* store.revokeSession(sessionId, now()))) {
       return yield* Effect.fail(new InvalidSessionToken({}))

@@ -73,7 +73,5 @@ export {
   SupplierAccountNotFound,
   SupplierRelationshipNotEligible,
 } from "./src/errors.ts"
-export type {
-  PurchaseOrderConfirmedEventPayload as PurchaseOrderConfirmedEventPayloadType,
-} from "./src/events.ts"
+export type { PurchaseOrderConfirmedEventPayload as PurchaseOrderConfirmedEventPayloadType } from "./src/events.ts"
 export { makeProcurementService, makeProcurementTestLayer, ProcurementLive } from "./src/layers.ts"

@@ -17,12 +17,13 @@ it.effect.skipIf(databaseUrl === undefined)(
   "proves release immutability, promotion audit, and environment binding",
   () =>
     withTemporaryDatabase(databaseUrl!, (client: Sql) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         yield* runMigrations(client)
-        const [tenant] = yield* Effect.promise(() =>
-          client<{ id: string }[]>`
+        const [tenant] = yield* Effect.promise(
+          () =>
+            client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
-          `
+          `,
         )
         const database = makePostgresDatabase(client)
         const input = {
@@ -47,10 +48,12 @@ it.effect.skipIf(databaseUrl === undefined)(
           Effect.provideService(Database, database),
         )
         const replay = yield* restartedStore.release(input)
-        const conflict = yield* Effect.flip(restartedStore.release({
-          ...input,
-          checksum: "different-ir-checksum",
-        }))
+        const conflict = yield* Effect.flip(
+          restartedStore.release({
+            ...input,
+            checksum: "different-ir-checksum",
+          }),
+        )
         const deploymentInput = {
           tenantId: tenant!.id,
           releaseId: release.id,
@@ -60,10 +63,12 @@ it.effect.skipIf(databaseUrl === undefined)(
         }
         const deployment = yield* restartedStore.deploy(deploymentInput)
         const deploymentReplay = yield* store.deploy(deploymentInput)
-        const deploymentConflict = yield* Effect.flip(store.deploy({
-          ...deploymentInput,
-          promotionReason: "different promotion",
-        }))
+        const deploymentConflict = yield* Effect.flip(
+          store.deploy({
+            ...deploymentInput,
+            promotionReason: "different promotion",
+          }),
+        )
         const mutationFailure = yield* Effect.tryPromise({
           try: () =>
             client`
@@ -71,12 +76,13 @@ it.effect.skipIf(databaseUrl === undefined)(
             `,
           catch: (cause) => cause,
         }).pipe(Effect.flip)
-        const audits = yield* Effect.promise(() =>
-          client<{ event: string; environment: string | null }[]>`
+        const audits = yield* Effect.promise(
+          () =>
+            client<{ event: string; environment: string | null }[]>`
             select event, environment from process.release_audits
             where tenant_id = ${tenant!.id} and release_id = ${release.id}
             order by created_at, id
-          `
+          `,
         )
 
         assert.strictEqual(replay.id, release.id)
@@ -85,12 +91,13 @@ it.effect.skipIf(databaseUrl === undefined)(
         assert.instanceOf(deploymentConflict, ProcessDeploymentConflict)
         assert.isTrue(String(mutationFailure).includes("immutable"))
         assert.deepStrictEqual(
-          [...audits].sort((left, right) => left.event < right.event ? -1 : 1),
+          [...audits].sort((left, right) => (left.event < right.event ? -1 : 1)),
           [
             { event: "approval", environment: null },
             { event: "deployment", environment: "TEST" },
             { event: "release", environment: null },
           ],
         )
-      })),
+      }),
+    ),
 )

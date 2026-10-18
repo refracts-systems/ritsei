@@ -12,11 +12,9 @@ if (base === undefined || head === undefined || args.length !== 2) {
 
 const zeroSha = /^0+$/u
 const range = zeroSha.test(base) ? head : `${base}..${head}`
-const result = spawnSync(
-  "git",
-  ["log", "--format=%H%x00%s", "--no-decorate", range],
-  { encoding: "utf8" },
-)
+const result = spawnSync("git", ["log", "--format=%H%x00%s", "--no-decorate", range], {
+  encoding: "utf8",
+})
 
 if (result.status !== 0) {
   const stderr = (result.stderr ?? "").trim()

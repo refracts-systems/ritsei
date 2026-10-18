@@ -36,10 +36,8 @@ import {
 
 const accountingCollectionKey = ["accounting", "collection"] as const
 
-const invalidate = (
-  client: ReturnType<typeof useQueryClient>,
-  tenantId: string,
-) => client.invalidateQueries({ queryKey: ["tenant", tenantId, ...accountingCollectionKey] })
+const invalidate = (client: ReturnType<typeof useQueryClient>, tenantId: string) =>
+  client.invalidateQueries({ queryKey: ["tenant", tenantId, ...accountingCollectionKey] })
 
 export function createAccountingConfigurationsQuery(
   scope: ApiScope,
@@ -119,11 +117,7 @@ export function createConfigureRevenuePostingMutation(
   afterSuccess?: (profile: RevenuePostingProfile) => void,
 ) {
   const client = useQueryClient()
-  return useMutation<
-    RevenuePostingProfile,
-    RequestFailure,
-    ConfigureRevenuePostingInput
-  >(() => ({
+  return useMutation<RevenuePostingProfile, RequestFailure, ConfigureRevenuePostingInput>(() => ({
     mutationFn: (input) => runRequest(scope, configureRevenuePosting(input)),
     onSuccess: (profile) => {
       afterSuccess?.(profile)

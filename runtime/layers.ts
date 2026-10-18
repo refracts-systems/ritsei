@@ -42,10 +42,10 @@ export const serviceLayers = (
   replicaClient?: Sql,
 ) => {
   const DatabaseLive = PostgresDatabaseLive(client)
-  const readYourWrites = configuration.postgresReadYourWrites !== undefined
-      && replicaClient !== undefined
-    ? PostgresReadYourWritesLive(client, replicaClient, configuration.postgresReadYourWrites)
-    : Layer.empty
+  const readYourWrites =
+    configuration.postgresReadYourWrites !== undefined && replicaClient !== undefined
+      ? PostgresReadYourWritesLive(client, replicaClient, configuration.postgresReadYourWrites)
+      : Layer.empty
   const PlatformCore = Layer.merge(DatabaseLive, readYourWrites)
   const PlatformLive = Layer.mergeAll(PlatformCore, WebCryptoLive)
   const financialLedger = makeFinancialLedgerLayer(DatabaseLive, configuration)
@@ -62,11 +62,13 @@ export const serviceLayers = (
   )
 
   const IdentityLive = Layer.effect(UserAccountService, makeUserAccountService).pipe(
-    Layer.provide(Layer.mergeAll(
-      DatabaseLive,
-      IdentityAccountAuthorizerLive.pipe(Layer.provide(AuthorizationLive)),
-      IdentityEventPublisherLive.pipe(Layer.provide(MessagingLive)),
-    )),
+    Layer.provide(
+      Layer.mergeAll(
+        DatabaseLive,
+        IdentityAccountAuthorizerLive.pipe(Layer.provide(AuthorizationLive)),
+        IdentityEventPublisherLive.pipe(Layer.provide(MessagingLive)),
+      ),
+    ),
   )
 
   const AuthLive = Layer.effect(AuthService, makeAuthService).pipe(
@@ -76,10 +78,9 @@ export const serviceLayers = (
   )
 
   const PartyLive = Layer.effect(PartyService, makePartyService).pipe(
-    Layer.provide(Layer.merge(
-      BusinessRequirements,
-      PartyEventPublisherLive.pipe(Layer.provide(MessagingLive)),
-    )),
+    Layer.provide(
+      Layer.merge(BusinessRequirements, PartyEventPublisherLive.pipe(Layer.provide(MessagingLive))),
+    ),
   )
 
   const SalesLive = Layer.effect(SalesService, makeSalesService).pipe(
@@ -90,40 +91,42 @@ export const serviceLayers = (
     Layer.provide(Layer.merge(BusinessRequirements, MessagingLive)),
   )
 
-  const AccountingRequirements = financialSigner === undefined
-    ? Layer.mergeAll(
-      BusinessRequirements,
-      MessagingLive,
-      SalesLive,
-      financialLedger,
-      financialObservation,
-    )
-    : Layer.mergeAll(
-      BusinessRequirements,
-      MessagingLive,
-      SalesLive,
-      financialLedger,
-      financialObservation,
-      financialSigner,
-    )
+  const AccountingRequirements =
+    financialSigner === undefined
+      ? Layer.mergeAll(
+          BusinessRequirements,
+          MessagingLive,
+          SalesLive,
+          financialLedger,
+          financialObservation,
+        )
+      : Layer.mergeAll(
+          BusinessRequirements,
+          MessagingLive,
+          SalesLive,
+          financialLedger,
+          financialObservation,
+          financialSigner,
+        )
   const AccountingLive = Layer.effect(AccountingService, makeAccountingService).pipe(
     Layer.provide(AccountingRequirements),
   )
 
-  const ProcessJobEnqueuerLive = Layer.effect(
-    DurableJobEnqueuer,
-    makeProcessJobEnqueuer,
-  ).pipe(Layer.provide(DatabaseLive))
+  const ProcessJobEnqueuerLive = Layer.effect(DurableJobEnqueuer, makeProcessJobEnqueuer).pipe(
+    Layer.provide(DatabaseLive),
+  )
 
   const FinancialOperationsLive = FinancialOperationServiceLive.pipe(
-    Layer.provide(Layer.mergeAll(
-      BusinessRequirements,
-      MessagingLive,
-      SalesLive,
-      ProcessJobEnqueuerLive,
-      financialLedger,
-      financialObservation,
-    )),
+    Layer.provide(
+      Layer.mergeAll(
+        BusinessRequirements,
+        MessagingLive,
+        SalesLive,
+        ProcessJobEnqueuerLive,
+        financialLedger,
+        financialObservation,
+      ),
+    ),
   )
 
   const ProcessLive = Layer.effect(ProcessService, makeProcessService).pipe(
@@ -137,9 +140,7 @@ export const serviceLayers = (
   )
 
   const ProcurementLiveWithRequirements = ProcurementLive.pipe(
-    Layer.provide(
-      Layer.mergeAll(BusinessRequirements, PartyLive, InventoryLive, MessagingLive),
-    ),
+    Layer.provide(Layer.mergeAll(BusinessRequirements, PartyLive, InventoryLive, MessagingLive)),
   )
 
   const ApplicationLive = Layer.mergeAll(

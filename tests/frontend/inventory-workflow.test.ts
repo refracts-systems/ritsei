@@ -65,16 +65,18 @@ const connectAndOpenInventory = async (page: Page, url: string) => {
 it.effect(
   "connects Inventory reads and runs stock commands through the backend surface",
   () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const { page, url, errors } = yield* builtApp
-      let balances: StockBalance[] = [{
-        tenantId,
-        warehouseId,
-        itemId,
-        onHand: "10",
-        reserved: "2",
-        unitOfMeasure: "EA",
-      }]
+      let balances: StockBalance[] = [
+        {
+          tenantId,
+          warehouseId,
+          itemId,
+          onHand: "10",
+          reserved: "2",
+          unitOfMeasure: "EA",
+        },
+      ]
       let reservations: StockReservation[] = [
         {
           id: reservationId,
@@ -133,9 +135,11 @@ it.effect(
             return fulfillJson(
               route,
               200,
-              [item, secondItem].filter((candidate) =>
-                search === null || candidate.sku.toLocaleLowerCase().includes(search)
-                || candidate.name.toLocaleLowerCase().includes(search)
+              [item, secondItem].filter(
+                (candidate) =>
+                  search === null ||
+                  candidate.sku.toLocaleLowerCase().includes(search) ||
+                  candidate.name.toLocaleLowerCase().includes(search),
               ),
             )
           }
@@ -175,15 +179,20 @@ it.effect(
           }
           if (path === `/inventory/reservations/${reservationId}/release` && method === "POST") {
             reservations = reservations.map((row) =>
-              row.id === reservationId ? { ...row, status: "released" } : row
+              row.id === reservationId ? { ...row, status: "released" } : row,
             )
-            return fulfillJson(route, 200, reservations.find((row) => row.id === reservationId))
+            return fulfillJson(
+              route,
+              200,
+              reservations.find((row) => row.id === reservationId),
+            )
           }
           if (
-            path === `/inventory/reservations/${secondReservationId}/fulfill` && method === "POST"
+            path === `/inventory/reservations/${secondReservationId}/fulfill` &&
+            method === "POST"
           ) {
             reservations = reservations.map((row) =>
-              row.id === secondReservationId ? { ...row, status: "fulfilled" } : row
+              row.id === secondReservationId ? { ...row, status: "fulfilled" } : row,
             )
             return fulfillJson(
               route,
@@ -225,34 +234,38 @@ it.effect(
             receiveBody = body
             balances = balances.map((row) => ({ ...row, onHand: "11" }))
             const receiptBalance = balances[0]!
-            movements = [{
-              id: movementId,
-              tenantId,
-              warehouseId,
-              itemId,
-              quantity: "1",
-              kind: "receipt",
-              referenceId: null,
-              unitOfMeasure: "EA",
-              reason: null,
-              idempotencyKey: null,
-            }]
+            movements = [
+              {
+                id: movementId,
+                tenantId,
+                warehouseId,
+                itemId,
+                quantity: "1",
+                kind: "receipt",
+                referenceId: null,
+                unitOfMeasure: "EA",
+                reason: null,
+                idempotencyKey: null,
+              },
+            ]
             return fulfillJson(route, 200, receiptBalance)
           }
           if (path === "/inventory/adjustments" && method === "POST") {
             adjustmentBody = body
-            movements = [{
-              id: correctionId,
-              tenantId,
-              warehouseId,
-              itemId,
-              quantity: body.adjustment,
-              kind: "issue",
-              referenceId: null,
-              unitOfMeasure: body.unitOfMeasure,
-              reason: body.reason,
-              idempotencyKey: body.idempotencyKey,
-            }]
+            movements = [
+              {
+                id: correctionId,
+                tenantId,
+                warehouseId,
+                itemId,
+                quantity: body.adjustment,
+                kind: "issue",
+                referenceId: null,
+                unitOfMeasure: body.unitOfMeasure,
+                reason: body.reason,
+                idempotencyKey: body.idempotencyKey,
+              },
+            ]
             return fulfillJson(route, 200, {
               id: correctionId,
               tenantId,
@@ -271,13 +284,13 @@ it.effect(
         await page.getByRole("cell", { name: warehouseId, exact: true }).first().waitFor({
           timeout: 5_000,
         })
-        assert.isTrue(requests.some((request) =>
-          request.path === "/inventory/stock-balances" && request.method === "GET"
-        ))
+        assert.isTrue(
+          requests.some(
+            (request) => request.path === "/inventory/stock-balances" && request.method === "GET",
+          ),
+        )
         assert.equal(
-          requests.find((request) =>
-            request.path.startsWith("/inventory")
-          )?.body,
+          requests.find((request) => request.path.startsWith("/inventory"))?.body,
           undefined,
         )
 
@@ -286,72 +299,74 @@ it.effect(
 
         await page.getByRole("button", { name: "Create warehouse", exact: true }).click()
         const warehouseDialog = page.getByRole("dialog", { name: "Create warehouse" })
-        await warehouseDialog.getByRole("textbox", { name: "Legal entity ID", exact: true }).fill(
-          legalEntityId,
-        )
-        await warehouseDialog.getByRole("textbox", { name: "Warehouse name", exact: true }).fill(
-          "New warehouse",
-        )
+        await warehouseDialog
+          .getByRole("textbox", { name: "Legal entity ID", exact: true })
+          .fill(legalEntityId)
+        await warehouseDialog
+          .getByRole("textbox", { name: "Warehouse name", exact: true })
+          .fill("New warehouse")
         await warehouseDialog.getByRole("button", { name: "Create warehouse", exact: true }).click()
         await warehouseDialog.waitFor({ state: "hidden" })
 
         await page.getByRole("button", { name: "Create item", exact: true }).click()
         const itemDialog = page.getByRole("dialog", { name: "Create item" })
         await itemDialog.getByRole("textbox", { name: "SKU", exact: true }).fill("widget-3")
-        await itemDialog.getByRole("textbox", { name: "Item name", exact: true }).fill(
-          "Third widget",
-        )
+        await itemDialog
+          .getByRole("textbox", { name: "Item name", exact: true })
+          .fill("Third widget")
         await itemDialog.getByRole("button", { name: "Create item", exact: true }).click()
         await itemDialog.waitFor({ state: "hidden" })
 
         await page.getByRole("button", { name: "Receive stock", exact: true }).click()
         const receiveDialog = page.getByRole("dialog", { name: "Receive stock" })
-        await receiveDialog.getByRole("combobox", { name: "Warehouse", exact: true }).selectOption(
-          warehouseId,
-        )
-        await receiveDialog.getByRole("combobox", { name: "Item", exact: true }).selectOption(
-          itemId,
-        )
+        await receiveDialog
+          .getByRole("combobox", { name: "Warehouse", exact: true })
+          .selectOption(warehouseId)
+        await receiveDialog
+          .getByRole("combobox", { name: "Item", exact: true })
+          .selectOption(itemId)
         await receiveDialog.getByRole("textbox", { name: "Quantity", exact: true }).fill("1")
         await receiveDialog.getByRole("button", { name: "Receive stock", exact: true }).click()
         await receiveDialog.waitFor({ state: "hidden" })
 
         await page.getByRole("button", { name: "Adjust stock", exact: true }).click()
         const adjustDialog = page.getByRole("dialog", { name: "Adjust stock" })
-        await adjustDialog.getByRole("combobox", { name: "Warehouse", exact: true }).selectOption(
-          warehouseId,
-        )
+        await adjustDialog
+          .getByRole("combobox", { name: "Warehouse", exact: true })
+          .selectOption(warehouseId)
         await adjustDialog.getByRole("combobox", { name: "Item", exact: true }).selectOption(itemId)
-        await adjustDialog.getByRole("textbox", { name: "Signed adjustment", exact: true }).fill(
-          "-1",
-        )
-        await adjustDialog.getByRole("textbox", { name: "Reason", exact: true }).fill(
-          "Cycle count correction",
-        )
+        await adjustDialog
+          .getByRole("textbox", { name: "Signed adjustment", exact: true })
+          .fill("-1")
+        await adjustDialog
+          .getByRole("textbox", { name: "Reason", exact: true })
+          .fill("Cycle count correction")
         await adjustDialog.getByRole("button", { name: "Post correction", exact: true }).click()
         await adjustDialog.waitFor({ state: "hidden" })
 
         await page.getByRole("button", { name: "Reserve stock", exact: true }).click()
         const reserveDialog = page.getByRole("dialog", { name: "Reserve stock" })
-        await reserveDialog.getByRole("combobox", { name: "Warehouse", exact: true }).selectOption(
-          warehouseId,
-        )
-        await reserveDialog.getByRole("combobox", { name: "Item", exact: true }).selectOption(
-          itemId,
-        )
+        await reserveDialog
+          .getByRole("combobox", { name: "Warehouse", exact: true })
+          .selectOption(warehouseId)
+        await reserveDialog
+          .getByRole("combobox", { name: "Item", exact: true })
+          .selectOption(itemId)
         await reserveDialog.getByRole("textbox", { name: "Quantity", exact: true }).fill("1")
         await reserveDialog.getByRole("button", { name: "Reserve stock", exact: true }).click()
         await reserveDialog.waitFor({ state: "hidden" })
 
         await page.getByRole("button", { name: "Create transfer", exact: true }).click()
         const transferDialog = page.getByRole("dialog", { name: "Create stock transfer" })
-        await transferDialog.getByRole("combobox", { name: "Source warehouse", exact: true })
+        await transferDialog
+          .getByRole("combobox", { name: "Source warehouse", exact: true })
           .selectOption(warehouseId)
-        await transferDialog.getByRole("combobox", { name: "Destination warehouse", exact: true })
+        await transferDialog
+          .getByRole("combobox", { name: "Destination warehouse", exact: true })
           .selectOption(destinationWarehouseId)
-        await transferDialog.getByRole("combobox", { name: "Item", exact: true }).selectOption(
-          itemId,
-        )
+        await transferDialog
+          .getByRole("combobox", { name: "Item", exact: true })
+          .selectOption(itemId)
         await transferDialog.getByRole("textbox", { name: "Quantity", exact: true }).fill("2")
         await transferDialog.getByRole("button", { name: "Create transfer", exact: true }).click()
         await transferDialog.waitFor({ state: "hidden" })
@@ -370,13 +385,15 @@ it.effect(
 
         await page.getByRole("button", { name: "Release reservation", exact: true }).first().click()
         const releaseDialog = page.getByRole("dialog", { name: "Release reservation" })
-        await releaseDialog.getByRole("button", { name: "Release reservation", exact: true })
+        await releaseDialog
+          .getByRole("button", { name: "Release reservation", exact: true })
           .click()
         await releaseDialog.waitFor({ state: "hidden" })
 
         await page.getByRole("button", { name: "Fulfill reservation", exact: true }).first().click()
         const fulfillDialog = page.getByRole("dialog", { name: "Fulfill reservation" })
-        await fulfillDialog.getByRole("button", { name: "Fulfill reservation", exact: true })
+        await fulfillDialog
+          .getByRole("button", { name: "Fulfill reservation", exact: true })
           .click()
         await fulfillDialog.waitFor({ state: "hidden" })
 
@@ -393,8 +410,8 @@ it.effect(
           requests.some((request) => request.path === `/inventory/transfers/${transferId}/confirm`),
         )
         assert.isTrue(
-          requests.some((request) =>
-            request.path === `/inventory/transfers/${transferId}/complete`
+          requests.some(
+            (request) => request.path === `/inventory/transfers/${transferId}/complete`,
           ),
         )
         assert.deepEqual(errors, [])

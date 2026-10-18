@@ -50,10 +50,7 @@ export interface IssuedSession {
 export interface AuthService {
   readonly findTenantBySlug: (
     slug: string,
-  ) => Effect.Effect<
-    Tenant | undefined,
-    import("../../../foundation/mod.ts").DatabaseFailure
-  >
+  ) => Effect.Effect<Tenant | undefined, import("../../../foundation/mod.ts").DatabaseFailure>
   readonly createTenant: (
     input: unknown,
   ) => Effect.Effect<

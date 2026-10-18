@@ -45,9 +45,7 @@ export const CommunicationProcessingResult = Schema.Struct({
   attempt: Schema.NullOr(DeliveryAttempt),
   receipt: Schema.NullOr(DeliveryReceipt),
 })
-export type CommunicationProcessingResult = Schema.Schema.Type<
-  typeof CommunicationProcessingResult
->
+export type CommunicationProcessingResult = Schema.Schema.Type<typeof CommunicationProcessingResult>
 
 export interface CommunicationConfiguration {
   readonly sender: SenderIdentity

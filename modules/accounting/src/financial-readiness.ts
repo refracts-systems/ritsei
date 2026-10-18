@@ -261,20 +261,15 @@ const PositiveMinorAmount = Schema.String.check(
     { expected: "a positive unsigned 128-bit minor amount" },
   ),
 )
-const Count = Schema.Int.check(
-  Schema.isBetween({ minimum: 0, maximum: 0x7fffffff }),
-)
-const PositiveInt = Schema.Int.check(
-  Schema.isBetween({ minimum: 1, maximum: 0x7fffffff }),
-)
-const PositiveSmallInt = Schema.Int.check(
-  Schema.isBetween({ minimum: 1, maximum: 0x7fff }),
-)
+const Count = Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: 0x7fffffff }))
+const PositiveInt = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 0x7fffffff }))
+const PositiveSmallInt = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 0x7fff }))
 const InstantString = EventEnvelope.fields.occurredAt
-const TrimmedNonEmptyString = Schema.String.check(Schema.makeFilter(
-  (value) => /\S/.test(value) && value === value.trim(),
-  { expected: "a trimmed nonblank string" },
-))
+const TrimmedNonEmptyString = Schema.String.check(
+  Schema.makeFilter((value) => /\S/.test(value) && value === value.trim(), {
+    expected: "a trimmed nonblank string",
+  }),
+)
 
 export const FinancialVerificationEvidence = Schema.Struct({
   tenantId: Uuid,
@@ -311,10 +306,12 @@ export const FinancialVerificationEvidence = Schema.Struct({
   mismatchCount: Count,
   startedAt: InstantString,
   completedAt: InstantString,
-}).check(Schema.makeFilter(
-  (evidence) => Date.parse(evidence.completedAt) >= Date.parse(evidence.startedAt),
-  { expected: "completedAt at or after startedAt" },
-))
+}).check(
+  Schema.makeFilter(
+    (evidence) => Date.parse(evidence.completedAt) >= Date.parse(evidence.startedAt),
+    { expected: "completedAt at or after startedAt" },
+  ),
+)
 export type FinancialVerificationEvidence = Schema.Schema.Type<typeof FinancialVerificationEvidence>
 
 const evidenceKeys = [
@@ -351,9 +348,7 @@ export const canonicalizeFinancialVerificationEvidence = (
   evidence: FinancialVerificationEvidence,
 ) => JSON.stringify(evidenceKeys.map((key) => [key, evidence[key]]))
 
-export const hashFinancialVerificationEvidence = (
-  evidence: FinancialVerificationEvidence,
-) =>
+export const hashFinancialVerificationEvidence = (evidence: FinancialVerificationEvidence) =>
   Effect.promise(async () => {
     const digest = new Uint8Array(
       await crypto.subtle.digest(
@@ -379,7 +374,7 @@ const amountPattern = /^(0|[1-9]\d*)$/
 const openingKey = (entry: OpeningBalance) =>
   `${entry.legalEntityId}:${entry.accountId}:${entry.currency.toUpperCase()}:${entry.mappingVersion}`
 
-const amount = (value: string) => amountPattern.test(value) ? BigInt(value) : undefined
+const amount = (value: string) => (amountPattern.test(value) ? BigInt(value) : undefined)
 
 const sum = (entries: readonly OpeningBalance[], field: "debitsMinor" | "creditsMinor") =>
   entries.reduce((total, entry) => total + (amount(entry[field]) ?? 0n), 0n)
@@ -411,10 +406,11 @@ export const FinancialTransferFact = Schema.Struct({
   amountMinor: PositiveMinorAmount,
   currency: Schema.String.check(Schema.isPattern(/^[A-Z]{3}$/)),
   mappingVersion: PositiveInt,
-}).check(Schema.makeFilter(
-  (transfer) => transfer.debitAccountId !== transfer.creditAccountId,
-  { expected: "financial transfer accounts must be distinct" },
-))
+}).check(
+  Schema.makeFilter((transfer) => transfer.debitAccountId !== transfer.creditAccountId, {
+    expected: "financial transfer accounts must be distinct",
+  }),
+)
 export type FinancialTransferFact = Schema.Schema.Type<typeof FinancialTransferFact>
 
 export const FinancialBalanceFact = Schema.Struct({
@@ -465,7 +461,10 @@ const sortFacts = <A>(facts: readonly A[], key: (fact: A) => string) =>
 const duplicateFactKeys = <A>(facts: readonly A[], key: (fact: A) => string) => {
   const counts = new Map<string, number>()
   for (const fact of facts) counts.set(key(fact), (counts.get(key(fact)) ?? 0) + 1)
-  return [...counts].filter(([, count]) => count > 1).map(([factKey]) => factKey).sort()
+  return [...counts]
+    .filter(([, count]) => count > 1)
+    .map(([factKey]) => factKey)
+    .sort()
 }
 
 const appendOperationMismatches = (
@@ -610,9 +609,8 @@ const hashJson = (value: unknown) =>
 const canonicalizeFinancialFactSnapshot = (snapshot: FinancialFactSnapshot) => ({
   operations: sortFacts(snapshot.operations, (fact) => fact.operationId),
   transfers: sortFacts(snapshot.transfers, (fact) => factKey(fact.operationId, fact.position)),
-  balances: sortFacts(
-    snapshot.balances,
-    (fact) => factKey(fact.accountId, fact.currency, fact.mappingVersion),
+  balances: sortFacts(snapshot.balances, (fact) =>
+    factKey(fact.accountId, fact.currency, fact.mappingVersion),
   ),
   projections: sortFacts(snapshot.projections, (fact) => fact.operationId),
 })
@@ -643,14 +641,12 @@ const sumBalance = (
   field: "debitsPostedMinor" | "creditsPostedMinor",
 ) => balances.reduce((sum, balance) => sum + BigInt(balance[field]), 0n).toString()
 
-export const buildFinancialVerificationEvidence = (
-  input: FinancialVerificationEvidenceSource,
-) =>
-  Effect.gen(function*() {
+export const buildFinancialVerificationEvidence = (input: FinancialVerificationEvidenceSource) =>
+  Effect.gen(function* () {
     const comparison = compareFinancialFactSnapshots(input.source, input.target)
     const canonicalSource = canonicalizeFinancialFactSnapshot(input.source)
-    const [operationSetHash, accountBalanceHash, transferSetHash, projectionHash] = yield* Effect
-      .all([
+    const [operationSetHash, accountBalanceHash, transferSetHash, projectionHash] =
+      yield* Effect.all([
         hashJson(canonicalSource.operations),
         hashJson(canonicalSource.balances),
         hashJson(canonicalSource.transfers),
@@ -725,10 +721,10 @@ export const verifyOpeningBalances = (
       return sourceEntry[field] !== targetEntry[field]
     })
     if (
-      amount(sourceEntry.debitsMinor) === undefined
-      || amount(sourceEntry.creditsMinor) === undefined
-      || amount(targetEntry.debitsMinor) === undefined
-      || amount(targetEntry.creditsMinor) === undefined
+      amount(sourceEntry.debitsMinor) === undefined ||
+      amount(sourceEntry.creditsMinor) === undefined ||
+      amount(targetEntry.debitsMinor) === undefined ||
+      amount(targetEntry.creditsMinor) === undefined
     ) {
       mismatches.push({ key, kind: "invalid_amount", source: sourceEntry, target: targetEntry })
     } else if (fields.length > 0) {
@@ -747,8 +743,10 @@ export const verifyOpeningBalances = (
   const sourceCreditMinor = sum(source, "creditsMinor").toString()
   const targetCreditMinor = sum(target, "creditsMinor").toString()
   return {
-    ok: mismatches.length === 0 && sourceDebitMinor === targetDebitMinor
-      && sourceCreditMinor === targetCreditMinor,
+    ok:
+      mismatches.length === 0 &&
+      sourceDebitMinor === targetDebitMinor &&
+      sourceCreditMinor === targetCreditMinor,
     sourceCount: source.length,
     targetCount: target.length,
     sourceDebitMinor,

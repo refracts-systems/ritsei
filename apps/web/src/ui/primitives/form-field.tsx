@@ -26,12 +26,12 @@ export function FormField(props: FormFieldProps) {
   const descriptionId = `${id}-help`
   const errorId = `${id}-error`
   const describedBy = () =>
-    [props.helperText && descriptionId, props.error && errorId].filter(Boolean).join(" ")
-    || undefined
+    [props.helperText && descriptionId, props.error && errorId].filter(Boolean).join(" ") ||
+    undefined
   const controlProps = () => ({
     id,
     "aria-describedby": describedBy(),
-    "aria-invalid": props.error ? "true" as const : undefined,
+    "aria-invalid": props.error ? ("true" as const) : undefined,
   })
   return (
     <div class={styles.root}>
@@ -40,8 +40,16 @@ export function FormField(props: FormFieldProps) {
         {props.required && <span aria-hidden="true">*</span>}
       </label>
       {typeof children === "function" ? children(controlProps()) : children}
-      {props.helperText && <div class={styles.help} id={descriptionId}>{props.helperText}</div>}
-      {props.error && <div class={styles.error} id={errorId} role="alert">{props.error}</div>}
+      {props.helperText && (
+        <div class={styles.help} id={descriptionId}>
+          {props.helperText}
+        </div>
+      )}
+      {props.error && (
+        <div class={styles.error} id={errorId} role="alert">
+          {props.error}
+        </div>
+      )}
     </div>
   )
 }

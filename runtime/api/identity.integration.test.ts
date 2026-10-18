@@ -47,15 +47,13 @@ const userAccounts: UserAccountServiceShape = {
   remove: unused,
 }
 
-const TestHttpServices = Layer.mergeAll(
-  Path.layer,
-  Etag.layerWeak,
-  HttpPlatform.layer,
-).pipe(Layer.provideMerge(FileSystem.layerNoop({})))
+const TestHttpServices = Layer.mergeAll(Path.layer, Etag.layerWeak, HttpPlatform.layer).pipe(
+  Layer.provideMerge(FileSystem.layerNoop({})),
+)
 
 it.layer(TestHttpServices)("identity tenant API authorization", (it) => {
   it.effect("allows, denies, and tenant-scopes account reads and updates", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       let allowedCapability: CapabilityType | null = IdentityCapabilities.userAccountRead
       const observed: CapabilityType[] = []
       const authorization: AuthorizationServiceShape = {
@@ -67,17 +65,17 @@ it.layer(TestHttpServices)("identity tenant API authorization", (it) => {
           observed.push(request.capability)
           return request.tenantId === tenantId && request.capability === allowedCapability
             ? Effect.succeed({
-              allowed: true as const,
-              tenantId: request.tenantId,
-              capability: request.capability,
-              grant: "membership" as const,
-            })
-            : Effect.fail(
-              new AuthorizationDenied({
+                allowed: true as const,
                 tenantId: request.tenantId,
                 capability: request.capability,
-              }),
-            )
+                grant: "membership" as const,
+              })
+            : Effect.fail(
+                new AuthorizationDenied({
+                  tenantId: request.tenantId,
+                  capability: request.capability,
+                }),
+              )
         },
         getMember: () =>
           Effect.succeed({ userAccountId: accountId, tenantId, status: "active" as const }),
@@ -95,9 +93,8 @@ it.layer(TestHttpServices)("identity tenant API authorization", (it) => {
       const bearer = Layer.succeed(BearerAuth, {
         bearer: (effect) => Effect.provideService(effect, CurrentPrincipal, principal),
       })
-      const bearerClient = HttpApiMiddleware.layerClient(
-        BearerAuth,
-        ({ request, next }) => next(HttpClientRequest.bearerToken(request, "test-token")),
+      const bearerClient = HttpApiMiddleware.layerClient(BearerAuth, ({ request, next }) =>
+        next(HttpClientRequest.bearerToken(request, "test-token")),
       )
       const handlers = UserAccountHandlers.pipe(
         Layer.provide(bearer),
@@ -128,18 +125,22 @@ it.layer(TestHttpServices)("identity tenant API authorization", (it) => {
       assert.deepStrictEqual(updated, account(updatedEmail))
 
       allowedCapability = null
-      const denied = yield* Effect.flip(client.UserAccounts.update({
-        params: { id: accountId },
-        headers: { "x-tenant-id": tenantId },
-        payload: { email: updatedEmail },
-      }))
+      const denied = yield* Effect.flip(
+        client.UserAccounts.update({
+          params: { id: accountId },
+          headers: { "x-tenant-id": tenantId },
+          payload: { email: updatedEmail },
+        }),
+      )
       assert.strictEqual(denied._tag, "ApiForbidden")
 
       allowedCapability = IdentityCapabilities.userAccountRead
-      const wrongTenant = yield* Effect.flip(client.UserAccounts.get({
-        params: { id: accountId },
-        headers: { "x-tenant-id": otherTenantId },
-      }))
+      const wrongTenant = yield* Effect.flip(
+        client.UserAccounts.get({
+          params: { id: accountId },
+          headers: { "x-tenant-id": otherTenantId },
+        }),
+      )
       assert.strictEqual(wrongTenant._tag, "ApiForbidden")
       assert.deepStrictEqual(observed, [
         IdentityCapabilities.userAccountRead,
@@ -148,5 +149,6 @@ it.layer(TestHttpServices)("identity tenant API authorization", (it) => {
         IdentityCapabilities.userAccountUpdate,
         IdentityCapabilities.userAccountRead,
       ])
-    }))
+    }),
+  )
 })

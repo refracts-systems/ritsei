@@ -103,17 +103,15 @@ export const makeExternalProcessActionMapping = (
   input,
 })
 
-export const simulateProcessExternalAction = (
-  input: {
-    readonly tenantId: string
-    readonly action: ExternalActionCatalogEntry
-    readonly input: unknown
-  },
-): Effect.Effect<
+export const simulateProcessExternalAction = (input: {
+  readonly tenantId: string
+  readonly action: ExternalActionCatalogEntry
+  readonly input: unknown
+}): Effect.Effect<
   ProcessExternalSimulationResult,
   ExternalActionNotAllowlisted | ExternalPayloadInvalid
 > =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const catalog = toProcessExternalCatalogEntry(input.action)
     if (catalog === undefined || catalog.kind !== "ExternalAction") {
       return yield* Effect.fail(

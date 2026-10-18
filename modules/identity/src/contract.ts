@@ -160,6 +160,4 @@ export interface UserAccountService {
   >
 }
 
-export const UserAccountService = Context.Service<UserAccountService>(
-  "RITSEI/UserAccountService",
-)
+export const UserAccountService = Context.Service<UserAccountService>("RITSEI/UserAccountService")

@@ -112,7 +112,7 @@ const assertPayloadFields = (
 
 describe("catalog compatibility", () => {
   it.effect("keeps identities, capability metadata, and schemas compatible", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const identities = [...actions, ...events].map((entry) => `${entry.id}@${entry.version}`)
       assert.strictEqual(new Set(identities).size, identities.length)
 
@@ -292,11 +292,13 @@ describe("catalog compatibility", () => {
         status: "confirmed",
         confirmedAt: "2026-08-12T00:00:00.000Z",
         total: "10.00",
-        lines: [{
-          itemId: "00000000-0000-4000-8000-000000000041",
-          quantity: "1",
-          unitPrice: "10.00",
-        }],
+        lines: [
+          {
+            itemId: "00000000-0000-4000-8000-000000000041",
+            quantity: "1",
+            unitPrice: "10.00",
+          },
+        ],
       })
 
       yield* Schema.decodeUnknownEffect(InventoryStockCorrectedEvent.payloadSchema)({
@@ -334,5 +336,6 @@ describe("catalog compatibility", () => {
         orderId: "00000000-0000-4000-8000-000000000006",
         total: "10.00",
       })
-    }))
+    }),
+  )
 })

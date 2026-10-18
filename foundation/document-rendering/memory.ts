@@ -19,13 +19,15 @@ const artifactKey = (tenantId: string, renderFingerprint: string) =>
   `${tenantId}:${renderFingerprint}`
 
 const artifactIdOf = (input: unknown) =>
-  typeof input === "object" && input !== null && "artifactId" in input
-    && typeof input.artifactId === "string"
+  typeof input === "object" &&
+  input !== null &&
+  "artifactId" in input &&
+  typeof input.artifactId === "string"
     ? input.artifactId
     : "unknown"
 
 const decodeArtifactWrite = (input: unknown) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     if (typeof input !== "object" || input === null) {
       return yield* Effect.fail(
         new DocumentArtifactInvalidContent({
@@ -54,12 +56,13 @@ const persistArtifact = (
   generations: Map<string, bigint>,
   write: DocumentArtifactWrite,
 ) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const key = artifactKey(write.metadata.tenantId, write.metadata.renderFingerprint)
     const existing = artifacts.get(key)
     const existingFingerprint = artifactIds.get(write.metadata.artifactId)
     if (
-      existingFingerprint !== undefined && existingFingerprint !== write.metadata.renderFingerprint
+      existingFingerprint !== undefined &&
+      existingFingerprint !== write.metadata.renderFingerprint
     ) {
       return yield* Effect.fail(
         new DocumentArtifactConflict({
@@ -71,8 +74,8 @@ const persistArtifact = (
     }
     if (existing !== undefined) {
       if (
-        existing.metadata.contentHash !== write.metadata.contentHash
-        || existing.metadata.byteLength !== write.metadata.byteLength
+        existing.metadata.contentHash !== write.metadata.contentHash ||
+        existing.metadata.byteLength !== write.metadata.byteLength
       ) {
         return yield* Effect.fail(
           new DocumentArtifactConflict({
@@ -101,12 +104,12 @@ export const makeMemoryDocumentArtifactStore = (): DocumentArtifactStore => {
   const artifactIds = new Map<string, string>()
   const generations = new Map<string, bigint>()
 
-  const put = Effect.fn("DocumentArtifactStore.memory.put")(function*(input: unknown) {
+  const put = Effect.fn("DocumentArtifactStore.memory.put")(function* (input: unknown) {
     const write = yield* decodeArtifactWrite(input)
     const contentHash = yield* sha256Hex(write.bytes)
     if (
-      contentHash !== write.metadata.contentHash
-      || write.bytes.byteLength !== write.metadata.byteLength
+      contentHash !== write.metadata.contentHash ||
+      write.bytes.byteLength !== write.metadata.byteLength
     ) {
       return yield* Effect.fail(
         new DocumentArtifactInvalidContent({
@@ -129,7 +132,7 @@ export const makeMemoryDocumentArtifactStore = (): DocumentArtifactStore => {
     return yield* persistArtifact(artifacts, artifactIds, generations, write)
   })
 
-  const get = Effect.fn("DocumentArtifactStore.memory.get")(function*(input: unknown) {
+  const get = Effect.fn("DocumentArtifactStore.memory.get")(function* (input: unknown) {
     const decoded = yield* Schema.decodeUnknownEffect(DocumentArtifactLookup)(input)
     const found = artifacts.get(artifactKey(decoded.tenantId, decoded.renderFingerprint))
     return found === undefined

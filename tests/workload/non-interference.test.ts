@@ -41,7 +41,7 @@ const isRejected = (value: unknown): value is WorkloadAdmissionRejected =>
 
 describe("workload admission", () => {
   it.effect("keeps query and async saturation out of the command reserve", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const admission = makeWorkloadAdmission({ commandReserve: 1, competingHardLimit: 1 })
       const commandLease = yield* admission.acquire({ metadata: command })
       const queryLease = yield* admission.acquire({ metadata: query })
@@ -72,10 +72,11 @@ describe("workload admission", () => {
         commandReserve: 1,
         competingCapacity: 1,
       })
-    }))
+    }),
+  )
 
   it.effect("rejects costs above each plane's hard ceiling", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const admission = makeWorkloadAdmission({ commandReserve: 2, competingHardLimit: 2 })
       const oversizedCommand = yield* Effect.flip(
         admission.acquire({ metadata: { ...command, estimatedCost: 3 } }),
@@ -88,7 +89,8 @@ describe("workload admission", () => {
       if (!isRejected(oversizedCommand) || !isRejected(oversizedQuery)) return
       assert.strictEqual(oversizedCommand.reason, "cost_above_hard_limit")
       assert.strictEqual(oversizedQuery.reason, "cost_above_hard_limit")
-    }))
+    }),
+  )
 
   it("rejects an adaptive limit above the hard limit", () => {
     assert.throws(

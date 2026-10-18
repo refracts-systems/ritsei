@@ -52,9 +52,7 @@ const visualIntent = projectVisualIntent({
     ],
   },
   motion: "active",
-  markers: [
-    { id: "receiving", label: "Receiving: 2 orders", x: 68, y: 58, tone: "info" },
-  ],
+  markers: [{ id: "receiving", label: "Receiving: 2 orders", x: 68, y: 58, tone: "info" }],
 })
 
 function ComponentsStory() {
@@ -76,17 +74,24 @@ function ComponentsStory() {
             <Input aria-label="Search" placeholder="Search records" />
             <Select
               aria-label="Status"
-              options={[{ value: "draft", label: "Draft" }, {
-                value: "approved",
-                label: "Approved",
-              }]}
+              options={[
+                { value: "draft", label: "Draft" },
+                {
+                  value: "approved",
+                  label: "Approved",
+                },
+              ]}
               placeholder="Status"
             />
             <Dialog
               title="Confirm action"
               description="This dialog owns the accessible modal boundary."
               trigger="Open dialog"
-              footer={<Button variant="secondary" type="button">Cancel</Button>}
+              footer={
+                <Button variant="secondary" type="button">
+                  Cancel
+                </Button>
+              }
             >
               <p>Dialog content is supplied by the caller.</p>
             </Dialog>
@@ -113,10 +118,13 @@ function ComponentsStory() {
             <PartyField
               label="Supplier"
               name="supplier"
-              options={[{ value: "aster", label: "Aster Supplies" }, {
-                value: "northwind",
-                label: "Northwind Parts",
-              }]}
+              options={[
+                { value: "aster", label: "Aster Supplies" },
+                {
+                  value: "northwind",
+                  label: "Northwind Parts",
+                },
+              ]}
               placeholder="Choose supplier"
             />
             <FieldArray
@@ -125,7 +133,9 @@ function ComponentsStory() {
               createItem={() => "New field"}
               renderItem={(item) => <Input aria-label="Repeatable field" value={item} />}
             />
-            <Button type="submit" variant="primary">Save</Button>
+            <Button type="submit" variant="primary">
+              Save
+            </Button>
           </Form>
         </section>
 
@@ -156,16 +166,30 @@ function ComponentsStory() {
           items={rows}
           itemHeight={48}
           getItemId={(row) => row.id}
-          renderItem={(row) => <span>{row.id} · {row.supplier}</span>}
+          renderItem={(row) => (
+            <span>
+              {row.id} · {row.supplier}
+            </span>
+          )}
         />
 
-        <FilterBar actions={<Button type="submit" variant="primary">Apply</Button>}>
+        <FilterBar
+          actions={
+            <Button type="submit" variant="primary">
+              Apply
+            </Button>
+          }
+        >
           <Input name="query" aria-label="Query" placeholder="Filter records" />
         </FilterBar>
 
         <CommandSurface label="Record commands">
-          <Button type="button" variant="primary">Create</Button>
-          <Button type="button" variant="secondary">Refresh</Button>
+          <Button type="button" variant="primary">
+            Create
+          </Button>
+          <Button type="button" variant="secondary">
+            Refresh
+          </Button>
         </CommandSurface>
 
         <MasterDetail
@@ -181,7 +205,11 @@ function ComponentsStory() {
         <EntityWorkspace
           title="Purchase order"
           description={<p>Review the current document and its related information.</p>}
-          headerActions={<Button type="button" variant="secondary">Edit</Button>}
+          headerActions={
+            <Button type="button" variant="secondary">
+              Edit
+            </Button>
+          }
           toolbar={
             <FilterBar>
               <Input aria-label="Workspace filter" placeholder="Filter lines" />
@@ -200,7 +228,11 @@ function ComponentsStory() {
           title="Receiving queue"
           description={<p>Work items requiring operator attention.</p>}
           status={<span>All systems operational</span>}
-          actions={<Button type="button" variant="primary">Refresh</Button>}
+          actions={
+            <Button type="button" variant="primary">
+              Refresh
+            </Button>
+          }
           secondary={<p>Queue policy and recent activity.</p>}
         >
           <p>Two receipts are ready for review.</p>
@@ -209,7 +241,11 @@ function ComponentsStory() {
         <Settings
           title="Workspace settings"
           description={<p>Configure the current operator workspace.</p>}
-          actions={<Button type="button" variant="primary">Save settings</Button>}
+          actions={
+            <Button type="button" variant="primary">
+              Save settings
+            </Button>
+          }
         >
           <FormField label="Workspace name">
             <Input name="workspace" />
@@ -234,14 +270,22 @@ function ComponentsStory() {
           title="Approval composition"
           description={<p>Content and actions are caller-owned slots.</p>}
           content={<p>Approval content.</p>}
-          actions={<Button type="button" variant="primary">Continue</Button>}
+          actions={
+            <Button type="button" variant="primary">
+              Continue
+            </Button>
+          }
         />
 
         <BulkOperation
           title="Bulk archive"
           description={<p>Review selected records before submitting the command.</p>}
           selectedCount={2}
-          actions={<Button type="button" variant="danger">Archive selected</Button>}
+          actions={
+            <Button type="button" variant="danger">
+              Archive selected
+            </Button>
+          }
         >
           <p>Two records selected.</p>
         </BulkOperation>
@@ -249,8 +293,12 @@ function ComponentsStory() {
         <ExceptionInvestigation
           title="Investigate exception"
           description={<p>Trace the failed operation and choose a safe next action.</p>}
-          actions={<Button type="button" variant="secondary">Open log</Button>}
-          evidence={<pre>{"{\"status\":\"timeout\"}"}</pre>}
+          actions={
+            <Button type="button" variant="secondary">
+              Open log
+            </Button>
+          }
+          evidence={<pre>{'{"status":"timeout"}'}</pre>}
         >
           <p>The supplier lookup timed out.</p>
         </ExceptionInvestigation>

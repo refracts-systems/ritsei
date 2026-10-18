@@ -34,7 +34,7 @@ const extractBundleCode = (result: unknown): string => {
 
   return outputs
     .flatMap(({ output }) => output)
-    .flatMap((asset) => asset.type === "chunk" && asset.code !== undefined ? [asset.code] : [])
+    .flatMap((asset) => (asset.type === "chunk" && asset.code !== undefined ? [asset.code] : []))
     .join("\n")
 }
 

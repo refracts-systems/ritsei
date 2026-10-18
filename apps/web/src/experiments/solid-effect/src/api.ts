@@ -188,27 +188,22 @@ export const SearchConfigLive = Layer.succeed(SearchConfig, {
  *    supersedes the flight and `runEffect` interrupts the fiber.
  */
 export function searchPackages(query: string) {
-  const attempt = Effect.gen(function*() {
+  const attempt = Effect.gen(function* () {
     const { flakiness, baseLatencyMs } = yield* SearchConfig
     yield* Effect.sleep(baseLatencyMs + Math.random() * 550)
     if (Math.random() < flakiness) {
       yield* Effect.sync(() =>
-        log(
-          "retry",
-          `search "${query}" hit a transient error — retrying with backoff`,
-        )
+        log("retry", `search "${query}" hit a transient error — retrying with backoff`),
       )
       return yield* new TransientNetworkError({ query })
     }
     const q = query.toLowerCase()
     return REGISTRY.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q)
-        || p.description.toLowerCase().includes(q),
+      (p) => p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q),
     ).sort((a, b) => b.downloads - a.downloads)
   })
 
-  return Effect.gen(function*() {
+  return Effect.gen(function* () {
     yield* Effect.sync(() => log("start", `search "${query}" — fiber started`))
     return yield* attempt.pipe(
       Effect.retry({
@@ -220,18 +215,15 @@ export function searchPackages(query: string) {
   }).pipe(
     Effect.timeout(4000),
     Effect.tap((results) =>
-      Effect.sync(() => log("success", `search "${query}" → ${results.length} results`))
+      Effect.sync(() => log("success", `search "${query}" → ${results.length} results`)),
     ),
     Effect.tapError((e) =>
-      Effect.sync(() => log("error", `search "${query}" failed for good: ${e._tag}`))
+      Effect.sync(() => log("error", `search "${query}" failed for good: ${e._tag}`)),
     ),
     Effect.onInterrupt(() =>
       Effect.sync(() =>
-        log(
-          "interrupt",
-          `search "${query}" interrupted — fiber + pending retries torn down`,
-        )
-      )
+        log("interrupt", `search "${query}" interrupted — fiber + pending retries torn down`),
+      ),
     ),
   )
 }
@@ -273,14 +265,12 @@ let ORDERS: Order[] = []
 let seq = 0
 
 export function fetchOrders(): Promise<Order[]> {
-  return Effect.runPromise(
-    Effect.sleep(300).pipe(Effect.map(() => ORDERS.map((o) => ({ ...o })))),
-  )
+  return Effect.runPromise(Effect.sleep(300).pipe(Effect.map(() => ORDERS.map((o) => ({ ...o })))))
 }
 
 /** Step 1 — hold inventory. ~900ms. */
 export function reserveInventory(items: CartItem[]) {
-  return Effect.gen(function*() {
+  return Effect.gen(function* () {
     yield* Effect.sync(() => log("start", "reserveInventory — placing hold"))
     yield* Effect.sleep(900)
     const reservation: Reservation = { id: `rsv_${++seq}`, items }
@@ -288,20 +278,17 @@ export function reserveInventory(items: CartItem[]) {
     return reservation
   }).pipe(
     Effect.onInterrupt(() =>
-      Effect.sync(() => log("interrupt", "reserveInventory interrupted — no hold placed"))
+      Effect.sync(() => log("interrupt", "reserveInventory interrupted — no hold placed")),
     ),
   )
 }
 
 /** Compensation for step 1 — release a hold that was successfully placed. */
 export function releaseReservation(reservation: Reservation) {
-  return Effect.gen(function*() {
+  return Effect.gen(function* () {
     yield* Effect.sleep(400)
     yield* Effect.sync(() =>
-      log(
-        "compensate",
-        `releaseReservation → ${reservation.id} released (saga compensation)`,
-      )
+      log("compensate", `releaseReservation → ${reservation.id} released (saga compensation)`),
     )
   })
 }
@@ -309,13 +296,13 @@ export function releaseReservation(reservation: Reservation) {
 /** Compensation for step 2 — refund a charge that fully settled (the
  * mid-flight case is covered by chargeCard's own onInterrupt finalizer). */
 export function refundCharge(charge: Charge) {
-  return Effect.gen(function*() {
+  return Effect.gen(function* () {
     yield* Effect.sleep(400)
     yield* Effect.sync(() =>
       log(
         "compensate",
         `refundCharge → ${charge.id} refunded $${charge.amount.toFixed(2)} (saga compensation)`,
-      )
+      ),
     )
   })
 }
@@ -328,7 +315,7 @@ export function refundCharge(charge: Charge) {
  * via a finalizer on the program itself.
  */
 export function chargeCard(amount: number, declineCard: boolean) {
-  const attempt = Effect.gen(function*() {
+  const attempt = Effect.gen(function* () {
     yield* Effect.sleep(2600)
     if (declineCard) return yield* new CardDeclinedError({ amount })
     const charge: Charge = { id: `ch_${++seq}`, amount }
@@ -336,28 +323,24 @@ export function chargeCard(amount: number, declineCard: boolean) {
     return charge
   })
 
-  return Effect.gen(function*() {
+  return Effect.gen(function* () {
     yield* Effect.sync(() => log("start", `chargeCard — authorizing $${amount.toFixed(2)}`))
     return yield* attempt
   }).pipe(
     Effect.tapError((e) =>
-      Effect.sync(() => log("error", `chargeCard failed: ${e._tag} ($${e.amount.toFixed(2)})`))
+      Effect.sync(() => log("error", `chargeCard failed: ${e._tag} ($${e.amount.toFixed(2)})`)),
     ),
     Effect.onInterrupt(() =>
-      Effect.sync(() => log("compensate", "chargeCard interrupted — voiding card authorization"))
+      Effect.sync(() => log("compensate", "chargeCard interrupted — voiding card authorization")),
     ),
   )
 }
 
 /** Step 3 — finalize the order. ~700ms. */
-export function createOrder(
-  items: CartItem[],
-  reservation: Reservation,
-  charge: Charge,
-) {
-  return Effect.gen(function*() {
+export function createOrder(items: CartItem[], reservation: Reservation, charge: Charge) {
+  return Effect.gen(function* () {
     yield* Effect.sync(() =>
-      log("start", `createOrder — committing ${reservation.id} + ${charge.id}`)
+      log("start", `createOrder — committing ${reservation.id} + ${charge.id}`),
     )
     yield* Effect.sleep(700)
     const order: Order = {
@@ -371,7 +354,7 @@ export function createOrder(
     return order
   }).pipe(
     Effect.onInterrupt(() =>
-      Effect.sync(() => log("interrupt", "createOrder interrupted before commit"))
+      Effect.sync(() => log("interrupt", "createOrder interrupted before commit")),
     ),
   )
 }

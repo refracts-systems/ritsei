@@ -34,7 +34,7 @@ function MotionDemo() {
       </div>
       <div
         class={motionStyles.enterSubtle}
-        ref={(element) => node = element}
+        ref={(element) => (node = element)}
         style="width:48px;height:48px;border-radius:8px;background-color:var(--colors-action)"
       />
     </div>
@@ -64,9 +64,7 @@ function FoundationsStory() {
         <header class={layout.stack}>
           <p class={layout.notice}>RITSEI shared UI</p>
           <h1>Foundation recipes</h1>
-          <p>
-            Semantic controls and surfaces stay usable in light and dark themes.
-          </p>
+          <p>Semantic controls and surfaces stay usable in light and dark themes.</p>
         </header>
 
         <section class={surface()} aria-labelledby="typography-heading">

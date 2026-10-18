@@ -52,13 +52,15 @@ const withBootstrap = <A, E>(
   const authorizationLayer = makeAuthorizationTestLayer()
   const messagingLayer = makeMessagingTestLayer()
   const accountingLayer = makeAccountingTestLayer().pipe(
-    Layer.provide(Layer.mergeAll(
-      authorizationLayer,
-      messagingLayer,
-      Layer.succeed(SalesService, {
-        getConfirmedOrderTotal: () => Effect.succeed("0.00"),
-      } as unknown as SalesService),
-    )),
+    Layer.provide(
+      Layer.mergeAll(
+        authorizationLayer,
+        messagingLayer,
+        Layer.succeed(SalesService, {
+          getConfirmedOrderTotal: () => Effect.succeed("0.00"),
+        } as unknown as SalesService),
+      ),
+    ),
   )
   const businessLayers = Layer.mergeAll(
     makePartyTestLayer(),
@@ -72,115 +74,126 @@ const withBootstrap = <A, E>(
 }
 
 it.effect("bootstraps the tenant scope vertical slice", () =>
-  withBootstrap(Effect.gen(function*() {
-    const authorization = yield* AuthorizationService
-    const result = yield* bootstrapTenant(input)
+  withBootstrap(
+    Effect.gen(function* () {
+      const authorization = yield* AuthorizationService
+      const result = yield* bootstrapTenant(input)
 
-    assert.strictEqual(result.tenant.slug, "acme")
-    assert.strictEqual(result.tenant.timezone, "Asia/Jakarta")
-    assert.strictEqual(result.organization.kind, "organization")
-    assert.strictEqual(result.legalEntity.organizationId, result.organization.id)
-    assert.strictEqual(result.branch.legalEntityId, result.legalEntity.id)
-    assert.strictEqual(result.branch.localTaxRegistration, "TAX-JKT-001")
-    assert.strictEqual(result.branch.dedicatedJournalCode, "JKT-OPS")
-    assert.strictEqual(result.accountingConfiguration.legalEntityId, result.legalEntity.id)
-    assert.strictEqual(result.accountingConfiguration.baseCurrency, "USD")
-    assert.strictEqual(result.warehouse.legalEntityId, result.legalEntity.id)
-    assert.strictEqual(result.warehouse.primaryBranchId, result.branch.id)
-    assert.isTrue(
-      (yield* authorization.authorize({
-        principal,
-        tenantId: result.tenant.id,
-        capability: PartyCapabilities.partyRead,
-      })).allowed,
-    )
+      assert.strictEqual(result.tenant.slug, "acme")
+      assert.strictEqual(result.tenant.timezone, "Asia/Jakarta")
+      assert.strictEqual(result.organization.kind, "organization")
+      assert.strictEqual(result.legalEntity.organizationId, result.organization.id)
+      assert.strictEqual(result.branch.legalEntityId, result.legalEntity.id)
+      assert.strictEqual(result.branch.localTaxRegistration, "TAX-JKT-001")
+      assert.strictEqual(result.branch.dedicatedJournalCode, "JKT-OPS")
+      assert.strictEqual(result.accountingConfiguration.legalEntityId, result.legalEntity.id)
+      assert.strictEqual(result.accountingConfiguration.baseCurrency, "USD")
+      assert.strictEqual(result.warehouse.legalEntityId, result.legalEntity.id)
+      assert.strictEqual(result.warehouse.primaryBranchId, result.branch.id)
+      assert.isTrue(
+        (yield* authorization.authorize({
+          principal,
+          tenantId: result.tenant.id,
+          capability: PartyCapabilities.partyRead,
+        })).allowed,
+      )
 
-    assert.instanceOf(
-      yield* Effect.flip(bootstrapTenant(input)),
-      TenantAlreadyExists,
-    )
-  })))
+      assert.instanceOf(yield* Effect.flip(bootstrapTenant(input)), TenantAlreadyExists)
+    }),
+  ),
+)
 
 it.effect("preserves typed failure boundaries around the bootstrap result", () =>
-  withBootstrap(Effect.gen(function*() {
-    const auth = yield* AuthService
-    const authorization = yield* AuthorizationService
-    const party = yield* PartyService
-    const inventory = yield* InventoryService
-    const result = yield* bootstrapTenant(input)
+  withBootstrap(
+    Effect.gen(function* () {
+      const auth = yield* AuthService
+      const authorization = yield* AuthorizationService
+      const party = yield* PartyService
+      const inventory = yield* InventoryService
+      const result = yield* bootstrapTenant(input)
 
-    assert.instanceOf(
-      yield* Effect.flip(party.create({
-        principal: { userAccountId: "outsider", sessionId: "session" },
-        tenantId: result.tenant.id,
-        kind: "organization",
-        name: "Unauthorized",
-      })),
-      AuthorizationDenied,
-    )
+      assert.instanceOf(
+        yield* Effect.flip(
+          party.create({
+            principal: { userAccountId: "outsider", sessionId: "session" },
+            tenantId: result.tenant.id,
+            kind: "organization",
+            name: "Unauthorized",
+          }),
+        ),
+        AuthorizationDenied,
+      )
 
-    const otherTenant = yield* auth.createTenant({ slug: "other" })
-    yield* authorization.addMember({
-      userAccountId: principal.userAccountId,
-      tenantId: otherTenant.id,
-    })
-    yield* authorization.grant({
-      userAccountId: principal.userAccountId,
-      tenantId: otherTenant.id,
-      capability: "party.branch.create",
-    })
-    assert.instanceOf(
-      yield* Effect.flip(party.createBranch({
-        principal,
+      const otherTenant = yield* auth.createTenant({ slug: "other" })
+      yield* authorization.addMember({
+        userAccountId: principal.userAccountId,
         tenantId: otherTenant.id,
-        legalEntityId: result.legalEntity.id,
-        name: "Cross Tenant",
-      })),
-      LegalEntityNotFound,
-    )
+      })
+      yield* authorization.grant({
+        userAccountId: principal.userAccountId,
+        tenantId: otherTenant.id,
+        capability: "party.branch.create",
+      })
+      assert.instanceOf(
+        yield* Effect.flip(
+          party.createBranch({
+            principal,
+            tenantId: otherTenant.id,
+            legalEntityId: result.legalEntity.id,
+            name: "Cross Tenant",
+          }),
+        ),
+        LegalEntityNotFound,
+      )
 
-    yield* authorization.grant({
-      userAccountId: principal.userAccountId,
-      tenantId: result.tenant.id,
-      capability: "party.party_identifier.attach",
-    })
-    const identifier = {
-      principal,
-      tenantId: result.tenant.id,
-      partyId: result.organization.id,
-      provider: "registry",
-      scheme: "account",
-      scope: "global",
-      value: "ACME-1",
-    }
-    yield* party.attachIdentifier(identifier)
-    assert.instanceOf(
-      yield* Effect.flip(party.attachIdentifier(identifier)),
-      ExternalIdentifierAlreadyAssigned,
-    )
-
-    yield* authorization.grant({
-      userAccountId: principal.userAccountId,
-      tenantId: result.tenant.id,
-      capability: "inventory.stock_transfer.create",
-    })
-    const otherWarehouse = yield* inventory.createWarehouse({
-      principal,
-      tenantId: result.tenant.id,
-      legalEntityId: "00000000-0000-4000-8000-000000000012",
-      name: "Other Entity Warehouse",
-    })
-    assert.instanceOf(
-      yield* Effect.flip(inventory.createTransfer({
+      yield* authorization.grant({
+        userAccountId: principal.userAccountId,
+        tenantId: result.tenant.id,
+        capability: "party.party_identifier.attach",
+      })
+      const identifier = {
         principal,
         tenantId: result.tenant.id,
-        sourceWarehouseId: result.warehouse.id,
-        destinationWarehouseId: otherWarehouse.id,
-        lines: [{
-          itemId: "00000000-0000-4000-8000-000000000099",
-          quantity: "1",
-        }],
-      })),
-      StockTransferDifferentLegalEntity,
-    )
-  })))
+        partyId: result.organization.id,
+        provider: "registry",
+        scheme: "account",
+        scope: "global",
+        value: "ACME-1",
+      }
+      yield* party.attachIdentifier(identifier)
+      assert.instanceOf(
+        yield* Effect.flip(party.attachIdentifier(identifier)),
+        ExternalIdentifierAlreadyAssigned,
+      )
+
+      yield* authorization.grant({
+        userAccountId: principal.userAccountId,
+        tenantId: result.tenant.id,
+        capability: "inventory.stock_transfer.create",
+      })
+      const otherWarehouse = yield* inventory.createWarehouse({
+        principal,
+        tenantId: result.tenant.id,
+        legalEntityId: "00000000-0000-4000-8000-000000000012",
+        name: "Other Entity Warehouse",
+      })
+      assert.instanceOf(
+        yield* Effect.flip(
+          inventory.createTransfer({
+            principal,
+            tenantId: result.tenant.id,
+            sourceWarehouseId: result.warehouse.id,
+            destinationWarehouseId: otherWarehouse.id,
+            lines: [
+              {
+                itemId: "00000000-0000-4000-8000-000000000099",
+                quantity: "1",
+              },
+            ],
+          }),
+        ),
+        StockTransferDifferentLegalEntity,
+      )
+    }),
+  ),
+)

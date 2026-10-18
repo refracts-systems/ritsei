@@ -12,10 +12,7 @@
   },
   "evidencePolicy": {
     "defaultOperationalEvidenceClasses": ["staging-real", "production-real"],
-    "repositoryProofAllowedOnlyForMechanicalGates": [
-      "artifact_integrity",
-      "key_rotation_recovery"
-    ],
+    "repositoryProofAllowedOnlyForMechanicalGates": ["artifact_integrity", "key_rotation_recovery"],
     "repoProofAndLocalRealDoNotSubstituteForDeploymentEvidence": true,
     "allGatesMustPassForGo": true
   },
@@ -50,9 +47,7 @@
       "id": "worker_process_start",
       "evidenceClass": "local-real",
       "status": "FAIL",
-      "commands": [
-        "deno run -A apps/worker/mod.ts"
-      ],
+      "commands": ["deno run -A apps/worker/mod.ts"],
       "outcome": "The worker now passes Effect module loading and reaches PostgreSQL, then fails because the selected local database does not contain process.jobs.",
       "limits": "A migrated disposable database and a real financial job are still required before worker lease/restart behavior can be rehearsed."
     },

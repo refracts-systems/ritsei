@@ -4,10 +4,9 @@ import type * as ManagedRuntime from "effect/ManagedRuntime"
 import type { ContextProviderComponent } from "solid-js"
 import * as Production from "../../../shared/solid-effect"
 
-export const RuntimeContext = Production
-  .RuntimeContext as unknown as ContextProviderComponent<
-    ManagedRuntime.ManagedRuntime<never, never>
-  >
+export const RuntimeContext = Production.RuntimeContext as unknown as ContextProviderComponent<
+  ManagedRuntime.ManagedRuntime<never, never>
+>
 export const MissingRuntimeContextError = Production.MissingRuntimeContextError
 export const ActionInterruptedError = Production.ActionInterruptedError
 

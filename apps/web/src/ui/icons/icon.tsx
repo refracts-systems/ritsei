@@ -76,12 +76,9 @@ export function Icon(props: IconProps) {
   const size = () => props.size ?? "md"
   const tone = () => props.tone ?? "default"
   const className = () =>
-    [
-      phosphorClass(props.name, variant()),
-      sizeStyles[size()],
-      toneStyles[tone()],
-      props.class,
-    ].filter(Boolean).join(" ")
+    [phosphorClass(props.name, variant()), sizeStyles[size()], toneStyles[tone()], props.class]
+      .filter(Boolean)
+      .join(" ")
 
   return (
     <i

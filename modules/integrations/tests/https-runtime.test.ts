@@ -51,7 +51,7 @@ const event = defineExternalEvent({
 })
 
 it.effect("proves duplicate delivery, timeout, and unknown outcome handling over HTTPS", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     let attempts = 0
     const deliveryStore = makeMemoryExternalDeliveryStore()
     const runtime = makeHttpsConnectorRuntime({
@@ -63,14 +63,14 @@ it.effect("proves duplicate delivery, timeout, and unknown outcome handling over
         attempts += 1
         return attempts === 1
           ? Effect.fail(
-            new ExternalProviderFailure({
-              tenantId: input.tenantId,
-              actionId: input.action.id,
-              operationId: input.action.operationId,
-              reason: "timeout",
-              retryable: true,
-            }),
-          )
+              new ExternalProviderFailure({
+                tenantId: input.tenantId,
+                actionId: input.action.id,
+                operationId: input.action.operationId,
+                reason: "timeout",
+                retryable: true,
+              }),
+            )
           : Effect.succeed({ accepted: true })
       },
     })
@@ -107,15 +107,18 @@ it.effect("proves duplicate delivery, timeout, and unknown outcome handling over
     assert.strictEqual(duplicateDelivery.duplicate, true)
     assert.strictEqual(deliveryLog?.status, "duplicate")
 
-    const mismatchedEnvelope = yield* Effect.flip(runtime.ingestWebhook({
-      ...webhook,
-      envelope: { ...envelope, id: "provider-event-2" },
-    }))
+    const mismatchedEnvelope = yield* Effect.flip(
+      runtime.ingestWebhook({
+        ...webhook,
+        envelope: { ...envelope, id: "provider-event-2" },
+      }),
+    )
     assert.strictEqual(mismatchedEnvelope._tag, "ExternalPayloadInvalid")
-  }))
+  }),
+)
 
 it.effect("rejects oversized webhook resources before signature verification", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     let verified = false
     const runtime = makeHttpsConnectorRuntime({
       authorizeScope: () => Effect.succeed(undefined),
@@ -145,16 +148,19 @@ it.effect("rejects oversized webhook resources before signature verification", (
     assert.strictEqual(failure._tag, "ExternalPayloadInvalid")
     assert.isFalse(verified)
 
-    const signatureFailure = yield* Effect.flip(runtime.ingestWebhook({
-      ...base,
-      body: "signed-cloud-event-body",
-      signature: "x".repeat(HttpsWebhookLimits.maxSignatureLength + 1),
-    }))
+    const signatureFailure = yield* Effect.flip(
+      runtime.ingestWebhook({
+        ...base,
+        body: "signed-cloud-event-body",
+        signature: "x".repeat(HttpsWebhookLimits.maxSignatureLength + 1),
+      }),
+    )
     assert.strictEqual(signatureFailure._tag, "ExternalPayloadInvalid")
-  }))
+  }),
+)
 
 it.effect("persists an unknown outcome and refuses an automatic replay", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const runtime = makeHttpsConnectorRuntime({
       authorizeScope: () => Effect.succeed(undefined),
       verifySignature: () => Effect.succeed(true),
@@ -172,4 +178,5 @@ it.effect("persists an unknown outcome and refuses an automatic replay", () =>
     const second = yield* Effect.flip(runtime.invokeAction(input))
     assert.instanceOf(first, ExternalUnknownOutcome)
     assert.instanceOf(second, ExternalUnknownOutcome)
-  }))
+  }),
+)

@@ -28,13 +28,19 @@ export function FieldShell(
   const errorId = `${id}-error`
   return (
     <div class={props.class ? [styles.root, props.class] : styles.root}>
-      <label class={styles.label} for={id}>{props.label}</label>
+      <label class={styles.label} for={id}>
+        {props.label}
+      </label>
       {props.children({
         id,
         "aria-describedby": props.error ? errorId : undefined,
         "aria-invalid": props.error ? "true" : undefined,
       })}
-      {props.error && <div class={styles.error} id={errorId} role="alert">{props.error}</div>}
+      {props.error && (
+        <div class={styles.error} id={errorId} role="alert">
+          {props.error}
+        </div>
+      )}
     </div>
   )
 }

@@ -52,7 +52,7 @@ const append = (
   store: ReturnType<typeof makeMemoryFinancialStagingEvidenceStore>,
   evidence: ReturnType<typeof makeEvidence>,
 ) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const evidenceHash = yield* hashFinancialStagingEvidence(evidence)
     return yield* store.append({
       tenantId,
@@ -64,12 +64,9 @@ const append = (
 
 describe("financial staging evidence store", () => {
   it.effect("appends once and supports scoped gate, cohort, and deployment lookup", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const store = makeMemoryFinancialStagingEvidenceStore()
-      const first = yield* append(
-        store,
-        makeEvidence("00000000-0000-7000-8000-000000000003"),
-      )
+      const first = yield* append(store, makeEvidence("00000000-0000-7000-8000-000000000003"))
       const second = yield* append(
         store,
         makeEvidence("00000000-0000-7000-8000-000000000004", "global_reconciliation"),
@@ -81,22 +78,17 @@ describe("financial staging evidence store", () => {
         (yield* store.get(tenantId, first.record.recordId))?.evidence,
         first.record.evidence,
       )
-      assert.lengthOf(
-        yield* store.list({ tenantId, gateId: "projection_rebuild", limit: 10 }),
-        1,
-      )
-      assert.lengthOf(
-        yield* store.list({ tenantId, cohortId: "cohort-1", limit: 10 }),
-        2,
-      )
+      assert.lengthOf(yield* store.list({ tenantId, gateId: "projection_rebuild", limit: 10 }), 1)
+      assert.lengthOf(yield* store.list({ tenantId, cohortId: "cohort-1", limit: 10 }), 2)
       assert.lengthOf(
         yield* store.list({ tenantId, deploymentRevision: "revision-1", limit: 10 }),
         2,
       )
-    }))
+    }),
+  )
 
   it.effect("is idempotent, rejects conflicting content, and verifies reads", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const store = makeMemoryFinancialStagingEvidenceStore()
       const evidence = makeEvidence("00000000-0000-7000-8000-000000000005")
       const first = yield* append(store, evidence)
@@ -107,10 +99,7 @@ describe("financial staging evidence store", () => {
         append(store, { ...evidence, gateId: "global_reconciliation" }),
       )
       assert.instanceOf(conflict, FinancialStagingEvidenceConflict)
-      assert.strictEqual(
-        (conflict as FinancialStagingEvidenceConflict).reason,
-        "different_content",
-      )
+      assert.strictEqual((conflict as FinancialStagingEvidenceConflict).reason, "different_content")
 
       const invalidHash = yield* Effect.flip(
         store.append({
@@ -121,10 +110,7 @@ describe("financial staging evidence store", () => {
         }),
       )
       assert.instanceOf(invalidHash, FinancialStagingEvidenceInvalid)
-      assert.strictEqual(
-        (invalidHash as FinancialStagingEvidenceInvalid).reason,
-        "hash_mismatch",
-      )
+      assert.strictEqual((invalidHash as FinancialStagingEvidenceInvalid).reason, "hash_mismatch")
 
       const tampered = yield* Effect.flip(
         verifyFinancialStagingEvidenceRecord({
@@ -134,5 +120,6 @@ describe("financial staging evidence store", () => {
       )
       assert.instanceOf(tampered, FinancialStagingEvidenceInvalid)
       assert.strictEqual(tampered.reason, "hash_mismatch")
-    }))
+    }),
+  )
 })

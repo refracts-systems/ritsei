@@ -63,7 +63,7 @@ const run = (args: readonly string[], dryRun: boolean): void => {
 
   // pnpm resolves through pnpm.cmd on Windows, so it needs a shell there;
   // every caller only spawns pnpm.
-  const result = spawnSync(args[0]!, [...args.slice(1)], {
+  const result = spawnSync(args[0]!, args.slice(1), {
     stdio: "inherit",
     shell: process.platform === "win32",
   })
@@ -71,7 +71,7 @@ const run = (args: readonly string[], dryRun: boolean): void => {
   if (result.status !== 0) process.exit(result.status ?? 1)
 }
 
-const args = [...process.argv.slice(2)]
+const args = process.argv.slice(2)
 const dryRun = args.includes("--dry-run")
 const providedFiles = args.filter((arg) => arg !== "--dry-run")
 const files = await changedFiles(providedFiles)
@@ -94,9 +94,9 @@ for (const path of files) {
   if (isExperiment(path)) continue
 
   if (
-    path === "AGENTS.md"
-    || path === "tooling/check-agent-skills.ts"
-    || path.startsWith(".agents/skills/")
+    path === "AGENTS.md" ||
+    path === "tooling/check-agent-skills.ts" ||
+    path.startsWith(".agents/skills/")
   ) {
     skillsChanged = true
   }
@@ -119,7 +119,9 @@ for (const path of files) {
   }
 
   if (
-    path.startsWith("foundation/") || path.startsWith("platform/") || path.startsWith("runtime/")
+    path.startsWith("foundation/") ||
+    path.startsWith("platform/") ||
+    path.startsWith("runtime/")
   ) {
     if (isTestFile(path)) tests.add(path)
     else componentRoots.add(path.split("/")[0]!)
@@ -201,9 +203,10 @@ if (fullSuite) {
   }
 
   if (tests.size > 0) {
-    const scope = packageNames.size > 1
-      ? `cross-package (${[...packageNames].toSorted().join(", ")})`
-      : "affected"
+    const scope =
+      packageNames.size > 1
+        ? `cross-package (${[...packageNames].toSorted().join(", ")})`
+        : "affected"
     console.log(`Running ${scope} tests (${tests.size} files).`)
     await run(["pnpm", "run", "test", ...[...tests].toSorted()], dryRun)
   } else if (relatedSources.size === 0) {

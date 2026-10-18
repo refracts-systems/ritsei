@@ -58,12 +58,7 @@ export const ProcessOrderCancellationCompletedEvent = defineEventCatalogEntry({
   scope: ["tenant"],
   aggregateType: "sales_order",
   correlationFields: ["orderId", "workflowRunId", "confirmationWorkflowRunId"],
-  filterableFields: [
-    "orderId",
-    "workflowRunId",
-    "confirmationWorkflowRunId",
-    "reversalJournalId",
-  ],
+  filterableFields: ["orderId", "workflowRunId", "confirmationWorkflowRunId", "reversalJournalId"],
   occurredAtSemantics: "owner_commit_time",
   deliveryExpectation: "at_least_once",
   sensitivity: "business_internal_minimized",

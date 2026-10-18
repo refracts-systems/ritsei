@@ -64,7 +64,7 @@ const readBalances = (client: Sql, tenantId: string) =>
   `
 
 const createLegalEntityScope = (tenantId: string, name: string) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const party = yield* PartyService
     const organization = yield* party.create({
       principal,
@@ -91,7 +91,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "stock corrected atomic publication stays idempotent and rolls back messaging failures",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
         const userAccountService = yield* makeUserAccountService.pipe(
@@ -115,10 +115,10 @@ it.effect.skipIf(databaseUrl === undefined)(
               userAccountId: principal.userAccountId,
               tenantId,
               capability,
-            }))
+            })),
           ),
         )
-        yield* Effect.gen(function*() {
+        yield* Effect.gen(function* () {
           const authorization = yield* AuthorizationService
           const requirements = Layer.mergeAll(
             Layer.succeed(Database, database),
@@ -178,12 +178,13 @@ it.effect.skipIf(databaseUrl === undefined)(
             unitOfMeasure: "box",
           })
           assert.notStrictEqual(otherItem.id, item.id)
-          const invalidItemUnitOfMeasure = yield* postgresFailure(() =>
-            client`
+          const invalidItemUnitOfMeasure = yield* postgresFailure(
+            () =>
+              client`
               update inventory.items
               set unit_of_measure = 'A B'
               where tenant_id = ${tenant.id} and id = ${item.id}
-            `
+            `,
           )
           assert.strictEqual((invalidItemUnitOfMeasure as { code?: string }).code, "23514")
           assert.strictEqual(
@@ -209,14 +210,16 @@ it.effect.skipIf(databaseUrl === undefined)(
             name: "Other Adjustment Warehouse",
           })
           assert.instanceOf(
-            yield* Effect.flip(inventory.reserveStock({
-              principal,
-              tenantId: tenant.id,
-              warehouseId: otherWarehouseSameTenant.id,
-              legalEntityId: scope.legalEntity.id,
-              itemId: item.id,
-              quantity: "1",
-            })),
+            yield* Effect.flip(
+              inventory.reserveStock({
+                principal,
+                tenantId: tenant.id,
+                warehouseId: otherWarehouseSameTenant.id,
+                legalEntityId: scope.legalEntity.id,
+                itemId: item.id,
+                quantity: "1",
+              }),
+            ),
             StockReservationLegalEntityMismatch,
           )
           const reservationInput = {
@@ -232,13 +235,14 @@ it.effect.skipIf(databaseUrl === undefined)(
             { concurrency: "unbounded" },
           )
           assert.strictEqual(duplicateReservations[0].id, duplicateReservations[1].id)
-          const invalidReservationInsert = yield* postgresFailure(() =>
-            client`
+          const invalidReservationInsert = yield* postgresFailure(
+            () =>
+              client`
               insert into inventory.reservations
                 (tenant_id, warehouse_id, item_id, quantity, idempotency_key, status)
               values
                 (${tenant.id}, ${warehouse.id}, ${item.id}, 1, 'invalid-initial-reservation', 'fulfilled')
-            `
+            `,
           )
           assert.strictEqual((invalidReservationInsert as { code?: string }).code, "23514")
           assert.strictEqual(
@@ -255,7 +259,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                 update inventory.reservations set status = 'released'
                 where id = ${duplicateReservations[0].id}
               `
-            })
+            }),
           )
           assert.strictEqual((invalidReservationTransition as { code?: string }).code, "23514")
           assert.strictEqual(
@@ -269,7 +273,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                 set status = 'fulfilled'
                 where tenant_id = ${tenant.id} and id = ${duplicateReservations[0].id}
               `
-            })
+            }),
           )
           assert.strictEqual((invalidReservationStatus as { code?: string }).code, "23514")
           assert.strictEqual(
@@ -285,86 +289,92 @@ it.effect.skipIf(databaseUrl === undefined)(
                   and warehouse_id = ${warehouse.id}
                   and item_id = ${item.id}
               `
-            })
+            }),
           )
           assert.strictEqual((invalidReservedBalance as { code?: string }).code, "23514")
           assert.strictEqual(
             (invalidReservedBalance as { constraint_name?: string }).constraint_name,
             "inventory_reservation_balance_consistency_check",
           )
-          const changedReservationQuantity = yield* postgresFailure(() =>
-            client`
+          const changedReservationQuantity = yield* postgresFailure(
+            () =>
+              client`
               update inventory.reservations
               set quantity = 2
               where tenant_id = ${tenant.id} and id = ${duplicateReservations[0].id}
-            `
+            `,
           )
           assert.strictEqual((changedReservationQuantity as { code?: string }).code, "23514")
           assert.strictEqual(
             (changedReservationQuantity as { constraint_name?: string }).constraint_name,
             "inventory_reservation_identity_immutable",
           )
-          const deletedReservation = yield* postgresFailure(() =>
-            client`
+          const deletedReservation = yield* postgresFailure(
+            () =>
+              client`
               delete from inventory.reservations
               where tenant_id = ${tenant.id} and id = ${duplicateReservations[0].id}
-            `
+            `,
           )
           assert.strictEqual((deletedReservation as { code?: string }).code, "23514")
           assert.strictEqual(
             (deletedReservation as { constraint_name?: string }).constraint_name,
             "inventory_reservation_identity_immutable",
           )
-          const orphanReservationMovement = yield* postgresFailure(() =>
-            client`
+          const orphanReservationMovement = yield* postgresFailure(
+            () =>
+              client`
               insert into inventory.movements
                 (tenant_id, warehouse_id, item_id, quantity, kind, reference_id)
               values
                 (${tenant.id}, ${warehouse.id}, ${item.id}, 1, 'reservation', ${uuidv7()})
-            `
+            `,
           )
           assert.strictEqual((orphanReservationMovement as { code?: string }).code, "23514")
           assert.strictEqual(
             (orphanReservationMovement as { constraint_name?: string }).constraint_name,
             "inventory_movement_reservation_reference_check",
           )
-          const mismatchedReservationMovement = yield* postgresFailure(() =>
-            client`
+          const mismatchedReservationMovement = yield* postgresFailure(
+            () =>
+              client`
               insert into inventory.movements
                 (tenant_id, warehouse_id, item_id, quantity, kind, reference_id)
               values
                 (${tenant.id}, ${warehouse.id}, ${item.id}, 2, 'reservation',
                  ${duplicateReservations[0].id})
-            `
+            `,
           )
           assert.strictEqual((mismatchedReservationMovement as { code?: string }).code, "23514")
           assert.strictEqual(
             (mismatchedReservationMovement as { constraint_name?: string }).constraint_name,
             "inventory_movement_reservation_reference_check",
           )
-          const issueForActiveReservation = yield* postgresFailure(() =>
-            client`
+          const issueForActiveReservation = yield* postgresFailure(
+            () =>
+              client`
               insert into inventory.movements
                 (tenant_id, warehouse_id, item_id, quantity, kind, reference_id)
               values
                 (${tenant.id}, ${warehouse.id}, ${item.id}, -1, 'issue',
                  ${duplicateReservations[0].id})
-            `
+            `,
           )
           assert.strictEqual((issueForActiveReservation as { code?: string }).code, "23514")
           assert.strictEqual(
             (issueForActiveReservation as { constraint_name?: string }).constraint_name,
             "inventory_movement_reservation_reference_check",
           )
-          const invalidTransferInsert = yield* postgresFailure(() =>
-            client`
+          const invalidTransferInsert = yield* postgresFailure(
+            () =>
+              client`
               insert into inventory.stock_transfers
                 (tenant_id, legal_entity_id, source_warehouse_id, destination_warehouse_id,
                  status, confirmed_at)
               values
                 (${tenant.id}, ${scope.legalEntity.id}, ${warehouse.id},
                  ${transferDestination.id}, 'confirmed', now())
-            `
+            `,
           )
           assert.strictEqual((invalidTransferInsert as { code?: string }).code, "23514")
           assert.strictEqual(
@@ -386,7 +396,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                 set status = 'completed', confirmed_at = now(), completed_at = now()
                 where id = ${transfer!.id}
               `
-            })
+            }),
           )
           assert.strictEqual((invalidTransferTransition as { code?: string }).code, "23514")
           assert.strictEqual(
@@ -413,26 +423,32 @@ it.effect.skipIf(databaseUrl === undefined)(
             },
           )
           assert.instanceOf(
-            yield* Effect.flip(inventory.releaseReservation({
-              principal,
-              tenantId: otherTenant.id,
-              reservationId: duplicateReservations[0].id,
-            })),
+            yield* Effect.flip(
+              inventory.releaseReservation({
+                principal,
+                tenantId: otherTenant.id,
+                reservationId: duplicateReservations[0].id,
+              }),
+            ),
             StockReservationNotFound,
           )
           assert.instanceOf(
-            yield* Effect.flip(inventory.fulfillReservation({
-              principal,
-              tenantId: otherTenant.id,
-              reservationId: duplicateReservations[0].id,
-            })),
+            yield* Effect.flip(
+              inventory.fulfillReservation({
+                principal,
+                tenantId: otherTenant.id,
+                reservationId: duplicateReservations[0].id,
+              }),
+            ),
             StockReservationNotFound,
           )
           assert.instanceOf(
-            yield* Effect.flip(inventory.reserveStock({
-              ...reservationInput,
-              quantity: "2",
-            })),
+            yield* Effect.flip(
+              inventory.reserveStock({
+                ...reservationInput,
+                quantity: "2",
+              }),
+            ),
             StockReservationIdempotencyConflict,
           )
           yield* inventory.reserveStock({
@@ -467,51 +483,58 @@ it.effect.skipIf(databaseUrl === undefined)(
             { concurrency: "unbounded" },
           )
           assert.strictEqual(duplicates[0].id, duplicates[1].id)
-          const changedMovement = yield* postgresFailure(() =>
-            client`
+          const changedMovement = yield* postgresFailure(
+            () =>
+              client`
               update inventory.movements
               set reason = 'edited correction'
               where tenant_id = ${tenant.id} and id = ${duplicates[0].id}
-            `
+            `,
           )
           assert.strictEqual((changedMovement as { code?: string }).code, "23514")
           assert.strictEqual(
             (changedMovement as { constraint_name?: string }).constraint_name,
             "inventory_movements_immutable",
           )
-          const deletedMovement = yield* postgresFailure(() =>
-            client`
+          const deletedMovement = yield* postgresFailure(
+            () =>
+              client`
               delete from inventory.movements
               where tenant_id = ${tenant.id} and id = ${duplicates[0].id}
-            `
+            `,
           )
           assert.strictEqual((deletedMovement as { code?: string }).code, "23514")
           assert.strictEqual(
             (deletedMovement as { constraint_name?: string }).constraint_name,
             "inventory_movements_immutable",
           )
-          const invalidUnitOfMeasure = yield* postgresFailure(() =>
-            client`
+          const invalidUnitOfMeasure = yield* postgresFailure(
+            () =>
+              client`
               insert into inventory.movements
                 (tenant_id, warehouse_id, item_id, quantity, kind,
                  unit_of_measure, reason, idempotency_key)
               values
                 (${tenant.id}, ${warehouse.id}, ${item.id}, 1, 'receipt',
                  'box', 'manual correction', ${`invalid-uom-${uuidv7()}`})
-            `
+            `,
           )
           assert.strictEqual((invalidUnitOfMeasure as { code?: string }).code, "23514")
           assert.strictEqual(
             (invalidUnitOfMeasure as { constraint_name?: string }).constraint_name,
             "movements_correction_metadata_check",
           )
-          for (const [kind, quantity] of [["issue", 1], ["receipt", -1]] as const) {
-            const invalidSign = yield* postgresFailure(() =>
-              client`
+          for (const [kind, quantity] of [
+            ["issue", 1],
+            ["receipt", -1],
+          ] as const) {
+            const invalidSign = yield* postgresFailure(
+              () =>
+                client`
                 insert into inventory.movements
                   (tenant_id, warehouse_id, item_id, quantity, kind)
                 values (${tenant.id}, ${warehouse.id}, ${item.id}, ${quantity}, ${kind})
-              `
+              `,
             )
             assert.strictEqual((invalidSign as { code?: string }).code, "23514")
             assert.strictEqual(
@@ -519,13 +542,14 @@ it.effect.skipIf(databaseUrl === undefined)(
               "movements_kind_quantity_sign_check",
             )
           }
-          const invalidReleaseReference = yield* postgresFailure(() =>
-            client`
+          const invalidReleaseReference = yield* postgresFailure(
+            () =>
+              client`
               insert into inventory.movements
                 (tenant_id, warehouse_id, item_id, quantity, kind)
               values
                 (${tenant.id}, ${warehouse.id}, ${item.id}, 1, 'release')
-            `
+            `,
           )
           assert.strictEqual((invalidReleaseReference as { code?: string }).code, "23514")
           assert.strictEqual(
@@ -552,24 +576,33 @@ it.effect.skipIf(databaseUrl === undefined)(
             },
           )
           assert.instanceOf(
-            yield* Effect.flip(inventory.adjustStock({
-              ...correctionInput,
-              adjustment: "1",
-            })),
+            yield* Effect.flip(
+              inventory.adjustStock({
+                ...correctionInput,
+                adjustment: "1",
+              }),
+            ),
             StockCorrectionIdempotencyConflict,
           )
-          const competing = yield* Effect.all([
-            Effect.result(inventory.adjustStock({
-              ...correctionInput,
-              adjustment: "-2",
-              idempotencyKey: "correction-2",
-            })),
-            Effect.result(inventory.adjustStock({
-              ...correctionInput,
-              adjustment: "-2",
-              idempotencyKey: "correction-3",
-            })),
-          ], { concurrency: "unbounded" })
+          const competing = yield* Effect.all(
+            [
+              Effect.result(
+                inventory.adjustStock({
+                  ...correctionInput,
+                  adjustment: "-2",
+                  idempotencyKey: "correction-2",
+                }),
+              ),
+              Effect.result(
+                inventory.adjustStock({
+                  ...correctionInput,
+                  adjustment: "-2",
+                  idempotencyKey: "correction-3",
+                }),
+              ),
+            ],
+            { concurrency: "unbounded" },
+          )
           assert.strictEqual(competing.filter((result) => result._tag === "Success").length, 1)
           assert.strictEqual(competing.filter((result) => result._tag === "Failure").length, 1)
           const [balance] = yield* Effect.promise(() => readBalances(client, tenant.id))
@@ -579,36 +612,40 @@ it.effect.skipIf(databaseUrl === undefined)(
             on_hand: "5",
             reserved: "5",
           })
-          const [movementCount] = yield* Effect.promise(() =>
-            client<{ count: string }[]>`
+          const [movementCount] = yield* Effect.promise(
+            () =>
+              client<{ count: string }[]>`
               select count(*)::text as count
               from inventory.movements
               where tenant_id = ${tenant.id} and idempotency_key = 'correction-1'
-            `
+            `,
           )
           assert.strictEqual(movementCount?.count, "1")
 
-          const [event] = yield* Effect.promise(() =>
-            client<{
-              id: string
-              event_type: string
-              event_version: number
-              aggregate_type: string
-              aggregate_id: string
-              command_id: string
-              correlation_id: string
-              causation_id: string | null
-              idempotency_key: string
-              actor_principal_id: string
-              occurred_at: string
-              payload: unknown
-            }[]>`
+          const [event] = yield* Effect.promise(
+            () =>
+              client<
+                {
+                  id: string
+                  event_type: string
+                  event_version: number
+                  aggregate_type: string
+                  aggregate_id: string
+                  command_id: string
+                  correlation_id: string
+                  causation_id: string | null
+                  idempotency_key: string
+                  actor_principal_id: string
+                  occurred_at: string
+                  payload: unknown
+                }[]
+              >`
               select id, event_type, event_version, aggregate_type, aggregate_id,
                 command_id, correlation_id, causation_id, idempotency_key,
                 actor_principal_id, occurred_at, payload
               from messaging.event_outbox
               where tenant_id = ${tenant.id} and idempotency_key = 'correction-1'
-            `
+            `,
           )
           yield* Schema.decodeUnknownEffect(InventoryStockCorrectedEvent.payloadSchema)(
             event?.payload,
@@ -649,25 +686,28 @@ it.effect.skipIf(databaseUrl === undefined)(
             ),
           )
           assert.instanceOf(
-            yield* Effect.flip(failingInventory.adjustStock({
-              ...correctionInput,
-              adjustment: "2",
-              commandId: "correction-rollback-command",
-              correlationId: "correction-rollback-correlation",
-              idempotencyKey: "correction-rollback",
-            })),
+            yield* Effect.flip(
+              failingInventory.adjustStock({
+                ...correctionInput,
+                adjustment: "2",
+                commandId: "correction-rollback-command",
+                correlationId: "correction-rollback-correlation",
+                idempotencyKey: "correction-rollback",
+              }),
+            ),
             DatabaseFailure,
           )
           const [rolledBackBalance] = yield* Effect.promise(() => readBalances(client, tenant.id))
           assert.strictEqual(rolledBackBalance?.on_hand, "5")
-          const [rolledBackCounts] = yield* Effect.promise(() =>
-            client<{ movements: string; events: string }[]>`
+          const [rolledBackCounts] = yield* Effect.promise(
+            () =>
+              client<{ movements: string; events: string }[]>`
               select
                 (select count(*)::text from inventory.movements
                   where tenant_id = ${tenant.id} and idempotency_key = 'correction-rollback') as movements,
                 (select count(*)::text from messaging.event_outbox
                   where tenant_id = ${tenant.id} and idempotency_key = 'correction-rollback') as events
-            `
+            `,
           )
           assert.deepStrictEqual(rolledBackCounts, { movements: "0", events: "0" })
 
@@ -701,30 +741,32 @@ it.effect.skipIf(databaseUrl === undefined)(
                   and warehouse_id = ${warehouse.id}
                   and item_id = ${guardedItem.id}
               `
-            })
+            }),
           )
           assert.strictEqual((invalidGuardedBalance as { code?: string }).code, "23514")
           assert.strictEqual(
             (invalidGuardedBalance as { constraint_name?: string }).constraint_name,
             "inventory_on_hand_movement_consistency_check",
           )
-          const [guardedReservationRow] = yield* Effect.promise(() =>
-            client<{ status: string }[]>`
+          const [guardedReservationRow] = yield* Effect.promise(
+            () =>
+              client<{ status: string }[]>`
               select status
               from inventory.reservations
               where tenant_id = ${tenant.id} and id = ${guardedReservation.id}
-            `
+            `,
           )
           assert.strictEqual(guardedReservationRow?.status, "active")
         }).pipe(Effect.provide(authorizationLayer))
-      })),
+      }),
+    ),
 )
 
 it.effect.skipIf(databaseUrl === undefined)(
   "moves transfer lines only at confirmation and completion",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
         const userAccountService = yield* makeUserAccountService.pipe(
@@ -745,10 +787,10 @@ it.effect.skipIf(databaseUrl === undefined)(
               userAccountId: principal.userAccountId,
               tenantId,
               capability,
-            }))
+            })),
           ),
         )
-        yield* Effect.gen(function*() {
+        yield* Effect.gen(function* () {
           const authorization = yield* AuthorizationService
           const requirements = Layer.mergeAll(
             Layer.succeed(Database, database),
@@ -822,23 +864,27 @@ it.effect.skipIf(databaseUrl === undefined)(
             quantity: "8",
           })
           assert.instanceOf(
-            yield* Effect.flip(inventory.createTransfer({
-              principal,
-              tenantId: otherTenant.id,
-              sourceWarehouseId: source.id,
-              destinationWarehouseId: destination.id,
-              lines: [{ itemId: widget.id, quantity: "1" }],
-            })),
+            yield* Effect.flip(
+              inventory.createTransfer({
+                principal,
+                tenantId: otherTenant.id,
+                sourceWarehouseId: source.id,
+                destinationWarehouseId: destination.id,
+                lines: [{ itemId: widget.id, quantity: "1" }],
+              }),
+            ),
             StockTransferWarehouseNotFound,
           )
           assert.instanceOf(
-            yield* Effect.flip(inventory.createTransfer({
-              principal,
-              tenantId: otherTenant.id,
-              sourceWarehouseId: otherSource.id,
-              destinationWarehouseId: otherDestination.id,
-              lines: [{ itemId: widget.id, quantity: "1" }],
-            })),
+            yield* Effect.flip(
+              inventory.createTransfer({
+                principal,
+                tenantId: otherTenant.id,
+                sourceWarehouseId: otherSource.id,
+                destinationWarehouseId: otherDestination.id,
+                lines: [{ itemId: widget.id, quantity: "1" }],
+              }),
+            ),
             StockTransferItemNotFound,
           )
 
@@ -853,11 +899,13 @@ it.effect.skipIf(databaseUrl === undefined)(
             ],
           })
           assert.instanceOf(
-            yield* Effect.flip(inventory.confirmTransfer({
-              principal,
-              tenantId: otherTenant.id,
-              transferId: transfer.id,
-            })),
+            yield* Effect.flip(
+              inventory.confirmTransfer({
+                principal,
+                tenantId: otherTenant.id,
+                transferId: transfer.id,
+              }),
+            ),
             StockTransferNotFound,
           )
           const beforeConfirm = yield* Effect.promise(() => readBalances(client, tenant.id))
@@ -871,7 +919,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               { warehouse_id: source.id, item_id: cable.id, on_hand: "8" },
               { warehouse_id: source.id, item_id: widget.id, on_hand: "10" },
             ].toSorted((a, b) =>
-              `${a.warehouse_id}:${a.item_id}`.localeCompare(`${b.warehouse_id}:${b.item_id}`)
+              `${a.warehouse_id}:${a.item_id}`.localeCompare(`${b.warehouse_id}:${b.item_id}`),
             ),
           )
 
@@ -896,28 +944,30 @@ it.effect.skipIf(databaseUrl === undefined)(
               { warehouse_id: source.id, item_id: cable.id, on_hand: "5" },
               { warehouse_id: source.id, item_id: widget.id, on_hand: "6" },
             ].toSorted((a, b) =>
-              `${a.warehouse_id}:${a.item_id}`.localeCompare(`${b.warehouse_id}:${b.item_id}`)
+              `${a.warehouse_id}:${a.item_id}`.localeCompare(`${b.warehouse_id}:${b.item_id}`),
             ),
           )
-          const changedConfirmedLine = yield* postgresFailure(() =>
-            client`
+          const changedConfirmedLine = yield* postgresFailure(
+            () =>
+              client`
               update inventory.stock_transfer_lines
               set quantity = 5
               where tenant_id = ${tenant.id} and transfer_id = ${transfer.id}
                 and item_id = ${widget.id}
-            `
+            `,
           )
           assert.strictEqual((changedConfirmedLine as { code?: string }).code, "23514")
           assert.strictEqual(
             (changedConfirmedLine as { constraint_name?: string }).constraint_name,
             "inventory_stock_transfer_lines_immutable",
           )
-          const deletedConfirmedLine = yield* postgresFailure(() =>
-            client`
+          const deletedConfirmedLine = yield* postgresFailure(
+            () =>
+              client`
               delete from inventory.stock_transfer_lines
               where tenant_id = ${tenant.id} and transfer_id = ${transfer.id}
                 and item_id = ${cable.id}
-            `
+            `,
           )
           assert.strictEqual((deletedConfirmedLine as { code?: string }).code, "23514")
           assert.strictEqual(
@@ -925,11 +975,13 @@ it.effect.skipIf(databaseUrl === undefined)(
             "inventory_stock_transfer_lines_immutable",
           )
           assert.instanceOf(
-            yield* Effect.flip(inventory.completeTransfer({
-              principal,
-              tenantId: otherTenant.id,
-              transferId: transfer.id,
-            })),
+            yield* Effect.flip(
+              inventory.completeTransfer({
+                principal,
+                tenantId: otherTenant.id,
+                transferId: transfer.id,
+              }),
+            ),
             StockTransferNotFound,
           )
           const incompleteTransfer = yield* postgresFailure(() =>
@@ -939,7 +991,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                 set status = 'completed', completed_at = now()
                 where tenant_id = ${tenant.id} and id = ${transfer.id}
               `
-            })
+            }),
           )
           assert.strictEqual((incompleteTransfer as { code?: string }).code, "23514")
           assert.strictEqual(
@@ -959,35 +1011,40 @@ it.effect.skipIf(databaseUrl === undefined)(
           })
           const afterComplete = yield* Effect.promise(() => readBalances(client, tenant.id))
           assert.deepStrictEqual(
-            afterComplete.map(({ warehouse_id, item_id, on_hand }) => ({
-              warehouse_id,
-              item_id,
-              on_hand,
-            })).toSorted((a, b) =>
-              `${a.warehouse_id}:${a.item_id}`.localeCompare(`${b.warehouse_id}:${b.item_id}`)
-            ),
+            afterComplete
+              .map(({ warehouse_id, item_id, on_hand }) => ({
+                warehouse_id,
+                item_id,
+                on_hand,
+              }))
+              .toSorted((a, b) =>
+                `${a.warehouse_id}:${a.item_id}`.localeCompare(`${b.warehouse_id}:${b.item_id}`),
+              ),
             [
               { warehouse_id: destination.id, item_id: cable.id, on_hand: "3" },
               { warehouse_id: destination.id, item_id: widget.id, on_hand: "4" },
               { warehouse_id: source.id, item_id: cable.id, on_hand: "5" },
               { warehouse_id: source.id, item_id: widget.id, on_hand: "6" },
             ].toSorted((a, b) =>
-              `${a.warehouse_id}:${a.item_id}`.localeCompare(`${b.warehouse_id}:${b.item_id}`)
+              `${a.warehouse_id}:${a.item_id}`.localeCompare(`${b.warehouse_id}:${b.item_id}`),
             ),
           )
-          const movements = yield* Effect.promise(() =>
-            client<{
-              warehouse_id: string
-              item_id: string
-              kind: string
-              quantity: string
-              reference_id: string
-            }[]>`
+          const movements = yield* Effect.promise(
+            () =>
+              client<
+                {
+                  warehouse_id: string
+                  item_id: string
+                  kind: string
+                  quantity: string
+                  reference_id: string
+                }[]
+              >`
               select warehouse_id, item_id, kind, quantity::text, reference_id
               from inventory.movements
               where tenant_id = ${tenant.id} and reference_id = ${transfer.id}
               order by warehouse_id, item_id, kind
-            `
+            `,
           )
           assert.deepStrictEqual(
             movements,
@@ -1023,18 +1080,19 @@ it.effect.skipIf(databaseUrl === undefined)(
             ].toSorted((a, b) =>
               `${a.warehouse_id}:${a.item_id}:${a.kind}`.localeCompare(
                 `${b.warehouse_id}:${b.item_id}:${b.kind}`,
-              )
+              ),
             ),
           )
         }).pipe(Effect.provide(authorizationLayer))
-      })),
+      }),
+    ),
 )
 
 it.effect.skipIf(databaseUrl === undefined)(
   "rolls back every source deduction when one transfer line is unavailable",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
         const userAccountService = yield* makeUserAccountService.pipe(
@@ -1053,7 +1111,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             capability,
           })),
         )
-        yield* Effect.gen(function*() {
+        yield* Effect.gen(function* () {
           const authorization = yield* AuthorizationService
           const requirements = Layer.mergeAll(
             Layer.succeed(Database, database),
@@ -1119,37 +1177,42 @@ it.effect.skipIf(databaseUrl === undefined)(
             ],
           })
 
-          const error = yield* Effect.flip(inventory.confirmTransfer({
-            principal,
-            tenantId: tenant.id,
-            transferId: transfer.id,
-          }))
+          const error = yield* Effect.flip(
+            inventory.confirmTransfer({
+              principal,
+              tenantId: tenant.id,
+              transferId: transfer.id,
+            }),
+          )
           assert.instanceOf(error, StockUnavailable)
           const balances = yield* Effect.promise(() => readBalances(client, tenant.id))
           assert.deepStrictEqual(
-            balances.map(({ warehouse_id, item_id, on_hand }) => ({
-              warehouse_id,
-              item_id,
-              on_hand,
-            })).toSorted((a, b) =>
-              `${a.warehouse_id}:${a.item_id}`.localeCompare(`${b.warehouse_id}:${b.item_id}`)
-            ),
+            balances
+              .map(({ warehouse_id, item_id, on_hand }) => ({
+                warehouse_id,
+                item_id,
+                on_hand,
+              }))
+              .toSorted((a, b) =>
+                `${a.warehouse_id}:${a.item_id}`.localeCompare(`${b.warehouse_id}:${b.item_id}`),
+              ),
             [
               { warehouse_id: source.id, item_id: cable.id, on_hand: "1" },
               { warehouse_id: source.id, item_id: widget.id, on_hand: "10" },
             ].toSorted((a, b) =>
-              `${a.warehouse_id}:${a.item_id}`.localeCompare(`${b.warehouse_id}:${b.item_id}`)
+              `${a.warehouse_id}:${a.item_id}`.localeCompare(`${b.warehouse_id}:${b.item_id}`),
             ),
           )
         }).pipe(Effect.provide(authorizationLayer))
-      })),
+      }),
+    ),
 )
 
 it.effect.skipIf(databaseUrl === undefined)(
   "enforces warehouse legal entity and branch scope",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
         const userAccountService = yield* makeUserAccountService.pipe(
@@ -1168,7 +1231,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             capability,
           })),
         )
-        yield* Effect.gen(function*() {
+        yield* Effect.gen(function* () {
           const authorization = yield* AuthorizationService
           const requirements = Layer.mergeAll(
             Layer.succeed(Database, database),
@@ -1190,13 +1253,15 @@ it.effect.skipIf(databaseUrl === undefined)(
           )
           const inventory = yield* Effect.provide(makeInventoryService, requirements)
 
-          const invalidWarehouse = yield* Effect.flip(inventory.createWarehouse({
-            principal,
-            tenantId: tenant.id,
-            legalEntityId: sourceScope.legalEntity.id,
-            primaryBranchId: destinationScope.branch.id,
-            name: "Invalid Branch Scope",
-          }))
+          const invalidWarehouse = yield* Effect.flip(
+            inventory.createWarehouse({
+              principal,
+              tenantId: tenant.id,
+              legalEntityId: sourceScope.legalEntity.id,
+              primaryBranchId: destinationScope.branch.id,
+              name: "Invalid Branch Scope",
+            }),
+          )
           assert.instanceOf(invalidWarehouse, WarehouseBranchNotFound)
 
           const source = yield* inventory.createWarehouse({
@@ -1213,17 +1278,22 @@ it.effect.skipIf(databaseUrl === undefined)(
             primaryBranchId: destinationScope.branch.id,
             name: "Destination Warehouse",
           })
-          const error = yield* Effect.flip(inventory.createTransfer({
-            principal,
-            tenantId: tenant.id,
-            sourceWarehouseId: source.id,
-            destinationWarehouseId: destination.id,
-            lines: [{
-              itemId: "00000000-0000-4000-8000-000000000099",
-              quantity: "1",
-            }],
-          }))
+          const error = yield* Effect.flip(
+            inventory.createTransfer({
+              principal,
+              tenantId: tenant.id,
+              sourceWarehouseId: source.id,
+              destinationWarehouseId: destination.id,
+              lines: [
+                {
+                  itemId: "00000000-0000-4000-8000-000000000099",
+                  quantity: "1",
+                },
+              ],
+            }),
+          )
           assert.instanceOf(error, StockTransferDifferentLegalEntity)
         }).pipe(Effect.provide(authorizationLayer))
-      })),
+      }),
+    ),
 )

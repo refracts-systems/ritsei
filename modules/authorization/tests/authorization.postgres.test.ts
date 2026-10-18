@@ -22,7 +22,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "enforces tenant membership lifecycle and capability scope in PostgreSQL",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
         const userAccounts = yield* makeUserAccountService.pipe(
@@ -59,8 +59,8 @@ it.effect.skipIf(databaseUrl === undefined)(
         )
         const orderedUserIds = [user.id, activeUser.id, suspendedUser.id].sort()
         assert.deepStrictEqual(
-          (yield* authorization.listMembers({ tenantId: tenant.id })).map(({ userAccountId }) =>
-            userAccountId
+          (yield* authorization.listMembers({ tenantId: tenant.id })).map(
+            ({ userAccountId }) => userAccountId,
           ),
           orderedUserIds,
         )
@@ -86,10 +86,12 @@ it.effect.skipIf(databaseUrl === undefined)(
           orderedUserIds.slice(0, 2),
         )
         assert.instanceOf(
-          yield* Effect.flip(authorization.addMember({
-            userAccountId: user.id,
-            tenantId: tenant.id,
-          })),
+          yield* Effect.flip(
+            authorization.addMember({
+              userAccountId: user.id,
+              tenantId: tenant.id,
+            }),
+          ),
           TenantMembershipAlreadyExists,
         )
         yield* authorization.grant({
@@ -135,11 +137,13 @@ it.effect.skipIf(databaseUrl === undefined)(
           2,
         )
         assert.instanceOf(
-          yield* Effect.flip(authorization.authorize({
-            principal,
-            tenantId: tenant.id,
-            capability,
-          })),
+          yield* Effect.flip(
+            authorization.authorize({
+              principal,
+              tenantId: tenant.id,
+              capability,
+            }),
+          ),
           AuthorizationDenied,
         )
         yield* authorization.activateMember({ userAccountId: user.id, tenantId: tenant.id })
@@ -159,10 +163,12 @@ it.effect.skipIf(databaseUrl === undefined)(
           2,
         )
         assert.instanceOf(
-          yield* Effect.flip(authorization.listDirectGrants({
-            userAccountId: user.id,
-            tenantId: "00000000-0000-0000-0000-000000000000",
-          })),
+          yield* Effect.flip(
+            authorization.listDirectGrants({
+              userAccountId: user.id,
+              tenantId: "00000000-0000-0000-0000-000000000000",
+            }),
+          ),
           TenantMembershipNotFound,
         )
 
@@ -176,21 +182,24 @@ it.effect.skipIf(databaseUrl === undefined)(
           [],
         )
         assert.instanceOf(
-          yield* Effect.flip(authorization.authorize({
-            principal,
-            tenantId: tenant.id,
-            capability,
-          })),
+          yield* Effect.flip(
+            authorization.authorize({
+              principal,
+              tenantId: tenant.id,
+              capability,
+            }),
+          ),
           AuthorizationDenied,
         )
-      })),
+      }),
+    ),
 )
 
 it.effect.skipIf(databaseUrl === undefined)(
   "maps missing membership user accounts in PostgreSQL",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
         const userAccounts = yield* makeUserAccountService.pipe(
@@ -207,11 +216,14 @@ it.effect.skipIf(databaseUrl === undefined)(
         )
         const missingUser = "00000000-0000-0000-0000-000000000000"
         assert.instanceOf(
-          yield* Effect.flip(authorization.addMember({
-            userAccountId: missingUser,
-            tenantId: tenant.id,
-          })),
+          yield* Effect.flip(
+            authorization.addMember({
+              userAccountId: missingUser,
+              tenantId: tenant.id,
+            }),
+          ),
           TenantMembershipUserAccountNotFound,
         )
-      })),
+      }),
+    ),
 )

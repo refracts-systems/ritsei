@@ -55,7 +55,7 @@ const escapeHtml = (value: string) =>
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
-    .replaceAll("\"", "&quot;")
+    .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;")
 
 const renderHtmlNode = (node: EmailMessage["nodes"][number]): string => {
@@ -73,19 +73,15 @@ const renderHtmlNode = (node: EmailMessage["nodes"][number]): string => {
     case "spacer":
       return `<div style="height:${node.heightPx}px"></div>`
     case "key_value":
-      return `<dl>${
-        node.entries.map((entry) =>
-          `<dt>${escapeHtml(entry.label)}</dt><dd>${escapeHtml(entry.value)}</dd>`
-        ).join("")
-      }</dl>`
+      return `<dl>${node.entries
+        .map((entry) => `<dt>${escapeHtml(entry.label)}</dt><dd>${escapeHtml(entry.value)}</dd>`)
+        .join("")}</dl>`
     case "table":
-      return `<table><thead><tr>${
-        node.headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")
-      }</tr></thead><tbody>${
-        node.rows.map((row) =>
-          `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`
-        ).join("")
-      }</tbody></table>`
+      return `<table><thead><tr>${node.headers
+        .map((header) => `<th>${escapeHtml(header)}</th>`)
+        .join("")}</tr></thead><tbody>${node.rows
+        .map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`)
+        .join("")}</tbody></table>`
   }
 }
 
@@ -120,9 +116,7 @@ const sha256Hex = (value: string) =>
       new CommunicationRenderFailure({ reason: "email content hashing failed", cause }),
   })
 
-export const makeCommunicationTestLayer = (
-  options: CommunicationTestLayerOptions = {},
-) => {
+export const makeCommunicationTestLayer = (options: CommunicationTestLayerOptions = {}) => {
   const sender = options.sender ?? defaultSender
   const recipient = options.recipient ?? defaultRecipient
   const statuses = options.deliveryStatuses ?? ["accepted"]
@@ -132,11 +126,11 @@ export const makeCommunicationTestLayer = (
   const policy: CommunicationPolicy = {
     derivePurchaseOrderConfirmed: Effect.fn(
       "CommunicationPolicy.test.derivePurchaseOrderConfirmed",
-    )(function*(input: unknown) {
+    )(function* (input: unknown) {
       const event = yield* Schema.decodeUnknownEffect(EventEnvelope)(input)
       if (
-        event.eventType !== ProcurementPurchaseOrderConfirmedEvent.id
-        || event.eventVersion !== ProcurementPurchaseOrderConfirmedEvent.version
+        event.eventType !== ProcurementPurchaseOrderConfirmedEvent.id ||
+        event.eventVersion !== ProcurementPurchaseOrderConfirmedEvent.version
       ) {
         return yield* Effect.fail(
           new UnsupportedCommunicationEvent({
@@ -180,7 +174,7 @@ export const makeCommunicationTestLayer = (
   }
 
   const recipientResolver: CommunicationRecipientResolver = {
-    resolve: Effect.fn("CommunicationRecipientResolver.test.resolve")(function*(input: unknown) {
+    resolve: Effect.fn("CommunicationRecipientResolver.test.resolve")(function* (input: unknown) {
       const intent = yield* Schema.decodeUnknownEffect(CommunicationIntent)(input)
       const snapshot: RecipientSnapshot = {
         audience: intent.audience,
@@ -196,11 +190,13 @@ export const makeCommunicationTestLayer = (
   }
 
   const contextBuilder: CommunicationContextBuilder = {
-    build: Effect.fn("CommunicationContextBuilder.test.build")(function*(input: unknown) {
-      const decoded = yield* Schema.decodeUnknownEffect(Schema.Struct({
-        intent: CommunicationIntent,
-        data: Schema.Json,
-      }))(input)
+    build: Effect.fn("CommunicationContextBuilder.test.build")(function* (input: unknown) {
+      const decoded = yield* Schema.decodeUnknownEffect(
+        Schema.Struct({
+          intent: CommunicationIntent,
+          data: Schema.Json,
+        }),
+      )(input)
       const context: CommunicationContext = {
         contextType: "purchase-order-confirmed-context",
         contextVersion: 1,
@@ -215,7 +211,7 @@ export const makeCommunicationTestLayer = (
   }
 
   const renderer: EmailRenderer = {
-    render: Effect.fn("EmailRenderer.test.render")(function*(input: unknown) {
+    render: Effect.fn("EmailRenderer.test.render")(function* (input: unknown) {
       const decoded = yield* Schema.decodeUnknownEffect(EmailRenderInput)(input)
       const html = decoded.message.nodes.map(renderHtmlNode).join("")
       const text = decoded.message.nodes.map(renderTextNode).filter(Boolean).join("\n\n")
@@ -239,7 +235,7 @@ export const makeCommunicationTestLayer = (
   }
 
   const transport: EmailTransport = {
-    send: Effect.fn("EmailTransport.test.send")(function*(input: unknown) {
+    send: Effect.fn("EmailTransport.test.send")(function* (input: unknown) {
       const prepared = yield* Schema.decodeUnknownEffect(PreparedEmail)(input)
       sent.push(prepared)
       const status = statuses[Math.min(deliveryIndex, statuses.length - 1)] ?? "accepted"

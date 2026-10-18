@@ -111,5 +111,6 @@ current system; ADRs preserve decision history.
 | [`0085`](./0085-separate-tanstack-adapters-from-semantic-ui-contracts.md) | Separate TanStack adapters from semantic UI contracts | Accepted |
 | [`0086`](./0086-promote-solid-effect-bridge-to-production-boundary.md) | Promote the Solid 2 × Effect bridge to the production boundary | Accepted |
 | [`0087`](./0087-adopt-node-lts-and-pnpm-toolchain.md) | Adopt Node.js LTS and pnpm as the repository toolchain | Accepted |
+| [`0088`](./0088-adopt-oxc-formatting-and-linting.md) | Adopt Oxc formatting and linting | Accepted |
 
 Accepted ADRs must not be rewritten to alter history. Create a new ADR and use `Supersedes`.

@@ -12,9 +12,7 @@ export interface PostgresTransaction {
 }
 
 export interface PostgresClient {
-  readonly begin: <A>(
-    callback: (transaction: PostgresTransaction) => Promise<A>,
-  ) => Promise<A>
+  readonly begin: <A>(callback: (transaction: PostgresTransaction) => Promise<A>) => Promise<A>
 }
 
 export type DrizzleDatabase = PostgresJsDatabase<EmptyRelations>
@@ -35,24 +33,25 @@ const unwrapCause = (cause: unknown): unknown =>
     ? unwrapCause(cause.cause)
     : cause
 
-export const isDatabaseConstraint = (
-  error: unknown,
-  constraint: string,
-  code = "23505",
-) => {
+export const isDatabaseConstraint = (error: unknown, constraint: string, code = "23505") => {
   if (!(error instanceof DatabaseFailure)) return false
   const cause = unwrapCause(error.cause)
-  return typeof cause === "object" && cause !== null
-    && "code" in cause && cause.code === code
-    && (("constraint" in cause && cause.constraint === constraint)
-      || ("constraint_name" in cause && cause.constraint_name === constraint))
+  return (
+    typeof cause === "object" &&
+    cause !== null &&
+    "code" in cause &&
+    cause.code === code &&
+    (("constraint" in cause && cause.constraint === constraint) ||
+      ("constraint_name" in cause && cause.constraint_name === constraint))
+  )
 }
 
-export class UnsupportedPostgresVersion
-  extends Schema.TaggedError<UnsupportedPostgresVersion>()("UnsupportedPostgresVersion", {
+export class UnsupportedPostgresVersion extends Schema.TaggedError<UnsupportedPostgresVersion>()(
+  "UnsupportedPostgresVersion",
+  {
     serverVersionNum: Schema.String,
-  })
-{
+  },
+) {
   override get message() {
     return `PostgreSQL 19 or newer is required; server_version_num is ${this.serverVersionNum}.`
   }

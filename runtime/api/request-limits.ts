@@ -49,11 +49,7 @@ const bufferedRequest = (
           return Effect.succeed(bytes.slice().buffer)
         case "modify":
           return (options: Parameters<typeof request.modify>[0]) =>
-            bufferedRequest(
-              target.modify(options),
-              bytes,
-              text,
-            )
+            bufferedRequest(target.modify(options), bytes, text)
         default:
           return Reflect.get(target, property, receiver)
       }
@@ -93,7 +89,7 @@ const requestBodyLimitMiddleware = (
   Types.unhandled,
   HttpServerRequest.HttpServerRequest
 > =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const request = yield* HttpServerRequest.HttpServerRequest
     if (!HttpMethod.hasBody(request.method)) return yield* effect
 

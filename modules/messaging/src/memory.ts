@@ -26,13 +26,12 @@ export const makeMessagingTestLayer = () => {
   const dedupeKey = (input: AppendEventInput) =>
     `${input.tenantId}:${input.eventType}:${input.eventVersion}:${input.idempotencyKey}`
 
-  const append = Effect.fn("MessagingService.append")(function*(input: unknown) {
+  const append = Effect.fn("MessagingService.append")(function* (input: unknown) {
     const decoded = yield* Schema.decodeUnknownEffect(AppendEventInput)(input)
     const byId = eventsById.get(eventKey(decoded.tenantId, decoded.eventId))
     const dedupedId = eventIdsByDedupe.get(dedupeKey(decoded))
-    const byDedupe = dedupedId === undefined
-      ? undefined
-      : eventsById.get(eventKey(decoded.tenantId, dedupedId))
+    const byDedupe =
+      dedupedId === undefined ? undefined : eventsById.get(eventKey(decoded.tenantId, dedupedId))
     const existing = byId ?? byDedupe
     if (existing !== undefined && byId === byDedupe && envelopeMatches(decoded, existing)) {
       return existing
@@ -44,7 +43,7 @@ export const makeMessagingTestLayer = () => {
     return event
   })
 
-  const getEvent = Effect.fn("MessagingService.getEvent")(function*(input: unknown) {
+  const getEvent = Effect.fn("MessagingService.getEvent")(function* (input: unknown) {
     const decoded = yield* Schema.decodeUnknownEffect(GetEventInput)(input)
     return eventsById.get(eventKey(decoded.tenantId, decoded.eventId))
   })
@@ -52,7 +51,7 @@ export const makeMessagingTestLayer = () => {
   const consumeOnce = <A, E, R>(input: unknown, effect: Effect.Effect<A, E, R>) =>
     Semaphore.withPermit(
       consumeSemaphore,
-      Effect.fn("MessagingService.consumeOnce")(function*() {
+      Effect.fn("MessagingService.consumeOnce")(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(ConsumeOnceInput)(input)
         const source = eventsById.get(eventKey(decoded.tenantId, decoded.eventId))
         if (source === undefined) {

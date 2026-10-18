@@ -13,9 +13,12 @@ const format = (value: number): string => value.toFixed(2)
 
 export const buildContourPaths = (intent: VisualIntent): readonly string[] => {
   if (
-    !hasPrimitive(intent, "contour") && !hasPrimitive(intent, "density")
-    && !hasPrimitive(intent, "elevation") && !hasPrimitive(intent, "field")
-  ) return []
+    !hasPrimitive(intent, "contour") &&
+    !hasPrimitive(intent, "density") &&
+    !hasPrimitive(intent, "elevation") &&
+    !hasPrimitive(intent, "field")
+  )
+    return []
 
   const count = Math.max(2, Math.min(8, Math.round(2 + intent.material.contourCount * 6)))
   const spacing = cartographyViewBox.height / (count + 1)

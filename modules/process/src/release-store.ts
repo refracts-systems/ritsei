@@ -148,14 +148,14 @@ const toDeployment = (row: {
 }): ProcessDeployment => ({ ...row, createdAt: row.createdAt.toISOString() })
 
 const sameRelease = (release: ProcessReleaseArtifact, input: ProcessReleaseInput): boolean =>
-  release.tenantId === input.tenantId
-  && release.definitionId === input.validation.definitionId
-  && release.definitionVersion === input.validation.definitionVersion
-  && release.catalogVersion === input.validation.catalogVersion
-  && release.checksum === input.checksum
-  && release.approvedBy === input.approvedBy
-  && release.approvalReason === input.approvalReason
-  && release.releasedBy === input.releasedBy
+  release.tenantId === input.tenantId &&
+  release.definitionId === input.validation.definitionId &&
+  release.definitionVersion === input.validation.definitionVersion &&
+  release.catalogVersion === input.validation.catalogVersion &&
+  release.checksum === input.checksum &&
+  release.approvedBy === input.approvedBy &&
+  release.approvalReason === input.approvalReason &&
+  release.releasedBy === input.releasedBy
 
 type ReleaseRecord =
   | { readonly _tag: "Recorded"; readonly release: ProcessReleaseArtifact }
@@ -165,29 +165,38 @@ const recordRelease = async (
   transaction: DrizzleTransaction,
   input: ProcessReleaseInput,
 ): Promise<ReleaseRecord> => {
-  const existingRows = await transaction.select().from(processReleases).where(and(
-    eq(processReleases.tenantId, input.tenantId),
-    eq(processReleases.definitionId, input.validation.definitionId),
-    eq(processReleases.definitionVersion, input.validation.definitionVersion),
-  )).for("update")
+  const existingRows = await transaction
+    .select()
+    .from(processReleases)
+    .where(
+      and(
+        eq(processReleases.tenantId, input.tenantId),
+        eq(processReleases.definitionId, input.validation.definitionId),
+        eq(processReleases.definitionVersion, input.validation.definitionVersion),
+      ),
+    )
+    .for("update")
   const existing = existingRows[0]
   if (existing !== undefined) {
     const release = toRelease(existing)
     return sameRelease(release, input) ? { _tag: "Recorded", release } : { _tag: "Conflict" }
   }
 
-  const rows = await transaction.insert(processReleases).values({
-    id: uuidv7(),
-    tenantId: input.tenantId,
-    definitionId: input.validation.definitionId,
-    definitionVersion: input.validation.definitionVersion,
-    catalogVersion: input.validation.catalogVersion,
-    checksum: input.checksum,
-    references: input.validation.references,
-    approvedBy: input.approvedBy,
-    approvalReason: input.approvalReason,
-    releasedBy: input.releasedBy,
-  }).returning()
+  const rows = await transaction
+    .insert(processReleases)
+    .values({
+      id: uuidv7(),
+      tenantId: input.tenantId,
+      definitionId: input.validation.definitionId,
+      definitionVersion: input.validation.definitionVersion,
+      catalogVersion: input.validation.catalogVersion,
+      checksum: input.checksum,
+      references: input.validation.references,
+      approvedBy: input.approvedBy,
+      approvalReason: input.approvalReason,
+      releasedBy: input.releasedBy,
+    })
+    .returning()
   const release = toRelease(rows[0]!)
   await transaction.insert(processReleaseAudits).values([
     {
@@ -221,35 +230,46 @@ const recordDeployment = async (
   transaction: DrizzleTransaction,
   input: ProcessDeploymentInput,
 ): Promise<DeploymentRecord> => {
-  const releaseRows = await transaction.select({ id: processReleases.id }).from(processReleases)
-    .where(and(
-      eq(processReleases.tenantId, input.tenantId),
-      eq(processReleases.id, input.releaseId),
-    )).for("update")
+  const releaseRows = await transaction
+    .select({ id: processReleases.id })
+    .from(processReleases)
+    .where(
+      and(eq(processReleases.tenantId, input.tenantId), eq(processReleases.id, input.releaseId)),
+    )
+    .for("update")
   if (releaseRows[0] === undefined) return { _tag: "MissingRelease" }
 
-  const existingRows = await transaction.select().from(processDeployments).where(and(
-    eq(processDeployments.tenantId, input.tenantId),
-    eq(processDeployments.releaseId, input.releaseId),
-    eq(processDeployments.environment, input.environment),
-  )).for("update")
+  const existingRows = await transaction
+    .select()
+    .from(processDeployments)
+    .where(
+      and(
+        eq(processDeployments.tenantId, input.tenantId),
+        eq(processDeployments.releaseId, input.releaseId),
+        eq(processDeployments.environment, input.environment),
+      ),
+    )
+    .for("update")
   const existing = existingRows[0]
   if (existing !== undefined) {
     const deployment = toDeployment(existing)
-    return deployment.deployedBy === input.deployedBy
-        && deployment.promotionReason === input.promotionReason
+    return deployment.deployedBy === input.deployedBy &&
+      deployment.promotionReason === input.promotionReason
       ? { _tag: "Recorded", deployment }
       : { _tag: "Conflict" }
   }
 
-  const rows = await transaction.insert(processDeployments).values({
-    id: uuidv7(),
-    tenantId: input.tenantId,
-    releaseId: input.releaseId,
-    environment: input.environment,
-    deployedBy: input.deployedBy,
-    promotionReason: input.promotionReason,
-  }).returning()
+  const rows = await transaction
+    .insert(processDeployments)
+    .values({
+      id: uuidv7(),
+      tenantId: input.tenantId,
+      releaseId: input.releaseId,
+      environment: input.environment,
+      deployedBy: input.deployedBy,
+      promotionReason: input.promotionReason,
+    })
+    .returning()
   const deployment = toDeployment(rows[0]!)
   await transaction.insert(processReleaseAudits).values({
     id: uuidv7(),
@@ -263,24 +283,28 @@ const recordDeployment = async (
   return { _tag: "Recorded", deployment }
 }
 
-export const makePostgresProcessReleaseStore = Effect.gen(function*() {
+export const makePostgresProcessReleaseStore = Effect.gen(function* () {
   const database = yield* Database
   return {
     release: (input: unknown) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(ProcessReleaseInput)(input)
-        const result = yield* database.transaction(
-          (transaction) => recordRelease(transaction, decoded),
-          "process.release.create",
-        ).pipe(Effect.result)
-        if (Result.isSuccess(result)) {
-          return result.success._tag === "Recorded" ? result.success.release : yield* Effect.fail(
-            new ProcessReleaseConflict({
-              tenantId: decoded.tenantId,
-              definitionId: decoded.validation.definitionId,
-              definitionVersion: decoded.validation.definitionVersion,
-            }),
+        const result = yield* database
+          .transaction(
+            (transaction) => recordRelease(transaction, decoded),
+            "process.release.create",
           )
+          .pipe(Effect.result)
+        if (Result.isSuccess(result)) {
+          return result.success._tag === "Recorded"
+            ? result.success.release
+            : yield* Effect.fail(
+                new ProcessReleaseConflict({
+                  tenantId: decoded.tenantId,
+                  definitionId: decoded.validation.definitionId,
+                  definitionVersion: decoded.validation.definitionVersion,
+                }),
+              )
         }
         if (isDatabaseConstraint(result.failure, "process_releases_tenant_definition_key")) {
           return yield* Effect.fail(
@@ -294,12 +318,14 @@ export const makePostgresProcessReleaseStore = Effect.gen(function*() {
         return yield* Effect.fail(result.failure)
       }),
     deploy: (input: unknown) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(ProcessDeploymentInput)(input)
-        const result = yield* database.transaction(
-          (transaction) => recordDeployment(transaction, decoded),
-          "process.release.deploy",
-        ).pipe(Effect.result)
+        const result = yield* database
+          .transaction(
+            (transaction) => recordDeployment(transaction, decoded),
+            "process.release.deploy",
+          )
+          .pipe(Effect.result)
         if (Result.isSuccess(result)) {
           if (result.success._tag === "Recorded") return result.success.deployment
           if (result.success._tag === "MissingRelease") {
@@ -339,10 +365,9 @@ export const makeMemoryProcessReleaseStore = (): ProcessReleaseStore => {
   const deployments = new Map<string, ProcessDeployment>()
   return {
     release: (input) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(ProcessReleaseInput)(input)
-        const key =
-          `${decoded.tenantId}:${decoded.validation.definitionId}:${decoded.validation.definitionVersion}`
+        const key = `${decoded.tenantId}:${decoded.validation.definitionId}:${decoded.validation.definitionVersion}`
         const existing = releases.get(key)
         if (existing !== undefined) {
           if (sameRelease(existing, decoded)) return existing
@@ -371,10 +396,11 @@ export const makeMemoryProcessReleaseStore = (): ProcessReleaseStore => {
         return release
       }),
     deploy: (input) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(ProcessDeploymentInput)(input)
-        const release = [...releases.values()].find((candidate) =>
-          candidate.id === decoded.releaseId && candidate.tenantId === decoded.tenantId
+        const release = [...releases.values()].find(
+          (candidate) =>
+            candidate.id === decoded.releaseId && candidate.tenantId === decoded.tenantId,
         )
         if (release === undefined) {
           return yield* Effect.fail(
@@ -388,9 +414,10 @@ export const makeMemoryProcessReleaseStore = (): ProcessReleaseStore => {
         const existing = deployments.get(key)
         if (existing !== undefined) {
           if (
-            existing.deployedBy === decoded.deployedBy
-            && existing.promotionReason === decoded.promotionReason
-          ) return existing
+            existing.deployedBy === decoded.deployedBy &&
+            existing.promotionReason === decoded.promotionReason
+          )
+            return existing
           return yield* Effect.fail(
             new ProcessDeploymentConflict({
               tenantId: decoded.tenantId,

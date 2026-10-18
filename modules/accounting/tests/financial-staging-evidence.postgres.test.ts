@@ -18,25 +18,28 @@ it.effect.skipIf(databaseUrl === undefined)(
   "protects append-only staging evidence and verifies persisted reads",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
-        const [tenant] = yield* Effect.promise(() =>
-          client<{ id: string }[]>`
+        const [tenant] = yield* Effect.promise(
+          () =>
+            client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${`staging-evidence-${uuidv7()}`}) returning id
-          `
+          `,
         )
-        const [party] = yield* Effect.promise(() =>
-          client<{ id: string }[]>`
+        const [party] = yield* Effect.promise(
+          () =>
+            client<{ id: string }[]>`
             insert into party.parties (tenant_id, kind, name)
             values (${tenant!.id}, 'organization', 'Staging Evidence Test') returning id
-          `
+          `,
         )
-        const [legalEntity] = yield* Effect.promise(() =>
-          client<{ id: string }[]>`
+        const [legalEntity] = yield* Effect.promise(
+          () =>
+            client<{ id: string }[]>`
             insert into party.legal_entities (tenant_id, organization_party_id)
             values (${tenant!.id}, ${party!.id}) returning id
-          `
+          `,
         )
         const store = yield* makePostgresFinancialStagingEvidenceStore.pipe(
           Effect.provideService(Database, database),
@@ -98,8 +101,9 @@ it.effect.skipIf(databaseUrl === undefined)(
 
         const corruptRecordId = uuidv7()
         const corruptEvidence = { ...evidence, recordId: corruptRecordId }
-        yield* Effect.promise(() =>
-          client`
+        yield* Effect.promise(
+          () =>
+            client`
             insert into accounting.financial_staging_evidence (
               record_id, tenant_id, legal_entity_id, gate_id, cohort_id, deployment_revision,
               schema_version, canonicalization_version, evidence_hash, evidence,
@@ -113,13 +117,11 @@ it.effect.skipIf(databaseUrl === undefined)(
               ${corruptEvidence.providerIdentityRef}, 'pass', 0, 0,
               ${corruptEvidence.startedAt}, ${corruptEvidence.completedAt}
             )
-          `
+          `,
         )
         const corrupt = yield* Effect.flip(store.get(tenant!.id, corruptRecordId))
         assert.instanceOf(corrupt, FinancialStagingEvidenceInvalid)
-        assert.strictEqual(
-          (corrupt as FinancialStagingEvidenceInvalid).reason,
-          "hash_mismatch",
-        )
-      })),
+        assert.strictEqual((corrupt as FinancialStagingEvidenceInvalid).reason, "hash_mismatch")
+      }),
+    ),
 )

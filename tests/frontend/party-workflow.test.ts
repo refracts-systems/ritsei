@@ -44,7 +44,7 @@ const connectAndOpenParties = async (page: Page, url: string) => {
 it.effect(
   "creates and administers Party master, legal, relationship, and representation facts",
   () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const { page, url, errors } = yield* builtApp
       const entries: Array<{
         party: typeof northwind
@@ -94,9 +94,10 @@ it.effect(
             return fulfillJson(
               route,
               200,
-              entries.filter((entry) =>
-                (search === undefined || entry.party.name.toLocaleLowerCase().includes(search))
-                && (kind === null || entry.party.kind === kind)
+              entries.filter(
+                (entry) =>
+                  (search === undefined || entry.party.name.toLocaleLowerCase().includes(search)) &&
+                  (kind === null || entry.party.kind === kind),
               ),
             )
           }
@@ -186,15 +187,19 @@ it.effect(
             return fulfillJson(
               route,
               200,
-              detail.relationships.length === 0 ? [] : [{
-                tenantId,
-                sourcePartyId: createdPartyId,
-                targetPartyId: northwindId,
-                legalEntityId: northwindLegalEntityId,
-                relationshipId,
-                relationshipKind: "supplier",
-                depth: 2,
-              }],
+              detail.relationships.length === 0
+                ? []
+                : [
+                    {
+                      tenantId,
+                      sourcePartyId: createdPartyId,
+                      targetPartyId: northwindId,
+                      legalEntityId: northwindLegalEntityId,
+                      relationshipId,
+                      relationshipKind: "supplier",
+                      depth: 2,
+                    },
+                  ],
             )
           }
           return fulfillJson(route, 404, { _tag: "ApiNotFound", code: "not_found" })
@@ -217,16 +222,18 @@ it.effect(
         await dialog.waitFor({ state: "hidden" })
         assert.isTrue(await createTrigger.evaluate((node) => document.activeElement === node))
         await createTrigger.click()
-        await dialog.getByRole("combobox", { name: "Kind", exact: true }).selectOption(
-          "organization",
-        )
+        await dialog
+          .getByRole("combobox", { name: "Kind", exact: true })
+          .selectOption("organization")
         await dialog.getByRole("textbox", { name: "Name", exact: true }).fill(createdParty.name)
         await dialog.getByRole("button", { name: "Create Party", exact: true }).click()
         await page.getByRole("heading", { name: "Party detail", exact: true }).waitFor()
         assert.equal(new URL(page.url()).pathname, `/parties/${createdPartyId}`)
         assert.deepEqual(createBody, { kind: "organization", name: createdParty.name })
         assert.isNotNull(
-          await page.getByRole("link", { name: "Parties", exact: true }).first()
+          await page
+            .getByRole("link", { name: "Parties", exact: true })
+            .first()
             .getAttribute("data-active"),
         )
 
@@ -250,7 +257,8 @@ it.effect(
         await page.getByText("Assign business role", { exact: true }).click()
         await page.getByRole("combobox", { name: "Role", exact: true }).selectOption("supplier")
         await page.getByRole("button", { name: "Assign role", exact: true }).click()
-        await page.getByRole("heading", { name: "Business roles", exact: true })
+        await page
+          .getByRole("heading", { name: "Business roles", exact: true })
           .locator("xpath=..")
           .getByText("Supplier", { exact: true })
           .waitFor()
@@ -274,15 +282,16 @@ it.effect(
           hasText: "Create legal-entity relationship",
         })
         await relationshipCommand.click()
-        await page.getByRole("combobox", { name: "Relationship kind", exact: true }).selectOption(
-          "supplier",
-        )
-        await page.getByRole("textbox", { name: "Legal entity ID", exact: true }).fill(
-          northwindLegalEntityId,
-        )
+        await page
+          .getByRole("combobox", { name: "Relationship kind", exact: true })
+          .selectOption("supplier")
+        await page
+          .getByRole("textbox", { name: "Legal entity ID", exact: true })
+          .fill(northwindLegalEntityId)
         await page.getByRole("button", { name: "Create relationship", exact: true }).click()
         await page.getByRole("cell", { name: "Northwind Holdings", exact: true }).last().waitFor()
-        await page.getByText("Supplier relationship to Northwind Holdings", { exact: true })
+        await page
+          .getByText("Supplier relationship to Northwind Holdings", { exact: true })
           .waitFor()
         assert.deepEqual(relationshipBody, {
           kind: "supplier",
@@ -290,16 +299,18 @@ it.effect(
         })
 
         await page.getByText("Link user account representation", { exact: true }).click()
-        await page.getByRole("textbox", { name: "User account ID", exact: true }).fill(
-          userAccountId,
-        )
+        await page
+          .getByRole("textbox", { name: "User account ID", exact: true })
+          .fill(userAccountId)
         await page.getByRole("button", { name: "Link representation", exact: true }).click()
         await page.getByRole("cell", { name: userAccountId, exact: true }).waitFor()
         assert.deepEqual(representationBody, { userAccountId, kind: "self" })
-        await page.getByRole("button", {
-          name: `Deactivate representation for ${userAccountId}`,
-          exact: true,
-        }).click()
+        await page
+          .getByRole("button", {
+            name: `Deactivate representation for ${userAccountId}`,
+            exact: true,
+          })
+          .click()
         await page.getByText("Inactive", { exact: true }).waitFor()
         assert.deepEqual(representationPatchBody, { active: false })
 
@@ -326,7 +337,7 @@ it.effect(
 it.effect(
   "keeps Party authorization, malformed data, and unknown command outcomes visible",
   () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const { page, url, errors } = yield* builtApp
       let mode: "forbidden" | "malformed" | "loaded" | "unknown-create" = "forbidden"
 
@@ -353,8 +364,7 @@ it.effect(
 
         mode = "malformed"
         await page.getByRole("button", { name: "Try loading Parties again", exact: true }).click()
-        await page.getByRole("alert").filter({ hasText: "invalid or oversized response" })
-          .waitFor()
+        await page.getByRole("alert").filter({ hasText: "invalid or oversized response" }).waitFor()
 
         mode = "loaded"
         await page.getByRole("button", { name: "Try loading Parties again", exact: true }).click()
@@ -370,7 +380,8 @@ it.effect(
         assert.isFalse(
           await dialog.getByRole("button", { name: "Create Party", exact: true }).isEnabled(),
         )
-        await dialog.getByRole("button", { name: "Reload Party before retrying", exact: true })
+        await dialog
+          .getByRole("button", { name: "Reload Party before retrying", exact: true })
           .click()
         assert.deepEqual(errors, [])
       })

@@ -16,6 +16,4 @@ export type FencingContext = Schema.Schema.Type<typeof FencingContext>
 
 export interface FencingContextService extends FencingContext {}
 
-export const FencingContextService = Context.Service<FencingContextService>(
-  "RITSEI/FencingContext",
-)
+export const FencingContextService = Context.Service<FencingContextService>("RITSEI/FencingContext")

@@ -291,31 +291,29 @@ export interface ProcessStudioService {
   readonly listWorkflowRuns: (
     input: unknown,
   ) => Effect.Effect<ReadonlyArray<ProcessWorkflowRun>, StudioFailure>
-  readonly listOperatorInbox: (
-    input: unknown,
-  ) => Effect.Effect<ProcessOperatorInbox, StudioFailure>
+  readonly listOperatorInbox: (input: unknown) => Effect.Effect<ProcessOperatorInbox, StudioFailure>
   readonly listOperatorControls: (
     input: unknown,
   ) => Effect.Effect<ReadonlyArray<ProcessOperatorControl>, StudioFailure>
-  readonly operateRuntime: (
-    input: unknown,
-  ) => Effect.Effect<ProcessRuntimeInstance, StudioFailure>
+  readonly operateRuntime: (input: unknown) => Effect.Effect<ProcessRuntimeInstance, StudioFailure>
 }
 
-export class ProcessRuntimeInstanceNotFound
-  extends Schema.TaggedError<ProcessRuntimeInstanceNotFound>()("ProcessRuntimeInstanceNotFound", {
+export class ProcessRuntimeInstanceNotFound extends Schema.TaggedError<ProcessRuntimeInstanceNotFound>()(
+  "ProcessRuntimeInstanceNotFound",
+  {
     tenantId: Uuid,
     instanceId: Uuid,
-  })
-{}
+  },
+) {}
 
-export class ProcessStudioRecordCorrupt
-  extends Schema.TaggedError<ProcessStudioRecordCorrupt>()("ProcessStudioRecordCorrupt", {
+export class ProcessStudioRecordCorrupt extends Schema.TaggedError<ProcessStudioRecordCorrupt>()(
+  "ProcessStudioRecordCorrupt",
+  {
     tenantId: Uuid,
     recordId: Uuid,
     recordType: NonEmptyString,
-  })
-{}
+  },
+) {}
 
 type StudioFailure =
   | Schema.SchemaError
@@ -329,9 +327,7 @@ type StudioFailure =
   | ProcessReleaseValidationFailed
   | ProcessStudioRecordCorrupt
 
-const allCatalogEntries: ReadonlyArray<
-  DomainActionCatalogEntry | DomainEventCatalogEntry
-> = [
+const allCatalogEntries: ReadonlyArray<DomainActionCatalogEntry | DomainEventCatalogEntry> = [
   ...IdentityTypedActionCatalog,
   ...IdentityTypedEventCatalog,
   ...PartyTypedActionCatalog,
@@ -352,41 +348,41 @@ const toCatalogDescriptor = (
 ): ProcessCatalogDescriptor =>
   entry.kind === "DomainAction"
     ? {
-      kind: entry.kind,
-      id: entry.id,
-      version: entry.version,
-      owningDomain: entry.owningDomain,
-      title: entry.title,
-      description: entry.description,
-      stability: entry.stability,
-      compatibilityRange: entry.compatibilityRange,
-      requiredCapability: entry.requiredCapability,
-      scope: entry.scope,
-      idempotency: entry.idempotency,
-      transactionSemantics: entry.transactionSemantics,
-      timeoutMs: entry.timeoutPolicy.timeoutMs,
-      maxAttempts: entry.retryPolicy.maxAttempts,
-      preconditions: entry.preconditions,
-      effects: entry.effects,
-      compensation: entry.compensation,
-    }
+        kind: entry.kind,
+        id: entry.id,
+        version: entry.version,
+        owningDomain: entry.owningDomain,
+        title: entry.title,
+        description: entry.description,
+        stability: entry.stability,
+        compatibilityRange: entry.compatibilityRange,
+        requiredCapability: entry.requiredCapability,
+        scope: entry.scope,
+        idempotency: entry.idempotency,
+        transactionSemantics: entry.transactionSemantics,
+        timeoutMs: entry.timeoutPolicy.timeoutMs,
+        maxAttempts: entry.retryPolicy.maxAttempts,
+        preconditions: entry.preconditions,
+        effects: entry.effects,
+        compensation: entry.compensation,
+      }
     : {
-      kind: entry.kind,
-      id: entry.id,
-      version: entry.version,
-      owningDomain: entry.owningDomain,
-      title: entry.title,
-      description: entry.description,
-      stability: entry.stability,
-      compatibilityRange: entry.compatibilityRange,
-      scope: entry.scope,
-      aggregateType: entry.aggregateType,
-      correlationFields: entry.correlationFields,
-      filterableFields: entry.filterableFields,
-      occurredAtSemantics: entry.occurredAtSemantics,
-      deliveryExpectation: entry.deliveryExpectation,
-      sensitivity: entry.sensitivity,
-    }
+        kind: entry.kind,
+        id: entry.id,
+        version: entry.version,
+        owningDomain: entry.owningDomain,
+        title: entry.title,
+        description: entry.description,
+        stability: entry.stability,
+        compatibilityRange: entry.compatibilityRange,
+        scope: entry.scope,
+        aggregateType: entry.aggregateType,
+        correlationFields: entry.correlationFields,
+        filterableFields: entry.filterableFields,
+        occurredAtSemantics: entry.occurredAtSemantics,
+        deliveryExpectation: entry.deliveryExpectation,
+        sensitivity: entry.sensitivity,
+      }
 
 const catalogDescriptors = allCatalogEntries
   .filter((entry) => entry.stability === "PUBLIC")
@@ -394,17 +390,15 @@ const catalogDescriptors = allCatalogEntries
   .sort((left, right) =>
     `${left.owningDomain}:${left.kind}:${left.id}:${left.version}`.localeCompare(
       `${right.owningDomain}:${right.kind}:${right.id}:${right.version}`,
-    )
+    ),
   )
 
-const operatorCapability = (
-  action: Schema.Schema.Type<typeof ProcessOperatorAction>,
-) =>
+const operatorCapability = (action: Schema.Schema.Type<typeof ProcessOperatorAction>) =>
   action === "retry"
     ? ProcessCapabilities.runtimeRetry
     : action === "compensate"
-    ? ProcessCapabilities.runtimeCompensate
-    : ProcessCapabilities.runtimeManualRecovery
+      ? ProcessCapabilities.runtimeCompensate
+      : ProcessCapabilities.runtimeManualRecovery
 
 const iso = (value: Date | null): string | null => value?.toISOString() ?? null
 
@@ -452,24 +446,24 @@ const decodeCheckpointRow = (row: {
     // Fallow: runtime checkpoint selection intentionally verifies every tenant and version invariant.
     // fallow-ignore-next-line complexity
     Effect.flatMap((checkpoint) =>
-      checkpoint.instanceId === row.id
-        && checkpoint.tenantId === row.tenantId
-        && checkpoint.processDefinitionId === row.processDefinitionId
-        && checkpoint.processDefinitionVersion === row.processDefinitionVersion
-        && checkpoint.catalogVersion === row.catalogVersion
-        && checkpoint.environment === row.environment
-        && checkpoint.status === row.status
-        && checkpoint.failureKind === row.failureKind
-        && checkpoint.currentNodeId === row.currentNodeId
-        && checkpoint.revision === row.revision
-        && checkpoint.correlationId === row.correlationId
-        && checkpoint.executionPrincipal === row.executionPrincipal
+      checkpoint.instanceId === row.id &&
+      checkpoint.tenantId === row.tenantId &&
+      checkpoint.processDefinitionId === row.processDefinitionId &&
+      checkpoint.processDefinitionVersion === row.processDefinitionVersion &&
+      checkpoint.catalogVersion === row.catalogVersion &&
+      checkpoint.environment === row.environment &&
+      checkpoint.status === row.status &&
+      checkpoint.failureKind === row.failureKind &&
+      checkpoint.currentNodeId === row.currentNodeId &&
+      checkpoint.revision === row.revision &&
+      checkpoint.correlationId === row.correlationId &&
+      checkpoint.executionPrincipal === row.executionPrincipal
         ? Effect.succeed(checkpoint)
         : Effect.fail(
-          new ProcessCheckpointInvalid({
-            reason: "checkpoint metadata disagrees with its persisted state",
-          }),
-        )
+            new ProcessCheckpointInvalid({
+              reason: "checkpoint metadata disagrees with its persisted state",
+            }),
+          ),
     ),
   )
 
@@ -528,12 +522,13 @@ const toWorkflowRun = (row: {
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   }).pipe(
-    Effect.mapError(() =>
-      new ProcessStudioRecordCorrupt({
-        tenantId: row.tenantId,
-        recordId: row.id,
-        recordType: "workflow_run",
-      })
+    Effect.mapError(
+      () =>
+        new ProcessStudioRecordCorrupt({
+          tenantId: row.tenantId,
+          recordId: row.id,
+          recordType: "workflow_run",
+        }),
     ),
   )
 
@@ -565,12 +560,13 @@ const toJobInboxItem = (row: {
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   }).pipe(
-    Effect.mapError(() =>
-      new ProcessStudioRecordCorrupt({
-        tenantId: row.tenantId,
-        recordId: row.id,
-        recordType: "process_job",
-      })
+    Effect.mapError(
+      () =>
+        new ProcessStudioRecordCorrupt({
+          tenantId: row.tenantId,
+          recordId: row.id,
+          recordType: "process_job",
+        }),
     ),
   )
 
@@ -605,16 +601,24 @@ const selectRuntimeCheckpointRows = (
     limit?: number
   },
 ) =>
-  db.select(processRuntimeCheckpointSelection).from(processRuntimeCheckpoints).where(and(
-    eq(processRuntimeCheckpoints.tenantId, options.tenantId),
-    options.instanceId === undefined
-      ? undefined
-      : eq(processRuntimeCheckpoints.id, options.instanceId),
-    options.status === undefined ? undefined : eq(processRuntimeCheckpoints.status, options.status),
-    options.environment === undefined
-      ? undefined
-      : eq(processRuntimeCheckpoints.environment, options.environment),
-  )).orderBy(desc(processRuntimeCheckpoints.updatedAt), desc(processRuntimeCheckpoints.id))
+  db
+    .select(processRuntimeCheckpointSelection)
+    .from(processRuntimeCheckpoints)
+    .where(
+      and(
+        eq(processRuntimeCheckpoints.tenantId, options.tenantId),
+        options.instanceId === undefined
+          ? undefined
+          : eq(processRuntimeCheckpoints.id, options.instanceId),
+        options.status === undefined
+          ? undefined
+          : eq(processRuntimeCheckpoints.status, options.status),
+        options.environment === undefined
+          ? undefined
+          : eq(processRuntimeCheckpoints.environment, options.environment),
+      ),
+    )
+    .orderBy(desc(processRuntimeCheckpoints.updatedAt), desc(processRuntimeCheckpoints.id))
     .limit(options.limit ?? 200)
 
 const sameOperatorControl = (
@@ -633,11 +637,13 @@ const sameOperatorControl = (
     readonly reason: string
   },
 ) =>
-  row.instanceId === input.instanceId && row.action === input.action
-  && row.actorPrincipalId === input.actorPrincipalId && row.idempotencyKey === input.idempotencyKey
-  && row.reason === input.reason
+  row.instanceId === input.instanceId &&
+  row.action === input.action &&
+  row.actorPrincipalId === input.actorPrincipalId &&
+  row.idempotencyKey === input.idempotencyKey &&
+  row.reason === input.reason
 
-export const makeProcessStudioService = Effect.gen(function*() {
+export const makeProcessStudioService = Effect.gen(function* () {
   const authorization = yield* AuthorizationService
   const database = yield* Database
   const clock = yield* Clock.Clock
@@ -652,17 +658,18 @@ export const makeProcessStudioService = Effect.gen(function*() {
   ) => authorization.authorize({ principal, tenantId, capability })
 
   const listCatalog = (input: unknown) =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ListProcessCatalogInput)(input)
       yield* authorize(decoded.principal, decoded.tenantId, ProcessCapabilities.catalogRead)
-      const entries = decoded.kind === undefined
-        ? catalogDescriptors
-        : catalogDescriptors.filter((entry) => entry.kind === decoded.kind)
+      const entries =
+        decoded.kind === undefined
+          ? catalogDescriptors
+          : catalogDescriptors.filter((entry) => entry.kind === decoded.kind)
       return entries.slice(0, decoded.limit ?? 200)
     })
 
   const validateDefinition = (input: unknown) =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ValidateProcessDefinitionInput)(input)
       yield* authorize(decoded.principal, decoded.tenantId, ProcessCapabilities.definitionValidate)
       return yield* validateProcessRelease(registry, {
@@ -674,7 +681,7 @@ export const makeProcessStudioService = Effect.gen(function*() {
     })
 
   const listRuntimeInstances = (input: unknown) =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ListProcessRuntimeInstancesInput)(input)
       yield* authorize(decoded.principal, decoded.tenantId, ProcessCapabilities.monitorRead)
       const rows = yield* database.query(
@@ -684,11 +691,12 @@ export const makeProcessStudioService = Effect.gen(function*() {
       return yield* Effect.forEach(rows, (row) =>
         decodeCheckpointRow(row).pipe(
           Effect.map((checkpoint) => toRuntimeInstance(checkpoint, row.createdAt, row.updatedAt)),
-        ))
+        ),
+      )
     })
 
   const getRuntimeInstance = (input: unknown) =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(GetProcessRuntimeInstanceInput)(input)
       yield* authorize(decoded.principal, decoded.tenantId, ProcessCapabilities.monitorRead)
       const rows = yield* database.query(
@@ -712,82 +720,99 @@ export const makeProcessStudioService = Effect.gen(function*() {
     })
 
   const listWorkflowRuns = (input: unknown) =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ListProcessWorkflowRunsInput)(input)
       yield* authorize(decoded.principal, decoded.tenantId, ProcessCapabilities.monitorRead)
       const rows = yield* database.query(
         (db) =>
-          db.select({
-            id: workflowRuns.id,
-            tenantId: workflowRuns.tenantId,
-            workflowType: workflowRuns.workflowType,
-            aggregateId: workflowRuns.aggregateId,
-            idempotencyKey: workflowRuns.idempotencyKey,
-            status: workflowRuns.status,
-            recoveryReason: workflowRuns.recoveryReason,
-            completedAt: workflowRuns.completedAt,
-            createdAt: workflowRuns.createdAt,
-            updatedAt: workflowRuns.updatedAt,
-          }).from(workflowRuns).where(and(
-            eq(workflowRuns.tenantId, decoded.tenantId),
-            decoded.workflowType === undefined
-              ? undefined
-              : eq(workflowRuns.workflowType, decoded.workflowType),
-            decoded.status === undefined ? undefined : eq(workflowRuns.status, decoded.status),
-          )).orderBy(desc(workflowRuns.updatedAt), desc(workflowRuns.id)).limit(
-            decoded.limit ?? 200,
-          ),
+          db
+            .select({
+              id: workflowRuns.id,
+              tenantId: workflowRuns.tenantId,
+              workflowType: workflowRuns.workflowType,
+              aggregateId: workflowRuns.aggregateId,
+              idempotencyKey: workflowRuns.idempotencyKey,
+              status: workflowRuns.status,
+              recoveryReason: workflowRuns.recoveryReason,
+              completedAt: workflowRuns.completedAt,
+              createdAt: workflowRuns.createdAt,
+              updatedAt: workflowRuns.updatedAt,
+            })
+            .from(workflowRuns)
+            .where(
+              and(
+                eq(workflowRuns.tenantId, decoded.tenantId),
+                decoded.workflowType === undefined
+                  ? undefined
+                  : eq(workflowRuns.workflowType, decoded.workflowType),
+                decoded.status === undefined ? undefined : eq(workflowRuns.status, decoded.status),
+              ),
+            )
+            .orderBy(desc(workflowRuns.updatedAt), desc(workflowRuns.id))
+            .limit(decoded.limit ?? 200),
         "process.studio.workflow-runs.list",
       )
       return yield* Effect.forEach(rows, toWorkflowRun)
     })
 
   const listOperatorInbox = (input: unknown) =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ListProcessOperatorInboxInput)(input)
       yield* authorize(decoded.principal, decoded.tenantId, ProcessCapabilities.inboxRead)
       const limit = decoded.limit ?? 200
       const [checkpointRows, jobRows] = yield* Effect.all([
         database.query(
           (db) =>
-            db.select(processRuntimeCheckpointSelection).from(processRuntimeCheckpoints).where(and(
-              eq(processRuntimeCheckpoints.tenantId, decoded.tenantId),
-              inArray(processRuntimeCheckpoints.status, [
-                "running",
-                "waiting",
-                "failed",
-                "manual_recovery",
-              ]),
-            )).orderBy(
-              desc(processRuntimeCheckpoints.updatedAt),
-              desc(processRuntimeCheckpoints.id),
-            )
+            db
+              .select(processRuntimeCheckpointSelection)
+              .from(processRuntimeCheckpoints)
+              .where(
+                and(
+                  eq(processRuntimeCheckpoints.tenantId, decoded.tenantId),
+                  inArray(processRuntimeCheckpoints.status, [
+                    "running",
+                    "waiting",
+                    "failed",
+                    "manual_recovery",
+                  ]),
+                ),
+              )
+              .orderBy(
+                desc(processRuntimeCheckpoints.updatedAt),
+                desc(processRuntimeCheckpoints.id),
+              )
               .limit(limit),
           "process.studio.inbox.runtime.list",
         ),
         database.query(
           (db) =>
-            db.select({
-              id: processJobs.id,
-              tenantId: processJobs.tenantId,
-              jobType: processJobs.jobType,
-              idempotencyKey: processJobs.idempotencyKey,
-              priority: processJobs.priority,
-              status: processJobs.status,
-              scheduledAt: processJobs.scheduledAt,
-              attempts: processJobs.attempts,
-              correlationId: processJobs.correlationId,
-              completedAt: processJobs.completedAt,
-              createdAt: processJobs.createdAt,
-              updatedAt: processJobs.updatedAt,
-            }).from(processJobs).where(and(
-              eq(processJobs.tenantId, decoded.tenantId),
-              inArray(processJobs.status, ["pending", "leased", "failed", "manual_recovery"]),
-            )).orderBy(
-              desc(processJobs.priority),
-              asc(processJobs.scheduledAt),
-              asc(processJobs.id),
-            )
+            db
+              .select({
+                id: processJobs.id,
+                tenantId: processJobs.tenantId,
+                jobType: processJobs.jobType,
+                idempotencyKey: processJobs.idempotencyKey,
+                priority: processJobs.priority,
+                status: processJobs.status,
+                scheduledAt: processJobs.scheduledAt,
+                attempts: processJobs.attempts,
+                correlationId: processJobs.correlationId,
+                completedAt: processJobs.completedAt,
+                createdAt: processJobs.createdAt,
+                updatedAt: processJobs.updatedAt,
+              })
+              .from(processJobs)
+              .where(
+                and(
+                  eq(processJobs.tenantId, decoded.tenantId),
+                  inArray(processJobs.status, ["pending", "leased", "failed", "manual_recovery"]),
+                ),
+              )
+              .orderBy(
+                desc(processJobs.priority),
+                asc(processJobs.scheduledAt),
+                asc(processJobs.id),
+              )
               .limit(limit),
           "process.studio.inbox.jobs.list",
         ),
@@ -800,87 +825,104 @@ export const makeProcessStudioService = Effect.gen(function*() {
               ? Effect.succeed(null)
               : Effect.succeed(instance)
           }),
-        )).pipe(
-          Effect.map((items) =>
-            items.filter((item): item is ProcessRuntimeInstance =>
-              item !== null
-            )
-          ),
-        )
+        ),
+      ).pipe(
+        Effect.map((items) =>
+          items.filter((item): item is ProcessRuntimeInstance => item !== null),
+        ),
+      )
       const jobs = yield* Effect.forEach(jobRows, toJobInboxItem)
       return { runtimeInstances, jobs }
     })
 
   const listOperatorControls = (input: unknown) =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ListProcessOperatorControlsInput)(input)
       yield* authorize(decoded.principal, decoded.tenantId, ProcessCapabilities.historyRead)
       const rows = yield* database.query(
         (db) =>
-          db.select({
-            id: processOperatorControls.id,
-            tenantId: processOperatorControls.tenantId,
-            instanceId: processOperatorControls.instanceId,
-            action: processOperatorControls.action,
-            idempotencyKey: processOperatorControls.idempotencyKey,
-            actorPrincipalId: processOperatorControls.actorPrincipalId,
-            reason: processOperatorControls.reason,
-            createdAt: processOperatorControls.createdAt,
-          }).from(processOperatorControls).where(and(
-            eq(processOperatorControls.tenantId, decoded.tenantId),
-            decoded.instanceId === undefined
-              ? undefined
-              : eq(processOperatorControls.instanceId, decoded.instanceId),
-          )).orderBy(desc(processOperatorControls.createdAt), desc(processOperatorControls.id))
+          db
+            .select({
+              id: processOperatorControls.id,
+              tenantId: processOperatorControls.tenantId,
+              instanceId: processOperatorControls.instanceId,
+              action: processOperatorControls.action,
+              idempotencyKey: processOperatorControls.idempotencyKey,
+              actorPrincipalId: processOperatorControls.actorPrincipalId,
+              reason: processOperatorControls.reason,
+              createdAt: processOperatorControls.createdAt,
+            })
+            .from(processOperatorControls)
+            .where(
+              and(
+                eq(processOperatorControls.tenantId, decoded.tenantId),
+                decoded.instanceId === undefined
+                  ? undefined
+                  : eq(processOperatorControls.instanceId, decoded.instanceId),
+              ),
+            )
+            .orderBy(desc(processOperatorControls.createdAt), desc(processOperatorControls.id))
             .limit(decoded.limit ?? 200),
         "process.studio.operator-controls.list",
       )
       return yield* Effect.forEach(rows, (row) =>
         Schema.decodeUnknownEffect(ProcessOperatorControl)(toOperatorControl(row)).pipe(
-          Effect.mapError(() =>
-            new ProcessStudioRecordCorrupt({
-              tenantId: row.tenantId,
-              recordId: row.id,
-              recordType: "operator_control",
-            })
+          Effect.mapError(
+            () =>
+              new ProcessStudioRecordCorrupt({
+                tenantId: row.tenantId,
+                recordId: row.id,
+                recordType: "operator_control",
+              }),
           ),
-        ))
+        ),
+      )
     })
 
   const loadRuntimeRow = (tenantId: string, instanceId: string, forUpdate = false) =>
     database.query(
       (db) => {
-        const query = db.select(processRuntimeCheckpointSelection).from(processRuntimeCheckpoints)
-          .where(and(
-            eq(processRuntimeCheckpoints.tenantId, tenantId),
-            eq(processRuntimeCheckpoints.id, instanceId),
-          ))
+        const query = db
+          .select(processRuntimeCheckpointSelection)
+          .from(processRuntimeCheckpoints)
+          .where(
+            and(
+              eq(processRuntimeCheckpoints.tenantId, tenantId),
+              eq(processRuntimeCheckpoints.id, instanceId),
+            ),
+          )
         return forUpdate ? query.for("update") : query
       },
       forUpdate ? "process.studio.runtime.lock" : "process.studio.runtime.load",
     )
 
   const operateRuntime = (input: unknown) =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ProcessRuntimeOperatorInput)(input)
       yield* authorize(decoded.principal, decoded.tenantId, operatorCapability(decoded.action))
       const actorPrincipalId = decoded.principal.userAccountId
       const operation = database.withTransaction(
-        Effect.gen(function*() {
+        Effect.gen(function* () {
           const existingRows = yield* database.query(
             (db) =>
-              db.select({
-                id: processOperatorControls.id,
-                tenantId: processOperatorControls.tenantId,
-                instanceId: processOperatorControls.instanceId,
-                action: processOperatorControls.action,
-                idempotencyKey: processOperatorControls.idempotencyKey,
-                actorPrincipalId: processOperatorControls.actorPrincipalId,
-                reason: processOperatorControls.reason,
-              }).from(processOperatorControls).where(and(
-                eq(processOperatorControls.tenantId, decoded.tenantId),
-                eq(processOperatorControls.idempotencyKey, decoded.idempotencyKey),
-              )).for("update"),
+              db
+                .select({
+                  id: processOperatorControls.id,
+                  tenantId: processOperatorControls.tenantId,
+                  instanceId: processOperatorControls.instanceId,
+                  action: processOperatorControls.action,
+                  idempotencyKey: processOperatorControls.idempotencyKey,
+                  actorPrincipalId: processOperatorControls.actorPrincipalId,
+                  reason: processOperatorControls.reason,
+                })
+                .from(processOperatorControls)
+                .where(
+                  and(
+                    eq(processOperatorControls.tenantId, decoded.tenantId),
+                    eq(processOperatorControls.idempotencyKey, decoded.idempotencyKey),
+                  ),
+                )
+                .for("update"),
             "process.studio.operator-control.idempotency.lookup",
           )
           const existing = existingRows[0]
@@ -927,26 +969,33 @@ export const makeProcessStudioService = Effect.gen(function*() {
             )
           }
           const checkpoint = yield* decodeCheckpointRow(row)
-          const updatedCheckpoint = decoded.action === "retry"
-            ? yield* operator.retry(checkpoint)
-            : decoded.action === "compensate"
-            ? yield* operator.startCompensation(checkpoint)
-            : yield* operator.requireManualRecovery(checkpoint)
+          const updatedCheckpoint =
+            decoded.action === "retry"
+              ? yield* operator.retry(checkpoint)
+              : decoded.action === "compensate"
+                ? yield* operator.startCompensation(checkpoint)
+                : yield* operator.requireManualRecovery(checkpoint)
           const updatedAt = now()
           const updatedRows = yield* database.query(
             (db) =>
-              db.update(processRuntimeCheckpoints).set({
-                status: updatedCheckpoint.status,
-                failureKind: updatedCheckpoint.failureKind,
-                currentNodeId: updatedCheckpoint.currentNodeId,
-                revision: updatedCheckpoint.revision,
-                state: updatedCheckpoint,
-                updatedAt,
-              }).where(and(
-                eq(processRuntimeCheckpoints.tenantId, decoded.tenantId),
-                eq(processRuntimeCheckpoints.id, decoded.instanceId),
-                eq(processRuntimeCheckpoints.revision, checkpoint.revision),
-              )).returning({ id: processRuntimeCheckpoints.id }),
+              db
+                .update(processRuntimeCheckpoints)
+                .set({
+                  status: updatedCheckpoint.status,
+                  failureKind: updatedCheckpoint.failureKind,
+                  currentNodeId: updatedCheckpoint.currentNodeId,
+                  revision: updatedCheckpoint.revision,
+                  state: updatedCheckpoint,
+                  updatedAt,
+                })
+                .where(
+                  and(
+                    eq(processRuntimeCheckpoints.tenantId, decoded.tenantId),
+                    eq(processRuntimeCheckpoints.id, decoded.instanceId),
+                    eq(processRuntimeCheckpoints.revision, checkpoint.revision),
+                  ),
+                )
+                .returning({ id: processRuntimeCheckpoints.id }),
             "process.studio.runtime.operator-update",
           )
           if (updatedRows.length !== 1) {
@@ -978,26 +1027,32 @@ export const makeProcessStudioService = Effect.gen(function*() {
       const outcome = yield* operation.pipe(Effect.result)
       if (Result.isSuccess(outcome)) return outcome.success
       if (
-        outcome.failure instanceof DatabaseFailure
-        && isDatabaseConstraint(outcome.failure, "operator_controls_tenant_id_key")
+        outcome.failure instanceof DatabaseFailure &&
+        isDatabaseConstraint(outcome.failure, "operator_controls_tenant_id_key")
       ) {
         const rows = yield* database.query(
           (db) =>
-            db.select({
-              instanceId: processOperatorControls.instanceId,
-              action: processOperatorControls.action,
-              actorPrincipalId: processOperatorControls.actorPrincipalId,
-              idempotencyKey: processOperatorControls.idempotencyKey,
-              reason: processOperatorControls.reason,
-            }).from(processOperatorControls).where(and(
-              eq(processOperatorControls.tenantId, decoded.tenantId),
-              eq(processOperatorControls.idempotencyKey, decoded.idempotencyKey),
-            )),
+            db
+              .select({
+                instanceId: processOperatorControls.instanceId,
+                action: processOperatorControls.action,
+                actorPrincipalId: processOperatorControls.actorPrincipalId,
+                idempotencyKey: processOperatorControls.idempotencyKey,
+                reason: processOperatorControls.reason,
+              })
+              .from(processOperatorControls)
+              .where(
+                and(
+                  eq(processOperatorControls.tenantId, decoded.tenantId),
+                  eq(processOperatorControls.idempotencyKey, decoded.idempotencyKey),
+                ),
+              ),
           "process.studio.operator-control.replay.lookup",
         )
         const existing = rows[0]
         if (
-          existing !== undefined && sameOperatorControl(existing, {
+          existing !== undefined &&
+          sameOperatorControl(existing, {
             instanceId: decoded.instanceId,
             action: decoded.action,
             actorPrincipalId,

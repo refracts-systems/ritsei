@@ -43,14 +43,15 @@ export const makeMemoryAuthorizationService = (
 
   return {
     authorize: Effect.fn("AuthorizationService.authorize")((input: unknown) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(AuthorizationInput)(input)
         const current = membershipsStore.get(
           membershipKey(decoded.principal.userAccountId, decoded.tenantId),
         )
-        const key = `${
-          membershipKey(decoded.principal.userAccountId, decoded.tenantId)
-        }:${decoded.capability}`
+        const key = `${membershipKey(
+          decoded.principal.userAccountId,
+          decoded.tenantId,
+        )}:${decoded.capability}`
         if (current?.status !== "active" || !grants.has(key)) {
           return yield* Effect.fail(
             new AuthorizationDenied({ tenantId: decoded.tenantId, capability: decoded.capability }),
@@ -62,10 +63,10 @@ export const makeMemoryAuthorizationService = (
           capability: decoded.capability,
           grant: "membership" as const,
         } satisfies Schema.Schema.Type<typeof AuthorizationDecision>
-      })
+      }),
     ),
     addMember: Effect.fn("AuthorizationService.addMember")((input: unknown) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(AddTenantMembershipInput)(input)
         const key = membershipKey(decoded.userAccountId, decoded.tenantId)
         if (membershipsStore.has(key)) {
@@ -74,41 +75,42 @@ export const makeMemoryAuthorizationService = (
         const created = { ...decoded, status: "active" as const }
         membershipsStore.set(key, created)
         return created
-      })
+      }),
     ),
     getMember: Effect.fn("AuthorizationService.getMember")((input: unknown) =>
-      Schema.decodeUnknownEffect(TenantMembershipInput)(input).pipe(Effect.flatMap(member))
+      Schema.decodeUnknownEffect(TenantMembershipInput)(input).pipe(Effect.flatMap(member)),
     ),
     listMembers: Effect.fn("AuthorizationService.listMembers")((input: unknown) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(ListTenantMembershipsInput)(input)
         return [...membershipsStore.values()]
-          .filter((member) =>
-            member.tenantId === decoded.tenantId
-            && (decoded.search === undefined
-              || member.userAccountId.toLocaleLowerCase().includes(
-                decoded.search.toLocaleLowerCase(),
-              ))
-            && (decoded.status === undefined || member.status === decoded.status)
+          .filter(
+            (member) =>
+              member.tenantId === decoded.tenantId &&
+              (decoded.search === undefined ||
+                member.userAccountId
+                  .toLocaleLowerCase()
+                  .includes(decoded.search.toLocaleLowerCase())) &&
+              (decoded.status === undefined || member.status === decoded.status),
           )
           .sort((left, right) => left.userAccountId.localeCompare(right.userAccountId))
           .slice(0, decoded.limit ?? 200)
-      })
+      }),
     ),
-    listAccessibleTenants: Effect.fn("AuthorizationService.listAccessibleTenants")((
-      input: unknown,
-    ) =>
-      Effect.gen(function*() {
-        const decoded = yield* Schema.decodeUnknownEffect(ListAccessibleTenantsInput)(input)
-        return [...membershipsStore.values()]
-          .filter((member) =>
-            member.userAccountId === decoded.userAccountId && member.status === "active"
-          )
-          .sort((left, right) => left.tenantId.localeCompare(right.tenantId))
-      })
+    listAccessibleTenants: Effect.fn("AuthorizationService.listAccessibleTenants")(
+      (input: unknown) =>
+        Effect.gen(function* () {
+          const decoded = yield* Schema.decodeUnknownEffect(ListAccessibleTenantsInput)(input)
+          return [...membershipsStore.values()]
+            .filter(
+              (member) =>
+                member.userAccountId === decoded.userAccountId && member.status === "active",
+            )
+            .sort((left, right) => left.tenantId.localeCompare(right.tenantId))
+        }),
     ),
     listDirectGrants: Effect.fn("AuthorizationService.listDirectGrants")((input: unknown) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(TenantMembershipInput)(input)
         yield* member(decoded)
         const prefix = `${membershipKey(decoded.userAccountId, decoded.tenantId)}:`
@@ -120,26 +122,26 @@ export const makeMemoryAuthorizationService = (
             scope: "tenant",
           }))
           .sort((left, right) => left.capability.localeCompare(right.capability))
-      })
+      }),
     ),
     suspendMember: Effect.fn("AuthorizationService.suspendMember")((input: unknown) =>
-      updateMember(input, "suspended")
+      updateMember(input, "suspended"),
     ),
     activateMember: Effect.fn("AuthorizationService.activateMember")((input: unknown) =>
-      updateMember(input, "active")
+      updateMember(input, "active"),
     ),
     removeMember: Effect.fn("AuthorizationService.removeMember")((input: unknown) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(TenantMembershipInput)(input)
         const key = membershipKey(decoded.userAccountId, decoded.tenantId)
         if (!membershipsStore.delete(key)) {
           return yield* Effect.fail(new TenantMembershipNotFound(decoded))
         }
-        for (const grant of [...grants]) if (grant.startsWith(`${key}:`)) grants.delete(grant)
-      })
+        for (const grant of grants) if (grant.startsWith(`${key}:`)) grants.delete(grant)
+      }),
     ),
     grant: Effect.fn("AuthorizationService.grant")((input: unknown) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(GrantCapabilityInput)(input)
         const current = yield* member(decoded)
         if (current.status !== "active") {
@@ -150,17 +152,18 @@ export const makeMemoryAuthorizationService = (
             }),
           )
         }
-        const key = `${
-          membershipKey(decoded.userAccountId, decoded.tenantId)
-        }:${decoded.capability}`
+        const key = `${membershipKey(
+          decoded.userAccountId,
+          decoded.tenantId,
+        )}:${decoded.capability}`
         if (grants.has(key)) return yield* Effect.fail(new CapabilityAlreadyGranted(decoded))
         grants.add(key)
-      })
+      }),
     ),
   }
 
   function updateMember(input: unknown, status: "active" | "suspended") {
-    return Effect.gen(function*() {
+    return Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(TenantMembershipInput)(input)
       const current = yield* member(decoded)
       const updated = { ...current, status }

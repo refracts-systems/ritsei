@@ -12,7 +12,10 @@ const encode = (value: unknown) =>
     .replace(/=+$/, "")
 
 const encodeBytes = (bytes: Uint8Array) =>
-  btoa(String.fromCharCode(...bytes)).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "")
+  btoa(String.fromCharCode(...bytes))
+    .replaceAll("+", "-")
+    .replaceAll("/", "_")
+    .replace(/=+$/, "")
 
 const oidcConfiguration = {
   profile: "oidc" as const,
@@ -30,7 +33,7 @@ const provider = makeOidcIdentityProvider(oidcConfiguration)
 const withProvider = (token: string) => provider.authenticate(token)
 
 it.effect("accepts a valid OIDC assertion and rejects invalid claims", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const keys = yield* Effect.promise(() =>
       crypto.subtle.generateKey(
         {
@@ -41,7 +44,7 @@ it.effect("accepts a valid OIDC assertion and rejects invalid claims", () =>
         },
         true,
         ["sign", "verify"],
-      )
+      ),
     )
     const publicJwk = yield* Effect.promise(() => crypto.subtle.exportKey("jwk", keys.publicKey))
     const jwk = { ...publicJwk, kid: "test-key", alg: "RS256", use: "sig" }
@@ -72,7 +75,7 @@ it.effect("accepts a valid OIDC assertion and rejects invalid claims", () =>
         { name: "RSASSA-PKCS1-v1_5" },
         keys.privateKey,
         new TextEncoder().encode(signingInput),
-      )
+      ),
     )
     const signaturePart = encodeBytes(new Uint8Array(signature))
     const token = `${signingInput}.${signaturePart}`
@@ -113,5 +116,6 @@ it.effect("accepts a valid OIDC assertion and rejects invalid claims", () =>
       yield* Effect.flip(withProvider(`${unknownKid}.${payload}.${signaturePart}`)),
       ExternalProviderUnavailable,
     )
-    yield* Effect.sync(() => globalThis.fetch = originalFetch)
-  }))
+    yield* Effect.sync(() => (globalThis.fetch = originalFetch))
+  }),
+)

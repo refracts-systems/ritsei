@@ -37,181 +37,188 @@ import {
 const databaseUrl = process.env["DATABASE_URL"]
 const sales = {} as SalesService
 
-it.effect.skipIf(databaseUrl === undefined)(
-  "enforces the controlled cutover state machine",
-  () =>
-    withTemporaryDatabase(
-      databaseUrl!,
-      (client) =>
-        Effect.gen(function*() {
-          yield* runMigrations(client)
-          const database = makePostgresDatabase(client)
-          const [tenant] = yield* Effect.promise(() =>
-            client<{ id: string }[]>`
+it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover state machine", () =>
+  withTemporaryDatabase(databaseUrl!, (client) =>
+    Effect.gen(function* () {
+      yield* runMigrations(client)
+      const database = makePostgresDatabase(client)
+      const [tenant] = yield* Effect.promise(
+        () =>
+          client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
-          `
-          )
-          const [organization] = yield* Effect.promise(() =>
-            client<{ id: string }[]>`
+          `,
+      )
+      const [organization] = yield* Effect.promise(
+        () =>
+          client<{ id: string }[]>`
             insert into party.parties (tenant_id, kind, name)
             values (${tenant!.id}, 'organization', 'Cutover Organization') returning id
-          `
-          )
-          const [legalEntity] = yield* Effect.promise(() =>
-            client<{ id: string }[]>`
+          `,
+      )
+      const [legalEntity] = yield* Effect.promise(
+        () =>
+          client<{ id: string }[]>`
             insert into party.legal_entities (tenant_id, organization_party_id)
             values (${tenant!.id}, ${organization!.id}) returning id
-          `
-          )
-          yield* Effect.promise(() =>
-            client`
+          `,
+      )
+      yield* Effect.promise(
+        () =>
+          client`
             insert into accounting.legal_entity_accounting_configurations
               (tenant_id, legal_entity_id, base_currency, decimal_precision,
                fiscal_year_start_month, posting_enabled)
             values (${tenant!.id}, ${legalEntity!.id}, 'USD', 2, 1, true)
-          `
-          )
-          yield* Effect.promise(() =>
-            client`
+          `,
+      )
+      yield* Effect.promise(
+        () =>
+          client`
             insert into accounting.accounts (tenant_id, code, name, type)
             values
               (${tenant!.id}, '1000', 'Cash', 'asset'),
               (${tenant!.id}, '4000', 'Revenue', 'revenue')
-          `
-          )
-          const principal = {
-            userAccountId: uuidv7(),
-            sessionId: uuidv7(),
-          }
-          const generatedSigner = yield* generateEd25519FinancialVerificationSigner("test-key")
-          const signer = yield* Effect.provide(
-            Effect.service(FinancialVerificationSigner),
-            generatedSigner.layer,
-          )
-          const authorization = makeAuthorizationTestLayer([{
-            userAccountId: principal.userAccountId,
-            tenantId: tenant!.id,
-            capability: AccountingCapabilities.financialEngineActivate,
-          }, {
-            userAccountId: principal.userAccountId,
-            tenantId: tenant!.id,
-            capability: AccountingCapabilities.journalPost,
-          }, {
-            userAccountId: principal.userAccountId,
-            tenantId: tenant!.id,
-            capability: AccountingCapabilities.financialProjectionRebuild,
-          }, {
-            userAccountId: principal.userAccountId,
-            tenantId: tenant!.id,
-            capability: AccountingCapabilities.financialReconciliationCheckpoint,
-          }, {
-            userAccountId: principal.userAccountId,
-            tenantId: tenant!.id,
-            capability: AccountingCapabilities.financialEvidenceRecord,
-          }])
-          const messaging = yield* makeMessagingService.pipe(
-            Effect.provideService(Database, database),
-          )
-          const service = yield* Effect.provide(
-            makeAccountingService,
-            Layer.mergeAll(
-              Layer.succeed(Database, database),
-              authorization,
-              Layer.succeed(MessagingService, messaging),
-              Layer.succeed(SalesService, sales),
-              makeFinancialLedgerTestLayer(),
-              generatedSigner.layer,
-            ),
-          )
+          `,
+      )
+      const principal = {
+        userAccountId: uuidv7(),
+        sessionId: uuidv7(),
+      }
+      const generatedSigner = yield* generateEd25519FinancialVerificationSigner("test-key")
+      const signer = yield* Effect.provide(
+        Effect.service(FinancialVerificationSigner),
+        generatedSigner.layer,
+      )
+      const authorization = makeAuthorizationTestLayer([
+        {
+          userAccountId: principal.userAccountId,
+          tenantId: tenant!.id,
+          capability: AccountingCapabilities.financialEngineActivate,
+        },
+        {
+          userAccountId: principal.userAccountId,
+          tenantId: tenant!.id,
+          capability: AccountingCapabilities.journalPost,
+        },
+        {
+          userAccountId: principal.userAccountId,
+          tenantId: tenant!.id,
+          capability: AccountingCapabilities.financialProjectionRebuild,
+        },
+        {
+          userAccountId: principal.userAccountId,
+          tenantId: tenant!.id,
+          capability: AccountingCapabilities.financialReconciliationCheckpoint,
+        },
+        {
+          userAccountId: principal.userAccountId,
+          tenantId: tenant!.id,
+          capability: AccountingCapabilities.financialEvidenceRecord,
+        },
+      ])
+      const messaging = yield* makeMessagingService.pipe(Effect.provideService(Database, database))
+      const service = yield* Effect.provide(
+        makeAccountingService,
+        Layer.mergeAll(
+          Layer.succeed(Database, database),
+          authorization,
+          Layer.succeed(MessagingService, messaging),
+          Layer.succeed(SalesService, sales),
+          makeFinancialLedgerTestLayer(),
+          generatedSigner.layer,
+        ),
+      )
 
-          const prepared = yield* service.prepareTigerBeetleCutover({
-            principal,
-            tenantId: tenant!.id,
-            legalEntityId: legalEntity!.id,
-          })
-          assert.strictEqual(prepared.status, "preparing_tigerbeetle")
+      const prepared = yield* service.prepareTigerBeetleCutover({
+        principal,
+        tenantId: tenant!.id,
+        legalEntityId: legalEntity!.id,
+      })
+      assert.strictEqual(prepared.status, "preparing_tigerbeetle")
 
-          const evidence = {
-            tenantId: tenant!.id,
-            legalEntityId: legalEntity!.id,
-            kind: "cutover_rehearsal" as const,
-            completeness: "bounded" as const,
-            scope: `tenant:${tenant!.id}/legal-entity:${legalEntity!.id}`,
-            schemaVersion: 1,
-            mappingVersion: 1,
-            currency: "USD",
-            sourceWatermark: "postgres:test:1",
-            targetWatermark: "tigerbeetle:test:1",
-            sourceSnapshotRef: "postgres:test-snapshot",
-            targetSnapshotRef: "tigerbeetle:test-snapshot",
-            operationSetHash: "0".repeat(64),
-            accountBalanceHash: "1".repeat(64),
-            transferSetHash: "2".repeat(64),
-            projectionHash: "3".repeat(64),
-            sourceDebitMinor: "100",
-            sourceCreditMinor: "100",
-            targetDebitMinor: "100",
-            targetCreditMinor: "100",
-            accountCount: 2,
-            operationCount: 1,
-            transferCount: 2,
-            mismatchCount: 1,
-            startedAt: "2026-08-18T00:00:00.000Z",
-            completedAt: "2026-08-18T00:01:00.000Z",
-          }
-          const rejected = yield* service.recordFinancialVerificationArtifact({
-            principal,
-            tenantId: tenant!.id,
-            evidence,
-          })
-          assert.strictEqual(rejected.status, "rejected")
-          assert.strictEqual(rejected.signatureAlgorithm, "Ed25519")
-          const rejectedSignature = yield* Effect.fromResult(
-            Base64Url.decode(rejected.signature),
-          )
-          assert.strictEqual(
-            yield* signer.verify(
-              new TextEncoder().encode(rejected.artifactHash),
-              rejectedSignature,
-            ),
-            true,
-          )
-          const artifactMutation = yield* Effect.flip(Effect.tryPromise({
-            try: () =>
-              client`
+      const evidence = {
+        tenantId: tenant!.id,
+        legalEntityId: legalEntity!.id,
+        kind: "cutover_rehearsal" as const,
+        completeness: "bounded" as const,
+        scope: `tenant:${tenant!.id}/legal-entity:${legalEntity!.id}`,
+        schemaVersion: 1,
+        mappingVersion: 1,
+        currency: "USD",
+        sourceWatermark: "postgres:test:1",
+        targetWatermark: "tigerbeetle:test:1",
+        sourceSnapshotRef: "postgres:test-snapshot",
+        targetSnapshotRef: "tigerbeetle:test-snapshot",
+        operationSetHash: "0".repeat(64),
+        accountBalanceHash: "1".repeat(64),
+        transferSetHash: "2".repeat(64),
+        projectionHash: "3".repeat(64),
+        sourceDebitMinor: "100",
+        sourceCreditMinor: "100",
+        targetDebitMinor: "100",
+        targetCreditMinor: "100",
+        accountCount: 2,
+        operationCount: 1,
+        transferCount: 2,
+        mismatchCount: 1,
+        startedAt: "2026-08-18T00:00:00.000Z",
+        completedAt: "2026-08-18T00:01:00.000Z",
+      }
+      const rejected = yield* service.recordFinancialVerificationArtifact({
+        principal,
+        tenantId: tenant!.id,
+        evidence,
+      })
+      assert.strictEqual(rejected.status, "rejected")
+      assert.strictEqual(rejected.signatureAlgorithm, "Ed25519")
+      const rejectedSignature = yield* Effect.fromResult(Base64Url.decode(rejected.signature))
+      assert.strictEqual(
+        yield* signer.verify(new TextEncoder().encode(rejected.artifactHash), rejectedSignature),
+        true,
+      )
+      const artifactMutation = yield* Effect.flip(
+        Effect.tryPromise({
+          try: () =>
+            client`
               update accounting.financial_verification_artifacts
               set scope = 'mutated'
               where tenant_id = ${tenant!.id} and id = ${rejected.id}
             `,
-            catch: (cause) => cause,
-          }))
-          assert.strictEqual(
-            (artifactMutation as { constraint_name?: string }).constraint_name,
-            "financial_verification_artifacts_immutable",
-          )
-          const blocked = yield* Effect.flip(service.approveTigerBeetleCutover({
-            principal,
-            tenantId: tenant!.id,
-            legalEntityId: legalEntity!.id,
-            evidenceArtifactId: rejected.id,
-          }))
-          assert.instanceOf(blocked, FinancialVerificationArtifactInvalid)
-          assert.strictEqual(blocked.reason, "mismatch")
-          const wrongCurrency = yield* Effect.flip(service.recordFinancialVerificationArtifact({
-            principal,
-            tenantId: tenant!.id,
-            evidence: { ...evidence, currency: "EUR", mismatchCount: 0 },
-          }))
-          assert.instanceOf(wrongCurrency, FinancialVerificationArtifactInvalid)
-          assert.strictEqual(wrongCurrency.reason, "scope_mismatch")
+          catch: (cause) => cause,
+        }),
+      )
+      assert.strictEqual(
+        (artifactMutation as { constraint_name?: string }).constraint_name,
+        "financial_verification_artifacts_immutable",
+      )
+      const blocked = yield* Effect.flip(
+        service.approveTigerBeetleCutover({
+          principal,
+          tenantId: tenant!.id,
+          legalEntityId: legalEntity!.id,
+          evidenceArtifactId: rejected.id,
+        }),
+      )
+      assert.instanceOf(blocked, FinancialVerificationArtifactInvalid)
+      assert.strictEqual(blocked.reason, "mismatch")
+      const wrongCurrency = yield* Effect.flip(
+        service.recordFinancialVerificationArtifact({
+          principal,
+          tenantId: tenant!.id,
+          evidence: { ...evidence, currency: "EUR", mismatchCount: 0 },
+        }),
+      )
+      assert.instanceOf(wrongCurrency, FinancialVerificationArtifactInvalid)
+      assert.strictEqual(wrongCurrency.reason, "scope_mismatch")
 
-          const verified = yield* service.recordFinancialVerificationArtifact({
-            principal,
-            tenantId: tenant!.id,
-            evidence: { ...evidence, mismatchCount: 0 },
-          })
-          const [forged] = yield* Effect.promise(() =>
-            client<{ id: string }[]>`
+      const verified = yield* service.recordFinancialVerificationArtifact({
+        principal,
+        tenantId: tenant!.id,
+        evidence: { ...evidence, mismatchCount: 0 },
+      })
+      const [forged] = yield* Effect.promise(
+        () =>
+          client<{ id: string }[]>`
               insert into accounting.financial_verification_artifacts (
                 tenant_id, legal_entity_id, artifact_hash, signature_algorithm,
                 signing_key_id, signature, status, kind, completeness, scope,
@@ -235,41 +242,48 @@ it.effect.skipIf(databaseUrl === undefined)(
               from accounting.financial_verification_artifacts
               where id = ${verified.id}
               returning id
-            `
-          )
-          const forgedApproval = yield* Effect.flip(service.approveTigerBeetleCutover({
-            principal,
-            tenantId: tenant!.id,
-            legalEntityId: legalEntity!.id,
-            evidenceArtifactId: forged!.id,
-          }))
-          assert.instanceOf(forgedApproval, FinancialVerificationArtifactInvalid)
-          assert.strictEqual(forgedApproval.reason, "unsigned")
-          yield* Effect.promise(() =>
-            client`
+            `,
+      )
+      const forgedApproval = yield* Effect.flip(
+        service.approveTigerBeetleCutover({
+          principal,
+          tenantId: tenant!.id,
+          legalEntityId: legalEntity!.id,
+          evidenceArtifactId: forged!.id,
+        }),
+      )
+      assert.instanceOf(forgedApproval, FinancialVerificationArtifactInvalid)
+      assert.strictEqual(forgedApproval.reason, "unsigned")
+      yield* Effect.promise(
+        () =>
+          client`
               update accounting.legal_entity_accounting_configurations
               set base_currency = 'EUR'
               where tenant_id = ${tenant!.id} and legal_entity_id = ${legalEntity!.id}
-            `
-          )
-          const driftedApproval = yield* Effect.flip(service.approveTigerBeetleCutover({
-            principal,
-            tenantId: tenant!.id,
-            legalEntityId: legalEntity!.id,
-            evidenceArtifactId: verified.id,
-          }))
-          assert.instanceOf(driftedApproval, FinancialVerificationArtifactInvalid)
-          assert.strictEqual(driftedApproval.reason, "scope_mismatch")
-          yield* Effect.promise(() =>
-            client`
+            `,
+      )
+      const driftedApproval = yield* Effect.flip(
+        service.approveTigerBeetleCutover({
+          principal,
+          tenantId: tenant!.id,
+          legalEntityId: legalEntity!.id,
+          evidenceArtifactId: verified.id,
+        }),
+      )
+      assert.instanceOf(driftedApproval, FinancialVerificationArtifactInvalid)
+      assert.strictEqual(driftedApproval.reason, "scope_mismatch")
+      yield* Effect.promise(
+        () =>
+          client`
               update accounting.legal_entity_accounting_configurations
               set base_currency = 'USD'
               where tenant_id = ${tenant!.id} and legal_entity_id = ${legalEntity!.id}
-            `
-          )
+            `,
+      )
 
-          yield* Effect.promise(() =>
-            client`
+      yield* Effect.promise(
+        () =>
+          client`
               insert into accounting.financial_reconciliation_checkpoints (
                 tenant_id, legal_entity_id, engine, status, recovery_watermark,
                 source_watermark, target_watermark, source_snapshot_ref, target_snapshot_ref,
@@ -283,337 +297,335 @@ it.effect.skipIf(databaseUrl === undefined)(
                 ${evidence.transferSetHash}, ${evidence.projectionHash}, ${verified.id},
                 0, 0, ${principal.userAccountId}, now()
               )
-            `
-          )
-          const approved = yield* service.approveTigerBeetleCutover({
-            principal,
-            tenantId: tenant!.id,
-            legalEntityId: legalEntity!.id,
-            evidenceArtifactId: verified.id,
-          })
-          assert.strictEqual(approved.status, "approved")
-          assert.strictEqual(approved.approvedBy, principal.userAccountId)
+            `,
+      )
+      const approved = yield* service.approveTigerBeetleCutover({
+        principal,
+        tenantId: tenant!.id,
+        legalEntityId: legalEntity!.id,
+        evidenceArtifactId: verified.id,
+      })
+      assert.strictEqual(approved.status, "approved")
+      assert.strictEqual(approved.approvedBy, principal.userAccountId)
 
-          const activated = yield* service.activateTigerBeetleCutover({
-            principal,
-            tenantId: tenant!.id,
-            legalEntityId: legalEntity!.id,
-          })
-          assert.strictEqual(activated.status, "tigerbeetle")
-          assert.strictEqual(activated.activatedBy, principal.userAccountId)
+      const activated = yield* service.activateTigerBeetleCutover({
+        principal,
+        tenantId: tenant!.id,
+        legalEntityId: legalEntity!.id,
+      })
+      assert.strictEqual(activated.status, "tigerbeetle")
+      assert.strictEqual(activated.activatedBy, principal.userAccountId)
 
-          const idempotent = yield* service.activateTigerBeetleCutover({
-            principal,
-            tenantId: tenant!.id,
-            legalEntityId: legalEntity!.id,
-          })
-          assert.deepStrictEqual(idempotent, activated)
+      const idempotent = yield* service.activateTigerBeetleCutover({
+        principal,
+        tenantId: tenant!.id,
+        legalEntityId: legalEntity!.id,
+      })
+      assert.deepStrictEqual(idempotent, activated)
 
-          const [configuration] = yield* Effect.promise(() =>
-            client<{ financial_engine: string }[]>`
+      const [configuration] = yield* Effect.promise(
+        () =>
+          client<{ financial_engine: string }[]>`
             select financial_engine
             from accounting.legal_entity_accounting_configurations
             where tenant_id = ${tenant!.id} and legal_entity_id = ${legalEntity!.id}
-          `
-          )
-          assert.strictEqual(configuration!.financial_engine, "tigerbeetle")
+          `,
+      )
+      assert.strictEqual(configuration!.financial_engine, "tigerbeetle")
 
-          yield* Effect.promise(() =>
-            client`
+      yield* Effect.promise(
+        () =>
+          client`
               insert into accounting.accounting_periods
                 (tenant_id, legal_entity_id, starts_on, ends_on, status)
               values (${tenant!.id}, ${legalEntity!.id}, '1900-01-01', '2100-12-31', 'open')
-            `
-          )
-          const accountRows = yield* Effect.promise(() =>
-            client<{ id: string; code: string }[]>`
+            `,
+      )
+      const accountRows = yield* Effect.promise(
+        () =>
+          client<{ id: string; code: string }[]>`
               select id, code from accounting.accounts
               where tenant_id = ${tenant!.id}
               order by code
-            `
-          )
-          const jobs = yield* makeProcessJobEnqueuer.pipe(
-            Effect.provideService(Database, database),
-          )
-          let observedSourceWatermark: FinancialStoreWatermarkType = {
-            authority: "postgresql",
-            scope: `tenant:${tenant!.id}/legal-entity:${legalEntity!.id}`,
-            value: "postgres:initial",
-            snapshotRef: "postgres:initial-snapshot",
-            consistency: "bounded",
-            capturedAt: "2026-08-30T00:00:00.000Z",
+            `,
+      )
+      const jobs = yield* makeProcessJobEnqueuer.pipe(Effect.provideService(Database, database))
+      let observedSourceWatermark: FinancialStoreWatermarkType = {
+        authority: "postgresql",
+        scope: `tenant:${tenant!.id}/legal-entity:${legalEntity!.id}`,
+        value: "postgres:initial",
+        snapshotRef: "postgres:initial-snapshot",
+        consistency: "bounded",
+        capturedAt: "2026-08-30T00:00:00.000Z",
+      }
+      let observedTargetWatermark: FinancialStoreWatermarkType = {
+        authority: "tigerbeetle",
+        scope: "provider:tigerbeetle",
+        value: "tigerbeetle:initial",
+        snapshotRef: "tigerbeetle:initial-snapshot",
+        consistency: "bounded",
+        capturedAt: "2026-08-30T00:00:00.000Z",
+      }
+      const observationRegistry = Layer.succeed(FinancialStoreObservationRegistry, {
+        collect: (authority) =>
+          Effect.succeed(
+            authority === "postgresql" ? observedSourceWatermark : observedTargetWatermark,
+          ),
+        scan: (authority, input) => {
+          const request = input as {
+            readonly scope: string
+            readonly watermark: FinancialStoreWatermarkType
           }
-          let observedTargetWatermark: FinancialStoreWatermarkType = {
-            authority: "tigerbeetle",
-            scope: "provider:tigerbeetle",
-            value: "tigerbeetle:initial",
-            snapshotRef: "tigerbeetle:initial-snapshot",
-            consistency: "bounded",
-            capturedAt: "2026-08-30T00:00:00.000Z",
+          return Effect.succeed({
+            authority,
+            scope: request.scope,
+            watermark: request.watermark,
+            accounts: [],
+            transfers: [],
+          } satisfies FinancialStoreInventoryType)
+        },
+      })
+      const reconcileCheckpoint = (
+        operationService: FinancialOperationServiceShape,
+        input: ReconcileFinancialCheckpointInputType,
+        consistency: FinancialStoreWatermarkType["consistency"] = "bounded",
+      ) =>
+        Effect.gen(function* () {
+          const sourceWatermark: FinancialStoreWatermarkType = {
+            ...observedSourceWatermark,
+            scope: `tenant:${input.tenantId}/legal-entity:${input.legalEntityId}`,
+            value: input.sourceWatermark?.trim() ?? `postgres:${uuidv7()}`,
+            snapshotRef: input.sourceSnapshotRef?.trim() ?? `postgres:${uuidv7()}`,
+            consistency,
           }
-          const observationRegistry = Layer.succeed(
-            FinancialStoreObservationRegistry,
-            {
-              collect: (authority) =>
-                Effect.succeed(
-                  authority === "postgresql" ? observedSourceWatermark : observedTargetWatermark,
-                ),
-              scan: (authority, input) => {
-                const request = input as {
-                  readonly scope: string
-                  readonly watermark: FinancialStoreWatermarkType
-                }
-                return Effect.succeed(
-                  {
-                    authority,
-                    scope: request.scope,
-                    watermark: request.watermark,
-                    accounts: [],
-                    transfers: [],
-                  } satisfies FinancialStoreInventoryType,
-                )
-              },
-            },
-          )
-          const reconcileCheckpoint = (
-            operationService: FinancialOperationServiceShape,
-            input: ReconcileFinancialCheckpointInputType,
-            consistency: FinancialStoreWatermarkType["consistency"] = "bounded",
-          ) =>
-            Effect.gen(function*() {
-              const sourceWatermark: FinancialStoreWatermarkType = {
-                ...observedSourceWatermark,
-                scope: `tenant:${input.tenantId}/legal-entity:${input.legalEntityId}`,
-                value: input.sourceWatermark?.trim() ?? `postgres:${uuidv7()}`,
-                snapshotRef: input.sourceSnapshotRef?.trim() ?? `postgres:${uuidv7()}`,
-                consistency,
-              }
-              const targetWatermark: FinancialStoreWatermarkType = {
-                ...observedTargetWatermark,
-                value: input.targetWatermark?.trim() ?? `tigerbeetle:${uuidv7()}`,
-                snapshotRef: input.targetSnapshotRef?.trim() ?? `tigerbeetle:${uuidv7()}`,
-                consistency,
-              }
-              observedSourceWatermark = sourceWatermark
-              observedTargetWatermark = targetWatermark
-              const recoveryHash = yield* hashFinancialStoreWatermarks(
-                sourceWatermark,
-                targetWatermark,
-              )
-              return yield* operationService.reconcileFinancialCheckpoint({
-                ...input,
-                recoveryWatermark: `observation:${recoveryHash}`,
-                sourceWatermark: sourceWatermark.value,
-                targetWatermark: targetWatermark.value,
-                sourceSnapshotRef: sourceWatermark.snapshotRef,
-                targetSnapshotRef: targetWatermark.snapshotRef,
-              })
-            })
-          const operationLedger = makeFinancialLedgerTestLayer()
-          const operationLedgerService = yield* Effect.provide(
-            Effect.service(FinancialLedgerPort),
-            operationLedger,
-          )
-          const operationDependencies = Layer.mergeAll(
-            Layer.succeed(Database, database),
-            authorization,
-            Layer.succeed(MessagingService, messaging),
-            Layer.succeed(DurableJobEnqueuer, jobs),
-            Layer.succeed(SalesService, sales),
-            Layer.succeed(FinancialLedgerPort, operationLedgerService),
-            observationRegistry,
-          )
-          const operationService = yield* Effect.provide(
-            makeFinancialOperationService,
-            operationDependencies,
-          )
-          const operationInput = {
-            principal,
-            tenantId: tenant!.id,
-            legalEntityId: legalEntity!.id,
-            operationId: `cutover-operation-${uuidv7()}`,
-            reference: `cutover-reference-${uuidv7()}`,
-            currency: "USD",
-            mappingVersion: 1,
-            lines: [
-              {
-                accountId: accountRows.find((account) => account.code === "1000")!.id,
-                debit: "12.50",
-                credit: "0",
-              },
-              {
-                accountId: accountRows.find((account) => account.code === "4000")!.id,
-                debit: "0",
-                credit: "12.50",
-              },
-            ],
-            correlationId: `cutover-correlation-${uuidv7()}`,
+          const targetWatermark: FinancialStoreWatermarkType = {
+            ...observedTargetWatermark,
+            value: input.targetWatermark?.trim() ?? `tigerbeetle:${uuidv7()}`,
+            snapshotRef: input.targetSnapshotRef?.trim() ?? `tigerbeetle:${uuidv7()}`,
+            consistency,
           }
-          const operation = yield* operationService.createJournalIntent(operationInput)
-          const accepted = yield* operationService.submitFinancialOperation({
-            tenantId: tenant!.id,
-            operationId: operation.operationId,
+          observedSourceWatermark = sourceWatermark
+          observedTargetWatermark = targetWatermark
+          const recoveryHash = yield* hashFinancialStoreWatermarks(sourceWatermark, targetWatermark)
+          return yield* operationService.reconcileFinancialCheckpoint({
+            ...input,
+            recoveryWatermark: `observation:${recoveryHash}`,
+            sourceWatermark: sourceWatermark.value,
+            targetWatermark: targetWatermark.value,
+            sourceSnapshotRef: sourceWatermark.snapshotRef,
+            targetSnapshotRef: targetWatermark.snapshotRef,
           })
-          assert.strictEqual(accepted.status, "reconciled")
-          yield* Effect.promise(() =>
-            client`
+        })
+      const operationLedger = makeFinancialLedgerTestLayer()
+      const operationLedgerService = yield* Effect.provide(
+        Effect.service(FinancialLedgerPort),
+        operationLedger,
+      )
+      const operationDependencies = Layer.mergeAll(
+        Layer.succeed(Database, database),
+        authorization,
+        Layer.succeed(MessagingService, messaging),
+        Layer.succeed(DurableJobEnqueuer, jobs),
+        Layer.succeed(SalesService, sales),
+        Layer.succeed(FinancialLedgerPort, operationLedgerService),
+        observationRegistry,
+      )
+      const operationService = yield* Effect.provide(
+        makeFinancialOperationService,
+        operationDependencies,
+      )
+      const operationInput = {
+        principal,
+        tenantId: tenant!.id,
+        legalEntityId: legalEntity!.id,
+        operationId: `cutover-operation-${uuidv7()}`,
+        reference: `cutover-reference-${uuidv7()}`,
+        currency: "USD",
+        mappingVersion: 1,
+        lines: [
+          {
+            accountId: accountRows.find((account) => account.code === "1000")!.id,
+            debit: "12.50",
+            credit: "0",
+          },
+          {
+            accountId: accountRows.find((account) => account.code === "4000")!.id,
+            debit: "0",
+            credit: "12.50",
+          },
+        ],
+        correlationId: `cutover-correlation-${uuidv7()}`,
+      }
+      const operation = yield* operationService.createJournalIntent(operationInput)
+      const accepted = yield* operationService.submitFinancialOperation({
+        tenantId: tenant!.id,
+        operationId: operation.operationId,
+      })
+      assert.strictEqual(accepted.status, "reconciled")
+      yield* Effect.promise(
+        () =>
+          client`
               delete from accounting.financial_operation_transfers
               where tenant_id = ${tenant!.id} and operation_id = ${operation.id}
-            `
-          )
-          const missingProjectionCheckpoint = yield* reconcileCheckpoint(operationService, {
-            principal,
-            tenantId: tenant!.id,
-            legalEntityId: legalEntity!.id,
-            recoveryWatermark: `missing-projection-${uuidv7()}`,
-            sourceWatermark: "postgres:missing-projection",
-            targetWatermark: "tigerbeetle:missing-projection",
-            sourceSnapshotRef: "postgres:missing-projection-snapshot",
-            targetSnapshotRef: "tigerbeetle:missing-projection-snapshot",
-            evidenceArtifactId: null,
-          })
-          assert.strictEqual(missingProjectionCheckpoint.status, "blocked")
-          assert.isAbove(missingProjectionCheckpoint.mismatchCount, 0)
-          yield* Effect.promise(() =>
-            client`
+            `,
+      )
+      const missingProjectionCheckpoint = yield* reconcileCheckpoint(operationService, {
+        principal,
+        tenantId: tenant!.id,
+        legalEntityId: legalEntity!.id,
+        recoveryWatermark: `missing-projection-${uuidv7()}`,
+        sourceWatermark: "postgres:missing-projection",
+        targetWatermark: "tigerbeetle:missing-projection",
+        sourceSnapshotRef: "postgres:missing-projection-snapshot",
+        targetSnapshotRef: "tigerbeetle:missing-projection-snapshot",
+        evidenceArtifactId: null,
+      })
+      assert.strictEqual(missingProjectionCheckpoint.status, "blocked")
+      assert.isAbove(missingProjectionCheckpoint.mismatchCount, 0)
+      yield* Effect.promise(
+        () =>
+          client`
               delete from messaging.event_outbox
               where tenant_id = ${tenant!.id} and id = (
                 select reconciled_event_id
                 from accounting.financial_operations
                 where tenant_id = ${tenant!.id} and id = ${operation.id}
               )
-            `
-          )
-          const rebuilt = yield* operationService.rebuildFinancialProjections({
+            `,
+      )
+      const rebuilt = yield* operationService.rebuildFinancialProjections({
+        principal,
+        tenantId: tenant!.id,
+        legalEntityId: legalEntity!.id,
+      })
+      assert.isAtLeast(rebuilt.rebuiltOperations, 1)
+      const checkpoint = yield* reconcileCheckpoint(operationService, {
+        principal,
+        tenantId: tenant!.id,
+        legalEntityId: legalEntity!.id,
+        recoveryWatermark: `cutover-recovery-${uuidv7()}`,
+        sourceWatermark: "postgres:test:1",
+        targetWatermark: "tigerbeetle:test:1",
+        sourceSnapshotRef: "postgres:test-snapshot",
+        targetSnapshotRef: "tigerbeetle:test-snapshot",
+        evidenceArtifactId: null,
+      })
+      assert.strictEqual(checkpoint.status, "verified")
+      const hashMismatchCheckpoint = yield* Effect.flip(
+        reconcileCheckpoint(
+          operationService,
+          {
             principal,
             tenantId: tenant!.id,
             legalEntityId: legalEntity!.id,
-          })
-          assert.isAtLeast(rebuilt.rebuiltOperations, 1)
-          const checkpoint = yield* reconcileCheckpoint(operationService, {
-            principal,
-            tenantId: tenant!.id,
-            legalEntityId: legalEntity!.id,
-            recoveryWatermark: `cutover-recovery-${uuidv7()}`,
+            recoveryWatermark: `hash-mismatch-${uuidv7()}`,
             sourceWatermark: "postgres:test:1",
             targetWatermark: "tigerbeetle:test:1",
             sourceSnapshotRef: "postgres:test-snapshot",
             targetSnapshotRef: "tigerbeetle:test-snapshot",
-            evidenceArtifactId: null,
-          })
-          assert.strictEqual(checkpoint.status, "verified")
-          const hashMismatchCheckpoint = yield* Effect.flip(
-            reconcileCheckpoint(operationService, {
-              principal,
-              tenantId: tenant!.id,
-              legalEntityId: legalEntity!.id,
-              recoveryWatermark: `hash-mismatch-${uuidv7()}`,
-              sourceWatermark: "postgres:test:1",
-              targetWatermark: "tigerbeetle:test:1",
-              sourceSnapshotRef: "postgres:test-snapshot",
-              targetSnapshotRef: "tigerbeetle:test-snapshot",
-              evidenceArtifactId: verified.id,
-            }, "snapshot"),
-          )
-          assert.instanceOf(
-            hashMismatchCheckpoint,
-            FinancialReconciliationCheckpointEvidenceInvalid,
-          )
-          assert.strictEqual(hashMismatchCheckpoint.reason, "hash_mismatch")
-          const pendingIntent = yield* operationService.createJournalIntent({
-            ...operationInput,
-            operationId: `cutover-pending-intent-${uuidv7()}`,
-            reference: `cutover-pending-intent-${uuidv7()}`,
-          })
-          const pendingCheckpoint = yield* reconcileCheckpoint(operationService, {
-            principal,
-            tenantId: tenant!.id,
-            legalEntityId: legalEntity!.id,
-            recoveryWatermark: `pending-intent-${uuidv7()}`,
-            sourceWatermark: "postgres:pending-intent",
-            targetWatermark: "tigerbeetle:pending-intent",
-            sourceSnapshotRef: "postgres:pending-intent-snapshot",
-            targetSnapshotRef: "tigerbeetle:pending-intent-snapshot",
-            evidenceArtifactId: null,
-          })
-          assert.strictEqual(pendingCheckpoint.status, "blocked")
-          assert.isAbove(pendingCheckpoint.mismatchCount, 0)
-          assert.strictEqual(pendingIntent.status, "intent")
-          const mappingMismatchArtifact = yield* service.recordFinancialVerificationArtifact({
-            principal,
-            tenantId: tenant!.id,
-            evidence: {
-              ...evidence,
-              mappingVersion: 2,
-              mismatchCount: 0,
-              sourceWatermark: "postgres:mapping-artifact",
-              targetWatermark: "tigerbeetle:mapping-artifact",
-              sourceSnapshotRef: "postgres:mapping-artifact-snapshot",
-              targetSnapshotRef: "tigerbeetle:mapping-artifact-snapshot",
-            },
-          })
-          assert.strictEqual(mappingMismatchArtifact.status, "verified")
-          const mappingMismatchCheckpoint = yield* Effect.flip(
-            reconcileCheckpoint(operationService, {
-              principal,
-              tenantId: tenant!.id,
-              legalEntityId: legalEntity!.id,
-              recoveryWatermark: `mapping-artifact-${uuidv7()}`,
-              sourceWatermark: "postgres:mapping-artifact",
-              targetWatermark: "tigerbeetle:mapping-artifact",
-              sourceSnapshotRef: "postgres:mapping-artifact-snapshot",
-              targetSnapshotRef: "tigerbeetle:mapping-artifact-snapshot",
-              evidenceArtifactId: mappingMismatchArtifact.id,
-            }),
-          )
-          assert.instanceOf(
-            mappingMismatchCheckpoint,
-            FinancialReconciliationCheckpointEvidenceInvalid,
-          )
-          assert.strictEqual(mappingMismatchCheckpoint.reason, "mapping_version_mismatch")
+            evidenceArtifactId: verified.id,
+          },
+          "snapshot",
+        ),
+      )
+      assert.instanceOf(hashMismatchCheckpoint, FinancialReconciliationCheckpointEvidenceInvalid)
+      assert.strictEqual(hashMismatchCheckpoint.reason, "hash_mismatch")
+      const pendingIntent = yield* operationService.createJournalIntent({
+        ...operationInput,
+        operationId: `cutover-pending-intent-${uuidv7()}`,
+        reference: `cutover-pending-intent-${uuidv7()}`,
+      })
+      const pendingCheckpoint = yield* reconcileCheckpoint(operationService, {
+        principal,
+        tenantId: tenant!.id,
+        legalEntityId: legalEntity!.id,
+        recoveryWatermark: `pending-intent-${uuidv7()}`,
+        sourceWatermark: "postgres:pending-intent",
+        targetWatermark: "tigerbeetle:pending-intent",
+        sourceSnapshotRef: "postgres:pending-intent-snapshot",
+        targetSnapshotRef: "tigerbeetle:pending-intent-snapshot",
+        evidenceArtifactId: null,
+      })
+      assert.strictEqual(pendingCheckpoint.status, "blocked")
+      assert.isAbove(pendingCheckpoint.mismatchCount, 0)
+      assert.strictEqual(pendingIntent.status, "intent")
+      const mappingMismatchArtifact = yield* service.recordFinancialVerificationArtifact({
+        principal,
+        tenantId: tenant!.id,
+        evidence: {
+          ...evidence,
+          mappingVersion: 2,
+          mismatchCount: 0,
+          sourceWatermark: "postgres:mapping-artifact",
+          targetWatermark: "tigerbeetle:mapping-artifact",
+          sourceSnapshotRef: "postgres:mapping-artifact-snapshot",
+          targetSnapshotRef: "tigerbeetle:mapping-artifact-snapshot",
+        },
+      })
+      assert.strictEqual(mappingMismatchArtifact.status, "verified")
+      const mappingMismatchCheckpoint = yield* Effect.flip(
+        reconcileCheckpoint(operationService, {
+          principal,
+          tenantId: tenant!.id,
+          legalEntityId: legalEntity!.id,
+          recoveryWatermark: `mapping-artifact-${uuidv7()}`,
+          sourceWatermark: "postgres:mapping-artifact",
+          targetWatermark: "tigerbeetle:mapping-artifact",
+          sourceSnapshotRef: "postgres:mapping-artifact-snapshot",
+          targetSnapshotRef: "tigerbeetle:mapping-artifact-snapshot",
+          evidenceArtifactId: mappingMismatchArtifact.id,
+        }),
+      )
+      assert.instanceOf(mappingMismatchCheckpoint, FinancialReconciliationCheckpointEvidenceInvalid)
+      assert.strictEqual(mappingMismatchCheckpoint.reason, "mapping_version_mismatch")
 
-          let failReceipt = true
-          const failingMessaging = {
-            ...messaging,
-            append: (event: unknown) =>
-              failReceipt
-                ? Effect.fail(
-                  new DatabaseFailure({
-                    operation: "financial-cutover.test.receipt",
-                    cause: null,
-                  }),
-                )
-                : messaging.append(event),
-          } as typeof messaging
-          const failingService = yield* Effect.provide(
-            makeFinancialOperationService,
-            Layer.mergeAll(
-              Layer.succeed(Database, database),
-              authorization,
-              Layer.succeed(MessagingService, failingMessaging),
-              Layer.succeed(DurableJobEnqueuer, jobs),
-              Layer.succeed(SalesService, sales),
-              Layer.succeed(FinancialLedgerPort, operationLedgerService),
-              observationRegistry,
-            ),
-          )
-          const failedInput = {
-            ...operationInput,
-            operationId: `cutover-draft-${uuidv7()}`,
-            reference: `cutover-draft-${uuidv7()}`,
-          }
-          yield* failingService.createJournalIntent(failedInput)
-          const receiptFailure = yield* Effect.flip(failingService.submitFinancialOperation({
-            tenantId: tenant!.id,
-            operationId: failedInput.operationId,
-          }))
-          assert.instanceOf(receiptFailure, DatabaseFailure)
-          const [failedState] = yield* Effect.promise(() =>
-            client<{
+      let failReceipt = true
+      const failingMessaging = {
+        ...messaging,
+        append: (event: unknown) =>
+          failReceipt
+            ? Effect.fail(
+                new DatabaseFailure({
+                  operation: "financial-cutover.test.receipt",
+                  cause: null,
+                }),
+              )
+            : messaging.append(event),
+      } as typeof messaging
+      const failingService = yield* Effect.provide(
+        makeFinancialOperationService,
+        Layer.mergeAll(
+          Layer.succeed(Database, database),
+          authorization,
+          Layer.succeed(MessagingService, failingMessaging),
+          Layer.succeed(DurableJobEnqueuer, jobs),
+          Layer.succeed(SalesService, sales),
+          Layer.succeed(FinancialLedgerPort, operationLedgerService),
+          observationRegistry,
+        ),
+      )
+      const failedInput = {
+        ...operationInput,
+        operationId: `cutover-draft-${uuidv7()}`,
+        reference: `cutover-draft-${uuidv7()}`,
+      }
+      yield* failingService.createJournalIntent(failedInput)
+      const receiptFailure = yield* Effect.flip(
+        failingService.submitFinancialOperation({
+          tenantId: tenant!.id,
+          operationId: failedInput.operationId,
+        }),
+      )
+      assert.instanceOf(receiptFailure, DatabaseFailure)
+      const [failedState] = yield* Effect.promise(
+        () =>
+          client<
+            {
               status: string
               journal_status: string
               transfer_status: string
-            }[]>`
+            }[]
+          >`
               select operation.status, journal.status as journal_status,
                 transfer.status as transfer_status
               from accounting.financial_operations operation
@@ -623,248 +635,248 @@ it.effect.skipIf(databaseUrl === undefined)(
                 on transfer.tenant_id = operation.tenant_id and transfer.operation_id = operation.id
               where operation.tenant_id = ${tenant!.id}
                 and operation.operation_id = ${failedInput.operationId}
-            `
-          )
-          assert.deepStrictEqual(failedState, {
-            status: "accepted",
-            journal_status: "draft",
-            transfer_status: "unresolved",
-          })
-          const draftCheckpoint = yield* reconcileCheckpoint(failingService, {
-            principal,
-            tenantId: tenant!.id,
-            legalEntityId: legalEntity!.id,
-            recoveryWatermark: `draft-journal-${uuidv7()}`,
-            sourceWatermark: "postgres:draft-journal",
-            targetWatermark: "tigerbeetle:draft-journal",
-            sourceSnapshotRef: "postgres:draft-journal-snapshot",
-            targetSnapshotRef: "tigerbeetle:draft-journal-snapshot",
-            evidenceArtifactId: null,
-          })
-          assert.strictEqual(draftCheckpoint.status, "blocked")
-          assert.isAbove(draftCheckpoint.mismatchCount, 0)
-          failReceipt = false
-          const recovered = yield* failingService.submitFinancialOperation({
-            tenantId: tenant!.id,
-            operationId: failedInput.operationId,
-          })
-          assert.strictEqual(recovered.status, "reconciled")
-          yield* Effect.promise(() =>
-            client`
+            `,
+      )
+      assert.deepStrictEqual(failedState, {
+        status: "accepted",
+        journal_status: "draft",
+        transfer_status: "unresolved",
+      })
+      const draftCheckpoint = yield* reconcileCheckpoint(failingService, {
+        principal,
+        tenantId: tenant!.id,
+        legalEntityId: legalEntity!.id,
+        recoveryWatermark: `draft-journal-${uuidv7()}`,
+        sourceWatermark: "postgres:draft-journal",
+        targetWatermark: "tigerbeetle:draft-journal",
+        sourceSnapshotRef: "postgres:draft-journal-snapshot",
+        targetSnapshotRef: "tigerbeetle:draft-journal-snapshot",
+        evidenceArtifactId: null,
+      })
+      assert.strictEqual(draftCheckpoint.status, "blocked")
+      assert.isAbove(draftCheckpoint.mismatchCount, 0)
+      failReceipt = false
+      const recovered = yield* failingService.submitFinancialOperation({
+        tenantId: tenant!.id,
+        operationId: failedInput.operationId,
+      })
+      assert.strictEqual(recovered.status, "reconciled")
+      yield* Effect.promise(
+        () =>
+          client`
               update accounting.financial_operation_transfers
               set status = 'manual_recovery'
               where tenant_id = ${tenant!.id} and operation_id = ${operation.id}
-            `
-          )
-          const quarantinedTransferCheckpoint = yield* reconcileCheckpoint(
-            operationService,
-            {
-              principal,
-              tenantId: tenant!.id,
-              legalEntityId: legalEntity!.id,
-              recoveryWatermark: `quarantined-transfer-${uuidv7()}`,
-              sourceWatermark: "postgres:quarantined-transfer",
-              targetWatermark: "tigerbeetle:quarantined-transfer",
-              sourceSnapshotRef: "postgres:quarantined-transfer-snapshot",
-              targetSnapshotRef: "tigerbeetle:quarantined-transfer-snapshot",
-              evidenceArtifactId: null,
-            },
-          )
-          assert.strictEqual(quarantinedTransferCheckpoint.status, "blocked")
-          assert.isAbove(quarantinedTransferCheckpoint.mismatchCount, 0)
+            `,
+      )
+      const quarantinedTransferCheckpoint = yield* reconcileCheckpoint(operationService, {
+        principal,
+        tenantId: tenant!.id,
+        legalEntityId: legalEntity!.id,
+        recoveryWatermark: `quarantined-transfer-${uuidv7()}`,
+        sourceWatermark: "postgres:quarantined-transfer",
+        targetWatermark: "tigerbeetle:quarantined-transfer",
+        sourceSnapshotRef: "postgres:quarantined-transfer-snapshot",
+        targetSnapshotRef: "tigerbeetle:quarantined-transfer-snapshot",
+        evidenceArtifactId: null,
+      })
+      assert.strictEqual(quarantinedTransferCheckpoint.status, "blocked")
+      assert.isAbove(quarantinedTransferCheckpoint.mismatchCount, 0)
 
-          const balanceMismatchLedger = {
-            ...operationLedgerService,
-            getBalance: (input: unknown) =>
-              operationLedgerService.getBalance(input).pipe(
-                Effect.map((outcome) =>
-                  outcome._tag === "available"
-                    ? {
-                      ...outcome,
-                      debitsPostedMinor: (BigInt(outcome.debitsPostedMinor) + 1n).toString(),
-                    }
-                    : outcome
-                ),
-              ),
-          }
-          const balanceMismatchService = yield* Effect.provide(
-            makeFinancialOperationService,
-            Layer.mergeAll(
-              Layer.succeed(Database, database),
-              authorization,
-              Layer.succeed(MessagingService, messaging),
-              Layer.succeed(DurableJobEnqueuer, jobs),
-              Layer.succeed(SalesService, sales),
-              Layer.succeed(FinancialLedgerPort, balanceMismatchLedger),
-              observationRegistry,
+      const balanceMismatchLedger = {
+        ...operationLedgerService,
+        getBalance: (input: unknown) =>
+          operationLedgerService.getBalance(input).pipe(
+            Effect.map((outcome) =>
+              outcome._tag === "available"
+                ? {
+                    ...outcome,
+                    debitsPostedMinor: (BigInt(outcome.debitsPostedMinor) + 1n).toString(),
+                  }
+                : outcome,
             ),
-          )
-          const balanceMismatchCheckpoint = yield* reconcileCheckpoint(
-            balanceMismatchService,
-            {
-              principal,
-              tenantId: tenant!.id,
-              legalEntityId: legalEntity!.id,
-              recoveryWatermark: `balance-mismatch-${uuidv7()}`,
-              sourceWatermark: "postgres:balance-mismatch",
-              targetWatermark: "tigerbeetle:balance-mismatch",
-              sourceSnapshotRef: "postgres:balance-mismatch-snapshot",
-              targetSnapshotRef: "tigerbeetle:balance-mismatch-snapshot",
-              evidenceArtifactId: null,
-            },
-          )
-          assert.strictEqual(balanceMismatchCheckpoint.status, "blocked")
-          assert.isAbove(balanceMismatchCheckpoint.mismatchCount, 0)
-          const provenanceMismatch = yield* Effect.flip(
-            reconcileCheckpoint(operationService, {
-              principal,
-              tenantId: tenant!.id,
-              legalEntityId: legalEntity!.id,
-              recoveryWatermark: `provenance-mismatch-${uuidv7()}`,
-              sourceWatermark: "postgres:wrong",
-              targetWatermark: "tigerbeetle:test:1",
-              sourceSnapshotRef: "postgres:test-snapshot",
-              targetSnapshotRef: "tigerbeetle:test-snapshot",
-              evidenceArtifactId: verified.id,
-            }),
-          )
-          assert.instanceOf(provenanceMismatch, FinancialReconciliationCheckpointEvidenceInvalid)
-          assert.strictEqual(provenanceMismatch.reason, "provenance_mismatch")
-          yield* Effect.promise(() =>
-            client`
+          ),
+      }
+      const balanceMismatchService = yield* Effect.provide(
+        makeFinancialOperationService,
+        Layer.mergeAll(
+          Layer.succeed(Database, database),
+          authorization,
+          Layer.succeed(MessagingService, messaging),
+          Layer.succeed(DurableJobEnqueuer, jobs),
+          Layer.succeed(SalesService, sales),
+          Layer.succeed(FinancialLedgerPort, balanceMismatchLedger),
+          observationRegistry,
+        ),
+      )
+      const balanceMismatchCheckpoint = yield* reconcileCheckpoint(balanceMismatchService, {
+        principal,
+        tenantId: tenant!.id,
+        legalEntityId: legalEntity!.id,
+        recoveryWatermark: `balance-mismatch-${uuidv7()}`,
+        sourceWatermark: "postgres:balance-mismatch",
+        targetWatermark: "tigerbeetle:balance-mismatch",
+        sourceSnapshotRef: "postgres:balance-mismatch-snapshot",
+        targetSnapshotRef: "tigerbeetle:balance-mismatch-snapshot",
+        evidenceArtifactId: null,
+      })
+      assert.strictEqual(balanceMismatchCheckpoint.status, "blocked")
+      assert.isAbove(balanceMismatchCheckpoint.mismatchCount, 0)
+      const provenanceMismatch = yield* Effect.flip(
+        reconcileCheckpoint(operationService, {
+          principal,
+          tenantId: tenant!.id,
+          legalEntityId: legalEntity!.id,
+          recoveryWatermark: `provenance-mismatch-${uuidv7()}`,
+          sourceWatermark: "postgres:wrong",
+          targetWatermark: "tigerbeetle:test:1",
+          sourceSnapshotRef: "postgres:test-snapshot",
+          targetSnapshotRef: "tigerbeetle:test-snapshot",
+          evidenceArtifactId: verified.id,
+        }),
+      )
+      assert.instanceOf(provenanceMismatch, FinancialReconciliationCheckpointEvidenceInvalid)
+      assert.strictEqual(provenanceMismatch.reason, "provenance_mismatch")
+      yield* Effect.promise(
+        () =>
+          client`
               update accounting.legal_entity_accounting_configurations
               set base_currency = 'EUR'
               where tenant_id = ${tenant!.id} and legal_entity_id = ${legalEntity!.id}
-            `
-          )
-          const driftedCheckpoint = yield* Effect.flip(
-            reconcileCheckpoint(operationService, {
-              principal,
-              tenantId: tenant!.id,
-              legalEntityId: legalEntity!.id,
-              recoveryWatermark: `currency-drift-${uuidv7()}`,
-              sourceWatermark: "postgres:test:1",
-              targetWatermark: "tigerbeetle:test:1",
-              sourceSnapshotRef: "postgres:test-snapshot",
-              targetSnapshotRef: "tigerbeetle:test-snapshot",
-              evidenceArtifactId: verified.id,
-            }),
-          )
-          assert.instanceOf(driftedCheckpoint, FinancialReconciliationCheckpointEvidenceInvalid)
-          assert.strictEqual(driftedCheckpoint.reason, "scope_mismatch")
-          yield* Effect.promise(() =>
-            client`
+            `,
+      )
+      const driftedCheckpoint = yield* Effect.flip(
+        reconcileCheckpoint(operationService, {
+          principal,
+          tenantId: tenant!.id,
+          legalEntityId: legalEntity!.id,
+          recoveryWatermark: `currency-drift-${uuidv7()}`,
+          sourceWatermark: "postgres:test:1",
+          targetWatermark: "tigerbeetle:test:1",
+          sourceSnapshotRef: "postgres:test-snapshot",
+          targetSnapshotRef: "tigerbeetle:test-snapshot",
+          evidenceArtifactId: verified.id,
+        }),
+      )
+      assert.instanceOf(driftedCheckpoint, FinancialReconciliationCheckpointEvidenceInvalid)
+      assert.strictEqual(driftedCheckpoint.reason, "scope_mismatch")
+      yield* Effect.promise(
+        () =>
+          client`
               update accounting.legal_entity_accounting_configurations
               set base_currency = 'USD'
               where tenant_id = ${tenant!.id} and legal_entity_id = ${legalEntity!.id}
-            `
-          )
-          const mixedMappingOperation = yield* operationService.createJournalIntent({
-            ...operationInput,
-            operationId: `cutover-mapping-v2-${uuidv7()}`,
-            reference: `cutover-mapping-v2-${uuidv7()}`,
-            mappingVersion: 2,
-          })
-          const mixedMappingAccepted = yield* operationService.submitFinancialOperation({
-            tenantId: tenant!.id,
-            operationId: mixedMappingOperation.operationId,
-          })
-          assert.strictEqual(mixedMappingAccepted.status, "reconciled")
-          const mixedMappingCheckpoint = yield* Effect.flip(
-            reconcileCheckpoint(operationService, {
-              principal,
-              tenantId: tenant!.id,
-              legalEntityId: legalEntity!.id,
-              recoveryWatermark: `mixed-mapping-${uuidv7()}`,
-              sourceWatermark: "postgres:mixed-mapping",
-              targetWatermark: "tigerbeetle:mixed-mapping",
-              sourceSnapshotRef: "postgres:mixed-mapping-snapshot",
-              targetSnapshotRef: "tigerbeetle:mixed-mapping-snapshot",
-              evidenceArtifactId: null,
-            }),
-          )
-          assert.instanceOf(
-            mixedMappingCheckpoint,
-            FinancialReconciliationCheckpointEvidenceInvalid,
-          )
-          assert.strictEqual(mixedMappingCheckpoint.reason, "mapping_version_mismatch")
+            `,
+      )
+      const mixedMappingOperation = yield* operationService.createJournalIntent({
+        ...operationInput,
+        operationId: `cutover-mapping-v2-${uuidv7()}`,
+        reference: `cutover-mapping-v2-${uuidv7()}`,
+        mappingVersion: 2,
+      })
+      const mixedMappingAccepted = yield* operationService.submitFinancialOperation({
+        tenantId: tenant!.id,
+        operationId: mixedMappingOperation.operationId,
+      })
+      assert.strictEqual(mixedMappingAccepted.status, "reconciled")
+      const mixedMappingCheckpoint = yield* Effect.flip(
+        reconcileCheckpoint(operationService, {
+          principal,
+          tenantId: tenant!.id,
+          legalEntityId: legalEntity!.id,
+          recoveryWatermark: `mixed-mapping-${uuidv7()}`,
+          sourceWatermark: "postgres:mixed-mapping",
+          targetWatermark: "tigerbeetle:mixed-mapping",
+          sourceSnapshotRef: "postgres:mixed-mapping-snapshot",
+          targetSnapshotRef: "tigerbeetle:mixed-mapping-snapshot",
+          evidenceArtifactId: null,
+        }),
+      )
+      assert.instanceOf(mixedMappingCheckpoint, FinancialReconciliationCheckpointEvidenceInvalid)
+      assert.strictEqual(mixedMappingCheckpoint.reason, "mapping_version_mismatch")
 
-          const [otherOrganization] = yield* Effect.promise(() =>
-            client<{ id: string }[]>`
+      const [otherOrganization] = yield* Effect.promise(
+        () =>
+          client<{ id: string }[]>`
             insert into party.parties (tenant_id, kind, name)
             values (${tenant!.id}, 'organization', 'Second Cutover Organization') returning id
-          `
-          )
-          const [otherEntity] = yield* Effect.promise(() =>
-            client<{ id: string }[]>`
+          `,
+      )
+      const [otherEntity] = yield* Effect.promise(
+        () =>
+          client<{ id: string }[]>`
             insert into party.legal_entities (tenant_id, organization_party_id)
             values (${tenant!.id}, ${otherOrganization!.id}) returning id
-          `
-          )
-          yield* Effect.promise(() =>
-            client`
+          `,
+      )
+      yield* Effect.promise(
+        () =>
+          client`
             insert into accounting.legal_entity_accounting_configurations
               (tenant_id, legal_entity_id, base_currency, decimal_precision,
                fiscal_year_start_month, posting_enabled)
             values (${tenant!.id}, ${otherEntity!.id}, 'USD', 2, 1, true)
-          `
-          )
-          const otherPrepared = yield* service.prepareTigerBeetleCutover({
-            principal,
-            tenantId: tenant!.id,
-            legalEntityId: otherEntity!.id,
-          })
-          assert.strictEqual(otherPrepared.status, "preparing_tigerbeetle")
-          const otherEvidence = {
-            ...evidence,
-            legalEntityId: otherEntity!.id,
-            scope: `tenant:${tenant!.id}/legal-entity:${otherEntity!.id}`,
-            sourceWatermark: "postgres:manual-recovery-approval",
-            targetWatermark: "tigerbeetle:manual-recovery-approval",
-            sourceSnapshotRef: "postgres:manual-recovery-approval-snapshot",
-            targetSnapshotRef: "tigerbeetle:manual-recovery-approval-snapshot",
-            sourceDebitMinor: "0",
-            sourceCreditMinor: "0",
-            targetDebitMinor: "0",
-            targetCreditMinor: "0",
-            accountCount: 0,
-            operationCount: 0,
-            transferCount: 0,
-            mismatchCount: 0,
-          }
-          const otherArtifact = yield* service.recordFinancialVerificationArtifact({
-            principal,
-            tenantId: tenant!.id,
-            evidence: otherEvidence,
-          })
-          assert.strictEqual(otherArtifact.status, "verified")
-          const missingCheckpointApproval = yield* Effect.flip(
-            service.approveTigerBeetleCutover({
-              principal,
-              tenantId: tenant!.id,
-              legalEntityId: otherEntity!.id,
-              evidenceArtifactId: otherArtifact.id,
-            }),
-          )
-          assert.instanceOf(missingCheckpointApproval, FinancialEngineCutoverBlocked)
-          assert.strictEqual(missingCheckpointApproval.reason, "verification_mismatch")
-          const [otherPeriod] = yield* Effect.promise(() =>
-            client<{ id: string }[]>`
+          `,
+      )
+      const otherPrepared = yield* service.prepareTigerBeetleCutover({
+        principal,
+        tenantId: tenant!.id,
+        legalEntityId: otherEntity!.id,
+      })
+      assert.strictEqual(otherPrepared.status, "preparing_tigerbeetle")
+      const otherEvidence = {
+        ...evidence,
+        legalEntityId: otherEntity!.id,
+        scope: `tenant:${tenant!.id}/legal-entity:${otherEntity!.id}`,
+        sourceWatermark: "postgres:manual-recovery-approval",
+        targetWatermark: "tigerbeetle:manual-recovery-approval",
+        sourceSnapshotRef: "postgres:manual-recovery-approval-snapshot",
+        targetSnapshotRef: "tigerbeetle:manual-recovery-approval-snapshot",
+        sourceDebitMinor: "0",
+        sourceCreditMinor: "0",
+        targetDebitMinor: "0",
+        targetCreditMinor: "0",
+        accountCount: 0,
+        operationCount: 0,
+        transferCount: 0,
+        mismatchCount: 0,
+      }
+      const otherArtifact = yield* service.recordFinancialVerificationArtifact({
+        principal,
+        tenantId: tenant!.id,
+        evidence: otherEvidence,
+      })
+      assert.strictEqual(otherArtifact.status, "verified")
+      const missingCheckpointApproval = yield* Effect.flip(
+        service.approveTigerBeetleCutover({
+          principal,
+          tenantId: tenant!.id,
+          legalEntityId: otherEntity!.id,
+          evidenceArtifactId: otherArtifact.id,
+        }),
+      )
+      assert.instanceOf(missingCheckpointApproval, FinancialEngineCutoverBlocked)
+      assert.strictEqual(missingCheckpointApproval.reason, "verification_mismatch")
+      const [otherPeriod] = yield* Effect.promise(
+        () =>
+          client<{ id: string }[]>`
               insert into accounting.accounting_periods
                 (tenant_id, legal_entity_id, starts_on, ends_on, status)
               values (${tenant!.id}, ${otherEntity!.id}, '1900-01-01', '2100-12-31', 'open')
               returning id
-            `
-          )
-          const [otherJournal] = yield* Effect.promise(() =>
-            client<{ id: string }[]>`
+            `,
+      )
+      const [otherJournal] = yield* Effect.promise(
+        () =>
+          client<{ id: string }[]>`
               insert into accounting.journal_entries (tenant_id, reference, status)
               values (${tenant!.id}, 'manual-recovery-approval-journal', 'draft')
               returning id
-            `
-          )
-          yield* Effect.promise(() =>
-            client`
+            `,
+      )
+      yield* Effect.promise(
+        () =>
+          client`
               insert into accounting.financial_operations (
                 tenant_id, legal_entity_id, period_id, operation_id, operation_type,
                 journal_id, reference, currency, mapping_version, engine, engine_verified,
@@ -878,45 +890,47 @@ it.effect.skipIf(databaseUrl === undefined)(
                 ${principal.sessionId}, 'manual_recovery', 'mapping_mismatch',
                 'tigerbeetle', 'manual-recovery-approval-test'
               )
-            `
-          )
-          const manualRecoveryCheckpoint = yield* reconcileCheckpoint(operationService, {
-            principal,
-            tenantId: tenant!.id,
-            legalEntityId: otherEntity!.id,
-            recoveryWatermark: `manual-recovery-checkpoint-${uuidv7()}`,
-            sourceWatermark: "postgres:manual-recovery-checkpoint",
-            targetWatermark: "tigerbeetle:manual-recovery-checkpoint",
-            sourceSnapshotRef: "postgres:manual-recovery-checkpoint-snapshot",
-            targetSnapshotRef: "tigerbeetle:manual-recovery-checkpoint-snapshot",
-            evidenceArtifactId: null,
-          })
-          assert.strictEqual(manualRecoveryCheckpoint.status, "blocked")
-          assert.isAbove(manualRecoveryCheckpoint.mismatchCount, 0)
-          const manualRecoveryApproval = yield* Effect.flip(
-            service.approveTigerBeetleCutover({
-              principal,
-              tenantId: tenant!.id,
-              legalEntityId: otherEntity!.id,
-              evidenceArtifactId: otherArtifact.id,
-            }),
-          )
-          assert.instanceOf(manualRecoveryApproval, FinancialEngineCutoverBlocked)
-          assert.strictEqual(manualRecoveryApproval.reason, "unresolved_operations")
+            `,
+      )
+      const manualRecoveryCheckpoint = yield* reconcileCheckpoint(operationService, {
+        principal,
+        tenantId: tenant!.id,
+        legalEntityId: otherEntity!.id,
+        recoveryWatermark: `manual-recovery-checkpoint-${uuidv7()}`,
+        sourceWatermark: "postgres:manual-recovery-checkpoint",
+        targetWatermark: "tigerbeetle:manual-recovery-checkpoint",
+        sourceSnapshotRef: "postgres:manual-recovery-checkpoint-snapshot",
+        targetSnapshotRef: "tigerbeetle:manual-recovery-checkpoint-snapshot",
+        evidenceArtifactId: null,
+      })
+      assert.strictEqual(manualRecoveryCheckpoint.status, "blocked")
+      assert.isAbove(manualRecoveryCheckpoint.mismatchCount, 0)
+      const manualRecoveryApproval = yield* Effect.flip(
+        service.approveTigerBeetleCutover({
+          principal,
+          tenantId: tenant!.id,
+          legalEntityId: otherEntity!.id,
+          evidenceArtifactId: otherArtifact.id,
+        }),
+      )
+      assert.instanceOf(manualRecoveryApproval, FinancialEngineCutoverBlocked)
+      assert.strictEqual(manualRecoveryApproval.reason, "unresolved_operations")
 
-          const bypass = yield* Effect.flip(Effect.tryPromise({
-            try: () =>
-              client`
+      const bypass = yield* Effect.flip(
+        Effect.tryPromise({
+          try: () =>
+            client`
             update accounting.legal_entity_accounting_configurations
             set financial_engine = 'tigerbeetle'
             where tenant_id = ${tenant!.id} and legal_entity_id = ${otherEntity!.id}
           `,
-            catch: (cause) => cause,
-          }))
-          assert.strictEqual(
-            (bypass as { constraint_name?: string }).constraint_name,
-            "legal_entity_accounting_engine_activation_gate_check",
-          )
+          catch: (cause) => cause,
         }),
-    ),
+      )
+      assert.strictEqual(
+        (bypass as { constraint_name?: string }).constraint_name,
+        "legal_entity_accounting_engine_activation_gate_check",
+      )
+    }),
+  ),
 )

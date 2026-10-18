@@ -169,26 +169,24 @@ export const ProcessJob = Schema.Struct({
   leaseOwner: Schema.NullOr(NonEmptyString).pipe(
     Schema.withDecodingDefaultKey(Effect.succeed(null)),
   ),
-  leaseToken: Schema.NullOr(Uuid).pipe(
-    Schema.withDecodingDefaultKey(Effect.succeed(null)),
-  ),
+  leaseToken: Schema.NullOr(Uuid).pipe(Schema.withDecodingDefaultKey(Effect.succeed(null))),
   attempts: NonNegativeInt,
   payload: Schema.Json,
   correlationId: NonEmptyString,
-}).check(Schema.makeFilter(
-  (job) =>
-    job.status === "leased"
-      ? job.leaseUntil !== null && job.leaseOwner !== null && job.leaseToken !== null
-      : job.leaseUntil === null && job.leaseOwner === null && job.leaseToken === null,
-  { expected: "job lease metadata consistent with its durable state" },
-))
+}).check(
+  Schema.makeFilter(
+    (job) =>
+      job.status === "leased"
+        ? job.leaseUntil !== null && job.leaseOwner !== null && job.leaseToken !== null
+        : job.leaseUntil === null && job.leaseOwner === null && job.leaseToken === null,
+    { expected: "job lease metadata consistent with its durable state" },
+  ),
+)
 
 export const ProcessJobClaimInput = Schema.Struct({
   tenantId: Uuid,
   workerId: NonEmptyString,
-  jobType: Schema.NullOr(ProcessJobType).pipe(
-    Schema.withDecodingDefaultKey(Effect.succeed(null)),
-  ),
+  jobType: Schema.NullOr(ProcessJobType).pipe(Schema.withDecodingDefaultKey(Effect.succeed(null))),
 })
 export const ProcessJobRenewInput = Schema.Struct({
   tenantId: Uuid,
@@ -205,9 +203,7 @@ export const ProcessJobFailInput = Schema.Struct({
   leaseToken: Uuid,
   leaseGeneration: LeaseGeneration,
   error: NonEmptyString,
-  retryAt: Schema.NullOr(InstantString).pipe(
-    Schema.withDecodingDefaultKey(Effect.succeed(null)),
-  ),
+  retryAt: Schema.NullOr(InstantString).pipe(Schema.withDecodingDefaultKey(Effect.succeed(null))),
 })
 
 export const WorkflowRun = Schema.Struct({
@@ -219,15 +215,17 @@ export const WorkflowRun = Schema.Struct({
   status: Schema.Literals(["running", "succeeded", "manual_recovery"]),
   recoveryReason: Schema.NullOr(NonEmptyString),
   completedAt: Schema.NullOr(InstantString),
-}).check(Schema.makeFilter(
-  (run) =>
-    run.status === "running"
-      ? run.completedAt === null && run.recoveryReason === null
-      : run.status === "succeeded"
-      ? run.completedAt !== null && run.recoveryReason === null
-      : run.completedAt === null && run.recoveryReason !== null,
-  { expected: "workflow status metadata consistent with its durable state" },
-))
+}).check(
+  Schema.makeFilter(
+    (run) =>
+      run.status === "running"
+        ? run.completedAt === null && run.recoveryReason === null
+        : run.status === "succeeded"
+          ? run.completedAt !== null && run.recoveryReason === null
+          : run.completedAt === null && run.recoveryReason !== null,
+    { expected: "workflow status metadata consistent with its durable state" },
+  ),
+)
 
 export const OrderConfirmationResult = Schema.Struct({
   workflowRunId: Uuid,

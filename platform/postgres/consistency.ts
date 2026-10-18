@@ -32,13 +32,16 @@ const TokenPayload = Schema.Struct({
 type TokenPayload = Schema.Schema.Type<typeof TokenPayload>
 
 const toBase64Url = (bytes: Uint8Array) =>
-  btoa(String.fromCharCode(...bytes)).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "")
+  btoa(String.fromCharCode(...bytes))
+    .replaceAll("+", "-")
+    .replaceAll("/", "_")
+    .replace(/=+$/, "")
 
 const fromBase64Url = (value: string) => {
-  const base64 = value.replaceAll("-", "+").replaceAll("_", "/").padEnd(
-    Math.ceil(value.length / 4) * 4,
-    "=",
-  )
+  const base64 = value
+    .replaceAll("-", "+")
+    .replaceAll("_", "/")
+    .padEnd(Math.ceil(value.length / 4) * 4, "=")
   return Uint8Array.from(atob(base64), (character) => character.charCodeAt(0))
 }
 
@@ -46,9 +49,14 @@ const invalidConfiguration = () =>
   new ReplicaConsistencyFailure({ reason: "invalid_configuration" })
 
 const validateConfig = (config: PostgresReadYourWritesConfig) =>
-  config.placementId.trim().length > 0 && encoder.encode(config.secret).length >= 32
-  && Number.isInteger(config.maxWaitMs) && config.maxWaitMs > 0 && config.maxWaitMs <= 30_000
-  && Number.isInteger(config.tokenTtlMs) && config.tokenTtlMs > 0 && config.tokenTtlMs <= 3_600_000
+  config.placementId.trim().length > 0 &&
+  encoder.encode(config.secret).length >= 32 &&
+  Number.isInteger(config.maxWaitMs) &&
+  config.maxWaitMs > 0 &&
+  config.maxWaitMs <= 30_000 &&
+  Number.isInteger(config.tokenTtlMs) &&
+  config.tokenTtlMs > 0 &&
+  config.tokenTtlMs <= 3_600_000
 
 const importHmacKey = (secret: string) =>
   Effect.tryPromise({
@@ -69,8 +77,8 @@ const databaseIdentity = (client: Sql, operation: "capture" | "wait") =>
       const rows = await client.unsafe<
         Array<{ readonly system_identifier: string; readonly timeline_id: number }>
       >(
-        "select (pg_control_system()).system_identifier::text as system_identifier, "
-          + "(pg_control_checkpoint()).timeline_id as timeline_id",
+        "select (pg_control_system()).system_identifier::text as system_identifier, " +
+          "(pg_control_checkpoint()).timeline_id as timeline_id",
       )
       const identity = rows[0]
       if (identity === undefined) throw new Error("PostgreSQL identity is unavailable")
@@ -112,7 +120,7 @@ const signPayload = (key: CryptoKey, payload: TokenPayload) =>
   })
 
 const decodePayload = (key: CryptoKey, token: string) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const [encodedPayload, encodedSignature, extra] = token.split(".")
     if (encodedPayload === undefined || encodedSignature === undefined || extra !== undefined) {
       return yield* Effect.fail(new ReplicaConsistencyFailure({ reason: "invalid_token" }))
@@ -144,8 +152,8 @@ const waitForReplay = (client: Sql, lsn: string, maxWaitMs: number) =>
     try: async () => {
       if (!isConsistencyLsn(lsn)) throw new Error("Invalid LSN")
       const rows = await client.unsafe<Array<{ readonly status: string }>>(
-        `WAIT FOR LSN '${lsn.toUpperCase()}' WITH (`
-          + `MODE 'standby_replay', TIMEOUT '${maxWaitMs}ms', NO_THROW)`,
+        `WAIT FOR LSN '${lsn.toUpperCase()}' WITH (` +
+          `MODE 'standby_replay', TIMEOUT '${maxWaitMs}ms', NO_THROW)`,
       )
       return rows[0]?.status
     },
@@ -158,14 +166,14 @@ export const makePostgresReadYourWrites = (
   config: PostgresReadYourWritesConfig,
   now: () => number = Date.now,
 ): Effect.Effect<PostgresReadYourWritesService, ReplicaConsistencyFailure> =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     if (!validateConfig(config)) return yield* Effect.fail(invalidConfiguration())
     const key = yield* importHmacKey(config.secret)
     const replicaDatabase = makePostgresDatabase(replicaClient)
 
     return {
       capture: (tenantId) =>
-        Effect.gen(function*() {
+        Effect.gen(function* () {
           const identity = yield* databaseIdentity(primaryClient, "capture")
           const lsn = yield* capturePosition(primaryClient)
           const issuedAt = now()
@@ -181,7 +189,7 @@ export const makePostgresReadYourWrites = (
           })
         }),
       wait: (tenantId, token) =>
-        Effect.gen(function*() {
+        Effect.gen(function* () {
           const payload = yield* decodePayload(key, token)
           if (payload.expiresAt <= now()) {
             return yield* Effect.fail(new ReplicaConsistencyFailure({ reason: "expired_token" }))

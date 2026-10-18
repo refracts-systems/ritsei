@@ -52,14 +52,15 @@ const withCommunication = <A, E>(
   >,
 ) => {
   const messaging = makeMessagingTestLayer()
-  const communication = makeCommunicationTestLayer({ deliveryStatuses: ["unknown", "accepted"] })
-    .pipe(Layer.provide(messaging))
+  const communication = makeCommunicationTestLayer({
+    deliveryStatuses: ["unknown", "accepted"],
+  }).pipe(Layer.provide(messaging))
   return Effect.provide(program, Layer.merge(messaging, communication))
 }
 
 it.effect("derives one intent, renders once, and retries the same artifact", () =>
   withCommunication(
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const messaging = yield* MessagingService
       yield* messaging.append(event)
       const service = yield* CommunicationService
@@ -91,11 +92,12 @@ it.effect("derives one intent, renders once, and retries the same artifact", () 
       assert.strictEqual(transport.sent[0]?.artifactId, transport.sent[1]?.artifactId)
       assert.strictEqual(transport.sent[0]?.html, transport.sent[1]?.html)
     }),
-  ))
+  ),
+)
 
 it.effect("rejects unsupported source events before creating a communication", () =>
   withCommunication(
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const messaging = yield* MessagingService
       const unsupportedEvent = { ...event, eventType: "billing.invoice.issued" }
       yield* messaging.append(unsupportedEvent)
@@ -112,11 +114,12 @@ it.effect("rejects unsupported source events before creating a communication", (
         })._tag,
       )
     }),
-  ))
+  ),
+)
 
 it.effect("does not retry a communication before its first delivery attempt", () =>
   withCommunication(
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const messaging = yield* MessagingService
       yield* messaging.append(event)
       const service = yield* CommunicationService
@@ -132,4 +135,5 @@ it.effect("does not retry a communication before its first delivery attempt", ()
         })._tag,
       )
     }),
-  ))
+  ),
+)

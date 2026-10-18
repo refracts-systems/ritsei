@@ -25,17 +25,13 @@ export type ExternalConnectorStore = {
     tenantId: string,
     idempotencyKey: string,
   ) => Effect.Effect<ExternalInvocationReceipt | undefined, never, never>
-  readonly putInvocation: (
-    receipt: ExternalInvocationReceipt,
-  ) => Effect.Effect<void, never, never>
+  readonly putInvocation: (receipt: ExternalInvocationReceipt) => Effect.Effect<void, never, never>
   readonly getEvent: (
     tenantId: string,
     source: string,
     providerEventId: string,
   ) => Effect.Effect<ExternalEventReceipt | undefined, never, never>
-  readonly putEvent: (
-    receipt: ExternalEventReceipt,
-  ) => Effect.Effect<void, never, never>
+  readonly putEvent: (receipt: ExternalEventReceipt) => Effect.Effect<void, never, never>
 }
 
 export const makeMemoryExternalConnectorStore = (): ExternalConnectorStore => {

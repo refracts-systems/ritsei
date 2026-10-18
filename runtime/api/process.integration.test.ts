@@ -126,15 +126,13 @@ const processService: ProcessServiceShape = {
   failJob: unused,
 }
 
-const TestHttpServices = Layer.mergeAll(
-  Path.layer,
-  Etag.layerWeak,
-  HttpPlatform.layer,
-).pipe(Layer.provideMerge(FileSystem.layerNoop({})))
+const TestHttpServices = Layer.mergeAll(Path.layer, Etag.layerWeak, HttpPlatform.layer).pipe(
+  Layer.provideMerge(FileSystem.layerNoop({})),
+)
 
 it.layer(TestHttpServices)("Process API", (it) => {
   it.effect("forwards tenant-scoped typed requests through the Process Studio contract", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const observed: unknown[] = []
       const studio: ProcessStudioServiceShape = {
         listCatalog: (input) => {
@@ -176,9 +174,8 @@ it.layer(TestHttpServices)("Process API", (it) => {
       const bearer = Layer.succeed(BearerAuth, {
         bearer: (effect) => Effect.provideService(effect, CurrentPrincipal, principal),
       })
-      const bearerClient = HttpApiMiddleware.layerClient(
-        BearerAuth,
-        ({ request, next }) => next(HttpClientRequest.bearerToken(request, "test-token")),
+      const bearerClient = HttpApiMiddleware.layerClient(BearerAuth, ({ request, next }) =>
+        next(HttpClientRequest.bearerToken(request, "test-token")),
       )
       const handlers = ProcessHandlers.pipe(
         Layer.provide(bearer),
@@ -274,5 +271,6 @@ it.layer(TestHttpServices)("Process API", (it) => {
         idempotencyKey: "process-retry-2",
         reason: "Retry after a transient failure",
       })
-    }))
+    }),
+  )
 })

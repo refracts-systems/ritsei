@@ -21,6 +21,6 @@ export const decodeExternalSchema = (schema: ExternalSchema, input: unknown) =>
     }
   }).pipe(
     Effect.catchCause((cause) =>
-      Cause.hasDies(cause) ? Effect.fail(new InvalidExternalSchema()) : Effect.failCause(cause)
+      Cause.hasDies(cause) ? Effect.fail(new InvalidExternalSchema()) : Effect.failCause(cause),
     ),
   )

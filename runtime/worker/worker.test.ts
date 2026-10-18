@@ -84,7 +84,7 @@ it.effect("claims a financial job and completes it through the Accounting contra
   } as unknown as ProcessService
   const accounting = {
     submitFinancialOperation: () =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const fence = yield* FencingContextService
         assert.deepStrictEqual(fence, {
           scope: `accounting.financial_operation:${tenantId}:${operationId}`,
@@ -123,16 +123,18 @@ it.effect("claims a financial job and completes it through the Accounting contra
   } as unknown as FinancialOperationService
 
   return runFinancialOperationOnce({ tenantId, workerId: "worker-1" }).pipe(
-    Effect.provide(Layer.mergeAll(
-      Layer.succeed(ProcessService, process),
-      Layer.succeed(FinancialOperationService, accounting),
-    )),
+    Effect.provide(
+      Layer.mergeAll(
+        Layer.succeed(ProcessService, process),
+        Layer.succeed(FinancialOperationService, accounting),
+      ),
+    ),
     Effect.tap((result) =>
       Effect.sync(() => {
         assert.strictEqual(result.status, "completed")
         assert.strictEqual(result.jobId, jobId)
         assert.isTrue(completed)
-      })
+      }),
     ),
   )
 })
@@ -201,74 +203,81 @@ it.effect("releases an unknown reconciliation for a bounded retry", () => {
   } as unknown as FinancialOperationService
 
   return runFinancialOperationOnce({ tenantId, workerId: "worker-1" }).pipe(
-    Effect.provide(Layer.mergeAll(
-      Layer.succeed(ProcessService, process),
-      Layer.succeed(FinancialOperationService, accounting),
-    )),
+    Effect.provide(
+      Layer.mergeAll(
+        Layer.succeed(ProcessService, process),
+        Layer.succeed(FinancialOperationService, accounting),
+      ),
+    ),
     Effect.tap((result) =>
       Effect.sync(() => {
         assert.strictEqual(result.status, "retrying")
         assert.strictEqual(result.jobId, job.jobId)
         assert.isTrue(failed)
-      })
+      }),
     ),
   )
 })
 
-it.effect("leaves a claimed lease untouched when the worker is terminated before Accounting", () => {
-  let accounted = false
-  const job = {
-    jobId: "00000000-0000-4000-8000-000000000020",
-    tenantId,
-    fenceScope: `accounting.financial_operation:${tenantId}:${operationId}`,
-    leaseGeneration: "3",
-    jobType: ProcessFinancialJobTypes.submit,
-    idempotencyKey: operationId,
-    priority: 100,
-    status: "leased" as const,
-    scheduledAt: new Date().toISOString(),
-    leaseUntil: new Date(Date.now() + 60_000).toISOString(),
-    leaseOwner: "worker-1",
-    leaseToken,
-    attempts: 1,
-    payload: { tenantId, operationId },
-    correlationId: operationId,
-  }
-  const process = {
-    claimJob: () => Effect.succeed(job),
-    completeJob: () => Effect.die("must not complete a terminated lease"),
-    renewJob: () => Effect.succeed(job),
-    failJob: () => Effect.die("must not mutate a terminated lease"),
-  } as unknown as ProcessService
-  const accounting = {
-    submitFinancialOperation: () => {
-      accounted = true
-      return Effect.succeed(workerOperation("reconciled"))
-    },
-    reconcileFinancialOperation: () => Effect.die("not used"),
-    createJournalIntent: () => Effect.die("not used"),
-    createRevenueIntent: () => Effect.die("not used"),
-    createReversalIntent: () => Effect.die("not used"),
-  } as unknown as FinancialOperationService
+it.effect(
+  "leaves a claimed lease untouched when the worker is terminated before Accounting",
+  () => {
+    let accounted = false
+    const job = {
+      jobId: "00000000-0000-4000-8000-000000000020",
+      tenantId,
+      fenceScope: `accounting.financial_operation:${tenantId}:${operationId}`,
+      leaseGeneration: "3",
+      jobType: ProcessFinancialJobTypes.submit,
+      idempotencyKey: operationId,
+      priority: 100,
+      status: "leased" as const,
+      scheduledAt: new Date().toISOString(),
+      leaseUntil: new Date(Date.now() + 60_000).toISOString(),
+      leaseOwner: "worker-1",
+      leaseToken,
+      attempts: 1,
+      payload: { tenantId, operationId },
+      correlationId: operationId,
+    }
+    const process = {
+      claimJob: () => Effect.succeed(job),
+      completeJob: () => Effect.die("must not complete a terminated lease"),
+      renewJob: () => Effect.succeed(job),
+      failJob: () => Effect.die("must not mutate a terminated lease"),
+    } as unknown as ProcessService
+    const accounting = {
+      submitFinancialOperation: () => {
+        accounted = true
+        return Effect.succeed(workerOperation("reconciled"))
+      },
+      reconcileFinancialOperation: () => Effect.die("not used"),
+      createJournalIntent: () => Effect.die("not used"),
+      createRevenueIntent: () => Effect.die("not used"),
+      createReversalIntent: () => Effect.die("not used"),
+    } as unknown as FinancialOperationService
 
-  return Effect.flip(runFinancialOperationOnce({ tenantId, workerId: "worker-1" })).pipe(
-    Effect.provide(Layer.mergeAll(
-      Layer.succeed(ProcessService, process),
-      Layer.succeed(FinancialOperationService, accounting),
-      makeWorkerFailpointLayer(["after_lease_before_accounting"]),
-    )),
-    Effect.tap((failure) =>
-      Effect.sync(() => {
-        assert.instanceOf(failure, WorkerInjectedFailure)
-        assert.strictEqual(failure.point, "after_lease_before_accounting")
-        assert.isFalse(accounted)
-      })
-    ),
-  )
-})
+    return Effect.flip(runFinancialOperationOnce({ tenantId, workerId: "worker-1" })).pipe(
+      Effect.provide(
+        Layer.mergeAll(
+          Layer.succeed(ProcessService, process),
+          Layer.succeed(FinancialOperationService, accounting),
+          makeWorkerFailpointLayer(["after_lease_before_accounting"]),
+        ),
+      ),
+      Effect.tap((failure) =>
+        Effect.sync(() => {
+          assert.instanceOf(failure, WorkerInjectedFailure)
+          assert.strictEqual(failure.point, "after_lease_before_accounting")
+          assert.isFalse(accounted)
+        }),
+      ),
+    )
+  },
+)
 
 it.effect("renews a long-running financial lease with its generation", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     let renewals = 0
     const job = {
       jobId: "00000000-0000-4000-8000-000000000030",
@@ -306,10 +315,12 @@ it.effect("renews a long-running financial lease with its generation", () =>
       createReversalIntent: () => Effect.die("not used"),
     } as unknown as FinancialOperationService
     const fiber = yield* runFinancialOperationOnce({ tenantId, workerId: "worker-1" }).pipe(
-      Effect.provide(Layer.mergeAll(
-        Layer.succeed(ProcessService, process),
-        Layer.succeed(FinancialOperationService, accounting),
-      )),
+      Effect.provide(
+        Layer.mergeAll(
+          Layer.succeed(ProcessService, process),
+          Layer.succeed(FinancialOperationService, accounting),
+        ),
+      ),
       Effect.forkChild,
     )
     yield* Effect.yieldNow
@@ -318,7 +329,8 @@ it.effect("renews a long-running financial lease with its generation", () =>
     yield* TestClock.adjust("1 minute")
     const result = yield* Fiber.join(fiber)
     assert.strictEqual(result.status, "completed")
-  }))
+  }),
+)
 
 it.effect("restarts after Accounting acceptance and fences stale duplicate completion", () => {
   let completions = 0
@@ -362,15 +374,15 @@ it.effect("restarts after Accounting acceptance and fences stale duplicate compl
     Layer.succeed(FinancialOperationService, accounting),
   )
 
-  return Effect.gen(function*() {
+  return Effect.gen(function* () {
     const terminated = yield* Effect.flip(
       runFinancialOperationOnce({ tenantId, workerId: "worker-1" }).pipe(
-        Effect.provide(Layer.mergeAll(
-          services,
-          makeWorkerFailpointLayer([
-            "after_accounting_before_job_completion",
-          ]),
-        )),
+        Effect.provide(
+          Layer.mergeAll(
+            services,
+            makeWorkerFailpointLayer(["after_accounting_before_job_completion"]),
+          ),
+        ),
       ),
     )
     assert.instanceOf(terminated, WorkerInjectedFailure)

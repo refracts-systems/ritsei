@@ -46,11 +46,7 @@ export function createAccountMutation(
 
 export function createAccountEmailMutation(scope: ApiScope, afterSuccess?: () => void) {
   const client = useQueryClient()
-  return useMutation<
-    UserAccount,
-    RequestFailure,
-    { id: string; email: string }
-  >(() => ({
+  return useMutation<UserAccount, RequestFailure, { id: string; email: string }>(() => ({
     mutationFn: (input) => runRequest(scope, updateAccount(input)),
     onSuccess: (account) => {
       client.setQueryData(serverQueryKey(scope.tenantId, accountKey(account.id)), account)

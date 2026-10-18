@@ -11,23 +11,22 @@ export const WorkloadAdmissionInput = Schema.Struct({
 })
 export type WorkloadAdmissionInput = Schema.Schema.Type<typeof WorkloadAdmissionInput>
 
-export class WorkloadAdmissionRejected
-  extends Schema.TaggedError<WorkloadAdmissionRejected>()("WorkloadAdmissionRejected", {
+export class WorkloadAdmissionRejected extends Schema.TaggedError<WorkloadAdmissionRejected>()(
+  "WorkloadAdmissionRejected",
+  {
     workloadClass: Schema.Literals(["command", "query", "async"]),
     reason: Schema.Literals([
       "command_reserve_exhausted",
       "competing_capacity_exhausted",
       "cost_above_hard_limit",
     ]),
-  })
-{}
+  },
+) {}
 
-export class WorkloadAdmissionConfigurationInvalid
-  extends Schema.TaggedError<WorkloadAdmissionConfigurationInvalid>()(
-    "WorkloadAdmissionConfigurationInvalid",
-    { reason: Schema.String },
-  )
-{}
+export class WorkloadAdmissionConfigurationInvalid extends Schema.TaggedError<WorkloadAdmissionConfigurationInvalid>()(
+  "WorkloadAdmissionConfigurationInvalid",
+  { reason: Schema.String },
+) {}
 
 export type WorkloadAdmissionConfig = {
   readonly commandReserve: number
@@ -51,9 +50,7 @@ export type WorkloadAdmission = {
   }
 }
 
-export const makeWorkloadAdmission = (
-  config: WorkloadAdmissionConfig,
-): WorkloadAdmission => {
+export const makeWorkloadAdmission = (config: WorkloadAdmissionConfig): WorkloadAdmission => {
   if (!Schema.is(PositiveCapacity)(config.commandReserve)) {
     throw new WorkloadAdmissionConfigurationInvalid({ reason: "command reserve must be positive" })
   }
@@ -62,8 +59,8 @@ export const makeWorkloadAdmission = (
   }
   const competingAdaptiveLimit = config.competingAdaptiveLimit ?? config.competingHardLimit
   if (
-    !Schema.is(NonNegativeCapacity)(competingAdaptiveLimit)
-    || competingAdaptiveLimit > config.competingHardLimit
+    !Schema.is(NonNegativeCapacity)(competingAdaptiveLimit) ||
+    competingAdaptiveLimit > config.competingHardLimit
   ) {
     throw new WorkloadAdmissionConfigurationInvalid({
       reason: "adaptive limit must not exceed hard limit",
@@ -74,7 +71,7 @@ export const makeWorkloadAdmission = (
   let competingAvailable = competingAdaptiveLimit
 
   const acquire = Effect.fn("WorkloadAdmission.acquire")((input: unknown) =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(WorkloadAdmissionInput)(input)
       const { workloadClass } = decoded.metadata
       const cost = decoded.metadata.estimatedCost
@@ -90,7 +87,7 @@ export const makeWorkloadAdmission = (
           )
         }
         commandAvailable -= cost
-        return lease(workloadClass, cost, () => commandAvailable += cost)
+        return lease(workloadClass, cost, () => (commandAvailable += cost))
       }
       if (cost > competingAdaptiveLimit) {
         return yield* Effect.fail(
@@ -103,8 +100,8 @@ export const makeWorkloadAdmission = (
         )
       }
       competingAvailable -= cost
-      return lease(workloadClass, cost, () => competingAvailable += cost)
-    })
+      return lease(workloadClass, cost, () => (competingAvailable += cost))
+    }),
   )
 
   return {

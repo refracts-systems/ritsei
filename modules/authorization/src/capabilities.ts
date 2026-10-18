@@ -95,13 +95,7 @@ export const LegacyCapabilityIds = [
   "inventory.stock.transfer.complete",
 ] as const
 
-const forbiddenVerbs = new Set([
-  "manage",
-  "write",
-  "admin",
-  "full_access",
-  "execute",
-])
+const forbiddenVerbs = new Set(["manage", "write", "admin", "full_access", "execute"])
 const capabilityIdShape = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*){1,2}$/
 
 export const isCapabilityIdShape = (value: string): boolean => {
@@ -181,12 +175,7 @@ const definition = (
 export const CapabilityDefinitions: ReadonlyArray<CapabilityDefinition> = [
   definition("authorization.capability.grant", "authorization", "capability", "grant"),
   definition("authorization.tenant_membership.add", "authorization", "tenant_membership", "add"),
-  definition(
-    "authorization.tenant_membership.read",
-    "authorization",
-    "tenant_membership",
-    "read",
-  ),
+  definition("authorization.tenant_membership.read", "authorization", "tenant_membership", "read"),
   definition(
     "authorization.tenant_membership.suspend",
     "authorization",
@@ -216,18 +205,8 @@ export const CapabilityDefinitions: ReadonlyArray<CapabilityDefinition> = [
   definition("party.party_relationship.create", "party", "party_relationship", "create"),
   definition("party.party_relationship.read", "party", "party_relationship", "read"),
   definition("party.party_identifier.attach", "party", "party_identifier", "attach"),
-  definition(
-    "party.party_representation.create",
-    "party",
-    "party_representation",
-    "create",
-  ),
-  definition(
-    "party.party_representation.activate",
-    "party",
-    "party_representation",
-    "activate",
-  ),
+  definition("party.party_representation.create", "party", "party_representation", "create"),
+  definition("party.party_representation.activate", "party", "party_representation", "activate"),
   definition(
     "party.party_representation.deactivate",
     "party",
@@ -242,48 +221,13 @@ export const CapabilityDefinitions: ReadonlyArray<CapabilityDefinition> = [
   definition("sales.order.confirm", "sales", "order", "confirm"),
   definition("sales.order.read", "sales", "order", "read"),
   definition("sales.order.cancel", "sales", "order", "cancel"),
-  definition(
-    "procurement.supplier_account.create",
-    "procurement",
-    "supplier_account",
-    "create",
-  ),
-  definition(
-    "procurement.purchase_order.create",
-    "procurement",
-    "purchase_order",
-    "create",
-  ),
-  definition(
-    "procurement.purchase_order.confirm",
-    "procurement",
-    "purchase_order",
-    "confirm",
-  ),
-  definition(
-    "procurement.purchase_order.read",
-    "procurement",
-    "purchase_order",
-    "read",
-  ),
-  definition(
-    "procurement.purchase_order.cancel",
-    "procurement",
-    "purchase_order",
-    "cancel",
-  ),
-  definition(
-    "procurement.purchase_receipt.receive",
-    "procurement",
-    "purchase_receipt",
-    "receive",
-  ),
-  definition(
-    "process.order_confirmation.recover",
-    "process",
-    "order_confirmation",
-    "recover",
-  ),
+  definition("procurement.supplier_account.create", "procurement", "supplier_account", "create"),
+  definition("procurement.purchase_order.create", "procurement", "purchase_order", "create"),
+  definition("procurement.purchase_order.confirm", "procurement", "purchase_order", "confirm"),
+  definition("procurement.purchase_order.read", "procurement", "purchase_order", "read"),
+  definition("procurement.purchase_order.cancel", "procurement", "purchase_order", "cancel"),
+  definition("procurement.purchase_receipt.receive", "procurement", "purchase_receipt", "receive"),
+  definition("process.order_confirmation.recover", "process", "order_confirmation", "recover"),
   definition(
     "process.order_confirmation.manual_recovery",
     "process",

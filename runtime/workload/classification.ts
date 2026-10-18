@@ -41,5 +41,5 @@ const decodeWorkloadMetadata = (input: unknown) =>
   Schema.decodeUnknownEffect(WorkloadMetadata, { onExcessProperty: "error" })(input)
 
 export const classifyWorkload = Effect.fn("Workload.classify")((input: unknown) =>
-  decodeWorkloadMetadata(input)
+  decodeWorkloadMetadata(input),
 )

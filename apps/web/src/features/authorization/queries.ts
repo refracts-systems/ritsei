@@ -31,10 +31,8 @@ const directGrantsKey = (userAccountId: string) =>
   [...authorizationKey, "direct-grants", userAccountId] as const
 const capabilityCatalogKey = [...authorizationKey, "capability-definitions"] as const
 
-const invalidateAuthorization = (
-  client: ReturnType<typeof useQueryClient>,
-  tenantId: string,
-) => client.invalidateQueries({ queryKey: serverQueryKey(tenantId, authorizationKey) })
+const invalidateAuthorization = (client: ReturnType<typeof useQueryClient>, tenantId: string) =>
+  client.invalidateQueries({ queryKey: serverQueryKey(tenantId, authorizationKey) })
 
 export function createTenantMembershipsQuery(
   scope: ApiScope,
@@ -105,10 +103,7 @@ export function createActivateTenantMembershipMutation(scope: ApiScope) {
   }))
 }
 
-export function createRemoveTenantMembershipMutation(
-  scope: ApiScope,
-  afterSuccess?: () => void,
-) {
+export function createRemoveTenantMembershipMutation(scope: ApiScope, afterSuccess?: () => void) {
   const client = useQueryClient()
   return useMutation<void, RequestFailure, { userAccountId: string }>(() => ({
     mutationFn: ({ userAccountId }) => runRequest(scope, removeMembership(userAccountId)),

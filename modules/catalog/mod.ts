@@ -14,11 +14,7 @@ export const CatalogStabilitySchema = Schema.Literals([
 ])
 export type CatalogStability = Schema.Schema.Type<typeof CatalogStabilitySchema>
 
-export const ActionIdempotencySchema = Schema.Literals([
-  "required",
-  "inherent",
-  "unsupported",
-])
+export const ActionIdempotencySchema = Schema.Literals(["required", "inherent", "unsupported"])
 export type ActionIdempotency = Schema.Schema.Type<typeof ActionIdempotencySchema>
 
 export type ActionTransactionSemantics =
@@ -42,13 +38,16 @@ export type ActionCompensation = Schema.Schema.Type<typeof ActionCompensationSch
 export const CompatibilityRangeSchema = Schema.Struct({
   minimumVersion: PositiveInteger,
   maximumVersion: PositiveInteger,
-}).check(Schema.makeFilter(
-  (range) =>
-    range.minimumVersion <= range.maximumVersion ? undefined : {
-      path: ["maximumVersion"],
-      issue: "maximumVersion must be greater than or equal to minimumVersion",
-    },
-))
+}).check(
+  Schema.makeFilter((range) =>
+    range.minimumVersion <= range.maximumVersion
+      ? undefined
+      : {
+          path: ["maximumVersion"],
+          issue: "maximumVersion must be greater than or equal to minimumVersion",
+        },
+  ),
+)
 export type CompatibilityRange = Schema.Schema.Type<typeof CompatibilityRangeSchema>
 
 export type ActionPrecondition =

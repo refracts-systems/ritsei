@@ -25,7 +25,7 @@ export const validateLines = (lines: readonly JournalLine[]) => {
   for (const [index, line] of lines.entries()) {
     const lineDebit = toMinor(line.debit)
     const lineCredit = toMinor(line.credit)
-    if ((lineDebit > 0n) === (lineCredit > 0n)) return new InvalidJournalLine({ index })
+    if (lineDebit > 0n === lineCredit > 0n) return new InvalidJournalLine({ index })
     debit += lineDebit
     credit += lineCredit
   }

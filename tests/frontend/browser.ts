@@ -30,18 +30,21 @@ export const mockLocalAuth = async (
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({ profile: "transitional-local", scopes: [] }),
-    }))
+    }),
+  )
   await page.route("**/api/auth/dev/login", (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({ token, expiresAt: "2026-09-14T00:00:00.000Z" }),
-    }))
+    }),
+  )
   await page.route("**/api/auth/session", (route) => {
     const requestedTenantId = route.request().headers()["x-tenant-id"]
-    const activeTenant = requestedTenantId === undefined
-      ? memberships[0]
-      : memberships.find((candidate) => candidate.tenantId === requestedTenantId)
+    const activeTenant =
+      requestedTenantId === undefined
+        ? memberships[0]
+        : memberships.find((candidate) => candidate.tenantId === requestedTenantId)
     if (requestedTenantId !== undefined && activeTenant === undefined) {
       return route.fulfill({
         status: 403,
@@ -78,7 +81,7 @@ export const connectToTenant = async (
   await page.getByRole("heading", { name: heading, exact: true }).waitFor()
 }
 
-export const builtApp = Effect.gen(function*() {
+export const builtApp = Effect.gen(function* () {
   const outDir = yield* Effect.acquireRelease(
     Effect.promise(() => mkdtemp(join(tmpdir(), "ritsei-web-"))),
     (path) => Effect.promise(() => rm(path, { recursive: true })),
@@ -87,15 +90,9 @@ export const builtApp = Effect.gen(function*() {
   const output = yield* Effect.sync(() =>
     spawnSync(
       "pnpm",
-      [
-        "--dir",
-        "apps/web",
-        "build",
-        "--outDir",
-        isWindows ? `"${outDir}"` : outDir,
-      ],
+      ["--dir", "apps/web", "build", "--outDir", isWindows ? `"${outDir}"` : outDir],
       { encoding: "utf8", shell: isWindows },
-    )
+    ),
   )
   assert.isTrue(output.status === 0, output.stdout + output.stderr)
   const server = yield* Effect.acquireRelease(
@@ -105,13 +102,14 @@ export const builtApp = Effect.gen(function*() {
         root: "apps/web",
         build: { outDir },
         preview: { host: "127.0.0.1", port: 0, strictPort: true },
-      })
+      }),
     ),
     (server) =>
-      Effect.promise(() =>
-        new Promise<void>((resolve, reject) => {
-          server.httpServer.close((error) => error ? reject(error) : resolve())
-        })
+      Effect.promise(
+        () =>
+          new Promise<void>((resolve, reject) => {
+            server.httpServer.close((error) => (error ? reject(error) : resolve()))
+          }),
       ),
   )
   const address = server.httpServer.address()

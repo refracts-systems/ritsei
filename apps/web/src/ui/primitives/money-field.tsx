@@ -3,9 +3,8 @@ import { omit } from "solid-js"
 import { type FieldProps, FieldShell } from "../internal/field-shell.tsx"
 import { control } from "../recipes/control.ts"
 
-type MoneyFieldProps =
-  & Omit<JSX.InputHTMLAttributes<HTMLInputElement>, "class" | "children">
-  & FieldProps
+type MoneyFieldProps = Omit<JSX.InputHTMLAttributes<HTMLInputElement>, "class" | "children"> &
+  FieldProps
 
 export function MoneyField(props: MoneyFieldProps) {
   const inputProps = omit(props, "class", "label", "error")

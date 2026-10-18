@@ -25,32 +25,32 @@ export type ProcurementStore = import("./contract.ts").ProcurementService
 type CreateSupplierAccount = Schema.Schema.Type<typeof CreateSupplierAccountInput>
 
 export const loadSupplierRelationship = (party: PartyService, input: CreateSupplierAccount) =>
-  party.getRelationship({
-    principal: input.principal,
-    tenantId: input.tenantId,
-    relationshipId: input.supplierRelationshipId,
-  }).pipe(
-    Effect.catchTag(
-      "PartyRelationshipNotFound",
-      () =>
+  party
+    .getRelationship({
+      principal: input.principal,
+      tenantId: input.tenantId,
+      relationshipId: input.supplierRelationshipId,
+    })
+    .pipe(
+      Effect.catchTag("PartyRelationshipNotFound", () =>
         Effect.fail(
           new SupplierRelationshipNotEligible({
             tenantId: input.tenantId,
             supplierRelationshipId: input.supplierRelationshipId,
           }),
         ),
-    ),
-    Effect.flatMap((relationship) =>
-      relationship.kind === "supplier" && relationship.active
-        ? Effect.succeed(relationship)
-        : Effect.fail(
-          new SupplierRelationshipNotEligible({
-            tenantId: input.tenantId,
-            supplierRelationshipId: input.supplierRelationshipId,
-          }),
-        )
-    ),
-  )
+      ),
+      Effect.flatMap((relationship) =>
+        relationship.kind === "supplier" && relationship.active
+          ? Effect.succeed(relationship)
+          : Effect.fail(
+              new SupplierRelationshipNotEligible({
+                tenantId: input.tenantId,
+                supplierRelationshipId: input.supplierRelationshipId,
+              }),
+            ),
+      ),
+    )
 
 export const supplierAccountSelection = {
   id: supplierAccounts.id,
@@ -137,7 +137,7 @@ export const toGoodsReceiptLine = (row: {
 
 export const canonicalReceiptLines = (lines: ReadonlyArray<PurchaseReceiptLineInput>) =>
   [...lines].sort((left, right) =>
-    left.purchaseOrderLineId.localeCompare(right.purchaseOrderLineId)
+    left.purchaseOrderLineId.localeCompare(right.purchaseOrderLineId),
   )
 
 export const sameReceiptLines = (
@@ -146,23 +146,31 @@ export const sameReceiptLines = (
 ) => {
   const orderedLeft = canonicalReceiptLines(left)
   const orderedRight = [...right].sort((a, b) =>
-    a.purchaseOrderLineId.localeCompare(b.purchaseOrderLineId)
+    a.purchaseOrderLineId.localeCompare(b.purchaseOrderLineId),
   )
-  return orderedLeft.length === orderedRight.length && orderedLeft.every((line, index) => {
-    const existing = orderedRight[index]!
-    return line.purchaseOrderLineId === existing.purchaseOrderLineId
-      && line.quantity === existing.quantity
-  })
+  return (
+    orderedLeft.length === orderedRight.length &&
+    orderedLeft.every((line, index) => {
+      const existing = orderedRight[index]!
+      return (
+        line.purchaseOrderLineId === existing.purchaseOrderLineId &&
+        line.quantity === existing.quantity
+      )
+    })
+  )
 }
 
-export const toPurchaseOrder = (row: {
-  readonly id: string
-  readonly tenantId: string
-  readonly supplierAccountId: string
-  readonly status: "draft" | "confirmed" | "cancelled"
-  readonly confirmedAt: Date | null
-  readonly total: string
-}, lines: ReadonlyArray<PurchaseOrderLineSnapshot>): PurchaseOrder => ({
+export const toPurchaseOrder = (
+  row: {
+    readonly id: string
+    readonly tenantId: string
+    readonly supplierAccountId: string
+    readonly status: "draft" | "confirmed" | "cancelled"
+    readonly confirmedAt: Date | null
+    readonly total: string
+  },
+  lines: ReadonlyArray<PurchaseOrderLineSnapshot>,
+): PurchaseOrder => ({
   id: row.id,
   tenantId: row.tenantId,
   supplierAccountId: row.supplierAccountId,
@@ -182,30 +190,30 @@ export const deriveTotal = (lines: ReadonlyArray<PurchaseOrderLine>): string => 
 
 export const withProcurementOperationNames = (service: ProcurementStore): ProcurementStore => ({
   createSupplierAccount: Effect.fn("ProcurementService.createSupplierAccount")((input: unknown) =>
-    service.createSupplierAccount(input)
+    service.createSupplierAccount(input),
   ),
   listSupplierAccounts: Effect.fn("ProcurementService.listSupplierAccounts")((input: unknown) =>
-    service.listSupplierAccounts(input)
+    service.listSupplierAccounts(input),
   ),
   createPurchaseOrder: Effect.fn("ProcurementService.createPurchaseOrder")((input: unknown) =>
-    service.createPurchaseOrder(input)
+    service.createPurchaseOrder(input),
   ),
   getPurchaseOrder: Effect.fn("ProcurementService.getPurchaseOrder")((input: unknown) =>
-    service.getPurchaseOrder(input)
+    service.getPurchaseOrder(input),
   ),
   listPurchaseOrders: Effect.fn("ProcurementService.listPurchaseOrders")((input: unknown) =>
-    service.listPurchaseOrders(input)
+    service.listPurchaseOrders(input),
   ),
   listPurchaseReceipts: Effect.fn("ProcurementService.listPurchaseReceipts")((input: unknown) =>
-    service.listPurchaseReceipts(input)
+    service.listPurchaseReceipts(input),
   ),
   confirmPurchaseOrder: Effect.fn("ProcurementService.confirmPurchaseOrder")((input: unknown) =>
-    service.confirmPurchaseOrder(input)
+    service.confirmPurchaseOrder(input),
   ),
   cancelPurchaseOrder: Effect.fn("ProcurementService.cancelPurchaseOrder")((input: unknown) =>
-    service.cancelPurchaseOrder(input)
+    service.cancelPurchaseOrder(input),
   ),
   receivePurchaseOrder: Effect.fn("ProcurementService.receivePurchaseOrder")((input: unknown) =>
-    service.receivePurchaseOrder(input)
+    service.receivePurchaseOrder(input),
   ),
 })

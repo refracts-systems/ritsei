@@ -20,14 +20,16 @@ const baseCheckpoint = {
   currentNodeId: "payment",
   revision: 0,
   completedStepIds: [],
-  stepExecutions: [{
-    stepId: "step-1",
-    nodeId: "payment",
-    idempotencyKey: "payment-1",
-    status: "command_failed",
-    commandId: "command-1",
-    eventId: null,
-  }],
+  stepExecutions: [
+    {
+      stepId: "step-1",
+      nodeId: "payment",
+      idempotencyKey: "payment-1",
+      status: "command_failed",
+      commandId: "command-1",
+      eventId: null,
+    },
+  ],
   consumedEventIds: [],
   scheduledTimerIds: [],
   correlationId: "correlation-1",
@@ -36,7 +38,7 @@ const baseCheckpoint = {
 } as const
 
 it.effect("distinguishes unknown external outcome from manual recovery", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const checkpoint = yield* Schema.decodeUnknownEffect(ProcessCheckpoint)(baseCheckpoint)
     const operator = makeProcessOperatorService()
     const snapshot = operator.inspect(checkpoint)
@@ -46,10 +48,11 @@ it.effect("distinguishes unknown external outcome from manual recovery", () =>
     assert.strictEqual(snapshot.correlationId, "correlation-1")
     assert.strictEqual(recovered.status, "manual_recovery")
     assert.strictEqual(recovered.stepExecutions[0]?.status, "manual_recovery_required")
-  }))
+  }),
+)
 
 it.effect("exposes a typed operator control for retry and compensation", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const checkpoint = yield* Schema.decodeUnknownEffect(ProcessCheckpoint)({
       ...baseCheckpoint,
       status: "running",
@@ -63,4 +66,5 @@ it.effect("exposes a typed operator control for retry and compensation", () =>
     assert.strictEqual(retried.status, "running")
     assert.strictEqual(retried.stepExecutions[0]?.status, "command_requested")
     assert.instanceOf(retryFailure, ProcessOperatorActionUnavailable)
-  }))
+  }),
+)

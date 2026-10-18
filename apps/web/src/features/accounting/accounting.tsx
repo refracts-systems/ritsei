@@ -79,7 +79,7 @@ const toMinor = (value: string): bigint => {
 
 const configurationTone = (
   configuration: AccountingConfiguration,
-): "neutral" | "success" | "warning" => configuration.postingEnabled ? "success" : "warning"
+): "neutral" | "success" | "warning" => (configuration.postingEnabled ? "success" : "warning")
 const periodTone = (status: AccountingPeriodStatus): "neutral" | "success" | "warning" =>
   status === "open" ? "success" : "neutral"
 const journalTone = (status: JournalStatus): "neutral" | "success" | "warning" =>
@@ -120,11 +120,14 @@ function ConfigureLegalEntityDialog(props: { reload: () => Promise<unknown> }) {
             const fiscalYearStartMonth = Number(requiredText(value.fiscalYearStartMonth))
             const postingEnabled = value.postingEnabled
             if (
-              legalEntityId === null || !uuidPattern.test(legalEntityId)
-              || baseCurrency === null || !currencyPattern.test(baseCurrency)
-              || !Number.isInteger(fiscalYearStartMonth) || fiscalYearStartMonth < 1
-              || fiscalYearStartMonth > 12
-              || (postingEnabled !== "true" && postingEnabled !== "false")
+              legalEntityId === null ||
+              !uuidPattern.test(legalEntityId) ||
+              baseCurrency === null ||
+              !currencyPattern.test(baseCurrency) ||
+              !Number.isInteger(fiscalYearStartMonth) ||
+              fiscalYearStartMonth < 1 ||
+              fiscalYearStartMonth > 12 ||
+              (postingEnabled !== "true" && postingEnabled !== "false")
             ) {
               setInvalid(true)
               legalEntityInput?.focus()
@@ -146,14 +149,16 @@ function ConfigureLegalEntityDialog(props: { reload: () => Promise<unknown> }) {
         <FormField
           label="Legal entity ID"
           required
-          error={invalid() || mutation.error?.kind === "validation"
-            ? "Enter a valid legal entity UUID and complete every field."
-            : undefined}
+          error={
+            invalid() || mutation.error?.kind === "validation"
+              ? "Enter a valid legal entity UUID and complete every field."
+              : undefined
+          }
         >
           {(fieldProps) => (
             <Input
               {...fieldProps}
-              ref={(element) => legalEntityInput = element}
+              ref={(element) => (legalEntityInput = element)}
               name="legalEntityId"
               autocomplete="off"
               spellcheck={false}
@@ -259,9 +264,10 @@ function CreateAccountDialog(props: { reload: () => Promise<unknown> }) {
             const name = requiredText(value.name)
             const type = requiredText(value.type)
             if (
-              code === null || !accountCodePattern.test(code)
-              || name === null
-              || !accountTypeOptions.some((option) => option.value === type)
+              code === null ||
+              !accountCodePattern.test(code) ||
+              name === null ||
+              !accountTypeOptions.some((option) => option.value === type)
             ) {
               setInvalid(true)
               codeInput?.focus()
@@ -279,14 +285,16 @@ function CreateAccountDialog(props: { reload: () => Promise<unknown> }) {
         <FormField
           label="Account code"
           required
-          error={invalid() || mutation.error?.kind === "validation"
-            ? "Enter a nonblank code, name, and account type."
-            : undefined}
+          error={
+            invalid() || mutation.error?.kind === "validation"
+              ? "Enter a nonblank code, name, and account type."
+              : undefined
+          }
         >
           {(fieldProps) => (
             <Input
               {...fieldProps}
-              ref={(element) => codeInput = element}
+              ref={(element) => (codeInput = element)}
               name="code"
               autocomplete="off"
               spellcheck={false}
@@ -377,10 +385,13 @@ function ConfigureRevenuePostingDialog(props: {
             const receivableAccountId = requiredText(value.receivableAccountId)
             const revenueAccountId = requiredText(value.revenueAccountId)
             if (
-              legalEntityId === null || !uuidPattern.test(legalEntityId)
-              || receivableAccountId === null || !uuidPattern.test(receivableAccountId)
-              || revenueAccountId === null || !uuidPattern.test(revenueAccountId)
-              || receivableAccountId === revenueAccountId
+              legalEntityId === null ||
+              !uuidPattern.test(legalEntityId) ||
+              receivableAccountId === null ||
+              !uuidPattern.test(receivableAccountId) ||
+              revenueAccountId === null ||
+              !uuidPattern.test(revenueAccountId) ||
+              receivableAccountId === revenueAccountId
             ) {
               setInvalid(true)
               legalEntityInput?.focus()
@@ -394,14 +405,16 @@ function ConfigureRevenuePostingDialog(props: {
         <FormField
           label="Legal entity ID"
           required
-          error={invalid() || mutation.error?.kind === "validation"
-            ? "Enter a valid legal entity UUID and choose distinct accounts."
-            : undefined}
+          error={
+            invalid() || mutation.error?.kind === "validation"
+              ? "Enter a valid legal entity UUID and choose distinct accounts."
+              : undefined
+          }
         >
           {(fieldProps) => (
             <Input
               {...fieldProps}
-              ref={(element) => legalEntityInput = element}
+              ref={(element) => (legalEntityInput = element)}
               name="legalEntityId"
               autocomplete="off"
               spellcheck={false}
@@ -415,12 +428,13 @@ function ConfigureRevenuePostingDialog(props: {
             <Select
               {...fieldProps}
               name="receivableAccountId"
-              options={props.accounts().filter((account) => account.type === "asset").map((
-                account,
-              ) => ({
-                value: account.id,
-                label: `${account.code} · ${account.name}`,
-              }))}
+              options={props
+                .accounts()
+                .filter((account) => account.type === "asset")
+                .map((account) => ({
+                  value: account.id,
+                  label: `${account.code} · ${account.name}`,
+                }))}
               placeholder="Choose receivable account"
               required
               disabled={mutation.isPending}
@@ -432,12 +446,13 @@ function ConfigureRevenuePostingDialog(props: {
             <Select
               {...fieldProps}
               name="revenueAccountId"
-              options={props.accounts().filter((account) => account.type === "revenue").map((
-                account,
-              ) => ({
-                value: account.id,
-                label: `${account.code} · ${account.name}`,
-              }))}
+              options={props
+                .accounts()
+                .filter((account) => account.type === "revenue")
+                .map((account) => ({
+                  value: account.id,
+                  label: `${account.code} · ${account.name}`,
+                }))}
               placeholder="Choose revenue account"
               required
               disabled={mutation.isPending}
@@ -500,9 +515,13 @@ function OpenPeriodDialog(props: { reload: () => Promise<unknown> }) {
             const startsOn = requiredText(value.startsOn)
             const endsOn = requiredText(value.endsOn)
             if (
-              legalEntityId === null || !uuidPattern.test(legalEntityId)
-              || startsOn === null || !isIsoDate(startsOn)
-              || endsOn === null || !isIsoDate(endsOn) || startsOn > endsOn
+              legalEntityId === null ||
+              !uuidPattern.test(legalEntityId) ||
+              startsOn === null ||
+              !isIsoDate(startsOn) ||
+              endsOn === null ||
+              !isIsoDate(endsOn) ||
+              startsOn > endsOn
             ) {
               setInvalid(true)
               legalEntityInput?.focus()
@@ -516,14 +535,16 @@ function OpenPeriodDialog(props: { reload: () => Promise<unknown> }) {
         <FormField
           label="Legal entity ID"
           required
-          error={invalid() || mutation.error?.kind === "validation"
-            ? "Enter a valid legal entity UUID and an ordered ISO date range."
-            : undefined}
+          error={
+            invalid() || mutation.error?.kind === "validation"
+              ? "Enter a valid legal entity UUID and an ordered ISO date range."
+              : undefined
+          }
         >
           {(fieldProps) => (
             <Input
               {...fieldProps}
-              ref={(element) => legalEntityInput = element}
+              ref={(element) => (legalEntityInput = element)}
               name="legalEntityId"
               autocomplete="off"
               spellcheck={false}
@@ -602,9 +623,7 @@ function ClosePeriodDialog(props: { period: AccountingPeriod; reload: () => Prom
       >
         <p>
           This command creates an immutable lifecycle transition for period{" "}
-          <span class={layout.code}>
-            {props.period.id}
-          </span>.
+          <span class={layout.code}>{props.period.id}</span>.
         </p>
         <CommandFeedback
           error={mutation.error}
@@ -647,11 +666,8 @@ function PostJournalDialog(props: {
   return (
     <Dialog
       open={open()}
-      onOpenChange={createDialogOpenChange(
-        mutation,
-        setOpen,
-        setInvalid,
-        () => setLineIndexes([0, 1]),
+      onOpenChange={createDialogOpenChange(mutation, setOpen, setInvalid, () =>
+        setLineIndexes([0, 1]),
       )}
       trigger={<span>Post journal</span>}
       triggerVariant="secondary"
@@ -684,29 +700,39 @@ function PostJournalDialog(props: {
                 return [{ accountId, debit, credit }]
               })
               // Fallow: exact-line validation intentionally remains adjacent to journal submission.
-              // fallow-ignore-next-line complexity
-              const validLines = lines.length >= 2 && lines.every((line) => {
-                if (
-                  line.accountId === null || !uuidPattern.test(line.accountId)
-                  || line.debit === null || !moneyPattern.test(line.debit)
-                  || line.credit === null || !moneyPattern.test(line.credit)
-                ) return false
-                const debit = toMinor(line.debit)
-                const credit = toMinor(line.credit)
-                return (debit > 0n) !== (credit > 0n)
-              })
-              const balanced = validLines && lines.reduce(
-                (total, line) => ({
-                  debit: total.debit + toMinor(line.debit!),
-                  credit: total.credit + toMinor(line.credit!),
-                }),
-                { debit: 0n, credit: 0n },
-              )
+              const validLines =
+                lines.length >= 2 &&
+                lines.every(
+                  // fallow-ignore-next-line complexity
+                  (line) => {
+                    if (
+                      line.accountId === null ||
+                      !uuidPattern.test(line.accountId) ||
+                      line.debit === null ||
+                      !moneyPattern.test(line.debit) ||
+                      line.credit === null ||
+                      !moneyPattern.test(line.credit)
+                    )
+                      return false
+                    const debit = toMinor(line.debit)
+                    const credit = toMinor(line.credit)
+                    return debit > 0n !== credit > 0n
+                  },
+                )
+              const balanced =
+                validLines &&
+                lines.reduce(
+                  (total, line) => ({
+                    debit: total.debit + toMinor(line.debit!),
+                    credit: total.credit + toMinor(line.credit!),
+                  }),
+                  { debit: 0n, credit: 0n },
+                )
               if (
-                reference === null
-                || !validLines
-                || balanced === false
-                || balanced.debit !== balanced.credit
+                reference === null ||
+                !validLines ||
+                balanced === false ||
+                balanced.debit !== balanced.credit
               ) {
                 setInvalid(true)
                 referenceInput?.focus()
@@ -727,14 +753,16 @@ function PostJournalDialog(props: {
           <FormField
             label="Reference"
             required
-            error={invalid() || mutation.error?.kind === "validation"
-              ? "Enter a reference and at least two balanced lines with exact amounts."
-              : undefined}
+            error={
+              invalid() || mutation.error?.kind === "validation"
+                ? "Enter a reference and at least two balanced lines with exact amounts."
+                : undefined
+            }
           >
             {(fieldProps) => (
               <Input
                 {...fieldProps}
-                ref={(element) => referenceInput = element}
+                ref={(element) => (referenceInput = element)}
                 name="reference"
                 autocomplete="off"
                 required
@@ -748,7 +776,8 @@ function PostJournalDialog(props: {
               <Button
                 type="button"
                 onClick={() =>
-                  setLineIndexes((current) => [...current, Math.max(...current, -1) + 1])}
+                  setLineIndexes((current) => [...current, Math.max(...current, -1) + 1])
+                }
                 disabled={mutation.isPending}
               >
                 Add line
@@ -764,8 +793,9 @@ function PostJournalDialog(props: {
                         type="button"
                         onClick={() =>
                           setLineIndexes((current) =>
-                            current.filter((_, item) => item !== position())
-                          )}
+                            current.filter((_, item) => item !== position()),
+                          )
+                        }
                         disabled={mutation.isPending}
                       >
                         Remove line
@@ -874,20 +904,20 @@ function AccountingFilters(props: {
             query.set("legalEntityId", legalEntityId)
           }
           if (
-            accountType !== null
-            && accountTypeOptions.some((option) => option.value === accountType)
+            accountType !== null &&
+            accountTypeOptions.some((option) => option.value === accountType)
           ) {
             query.set("accountType", accountType)
           }
           if (
-            periodStatus !== null
-            && periodStatusOptions.some((option) => option.value === periodStatus)
+            periodStatus !== null &&
+            periodStatusOptions.some((option) => option.value === periodStatus)
           ) {
             query.set("periodStatus", periodStatus)
           }
           if (
-            journalStatus !== null
-            && journalStatusOptions.some((option) => option.value === journalStatus)
+            journalStatus !== null &&
+            journalStatusOptions.some((option) => option.value === journalStatus)
           ) {
             query.set("journalStatus", journalStatus)
           }
@@ -1094,7 +1124,8 @@ function JournalTable(props: { journals: readonly JournalEntry[]; selectedJourna
       caption="Posted journal history · first 200 matching records"
       rows={props.journals}
       getRowClass={(journal) =>
-        journal.id === props.selectedJournalId ? layout.tableRowSelected : undefined}
+        journal.id === props.selectedJournalId ? layout.tableRowSelected : undefined
+      }
       columns={[
         {
           id: "id",
@@ -1269,7 +1300,9 @@ export function Accounting(props: {
           <ConfigureRevenuePostingDialog accounts={() => accounts.data ?? []} reload={reload} />
           <OpenPeriodDialog reload={reload} />
           <PostJournalDialog accounts={() => accounts.data ?? []} reload={reload} />
-          <Button type="button" onClick={() => void reload()}>Reload Finance</Button>
+          <Button type="button" onClick={() => void reload()}>
+            Reload Finance
+          </Button>
         </div>
       }
       toolbar={
@@ -1280,9 +1313,11 @@ export function Accounting(props: {
           journalStatus={props.journalStatus}
         />
       }
-      aside={props.selectedJournalId
-        ? <JournalDetail id={props.selectedJournalId} journals={journals.data ?? []} />
-        : undefined}
+      aside={
+        props.selectedJournalId ? (
+          <JournalDetail id={props.selectedJournalId} journals={journals.data ?? []} />
+        ) : undefined
+      }
     >
       <section
         class={[surface(), layout.stack]}

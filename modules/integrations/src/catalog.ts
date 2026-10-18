@@ -31,10 +31,11 @@ const Uuid = Schema.String.check(Schema.isUUID())
 export const simulateWithoutSideEffect = (
   input: SimulateExternalActionInput,
 ): Effect.Effect<ExternalSimulationResult, ExternalActionNotAllowlisted | ExternalPayloadInvalid> =>
-  Effect.gen(function*() {
-    const identifier = typeof input.action?.id === "string" && input.action.id.trim() !== ""
-      ? input.action.id.slice(0, 256)
-      : "external-action"
+  Effect.gen(function* () {
+    const identifier =
+      typeof input.action?.id === "string" && input.action.id.trim() !== ""
+        ? input.action.id.slice(0, 256)
+        : "external-action"
     if (!Schema.is(Uuid)(input.tenantId)) {
       return yield* Effect.fail(
         new ExternalPayloadInvalid({
@@ -60,11 +61,12 @@ export const simulateWithoutSideEffect = (
       )
     }
     const validatedInput = yield* decodeExternalSchema(input.action.inputSchema, input.input).pipe(
-      Effect.mapError(() =>
-        new ExternalPayloadInvalid({
-          boundary: "external.simulation.input",
-          identifier,
-        })
+      Effect.mapError(
+        () =>
+          new ExternalPayloadInvalid({
+            boundary: "external.simulation.input",
+            identifier,
+          }),
       ),
     )
     return {

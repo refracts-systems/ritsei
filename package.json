@@ -1,41 +1,9 @@
 {
   "name": "ritsei",
+  "private": true,
   "description": "Open-source enterprise business platform for running operations and designing how they run.",
   "license": "Apache-2.0",
-  "private": true,
   "type": "module",
-  "packageManager": "pnpm@12.14.0",
-  "engines": {
-    "node": ">=24.22.0"
-  },
-  "dependencies": {
-    "effect": "4.0.0",
-    "@effect/platform-node": "4.0.0",
-    "@effect/platform-node-shared": "4.0.0",
-    "@effect/sql-pg": "4.0.0",
-    "uuid": "14.0.3",
-    "drizzle-orm": "1.0.0-rc.5-169397b",
-    "pdfnative": "1.7.0",
-    "postgres": "3.4.7",
-    "tigerbeetle-node": "0.17.9"
-  },
-  "devDependencies": {
-    "@axe-core/playwright": "4.13.0",
-    "playwright": "1.63.0",
-    "typescript": "6.0.3",
-    "vite": "8.2.2",
-    "esbuild": "0.28.0",
-    "@types/node": "^24.19.2",
-    "@ast-grep/cli": "0.51.0",
-    "tsx": "4.23.15",
-    "dprint": "0.63.0",
-    "@effect/vitest": "4.0.0",
-    "@vitest/coverage-v8": "5.0.2",
-    "drizzle-kit": "1.0.0-rc.4",
-    "fallow": "3.20.0",
-    "lefthook": "2.1.15",
-    "vitest": "5.0.2"
-  },
   "scripts": {
     "start": "tsx runtime/api/mod.ts",
     "dev": "tsx watch runtime/api/mod.ts",
@@ -65,9 +33,10 @@
     "fallow:fix:dry-run": "npx --no-install fallow fix --dry-run",
     "skills:check": "tsx tooling/check-agent-skills.ts",
     "release:metadata": "tsx tooling/release-check.ts",
-    "fmt:check": "dprint check",
-    "fmt": "dprint fmt",
-    "release:check": "pnpm run fmt:check && pnpm run check && pnpm run db:check && pnpm run roadmap:measure && pnpm run skills:check && pnpm run boundary:test && pnpm run boundary:lint && pnpm run test && pnpm run fallow:audit",
+    "fmt:check": "oxfmt --check --no-error-on-unmatched-pattern \"**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,json,jsonc,json5}\"",
+    "fmt": "oxfmt --write --no-error-on-unmatched-pattern \"**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,json,jsonc,json5}\"",
+    "lint": "oxlint --disable-nested-config --deny-warnings --report-unused-disable-directives .",
+    "release:check": "pnpm run fmt:check && pnpm run lint && pnpm run check && pnpm run db:check && pnpm run roadmap:measure && pnpm run skills:check && pnpm run boundary:test && pnpm run boundary:lint && pnpm run test && pnpm run fallow:audit",
     "architecture:check": "tsx tooling/architecture.ts",
     "financial:gate": "tsx tooling/financial-gate.ts",
     "roadmap:measure": "tsx tooling/roadmap-completion/measure.ts",
@@ -76,5 +45,38 @@
     "production:artifacts": "tsx tooling/production/artifacts.ts",
     "boundary:test": "ast-grep test --skip-snapshot-tests",
     "check": "pnpm run contracts && pnpm run styles && tsc --noEmit -p tsconfig.json && pnpm --filter @ritsei/web run check"
-  }
+  },
+  "dependencies": {
+    "@effect/platform-node": "4.0.0",
+    "@effect/platform-node-shared": "4.0.0",
+    "@effect/sql-pg": "4.0.0",
+    "drizzle-orm": "1.0.0-rc.5-169397b",
+    "effect": "4.0.0",
+    "pdfnative": "1.7.0",
+    "postgres": "3.4.7",
+    "tigerbeetle-node": "0.17.9",
+    "uuid": "14.0.3"
+  },
+  "devDependencies": {
+    "@ast-grep/cli": "0.51.0",
+    "@axe-core/playwright": "4.13.0",
+    "@effect/vitest": "4.0.0",
+    "@types/node": "^24.19.2",
+    "@vitest/coverage-v8": "5.0.2",
+    "drizzle-kit": "1.0.0-rc.4",
+    "esbuild": "0.28.0",
+    "fallow": "3.20.0",
+    "lefthook": "2.1.15",
+    "oxfmt": "0.73.0",
+    "oxlint": "1.88.0",
+    "playwright": "1.63.0",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "vite": "8.2.2",
+    "vitest": "5.0.2"
+  },
+  "engines": {
+    "node": ">=24.22.0"
+  },
+  "packageManager": "pnpm@12.14.0"
 }

@@ -72,16 +72,18 @@ const withInventory = <A, E>(
   Effect.provide(
     program,
     makeInventoryTestLayer().pipe(
-      Layer.provide(Layer.merge(
-        makeAuthorizationTestLayer(
-          grantedCapabilities.map((capability) => ({
-            userAccountId: principal.userAccountId,
-            tenantId,
-            capability: capability as (typeof capabilities)[number],
-          })),
+      Layer.provide(
+        Layer.merge(
+          makeAuthorizationTestLayer(
+            grantedCapabilities.map((capability) => ({
+              userAccountId: principal.userAccountId,
+              tenantId,
+              capability: capability as (typeof capabilities)[number],
+            })),
+          ),
+          messaging,
         ),
-        messaging,
-      )),
+      ),
     ),
   )
 
@@ -91,9 +93,7 @@ const makeRecordingMessagingLayer = (events: EventEnvelope[]) =>
     Effect.map(MessagingService, (messaging) => ({
       ...messaging,
       append: (input: unknown) =>
-        messaging.append(input).pipe(
-          Effect.tap((event) => Effect.sync(() => events.push(event))),
-        ),
+        messaging.append(input).pipe(Effect.tap((event) => Effect.sync(() => events.push(event)))),
     })),
   ).pipe(Layer.provide(makeMessagingTestLayer()))
 
@@ -118,7 +118,7 @@ const makeFailOnceMessagingLayer = () => {
 
 describe("inventory contract", () => {
   it.effect("bounds stock adjustments to PostgreSQL bigint", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const error = yield* Effect.flip(
         Schema.decodeUnknownEffect(AdjustStockInput)({
           principal,
@@ -133,10 +133,11 @@ describe("inventory contract", () => {
         }),
       )
       assert.strictEqual(error._tag, "SchemaError")
-    }))
+    }),
+  )
 
   it.effect("validates warehouse UUID references at the input boundary", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const invalidTenant = yield* Effect.flip(
         Schema.decodeUnknownEffect(CreateWarehouseInput)({
           principal,
@@ -231,10 +232,12 @@ describe("inventory contract", () => {
           tenantId,
           sourceWarehouseId: "not-a-uuid",
           destinationWarehouseId: "00000000-0000-4000-8000-000000000002",
-          lines: [{
-            itemId: "00000000-0000-4000-8000-000000000003",
-            quantity: "1",
-          }],
+          lines: [
+            {
+              itemId: "00000000-0000-4000-8000-000000000003",
+              quantity: "1",
+            },
+          ],
         }),
       )
       assert.strictEqual(invalidTransferWarehouse._tag, "SchemaError")
@@ -259,10 +262,12 @@ describe("inventory contract", () => {
           tenantId,
           sourceWarehouseId: "00000000-0000-4000-8000-000000000002",
           destinationWarehouseId: "00000000-0000-4000-8000-000000000002",
-          lines: [{
-            itemId: "00000000-0000-4000-8000-000000000003",
-            quantity: "1",
-          }],
+          lines: [
+            {
+              itemId: "00000000-0000-4000-8000-000000000003",
+              quantity: "1",
+            },
+          ],
         }),
       )
       assert.strictEqual(sameWarehouseTransfer._tag, "SchemaError")
@@ -284,10 +289,11 @@ describe("inventory contract", () => {
         }),
       )
       assert.strictEqual(invalidReservation._tag, "SchemaError")
-    }))
+    }),
+  )
 
   it.effect("bounds positive inventory quantities to PostgreSQL bigint", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const error = yield* Effect.flip(
         Schema.decodeUnknownEffect(StockTransferLine)({
           itemId: "item",
@@ -295,10 +301,11 @@ describe("inventory contract", () => {
         }),
       )
       assert.strictEqual(error._tag, "SchemaError")
-    }))
+    }),
+  )
 
   it.effect("bounds stock-balance quantities to PostgreSQL bigint", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const error = yield* Effect.flip(
         Schema.decodeUnknownEffect(StockBalance)({
           tenantId: "00000000-0000-4000-8000-000000000001",
@@ -321,350 +328,384 @@ describe("inventory contract", () => {
         }),
       )
       assert.strictEqual(exceedsOnHand._tag, "SchemaError")
-    }))
+    }),
+  )
 
   it.effect("denies inventory capability in an ungranted tenant", () =>
-    withInventory(Effect.gen(function*() {
-      const inventory = yield* InventoryService
-      assert.instanceOf(
-        yield* Effect.flip(inventory.createWarehouse({
-          principal,
-          tenantId: "00000000-0000-4000-8000-000000000003",
-          legalEntityId,
-          name: "Untrusted Warehouse",
-        })),
-        AuthorizationDenied,
-      )
-    })))
+    withInventory(
+      Effect.gen(function* () {
+        const inventory = yield* InventoryService
+        assert.instanceOf(
+          yield* Effect.flip(
+            inventory.createWarehouse({
+              principal,
+              tenantId: "00000000-0000-4000-8000-000000000003",
+              legalEntityId,
+              name: "Untrusted Warehouse",
+            }),
+          ),
+          AuthorizationDenied,
+        )
+      }),
+    ),
+  )
 
   it.effect("receives and atomically reserves available stock", () =>
-    withInventory(Effect.gen(function*() {
-      const inventory = yield* InventoryService
-      const warehouse = yield* inventory.createWarehouse({
-        principal,
-        tenantId,
-        legalEntityId,
-        name: "Main",
-      })
-      const item = yield* inventory.createItem({
-        principal,
-        tenantId,
-        sku: "sku-1",
-        name: "Widget",
-      })
-      yield* Schema.decodeUnknownEffect(Warehouse)(warehouse)
-      assert.strictEqual(
-        (yield* Effect.flip(Schema.decodeUnknownEffect(Warehouse)({ ...warehouse, name: " " })))
-          ._tag,
-        "SchemaError",
-      )
-      assert.strictEqual(
-        (yield* Effect.flip(
-          Schema.decodeUnknownEffect(Warehouse)({ ...warehouse, name: " Main " }),
-        ))._tag,
-        "SchemaError",
-      )
-      yield* Schema.decodeUnknownEffect(Item)(item)
-      assert.strictEqual(
-        (yield* Effect.flip(Schema.decodeUnknownEffect(Item)({ ...item, sku: " " })))._tag,
-        "SchemaError",
-      )
-      assert.strictEqual(
-        (yield* Effect.flip(Schema.decodeUnknownEffect(Item)({ ...item, sku: "sku-1" })))._tag,
-        "SchemaError",
-      )
-      assert.strictEqual(
-        (yield* Effect.flip(Schema.decodeUnknownEffect(Item)({ ...item, name: " " })))._tag,
-        "SchemaError",
-      )
-      assert.strictEqual(
-        (yield* Effect.flip(Schema.decodeUnknownEffect(Item)({ ...item, name: " Widget " })))._tag,
-        "SchemaError",
-      )
-      const balance = yield* inventory.receiveStock({
-        principal,
-        tenantId,
-        warehouseId: warehouse.id,
-        itemId: item.id,
-        quantity: "10",
-      })
-      assert.instanceOf(
-        yield* Effect.flip(inventory.reserveStock({
+    withInventory(
+      Effect.gen(function* () {
+        const inventory = yield* InventoryService
+        const warehouse = yield* inventory.createWarehouse({
+          principal,
+          tenantId,
+          legalEntityId,
+          name: "Main",
+        })
+        const item = yield* inventory.createItem({
+          principal,
+          tenantId,
+          sku: "sku-1",
+          name: "Widget",
+        })
+        yield* Schema.decodeUnknownEffect(Warehouse)(warehouse)
+        assert.strictEqual(
+          (yield* Effect.flip(Schema.decodeUnknownEffect(Warehouse)({ ...warehouse, name: " " })))
+            ._tag,
+          "SchemaError",
+        )
+        assert.strictEqual(
+          (yield* Effect.flip(
+            Schema.decodeUnknownEffect(Warehouse)({ ...warehouse, name: " Main " }),
+          ))._tag,
+          "SchemaError",
+        )
+        yield* Schema.decodeUnknownEffect(Item)(item)
+        assert.strictEqual(
+          (yield* Effect.flip(Schema.decodeUnknownEffect(Item)({ ...item, sku: " " })))._tag,
+          "SchemaError",
+        )
+        assert.strictEqual(
+          (yield* Effect.flip(Schema.decodeUnknownEffect(Item)({ ...item, sku: "sku-1" })))._tag,
+          "SchemaError",
+        )
+        assert.strictEqual(
+          (yield* Effect.flip(Schema.decodeUnknownEffect(Item)({ ...item, name: " " })))._tag,
+          "SchemaError",
+        )
+        assert.strictEqual(
+          (yield* Effect.flip(Schema.decodeUnknownEffect(Item)({ ...item, name: " Widget " })))
+            ._tag,
+          "SchemaError",
+        )
+        const balance = yield* inventory.receiveStock({
           principal,
           tenantId,
           warehouseId: warehouse.id,
-          legalEntityId: "00000000-0000-4000-8000-000000000011",
           itemId: item.id,
-          quantity: "1",
-        })),
-        StockReservationLegalEntityMismatch,
-      )
-      const reservation = yield* inventory.reserveStock({
-        principal,
-        tenantId,
-        warehouseId: warehouse.id,
-        itemId: item.id,
-        quantity: "4",
-        idempotencyKey: " reservation-1 ",
-      })
-      const repeated = yield* inventory.reserveStock({
-        principal,
-        tenantId,
-        warehouseId: warehouse.id,
-        itemId: item.id,
-        quantity: "4",
-        idempotencyKey: "reservation-1",
-      })
-      yield* Schema.decodeUnknownEffect(StockReservation)(reservation)
-      assert.strictEqual(
-        (yield* Effect.flip(
-          Schema.decodeUnknownEffect(StockReservation)({
-            ...reservation,
-            idempotencyKey: "   ",
-          }),
-        ))._tag,
-        "SchemaError",
-      )
+          quantity: "10",
+        })
+        assert.instanceOf(
+          yield* Effect.flip(
+            inventory.reserveStock({
+              principal,
+              tenantId,
+              warehouseId: warehouse.id,
+              legalEntityId: "00000000-0000-4000-8000-000000000011",
+              itemId: item.id,
+              quantity: "1",
+            }),
+          ),
+          StockReservationLegalEntityMismatch,
+        )
+        const reservation = yield* inventory.reserveStock({
+          principal,
+          tenantId,
+          warehouseId: warehouse.id,
+          itemId: item.id,
+          quantity: "4",
+          idempotencyKey: " reservation-1 ",
+        })
+        const repeated = yield* inventory.reserveStock({
+          principal,
+          tenantId,
+          warehouseId: warehouse.id,
+          itemId: item.id,
+          quantity: "4",
+          idempotencyKey: "reservation-1",
+        })
+        yield* Schema.decodeUnknownEffect(StockReservation)(reservation)
+        assert.strictEqual(
+          (yield* Effect.flip(
+            Schema.decodeUnknownEffect(StockReservation)({
+              ...reservation,
+              idempotencyKey: "   ",
+            }),
+          ))._tag,
+          "SchemaError",
+        )
 
-      assert.strictEqual(item.unitOfMeasure, "EA")
-      assert.strictEqual(balance.onHand, "10")
-      assert.strictEqual(balance.unitOfMeasure, "EA")
-      assert.strictEqual(reservation.quantity, "4")
-      assert.strictEqual(reservation.idempotencyKey, "reservation-1")
-      assert.strictEqual(reservation.id, repeated.id)
-    })))
+        assert.strictEqual(item.unitOfMeasure, "EA")
+        assert.strictEqual(balance.onHand, "10")
+        assert.strictEqual(balance.unitOfMeasure, "EA")
+        assert.strictEqual(reservation.quantity, "4")
+        assert.strictEqual(reservation.idempotencyKey, "reservation-1")
+        assert.strictEqual(reservation.id, repeated.id)
+      }),
+    ),
+  )
 
   it.effect("lists tenant-scoped inventory projections and append-only movement history", () =>
-    withInventory(Effect.gen(function*() {
-      const inventory = yield* InventoryService
-      const warehouse = yield* inventory.createWarehouse({
-        principal,
-        tenantId,
-        legalEntityId,
-        name: "Read Warehouse",
-      })
-      const item = yield* inventory.createItem({
-        principal,
-        tenantId,
-        sku: "read-item",
-        name: "Read Item",
-      })
-      yield* inventory.receiveStock({
-        principal,
-        tenantId,
-        warehouseId: warehouse.id,
-        itemId: item.id,
-        quantity: "10",
-      })
-      const reservation = yield* inventory.reserveStock({
-        principal,
-        tenantId,
-        warehouseId: warehouse.id,
-        itemId: item.id,
-        quantity: "3",
-        idempotencyKey: "read-reservation",
-      })
-      const warehouses = yield* inventory.listWarehouses({ principal, tenantId, limit: 10 })
-      const items = yield* inventory.listItems({ principal, tenantId, search: "READ", limit: 10 })
-      const balances = yield* inventory.listStockBalances({ principal, tenantId, limit: 10 })
-      const reservations = yield* inventory.listStockReservations({
-        principal,
-        tenantId,
-        status: "active",
-      })
-      const movements = yield* inventory.listStockMovements({ principal, tenantId, limit: 10 })
+    withInventory(
+      Effect.gen(function* () {
+        const inventory = yield* InventoryService
+        const warehouse = yield* inventory.createWarehouse({
+          principal,
+          tenantId,
+          legalEntityId,
+          name: "Read Warehouse",
+        })
+        const item = yield* inventory.createItem({
+          principal,
+          tenantId,
+          sku: "read-item",
+          name: "Read Item",
+        })
+        yield* inventory.receiveStock({
+          principal,
+          tenantId,
+          warehouseId: warehouse.id,
+          itemId: item.id,
+          quantity: "10",
+        })
+        const reservation = yield* inventory.reserveStock({
+          principal,
+          tenantId,
+          warehouseId: warehouse.id,
+          itemId: item.id,
+          quantity: "3",
+          idempotencyKey: "read-reservation",
+        })
+        const warehouses = yield* inventory.listWarehouses({ principal, tenantId, limit: 10 })
+        const items = yield* inventory.listItems({ principal, tenantId, search: "READ", limit: 10 })
+        const balances = yield* inventory.listStockBalances({ principal, tenantId, limit: 10 })
+        const reservations = yield* inventory.listStockReservations({
+          principal,
+          tenantId,
+          status: "active",
+        })
+        const movements = yield* inventory.listStockMovements({ principal, tenantId, limit: 10 })
 
-      assert.deepStrictEqual(warehouses, [warehouse])
-      assert.deepStrictEqual(items, [item])
-      assert.deepStrictEqual(balances, [{
-        tenantId,
-        warehouseId: warehouse.id,
-        itemId: item.id,
-        onHand: "10",
-        reserved: "3",
-        unitOfMeasure: "EA",
-      }])
-      assert.deepStrictEqual(reservations, [reservation])
-      assert.strictEqual(movements.length, 2)
-      for (const movement of movements) yield* Schema.decodeUnknownEffect(StockMovement)(movement)
-      assert.deepStrictEqual(movements.map((movement) => movement.kind), ["receipt", "reservation"])
-    })))
+        assert.deepStrictEqual(warehouses, [warehouse])
+        assert.deepStrictEqual(items, [item])
+        assert.deepStrictEqual(balances, [
+          {
+            tenantId,
+            warehouseId: warehouse.id,
+            itemId: item.id,
+            onHand: "10",
+            reserved: "3",
+            unitOfMeasure: "EA",
+          },
+        ])
+        assert.deepStrictEqual(reservations, [reservation])
+        assert.strictEqual(movements.length, 2)
+        for (const movement of movements) yield* Schema.decodeUnknownEffect(StockMovement)(movement)
+        assert.deepStrictEqual(
+          movements.map((movement) => movement.kind),
+          ["receipt", "reservation"],
+        )
+      }),
+    ),
+  )
 
   it.effect("validates receive warehouse legal entity when supplied", () =>
-    withInventory(Effect.gen(function*() {
-      const inventory = yield* InventoryService
-      const warehouse = yield* inventory.createWarehouse({
-        principal,
-        tenantId,
-        legalEntityId,
-        name: "Scoped Receipt",
-      })
-      const item = yield* inventory.createItem({
-        principal,
-        tenantId,
-        sku: "scoped-receipt",
-        name: "Scoped Receipt Item",
-      })
+    withInventory(
+      Effect.gen(function* () {
+        const inventory = yield* InventoryService
+        const warehouse = yield* inventory.createWarehouse({
+          principal,
+          tenantId,
+          legalEntityId,
+          name: "Scoped Receipt",
+        })
+        const item = yield* inventory.createItem({
+          principal,
+          tenantId,
+          sku: "scoped-receipt",
+          name: "Scoped Receipt Item",
+        })
 
-      assert.instanceOf(
-        yield* Effect.flip(inventory.receiveStock({
+        assert.instanceOf(
+          yield* Effect.flip(
+            inventory.receiveStock({
+              principal,
+              tenantId,
+              warehouseId: warehouse.id,
+              itemId: item.id,
+              quantity: "1",
+              legalEntityId: "00000000-0000-4000-8000-000000000099",
+            }),
+          ),
+          InventoryWarehouseLegalEntityMismatch,
+        )
+        const balance = yield* inventory.receiveStock({
           principal,
           tenantId,
           warehouseId: warehouse.id,
           itemId: item.id,
-          quantity: "1",
-          legalEntityId: "00000000-0000-4000-8000-000000000099",
-        })),
-        InventoryWarehouseLegalEntityMismatch,
-      )
-      const balance = yield* inventory.receiveStock({
-        principal,
-        tenantId,
-        warehouseId: warehouse.id,
-        itemId: item.id,
-        quantity: "2",
-        legalEntityId,
-        referenceId: uuidv7(),
-      })
-      assert.strictEqual(balance.onHand, "2")
-    })))
+          quantity: "2",
+          legalEntityId,
+          referenceId: uuidv7(),
+        })
+        assert.strictEqual(balance.onHand, "2")
+      }),
+    ),
+  )
 
   it.effect("applies normalized UOM corrections once and preserves reserved stock", () =>
-    withInventory(Effect.gen(function*() {
-      const inventory = yield* InventoryService
-      const invalidTenant = yield* Effect.flip(
-        Schema.decodeUnknownEffect(AdjustStockInput)({
-          principal,
-          tenantId: "not-a-uuid",
-          warehouseId: "00000000-0000-4000-8000-000000000002",
-          itemId: "00000000-0000-4000-8000-000000000003",
-          adjustment: "1",
-          unitOfMeasure: "EA",
-          reason: "cycle count",
-          ...correctionMetadata,
-          idempotencyKey: "invalid-tenant",
-        }),
-      )
-      assert.strictEqual(invalidTenant._tag, "SchemaError")
-      const warehouse = yield* inventory.createWarehouse({
-        principal,
-        tenantId,
-        legalEntityId,
-        name: "Adjustments",
-      })
-      const item = yield* inventory.createItem({
-        principal,
-        tenantId,
-        sku: "adjustment-item",
-        name: "Adjustment Item",
-        unitOfMeasure: "box",
-      })
-      assert.strictEqual(item.unitOfMeasure, "BOX")
-      yield* inventory.receiveStock({
-        principal,
-        tenantId,
-        warehouseId: warehouse.id,
-        itemId: item.id,
-        quantity: "10",
-      })
-      yield* inventory.reserveStock({
-        principal,
-        tenantId,
-        warehouseId: warehouse.id,
-        itemId: item.id,
-        quantity: "4",
-      })
-      const correction = yield* inventory.adjustStock({
-        principal,
-        tenantId,
-        warehouseId: warehouse.id,
-        itemId: item.id,
-        adjustment: "-6",
-        unitOfMeasure: "box",
-        reason: "  Count correction  ",
-        ...correctionMetadata,
-        idempotencyKey: " correction-1 ",
-      })
-      yield* Schema.decodeUnknownEffect(StockCorrection)(correction)
-      assert.strictEqual(
-        (yield* Effect.flip(
-          Schema.decodeUnknownEffect(StockCorrection)({
-            ...correction,
-            reason: " Count correction ",
+    withInventory(
+      Effect.gen(function* () {
+        const inventory = yield* InventoryService
+        const invalidTenant = yield* Effect.flip(
+          Schema.decodeUnknownEffect(AdjustStockInput)({
+            principal,
+            tenantId: "not-a-uuid",
+            warehouseId: "00000000-0000-4000-8000-000000000002",
+            itemId: "00000000-0000-4000-8000-000000000003",
+            adjustment: "1",
+            unitOfMeasure: "EA",
+            reason: "cycle count",
+            ...correctionMetadata,
+            idempotencyKey: "invalid-tenant",
           }),
-        ))._tag,
-        "SchemaError",
-      )
-      assert.strictEqual(
-        (yield* Effect.flip(
-          Schema.decodeUnknownEffect(StockCorrection)({
-            ...correction,
+        )
+        assert.strictEqual(invalidTenant._tag, "SchemaError")
+        const warehouse = yield* inventory.createWarehouse({
+          principal,
+          tenantId,
+          legalEntityId,
+          name: "Adjustments",
+        })
+        const item = yield* inventory.createItem({
+          principal,
+          tenantId,
+          sku: "adjustment-item",
+          name: "Adjustment Item",
+          unitOfMeasure: "box",
+        })
+        assert.strictEqual(item.unitOfMeasure, "BOX")
+        yield* inventory.receiveStock({
+          principal,
+          tenantId,
+          warehouseId: warehouse.id,
+          itemId: item.id,
+          quantity: "10",
+        })
+        yield* inventory.reserveStock({
+          principal,
+          tenantId,
+          warehouseId: warehouse.id,
+          itemId: item.id,
+          quantity: "4",
+        })
+        const correction = yield* inventory.adjustStock({
+          principal,
+          tenantId,
+          warehouseId: warehouse.id,
+          itemId: item.id,
+          adjustment: "-6",
+          unitOfMeasure: "box",
+          reason: "  Count correction  ",
+          ...correctionMetadata,
+          idempotencyKey: " correction-1 ",
+        })
+        yield* Schema.decodeUnknownEffect(StockCorrection)(correction)
+        assert.strictEqual(
+          (yield* Effect.flip(
+            Schema.decodeUnknownEffect(StockCorrection)({
+              ...correction,
+              reason: " Count correction ",
+            }),
+          ))._tag,
+          "SchemaError",
+        )
+        assert.strictEqual(
+          (yield* Effect.flip(
+            Schema.decodeUnknownEffect(StockCorrection)({
+              ...correction,
+              idempotencyKey: " correction-1 ",
+            }),
+          ))._tag,
+          "SchemaError",
+        )
+        const repeated = yield* inventory.adjustStock({
+          principal,
+          tenantId,
+          warehouseId: warehouse.id,
+          itemId: item.id,
+          adjustment: "-6",
+          unitOfMeasure: "BOX",
+          reason: "Count correction",
+          ...correctionMetadata,
+          idempotencyKey: "correction-1",
+        })
+        assert.strictEqual(correction.id, repeated.id)
+        assert.strictEqual(correction.unitOfMeasure, "BOX")
+        assert.strictEqual(correction.reason, "Count correction")
+        assert.instanceOf(
+          yield* Effect.flip(
+            inventory.adjustStock({
+              principal,
+              tenantId,
+              warehouseId: warehouse.id,
+              itemId: item.id,
+              adjustment: "-1",
+              unitOfMeasure: "BOX",
+              reason: "Below reservation",
+              ...correctionMetadata,
+              idempotencyKey: "correction-2",
+            }),
+          ),
+          StockUnavailable,
+        )
+        assert.instanceOf(
+          yield* Effect.flip(
+            inventory.adjustStock({
+              principal,
+              tenantId,
+              warehouseId: warehouse.id,
+              itemId: item.id,
+              adjustment: "1",
+              unitOfMeasure: "EA",
+              reason: "Wrong unit",
+              ...correctionMetadata,
+              idempotencyKey: "correction-3",
+            }),
+          ),
+          InventoryUnitOfMeasureMismatch,
+        )
+        const correctionConflict = yield* Effect.flip(
+          inventory.adjustStock({
+            principal,
+            tenantId,
+            warehouseId: warehouse.id,
+            itemId: item.id,
+            adjustment: "1",
+            unitOfMeasure: "BOX",
+            reason: "Changed payload",
+            ...correctionMetadata,
             idempotencyKey: " correction-1 ",
           }),
-        ))._tag,
-        "SchemaError",
-      )
-      const repeated = yield* inventory.adjustStock({
-        principal,
-        tenantId,
-        warehouseId: warehouse.id,
-        itemId: item.id,
-        adjustment: "-6",
-        unitOfMeasure: "BOX",
-        reason: "Count correction",
-        ...correctionMetadata,
-        idempotencyKey: "correction-1",
-      })
-      assert.strictEqual(correction.id, repeated.id)
-      assert.strictEqual(correction.unitOfMeasure, "BOX")
-      assert.strictEqual(correction.reason, "Count correction")
-      assert.instanceOf(
-        yield* Effect.flip(inventory.adjustStock({
-          principal,
-          tenantId,
-          warehouseId: warehouse.id,
-          itemId: item.id,
-          adjustment: "-1",
-          unitOfMeasure: "BOX",
-          reason: "Below reservation",
-          ...correctionMetadata,
-          idempotencyKey: "correction-2",
-        })),
-        StockUnavailable,
-      )
-      assert.instanceOf(
-        yield* Effect.flip(inventory.adjustStock({
-          principal,
-          tenantId,
-          warehouseId: warehouse.id,
-          itemId: item.id,
-          adjustment: "1",
-          unitOfMeasure: "EA",
-          reason: "Wrong unit",
-          ...correctionMetadata,
-          idempotencyKey: "correction-3",
-        })),
-        InventoryUnitOfMeasureMismatch,
-      )
-      const correctionConflict = yield* Effect.flip(inventory.adjustStock({
-        principal,
-        tenantId,
-        warehouseId: warehouse.id,
-        itemId: item.id,
-        adjustment: "1",
-        unitOfMeasure: "BOX",
-        reason: "Changed payload",
-        ...correctionMetadata,
-        idempotencyKey: " correction-1 ",
-      }))
-      assert.instanceOf(correctionConflict, StockCorrectionIdempotencyConflict)
-      assert.strictEqual(correctionConflict.idempotencyKey, "correction-1")
-    })))
+        )
+        assert.instanceOf(correctionConflict, StockCorrectionIdempotencyConflict)
+        assert.strictEqual(correctionConflict.idempotencyKey, "correction-1")
+      }),
+    ),
+  )
 
   it.effect("stock corrected atomic publication preserves metadata and one event on retry", () => {
     const events: EventEnvelope[] = []
     return withInventory(
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const inventory = yield* InventoryService
         const warehouse = yield* inventory.createWarehouse({
           principal,
@@ -731,7 +772,7 @@ describe("inventory contract", () => {
 
   it.effect("stock corrected atomic publication rolls back when messaging append fails", () =>
     withInventory(
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const inventory = yield* InventoryService
         const warehouse = yield* inventory.createWarehouse({
           principal,
@@ -767,411 +808,450 @@ describe("inventory contract", () => {
           quantity: "5",
         })
         assert.instanceOf(
-          yield* Effect.flip(inventory.reserveStock({
-            principal,
-            tenantId,
-            warehouseId: warehouse.id,
-            itemId: item.id,
-            quantity: "1",
-          })),
+          yield* Effect.flip(
+            inventory.reserveStock({
+              principal,
+              tenantId,
+              warehouseId: warehouse.id,
+              itemId: item.id,
+              quantity: "1",
+            }),
+          ),
           StockUnavailable,
         )
       }),
       capabilities,
       makeFailOnceMessagingLayer(),
-    ))
+    ),
+  )
 
   it.effect("requires the stock adjustment capability", () =>
     withInventory(
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const inventory = yield* InventoryService
         assert.instanceOf(
-          yield* Effect.flip(inventory.adjustStock({
-            principal,
-            tenantId,
-            warehouseId: "00000000-0000-4000-8000-000000000002",
-            itemId: "00000000-0000-4000-8000-000000000003",
-            adjustment: "1",
-            unitOfMeasure: "EA",
-            reason: "Correction",
-            ...correctionMetadata,
-            idempotencyKey: "correction-denied",
-          })),
+          yield* Effect.flip(
+            inventory.adjustStock({
+              principal,
+              tenantId,
+              warehouseId: "00000000-0000-4000-8000-000000000002",
+              itemId: "00000000-0000-4000-8000-000000000003",
+              adjustment: "1",
+              unitOfMeasure: "EA",
+              reason: "Correction",
+              ...correctionMetadata,
+              idempotencyKey: "correction-denied",
+            }),
+          ),
           AuthorizationDenied,
         )
       }),
       capabilities.filter((capability) => capability !== InventoryCapabilities.stockAdjust),
-    ))
+    ),
+  )
 
   it.effect("releases and fulfills active reservations exactly once", () =>
-    withInventory(Effect.gen(function*() {
-      const inventory = yield* InventoryService
-      const warehouse = yield* inventory.createWarehouse({
-        principal,
-        tenantId,
-        legalEntityId,
-        name: "Main",
-      })
-      const item = yield* inventory.createItem({
-        principal,
-        tenantId,
-        sku: "sku-terminal",
-        name: "Widget",
-      })
-      yield* inventory.receiveStock({
-        principal,
-        tenantId,
-        warehouseId: warehouse.id,
-        itemId: item.id,
-        quantity: "10",
-      })
-      const released = yield* inventory.reserveStock({
-        principal,
-        tenantId,
-        warehouseId: warehouse.id,
-        itemId: item.id,
-        quantity: "4",
-      })
-      assert.strictEqual(
-        (yield* inventory.releaseReservation({
+    withInventory(
+      Effect.gen(function* () {
+        const inventory = yield* InventoryService
+        const warehouse = yield* inventory.createWarehouse({
           principal,
           tenantId,
-          reservationId: released.id,
-        })).status,
-        "released",
-      )
-      assert.strictEqual(
-        (yield* inventory.releaseReservation({
+          legalEntityId,
+          name: "Main",
+        })
+        const item = yield* inventory.createItem({
           principal,
           tenantId,
-          reservationId: released.id,
-        })).id,
-        released.id,
-      )
-      assert.instanceOf(
-        yield* Effect.flip(inventory.fulfillReservation({
-          principal,
-          tenantId,
-          reservationId: released.id,
-        })),
-        StockReservationInvalidState,
-      )
-      const allAvailable = yield* inventory.reserveStock({
-        principal,
-        tenantId,
-        warehouseId: warehouse.id,
-        itemId: item.id,
-        quantity: "10",
-      })
-      yield* inventory.releaseReservation({
-        principal,
-        tenantId,
-        reservationId: allAvailable.id,
-      })
-
-      const fulfilled = yield* inventory.reserveStock({
-        principal,
-        tenantId,
-        warehouseId: warehouse.id,
-        itemId: item.id,
-        quantity: "4",
-      })
-      assert.strictEqual(
-        (yield* inventory.fulfillReservation({
-          principal,
-          tenantId,
-          reservationId: fulfilled.id,
-        })).status,
-        "fulfilled",
-      )
-      assert.strictEqual(
-        (yield* inventory.fulfillReservation({
-          principal,
-          tenantId,
-          reservationId: fulfilled.id,
-        })).id,
-        fulfilled.id,
-      )
-      assert.instanceOf(
-        yield* Effect.flip(inventory.releaseReservation({
-          principal,
-          tenantId,
-          reservationId: fulfilled.id,
-        })),
-        StockReservationInvalidState,
-      )
-      assert.instanceOf(
-        yield* Effect.flip(inventory.reserveStock({
+          sku: "sku-terminal",
+          name: "Widget",
+        })
+        yield* inventory.receiveStock({
           principal,
           tenantId,
           warehouseId: warehouse.id,
           itemId: item.id,
-          quantity: "7",
-        })),
-        StockUnavailable,
-      )
-    })))
-
-  it.effect("rejects an idempotency key reused for different stock", () =>
-    withInventory(Effect.gen(function*() {
-      const inventory = yield* InventoryService
-      const warehouse = yield* inventory.createWarehouse({
-        principal,
-        tenantId,
-        legalEntityId,
-        name: "Main",
-      })
-      const item = yield* inventory.createItem({
-        principal,
-        tenantId,
-        sku: "sku-key",
-        name: "Widget",
-      })
-      yield* inventory.receiveStock({
-        principal,
-        tenantId,
-        warehouseId: warehouse.id,
-        itemId: item.id,
-        quantity: "10",
-      })
-      yield* inventory.reserveStock({
-        principal,
-        tenantId,
-        warehouseId: warehouse.id,
-        itemId: item.id,
-        quantity: "4",
-        idempotencyKey: "reservation-conflict",
-      })
-      const reservationConflict = yield* Effect.flip(inventory.reserveStock({
-        principal,
-        tenantId,
-        warehouseId: warehouse.id,
-        itemId: item.id,
-        quantity: "5",
-        idempotencyKey: " reservation-conflict ",
-      }))
-      assert.instanceOf(reservationConflict, StockReservationIdempotencyConflict)
-      assert.strictEqual(reservationConflict.idempotencyKey, "reservation-conflict")
-    })))
-
-  it.effect("rejects reservations above available stock", () =>
-    withInventory(Effect.gen(function*() {
-      const inventory = yield* InventoryService
-      const warehouse = yield* inventory.createWarehouse({
-        principal,
-        tenantId,
-        legalEntityId,
-        name: "Main",
-      })
-      const item = yield* inventory.createItem({
-        principal,
-        tenantId,
-        sku: "sku-1",
-        name: "Widget",
-      })
-      const error = yield* Effect.flip(inventory.reserveStock({
-        principal,
-        tenantId,
-        warehouseId: warehouse.id,
-        itemId: item.id,
-        quantity: "1",
-      }))
-      assert.instanceOf(error, StockUnavailable)
-    })))
-
-  it.effect("moves multiple items only across the confirmed and completed states", () =>
-    withInventory(Effect.gen(function*() {
-      const inventory = yield* InventoryService
-      const source = yield* inventory.createWarehouse({
-        principal,
-        tenantId,
-        legalEntityId,
-        name: "Source",
-      })
-      const destination = yield* inventory.createWarehouse({
-        principal,
-        tenantId,
-        legalEntityId,
-        name: "Destination",
-      })
-      const widget = yield* inventory.createItem({
-        principal,
-        tenantId,
-        sku: "widget",
-        name: "Widget",
-      })
-      const cable = yield* inventory.createItem({
-        principal,
-        tenantId,
-        sku: "cable",
-        name: "Cable",
-      })
-      yield* inventory.receiveStock({
-        principal,
-        tenantId,
-        warehouseId: source.id,
-        itemId: widget.id,
-        quantity: "10",
-      })
-      yield* inventory.receiveStock({
-        principal,
-        tenantId,
-        warehouseId: source.id,
-        itemId: cable.id,
-        quantity: "8",
-      })
-
-      const transfer = yield* inventory.createTransfer({
-        principal,
-        tenantId,
-        sourceWarehouseId: source.id,
-        destinationWarehouseId: destination.id,
-        lines: [
-          { itemId: widget.id, quantity: "4" },
-          { itemId: cable.id, quantity: "3" },
-        ],
-      })
-      yield* Schema.decodeUnknownEffect(StockTransfer)(transfer)
-      assert.strictEqual(transfer.status, "draft")
-      assert.strictEqual(transfer.confirmedAt, null)
-      assert.strictEqual(transfer.completedAt, null)
-      assert.strictEqual(
-        (yield* Effect.flip(
-          Schema.decodeUnknownEffect(StockTransfer)({
-            ...transfer,
-            status: "confirmed",
-            confirmedAt: null,
-          }),
-        ))._tag,
-        "SchemaError",
-      )
-      assert.strictEqual(
-        (yield* Effect.flip(
-          Schema.decodeUnknownEffect(StockTransfer)({
-            ...transfer,
-            destinationWarehouseId: transfer.sourceWarehouseId,
-          }),
-        ))._tag,
-        "SchemaError",
-      )
-      assert.strictEqual(
-        (yield* Effect.flip(
-          Schema.decodeUnknownEffect(StockTransfer)({ ...transfer, lines: [] }),
-        ))._tag,
-        "SchemaError",
-      )
-      assert.strictEqual(
-        (yield* Effect.flip(
-          Schema.decodeUnknownEffect(StockTransfer)({
-            ...transfer,
-            lines: [transfer.lines[0]!, transfer.lines[0]!],
-          }),
-        ))._tag,
-        "SchemaError",
-      )
-
-      assert.instanceOf(
-        yield* Effect.flip(inventory.completeTransfer({
+          quantity: "10",
+        })
+        const released = yield* inventory.reserveStock({
           principal,
           tenantId,
-          transferId: transfer.id,
-        })),
-        StockTransferInvalidState,
-      )
+          warehouseId: warehouse.id,
+          itemId: item.id,
+          quantity: "4",
+        })
+        assert.strictEqual(
+          (yield* inventory.releaseReservation({
+            principal,
+            tenantId,
+            reservationId: released.id,
+          })).status,
+          "released",
+        )
+        assert.strictEqual(
+          (yield* inventory.releaseReservation({
+            principal,
+            tenantId,
+            reservationId: released.id,
+          })).id,
+          released.id,
+        )
+        assert.instanceOf(
+          yield* Effect.flip(
+            inventory.fulfillReservation({
+              principal,
+              tenantId,
+              reservationId: released.id,
+            }),
+          ),
+          StockReservationInvalidState,
+        )
+        const allAvailable = yield* inventory.reserveStock({
+          principal,
+          tenantId,
+          warehouseId: warehouse.id,
+          itemId: item.id,
+          quantity: "10",
+        })
+        yield* inventory.releaseReservation({
+          principal,
+          tenantId,
+          reservationId: allAvailable.id,
+        })
 
-      // Reserving the remaining source availability proves creation did not deduct stock.
-      yield* inventory.reserveStock({
-        principal,
-        tenantId,
-        warehouseId: source.id,
-        itemId: widget.id,
-        quantity: "6",
-      })
-      yield* inventory.reserveStock({
-        principal,
-        tenantId,
-        warehouseId: source.id,
-        itemId: cable.id,
-        quantity: "5",
-      })
+        const fulfilled = yield* inventory.reserveStock({
+          principal,
+          tenantId,
+          warehouseId: warehouse.id,
+          itemId: item.id,
+          quantity: "4",
+        })
+        assert.strictEqual(
+          (yield* inventory.fulfillReservation({
+            principal,
+            tenantId,
+            reservationId: fulfilled.id,
+          })).status,
+          "fulfilled",
+        )
+        assert.strictEqual(
+          (yield* inventory.fulfillReservation({
+            principal,
+            tenantId,
+            reservationId: fulfilled.id,
+          })).id,
+          fulfilled.id,
+        )
+        assert.instanceOf(
+          yield* Effect.flip(
+            inventory.releaseReservation({
+              principal,
+              tenantId,
+              reservationId: fulfilled.id,
+            }),
+          ),
+          StockReservationInvalidState,
+        )
+        assert.instanceOf(
+          yield* Effect.flip(
+            inventory.reserveStock({
+              principal,
+              tenantId,
+              warehouseId: warehouse.id,
+              itemId: item.id,
+              quantity: "7",
+            }),
+          ),
+          StockUnavailable,
+        )
+      }),
+    ),
+  )
 
-      const confirmed = yield* inventory.confirmTransfer({
-        principal,
-        tenantId,
-        transferId: transfer.id,
-      })
-      assert.strictEqual(confirmed.status, "confirmed")
-      assert.ok(confirmed.confirmedAt)
-      assert.strictEqual(confirmed.completedAt, null)
-      assert.instanceOf(
-        yield* Effect.flip(inventory.reserveStock({
+  it.effect("rejects an idempotency key reused for different stock", () =>
+    withInventory(
+      Effect.gen(function* () {
+        const inventory = yield* InventoryService
+        const warehouse = yield* inventory.createWarehouse({
+          principal,
+          tenantId,
+          legalEntityId,
+          name: "Main",
+        })
+        const item = yield* inventory.createItem({
+          principal,
+          tenantId,
+          sku: "sku-key",
+          name: "Widget",
+        })
+        yield* inventory.receiveStock({
+          principal,
+          tenantId,
+          warehouseId: warehouse.id,
+          itemId: item.id,
+          quantity: "10",
+        })
+        yield* inventory.reserveStock({
+          principal,
+          tenantId,
+          warehouseId: warehouse.id,
+          itemId: item.id,
+          quantity: "4",
+          idempotencyKey: "reservation-conflict",
+        })
+        const reservationConflict = yield* Effect.flip(
+          inventory.reserveStock({
+            principal,
+            tenantId,
+            warehouseId: warehouse.id,
+            itemId: item.id,
+            quantity: "5",
+            idempotencyKey: " reservation-conflict ",
+          }),
+        )
+        assert.instanceOf(reservationConflict, StockReservationIdempotencyConflict)
+        assert.strictEqual(reservationConflict.idempotencyKey, "reservation-conflict")
+      }),
+    ),
+  )
+
+  it.effect("rejects reservations above available stock", () =>
+    withInventory(
+      Effect.gen(function* () {
+        const inventory = yield* InventoryService
+        const warehouse = yield* inventory.createWarehouse({
+          principal,
+          tenantId,
+          legalEntityId,
+          name: "Main",
+        })
+        const item = yield* inventory.createItem({
+          principal,
+          tenantId,
+          sku: "sku-1",
+          name: "Widget",
+        })
+        const error = yield* Effect.flip(
+          inventory.reserveStock({
+            principal,
+            tenantId,
+            warehouseId: warehouse.id,
+            itemId: item.id,
+            quantity: "1",
+          }),
+        )
+        assert.instanceOf(error, StockUnavailable)
+      }),
+    ),
+  )
+
+  it.effect("moves multiple items only across the confirmed and completed states", () =>
+    withInventory(
+      Effect.gen(function* () {
+        const inventory = yield* InventoryService
+        const source = yield* inventory.createWarehouse({
+          principal,
+          tenantId,
+          legalEntityId,
+          name: "Source",
+        })
+        const destination = yield* inventory.createWarehouse({
+          principal,
+          tenantId,
+          legalEntityId,
+          name: "Destination",
+        })
+        const widget = yield* inventory.createItem({
+          principal,
+          tenantId,
+          sku: "widget",
+          name: "Widget",
+        })
+        const cable = yield* inventory.createItem({
+          principal,
+          tenantId,
+          sku: "cable",
+          name: "Cable",
+        })
+        yield* inventory.receiveStock({
           principal,
           tenantId,
           warehouseId: source.id,
           itemId: widget.id,
-          quantity: "1",
-        })),
-        StockUnavailable,
-      )
+          quantity: "10",
+        })
+        yield* inventory.receiveStock({
+          principal,
+          tenantId,
+          warehouseId: source.id,
+          itemId: cable.id,
+          quantity: "8",
+        })
 
-      const completed = yield* inventory.completeTransfer({
-        principal,
-        tenantId,
-        transferId: transfer.id,
-      })
-      assert.strictEqual(completed.status, "completed")
-      assert.ok(completed.confirmedAt)
-      assert.ok(completed.completedAt)
+        const transfer = yield* inventory.createTransfer({
+          principal,
+          tenantId,
+          sourceWarehouseId: source.id,
+          destinationWarehouseId: destination.id,
+          lines: [
+            { itemId: widget.id, quantity: "4" },
+            { itemId: cable.id, quantity: "3" },
+          ],
+        })
+        yield* Schema.decodeUnknownEffect(StockTransfer)(transfer)
+        assert.strictEqual(transfer.status, "draft")
+        assert.strictEqual(transfer.confirmedAt, null)
+        assert.strictEqual(transfer.completedAt, null)
+        assert.strictEqual(
+          (yield* Effect.flip(
+            Schema.decodeUnknownEffect(StockTransfer)({
+              ...transfer,
+              status: "confirmed",
+              confirmedAt: null,
+            }),
+          ))._tag,
+          "SchemaError",
+        )
+        assert.strictEqual(
+          (yield* Effect.flip(
+            Schema.decodeUnknownEffect(StockTransfer)({
+              ...transfer,
+              destinationWarehouseId: transfer.sourceWarehouseId,
+            }),
+          ))._tag,
+          "SchemaError",
+        )
+        assert.strictEqual(
+          (yield* Effect.flip(
+            Schema.decodeUnknownEffect(StockTransfer)({ ...transfer, lines: [] }),
+          ))._tag,
+          "SchemaError",
+        )
+        assert.strictEqual(
+          (yield* Effect.flip(
+            Schema.decodeUnknownEffect(StockTransfer)({
+              ...transfer,
+              lines: [transfer.lines[0]!, transfer.lines[0]!],
+            }),
+          ))._tag,
+          "SchemaError",
+        )
 
-      yield* inventory.reserveStock({
-        principal,
-        tenantId,
-        warehouseId: destination.id,
-        itemId: widget.id,
-        quantity: "4",
-      })
-      yield* inventory.reserveStock({
-        principal,
-        tenantId,
-        warehouseId: destination.id,
-        itemId: cable.id,
-        quantity: "3",
-      })
-    })))
+        assert.instanceOf(
+          yield* Effect.flip(
+            inventory.completeTransfer({
+              principal,
+              tenantId,
+              transferId: transfer.id,
+            }),
+          ),
+          StockTransferInvalidState,
+        )
+
+        // Reserving the remaining source availability proves creation did not deduct stock.
+        yield* inventory.reserveStock({
+          principal,
+          tenantId,
+          warehouseId: source.id,
+          itemId: widget.id,
+          quantity: "6",
+        })
+        yield* inventory.reserveStock({
+          principal,
+          tenantId,
+          warehouseId: source.id,
+          itemId: cable.id,
+          quantity: "5",
+        })
+
+        const confirmed = yield* inventory.confirmTransfer({
+          principal,
+          tenantId,
+          transferId: transfer.id,
+        })
+        assert.strictEqual(confirmed.status, "confirmed")
+        assert.ok(confirmed.confirmedAt)
+        assert.strictEqual(confirmed.completedAt, null)
+        assert.instanceOf(
+          yield* Effect.flip(
+            inventory.reserveStock({
+              principal,
+              tenantId,
+              warehouseId: source.id,
+              itemId: widget.id,
+              quantity: "1",
+            }),
+          ),
+          StockUnavailable,
+        )
+
+        const completed = yield* inventory.completeTransfer({
+          principal,
+          tenantId,
+          transferId: transfer.id,
+        })
+        assert.strictEqual(completed.status, "completed")
+        assert.ok(completed.confirmedAt)
+        assert.ok(completed.completedAt)
+
+        yield* inventory.reserveStock({
+          principal,
+          tenantId,
+          warehouseId: destination.id,
+          itemId: widget.id,
+          quantity: "4",
+        })
+        yield* inventory.reserveStock({
+          principal,
+          tenantId,
+          warehouseId: destination.id,
+          itemId: cable.id,
+          quantity: "3",
+        })
+      }),
+    ),
+  )
 
   it.effect("rejects transfers across legal entities", () =>
-    withInventory(Effect.gen(function*() {
-      const inventory = yield* InventoryService
-      const source = yield* inventory.createWarehouse({
-        principal,
-        tenantId,
-        legalEntityId: "00000000-0000-4000-8000-000000000011",
-        name: "Source",
-      })
-      const destination = yield* inventory.createWarehouse({
-        principal,
-        tenantId,
-        legalEntityId: "00000000-0000-4000-8000-000000000012",
-        name: "Destination",
-      })
+    withInventory(
+      Effect.gen(function* () {
+        const inventory = yield* InventoryService
+        const source = yield* inventory.createWarehouse({
+          principal,
+          tenantId,
+          legalEntityId: "00000000-0000-4000-8000-000000000011",
+          name: "Source",
+        })
+        const destination = yield* inventory.createWarehouse({
+          principal,
+          tenantId,
+          legalEntityId: "00000000-0000-4000-8000-000000000012",
+          name: "Destination",
+        })
 
-      const error = yield* Effect.flip(inventory.createTransfer({
-        principal,
-        tenantId,
-        sourceWarehouseId: source.id,
-        destinationWarehouseId: destination.id,
-        lines: [{
-          itemId: "00000000-0000-4000-8000-000000000099",
-          quantity: "1",
-        }],
-      }))
+        const error = yield* Effect.flip(
+          inventory.createTransfer({
+            principal,
+            tenantId,
+            sourceWarehouseId: source.id,
+            destinationWarehouseId: destination.id,
+            lines: [
+              {
+                itemId: "00000000-0000-4000-8000-000000000099",
+                quantity: "1",
+              },
+            ],
+          }),
+        )
 
-      assert.instanceOf(error, StockTransferDifferentLegalEntity)
-    })))
+        assert.instanceOf(error, StockTransferDifferentLegalEntity)
+      }),
+    ),
+  )
 
   it.effect("requires a capability to confirm a transfer", () =>
     withInventory(
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const inventory = yield* InventoryService
         const source = yield* inventory.createWarehouse({
           principal,
@@ -1198,21 +1278,24 @@ describe("inventory contract", () => {
           destinationWarehouseId: destination.id,
           lines: [{ itemId: item.id, quantity: "1" }],
         })
-        const error = yield* Effect.flip(inventory.confirmTransfer({
-          principal,
-          tenantId,
-          transferId: transfer.id,
-        }))
+        const error = yield* Effect.flip(
+          inventory.confirmTransfer({
+            principal,
+            tenantId,
+            transferId: transfer.id,
+          }),
+        )
         assert.instanceOf(error, AuthorizationDenied)
       }),
-      capabilities.filter((capability) =>
-        capability !== InventoryCapabilities.stockTransferConfirm
+      capabilities.filter(
+        (capability) => capability !== InventoryCapabilities.stockTransferConfirm,
       ),
-    ))
+    ),
+  )
 
   it.effect("requires a separate capability to complete a transfer", () =>
     withInventory(
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const inventory = yield* InventoryService
         const source = yield* inventory.createWarehouse({
           principal,
@@ -1247,15 +1330,18 @@ describe("inventory contract", () => {
           lines: [{ itemId: item.id, quantity: "1" }],
         })
         yield* inventory.confirmTransfer({ principal, tenantId, transferId: transfer.id })
-        const error = yield* Effect.flip(inventory.completeTransfer({
-          principal,
-          tenantId,
-          transferId: transfer.id,
-        }))
+        const error = yield* Effect.flip(
+          inventory.completeTransfer({
+            principal,
+            tenantId,
+            transferId: transfer.id,
+          }),
+        )
         assert.instanceOf(error, AuthorizationDenied)
       }),
-      capabilities.filter((capability) =>
-        capability !== InventoryCapabilities.stockTransferComplete
+      capabilities.filter(
+        (capability) => capability !== InventoryCapabilities.stockTransferComplete,
       ),
-    ))
+    ),
+  )
 })

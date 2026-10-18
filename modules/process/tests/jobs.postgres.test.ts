@@ -22,16 +22,14 @@ import {
 const databaseUrl = process.env["DATABASE_URL"]
 
 const makeProcess = (client: Sql) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const database = makePostgresDatabase(client)
     const authorization = yield* AuthorizationService
     const requirements = Layer.merge(
       Layer.succeed(Database, database),
       Layer.succeed(AuthorizationService, authorization),
     )
-    const messaging = yield* makeMessagingService.pipe(
-      Effect.provideService(Database, database),
-    )
+    const messaging = yield* makeMessagingService.pipe(Effect.provideService(Database, database))
     const sales = yield* Effect.provide(
       makeSalesService,
       Layer.merge(requirements, Layer.succeed(MessagingService, messaging)),
@@ -66,17 +64,19 @@ it.effect.skipIf(databaseUrl === undefined)(
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
       TestClock.withLive(
-        Effect.gen(function*() {
+        Effect.gen(function* () {
           yield* runMigrations(client)
-          const [tenant] = yield* Effect.promise(() =>
-            client<{ id: string }[]>`
+          const [tenant] = yield* Effect.promise(
+            () =>
+              client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
-          `
+          `,
           )
           const authorizationLayer = makeAuthorizationTestLayer([])
           const process = yield* makeProcess(client).pipe(Effect.provide(authorizationLayer))
-          const [job] = yield* Effect.promise(() =>
-            client<{ id: string }[]>`
+          const [job] = yield* Effect.promise(
+            () =>
+              client<{ id: string }[]>`
             insert into process.jobs
               (tenant_id, job_type, idempotency_key, scheduled_at, payload, correlation_id)
             values
@@ -84,7 +84,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                now() - interval '1 second',
                ${JSON.stringify({ eventId: uuidv7() })}::jsonb, 'lease-correlation-1')
             returning id
-          `
+          `,
           )
 
           const first = yield* process.claimJob({
@@ -105,21 +105,24 @@ it.effect.skipIf(databaseUrl === undefined)(
             }),
           )
 
-          yield* Effect.promise(() =>
-            client`
+          yield* Effect.promise(
+            () =>
+              client`
             update process.jobs
             set lease_until = now() - interval '1 second'
             where id = ${job!.id}
-          `
+          `,
           )
           assert.instanceOf(
-            yield* Effect.flip(process.renewJob({
-              tenantId: tenant!.id,
-              workerId: "worker-a",
-              jobId: job!.id,
-              leaseToken: first!.leaseToken!,
-              leaseGeneration: first!.leaseGeneration!,
-            })),
+            yield* Effect.flip(
+              process.renewJob({
+                tenantId: tenant!.id,
+                workerId: "worker-a",
+                jobId: job!.id,
+                leaseToken: first!.leaseToken!,
+                leaseGeneration: first!.leaseGeneration!,
+              }),
+            ),
             ProcessJobLeaseLost,
           )
           const second = yield* process.claimJob({
@@ -133,35 +136,41 @@ it.effect.skipIf(databaseUrl === undefined)(
           assert.strictEqual(second!.leaseGeneration, "2")
 
           assert.instanceOf(
-            yield* Effect.flip(process.renewJob({
-              tenantId: tenant!.id,
-              workerId: "worker-a",
-              jobId: job!.id,
-              leaseToken: first!.leaseToken!,
-              leaseGeneration: first!.leaseGeneration!,
-            })),
+            yield* Effect.flip(
+              process.renewJob({
+                tenantId: tenant!.id,
+                workerId: "worker-a",
+                jobId: job!.id,
+                leaseToken: first!.leaseToken!,
+                leaseGeneration: first!.leaseGeneration!,
+              }),
+            ),
             ProcessJobLeaseLost,
           )
           assert.instanceOf(
-            yield* Effect.flip(process.completeJob({
-              tenantId: tenant!.id,
-              workerId: "worker-a",
-              jobId: job!.id,
-              leaseToken: first!.leaseToken!,
-              leaseGeneration: first!.leaseGeneration!,
-            })),
+            yield* Effect.flip(
+              process.completeJob({
+                tenantId: tenant!.id,
+                workerId: "worker-a",
+                jobId: job!.id,
+                leaseToken: first!.leaseToken!,
+                leaseGeneration: first!.leaseGeneration!,
+              }),
+            ),
             ProcessJobLeaseLost,
           )
           assert.instanceOf(
-            yield* Effect.flip(process.failJob({
-              tenantId: tenant!.id,
-              workerId: "worker-a",
-              jobId: job!.id,
-              leaseToken: first!.leaseToken!,
-              leaseGeneration: first!.leaseGeneration!,
-              error: "stale worker",
-              retryAt: null,
-            })),
+            yield* Effect.flip(
+              process.failJob({
+                tenantId: tenant!.id,
+                workerId: "worker-a",
+                jobId: job!.id,
+                leaseToken: first!.leaseToken!,
+                leaseGeneration: first!.leaseGeneration!,
+                error: "stale worker",
+                retryAt: null,
+              }),
+            ),
             ProcessJobLeaseLost,
           )
 
@@ -200,27 +209,32 @@ it.effect.skipIf(databaseUrl === undefined)(
           assert.isNull(recovered.leaseToken)
 
           assert.instanceOf(
-            yield* Effect.flip(process.completeJob({
-              tenantId: tenant!.id,
-              workerId: "worker-c",
-              jobId: job!.id,
-              leaseToken: third!.leaseToken!,
-              leaseGeneration: third!.leaseGeneration!,
-            })),
+            yield* Effect.flip(
+              process.completeJob({
+                tenantId: tenant!.id,
+                workerId: "worker-c",
+                jobId: job!.id,
+                leaseToken: third!.leaseToken!,
+                leaseGeneration: third!.leaseGeneration!,
+              }),
+            ),
             ProcessJobLeaseLost,
           )
           assert.instanceOf(
-            yield* Effect.flip(process.renewJob({
-              tenantId: tenant!.id,
-              workerId: "worker-c",
-              jobId: uuidv7(),
-              leaseToken: uuidv7(),
-              leaseGeneration: "1",
-            })),
+            yield* Effect.flip(
+              process.renewJob({
+                tenantId: tenant!.id,
+                workerId: "worker-c",
+                jobId: uuidv7(),
+                leaseToken: uuidv7(),
+                leaseGeneration: "1",
+              }),
+            ),
             ProcessJobNotFound,
           )
         }).pipe(Effect.provide(makeAuthorizationTestLayer([]))),
-      )),
+      ),
+    ),
 )
 
 it.effect.skipIf(databaseUrl === undefined)(
@@ -228,16 +242,18 @@ it.effect.skipIf(databaseUrl === undefined)(
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
       TestClock.withLive(
-        Effect.gen(function*() {
+        Effect.gen(function* () {
           yield* runMigrations(client)
-          const [tenant] = yield* Effect.promise(() =>
-            client<{ id: string }[]>`
+          const [tenant] = yield* Effect.promise(
+            () =>
+              client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
-          `
+          `,
           )
           const fenceScope = `test.fence:${tenant!.id}:${uuidv7()}`
-          yield* Effect.promise(() =>
-            client`
+          yield* Effect.promise(
+            () =>
+              client`
             insert into process.jobs
               (tenant_id, fence_scope, job_type, idempotency_key, scheduled_at, payload, correlation_id)
             values
@@ -245,23 +261,27 @@ it.effect.skipIf(databaseUrl === undefined)(
                now() - interval '1 second', '{}'::jsonb, 'claim-a'),
               (${tenant!.id}, ${fenceScope}, 'process.order_confirmation.post_commit', 'claim-b',
                now() - interval '1 second', '{}'::jsonb, 'claim-b')
-          `
+          `,
           )
           const process = yield* makeProcess(client).pipe(
             Effect.provide(makeAuthorizationTestLayer([])),
           )
-          const claimed = yield* Effect.all([
-            process.claimJob({ tenantId: tenant!.id, workerId: "worker-a" }),
-            process.claimJob({ tenantId: tenant!.id, workerId: "worker-b" }),
-          ], { concurrency: "unbounded" })
-          const generations = claimed.map((job) => job?.leaseGeneration).filter(
-            (generation): generation is string => generation !== undefined,
+          const claimed = yield* Effect.all(
+            [
+              process.claimJob({ tenantId: tenant!.id, workerId: "worker-a" }),
+              process.claimJob({ tenantId: tenant!.id, workerId: "worker-b" }),
+            ],
+            { concurrency: "unbounded" },
           )
+          const generations = claimed
+            .map((job) => job?.leaseGeneration)
+            .filter((generation): generation is string => generation !== undefined)
           assert.strictEqual(generations.length, 2)
           assert.strictEqual(new Set(generations).size, 2)
           assert.deepStrictEqual(new Set(generations), new Set(["1", "2"]))
         }),
-      )),
+      ),
+    ),
 )
 
 it.effect.skipIf(databaseUrl === undefined)(
@@ -269,23 +289,25 @@ it.effect.skipIf(databaseUrl === undefined)(
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
       TestClock.withLive(
-        Effect.gen(function*() {
+        Effect.gen(function* () {
           yield* runMigrations(client)
-          const [tenant] = yield* Effect.promise(() =>
-            client<{ id: string }[]>`
+          const [tenant] = yield* Effect.promise(
+            () =>
+              client<{ id: string }[]>`
               insert into auth.tenants (slug) values (${uuidv7()}) returning id
-            `
+            `,
           )
           const fenceScope = `test.termination:${tenant!.id}:${uuidv7()}`
-          const [job] = yield* Effect.promise(() =>
-            client<{ id: string }[]>`
+          const [job] = yield* Effect.promise(
+            () =>
+              client<{ id: string }[]>`
               insert into process.jobs
                 (tenant_id, fence_scope, job_type, idempotency_key, scheduled_at, payload, correlation_id)
               values
                 (${tenant!.id}, ${fenceScope}, 'process.order_confirmation.post_commit',
                  ${uuidv7()}, now() - interval '1 second', '{}'::jsonb, ${uuidv7()})
               returning id
-            `
+            `,
           )
           const workerA = yield* makeProcess(client).pipe(
             Effect.provide(makeAuthorizationTestLayer([])),
@@ -301,12 +323,13 @@ it.effect.skipIf(databaseUrl === undefined)(
           assert.strictEqual(first!.leaseGeneration, "1")
 
           // Worker A terminates without completing the leased job.
-          yield* Effect.promise(() =>
-            client`
+          yield* Effect.promise(
+            () =>
+              client`
               update process.jobs
               set lease_until = now() - interval '1 second'
               where id = ${job!.id}
-            `
+            `,
           )
 
           const second = yield* workerB.claimJob({
@@ -318,13 +341,15 @@ it.effect.skipIf(databaseUrl === undefined)(
           assert.strictEqual(second!.leaseGeneration, "2")
           assert.strictEqual(second!.leaseOwner, "worker-b")
 
-          const staleCompletion = yield* Effect.flip(workerA.completeJob({
-            tenantId: tenant!.id,
-            workerId: "worker-a",
-            jobId: first!.jobId,
-            leaseToken: first!.leaseToken!,
-            leaseGeneration: first!.leaseGeneration,
-          }))
+          const staleCompletion = yield* Effect.flip(
+            workerA.completeJob({
+              tenantId: tenant!.id,
+              workerId: "worker-a",
+              jobId: first!.jobId,
+              leaseToken: first!.leaseToken!,
+              leaseGeneration: first!.leaseGeneration,
+            }),
+          )
           assert.instanceOf(staleCompletion, ProcessJobLeaseLost)
 
           const completed = yield* workerB.completeJob({
@@ -337,5 +362,6 @@ it.effect.skipIf(databaseUrl === undefined)(
           assert.strictEqual(completed.status, "completed")
           assert.strictEqual(completed.leaseGeneration, "2")
         }),
-      )),
+      ),
+    ),
 )

@@ -32,21 +32,24 @@ import {
   validateDocumentRenderPolicy,
 } from "../../foundation/mod.ts"
 
-const fontLoader = (load: () => Promise<unknown>): FontLoader => async () => {
-  const module = await load()
-  const font = typeof module === "object" && module !== null && "default" in module
-    ? module.default
-    : module
-  if (
-    typeof font !== "object" || font === null || !("fontName" in font)
-    || !("ttfBase64" in font)
-  ) {
-    throw new TypeError("pdfnative font module did not expose FontData")
+const fontLoader =
+  (load: () => Promise<unknown>): FontLoader =>
+  async () => {
+    const module = await load()
+    const font =
+      typeof module === "object" && module !== null && "default" in module ? module.default : module
+    if (
+      typeof font !== "object" ||
+      font === null ||
+      !("fontName" in font) ||
+      !("ttfBase64" in font)
+    ) {
+      throw new TypeError("pdfnative font module did not expose FontData")
+    }
+    // pdfnative's generated font declarations describe module fields loosely; the runtime object is
+    // the FontData shape documented by its FontLoader contract.
+    return font as FontData
   }
-  // pdfnative's generated font declarations describe module fields loosely; the runtime object is
-  // the FontData shape documented by its FontLoader contract.
-  return font as FontData
-}
 
 registerFonts({
   ar: fontLoader(() => import("pdfnative/fonts/noto-arabic-data.js")),
@@ -70,10 +73,7 @@ const defaultPolicy: DocumentRenderPolicy = {
 
 export type PdfNativeAssetResolver = (
   assetId: string,
-) => Effect.Effect<
-  Uint8Array | undefined,
-  DocumentAssetUnavailable | DocumentRendererFailure
->
+) => Effect.Effect<Uint8Array | undefined, DocumentAssetUnavailable | DocumentRendererFailure>
 
 export type PdfNativeRendererOptions = {
   readonly policy?: DocumentRenderPolicy
@@ -107,9 +107,8 @@ const loadFontEntries = (texts: ReadonlyArray<string>) =>
           return fontData === null ? undefined : { fontData, lang: language }
         }),
       )
-      return loaded.filter((entry): entry is { fontData: FontData; lang: string } =>
-        entry !== undefined
-      )
+      return loaded
+        .filter((entry): entry is { fontData: FontData; lang: string } => entry !== undefined)
         .map(({ fontData, lang }, index) => ({
           fontData,
           fontRef: `/F${index + 1}`,
@@ -119,11 +118,8 @@ const loadFontEntries = (texts: ReadonlyArray<string>) =>
     catch: (cause) => rendererFailure("font-loading", "unable to load registered fonts", cause),
   })
 
-const loadAsset = (
-  assetId: string,
-  resolveAsset: PdfNativeAssetResolver | undefined,
-) =>
-  Effect.gen(function*() {
+const loadAsset = (assetId: string, resolveAsset: PdfNativeAssetResolver | undefined) =>
+  Effect.gen(function* () {
     const bytes = resolveAsset === undefined ? undefined : yield* resolveAsset(assetId)
     if (bytes === undefined) {
       return yield* Effect.fail(
@@ -181,14 +177,16 @@ const toImageBlocks = (
   node: Extract<DocumentNode, { _tag: "image" }>,
   resolveAsset: PdfNativeAssetResolver | undefined,
 ) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const bytes = yield* loadAsset(node.assetId, resolveAsset)
-    const blocks: PdfDocumentBlock[] = [{
-      type: "image",
-      data: bytes,
-      alt: node.alt,
-      align: "center",
-    }]
+    const blocks: PdfDocumentBlock[] = [
+      {
+        type: "image",
+        data: bytes,
+        alt: node.alt,
+        align: "center",
+      },
+    ]
     return { blocks, assetBytes: bytes.byteLength }
   })
 
@@ -196,7 +194,7 @@ const toSignatureBlocks = (
   node: Extract<DocumentNode, { _tag: "signature" }>,
   resolveAsset: PdfNativeAssetResolver | undefined,
 ) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const bytes = yield* loadAsset(node.assetId, resolveAsset)
     const blocks: PdfDocumentBlock[] = [
       { type: "paragraph", text: node.label },
@@ -209,7 +207,7 @@ const toPdfBlocks = (
   nodes: ReadonlyArray<DocumentNode>,
   resolveAsset: PdfNativeAssetResolver | undefined,
 ) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const blockResults = yield* Effect.all(
       nodes.map((node) => {
         switch (node._tag) {
@@ -231,7 +229,7 @@ const toPdfBlocks = (
   })
 
 const decodeInput = (input: DocumentRenderInput) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const context = yield* Schema.decodeUnknownEffect(DocumentContext)(input.context)
     const ast = yield* Schema.decodeUnknownEffect(DocumentAst)(input.ast)
     const request = yield* Schema.decodeUnknownEffect(DocumentRenderRequest)(input.request)
@@ -244,9 +242,9 @@ const validateInputReferences = (
   request: DocumentRenderRequest,
 ) => {
   if (
-    context.tenantId !== request.tenantId
-    || context.snapshotId !== request.snapshotId
-    || context.snapshotChecksum !== request.snapshotChecksum
+    context.tenantId !== request.tenantId ||
+    context.snapshotId !== request.snapshotId ||
+    context.snapshotChecksum !== request.snapshotChecksum
   ) {
     return Effect.fail(
       rendererFailure(
@@ -271,26 +269,27 @@ const validateInputReferences = (
 const validateAssetBytes = (assetBytes: number, policy: DocumentRenderPolicy) =>
   assetBytes > policy.maxAssetBytes
     ? Effect.fail(
-      new DocumentRenderLimitExceeded({
-        limit: "asset_bytes",
-        actual: assetBytes,
-        maximum: policy.maxAssetBytes,
-      }),
-    )
+        new DocumentRenderLimitExceeded({
+          limit: "asset_bytes",
+          actual: assetBytes,
+          maximum: policy.maxAssetBytes,
+        }),
+      )
     : Effect.succeed(undefined)
 
 const validatePageCount = (pageCount: number, policy: DocumentRenderPolicy) =>
   pageCount > policy.maxPages
     ? Effect.fail(
-      new DocumentRenderLimitExceeded({
-        limit: "pages",
-        actual: pageCount,
-        maximum: policy.maxPages,
-      }),
-    )
+        new DocumentRenderLimitExceeded({
+          limit: "pages",
+          actual: pageCount,
+          maximum: policy.maxPages,
+        }),
+      )
     : Effect.succeed(undefined)
 
-const valueOr = <T>(value: T | undefined, fallback: T): T => value === undefined ? fallback : value
+const valueOr = <T>(value: T | undefined, fallback: T): T =>
+  value === undefined ? fallback : value
 
 const makePdfLayout = (
   options: PdfNativeRendererOptions,
@@ -327,7 +326,7 @@ const makeDocumentArtifact = (
   bytes: Uint8Array,
   pageCount: number,
 ) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const contentHash = yield* sha256Hex(bytes)
     const metadata = yield* Schema.decodeUnknownEffect(DocumentArtifact)({
       artifactId: uuidv7(),
@@ -356,7 +355,7 @@ const renderPdfNativeDocument = (
   options: PdfNativeRendererOptions,
   policy: DocumentRenderPolicy,
 ) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const { context, ast, request } = yield* decodeInput(input)
     yield* validateInputReferences(context, ast, request)
     yield* validateDocumentRenderPolicy(request, policy)
@@ -382,7 +381,7 @@ export const makePdfNativeDocumentRenderer = (
 ): DocumentRenderer => {
   const policy = options.policy ?? defaultPolicy
   const render = Effect.fn("DocumentRenderer.pdfnative.render")((input: DocumentRenderInput) =>
-    renderPdfNativeDocument(input, options, policy)
+    renderPdfNativeDocument(input, options, policy),
   )
 
   return {

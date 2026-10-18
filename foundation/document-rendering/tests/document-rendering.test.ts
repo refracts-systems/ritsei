@@ -52,7 +52,7 @@ describe("document rendering contracts", () => {
   })
 
   it.effect("creates deterministic snapshots and render job identity", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const first = yield* makeDocumentSnapshot({
         snapshotId,
         tenantId,
@@ -83,10 +83,11 @@ describe("document rendering contracts", () => {
       )
       assert.strictEqual(job.fenceScope, request.fenceScope)
       assert.strictEqual(job.jobVersion, 1)
-    }))
+    }),
+  )
 
   it.effect("rejects static HTML capabilities that require JavaScript", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const requirements = {
         ...requestInput(),
         capabilities: ["css", "javascript"] as const,
@@ -103,13 +104,13 @@ describe("document rendering contracts", () => {
       const error = yield* Effect.flip(validateDocumentRenderPolicy(requirements, policy))
       assert.instanceOf(error, DocumentRenderPolicyViolation)
       assert.strictEqual(error.reason, "javascript_disabled")
-    }))
+    }),
+  )
 
   it.effect("rejects render inputs over the declared budget", () =>
-    Effect.gen(function*() {
-      const error = yield* Effect.flip(validateDocumentRenderPolicy(
-        requestInput(),
-        {
+    Effect.gen(function* () {
+      const error = yield* Effect.flip(
+        validateDocumentRenderPolicy(requestInput(), {
           rendererFamily: "static-html",
           capabilities: ["css", "paged-media"],
           allowJavaScript: false,
@@ -117,15 +118,16 @@ describe("document rendering contracts", () => {
           maxAstNodes: 5,
           maxPages: 1,
           maxAssetBytes: 0,
-        },
-      ))
+        }),
+      )
       assert.instanceOf(error, DocumentRenderLimitExceeded)
       assert.strictEqual(error.limit, "ast_nodes")
       assert.strictEqual(error.actual, 6)
-    }))
+    }),
+  )
 
   it.effect("deduplicates artifacts and rejects stale writers", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const store = makeMemoryDocumentArtifactStore()
       const bytes = new Uint8Array([1, 2, 3])
       const contentHash = yield* sha256Hex(bytes)
@@ -160,27 +162,32 @@ describe("document rendering contracts", () => {
       })
       assert.strictEqual(replay.artifactId, first.artifactId)
 
-      const stale = yield* Effect.flip(store.put({
-        metadata,
-        bytes,
-        fencing: { scope: "document-render:scope", generation: "0" },
-      }))
+      const stale = yield* Effect.flip(
+        store.put({
+          metadata,
+          bytes,
+          fencing: { scope: "document-render:scope", generation: "0" },
+        }),
+      )
       assert.instanceOf(stale, DocumentArtifactStaleWriter)
 
       const conflictBytes = new Uint8Array([1, 2, 3, 4])
-      const conflict = yield* Effect.flip(store.put({
-        metadata: {
-          ...metadata,
-          contentHash: yield* sha256Hex(conflictBytes),
-          byteLength: conflictBytes.byteLength,
-        },
-        bytes: conflictBytes,
-        fencing: { scope: "document-render:scope", generation: "2" },
-      }))
+      const conflict = yield* Effect.flip(
+        store.put({
+          metadata: {
+            ...metadata,
+            contentHash: yield* sha256Hex(conflictBytes),
+            byteLength: conflictBytes.byteLength,
+          },
+          bytes: conflictBytes,
+          fencing: { scope: "document-render:scope", generation: "2" },
+        }),
+      )
       assert.instanceOf(conflict, DocumentArtifactConflict)
 
       const stored = yield* store.get({ tenantId, renderFingerprint: hashA })
       assert.isDefined(stored)
       assert.deepStrictEqual([...stored!.bytes], [1, 2, 3])
-    }))
+    }),
+  )
 })

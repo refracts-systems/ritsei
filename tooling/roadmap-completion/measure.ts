@@ -53,8 +53,8 @@ const markersPass = async (requirements: readonly GateRequirement[]): Promise<bo
 
 const gateTestFiles = (gate: Gate): readonly string[] => {
   if (
-    (gate.commands ?? []).some((command) =>
-      command.args[0] !== "task" || command.args[1] !== "test"
+    (gate.commands ?? []).some(
+      (command) => command.args[0] !== "task" || command.args[1] !== "test",
     )
   ) {
     throw new Error(`${gate.id} must use targeted pnpm run test commands`)
@@ -82,14 +82,10 @@ const testGateResults = async (gates: readonly Gate[]): Promise<Map<string, bool
   const { filesByGate, files } = collectTestFiles(gates)
   if (files.size === 0) return new Map()
 
-  const result = spawnSync(
-    "pnpm",
-    ["run", "test", "--reporter=json", ...files],
-    {
-      encoding: "utf8",
-      shell: process.platform === "win32",
-    },
-  )
+  const result = spawnSync("pnpm", ["run", "test", "--reporter=json", ...files], {
+    encoding: "utf8",
+    shell: process.platform === "win32",
+  })
   const passedFiles = parsePassedTestFiles(result.stdout)
   return new Map(
     [...filesByGate].map(([id, testFiles]) => [
@@ -143,27 +139,27 @@ const validateRoadmapTracks = async () => {
   const duplicateTrackIds = duplicateValues(roadmapTracks.map(({ id }) => id))
   const duplicateTrackPaths = duplicateValues(roadmapTracks.map(({ path }) => path))
   const failures = [
-    ...roadmapFiles.filter((path) => !registeredPaths.has(path)).map((path) =>
-      `unregistered roadmap file: ${path}`
-    ),
-    ...roadmapTracks.filter((track) => !roadmapFiles.includes(track.path)).map((track) =>
-      `missing roadmap file: ${track.path}`
-    ),
+    ...roadmapFiles
+      .filter((path) => !registeredPaths.has(path))
+      .map((path) => `unregistered roadmap file: ${path}`),
+    ...roadmapTracks
+      .filter((track) => !roadmapFiles.includes(track.path))
+      .map((track) => `missing roadmap file: ${track.path}`),
     ...roadmapTracks.flatMap((track) =>
-      track.gateIds.filter((id) => !registeredGateIds.has(id)).map((id) =>
-        `unknown roadmap gate: ${track.id}:${id}`
-      )
+      track.gateIds
+        .filter((id) => !registeredGateIds.has(id))
+        .map((id) => `unknown roadmap gate: ${track.id}:${id}`),
     ),
-    ...gateIds.filter((id) => id !== "roadmap.global-exit" && !gateOwners.has(id)).map((id) =>
-      `unassigned roadmap gate: ${id}`
-    ),
-    ...duplicateGateOwners.map(([id, owners]) =>
-      `roadmap gate ${id} has multiple owners: ${owners.join(", ")}`
+    ...gateIds
+      .filter((id) => id !== "roadmap.global-exit" && !gateOwners.has(id))
+      .map((id) => `unassigned roadmap gate: ${id}`),
+    ...duplicateGateOwners.map(
+      ([id, owners]) => `roadmap gate ${id} has multiple owners: ${owners.join(", ")}`,
     ),
     ...duplicateTrackIds.map((id) => `duplicate roadmap track ID: ${id}`),
     ...duplicateTrackPaths.map((path) => `duplicate roadmap track path: ${path}`),
-    ...(await invalidRoadmapDocuments()).map((path) =>
-      `roadmap document missing required metadata: ${path}`
+    ...(await invalidRoadmapDocuments()).map(
+      (path) => `roadmap document missing required metadata: ${path}`,
     ),
   ]
   if (failures.length > 0) throw new Error(failures.join("\n"))
@@ -250,10 +246,12 @@ for (const gate of gates) {
     continue
   }
   if (gate.kind === "markers") {
-    const markers = dependenciesPassed && await markersPass(gate.requirements ?? [])
-    const commands = markers
-      && (gate.commands === undefined || gate.commands.length === 0
-        || executableGateResults.get(gate.id) === true)
+    const markers = dependenciesPassed && (await markersPass(gate.requirements ?? []))
+    const commands =
+      markers &&
+      (gate.commands === undefined ||
+        gate.commands.length === 0 ||
+        executableGateResults.get(gate.id) === true)
     const evidence = frontendResults.get(gate.id) ?? true
     const passed = markers && commands && evidence
     results.set(gate.id, {
@@ -262,14 +260,14 @@ for (const gate of gates) {
       reason: !dependenciesPassed
         ? "dependent gates remain incomplete"
         : !markers
-        ? "required evidence is missing"
-        : !commands
-        ? "required executable checks failed"
-        : !evidence
-        ? "frontend review evidence is blocked or incomplete"
-        : (gate.commands?.length ?? 0) > 0
-        ? "required evidence and executable checks passed"
-        : "required implementation evidence is present",
+          ? "required evidence is missing"
+          : !commands
+            ? "required executable checks failed"
+            : !evidence
+              ? "frontend review evidence is blocked or incomplete"
+              : (gate.commands?.length ?? 0) > 0
+                ? "required evidence and executable checks passed"
+                : "required implementation evidence is present",
     })
     continue
   }
@@ -295,22 +293,25 @@ const globalPassed = results.get(globalGate.id)?.passed === true
 const level3 = gates.filter((gate) => gate.kind === "domain" && results.get(gate.id)?.passed).length
 const processGates = gates.filter((gate) => gate.id.startsWith("process."))
 const integrationGates = gates.filter((gate) => gate.id.startsWith("integration."))
-const partialText = await readText("docs/roadmap/domain-maturity.md") ?? ""
+const partialText = (await readText("docs/roadmap/domain-maturity.md")) ?? ""
 const partialCommittedPackages = [...partialText.matchAll(/^\| `[^`]+`[^\n]*\bPARTIAL\b/gm)].length
-const unknownText = await readText("docs/roadmap/erp-primitives.md") ?? ""
+const unknownText = (await readText("docs/roadmap/erp-primitives.md")) ?? ""
 const openUnknownDecisions = [...unknownText.matchAll(/^\|[^\n]*\b`UNKNOWN`\b/gm)].length
-const financialRemaining =
-  gates.filter((gate) => gate.kind === "financial" && results.get(gate.id)?.passed !== true).length
+const financialRemaining = gates.filter(
+  (gate) => gate.kind === "financial" && results.get(gate.id)?.passed !== true,
+).length
 const processRemaining = processGates.filter((gate) => results.get(gate.id)?.passed !== true).length
-const integrationRemaining =
-  integrationGates.filter((gate) => results.get(gate.id)?.passed !== true).length
-const businessPackRemaining = roadmapTracks.find((track) => track.id === "packs")?.gateIds.filter(
-  (id) => results.get(id)?.passed !== true,
-).length ?? 0
+const integrationRemaining = integrationGates.filter(
+  (gate) => results.get(gate.id)?.passed !== true,
+).length
+const businessPackRemaining =
+  roadmapTracks
+    .find((track) => track.id === "packs")
+    ?.gateIds.filter((id) => results.get(id)?.passed !== true).length ?? 0
 const postgres19Remaining =
-  roadmapTracks.find((track) => track.id === "postgres19")?.gateIds.filter(
-    (id) => results.get(id)?.passed !== true,
-  ).length ?? 0
+  roadmapTracks
+    .find((track) => track.id === "postgres19")
+    ?.gateIds.filter((id) => results.get(id)?.passed !== true).length ?? 0
 
 console.log(`METRIC roadmap_tracks=${roadmapTracks.length}`)
 console.log("METRIC unregistered_roadmap_tracks=0")

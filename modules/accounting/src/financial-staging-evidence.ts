@@ -15,9 +15,9 @@ import {
 } from "./financial-store-contract.ts"
 
 const Uuid = Schema.String.check(Schema.isUUID())
-const Uuidv7 = Schema.String.check(Schema.isPattern(
-  /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-))
+const Uuidv7 = Schema.String.check(
+  Schema.isPattern(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i),
+)
 const Hash = Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/))
 const NonEmptyString = Schema.String.check(Schema.isPattern(/\S/))
 const LookupLimit = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 1_000 }))
@@ -27,9 +27,7 @@ type FinancialStagingEvidenceRecordType = Schema.Schema.Type<typeof FinancialSta
 const StoreAppendFinancialStagingEvidenceInput = Schema.Struct({
   tenantId: Uuid,
   evidence: KernelFinancialStagingEvidence,
-  canonicalizationVersion: Schema.Literal(
-    FINANCIAL_STAGING_EVIDENCE_CANONICALIZATION_VERSION,
-  ),
+  canonicalizationVersion: Schema.Literal(FINANCIAL_STAGING_EVIDENCE_CANONICALIZATION_VERSION),
   evidenceHash: Hash,
 })
 
@@ -40,12 +38,15 @@ const StoreFinancialStagingEvidenceLookupInput = Schema.Struct({
   cohortId: Schema.optionalKey(NonEmptyString),
   deploymentRevision: Schema.optionalKey(NonEmptyString),
   limit: LookupLimit,
-}).check(Schema.makeFilter(
-  (input) =>
-    input.gateId !== undefined || input.cohortId !== undefined
-    || input.deploymentRevision !== undefined,
-  { expected: "staging evidence lookup requires gate, cohort, or deployment scope" },
-))
+}).check(
+  Schema.makeFilter(
+    (input) =>
+      input.gateId !== undefined ||
+      input.cohortId !== undefined ||
+      input.deploymentRevision !== undefined,
+    { expected: "staging evidence lookup requires gate, cohort, or deployment scope" },
+  ),
+)
 
 export type FinancialStagingEvidenceAppendResult = Readonly<{
   readonly record: FinancialStagingEvidenceRecordType
@@ -96,14 +97,14 @@ const invalid = (
 ) => new FinancialStagingEvidenceInvalid({ tenantId, recordId, reason })
 
 const prepare = (input: unknown) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const decoded = yield* Schema.decodeUnknownEffect(StoreAppendFinancialStagingEvidenceInput)(
       input,
     )
     if (
-      decoded.evidence.tenantId !== decoded.tenantId
-      || decoded.evidence.legalEntityId !== decoded.evidence.cohort.legalEntityId
-      || decoded.evidence.tenantId !== decoded.evidence.cohort.tenantId
+      decoded.evidence.tenantId !== decoded.tenantId ||
+      decoded.evidence.legalEntityId !== decoded.evidence.cohort.legalEntityId ||
+      decoded.evidence.tenantId !== decoded.evidence.cohort.tenantId
     ) {
       return yield* Effect.fail(
         invalid(decoded.tenantId, decoded.evidence.recordId, "scope_mismatch"),
@@ -134,7 +135,7 @@ const prepare = (input: unknown) =>
 export const verifyFinancialStagingEvidenceRecord = (
   record: FinancialStagingEvidenceRecordType,
 ): Effect.Effect<FinancialStagingEvidenceRecordType, FinancialStagingEvidenceInvalid> =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     if (record.canonicalizationVersion !== FINANCIAL_STAGING_EVIDENCE_CANONICALIZATION_VERSION) {
       return yield* Effect.fail(
         invalid(record.tenantId, record.recordId, "canonicalization_version"),
@@ -164,14 +165,14 @@ const sameEvidence = (
   left: FinancialStagingEvidenceRecordType,
   right: FinancialStagingEvidenceRecordType,
 ) =>
-  left.canonicalizationVersion === right.canonicalizationVersion
-  && left.evidenceHash === right.evidenceHash
-  && left.recordId === right.recordId
-  && left.tenantId === right.tenantId
-  && left.legalEntityId === right.legalEntityId
-  && left.gateId === right.gateId
-  && left.cohortId === right.cohortId
-  && left.deploymentRevision === right.deploymentRevision
+  left.canonicalizationVersion === right.canonicalizationVersion &&
+  left.evidenceHash === right.evidenceHash &&
+  left.recordId === right.recordId &&
+  left.tenantId === right.tenantId &&
+  left.legalEntityId === right.legalEntityId &&
+  left.gateId === right.gateId &&
+  left.cohortId === right.cohortId &&
+  left.deploymentRevision === right.deploymentRevision
 
 const validateGet = (tenantId: string, recordId: string) =>
   Schema.is(Uuid)(tenantId) && Schema.is(Uuidv7)(recordId)
@@ -198,7 +199,7 @@ const validateStoredRow = (row: {
   readonly completedAt: Date
   readonly createdAt: Date
 }) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const record = yield* Schema.decodeUnknownEffect(FinancialStagingEvidenceRecord)({
       recordId: row.recordId,
       tenantId: row.tenantId,
@@ -211,9 +212,7 @@ const validateStoredRow = (row: {
       evidenceHash: row.evidenceHash,
       evidence: row.evidence,
       persistedAt: row.createdAt.toISOString(),
-    }).pipe(
-      Effect.mapError(() => invalid(row.tenantId, row.recordId, "stored_payload_invalid")),
-    )
+    }).pipe(Effect.mapError(() => invalid(row.tenantId, row.recordId, "stored_payload_invalid")))
     if (
       ![
         row.operatorPrincipalId === record.evidence.operatorPrincipalId,
@@ -256,7 +255,7 @@ export const makeMemoryFinancialStagingEvidenceStore = (): FinancialStagingEvide
   const records = new Map<string, FinancialStagingEvidenceRecordType>()
   return {
     append: (input) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const candidate = yield* prepare(input)
         const existing = records.get(key(candidate.tenantId, candidate.recordId))
         if (existing === undefined) {
@@ -275,7 +274,7 @@ export const makeMemoryFinancialStagingEvidenceStore = (): FinancialStagingEvide
         return { record: yield* verifyFinancialStagingEvidenceRecord(existing), duplicate: true }
       }),
     get: (tenantId, recordId) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         yield* validateGet(tenantId, recordId)
         const record = records.get(key(tenantId, recordId))
         return record === undefined
@@ -283,23 +282,25 @@ export const makeMemoryFinancialStagingEvidenceStore = (): FinancialStagingEvide
           : yield* verifyFinancialStagingEvidenceRecord(record)
       }),
     list: (input) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(StoreFinancialStagingEvidenceLookupInput)(
           input,
         )
         const values = [...records.values()]
-          .filter((record) =>
-            record.tenantId === decoded.tenantId
-            && (decoded.legalEntityId === undefined
-              || record.legalEntityId === decoded.legalEntityId)
-            && (decoded.gateId === undefined || record.gateId === decoded.gateId)
-            && (decoded.cohortId === undefined || record.cohortId === decoded.cohortId)
-            && (decoded.deploymentRevision === undefined
-              || record.deploymentRevision === decoded.deploymentRevision)
+          .filter(
+            (record) =>
+              record.tenantId === decoded.tenantId &&
+              (decoded.legalEntityId === undefined ||
+                record.legalEntityId === decoded.legalEntityId) &&
+              (decoded.gateId === undefined || record.gateId === decoded.gateId) &&
+              (decoded.cohortId === undefined || record.cohortId === decoded.cohortId) &&
+              (decoded.deploymentRevision === undefined ||
+                record.deploymentRevision === decoded.deploymentRevision),
           )
-          .toSorted((left, right) =>
-            right.persistedAt.localeCompare(left.persistedAt)
-            || right.recordId.localeCompare(left.recordId)
+          .toSorted(
+            (left, right) =>
+              right.persistedAt.localeCompare(left.persistedAt) ||
+              right.recordId.localeCompare(left.recordId),
           )
           .slice(0, decoded.limit)
         return yield* Effect.forEach(values, verifyFinancialStagingEvidenceRecord)
@@ -307,21 +308,29 @@ export const makeMemoryFinancialStagingEvidenceStore = (): FinancialStagingEvide
   }
 }
 
-export const makePostgresFinancialStagingEvidenceStore = Effect.gen(function*() {
+export const makePostgresFinancialStagingEvidenceStore = Effect.gen(function* () {
   const database = yield* Database
   return {
     append: (input: unknown) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const candidate = yield* prepare(input)
         const result = yield* database.transaction(async (transaction) => {
-          const [inserted] = await transaction.insert(financialStagingEvidence).values(
-            dbValues(candidate),
-          ).onConflictDoNothing().returning()
+          const [inserted] = await transaction
+            .insert(financialStagingEvidence)
+            .values(dbValues(candidate))
+            .onConflictDoNothing()
+            .returning()
           if (inserted !== undefined) return { _tag: "inserted" as const, row: inserted }
-          const [existing] = await transaction.select().from(financialStagingEvidence).where(and(
-            eq(financialStagingEvidence.tenantId, candidate.tenantId),
-            eq(financialStagingEvidence.recordId, candidate.recordId),
-          )).for("update")
+          const [existing] = await transaction
+            .select()
+            .from(financialStagingEvidence)
+            .where(
+              and(
+                eq(financialStagingEvidence.tenantId, candidate.tenantId),
+                eq(financialStagingEvidence.recordId, candidate.recordId),
+              ),
+            )
+            .for("update")
           return existing === undefined
             ? { _tag: "missing" as const }
             : { _tag: "existing" as const, row: existing }
@@ -348,21 +357,27 @@ export const makePostgresFinancialStagingEvidenceStore = Effect.gen(function*() 
         return { record, duplicate: true }
       }),
     get: (tenantId: string, recordId: string) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         yield* validateGet(tenantId, recordId)
         const rows = yield* database.query(
           (db) =>
-            db.select().from(financialStagingEvidence).where(and(
-              eq(financialStagingEvidence.tenantId, tenantId),
-              eq(financialStagingEvidence.recordId, recordId),
-            )).limit(1),
+            db
+              .select()
+              .from(financialStagingEvidence)
+              .where(
+                and(
+                  eq(financialStagingEvidence.tenantId, tenantId),
+                  eq(financialStagingEvidence.recordId, recordId),
+                ),
+              )
+              .limit(1),
           "accounting.financial_staging_evidence.get",
         )
         const row = rows[0]
         return row === undefined ? undefined : yield* validateStoredRow(row)
       }),
     list: (input: unknown) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(StoreFinancialStagingEvidenceLookupInput)(
           input,
         )
@@ -383,10 +398,15 @@ export const makePostgresFinancialStagingEvidenceStore = Effect.gen(function*() 
         }
         const rows = yield* database.query(
           (db) =>
-            db.select().from(financialStagingEvidence).where(and(...conditions)).orderBy(
-              desc(financialStagingEvidence.createdAt),
-              desc(financialStagingEvidence.recordId),
-            ).limit(decoded.limit),
+            db
+              .select()
+              .from(financialStagingEvidence)
+              .where(and(...conditions))
+              .orderBy(
+                desc(financialStagingEvidence.createdAt),
+                desc(financialStagingEvidence.recordId),
+              )
+              .limit(decoded.limit),
           "accounting.financial_staging_evidence.list",
         )
         return yield* Effect.forEach(rows, validateStoredRow)

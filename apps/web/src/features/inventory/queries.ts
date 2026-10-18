@@ -53,7 +53,7 @@ const movementsKey = [...inventoryCollectionKey, "movements"] as const
 const invalidate = (
   client: ReturnType<typeof useQueryClient>,
   tenantId: string,
-  key: readonly [string, ...readonly unknown[]],
+  key: readonly [string, ...(readonly unknown[])],
 ) => client.invalidateQueries({ queryKey: serverQueryKey(tenantId, key) })
 
 const invalidateStock = (client: ReturnType<typeof useQueryClient>, tenantId: string) =>

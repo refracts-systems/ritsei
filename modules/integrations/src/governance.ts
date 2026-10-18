@@ -11,17 +11,8 @@ import {
 
 const NonEmptyString = Schema.String.check(Schema.isPattern(/\S/))
 
-export const ExternalConnectorStatus = Schema.Literals([
-  "draft",
-  "reviewed",
-  "active",
-  "retired",
-])
-export const ExternalDeliveryControlKind = Schema.Literals([
-  "retry",
-  "redeliver",
-  "quarantine",
-])
+export const ExternalConnectorStatus = Schema.Literals(["draft", "reviewed", "active", "retired"])
+export const ExternalDeliveryControlKind = Schema.Literals(["retry", "redeliver", "quarantine"])
 
 export type ExternalConnectorDefinition = {
   readonly connectorId: string
@@ -72,11 +63,11 @@ export const activateExternalConnector = (
   connector.status === "reviewed"
     ? Effect.succeed({ ...connector, status: "active" })
     : Effect.fail(
-      new ExternalConnectorNotReviewed({
-        connectorId: connector.connectorId,
-        version: connector.version,
-      }),
-    )
+        new ExternalConnectorNotReviewed({
+          connectorId: connector.connectorId,
+          version: connector.version,
+        }),
+      )
 
 // connector retirement is terminal for new invocations while preserving history and controls.
 export const retireExternalConnector = (
@@ -88,9 +79,7 @@ export const validateExternalOperation = (
   action: ExternalActionCatalogEntry,
 ): Effect.Effect<
   ExternalActionCatalogEntry,
-  | ExternalConnectorNotReviewed
-  | ExternalConnectorRetired
-  | ExternalConnectorVersionConflict
+  ExternalConnectorNotReviewed | ExternalConnectorRetired | ExternalConnectorVersionConflict
 > => {
   if (connector.status === "retired") {
     return Effect.fail(
@@ -109,9 +98,9 @@ export const validateExternalOperation = (
     )
   }
   if (
-    action.connectorId !== connector.connectorId
-    || action.version < connector.compatibilityRange.minimumVersion
-    || action.version > connector.compatibilityRange.maximumVersion
+    action.connectorId !== connector.connectorId ||
+    action.version < connector.compatibilityRange.minimumVersion ||
+    action.version > connector.compatibilityRange.maximumVersion
   ) {
     return Effect.fail(
       new ExternalConnectorVersionConflict({
@@ -129,9 +118,9 @@ export const makeDeliveryControl = (
   control: ExternalDeliveryControl,
 ): Effect.Effect<ExternalDeliveryControl, ExternalPayloadInvalid> => {
   if (
-    !Schema.is(ExternalDeliveryControlKind)(control.kind)
-    || !Schema.is(NonEmptyString)(control.operationId)
-    || !Schema.is(NonEmptyString)(control.reason)
+    !Schema.is(ExternalDeliveryControlKind)(control.kind) ||
+    !Schema.is(NonEmptyString)(control.operationId) ||
+    !Schema.is(NonEmptyString)(control.reason)
   ) {
     return Effect.fail(
       new ExternalPayloadInvalid({

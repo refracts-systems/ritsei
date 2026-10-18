@@ -60,10 +60,12 @@ export const checkOwnership = async (): Promise<readonly string[]> => {
 
       const sql = await readFile(path, "utf8")
       const owner = sql.match(/^\s*--\s*owner:\s*([A-Za-z_][A-Za-z0-9_]*)\s*$/m)?.[1]
-      const owners = sql.match(/^\s*--\s*owners:\s*(.+)\s*$/m)?.[1]
-        ?.split(",")
-        .map((value) => value.trim())
-        .filter(Boolean) ?? []
+      const owners =
+        sql
+          .match(/^\s*--\s*owners:\s*(.+)\s*$/m)?.[1]
+          ?.split(",")
+          .map((value) => value.trim())
+          .filter(Boolean) ?? []
       const declaredOwners = owner === undefined ? owners : [owner]
 
       if (declaredOwners.length === 0) {
@@ -100,17 +102,15 @@ export const checkOwnership = async (): Promise<readonly string[]> => {
 
   const isPlatformSchemaTest = (path: string) => path.startsWith("platform/postgres/tests/")
 
-  for (
-    const root of [
-      "apps",
-      "foundation",
-      "modules",
-      "platform",
-      "runtime",
-      "tests",
-      "tooling",
-    ] as const
-  ) {
+  for (const root of [
+    "apps",
+    "foundation",
+    "modules",
+    "platform",
+    "runtime",
+    "tests",
+    "tooling",
+  ] as const) {
     for (const { path, source } of await collectSourceFiles(root, [".ts"])) {
       for (const specifier of extractModuleSpecifiers({ path, source })) {
         const importedSchema = specifier.match(

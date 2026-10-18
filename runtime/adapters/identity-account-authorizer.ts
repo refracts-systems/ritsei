@@ -10,27 +10,29 @@ import {
 
 export const IdentityAccountAuthorizerLive = Layer.effect(
   IdentityAccountAuthorizer,
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const authorization = yield* AuthorizationService
     return {
       authorize: (input: {
         readonly principal: { readonly userAccountId: string; readonly sessionId: string }
         readonly tenantId: string
       }) =>
-        authorization.authorize({
-          principal: input.principal,
-          tenantId: input.tenantId,
-          capability: IdentityCapabilities.userAccountCreate,
-        }).pipe(
-          Effect.mapError((error) =>
-            error instanceof AuthorizationDenied
-              ? new IdentityAuthorizationDenied({
-                tenantId: error.tenantId,
-                capability: error.capability,
-              })
-              : error
+        authorization
+          .authorize({
+            principal: input.principal,
+            tenantId: input.tenantId,
+            capability: IdentityCapabilities.userAccountCreate,
+          })
+          .pipe(
+            Effect.mapError((error) =>
+              error instanceof AuthorizationDenied
+                ? new IdentityAuthorizationDenied({
+                    tenantId: error.tenantId,
+                    capability: error.capability,
+                  })
+                : error,
+            ),
           ),
-        ),
     }
   }),
 )

@@ -161,7 +161,7 @@ dependency graph, while `node_modules` provides the conventional local package t
 npm ecosystem dependencies.
 
 Root `package.json` scripts own workspace orchestration: workspace membership (`pnpm-workspace.yaml`),
-type checking, task entrypoints, and formatting (`dprint`). Internal `modules/*` directories remain
+type checking, task entrypoints, formatting (`oxfmt`), and linting (`oxlint`). Internal `modules/*` directories remain
 modular-monolith boundaries, not workspace package boundaries by default.
 
 ## Repository Shape

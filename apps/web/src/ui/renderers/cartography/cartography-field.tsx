@@ -20,12 +20,10 @@ import {
  * STATES: ready, loading, empty, error, and degraded are rendered with text/status messaging.
  * DENSITY: compact by default; the visual scales down to a single column on narrow screens.
  */
-export interface CartographyFieldProps extends
-  Omit<
-    JSX.HTMLAttributes<HTMLElement>,
-    "aria-busy" | "aria-describedby" | "aria-labelledby" | "children" | "class" | "role"
-  >
-{
+export interface CartographyFieldProps extends Omit<
+  JSX.HTMLAttributes<HTMLElement>,
+  "aria-busy" | "aria-describedby" | "aria-labelledby" | "children" | "class" | "role"
+> {
   readonly intent: VisualIntent
   readonly selectedMarkerId?: string
   readonly onInteraction?: (intent: InteractionIntent) => void
@@ -154,9 +152,9 @@ export function CartographyField(props: CartographyFieldProps) {
   const descriptionId = `${id}-description`
   const rootProps = omit(props, "intent", "selectedMarkerId", "onInteraction", "class", "children")
   const hasScene = () => props.intent.status === "ready" || props.intent.status === "degraded"
-  const contourPaths = () => hasScene() ? buildContourPaths(props.intent) : []
-  const routePath = () => hasScene() ? buildRoutePath(props.intent) : undefined
-  const boundaryPath = () => hasScene() ? buildBoundaryPath(props.intent) : undefined
+  const contourPaths = () => (hasScene() ? buildContourPaths(props.intent) : [])
+  const routePath = () => (hasScene() ? buildRoutePath(props.intent) : undefined)
+  const boundaryPath = () => (hasScene() ? buildBoundaryPath(props.intent) : undefined)
   const animated = () => hasScene() && props.intent.motion !== "static"
   const visibleMetrics = () => props.intent.fallback.metrics ?? []
 
@@ -237,32 +235,36 @@ export function CartographyField(props: CartographyFieldProps) {
               props.onInteraction ? styles.marker : styles.markerDot,
               markerStyles[marker.tone ?? "neutral"],
             ]
-            return props.onInteraction
-              ? (
-                <button
-                  class={className}
-                  type="button"
-                  style={markerPosition(marker)}
-                  aria-label={marker.label}
-                  aria-pressed={props.selectedMarkerId === marker.id ? "true" : "false"}
-                  data-marker-id={marker.id}
-                  data-selected={props.selectedMarkerId === marker.id ? "true" : undefined}
-                  onClick={(event) => {
-                    props.onInteraction?.({
-                      type: "select",
-                      targetId: marker.id,
-                      source: event.detail === 0 ? "keyboard" : "pointer",
-                    })
-                  }}
-                />
-              )
-              : <span class={className} style={markerPosition(marker)} aria-hidden="true" />
+            return props.onInteraction ? (
+              <button
+                class={className}
+                type="button"
+                style={markerPosition(marker)}
+                aria-label={marker.label}
+                aria-pressed={props.selectedMarkerId === marker.id ? "true" : "false"}
+                data-marker-id={marker.id}
+                data-selected={props.selectedMarkerId === marker.id ? "true" : undefined}
+                onClick={(event) => {
+                  props.onInteraction?.({
+                    type: "select",
+                    targetId: marker.id,
+                    source: event.detail === 0 ? "keyboard" : "pointer",
+                  })
+                }}
+              />
+            ) : (
+              <span class={className} style={markerPosition(marker)} aria-hidden="true" />
+            )
           }}
         </For>
       </div>
       <div class={styles.summary}>
-        <span id={labelId} class={styles.label}>{props.intent.semantics.label}</span>
-        <p id={descriptionId} class={styles.description}>{props.intent.semantics.description}</p>
+        <span id={labelId} class={styles.label}>
+          {props.intent.semantics.label}
+        </span>
+        <p id={descriptionId} class={styles.description}>
+          {props.intent.semantics.description}
+        </p>
         <p class={styles.description}>{props.intent.fallback.summary}</p>
         <Show when={statusMessage(props.intent)}>
           <p

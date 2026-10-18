@@ -4,9 +4,7 @@ import { defineEventCatalogEntry } from "../../catalog/mod.ts"
 
 const Uuid = Schema.String.check(Schema.isUUID())
 const NonEmptyString = Schema.String.check(Schema.isPattern(/\S/))
-const PositiveInt = Schema.Int.check(
-  Schema.isBetween({ minimum: 1, maximum: 0x7fffffff }),
-)
+const PositiveInt = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 0x7fffffff }))
 
 export const RevenuePostedEventPayload = Schema.Struct({
   journalId: Uuid,

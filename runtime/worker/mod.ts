@@ -25,7 +25,7 @@ export const startWorker = (
   intervalMs = 1_000,
 ) =>
   Effect.scoped(
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const client = postgres(url)
       yield* Effect.addFinalizer(() => Effect.promise(() => client.end()))
       const services = serviceLayers(client, configuration)
@@ -50,7 +50,7 @@ if (isMain(import.meta.url)) {
     console.error("WORKER_ID is required")
     process.exit(1)
   }
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const configuration = yield* readRuntimeConfiguration()
     yield* startWorker(url, { tenantId, workerId }, configuration)
   }).pipe(NodeRuntime.runMain)

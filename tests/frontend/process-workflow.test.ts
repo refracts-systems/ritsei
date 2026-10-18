@@ -105,14 +105,17 @@ const job: ProcessJobInboxItem = {
 it.effect(
   "connects Process Studio catalog, designer validation, monitor, inbox, and recovery controls",
   () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const { page, url, errors } = yield* builtApp
       let runtime = makeRuntime()
       let inboxRuntime: ProcessRuntimeInstance[] = [runtime]
       let controls: ProcessOperatorControl[] = []
-      const requests: Array<
-        { path: string; method: string; headers: Record<string, string>; body: unknown }
-      > = []
+      const requests: Array<{
+        path: string
+        method: string
+        headers: Record<string, string>
+        body: unknown
+      }> = []
 
       yield* Effect.promise(async () => {
         // Fallow: this browser workflow intentionally uses one deterministic Process Studio route matrix.
@@ -160,16 +163,18 @@ it.effect(
               updatedAt: "2026-09-13T12:03:00.000Z",
             })
             inboxRuntime = []
-            controls = [{
-              id: controlId,
-              tenantId,
-              instanceId,
-              action: body.action,
-              actorPrincipalId: "process-session",
-              idempotencyKey: body.idempotencyKey,
-              reason: body.reason,
-              createdAt: "2026-09-13T12:03:00.000Z",
-            }]
+            controls = [
+              {
+                id: controlId,
+                tenantId,
+                instanceId,
+                action: body.action,
+                actorPrincipalId: "process-session",
+                idempotencyKey: body.idempotencyKey,
+                reason: body.reason,
+                createdAt: "2026-09-13T12:03:00.000Z",
+              },
+            ]
             return fulfillJson(route, 200, runtime)
           }
           return fulfillJson(route, 404, { _tag: "ApiNotFound", code: "not_found" })
@@ -182,12 +187,12 @@ it.effect(
         await page.getByRole("tab", { name: "Inbox", exact: true }).click()
         await page.getByRole("button", { name: "Retry runtime", exact: true }).click()
         const dialog = page.getByRole("dialog", { name: "Retry runtime" })
-        await dialog.getByRole("textbox", { name: "Idempotency key", exact: true }).fill(
-          "retry-process-1",
-        )
-        await dialog.getByRole("textbox", { name: "Reason", exact: true }).fill(
-          "Retry after transient worker failure",
-        )
+        await dialog
+          .getByRole("textbox", { name: "Idempotency key", exact: true })
+          .fill("retry-process-1")
+        await dialog
+          .getByRole("textbox", { name: "Reason", exact: true })
+          .fill("Retry after transient worker failure")
         await dialog.getByRole("button", { name: "Confirm retry runtime", exact: true }).click()
         await dialog.waitFor({ state: "hidden" })
         await page.getByText("No runtime recovery actions are waiting.", { exact: true }).waitFor()
@@ -206,8 +211,8 @@ it.effect(
           tenantId,
         )
         assert.deepEqual(
-          requests.find((request) =>
-            request.path === `/process/runtime/${instanceId}/operator-controls`
+          requests.find(
+            (request) => request.path === `/process/runtime/${instanceId}/operator-controls`,
           )?.body,
           {
             action: "retry",
@@ -220,28 +225,29 @@ it.effect(
           { definitionId, definitionVersion: 1, catalogVersion: 1, references: [] },
         )
         assert.isTrue(
-          requests.some((request) =>
-            request.path === "/process/runtime" && request.method === "GET"
+          requests.some(
+            (request) => request.path === "/process/runtime" && request.method === "GET",
           ),
         )
         assert.isTrue(
-          requests.some((request) =>
-            request.path === "/process/workflow-runs" && request.method === "GET"
+          requests.some(
+            (request) => request.path === "/process/workflow-runs" && request.method === "GET",
           ),
         )
         assert.isTrue(
           requests.some((request) => request.path === "/process/inbox" && request.method === "GET"),
         )
         assert.isTrue(
-          requests.some((request) =>
-            request.path === "/process/operator-controls" && request.method === "GET"
+          requests.some(
+            (request) => request.path === "/process/operator-controls" && request.method === "GET",
           ),
         )
         assert.deepEqual(errors, [])
         assert.deepEqual(
-          await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze().then((result) =>
-            result.violations
-          ),
+          await new AxeBuilder({ page })
+            .withTags(["wcag2a", "wcag2aa"])
+            .analyze()
+            .then((result) => result.violations),
           [],
         )
       })

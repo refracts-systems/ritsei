@@ -53,10 +53,10 @@ export type DesignerAction =
   | { readonly _tag: "move_node"; readonly sourceId: string; readonly targetId: string }
   | { readonly _tag: "set_label"; readonly nodeId: string; readonly label: string }
   | {
-    readonly _tag: "set_capability"
-    readonly nodeId: string
-    readonly capability?: CatalogReference
-  }
+      readonly _tag: "set_capability"
+      readonly nodeId: string
+      readonly capability?: CatalogReference
+    }
   | { readonly _tag: "add_mapping"; readonly nodeId: string; readonly mapping: TypedMapping }
 
 export type DesignerValidationIssue = {
@@ -109,9 +109,10 @@ export const makeInitialDesignerModel = (): DesignerModel => ({
 })
 
 const nextId = (model: DesignerModel): string => {
-  const numbers = model.nodes.map((node) => /^node-(\d+)$/.exec(node.id)?.[1]).filter(Boolean).map(
-    Number,
-  )
+  const numbers = model.nodes
+    .map((node) => /^node-(\d+)$/.exec(node.id)?.[1])
+    .filter(Boolean)
+    .map(Number)
   return `node-${Math.max(0, ...numbers) + 1}`
 }
 
@@ -134,12 +135,17 @@ const linear = (model: DesignerModel, nodes: readonly DesignerNode[]): DesignerM
 }
 
 export const addNode = (model: DesignerModel, kind: ProcessNodeKind): DesignerModel =>
-  kind === "Start" || kind === "End" ? model : linear(model, [...middle(model.nodes), {
-    id: nextId(model),
-    kind,
-    label: labels[kind],
-    mappings: [],
-  }])
+  kind === "Start" || kind === "End"
+    ? model
+    : linear(model, [
+        ...middle(model.nodes),
+        {
+          id: nextId(model),
+          kind,
+          label: labels[kind],
+          mappings: [],
+        },
+      ])
 
 export const reorderNode = (
   model: DesignerModel,
@@ -155,11 +161,7 @@ export const reorderNode = (
   return linear(model, nodes)
 }
 
-const moveNodeTo = (
-  model: DesignerModel,
-  sourceId: string,
-  targetId: string,
-): DesignerModel => {
+const moveNodeTo = (model: DesignerModel, sourceId: string, targetId: string): DesignerModel => {
   const nodes = middle(model.nodes)
   const sourceIndex = nodes.findIndex((node) => node.id === sourceId)
   const targetIndex = nodes.findIndex((node) => node.id === targetId)
@@ -176,7 +178,7 @@ export const setNodeLabel = (
   label: string,
 ): DesignerModel => ({
   ...model,
-  nodes: model.nodes.map((node) => node.id === nodeId ? { ...node, label } : node),
+  nodes: model.nodes.map((node) => (node.id === nodeId ? { ...node, label } : node)),
 })
 
 export const setNodeCapability = (
@@ -185,7 +187,7 @@ export const setNodeCapability = (
   capability?: CatalogReference,
 ): DesignerModel => ({
   ...model,
-  nodes: model.nodes.map((node) => node.id === nodeId ? { ...node, capability } : node),
+  nodes: model.nodes.map((node) => (node.id === nodeId ? { ...node, capability } : node)),
 })
 
 export const addTypedMapping = (
@@ -195,7 +197,7 @@ export const addTypedMapping = (
 ): DesignerModel => ({
   ...model,
   nodes: model.nodes.map((node) =>
-    node.id === nodeId ? { ...node, mappings: [...node.mappings, mapping] } : node
+    node.id === nodeId ? { ...node, mappings: [...node.mappings, mapping] } : node,
   ),
 })
 
@@ -219,7 +221,7 @@ export const applyDesignerAction = (
   }
 }
 
-const compare = (a: string, b: string): number => a < b ? -1 : a > b ? 1 : 0
+const compare = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0)
 const canonical = (model: DesignerModel) => ({
   formatVersion: 1 as const,
   definitionId: model.definitionId,
@@ -247,21 +249,26 @@ export const serializeProcessIr = (ir: ProcessDesignIr): string =>
   JSON.stringify({ ...canonical(ir), checksum: ir.checksum })
 
 const capabilityIssue = (node: DesignerNode): DesignerValidationIssue | undefined => {
-  const expectedKind = node.kind === "DomainCommand"
-    ? "DomainAction"
-    : node.kind === "WaitForEvent"
-    ? "DomainEvent"
-    : undefined
+  const expectedKind =
+    node.kind === "DomainCommand"
+      ? "DomainAction"
+      : node.kind === "WaitForEvent"
+        ? "DomainEvent"
+        : undefined
   if (expectedKind === undefined) {
-    return node.capability === undefined ? undefined : {
-      code: "invalid_capability",
-      nodeId: node.id,
-      message: `${node.kind} nodes cannot reference a catalog capability.`,
-    }
+    return node.capability === undefined
+      ? undefined
+      : {
+          code: "invalid_capability",
+          nodeId: node.id,
+          message: `${node.kind} nodes cannot reference a catalog capability.`,
+        }
   }
   if (
-    node.capability === undefined || !/\S/.test(node.capability.id)
-    || !Number.isSafeInteger(node.capability.version) || node.capability.version < 1
+    node.capability === undefined ||
+    !/\S/.test(node.capability.id) ||
+    !Number.isSafeInteger(node.capability.version) ||
+    node.capability.version < 1
   ) {
     return {
       code: "missing_capability",
@@ -269,24 +276,27 @@ const capabilityIssue = (node: DesignerNode): DesignerValidationIssue | undefine
       message: `${node.kind} nodes must reference an exact ${expectedKind} catalog capability.`,
     }
   }
-  return node.capability.kind === expectedKind ? undefined : {
-    code: "invalid_capability",
-    nodeId: node.id,
-    message: `${node.kind} nodes require ${expectedKind}, not ${node.capability.kind}.`,
-  }
+  return node.capability.kind === expectedKind
+    ? undefined
+    : {
+        code: "invalid_capability",
+        nodeId: node.id,
+        message: `${node.kind} nodes require ${expectedKind}, not ${node.capability.kind}.`,
+      }
 }
 
 const mappingIssue = (
   node: DesignerNode,
   mapping: TypedMapping,
 ): DesignerValidationIssue | undefined =>
-  !/\S/.test(mapping.sourcePath) || !/\S/.test(mapping.targetPath)
-    || mapping.sourceType !== mapping.targetType
+  !/\S/.test(mapping.sourcePath) ||
+  !/\S/.test(mapping.targetPath) ||
+  mapping.sourceType !== mapping.targetType
     ? {
-      code: "invalid_mapping",
-      nodeId: node.id,
-      message: "Typed mappings need non-empty paths and matching source and target types.",
-    }
+        code: "invalid_mapping",
+        nodeId: node.id,
+        message: "Typed mappings need non-empty paths and matching source and target types.",
+      }
     : undefined
 
 const nodeValidation = (nodes: readonly DesignerNode[]) => {
@@ -346,11 +356,15 @@ const reachabilityValidation = (
     }
   }
   return model.nodes.flatMap((node) =>
-    reachable.has(node.id) ? [] : [{
-      code: "unreachable_node" as const,
-      nodeId: node.id,
-      message: `Node ${node.label} is not reachable from Start.`,
-    }]
+    reachable.has(node.id)
+      ? []
+      : [
+          {
+            code: "unreachable_node" as const,
+            nodeId: node.id,
+            message: `Node ${node.label} is not reachable from Start.`,
+          },
+        ],
   )
 }
 

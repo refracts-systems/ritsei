@@ -57,7 +57,7 @@ export const makePostgresDatabase = (client: Sql): DatabaseService => {
     Effect.mapError((cause) =>
       cause instanceof DatabaseFailure
         ? cause
-        : new DatabaseFailure({ operation: "version-check", cause })
+        : new DatabaseFailure({ operation: "version-check", cause }),
     ),
   )
 
@@ -65,7 +65,7 @@ export const makePostgresDatabase = (client: Sql): DatabaseService => {
     query: (operation, operationName = "query") =>
       Effect.andThen(
         validate,
-        Effect.gen(function*() {
+        Effect.gen(function* () {
           const transaction = yield* CurrentDatabaseTransaction
           return yield* Effect.tryPromise({
             try: () =>
@@ -79,7 +79,7 @@ export const makePostgresDatabase = (client: Sql): DatabaseService => {
     transaction: (operation, operationName = "transaction") =>
       Effect.andThen(
         validate,
-        Effect.gen(function*() {
+        Effect.gen(function* () {
           const transaction = yield* CurrentDatabaseTransaction
           return yield* Effect.tryPromise({
             try: () =>
@@ -91,7 +91,7 @@ export const makePostgresDatabase = (client: Sql): DatabaseService => {
     withTransaction: <A, E, R>(operation: Effect.Effect<A, E, R>, operationName = "transaction") =>
       Effect.andThen(
         validate,
-        Effect.gen(function*() {
+        Effect.gen(function* () {
           const current = yield* CurrentDatabaseTransaction
           if (current !== undefined) return yield* operation
 
@@ -115,9 +115,9 @@ export const makePostgresDatabase = (client: Sql): DatabaseService => {
               cause instanceof TransactionEffectFailure
                 ? { _tag: "effect-failure" as const, error: cause.failure as E }
                 : {
-                  _tag: "database-failure" as const,
-                  error: new DatabaseFailure({ operation: operationName, cause }),
-                },
+                    _tag: "database-failure" as const,
+                    error: new DatabaseFailure({ operation: operationName, cause }),
+                  },
           }).pipe(Effect.result)
 
           if (Result.isFailure(outcome)) return yield* Effect.fail(outcome.failure.error)

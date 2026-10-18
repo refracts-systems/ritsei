@@ -22,45 +22,54 @@ export type ModuleImport = {
 }
 
 const namedBindingsAreTypeOnly = (bindings: ts.NamedImportBindings | undefined) =>
-  bindings !== undefined && ts.isNamedImports(bindings) && bindings.elements.length > 0
-  && bindings.elements.every((element) => element.isTypeOnly)
+  bindings !== undefined &&
+  ts.isNamedImports(bindings) &&
+  bindings.elements.length > 0 &&
+  bindings.elements.every((element) => element.isTypeOnly)
 
 const namedExportsAreTypeOnly = (clause: ts.NamedExports | undefined) =>
-  clause !== undefined && clause.elements.length > 0
-  && clause.elements.every((element) => element.isTypeOnly)
+  clause !== undefined &&
+  clause.elements.length > 0 &&
+  clause.elements.every((element) => element.isTypeOnly)
 
 export const extractModuleImports = (file: SourceFile): readonly ModuleImport[] => {
   const imports: ModuleImport[] = []
   const source = ts.createSourceFile(file.path, file.source, ts.ScriptTarget.Latest, true)
   const visit = (node: ts.Node): void => {
     if (
-      ts.isImportDeclaration(node) && node.moduleSpecifier
-      && ts.isStringLiteral(node.moduleSpecifier)
+      ts.isImportDeclaration(node) &&
+      node.moduleSpecifier &&
+      ts.isStringLiteral(node.moduleSpecifier)
     ) {
       imports.push({
         specifier: node.moduleSpecifier.text,
-        typeOnly: node.importClause?.isTypeOnly === true
-          || namedBindingsAreTypeOnly(node.importClause?.namedBindings),
+        typeOnly:
+          node.importClause?.isTypeOnly === true ||
+          namedBindingsAreTypeOnly(node.importClause?.namedBindings),
       })
     } else if (
-      ts.isExportDeclaration(node) && node.moduleSpecifier
-      && ts.isStringLiteral(node.moduleSpecifier)
+      ts.isExportDeclaration(node) &&
+      node.moduleSpecifier &&
+      ts.isStringLiteral(node.moduleSpecifier)
     ) {
       imports.push({
         specifier: node.moduleSpecifier.text,
-        typeOnly: node.isTypeOnly
-          || (node.exportClause !== undefined && ts.isNamedExports(node.exportClause)
-            && namedExportsAreTypeOnly(node.exportClause)),
+        typeOnly:
+          node.isTypeOnly ||
+          (node.exportClause !== undefined &&
+            ts.isNamedExports(node.exportClause) &&
+            namedExportsAreTypeOnly(node.exportClause)),
       })
     } else if (ts.isImportTypeNode(node)) {
       if (ts.isLiteralTypeNode(node.argument) && ts.isStringLiteral(node.argument.literal)) {
         imports.push({ specifier: node.argument.literal.text, typeOnly: true })
       }
     } else if (
-      ts.isCallExpression(node)
-      && (node.expression.kind === ts.SyntaxKind.ImportKeyword
-        || (ts.isIdentifier(node.expression) && node.expression.text === "require"))
-      && node.arguments[0] && ts.isStringLiteral(node.arguments[0])
+      ts.isCallExpression(node) &&
+      (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+        (ts.isIdentifier(node.expression) && node.expression.text === "require")) &&
+      node.arguments[0] &&
+      ts.isStringLiteral(node.arguments[0])
     ) {
       imports.push({ specifier: node.arguments[0].text, typeOnly: false })
     }
@@ -71,9 +80,10 @@ export const extractModuleImports = (file: SourceFile): readonly ModuleImport[] 
 }
 
 export const extractModuleSpecifiers = (file: SourceFile | string): readonly string[] => {
-  const imports = typeof file === "string"
-    ? extractModuleImports({ path: "module.ts", source: file })
-    : extractModuleImports(file)
+  const imports =
+    typeof file === "string"
+      ? extractModuleImports({ path: "module.ts", source: file })
+      : extractModuleImports(file)
   return [...new Set(imports.map(({ specifier }) => specifier))]
 }
 
@@ -88,9 +98,7 @@ const resolveLocal = (file: string, specifier: string): string | undefined => {
     return `apps/web/src/${specifier.slice(2)}`
   }
   if (!specifier.startsWith(".")) return undefined
-  return decodeURIComponent(
-    new URL(specifier, `file:///${normalizePath(file)}`).pathname.slice(1),
-  )
+  return decodeURIComponent(new URL(specifier, `file:///${normalizePath(file)}`).pathname.slice(1))
 }
 
 const packageTarget = (file: string, specifier: string) => {
@@ -123,9 +131,9 @@ export const analyzePublicPackageImports = (
       }
       if (sourcePackage === target.name || isPublicEntry(target.path)) continue
       failures.push(
-        `${path}: cross-package import ${
-          JSON.stringify(specifier)
-        } must use modules/${target.name}/mod.ts`,
+        `${path}: cross-package import ${JSON.stringify(
+          specifier,
+        )} must use modules/${target.name}/mod.ts`,
       )
     }
   }
@@ -141,11 +149,13 @@ const forbiddenUiBarrelPath = /^apps\/web\/src\/ui\/(?:index|recipes\/index)\.ts
 
 const isFrontendSource = (path: string) => {
   const normalized = normalizePath(path)
-  return normalized.startsWith("apps/web/src/")
-    && !normalized.startsWith("apps/web/src/experiments/solid-effect/")
-    && !/(?:^|\/)(?:__tests__|__fixtures__)\//.test(normalized)
-    && !/\.config\.[cm]?[jt]sx?$/.test(normalized)
-    && !/\.(?:test|spec)\.[jt]sx?$/.test(normalized)
+  return (
+    normalized.startsWith("apps/web/src/") &&
+    !normalized.startsWith("apps/web/src/experiments/solid-effect/") &&
+    !/(?:^|\/)(?:__tests__|__fixtures__)\//.test(normalized) &&
+    !/\.config\.[cm]?[jt]sx?$/.test(normalized) &&
+    !/\.(?:test|spec)\.[jt]sx?$/.test(normalized)
+  )
 }
 
 const analyzeFrontendSource = (file: SourceFile): readonly string[] => {
@@ -157,16 +167,19 @@ const analyzeFrontendSource = (file: SourceFile): readonly string[] => {
       return [`${path}: import a specific RITSEI UI module instead of a UI barrel: ${target}`]
     }
     if (
-      !inUi
-      && (rendererSpecifier.test(specifier) || target?.startsWith("apps/web/src/ui/generated/")
-        || target?.startsWith("vendor/"))
+      !inUi &&
+      (rendererSpecifier.test(specifier) ||
+        target?.startsWith("apps/web/src/ui/generated/") ||
+        target?.startsWith("vendor/"))
     ) {
       return [`${path}: renderer and styling dependencies must stay under apps/web/src/ui`]
     }
     if (
-      inUi && target
-      && (uiApplicationPath.test(target) || uiSharedApplicationPath.test(target)
-        || target.startsWith("modules/"))
+      inUi &&
+      target &&
+      (uiApplicationPath.test(target) ||
+        uiSharedApplicationPath.test(target) ||
+        target.startsWith("modules/"))
     ) {
       return [`${path}: shared UI cannot import application or domain-specific modules: ${target}`]
     }
@@ -219,26 +232,29 @@ const directMutationMethod = new Set([
 const isProviderImport = (specifier: string) =>
   providerSpecifiers.some((pattern) => pattern.test(specifier))
 const isPersistenceBoundary = (path: string) =>
-  path === "modules/integrations/src/reliability-store.ts"
-  || path === "modules/integrations/src/governance-store.ts"
+  path === "modules/integrations/src/reliability-store.ts" ||
+  path === "modules/integrations/src/governance-store.ts"
 const isAiSurface = (path: string) =>
-  path.startsWith("modules/integrations/")
-  || /(?:^|\/)(?:ai|agent|agents|recommendation|recommendations)(?:\/|[-_.]|$)/i.test(path)
+  path.startsWith("modules/integrations/") ||
+  /(?:^|\/)(?:ai|agent|agents|recommendation|recommendations)(?:\/|[-_.]|$)/i.test(path)
 
 const isPrivateSpecifier = (specifier: string) =>
-  privateSpecifier.test(specifier) || privatePackageSource.test(specifier)
-  || databaseSpecifier.test(specifier)
+  privateSpecifier.test(specifier) ||
+  privatePackageSource.test(specifier) ||
+  databaseSpecifier.test(specifier)
 
 const hasDirectMutation = (source: string, path: string) => {
   const file = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true)
   let found = false
   const visit = (node: ts.Node): void => {
     if (
-      ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)
-      && ts.isIdentifier(node.expression.expression)
-      && directMutationObject.has(node.expression.expression.text)
-      && directMutationMethod.has(node.expression.name.text)
-    ) found = true
+      ts.isCallExpression(node) &&
+      ts.isPropertyAccessExpression(node.expression) &&
+      ts.isIdentifier(node.expression.expression) &&
+      directMutationObject.has(node.expression.expression.text) &&
+      directMutationMethod.has(node.expression.name.text)
+    )
+      found = true
     if (!found) ts.forEachChild(node, visit)
   }
   visit(file)
@@ -255,8 +271,9 @@ export const analyzeAiBoundary = (files: readonly SourceFile[]): readonly string
 
     if (isPersistenceBoundary(path)) {
       failures.push(
-        ...providerImports.map((specifier) =>
-          `${path}: persistence adapter cannot import provider SDK ${JSON.stringify(specifier)}`
+        ...providerImports.map(
+          (specifier) =>
+            `${path}: persistence adapter cannot import provider SDK ${JSON.stringify(specifier)}`,
         ),
       )
       continue
@@ -265,19 +282,23 @@ export const analyzeAiBoundary = (files: readonly SourceFile[]): readonly string
     const aiSurface = isAiSurface(path) || providerImports.length > 0
     if (!approved && providerImports.length > 0) {
       failures.push(
-        ...providerImports.map((specifier) =>
-          `${path}: model/provider import ${
-            JSON.stringify(specifier)
-          } must stay under modules/integrations/`
+        ...providerImports.map(
+          (specifier) =>
+            `${path}: model/provider import ${JSON.stringify(
+              specifier,
+            )} must stay under modules/integrations/`,
         ),
       )
     }
     if (!aiSurface) continue
 
     failures.push(
-      ...specifiers.filter(isPrivateSpecifier).map((specifier) =>
-        `${path}: AI/provider code cannot import private persistence ${JSON.stringify(specifier)}`
-      ),
+      ...specifiers
+        .filter(isPrivateSpecifier)
+        .map(
+          (specifier) =>
+            `${path}: AI/provider code cannot import private persistence ${JSON.stringify(specifier)}`,
+        ),
     )
     if (hasDirectMutation(file.source, path)) {
       failures.push(`${path}: AI/provider code cannot issue direct business-fact mutations`)
@@ -287,9 +308,9 @@ export const analyzeAiBoundary = (files: readonly SourceFile[]): readonly string
 }
 
 export const checkArchitecture = async (): Promise<readonly string[]> => {
-  const files = (await Promise.all(
-    sourceRoots.map((root) => collectSourceFiles(root, [".ts", ".tsx"])),
-  )).flat()
+  const files = (
+    await Promise.all(sourceRoots.map((root) => collectSourceFiles(root, [".ts", ".tsx"])))
+  ).flat()
   const packageNames: string[] = []
   for (const entry of await readdir("modules", { withFileTypes: true })) {
     if (!entry.isDirectory()) continue

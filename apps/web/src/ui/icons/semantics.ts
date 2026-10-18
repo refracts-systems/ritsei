@@ -1,11 +1,4 @@
-const iconSizes = [
-  "xs",
-  "sm",
-  "md",
-  "lg",
-  "xl",
-  "display",
-] as const
+const iconSizes = ["xs", "sm", "md", "lg", "xl", "display"] as const
 
 export type IconSize = (typeof iconSizes)[number]
 

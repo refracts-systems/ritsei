@@ -138,10 +138,7 @@ it("generates deterministic browser-only contracts and canonical endpoint paths"
   assert.notInclude(source(), "runtime/")
   assert.equal(
     readFileSync(
-      new URL(
-        "../../apps/web/src/shared/contracts/generated/authorization.ts",
-        import.meta.url,
-      ),
+      new URL("../../apps/web/src/shared/contracts/generated/authorization.ts", import.meta.url),
       "utf8",
     ),
     authorizationSource(),
@@ -192,7 +189,7 @@ it("generates deterministic browser-only contracts and canonical endpoint paths"
     processSource(),
   )
   assert.notInclude(processSource(), "modules/")
-  assert.notInclude(processSource(), "from \"../../runtime/")
+  assert.notInclude(processSource(), 'from "../../runtime/')
   assert.deepEqual(authRoutes, {
     config: RitseiApi.groups.Authentication.endpoints.config.path,
     devLogin: RitseiApi.groups.Authentication.endpoints.devLogin.path,
@@ -306,7 +303,7 @@ it("generates deterministic browser-only contracts and canonical endpoint paths"
 it.effect("preserves canonical whitespace, Unicode and case validation in browser decoders", () =>
   // Fallow: this contract test intentionally iterates the complete canonical decoder matrix.
   // fallow-ignore-next-line complexity
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     for (const email of emails) {
       const input = { id, email, status: "active" }
       const account = yield* Effect.result(Schema.decodeUnknownEffect(UserAccount)(input))
@@ -322,18 +319,14 @@ it.effect("preserves canonical whitespace, Unicode and case validation in browse
       )
       assert.equal(create._tag === "Success", /\S/.test(email), JSON.stringify(email))
     }
-    for (
-      const [canonical, browser] of [
-        [UserAccount, BrowserUserAccount],
-        [UpdateUserAccountInput, BrowserUpdateUserAccountInput],
-      ] as const
-    ) {
-      for (
-        const input of [
-          ...unknownInputs,
-          ...emails.map((email) => ({ id, email, status: "active" })),
-        ]
-      ) {
+    for (const [canonical, browser] of [
+      [UserAccount, BrowserUserAccount],
+      [UpdateUserAccountInput, BrowserUpdateUserAccountInput],
+    ] as const) {
+      for (const input of [
+        ...unknownInputs,
+        ...emails.map((email) => ({ id, email, status: "active" })),
+      ]) {
         const expected = yield* Effect.result(Schema.decodeUnknownEffect(canonical)(input))
         const actual = yield* Effect.result(Schema.decodeUnknownEffect(browser)(input))
         assert.equal(actual._tag, expected._tag)
@@ -354,10 +347,11 @@ it.effect("preserves canonical whitespace, Unicode and case validation in browse
         assert.deepEqual(actual.success, expected.success)
       }
     }
-  }))
+  }),
+)
 
 it.effect("preserves Party projection validation in browser decoders", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const party = {
       id,
       tenantId: "01900000-0000-7000-8000-000000000002",
@@ -374,13 +368,11 @@ it.effect("preserves Party projection validation in browser decoders", () =>
       relationships: [],
       representations: [],
     }
-    for (
-      const [canonical, browser, value] of [
-        [Party, BrowserParty, party],
-        [PartyDirectoryEntry, BrowserPartyDirectoryEntry, directory],
-        [PartyDetail, BrowserPartyDetail, detail],
-      ] as const
-    ) {
+    for (const [canonical, browser, value] of [
+      [Party, BrowserParty, party],
+      [PartyDirectoryEntry, BrowserPartyDirectoryEntry, directory],
+      [PartyDetail, BrowserPartyDetail, detail],
+    ] as const) {
       assert.deepEqual(
         yield* Schema.decodeUnknownEffect(browser)(value),
         yield* Schema.decodeUnknownEffect(canonical)(value),
@@ -402,10 +394,11 @@ it.effect("preserves Party projection validation in browser decoders", () =>
         }),
       ))._tag === "Failure",
     )
-  }))
+  }),
+)
 
 it.effect("preserves Inventory projection validation and tenant-shaped values", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const tenantId = "01900000-0000-7000-8000-000000000002"
     const warehouse = {
       id,
@@ -443,10 +436,11 @@ it.effect("preserves Inventory projection validation and tenant-shaped values", 
         Schema.decodeUnknownEffect(BrowserInventoryStockBalance)({ ...balance, onHand: "02" }),
       ))._tag === "Failure",
     )
-  }))
+  }),
+)
 
 it.effect("preserves Sales projection validation and tenant-shaped values", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const tenantId = "01900000-0000-7000-8000-000000000002"
     const customer = { id, tenantId, name: "Sales Customer", email: "sales@example.test" }
     const order = {
@@ -457,11 +451,13 @@ it.effect("preserves Sales projection validation and tenant-shaped values", () =
       status: "draft" as const,
       confirmedAt: null,
       total: "10.00",
-      lines: [{
-        itemId: "01900000-0000-7000-8000-000000000005",
-        quantity: "1",
-        unitPrice: "10.00",
-      }],
+      lines: [
+        {
+          itemId: "01900000-0000-7000-8000-000000000005",
+          quantity: "1",
+          unitPrice: "10.00",
+        },
+      ],
     }
     assert.deepStrictEqual(
       yield* Schema.decodeUnknownEffect(BrowserSalesCustomer)(customer),
@@ -473,10 +469,11 @@ it.effect("preserves Sales projection validation and tenant-shaped values", () =
         Schema.decodeUnknownEffect(BrowserSalesOrder)({ ...order, status: "unknown" }),
       ))._tag === "Failure",
     )
-  }))
+  }),
+)
 
 it.effect("preserves Accounting projection and exact-money validation", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const tenantId = "01900000-0000-7000-8000-000000000002"
     const legalEntityId = "01900000-0000-7000-8000-000000000003"
     const accountId = "01900000-0000-7000-8000-000000000004"
@@ -531,10 +528,11 @@ it.effect("preserves Accounting projection and exact-money validation", () =>
         }),
       ))._tag === "Failure",
     )
-  }))
+  }),
+)
 
 it.effect("preserves Authorization membership, grant, and catalog validation", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const tenantId = "01900000-0000-7000-8000-000000000002"
     const membership = { userAccountId: id, tenantId, status: "active" }
     const grant = {
@@ -543,12 +541,10 @@ it.effect("preserves Authorization membership, grant, and catalog validation", (
       capability: "authorization.tenant_membership.read",
       scope: "tenant",
     }
-    for (
-      const [canonical, browser, value] of [
-        [TenantMembership, BrowserTenantMembership, membership],
-        [DirectCapabilityGrant, BrowserDirectCapabilityGrant, grant],
-      ] as const
-    ) {
+    for (const [canonical, browser, value] of [
+      [TenantMembership, BrowserTenantMembership, membership],
+      [DirectCapabilityGrant, BrowserDirectCapabilityGrant, grant],
+    ] as const) {
       assert.deepEqual(
         yield* Schema.decodeUnknownEffect(browser)(value),
         yield* Schema.decodeUnknownEffect(canonical)(value),
@@ -580,10 +576,11 @@ it.effect("preserves Authorization membership, grant, and catalog validation", (
       }),
       { userAccountId: id, capability: grant.capability },
     )
-  }))
+  }),
+)
 
 it.effect("generates the canonical HTTP error wire union without backend error classes", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const canonical = Schema.Union([
       ApiUnauthorized,
       ApiForbidden,
@@ -591,18 +588,16 @@ it.effect("generates the canonical HTTP error wire union without backend error c
       ApiConflict,
       ApiServiceUnavailable,
     ])
-    for (
-      const input of [
-        { _tag: "ApiUnauthorized", code: "unauthorized" },
-        { _tag: "ApiForbidden", code: "forbidden" },
-        { _tag: "ApiNotFound", code: "user_account_not_found" },
-        { _tag: "ApiConflict", code: "user_account_already_exists" },
-        { _tag: "ApiServiceUnavailable", code: "service_unavailable" },
-        { _tag: "ApiUnauthorized", code: "wrong" },
-        { _tag: "Unknown", code: "unknown" },
-        ...unknownInputs,
-      ]
-    ) {
+    for (const input of [
+      { _tag: "ApiUnauthorized", code: "unauthorized" },
+      { _tag: "ApiForbidden", code: "forbidden" },
+      { _tag: "ApiNotFound", code: "user_account_not_found" },
+      { _tag: "ApiConflict", code: "user_account_already_exists" },
+      { _tag: "ApiServiceUnavailable", code: "service_unavailable" },
+      { _tag: "ApiUnauthorized", code: "wrong" },
+      { _tag: "Unknown", code: "unknown" },
+      ...unknownInputs,
+    ]) {
       const expected = yield* Effect.result(Schema.decodeUnknownEffect(canonical)(input))
       const actual = yield* Effect.result(Schema.decodeUnknownEffect(ApiError)(input))
       assert.equal(actual._tag, expected._tag)
@@ -611,4 +606,5 @@ it.effect("generates the canonical HTTP error wire union without backend error c
         assert.equal(actual.success.code, expected.success.code)
       }
     }
-  }))
+  }),
+)

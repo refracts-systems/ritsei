@@ -54,7 +54,7 @@ const optionalText = (value: FormValue[string]): string | undefined => {
   return text === null ? undefined : text
 }
 
-const labelForKind = (kind: PartyKind): string => kind === "person" ? "Person" : "Organization"
+const labelForKind = (kind: PartyKind): string => (kind === "person" ? "Person" : "Organization")
 const labelForRole = (role: PartyRole): string => role.charAt(0).toUpperCase() + role.slice(1)
 
 type PartyDirectoryAccessor = () => readonly PartyDirectoryEntry[]
@@ -151,14 +151,16 @@ function CreatePartyDialog(props: { reload: () => Promise<unknown> }) {
           label="Name"
           required
           helperText="Use the name by which operators identify this Party."
-          error={invalid() || mutation.error?.kind === "validation"
-            ? "Enter a nonblank name."
-            : undefined}
+          error={
+            invalid() || mutation.error?.kind === "validation"
+              ? "Enter a nonblank name."
+              : undefined
+          }
         >
           {(fieldProps) => (
             <Input
               {...fieldProps}
-              ref={(element) => nameInput = element}
+              ref={(element) => (nameInput = element)}
               name="name"
               autocomplete="off"
               required
@@ -221,31 +223,29 @@ function PartyFilters(props: { search?: string; kind?: PartyKind }) {
           />
         )}
       </FormField>
-      <Button variant="primary" type="submit">Apply filters</Button>
+      <Button variant="primary" type="submit">
+        Apply filters
+      </Button>
       <a href="/parties">Clear filters</a>
     </Form>
   )
 }
 
-function PartyTable(props: {
-  parties: readonly PartyDirectoryEntry[]
-  selectedPartyId?: string
-}) {
+function PartyTable(props: { parties: readonly PartyDirectoryEntry[]; selectedPartyId?: string }) {
   return (
     <DataTable
       surface={false}
       caption="Party directory · maximum 200 records"
       rows={props.parties}
       getRowClass={(entry) =>
-        entry.party.id === props.selectedPartyId ? layout.tableRowSelected : undefined}
+        entry.party.id === props.selectedPartyId ? layout.tableRowSelected : undefined
+      }
       columns={[
         {
           id: "name",
           header: "Name",
           cell: (entry) => (
-            <a href={`/parties/${encodeURIComponent(entry.party.id)}`}>
-              {entry.party.name}
-            </a>
+            <a href={`/parties/${encodeURIComponent(entry.party.id)}`}>{entry.party.name}</a>
           ),
         },
         { id: "kind", header: "Kind", cell: (entry) => labelForKind(entry.party.kind) },
@@ -253,9 +253,11 @@ function PartyTable(props: {
           id: "legalEntity",
           header: "Legal context",
           cell: (entry) =>
-            entry.legalEntityId === null
-              ? <span class={layout.muted}>Not registered</span>
-              : <Badge tone="success">Legal entity</Badge>,
+            entry.legalEntityId === null ? (
+              <span class={layout.muted}>Not registered</span>
+            ) : (
+              <Badge tone="success">Legal entity</Badge>
+            ),
         },
         {
           id: "action",
@@ -314,10 +316,7 @@ function CreateLegalEntityCommand(props: {
   )
 }
 
-function AssignRoleCommand(props: {
-  detail: PartyDetailValue
-  reload: () => Promise<unknown>
-}) {
+function AssignRoleCommand(props: { detail: PartyDetailValue; reload: () => Promise<unknown> }) {
   const scope = useContext(ApiRuntime)
   const mutation = assignPartyRoleMutation(scope)
   const options = () =>
@@ -397,8 +396,10 @@ function AttachIdentifierCommand(props: {
             const scopeValue = requiredText(value.scope)
             const identifierValue = requiredText(value.value)
             if (
-              provider === null || scheme === null || scopeValue === null
-              || identifierValue === null
+              provider === null ||
+              scheme === null ||
+              scopeValue === null ||
+              identifierValue === null
             ) {
               setInvalid(true)
               return
@@ -438,10 +439,14 @@ function AttachIdentifierCommand(props: {
               name="legalEntityId"
               placeholder="Tenant-wide"
               options={props.legalEntities().flatMap((entry) =>
-                entry.legalEntityId === null ? [] : [{
-                  value: entry.legalEntityId,
-                  label: entry.party.name,
-                }]
+                entry.legalEntityId === null
+                  ? []
+                  : [
+                      {
+                        value: entry.legalEntityId,
+                        label: entry.party.name,
+                      },
+                    ],
               )}
             />
           )}
@@ -490,9 +495,10 @@ function CreateRelationshipCommand(props: {
                 const legalEntityId = requiredText(value.legalEntityId)
                 const kind = value.kind
                 if (
-                  legalEntityId === null
-                  || !eligibleKinds().some((option) => option.value === kind)
-                ) return
+                  legalEntityId === null ||
+                  !eligibleKinds().some((option) => option.value === kind)
+                )
+                  return
                 mutation.mutate({
                   partyId: props.detail.party.id,
                   legalEntityId,
@@ -535,10 +541,7 @@ function CreateRelationshipCommand(props: {
   )
 }
 
-function CreateBranchCommand(props: {
-  detail: PartyDetailValue
-  reload: () => Promise<unknown>
-}) {
+function CreateBranchCommand(props: { detail: PartyDetailValue; reload: () => Promise<unknown> }) {
   const scope = useContext(ApiRuntime)
   const mutation = createBranchMutation(scope)
   const [invalid, setInvalid] = createSignal(false)
@@ -647,9 +650,11 @@ function CreateRepresentationCommand(props: {
           label="User account ID"
           required
           helperText="Copy the UUID from User accounts."
-          error={invalid() || mutation.error?.kind === "validation"
-            ? "Enter a valid user-account UUID and representation kind."
-            : undefined}
+          error={
+            invalid() || mutation.error?.kind === "validation"
+              ? "Enter a valid user-account UUID and representation kind."
+              : undefined
+          }
         >
           {(fieldProps) => <Input {...fieldProps} name="userAccountId" required />}
         </FormField>
@@ -670,10 +675,7 @@ function CreateRepresentationCommand(props: {
   )
 }
 
-function RepresentationTable(props: {
-  detail: PartyDetailValue
-  reload: () => Promise<unknown>
-}) {
+function RepresentationTable(props: { detail: PartyDetailValue; reload: () => Promise<unknown> }) {
   const scope = useContext(ApiRuntime)
   const mutation = setPartyRepresentationActiveMutation(scope)
   return (
@@ -721,7 +723,8 @@ function RepresentationTable(props: {
                     mutation.mutate({
                       representationId: representation.id,
                       active: !representation.active,
-                    })}
+                    })
+                  }
                 >
                   {representation.active ? "Deactivate" : "Activate"}
                 </Button>
@@ -742,10 +745,7 @@ function RepresentationTable(props: {
   )
 }
 
-function RelatedPaths(props: {
-  partyId: string
-  legalEntities: PartyDirectoryAccessor
-}) {
+function RelatedPaths(props: { partyId: string; legalEntities: PartyDirectoryAccessor }) {
   const scope = useContext(ApiRuntime)
   const query = createRelatedPartyPathsQuery(scope, props.partyId, { limit: 100 })
   const nameForParty = (partyId: string) =>
@@ -754,7 +754,9 @@ function RelatedPaths(props: {
     <section class={[surface(), layout.stack]} aria-labelledby="related-paths-heading">
       <div class={layout.row}>
         <h3 id="related-paths-heading">Related-party paths</h3>
-        <Button type="button" onClick={() => void query.refetch()}>Reload paths</Button>
+        <Button type="button" onClick={() => void query.refetch()}>
+          Reload paths
+        </Button>
       </div>
       <p class={layout.muted}>Bounded two-edge analysis; never authorization evidence.</p>
       <QueryBoundary label="related paths" retry={() => query.refetch()}>
@@ -766,9 +768,8 @@ function RelatedPaths(props: {
             <For each={query.data}>
               {(path) => (
                 <li>
-                  {labelForRole(path.relationshipKind)} relationship to {nameForParty(
-                    path.targetPartyId,
-                  )}
+                  {labelForRole(path.relationshipKind)} relationship to{" "}
+                  {nameForParty(path.targetPartyId)}
                 </li>
               )}
             </For>
@@ -785,8 +786,8 @@ function PartyFacts(props: {
   reload: () => Promise<unknown>
 }) {
   const nameForLegalEntity = (legalEntityId: string) =>
-    props.legalEntities().find((entry) => entry.legalEntityId === legalEntityId)?.party.name
-      ?? legalEntityId
+    props.legalEntities().find((entry) => entry.legalEntityId === legalEntityId)?.party.name ??
+    legalEntityId
   return (
     <div class={layout.stack}>
       <dl class={layout.detailList}>
@@ -808,9 +809,7 @@ function PartyFacts(props: {
         <h3 id="roles-heading">Business roles</h3>
         <Show when={props.detail.roles.length > 0} fallback={<p>No roles assigned.</p>}>
           <div class={layout.row}>
-            <For each={props.detail.roles}>
-              {(role) => <Badge>{labelForRole(role)}</Badge>}
-            </For>
+            <For each={props.detail.roles}>{(role) => <Badge>{labelForRole(role)}</Badge>}</For>
           </div>
         </Show>
         <p class={layout.muted}>The public contract does not permit role removal.</p>
@@ -950,7 +949,9 @@ function PartyDetail(props: { id: string }) {
     <section class={layout.stack} aria-labelledby="party-detail-heading">
       <div class={layout.row}>
         <h2 id="party-detail-heading">Party detail</h2>
-        <Button type="button" onClick={() => void query.refetch()}>Reload detail</Button>
+        <Button type="button" onClick={() => void query.refetch()}>
+          Reload detail
+        </Button>
       </div>
       <QueryBoundary label="Party detail" retry={() => query.refetch()}>
         <Show when={query.data} keyed>
@@ -974,11 +975,7 @@ function PartyDetail(props: { id: string }) {
   )
 }
 
-export function Parties(props: {
-  selectedPartyId?: string
-  search?: string
-  kind?: PartyKind
-}) {
+export function Parties(props: { selectedPartyId?: string; search?: string; kind?: PartyKind }) {
   const scope = useContext(ApiRuntime)
   const input: ListPartiesInput = {
     ...(props.search === undefined ? {} : { search: props.search }),
@@ -998,7 +995,9 @@ export function Parties(props: {
       headerActions={
         <div class={layout.row}>
           <CreatePartyDialog reload={() => query.refetch()} />
-          <Button type="button" onClick={() => void query.refetch()}>Reload Parties</Button>
+          <Button type="button" onClick={() => void query.refetch()}>
+            Reload Parties
+          </Button>
         </div>
       }
       toolbar={<PartyFilters search={props.search} kind={props.kind} />}

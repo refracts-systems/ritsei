@@ -40,19 +40,21 @@ const withUserAccount = <A, E>(program: Effect.Effect<A, E, UserAccountService>)
 
 describe("user account contract", () => {
   it.effect("authorizes tenant account creation and publishes its owner event", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const published: EventEnvelopeShape[] = []
       const service = yield* Effect.provide(
         makeUserAccountServiceFromStore(Effect.succeed(makeUserAccountMemoryStore())),
         Layer.mergeAll(
           Layer.succeed(IdentityAccountAuthorizer, {
             authorize: ({ tenantId }) =>
-              tenantId === identityTenantId ? Effect.void : Effect.fail(
-                new IdentityAuthorizationDenied({
-                  tenantId,
-                  capability: "identity.user_account.create",
-                }),
-              ),
+              tenantId === identityTenantId
+                ? Effect.void
+                : Effect.fail(
+                    new IdentityAuthorizationDenied({
+                      tenantId,
+                      capability: "identity.user_account.create",
+                    }),
+                  ),
           }),
           Layer.succeed(IdentityEventPublisher, {
             append: (input) => {
@@ -88,20 +90,23 @@ describe("user account contract", () => {
         email: created.email,
       })
 
-      const denied = yield* Effect.flip(service.createForTenant({
-        principal,
-        tenantId: identityDeniedTenantId,
-        email: "denied@example.com",
-      }))
+      const denied = yield* Effect.flip(
+        service.createForTenant({
+          principal,
+          tenantId: identityDeniedTenantId,
+          email: "denied@example.com",
+        }),
+      )
       assert.instanceOf(denied, IdentityAuthorizationDenied)
       assert.strictEqual((yield* service.list()).length, 1)
-    }))
+    }),
+  )
 
   it.effect("creates a normalized user account", () =>
     withUserAccount(
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const userAccount = yield* UserAccountService.use((service) =>
-          service.create({ email: "  USER@Example.COM " })
+          service.create({ email: "  USER@Example.COM " }),
         )
 
         assert.strictEqual(userAccount.email, "user@example.com")
@@ -120,11 +125,12 @@ describe("user account contract", () => {
         )
         assert.strictEqual(userAccount.status, "active")
       }),
-    ))
+    ),
+  )
 
   it.effect("binds and resolves an issuer-scoped external subject", () =>
     withUserAccount(
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const service = yield* UserAccountService
         const account = yield* service.create({ email: "external@example.com" })
         const subject = { issuer: "https://issuer.example.test", subject: "subject-1" }
@@ -147,13 +153,14 @@ describe("user account contract", () => {
           ExternalSubjectNotFound,
         )
       }),
-    ))
+    ),
+  )
 
   it.effect("rejects duplicate email", () =>
     withUserAccount(
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const create = UserAccountService.use((service) =>
-          service.create({ email: "duplicate@example.com" })
+          service.create({ email: "duplicate@example.com" }),
         )
         yield* create
         const error = yield* Effect.flip(create)
@@ -161,11 +168,12 @@ describe("user account contract", () => {
         assert.instanceOf(error, UserAccountAlreadyExists)
         assert.strictEqual(error.email, "duplicate@example.com")
       }),
-    ))
+    ),
+  )
 
   it.effect("lists, updates, and removes user accounts", () =>
     withUserAccount(
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const service = yield* UserAccountService
         const created = yield* service.create({ email: "before@example.com" })
         assert.strictEqual((yield* service.getById(created.id)).id, created.id)
@@ -177,11 +185,12 @@ describe("user account contract", () => {
         yield* service.remove(created.id)
         assert.instanceOf(yield* Effect.flip(service.getById(created.id)), UserAccountNotFound)
       }),
-    ))
+    ),
+  )
 
   it.effect("rejects duplicate and missing updates", () =>
     withUserAccount(
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const service = yield* UserAccountService
         const invalidId = yield* Effect.flip(
           Schema.decodeUnknownEffect(UpdateUserAccountInput)({
@@ -198,10 +207,12 @@ describe("user account contract", () => {
           UserAccountAlreadyExists,
         )
         assert.instanceOf(
-          yield* Effect.flip(service.update({
-            id: missingUserAccountId,
-            email: "missing@example.com",
-          })),
+          yield* Effect.flip(
+            service.update({
+              id: missingUserAccountId,
+              email: "missing@example.com",
+            }),
+          ),
           UserAccountNotFound,
         )
         assert.instanceOf(
@@ -211,7 +222,8 @@ describe("user account contract", () => {
         const invalidLifecycleId = yield* Effect.flip(service.remove("not-a-uuid"))
         assert.strictEqual(invalidLifecycleId._tag, "SchemaError")
       }),
-    ))
+    ),
+  )
 
   it.effect("propagates non-constraint database failures", () => {
     const databaseFailure = new DatabaseFailure({
@@ -228,17 +240,19 @@ describe("user account contract", () => {
     }
 
     return Effect.provide(
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const service = yield* makeUserAccountService
         assert.instanceOf(
           yield* Effect.flip(service.create({ email: "failure@example.com" })),
           DatabaseFailure,
         )
         assert.instanceOf(
-          yield* Effect.flip(service.update({
-            id: missingUserAccountId,
-            email: "failure@example.com",
-          })),
+          yield* Effect.flip(
+            service.update({
+              id: missingUserAccountId,
+              email: "failure@example.com",
+            }),
+          ),
           DatabaseFailure,
         )
       }),
@@ -248,13 +262,10 @@ describe("user account contract", () => {
 
   it.effect("disables and enables authentication state", () =>
     withUserAccount(
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const service = yield* UserAccountService
         const created = yield* service.create({ email: "status@example.com" })
-        assert.strictEqual(
-          (yield* service.getAuthenticationState(created.id)).status,
-          "active",
-        )
+        assert.strictEqual((yield* service.getAuthenticationState(created.id)).status, "active")
         const disabled = yield* service.disable(created.id)
         assert.strictEqual(disabled.status, "disabled")
         const disabledState = yield* service.getAuthenticationState(created.id)
@@ -262,23 +273,20 @@ describe("user account contract", () => {
         assert.strictEqual(disabledState.status, "disabled")
         assert.ok(disabledState.sessionInvalidatedAt !== null)
         assert.strictEqual((yield* service.enable(created.id)).status, "active")
-        assert.strictEqual(
-          (yield* service.getAuthenticationState(created.id)).status,
-          "active",
-        )
+        assert.strictEqual((yield* service.getAuthenticationState(created.id)).status, "active")
       }),
-    ))
+    ),
+  )
 
   it.effect("reads multiple accounts and rejects missing lifecycle records", () =>
     withUserAccount(
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const service = yield* UserAccountService
         const created = yield* service.create({ email: "many@example.com" })
         assert.deepStrictEqual(yield* service.getByIds([]), [])
-        assert.deepStrictEqual(
-          yield* service.getByIds([created.id, missingUserAccountId]),
-          [created],
-        )
+        assert.deepStrictEqual(yield* service.getByIds([created.id, missingUserAccountId]), [
+          created,
+        ])
         assert.instanceOf(
           yield* Effect.flip(service.getAuthenticationState(missingUserAccountId)),
           UserAccountNotFound,
@@ -292,11 +300,12 @@ describe("user account contract", () => {
           UserAccountNotFound,
         )
       }),
-    ))
+    ),
+  )
 
   it.effect("rejects invalid input", () =>
     withUserAccount(
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const error = yield* Effect.flip(
           UserAccountService.use((service) => service.create({ email: 42 })),
         )
@@ -304,5 +313,6 @@ describe("user account contract", () => {
         assert.instanceOf(error, Error)
         assert.match(error.message, /email/)
       }),
-    ))
+    ),
+  )
 })

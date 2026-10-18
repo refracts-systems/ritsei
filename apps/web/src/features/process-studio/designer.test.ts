@@ -74,9 +74,7 @@ describe("Process Designer", () => {
       _tag: "add_node",
       kind: "WaitForEvent",
     })
-    assert.isTrue(
-      validateDesignerModel(wait).some((issue) => issue.code === "missing_capability"),
-    )
+    assert.isTrue(validateDesignerModel(wait).some((issue) => issue.code === "missing_capability"))
     const configuredWait = setNodeCapability(wait, "node-1", {
       kind: "DomainEvent",
       id: "sales.order.confirmed",
@@ -92,10 +90,7 @@ describe("Process Designer", () => {
       applyDesignerAction(initial, { _tag: "add_node", kind: "Start" }),
       initial,
     )
-    assert.deepStrictEqual(
-      applyDesignerAction(initial, { _tag: "add_node", kind: "End" }),
-      initial,
-    )
+    assert.deepStrictEqual(applyDesignerAction(initial, { _tag: "add_node", kind: "End" }), initial)
   })
 
   it("moves dragged nodes to the selected target", () => {
@@ -109,13 +104,10 @@ describe("Process Designer", () => {
       targetId: "node-3",
     })
 
-    assert.deepStrictEqual(moved.nodes.map((node) => node.id), [
-      "start",
-      "node-2",
-      "node-1",
-      "node-3",
-      "end",
-    ])
+    assert.deepStrictEqual(
+      moved.nodes.map((node) => node.id),
+      ["start", "node-2", "node-1", "node-3", "end"],
+    )
   })
 
   it("accepts a configured linear draft", () => {

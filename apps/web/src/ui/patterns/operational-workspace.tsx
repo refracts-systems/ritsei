@@ -22,10 +22,16 @@ export function OperationalWorkspace(props: OperationalWorkspaceProps) {
         </div>
         {props.actions}
       </header>
-      {props.status && <div role="status" class={surface()}>{props.status}</div>}
+      {props.status && (
+        <div role="status" class={surface()}>
+          {props.status}
+        </div>
+      )}
       <div class={layout.stack}>{props.children}</div>
       {props.secondary && (
-        <section class={surface()} aria-label="Additional information">{props.secondary}</section>
+        <section class={surface()} aria-label="Additional information">
+          {props.secondary}
+        </section>
       )}
     </section>
   )

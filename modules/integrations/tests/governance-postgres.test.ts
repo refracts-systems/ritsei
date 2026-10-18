@@ -47,12 +47,13 @@ it.effect.skipIf(databaseUrl === undefined)(
   "proves durable unreviewed operation rejection, connector version, retention, and audit",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         yield* runMigrations(client)
-        const [tenant] = yield* Effect.promise(() =>
-          client<{ id: string }[]>`
+        const [tenant] = yield* Effect.promise(
+          () =>
+            client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${"integration-governance-${occurredAt}"}) returning id
-          `
+          `,
         )
         const database = makePostgresDatabase(client)
         const store = yield* makePostgresExternalGovernanceStore.pipe(
@@ -66,9 +67,11 @@ it.effect.skipIf(databaseUrl === undefined)(
         assert.strictEqual(duplicateRegistration.duplicate, true)
         assert.strictEqual(duplicateRegistration.record.id, registered.record.id)
 
-        const unreviewed = yield* Effect.flip(store.transition(
-          transitionInput(tenant!.id, "activate", "connector-activate-before-review"),
-        ))
+        const unreviewed = yield* Effect.flip(
+          store.transition(
+            transitionInput(tenant!.id, "activate", "connector-activate-before-review"),
+          ),
+        )
         assert.instanceOf(unreviewed, ExternalConnectorNotReviewed)
 
         const reviewed = yield* store.transition(
@@ -115,20 +118,22 @@ it.effect.skipIf(databaseUrl === undefined)(
           transitionInput(tenant!.id, "retire", "connector-retire-1"),
         )
         assert.strictEqual(retired.record.status, "retired")
-        const retiredControl = yield* Effect.flip(store.recordDeliveryControl({
-          tenantId: tenant!.id,
-          connectorId: "midtrans",
-          version: 1,
-          actor: "operator-1",
-          idempotencyKey: "delivery-control-after-retirement",
-          reason: "retry a retired connector",
-          retentionUntil,
-          control: {
-            kind: "retry",
-            operationId: "payment-1",
-            reason: "provider recovered",
-          },
-        }))
+        const retiredControl = yield* Effect.flip(
+          store.recordDeliveryControl({
+            tenantId: tenant!.id,
+            connectorId: "midtrans",
+            version: 1,
+            actor: "operator-1",
+            idempotencyKey: "delivery-control-after-retirement",
+            reason: "retry a retired connector",
+            retentionUntil,
+            control: {
+              kind: "retry",
+              operationId: "payment-1",
+              reason: "provider recovered",
+            },
+          }),
+        )
         assert.instanceOf(retiredControl, ExternalConnectorRetired)
 
         const restartedStore = yield* makePostgresExternalGovernanceStore.pipe(
@@ -141,16 +146,22 @@ it.effect.skipIf(databaseUrl === undefined)(
 
         const audit = yield* restartedStore.listAudit(tenant!.id, "midtrans", 1)
         assert.strictEqual(audit.length, 5)
-        assert.deepStrictEqual(
-          audit.map((entry) => entry.action).toSorted(),
-          ["activated", "delivery_control", "registered", "retired", "reviewed"],
-        )
+        assert.deepStrictEqual(audit.map((entry) => entry.action).toSorted(), [
+          "activated",
+          "delivery_control",
+          "registered",
+          "retired",
+          "reviewed",
+        ])
         assert.isTrue(audit.every((entry) => entry.retentionUntil === retentionUntil))
 
-        const conflict = yield* Effect.flip(restartedStore.register({
-          ...registerInput(tenant!.id),
-          idempotencyKey: "connector-register-conflict",
-        }))
+        const conflict = yield* Effect.flip(
+          restartedStore.register({
+            ...registerInput(tenant!.id),
+            idempotencyKey: "connector-register-conflict",
+          }),
+        )
         assert.instanceOf(conflict, ExternalIdempotencyConflict)
-      })),
+      }),
+    ),
 )

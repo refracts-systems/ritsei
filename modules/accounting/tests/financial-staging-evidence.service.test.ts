@@ -53,51 +53,58 @@ const evidence = {
 }
 
 const layer = makeAccountingTestLayer().pipe(
-  Layer.provide(Layer.mergeAll(
-    makeAuthorizationTestLayer([
-      {
-        userAccountId: principal.userAccountId,
-        tenantId,
-        capability: AccountingCapabilities.legalEntityConfigure,
-      },
-      {
-        userAccountId: principal.userAccountId,
-        tenantId,
-        capability: AccountingCapabilities.financialEvidenceRecord,
-      },
-      {
-        userAccountId: principal.userAccountId,
-        tenantId,
-        capability: AccountingCapabilities.financialEvidenceRead,
-      },
-    ]),
-    makeMessagingTestLayer(),
-    Layer.succeed(SalesService, {} as SalesService),
-  )),
+  Layer.provide(
+    Layer.mergeAll(
+      makeAuthorizationTestLayer([
+        {
+          userAccountId: principal.userAccountId,
+          tenantId,
+          capability: AccountingCapabilities.legalEntityConfigure,
+        },
+        {
+          userAccountId: principal.userAccountId,
+          tenantId,
+          capability: AccountingCapabilities.financialEvidenceRecord,
+        },
+        {
+          userAccountId: principal.userAccountId,
+          tenantId,
+          capability: AccountingCapabilities.financialEvidenceRead,
+        },
+      ]),
+      makeMessagingTestLayer(),
+      Layer.succeed(SalesService, {} as SalesService),
+    ),
+  ),
 )
 
 const deniedLayer = makeAccountingTestLayer().pipe(
-  Layer.provide(Layer.mergeAll(
-    makeAuthorizationTestLayer([]),
-    makeMessagingTestLayer(),
-    Layer.succeed(SalesService, {} as SalesService),
-  )),
+  Layer.provide(
+    Layer.mergeAll(
+      makeAuthorizationTestLayer([]),
+      makeMessagingTestLayer(),
+      Layer.succeed(SalesService, {} as SalesService),
+    ),
+  ),
 )
 
 it.effect("denies staging evidence lookup without its read capability", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const accounting = yield* AccountingService
-    const denied = yield* Effect.flip(accounting.listFinancialStagingEvidence({
-      principal,
-      tenantId,
-      gateId: "projection_rebuild",
-      limit: 10,
-    }))
+    const denied = yield* Effect.flip(
+      accounting.listFinancialStagingEvidence({
+        principal,
+        tenantId,
+        gateId: "projection_rebuild",
+        limit: 10,
+      }),
+    )
     assert.instanceOf(denied, AuthorizationDenied)
-  }).pipe(Effect.provide(deniedLayer)))
+  }).pipe(Effect.provide(deniedLayer)),
+)
 
 it.effect("records staging evidence through the authorized Accounting contract", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const accounting = yield* AccountingService
     yield* accounting.configureLegalEntity({
       principal,
@@ -149,4 +156,5 @@ it.effect("records staging evidence through the authorized Accounting contract",
       (operatorFailure as FinancialStagingEvidenceInvalid).reason,
       "operator_mismatch",
     )
-  }).pipe(Effect.provide(layer)))
+  }).pipe(Effect.provide(layer)),
+)

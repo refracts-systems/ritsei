@@ -43,11 +43,7 @@ export const gates: readonly Gate[] = [
     source: "docs/roadmap/erp-primitives.md",
     kind: "markers",
     commands: [
-      task(
-        "test",
-        "modules/identity/tests/identity.test.ts",
-        "modules/party/tests/party.test.ts",
-      ),
+      task("test", "modules/identity/tests/identity.test.ts", "modules/party/tests/party.test.ts"),
     ],
     requirements: [
       marker(
@@ -272,14 +268,7 @@ export const gates: readonly Gate[] = [
       file("docs/decisions/0031-capability-naming-and-business-verb-conventions.md"),
     ],
   },
-  ...[
-    "identity",
-    "party",
-    "inventory",
-    "accounting",
-    "sales",
-    "procurement",
-  ].map((domain) => ({
+  ...["identity", "party", "inventory", "accounting", "sales", "procurement"].map((domain) => ({
     id: `domain.${domain}.level3`,
     title: `${domain} bounded Level 3 provider slice`,
     source: "tooling/domain-maturity/measure.ts",
@@ -515,12 +504,7 @@ export const gates: readonly Gate[] = [
       ),
     ],
     requirements: [
-      marker(
-        "modules/integrations/src/openapi.ts",
-        "OpenAPI 3.2.0",
-        "allowlist",
-        "ExternalAction",
-      ),
+      marker("modules/integrations/src/openapi.ts", "OpenAPI 3.2.0", "allowlist", "ExternalAction"),
       marker(
         "modules/integrations/src/cloudevents.ts",
         "CloudEvents 1.0.x",
@@ -739,11 +723,7 @@ export const gates: readonly Gate[] = [
     kind: "markers",
     dependencies: ["postgres19.minimum-version"],
     commands: [
-      task(
-        "test",
-        "modules/party/tests/party.test.ts",
-        "tests/architecture/postgresql-19.test.ts",
-      ),
+      task("test", "modules/party/tests/party.test.ts", "tests/architecture/postgresql-19.test.ts"),
     ],
     requirements: [
       marker(
@@ -751,13 +731,9 @@ export const gates: readonly Gate[] = [
         "CREATE VIEW",
         "party_relationships",
         "legal_entity_organization_edges",
-        "\"relationship\".\"active\"",
+        '"relationship"."active"',
       ),
-      marker(
-        "modules/party/src/contract.ts",
-        "RelatedPartyPath",
-        "FindRelatedPartyPathsInput",
-      ),
+      marker("modules/party/src/contract.ts", "RelatedPartyPath", "FindRelatedPartyPathsInput"),
       marker(
         "modules/party/src/postgres.ts",
         "party.related-party-paths.find",
@@ -798,9 +774,9 @@ export const gates: readonly Gate[] = [
       file("docs/operations/postgresql-19-evidence-2026-08-31.json"),
       marker(
         "docs/operations/postgresql-19-evidence-2026-08-31.json",
-        "\"productionEligible\": false",
-        "\"indexValidAfter\": true",
-        "\"checksum\":",
+        '"productionEligible": false',
+        '"indexValidAfter": true',
+        '"checksum":',
       ),
     ],
   },
@@ -1056,11 +1032,7 @@ export const gates: readonly Gate[] = [
         "tooling/production/install-upgrade.ts",
         "forward recovery",
       ),
-      marker(
-        "docs/deployment/README.md",
-        "PostgreSQL 19",
-        "entry + postgresql",
-      ),
+      marker("docs/deployment/README.md", "PostgreSQL 19", "entry + postgresql"),
       file("tooling/production/install-upgrade.ts"),
       file("docs/operations/production-install-upgrade-evidence.json"),
     ],
@@ -1278,11 +1250,7 @@ export const roadmapTracks: readonly RoadmapTrack[] = [
     id: "production",
     title: "Production profile readiness",
     path: "docs/roadmap/production.md",
-    gateIds: [
-      "production.artifacts",
-      "production.install-upgrade",
-      "production.entry-profile",
-    ],
+    gateIds: ["production.artifacts", "production.install-upgrade", "production.entry-profile"],
   },
 ]
 

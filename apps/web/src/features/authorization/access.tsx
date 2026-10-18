@@ -43,9 +43,10 @@ const requiredText = (value: FormValue[string]): string | null =>
   typeof value === "string" && /\S/.test(value) ? value.trim() : null
 
 const capabilityLabel = (definition: CapabilityDefinition): string =>
-  `${definition.owner} · ${definition.resource.replaceAll("_", " ")} · ${
-    definition.verb.replaceAll("_", " ")
-  }`
+  `${definition.owner} · ${definition.resource.replaceAll("_", " ")} · ${definition.verb.replaceAll(
+    "_",
+    " ",
+  )}`
 
 function MutationFeedback(props: {
   error?: RequestFailure | null
@@ -106,7 +107,9 @@ function MembershipFilters(props: { search?: string; status?: TenantMembershipSt
           />
         )}
       </FormField>
-      <Button variant="primary" type="submit">Apply filters</Button>
+      <Button variant="primary" type="submit">
+        Apply filters
+      </Button>
       <a href="/access">Clear filters</a>
     </Form>
   )
@@ -124,16 +127,14 @@ function MembershipTable(props: {
       getRowClass={(membership) =>
         membership.userAccountId === props.selectedUserAccountId
           ? layout.tableRowSelected
-          : undefined}
+          : undefined
+      }
       columns={[
         {
           id: "userAccountId",
           header: "User account",
           cell: (membership) => (
-            <a
-              class={layout.code}
-              href={`/access/${encodeURIComponent(membership.userAccountId)}`}
-            >
+            <a class={layout.code} href={`/access/${encodeURIComponent(membership.userAccountId)}`}>
               {membership.userAccountId}
             </a>
           ),
@@ -208,14 +209,16 @@ function AddMembershipDialog(props: { reload: () => Promise<unknown> }) {
           label="User account ID"
           required
           helperText="Create the global account in User accounts first, then use its UUID here."
-          error={invalid() || mutation.error?.kind === "validation"
-            ? "Enter a valid user-account UUID."
-            : undefined}
+          error={
+            invalid() || mutation.error?.kind === "validation"
+              ? "Enter a valid user-account UUID."
+              : undefined
+          }
         >
           {(fieldProps) => (
             <Input
               {...fieldProps}
-              ref={(element) => accountInput = element}
+              ref={(element) => (accountInput = element)}
               name="userAccountId"
               autocomplete="off"
               spellcheck={false}
@@ -460,10 +463,10 @@ function GrantCapabilityDialog(props: {
   const mutation = createGrantCapabilityMutation(scope, () => setOpen(false))
   const granted = createMemo(() => new Set(props.grants.map((grant) => grant.capability)))
   const publicDefinitions = createMemo(() =>
-    props.definitions.filter((definition) => definition.stability === "PUBLIC")
+    props.definitions.filter((definition) => definition.stability === "PUBLIC"),
   )
   const selected = createMemo(() =>
-    publicDefinitions().find((definition) => definition.id === capability())
+    publicDefinitions().find((definition) => definition.id === capability()),
   )
   const options = createMemo(() =>
     publicDefinitions().map((definition) => ({
@@ -472,20 +475,15 @@ function GrantCapabilityDialog(props: {
         granted().has(definition.id) ? " · already granted" : ""
       }`,
       disabled: granted().has(definition.id),
-    }))
+    })),
   )
   return (
     <Dialog
       open={open()}
-      onOpenChange={createDialogOpenChange(
-        mutation,
-        setOpen,
-        undefined,
-        () => {
-          setCapability("")
-          setAcknowledged(false)
-        },
-      )}
+      onOpenChange={createDialogOpenChange(mutation, setOpen, undefined, () => {
+        setCapability("")
+        setAcknowledged(false)
+      })}
       trigger={<span>Grant capability</span>}
       triggerVariant="primary"
       title="Grant tenant capability"
@@ -559,8 +557,9 @@ function GrantCapabilityDialog(props: {
           variant="primary"
           type="button"
           loading={mutation.isPending}
-          disabled={capability() === "" || !acknowledged()
-            || mutation.error?.kind === "unknown-outcome"}
+          disabled={
+            capability() === "" || !acknowledged() || mutation.error?.kind === "unknown-outcome"
+          }
           onClick={() => {
             const selectedCapability = capability()
             if (selectedCapability === "") return
@@ -592,7 +591,9 @@ function MembershipDetail(props: {
     <section class={layout.stack} aria-labelledby="access-detail-heading">
       <div class={layout.row}>
         <h2 id="access-detail-heading">Access detail</h2>
-        <Button type="button" onClick={() => void reloadDetail()}>Reload access</Button>
+        <Button type="button" onClick={() => void reloadDetail()}>
+          Reload access
+        </Button>
       </div>
       <QueryBoundary label="membership" retry={() => membership.refetch()}>
         <Show when={membership.data} keyed>
@@ -711,28 +712,27 @@ export function Access(props: {
       headerActions={
         <div class={layout.row}>
           <AddMembershipDialog reload={() => query.refetch()} />
-          <Button type="button" onClick={() => void query.refetch()}>Reload memberships</Button>
+          <Button type="button" onClick={() => void query.refetch()}>
+            Reload memberships
+          </Button>
         </div>
       }
       toolbar={<MembershipFilters search={search} status={status} />}
-      aside={selectedUserAccountId
-        ? (
+      aside={
+        selectedUserAccountId ? (
           <MembershipDetail
             userAccountId={selectedUserAccountId}
             reloadMemberships={() => query.refetch()}
           />
-        )
-        : undefined}
+        ) : undefined
+      }
     >
       <QueryBoundary label="memberships" retry={() => query.refetch()}>
         <Show
           when={query.data.length > 0}
           fallback={<p role="status">No tenant memberships match this search or status.</p>}
         >
-          <MembershipTable
-            memberships={query.data}
-            selectedUserAccountId={selectedUserAccountId}
-          />
+          <MembershipTable memberships={query.data} selectedUserAccountId={selectedUserAccountId} />
         </Show>
       </QueryBoundary>
     </EntityWorkspace>

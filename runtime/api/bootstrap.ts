@@ -80,7 +80,7 @@ export const bootstrapCapabilities = [
 ] as const satisfies readonly Capability[]
 
 export const bootstrapTenant = (input: unknown) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const decoded = yield* Schema.decodeUnknownEffect(BootstrapTenantInput)(input)
     const auth = yield* AuthService
     const authorization = yield* AuthorizationService
@@ -89,12 +89,10 @@ export const bootstrapTenant = (input: unknown) =>
     const inventory = yield* InventoryService
 
     // Tenant creation is a trusted bootstrap operation, not a self-service API command.
-    const tenant = yield* auth.createTenant(
-      {
-        slug: decoded.slug,
-        timezone: decoded.timezone,
-      } satisfies Schema.Schema.Type<typeof CreateTenantInput>,
-    )
+    const tenant = yield* auth.createTenant({
+      slug: decoded.slug,
+      timezone: decoded.timezone,
+    } satisfies Schema.Schema.Type<typeof CreateTenantInput>)
 
     yield* authorization.addMember({
       userAccountId: decoded.principal.userAccountId,
@@ -109,52 +107,42 @@ export const bootstrapTenant = (input: unknown) =>
       })
     }
 
-    const organization = yield* party.create(
-      {
-        principal: decoded.principal,
-        tenantId: tenant.id,
-        kind: "organization",
-        name: decoded.organizationName,
-      } satisfies Schema.Schema.Type<typeof CreatePartyInput>,
-    )
-    const legalEntity = yield* party.createLegalEntity(
-      {
-        principal: decoded.principal,
-        tenantId: tenant.id,
-        organizationId: organization.id,
-      } satisfies Schema.Schema.Type<typeof CreateLegalEntityInput>,
-    )
-    const branch = yield* party.createBranch(
-      {
-        principal: decoded.principal,
-        tenantId: tenant.id,
-        legalEntityId: legalEntity.id,
-        name: decoded.branchName,
-        timezone: decoded.branchTimezone,
-        localTaxRegistration: decoded.localTaxRegistration,
-        dedicatedJournalCode: decoded.dedicatedJournalCode,
-      } satisfies Schema.Schema.Type<typeof CreateBranchInput>,
-    )
-    const accountingConfiguration = yield* accounting.configureLegalEntity(
-      {
-        principal: decoded.principal,
-        tenantId: tenant.id,
-        legalEntityId: legalEntity.id,
-        baseCurrency: decoded.baseCurrency,
-        precision: decoded.precision,
-        fiscalYearStartMonth: decoded.fiscalYearStartMonth,
-        postingEnabled: decoded.postingEnabled,
-      } satisfies Schema.Schema.Type<typeof ConfigureLegalEntityInput>,
-    )
-    const warehouse = yield* inventory.createWarehouse(
-      {
-        principal: decoded.principal,
-        tenantId: tenant.id,
-        legalEntityId: legalEntity.id,
-        primaryBranchId: branch.id,
-        name: decoded.warehouseName,
-      } satisfies Schema.Schema.Type<typeof CreateWarehouseInput>,
-    )
+    const organization = yield* party.create({
+      principal: decoded.principal,
+      tenantId: tenant.id,
+      kind: "organization",
+      name: decoded.organizationName,
+    } satisfies Schema.Schema.Type<typeof CreatePartyInput>)
+    const legalEntity = yield* party.createLegalEntity({
+      principal: decoded.principal,
+      tenantId: tenant.id,
+      organizationId: organization.id,
+    } satisfies Schema.Schema.Type<typeof CreateLegalEntityInput>)
+    const branch = yield* party.createBranch({
+      principal: decoded.principal,
+      tenantId: tenant.id,
+      legalEntityId: legalEntity.id,
+      name: decoded.branchName,
+      timezone: decoded.branchTimezone,
+      localTaxRegistration: decoded.localTaxRegistration,
+      dedicatedJournalCode: decoded.dedicatedJournalCode,
+    } satisfies Schema.Schema.Type<typeof CreateBranchInput>)
+    const accountingConfiguration = yield* accounting.configureLegalEntity({
+      principal: decoded.principal,
+      tenantId: tenant.id,
+      legalEntityId: legalEntity.id,
+      baseCurrency: decoded.baseCurrency,
+      precision: decoded.precision,
+      fiscalYearStartMonth: decoded.fiscalYearStartMonth,
+      postingEnabled: decoded.postingEnabled,
+    } satisfies Schema.Schema.Type<typeof ConfigureLegalEntityInput>)
+    const warehouse = yield* inventory.createWarehouse({
+      principal: decoded.principal,
+      tenantId: tenant.id,
+      legalEntityId: legalEntity.id,
+      primaryBranchId: branch.id,
+      name: decoded.warehouseName,
+    } satisfies Schema.Schema.Type<typeof CreateWarehouseInput>)
 
     return {
       tenant,

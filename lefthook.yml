@@ -5,7 +5,7 @@ pre-commit:
   commands:
     format:
       glob: "*.{ts,tsx,js,jsx,json,jsonc}"
-      run: pnpm exec dprint fmt {staged_files}
+      run: pnpm exec oxfmt --write {staged_files}
       stage_fixed: true
 
 commit-msg:

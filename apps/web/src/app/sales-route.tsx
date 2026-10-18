@@ -12,10 +12,9 @@ const RouteInput = Schema.Struct({
     Schema.Literals(["draft", "sent", "accepted", "rejected", "expired"]),
   ),
   orderStatus: Schema.optionalKey(Schema.Literals(["draft", "confirmed", "cancelled"])),
-  search: Schema.optionalKey(Schema.Trim.pipe(
-    Schema.check(Schema.isPattern(/\S/)),
-    Schema.check(Schema.isMaxLength(256)),
-  )),
+  search: Schema.optionalKey(
+    Schema.Trim.pipe(Schema.check(Schema.isPattern(/\S/)), Schema.check(Schema.isMaxLength(256))),
+  ),
 })
 
 type SalesDetail = "customer" | "quotation" | "order"

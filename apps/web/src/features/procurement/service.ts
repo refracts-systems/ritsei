@@ -33,7 +33,7 @@ const PurchaseOrderList = Schema.Array(PurchaseOrder).check(Schema.isMaxLength(2
 const GoodsReceiptList = Schema.Array(GoodsReceipt).check(Schema.isMaxLength(200))
 
 export const listSupplierAccounts = Effect.fn("Frontend.Procurement.listSupplierAccounts")(
-  function*(input: unknown = {}) {
+  function* (input: unknown = {}) {
     const decoded = yield* decodeInput(ListSupplierAccountsInput, input)
     const body = yield* requestJson(
       `${procurementRoutes.listSupplierAccounts}${querySuffix(decoded)}`,
@@ -48,7 +48,7 @@ export const listSupplierAccounts = Effect.fn("Frontend.Procurement.listSupplier
 )
 
 export const createSupplierAccount = Effect.fn("Frontend.Procurement.createSupplierAccount")(
-  function*(input: unknown) {
+  function* (input: unknown) {
     const decoded = yield* decodeInput(CreateSupplierAccountInput, input)
     const connection = yield* BrowserConnection
     const body = yield* mutationRequest(procurementRoutes.createSupplierAccount, "POST", decoded)
@@ -65,70 +65,68 @@ export const createSupplierAccount = Effect.fn("Frontend.Procurement.createSuppl
   },
 )
 
-export const listPurchaseOrders = Effect.fn("Frontend.Procurement.listPurchaseOrders")(
-  function*(input: unknown = {}) {
-    const decoded = yield* decodeInput(ListPurchaseOrdersInput, input)
-    const body = yield* requestJson(
-      `${procurementRoutes.listPurchaseOrders}${querySuffix(decoded)}`,
-    )
-    const orders = yield* decodeResponse(PurchaseOrderList, body, "invalid-response")
-    const connection = yield* BrowserConnection
-    if (
-      !responseListMatches(orders, {
-        tenantId: connection.tenantId,
-        ...definedFields({
-          supplierAccountId: decoded.supplierAccountId,
-          status: decoded.status,
-        }),
-      })
-    ) {
-      return yield* Effect.fail(new RequestFailure({ kind: "invalid-response" }))
-    }
-    return orders
-  },
-)
-
-export const createPurchaseOrder = Effect.fn("Frontend.Procurement.createPurchaseOrder")(
-  function*(input: unknown) {
-    const decoded = yield* decodeInput(CreatePurchaseOrderInput, input)
-    const connection = yield* BrowserConnection
-    const body = yield* mutationRequest(procurementRoutes.createPurchaseOrder, "POST", decoded)
-    const order = yield* decodeResponse(PurchaseOrder, body, "unknown-outcome")
-    if (
-      !responseMatches(order, {
-        tenantId: connection.tenantId,
+export const listPurchaseOrders = Effect.fn("Frontend.Procurement.listPurchaseOrders")(function* (
+  input: unknown = {},
+) {
+  const decoded = yield* decodeInput(ListPurchaseOrdersInput, input)
+  const body = yield* requestJson(`${procurementRoutes.listPurchaseOrders}${querySuffix(decoded)}`)
+  const orders = yield* decodeResponse(PurchaseOrderList, body, "invalid-response")
+  const connection = yield* BrowserConnection
+  if (
+    !responseListMatches(orders, {
+      tenantId: connection.tenantId,
+      ...definedFields({
         supplierAccountId: decoded.supplierAccountId,
-        status: "draft",
-      })
-    ) {
-      return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
-    }
-    return order
-  },
-)
+        status: decoded.status,
+      }),
+    })
+  ) {
+    return yield* Effect.fail(new RequestFailure({ kind: "invalid-response" }))
+  }
+  return orders
+})
 
-export const getPurchaseOrder = Effect.fn("Frontend.Procurement.getPurchaseOrder")(
-  function*(id: unknown) {
-    const decodedId = yield* decodeInput(Uuid, id)
-    const connection = yield* BrowserConnection
-    const body = yield* requestJson(routeWithId(procurementRoutes.getPurchaseOrder, decodedId))
-    const order = yield* decodeResponse(PurchaseOrder, body, "invalid-response")
-    if (
-      !responseMatches(order, {
-        id: decodedId,
-        tenantId: connection.tenantId,
-      })
-    ) {
-      return yield* Effect.fail(new RequestFailure({ kind: "invalid-response" }))
-    }
-    return order
-  },
-)
+export const createPurchaseOrder = Effect.fn("Frontend.Procurement.createPurchaseOrder")(function* (
+  input: unknown,
+) {
+  const decoded = yield* decodeInput(CreatePurchaseOrderInput, input)
+  const connection = yield* BrowserConnection
+  const body = yield* mutationRequest(procurementRoutes.createPurchaseOrder, "POST", decoded)
+  const order = yield* decodeResponse(PurchaseOrder, body, "unknown-outcome")
+  if (
+    !responseMatches(order, {
+      tenantId: connection.tenantId,
+      supplierAccountId: decoded.supplierAccountId,
+      status: "draft",
+    })
+  ) {
+    return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
+  }
+  return order
+})
+
+export const getPurchaseOrder = Effect.fn("Frontend.Procurement.getPurchaseOrder")(function* (
+  id: unknown,
+) {
+  const decodedId = yield* decodeInput(Uuid, id)
+  const connection = yield* BrowserConnection
+  const body = yield* requestJson(routeWithId(procurementRoutes.getPurchaseOrder, decodedId))
+  const order = yield* decodeResponse(PurchaseOrder, body, "invalid-response")
+  if (
+    !responseMatches(order, {
+      id: decodedId,
+      tenantId: connection.tenantId,
+    })
+  ) {
+    return yield* Effect.fail(new RequestFailure({ kind: "invalid-response" }))
+  }
+  return order
+})
 
 // Fallow: confirm and cancel are paired lifecycle adapters with the same verified mutation shape.
 // fallow-ignore-next-line code-duplication
 export const confirmPurchaseOrder = Effect.fn("Frontend.Procurement.confirmPurchaseOrder")(
-  function*(id: unknown, input: unknown) {
+  function* (id: unknown, input: unknown) {
     const decodedId = yield* decodeInput(Uuid, id)
     const decoded = yield* decodeInput(ConfirmPurchaseOrderInput, input)
     const connection = yield* BrowserConnection
@@ -153,30 +151,30 @@ export const confirmPurchaseOrder = Effect.fn("Frontend.Procurement.confirmPurch
 
 // Fallow: confirm and cancel are paired lifecycle adapters with the same verified mutation shape.
 // fallow-ignore-next-line code-duplication
-export const cancelPurchaseOrder = Effect.fn("Frontend.Procurement.cancelPurchaseOrder")(
-  function*(id: unknown) {
-    const decodedId = yield* decodeInput(Uuid, id)
-    const connection = yield* BrowserConnection
-    const body = yield* mutationRequest(
-      routeWithId(procurementRoutes.cancelPurchaseOrder, decodedId),
-      "POST",
-    )
-    const order = yield* decodeResponse(PurchaseOrder, body, "unknown-outcome")
-    if (
-      !responseMatches(order, {
-        id: decodedId,
-        tenantId: connection.tenantId,
-        status: "cancelled",
-      })
-    ) {
-      return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
-    }
-    return order
-  },
-)
+export const cancelPurchaseOrder = Effect.fn("Frontend.Procurement.cancelPurchaseOrder")(function* (
+  id: unknown,
+) {
+  const decodedId = yield* decodeInput(Uuid, id)
+  const connection = yield* BrowserConnection
+  const body = yield* mutationRequest(
+    routeWithId(procurementRoutes.cancelPurchaseOrder, decodedId),
+    "POST",
+  )
+  const order = yield* decodeResponse(PurchaseOrder, body, "unknown-outcome")
+  if (
+    !responseMatches(order, {
+      id: decodedId,
+      tenantId: connection.tenantId,
+      status: "cancelled",
+    })
+  ) {
+    return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
+  }
+  return order
+})
 
 export const listPurchaseReceipts = Effect.fn("Frontend.Procurement.listPurchaseReceipts")(
-  function*(id: unknown, input: unknown = {}) {
+  function* (id: unknown, input: unknown = {}) {
     const decodedId = yield* decodeInput(Uuid, id)
     const decoded = yield* decodeInput(ListPurchaseReceiptsInput, input)
     const body = yield* requestJson(
@@ -197,7 +195,7 @@ export const listPurchaseReceipts = Effect.fn("Frontend.Procurement.listPurchase
 )
 
 export const receivePurchaseOrder = Effect.fn("Frontend.Procurement.receivePurchaseOrder")(
-  function*(id: unknown, input: unknown) {
+  function* (id: unknown, input: unknown) {
     const decodedId = yield* decodeInput(Uuid, id)
     const decoded = yield* decodeInput(ReceivePurchaseOrderInput, input)
     const connection = yield* BrowserConnection

@@ -26,10 +26,7 @@ describe("capability naming contract", () => {
     for (const definition of CapabilityDefinitions) {
       const segments = definition.id.split(".")
       assert.strictEqual(definition.owner, segments[0])
-      assert.strictEqual(
-        definition.resource,
-        segments.length === 2 ? segments[0] : segments[1],
-      )
+      assert.strictEqual(definition.resource, segments.length === 2 ? segments[0] : segments[1])
       assert.strictEqual(definition.verb, segments.at(-1))
       assert.strictEqual(definition.version, 1)
       assert.strictEqual(definition.stability, "PUBLIC")
@@ -63,7 +60,7 @@ describe("capability naming contract", () => {
   })
 
   it.effect("keeps legacy identifiers outside the assignable capability schema", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       for (const legacy of LegacyCapabilityIds) {
         assert.strictEqual(
           (yield* Effect.flip(Schema.decodeUnknownEffect(Capability)(legacy)))._tag,
@@ -74,10 +71,11 @@ describe("capability naming contract", () => {
         yield* Schema.decodeUnknownEffect(Capability)("identity.user_account.read"),
         "identity.user_account.read",
       )
-    }))
+    }),
+  )
 
   it.effect("validates contributor-shaped identifiers at the schema boundary", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       assert.strictEqual(
         yield* Schema.decodeUnknownEffect(CapabilityId)("plugin_customer.submit"),
         "plugin_customer.submit",
@@ -98,5 +96,6 @@ describe("capability naming contract", () => {
       })
       assert.strictEqual(definition.owner, "plugin_customer")
       assert.strictEqual(definition.stability, "EXPERIMENTAL")
-    }))
+    }),
+  )
 })

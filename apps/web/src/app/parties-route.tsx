@@ -7,11 +7,9 @@ import { decodeRouteInput } from "./route-input.ts"
 
 const RouteInput = Schema.Struct({
   id: Schema.optionalKey(Schema.String.check(Schema.isUUID())),
-  search: Schema.optionalKey(Schema.String.check(
-    Schema.isPattern(/\S/),
-    Schema.isTrimmed(),
-    Schema.isMaxLength(160),
-  )),
+  search: Schema.optionalKey(
+    Schema.String.check(Schema.isPattern(/\S/), Schema.isTrimmed(), Schema.isMaxLength(160)),
+  ),
   kind: Schema.optionalKey(Schema.Literals(["person", "organization"])),
 })
 
@@ -29,13 +27,7 @@ export default function PartiesRoute() {
       title="Parties"
       description="Connect a valid session to view Party records."
     >
-      {(route) => (
-        <Parties
-          selectedPartyId={route.id}
-          search={route.search}
-          kind={route.kind}
-        />
-      )}
+      {(route) => <Parties selectedPartyId={route.id} search={route.search} kind={route.kind} />}
     </DecodedConnectedSessionRoute>
   )
 }

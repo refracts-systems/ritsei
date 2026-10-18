@@ -26,7 +26,7 @@ const baseInput = {
 }
 
 it.effect("checks compatibility and payload limit with redaction", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const decision = yield* assessExternalDelivery(baseInput)
     assert.strictEqual(decision.state, "retry")
     assert.strictEqual(decision.providerStatus, "unknown")
@@ -37,21 +37,26 @@ it.effect("checks compatibility and payload limit with redaction", () =>
       nested: { clientSecret: "[REDACTED]" },
     })
 
-    const incompatible = yield* Effect.flip(assessExternalDelivery({
-      ...baseInput,
-      connectorVersion: 2,
-    }))
+    const incompatible = yield* Effect.flip(
+      assessExternalDelivery({
+        ...baseInput,
+        connectorVersion: 2,
+      }),
+    )
     assert.instanceOf(incompatible, ExternalCompatibilityMismatch)
 
-    const tooLarge = yield* Effect.flip(assessExternalDelivery({
-      ...baseInput,
-      maxPayloadBytes: 1,
-    }))
+    const tooLarge = yield* Effect.flip(
+      assessExternalDelivery({
+        ...baseInput,
+        maxPayloadBytes: 1,
+      }),
+    )
     assert.instanceOf(tooLarge, ExternalPayloadLimitExceeded)
-  }))
+  }),
+)
 
 it.effect("moves a provider failure to a dead letter after bounded attempts", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const decision = yield* assessExternalDelivery({
       ...baseInput,
       attempts: 3,
@@ -60,4 +65,5 @@ it.effect("moves a provider failure to a dead letter after bounded attempts", ()
 
     assert.strictEqual(decision.state, "dead_letter")
     assert.strictEqual(decision.attempts, 3)
-  }))
+  }),
+)

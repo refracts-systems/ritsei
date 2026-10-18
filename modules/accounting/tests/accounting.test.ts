@@ -85,19 +85,21 @@ const withAccounting = <A, E>(
   Effect.provide(
     program,
     makeAccountingTestLayer().pipe(
-      Layer.provide(Layer.mergeAll(
-        makeAuthorizationTestLayer(
-          [tenantId, otherTenantId].flatMap((tenantId) =>
-            grantedCapabilities.map((capability) => ({
-              userAccountId: principal.userAccountId,
-              tenantId,
-              capability: capability as (typeof capabilities)[number],
-            }))
+      Layer.provide(
+        Layer.mergeAll(
+          makeAuthorizationTestLayer(
+            [tenantId, otherTenantId].flatMap((tenantId) =>
+              grantedCapabilities.map((capability) => ({
+                userAccountId: principal.userAccountId,
+                tenantId,
+                capability: capability as (typeof capabilities)[number],
+              })),
+            ),
           ),
+          messaging,
+          Layer.succeed(SalesService, salesFacts),
         ),
-        messaging,
-        Layer.succeed(SalesService, salesFacts),
-      )),
+      ),
     ),
   )
 
@@ -107,9 +109,7 @@ const makeRecordingMessagingLayer = (events: EventEnvelope[]) =>
     Effect.map(MessagingService, (messaging) => ({
       ...messaging,
       append: (input: unknown) =>
-        messaging.append(input).pipe(
-          Effect.tap((event) => Effect.sync(() => events.push(event))),
-        ),
+        messaging.append(input).pipe(Effect.tap((event) => Effect.sync(() => events.push(event)))),
     })),
   ).pipe(Layer.provide(makeMessagingTestLayer()))
 
@@ -132,7 +132,7 @@ const makeFailOnceMessagingLayer = () => {
   ).pipe(Layer.provide(makeMessagingTestLayer()))
 }
 
-const prepareRevenuePosting = Effect.gen(function*() {
+const prepareRevenuePosting = Effect.gen(function* () {
   const accounting = yield* AccountingService
   yield* accounting.configureLegalEntity({
     principal,
@@ -176,214 +176,238 @@ const prepareRevenuePosting = Effect.gen(function*() {
 
 describe("accounting contract", () => {
   it.effect("configures a legal entity once", () =>
-    withAccounting(Effect.gen(function*() {
-      const accounting = yield* AccountingService
-      const malformedLegalEntity = yield* Effect.flip(
-        Schema.decodeUnknownEffect(ConfigureLegalEntityInput.fields.legalEntityId)(
-          "not-a-uuid",
-        ),
-      )
-      assert.strictEqual(malformedLegalEntity._tag, "SchemaError")
-      const configuration = yield* accounting.configureLegalEntity({
-        principal,
-        tenantId,
-        legalEntityId: "00000000-0000-4000-8000-000000000070",
-        baseCurrency: "usd",
-        precision: 2,
-        fiscalYearStartMonth: 1,
-        postingEnabled: true,
-      })
-      assert.strictEqual(configuration.baseCurrency, "USD")
-      assert.strictEqual(configuration.precision, 2)
-      assert.strictEqual(configuration.fiscalYearStartMonth, 1)
-      assert.strictEqual(configuration.postingEnabled, true)
-      const cutoverBlocked = yield* Effect.flip(accounting.configureLegalEntity({
-        principal,
-        tenantId,
-        legalEntityId: "00000000-0000-4000-8000-000000000071",
-        baseCurrency: "USD",
-        precision: 2,
-        fiscalYearStartMonth: 1,
-        postingEnabled: true,
-        financialEngine: "tigerbeetle",
-      }))
-      assert.instanceOf(cutoverBlocked, FinancialEngineCutoverBlocked)
-
-      assert.strictEqual(
-        (yield* Effect.flip(accounting.configureLegalEntity({
-          principal,
-          tenantId,
-          legalEntityId: "00000000-0000-4000-8000-000000000072",
-          baseCurrency: "USD",
-          precision: 3,
-          fiscalYearStartMonth: 1,
-          postingEnabled: true,
-        })))._tag,
-        "SchemaError",
-      )
-
-      const error = yield* Effect.flip(accounting.configureLegalEntity({
-        principal,
-        tenantId,
-        legalEntityId: "00000000-0000-4000-8000-000000000070",
-        baseCurrency: "USD",
-        precision: 2,
-        fiscalYearStartMonth: 1,
-        postingEnabled: true,
-      }))
-      assert.instanceOf(error, AccountingConfigurationAlreadyExists)
-    })))
-
-  it.effect("requires the legal entity configuration capability", () =>
     withAccounting(
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const accounting = yield* AccountingService
-        const error = yield* Effect.flip(accounting.configureLegalEntity({
+        const malformedLegalEntity = yield* Effect.flip(
+          Schema.decodeUnknownEffect(ConfigureLegalEntityInput.fields.legalEntityId)("not-a-uuid"),
+        )
+        assert.strictEqual(malformedLegalEntity._tag, "SchemaError")
+        const configuration = yield* accounting.configureLegalEntity({
           principal,
           tenantId,
           legalEntityId: "00000000-0000-4000-8000-000000000070",
-          baseCurrency: "USD",
+          baseCurrency: "usd",
           precision: 2,
           fiscalYearStartMonth: 1,
           postingEnabled: true,
-        }))
+        })
+        assert.strictEqual(configuration.baseCurrency, "USD")
+        assert.strictEqual(configuration.precision, 2)
+        assert.strictEqual(configuration.fiscalYearStartMonth, 1)
+        assert.strictEqual(configuration.postingEnabled, true)
+        const cutoverBlocked = yield* Effect.flip(
+          accounting.configureLegalEntity({
+            principal,
+            tenantId,
+            legalEntityId: "00000000-0000-4000-8000-000000000071",
+            baseCurrency: "USD",
+            precision: 2,
+            fiscalYearStartMonth: 1,
+            postingEnabled: true,
+            financialEngine: "tigerbeetle",
+          }),
+        )
+        assert.instanceOf(cutoverBlocked, FinancialEngineCutoverBlocked)
+
+        assert.strictEqual(
+          (yield* Effect.flip(
+            accounting.configureLegalEntity({
+              principal,
+              tenantId,
+              legalEntityId: "00000000-0000-4000-8000-000000000072",
+              baseCurrency: "USD",
+              precision: 3,
+              fiscalYearStartMonth: 1,
+              postingEnabled: true,
+            }),
+          ))._tag,
+          "SchemaError",
+        )
+
+        const error = yield* Effect.flip(
+          accounting.configureLegalEntity({
+            principal,
+            tenantId,
+            legalEntityId: "00000000-0000-4000-8000-000000000070",
+            baseCurrency: "USD",
+            precision: 2,
+            fiscalYearStartMonth: 1,
+            postingEnabled: true,
+          }),
+        )
+        assert.instanceOf(error, AccountingConfigurationAlreadyExists)
+      }),
+    ),
+  )
+
+  it.effect("requires the legal entity configuration capability", () =>
+    withAccounting(
+      Effect.gen(function* () {
+        const accounting = yield* AccountingService
+        const error = yield* Effect.flip(
+          accounting.configureLegalEntity({
+            principal,
+            tenantId,
+            legalEntityId: "00000000-0000-4000-8000-000000000070",
+            baseCurrency: "USD",
+            precision: 2,
+            fiscalYearStartMonth: 1,
+            postingEnabled: true,
+          }),
+        )
         assert.instanceOf(error, AuthorizationDenied)
       }),
       capabilities.filter((capability) => capability !== "accounting.legal_entity.configure"),
-    ))
+    ),
+  )
 
   it.effect("denies accounting capability in an ungranted tenant", () =>
-    withAccounting(Effect.gen(function*() {
-      const accounting = yield* AccountingService
-      assert.instanceOf(
-        yield* Effect.flip(accounting.createAccount({
-          principal,
-          tenantId: "00000000-0000-4000-8000-000000000003",
-          code: "UNGRANTED",
-          name: "Untrusted Account",
-          type: "asset",
-        })),
-        AuthorizationDenied,
-      )
-    })))
+    withAccounting(
+      Effect.gen(function* () {
+        const accounting = yield* AccountingService
+        assert.instanceOf(
+          yield* Effect.flip(
+            accounting.createAccount({
+              principal,
+              tenantId: "00000000-0000-4000-8000-000000000003",
+              code: "UNGRANTED",
+              name: "Untrusted Account",
+              type: "asset",
+            }),
+          ),
+          AuthorizationDenied,
+        )
+      }),
+    ),
+  )
 
   it.effect("posts a balanced journal", () =>
-    withAccounting(Effect.gen(function*() {
-      const accounting = yield* AccountingService
-      const cash = yield* accounting.createAccount({
-        principal,
-        tenantId,
-        code: "1000",
-        name: "Cash",
-        type: "asset",
-      })
-      const revenue = yield* accounting.createAccount({
-        principal,
-        tenantId,
-        code: "4000",
-        name: "Revenue",
-        type: "revenue",
-      })
-      const journal = yield* accounting.postJournal({
-        principal,
-        tenantId,
-        reference: "SALE-1",
-        lines: [
-          { accountId: cash.id, debit: "125.00", credit: "0" },
-          { accountId: revenue.id, debit: "0", credit: "125.00" },
-        ],
-      })
-
-      assert.strictEqual(journal.status, "posted")
-      assert.strictEqual(
-        (yield* Effect.flip(
-          Schema.decodeUnknownEffect(JournalEntry)({ ...journal, reference: " SALE-1 " }),
-        ))._tag,
-        "SchemaError",
-      )
-      assert.strictEqual(journal.lines.length, 2)
-      const otherCash = yield* accounting.createAccount({
-        principal,
-        tenantId: otherTenantId,
-        code: "1000",
-        name: "Cash",
-        type: "asset",
-      })
-      const otherRevenue = yield* accounting.createAccount({
-        principal,
-        tenantId: otherTenantId,
-        code: "4000",
-        name: "Revenue",
-        type: "revenue",
-      })
-      const otherJournal = yield* accounting.postJournal({
-        principal,
-        tenantId: otherTenantId,
-        reference: "SALE-1",
-        lines: [
-          { accountId: otherCash.id, debit: "125.00", credit: "0" },
-          { accountId: otherRevenue.id, debit: "0", credit: "125.00" },
-        ],
-      })
-      assert.notStrictEqual(otherJournal.id, journal.id)
-      assert.strictEqual(otherJournal.tenantId, otherTenantId)
-      assert.instanceOf(
-        yield* Effect.flip(accounting.postJournal({
+    withAccounting(
+      Effect.gen(function* () {
+        const accounting = yield* AccountingService
+        const cash = yield* accounting.createAccount({
           principal,
-          tenantId: otherTenantId,
-          reference: "FOREIGN-ACCOUNT",
+          tenantId,
+          code: "1000",
+          name: "Cash",
+          type: "asset",
+        })
+        const revenue = yield* accounting.createAccount({
+          principal,
+          tenantId,
+          code: "4000",
+          name: "Revenue",
+          type: "revenue",
+        })
+        const journal = yield* accounting.postJournal({
+          principal,
+          tenantId,
+          reference: "SALE-1",
           lines: [
             { accountId: cash.id, debit: "125.00", credit: "0" },
             { accountId: revenue.id, debit: "0", credit: "125.00" },
           ],
-        })),
-        AccountNotFound,
-      )
-      const invalidReference = yield* Effect.flip(accounting.postJournal({
-        principal,
-        tenantId,
-        reference: "   ",
-        lines: [
-          { accountId: cash.id, debit: "125.00", credit: "0" },
-          { accountId: revenue.id, debit: "0", credit: "125.00" },
-        ],
-      }))
-      assert.strictEqual(invalidReference._tag, "SchemaError")
-      const repeated = yield* accounting.postJournal({
-        principal,
-        tenantId,
-        reference: "SALE-1",
-        lines: [
-          { accountId: cash.id, debit: "125.00", credit: "0" },
-          { accountId: revenue.id, debit: "0", credit: "125.00" },
-        ],
-      })
-      assert.strictEqual(repeated.id, journal.id)
-      const scaledReplay = yield* accounting.postJournal({
-        principal,
-        tenantId,
-        reference: "SALE-1",
-        lines: [
-          { accountId: cash.id, debit: "125.0", credit: "0" },
-          { accountId: revenue.id, debit: "0", credit: "125.0" },
-        ],
-      })
-      assert.strictEqual(scaledReplay.id, journal.id)
-      const journalConflict = yield* Effect.flip(accounting.postJournal({
-        principal,
-        tenantId,
-        reference: " SALE-1 ",
-        lines: [
-          { accountId: cash.id, debit: "124.00", credit: "0" },
-          { accountId: revenue.id, debit: "0", credit: "124.00" },
-        ],
-      }))
-      assert.instanceOf(journalConflict, JournalIdempotencyConflict)
-      assert.strictEqual(journalConflict.reference, "SALE-1")
-    })))
+        })
+
+        assert.strictEqual(journal.status, "posted")
+        assert.strictEqual(
+          (yield* Effect.flip(
+            Schema.decodeUnknownEffect(JournalEntry)({ ...journal, reference: " SALE-1 " }),
+          ))._tag,
+          "SchemaError",
+        )
+        assert.strictEqual(journal.lines.length, 2)
+        const otherCash = yield* accounting.createAccount({
+          principal,
+          tenantId: otherTenantId,
+          code: "1000",
+          name: "Cash",
+          type: "asset",
+        })
+        const otherRevenue = yield* accounting.createAccount({
+          principal,
+          tenantId: otherTenantId,
+          code: "4000",
+          name: "Revenue",
+          type: "revenue",
+        })
+        const otherJournal = yield* accounting.postJournal({
+          principal,
+          tenantId: otherTenantId,
+          reference: "SALE-1",
+          lines: [
+            { accountId: otherCash.id, debit: "125.00", credit: "0" },
+            { accountId: otherRevenue.id, debit: "0", credit: "125.00" },
+          ],
+        })
+        assert.notStrictEqual(otherJournal.id, journal.id)
+        assert.strictEqual(otherJournal.tenantId, otherTenantId)
+        assert.instanceOf(
+          yield* Effect.flip(
+            accounting.postJournal({
+              principal,
+              tenantId: otherTenantId,
+              reference: "FOREIGN-ACCOUNT",
+              lines: [
+                { accountId: cash.id, debit: "125.00", credit: "0" },
+                { accountId: revenue.id, debit: "0", credit: "125.00" },
+              ],
+            }),
+          ),
+          AccountNotFound,
+        )
+        const invalidReference = yield* Effect.flip(
+          accounting.postJournal({
+            principal,
+            tenantId,
+            reference: "   ",
+            lines: [
+              { accountId: cash.id, debit: "125.00", credit: "0" },
+              { accountId: revenue.id, debit: "0", credit: "125.00" },
+            ],
+          }),
+        )
+        assert.strictEqual(invalidReference._tag, "SchemaError")
+        const repeated = yield* accounting.postJournal({
+          principal,
+          tenantId,
+          reference: "SALE-1",
+          lines: [
+            { accountId: cash.id, debit: "125.00", credit: "0" },
+            { accountId: revenue.id, debit: "0", credit: "125.00" },
+          ],
+        })
+        assert.strictEqual(repeated.id, journal.id)
+        const scaledReplay = yield* accounting.postJournal({
+          principal,
+          tenantId,
+          reference: "SALE-1",
+          lines: [
+            { accountId: cash.id, debit: "125.0", credit: "0" },
+            { accountId: revenue.id, debit: "0", credit: "125.0" },
+          ],
+        })
+        assert.strictEqual(scaledReplay.id, journal.id)
+        const journalConflict = yield* Effect.flip(
+          accounting.postJournal({
+            principal,
+            tenantId,
+            reference: " SALE-1 ",
+            lines: [
+              { accountId: cash.id, debit: "124.00", credit: "0" },
+              { accountId: revenue.id, debit: "0", credit: "124.00" },
+            ],
+          }),
+        )
+        assert.instanceOf(journalConflict, JournalIdempotencyConflict)
+        assert.strictEqual(journalConflict.reference, "SALE-1")
+      }),
+    ),
+  )
 
   it.effect("rejects non-timezone-qualified journal posted timestamps", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const dateOnly = yield* Effect.flip(
         Schema.decodeUnknownEffect(JournalEntry.fields.postedAt)("2026-08-20"),
       )
@@ -392,20 +416,22 @@ describe("accounting contract", () => {
         Schema.decodeUnknownEffect(JournalEntry.fields.postedAt)("not-a-timestamp"),
       )
       assert.strictEqual(malformed._tag, "SchemaError")
-    }))
+    }),
+  )
 
   it.effect("rejects malformed journal entry identities", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       for (const field of ["id", "tenantId", "reversesEntryId"] as const) {
         const failure = yield* Effect.flip(
           Schema.decodeUnknownEffect(JournalEntry.fields[field])("not-a-uuid"),
         )
         assert.strictEqual(failure._tag, "SchemaError")
       }
-    }))
+    }),
+  )
 
   it.effect("rejects contradictory journal reversal state", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const base = {
         id: "00000000-0000-4000-8000-000000000030",
         tenantId,
@@ -436,10 +462,7 @@ describe("accounting contract", () => {
         Schema.decodeUnknownEffect(JournalEntry)({
           ...base,
           status: "posted",
-          lines: [
-            base.lines[0]!,
-            { ...base.lines[1]!, credit: "2" },
-          ],
+          lines: [base.lines[0]!, { ...base.lines[1]!, credit: "2" }],
         }),
       )
       assert.strictEqual(unbalanced._tag, "SchemaError")
@@ -455,27 +478,27 @@ describe("accounting contract", () => {
         }),
       )
       assert.strictEqual(unexpectedSource._tag, "SchemaError")
-    }))
+    }),
+  )
 
   it.effect("rejects malformed revenue posting profile identities", () =>
-    Effect.gen(function*() {
-      for (
-        const field of [
-          "tenantId",
-          "legalEntityId",
-          "receivableAccountId",
-          "revenueAccountId",
-        ] as const
-      ) {
+    Effect.gen(function* () {
+      for (const field of [
+        "tenantId",
+        "legalEntityId",
+        "receivableAccountId",
+        "revenueAccountId",
+      ] as const) {
         const failure = yield* Effect.flip(
           Schema.decodeUnknownEffect(RevenuePostingProfile.fields[field])("not-a-uuid"),
         )
         assert.strictEqual(failure._tag, "SchemaError")
       }
-    }))
+    }),
+  )
 
   it.effect("rejects duplicate revenue posting accounts", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const inputFailure = yield* Effect.flip(
         Schema.decodeUnknownEffect(ConfigureRevenuePostingInput)({
           principal,
@@ -493,9 +516,7 @@ describe("accounting contract", () => {
       )
       assert.strictEqual(malformedReceivable._tag, "SchemaError")
       const malformedLegalEntity = yield* Effect.flip(
-        Schema.decodeUnknownEffect(ConfigureRevenuePostingInput.fields.legalEntityId)(
-          "not-a-uuid",
-        ),
+        Schema.decodeUnknownEffect(ConfigureRevenuePostingInput.fields.legalEntityId)("not-a-uuid"),
       )
       assert.strictEqual(malformedLegalEntity._tag, "SchemaError")
       const outputFailure = yield* Effect.flip(
@@ -507,20 +528,22 @@ describe("accounting contract", () => {
         }),
       )
       assert.strictEqual(outputFailure._tag, "SchemaError")
-    }))
+    }),
+  )
 
   it.effect("rejects malformed accounting period identities", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       for (const field of ["id", "tenantId", "legalEntityId"] as const) {
         const failure = yield* Effect.flip(
           Schema.decodeUnknownEffect(AccountingPeriod.fields[field])("not-a-uuid"),
         )
         assert.strictEqual(failure._tag, "SchemaError")
       }
-    }))
+    }),
+  )
 
   it.effect("rejects reversed accounting period dates", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const invalidCalendarDate = yield* Effect.flip(
         Schema.decodeUnknownEffect(OpenPeriodInput.fields.startsOn)("2026-02-30"),
       )
@@ -554,18 +577,20 @@ describe("accounting contract", () => {
         }),
       )
       assert.strictEqual(outputFailure._tag, "SchemaError")
-    }))
+    }),
+  )
 
   it.effect("rejects malformed journal line account identities", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const failure = yield* Effect.flip(
         Schema.decodeUnknownEffect(JournalLine.fields.accountId)("not-a-uuid"),
       )
       assert.strictEqual(failure._tag, "SchemaError")
-    }))
+    }),
+  )
 
   it.effect("rejects zero-sided and double-sided journal lines", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const zeroSided = yield* Effect.flip(
         Schema.decodeUnknownEffect(JournalLine)({
           accountId: "account-1",
@@ -582,50 +607,53 @@ describe("accounting contract", () => {
         }),
       )
       assert.strictEqual(doubleSided._tag, "SchemaError")
-    }))
+    }),
+  )
 
   it.effect("rejects blank journal references", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const failure = yield* Effect.flip(
         Schema.decodeUnknownEffect(JournalEntry.fields.reference)("   "),
       )
       assert.strictEqual(failure._tag, "SchemaError")
-    }))
+    }),
+  )
 
   it.effect("rejects malformed revenue order identities", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const failure = yield* Effect.flip(
         Schema.decodeUnknownEffect(PostRevenueForOrderInput.fields.orderId)("not-a-uuid"),
       )
       assert.strictEqual(failure._tag, "SchemaError")
-    }))
+    }),
+  )
 
   it.effect("rejects financial operation mapping versions outside PostgreSQL integer range", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const failure = yield* Effect.flip(
         Schema.decodeUnknownEffect(CreateFinancialRevenueIntentInput.fields.mappingVersion)(
           2_147_483_648,
         ),
       )
       assert.strictEqual(failure._tag, "SchemaError")
-    }))
+    }),
+  )
 
   it.effect("rejects blank financial operation identities", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       for (const operationId of ["", "   "]) {
         const failure = yield* Effect.flip(
           Schema.decodeUnknownEffect(FinancialOperation.fields.operationId)(operationId),
         )
         assert.strictEqual(failure._tag, "SchemaError")
       }
-    }))
+    }),
+  )
 
   it.effect("rejects unresolved cutover operation counts outside PostgreSQL integer range", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const negative = yield* Effect.flip(
-        Schema.decodeUnknownEffect(FinancialCutoverControl.fields.unresolvedAcceptedOperations)(
-          -1,
-        ),
+        Schema.decodeUnknownEffect(FinancialCutoverControl.fields.unresolvedAcceptedOperations)(-1),
       )
       assert.strictEqual(negative._tag, "SchemaError")
       const overflow = yield* Effect.flip(
@@ -634,27 +662,27 @@ describe("accounting contract", () => {
         ),
       )
       assert.strictEqual(overflow._tag, "SchemaError")
-    }))
+    }),
+  )
 
   it.effect("rejects blank financial operation terminal metadata", () =>
-    Effect.gen(function*() {
-      for (
-        const field of [
-          "engineAcceptedAt",
-          "rejectionReason",
-          "recoveryReason",
-          "lastError",
-        ] as const
-      ) {
+    Effect.gen(function* () {
+      for (const field of [
+        "engineAcceptedAt",
+        "rejectionReason",
+        "recoveryReason",
+        "lastError",
+      ] as const) {
         const failure = yield* Effect.flip(
           Schema.decodeUnknownEffect(FinancialOperation.fields[field])("   "),
         )
         assert.strictEqual(failure._tag, "SchemaError")
       }
-    }))
+    }),
+  )
 
   it.effect("rejects mismatched financial operation source identities", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const operation = {
         id: "00000000-0000-4000-8000-000000000020",
         tenantId,
@@ -710,11 +738,13 @@ describe("accounting contract", () => {
         reference: "reference-1",
         currency: "USD",
         mappingVersion: 1,
-        lines: [{
-          accountId: "00000000-0000-4000-8000-000000000025",
-          debit: "1",
-          credit: "0",
-        }],
+        lines: [
+          {
+            accountId: "00000000-0000-4000-8000-000000000025",
+            debit: "1",
+            credit: "0",
+          },
+        ],
         correlationId: "correlation-1",
       }
       const reversedIntentWithoutSource = yield* Effect.flip(
@@ -733,10 +763,11 @@ describe("accounting contract", () => {
         }),
       )
       assert.strictEqual(postedIntentWithSource._tag, "SchemaError")
-    }))
+    }),
+  )
 
   it.effect("rejects invalid financial intent journal line amounts", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const input = {
         principal,
         tenantId,
@@ -747,37 +778,42 @@ describe("accounting contract", () => {
         mappingVersion: 1,
         correlationId: "correlation-lines-1",
       }
-      for (const [debit, credit] of [["0", "0"], ["1", "1"]] as const) {
+      for (const [debit, credit] of [
+        ["0", "0"],
+        ["1", "1"],
+      ] as const) {
         const failure = yield* Effect.flip(
           Schema.decodeUnknownEffect(CreateFinancialJournalIntentInput)({
             ...input,
-            lines: [{
-              accountId: "00000000-0000-4000-8000-000000000025",
-              debit,
-              credit,
-            }],
+            lines: [
+              {
+                accountId: "00000000-0000-4000-8000-000000000025",
+                debit,
+                credit,
+              },
+            ],
           }),
         )
         assert.strictEqual(failure._tag, "SchemaError")
       }
-    }))
+    }),
+  )
 
   it.effect("rejects malformed cutover control timestamps", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const dateOnly = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialCutoverControl.fields.approvedAt)("2026-08-20"),
       )
       assert.strictEqual(dateOnly._tag, "SchemaError")
       const malformed = yield* Effect.flip(
-        Schema.decodeUnknownEffect(FinancialCutoverControl.fields.activatedAt)(
-          "not-a-timestamp",
-        ),
+        Schema.decodeUnknownEffect(FinancialCutoverControl.fields.activatedAt)("not-a-timestamp"),
       )
       assert.strictEqual(malformed._tag, "SchemaError")
-    }))
+    }),
+  )
 
   it.effect("rejects contradictory cutover control status metadata", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const base = {
         tenantId,
         legalEntityId: "00000000-0000-4000-8000-000000000041",
@@ -820,10 +856,11 @@ describe("accounting contract", () => {
         }),
       )
       assert.strictEqual(invalidActivation._tag, "SchemaError")
-    }))
+    }),
+  )
 
   it.effect("rejects financial operation status metadata contradictions", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const operation = {
         id: "00000000-0000-4000-8000-000000000030",
         tenantId,
@@ -849,24 +886,23 @@ describe("accounting contract", () => {
         lastError: null,
         reconciledAt: null,
       }
-      for (
-        const invalidState of [
-          { status: "accepted" },
-          { status: "rejected" },
-          { status: "manual_recovery" },
-          { status: "reconciled" },
-          { status: "intent", recoveryReason: "unexpected-recovery" },
-        ]
-      ) {
+      for (const invalidState of [
+        { status: "accepted" },
+        { status: "rejected" },
+        { status: "manual_recovery" },
+        { status: "reconciled" },
+        { status: "intent", recoveryReason: "unexpected-recovery" },
+      ]) {
         const failure = yield* Effect.flip(
           Schema.decodeUnknownEffect(FinancialOperation)({ ...operation, ...invalidState }),
         )
         assert.strictEqual(failure._tag, "SchemaError")
       }
-    }))
+    }),
+  )
 
   it.effect("rejects malformed accounting input tenant identities", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const failure = yield* Effect.flip(
         Schema.decodeUnknownEffect(CreateAccountInput)({
           principal,
@@ -905,20 +941,22 @@ describe("accounting contract", () => {
         Schema.decodeUnknownEffect(Account.fields.code)("cash"),
       )
       assert.strictEqual(lowercaseCode._tag, "SchemaError")
-    }))
+    }),
+  )
 
   it.effect("rejects malformed account identities", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       for (const field of ["id", "tenantId"] as const) {
         const failure = yield* Effect.flip(
           Schema.decodeUnknownEffect(Account.fields[field])("not-a-uuid"),
         )
         assert.strictEqual(failure._tag, "SchemaError")
       }
-    }))
+    }),
+  )
 
   it.effect("rejects malformed accounting configuration identities", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const lowercaseCurrency = yield* Effect.flip(
         Schema.decodeUnknownEffect(AccountingConfiguration.fields.baseCurrency)("usd"),
       )
@@ -929,10 +967,11 @@ describe("accounting contract", () => {
         )
         assert.strictEqual(failure._tag, "SchemaError")
       }
-    }))
+    }),
+  )
 
   it.effect("rejects malformed financial verification artifact timestamps", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const dateOnly = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialVerificationArtifact.fields.createdAt)("2026-08-20"),
       )
@@ -943,10 +982,11 @@ describe("accounting contract", () => {
         ),
       )
       assert.strictEqual(malformed._tag, "SchemaError")
-    }))
+    }),
+  )
 
   it.effect("rejects financial operation attempts outside PostgreSQL integer range", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const negative = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialOperation.fields.attempts)(-1),
       )
@@ -955,10 +995,11 @@ describe("accounting contract", () => {
         Schema.decodeUnknownEffect(FinancialOperation.fields.attempts)(2_147_483_648),
       )
       assert.strictEqual(overflow._tag, "SchemaError")
-    }))
+    }),
+  )
 
   it.effect("rejects financial checkpoint counts outside PostgreSQL integer range", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const negative = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialReconciliationCheckpoint.fields.mismatchCount)(-1),
       )
@@ -969,10 +1010,11 @@ describe("accounting contract", () => {
         ),
       )
       assert.strictEqual(overflow._tag, "SchemaError")
-    }))
+    }),
+  )
 
   it.effect("rejects verified financial checkpoints with mismatch evidence", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const failure = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialReconciliationCheckpoint)({
           id: "00000000-0000-4000-8000-000000000030",
@@ -997,10 +1039,11 @@ describe("accounting contract", () => {
         }),
       )
       assert.strictEqual(failure._tag, "SchemaError")
-    }))
+    }),
+  )
 
   it.effect("rejects malformed financial checkpoint timestamps", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const dateOnly = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialReconciliationCheckpoint.fields.checkedAt)(
           "2026-08-20",
@@ -1013,10 +1056,11 @@ describe("accounting contract", () => {
         ),
       )
       assert.strictEqual(malformed._tag, "SchemaError")
-    }))
+    }),
+  )
 
   it.effect("rejects malformed financial operation timestamps", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const scheduled = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialOperation.fields.scheduledAt)("2026-08-20"),
       )
@@ -1029,10 +1073,11 @@ describe("accounting contract", () => {
         Schema.decodeUnknownEffect(FinancialOperation.fields.reconciledAt)("2026-08-20"),
       )
       assert.strictEqual(reconciled._tag, "SchemaError")
-    }))
+    }),
+  )
 
   it.effect("accepts revenue posting without a caller amount", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(PostRevenueForOrderInput)({
         principal,
         tenantId,
@@ -1044,115 +1089,129 @@ describe("accounting contract", () => {
       })
       assert.strictEqual(decoded.orderId, revenueOrderIds.open)
       assert.isUndefined(decoded.amount)
-    }))
+    }),
+  )
 
   it.effect("rejects malformed revenue reversal identities", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const failure = yield* Effect.flip(
         Schema.decodeUnknownEffect(ReverseRevenueForOrderInput.fields.orderId)("not-a-uuid"),
       )
       assert.strictEqual(failure._tag, "SchemaError")
       const legalEntityFailure = yield* Effect.flip(
-        Schema.decodeUnknownEffect(ReverseRevenueForOrderInput.fields.legalEntityId)(
-          "not-a-uuid",
-        ),
+        Schema.decodeUnknownEffect(ReverseRevenueForOrderInput.fields.legalEntityId)("not-a-uuid"),
       )
       assert.strictEqual(legalEntityFailure._tag, "SchemaError")
-    }))
+    }),
+  )
 
   it.effect("posts revenue in an open period", () =>
-    withAccounting(Effect.gen(function*() {
-      const invalidTenant = yield* Effect.flip(
-        Schema.decodeUnknownEffect(PostRevenueForOrderInput)({
+    withAccounting(
+      Effect.gen(function* () {
+        const invalidTenant = yield* Effect.flip(
+          Schema.decodeUnknownEffect(PostRevenueForOrderInput)({
+            principal,
+            tenantId: "not-a-uuid",
+            legalEntityId: revenueLegalEntityId,
+            orderId: revenueOrderIds.open,
+            amount: "125.00",
+            ...revenueMetadata,
+          }),
+        )
+        assert.strictEqual(invalidTenant._tag, "SchemaError")
+        const invalidLegalEntity = yield* Effect.flip(
+          Schema.decodeUnknownEffect(PostRevenueForOrderInput)({
+            principal,
+            tenantId,
+            legalEntityId: "not-a-uuid",
+            orderId: revenueOrderIds.open,
+            amount: "125.00",
+            ...revenueMetadata,
+          }),
+        )
+        assert.strictEqual(invalidLegalEntity._tag, "SchemaError")
+        const { accounting } = yield* prepareRevenuePosting
+        const journal = yield* accounting.postRevenueForOrder({
           principal,
-          tenantId: "not-a-uuid",
+          tenantId,
           legalEntityId: revenueLegalEntityId,
           orderId: revenueOrderIds.open,
           amount: "125.00",
           ...revenueMetadata,
-        }),
-      )
-      assert.strictEqual(invalidTenant._tag, "SchemaError")
-      const invalidLegalEntity = yield* Effect.flip(
-        Schema.decodeUnknownEffect(PostRevenueForOrderInput)({
-          principal,
-          tenantId,
-          legalEntityId: "not-a-uuid",
-          orderId: revenueOrderIds.open,
-          amount: "125.00",
-          ...revenueMetadata,
-        }),
-      )
-      assert.strictEqual(invalidLegalEntity._tag, "SchemaError")
-      const { accounting } = yield* prepareRevenuePosting
-      const journal = yield* accounting.postRevenueForOrder({
-        principal,
-        tenantId,
-        legalEntityId: revenueLegalEntityId,
-        orderId: revenueOrderIds.open,
-        amount: "125.00",
-        ...revenueMetadata,
-      })
-      assert.strictEqual(journal.status, "posted")
-      assert.deepStrictEqual(journal.lines.map(({ debit, credit }) => ({ debit, credit })), [
-        { debit: "125.00", credit: "0" },
-        { debit: "0", credit: "125.00" },
-      ])
-    })))
+        })
+        assert.strictEqual(journal.status, "posted")
+        assert.deepStrictEqual(
+          journal.lines.map(({ debit, credit }) => ({ debit, credit })),
+          [
+            { debit: "125.00", credit: "0" },
+            { debit: "0", credit: "125.00" },
+          ],
+        )
+      }),
+    ),
+  )
 
   it.effect("rejects revenue posting after the period closes", () =>
-    withAccounting(Effect.gen(function*() {
-      const { accounting, period } = yield* prepareRevenuePosting
-      yield* accounting.closePeriod({
-        principal,
-        tenantId,
-        legalEntityId: revenueLegalEntityId,
-        periodId: period.id,
-      })
-      assert.instanceOf(
-        yield* Effect.flip(accounting.postRevenueForOrder({
+    withAccounting(
+      Effect.gen(function* () {
+        const { accounting, period } = yield* prepareRevenuePosting
+        yield* accounting.closePeriod({
           principal,
           tenantId,
           legalEntityId: revenueLegalEntityId,
-          orderId: revenueOrderIds.closed,
-          amount: "125.00",
-          ...revenueMetadata,
-        })),
-        AccountingPeriodNotOpen,
-      )
-    })))
+          periodId: period.id,
+        })
+        assert.instanceOf(
+          yield* Effect.flip(
+            accounting.postRevenueForOrder({
+              principal,
+              tenantId,
+              legalEntityId: revenueLegalEntityId,
+              orderId: revenueOrderIds.closed,
+              amount: "125.00",
+              ...revenueMetadata,
+            }),
+          ),
+          AccountingPeriodNotOpen,
+        )
+      }),
+    ),
+  )
 
   it.effect("reverses posted revenue idempotently", () =>
-    withAccounting(Effect.gen(function*() {
-      const { accounting } = yield* prepareRevenuePosting
-      const posted = yield* accounting.postRevenueForOrder({
-        principal,
-        tenantId,
-        legalEntityId: revenueLegalEntityId,
-        orderId: revenueOrderIds.reverse,
-        amount: "125.00",
-        ...revenueMetadata,
-      })
-      const reversal = yield* accounting.reverseRevenueForOrder({
-        principal,
-        tenantId,
-        legalEntityId: revenueLegalEntityId,
-        orderId: revenueOrderIds.reverse,
-      })
-      const repeated = yield* accounting.reverseRevenueForOrder({
-        principal,
-        tenantId,
-        legalEntityId: revenueLegalEntityId,
-        orderId: revenueOrderIds.reverse,
-      })
-      assert.strictEqual(reversal.reversesEntryId, posted.id)
-      assert.strictEqual(repeated.id, reversal.id)
-    })))
+    withAccounting(
+      Effect.gen(function* () {
+        const { accounting } = yield* prepareRevenuePosting
+        const posted = yield* accounting.postRevenueForOrder({
+          principal,
+          tenantId,
+          legalEntityId: revenueLegalEntityId,
+          orderId: revenueOrderIds.reverse,
+          amount: "125.00",
+          ...revenueMetadata,
+        })
+        const reversal = yield* accounting.reverseRevenueForOrder({
+          principal,
+          tenantId,
+          legalEntityId: revenueLegalEntityId,
+          orderId: revenueOrderIds.reverse,
+        })
+        const repeated = yield* accounting.reverseRevenueForOrder({
+          principal,
+          tenantId,
+          legalEntityId: revenueLegalEntityId,
+          orderId: revenueOrderIds.reverse,
+        })
+        assert.strictEqual(reversal.reversesEntryId, posted.id)
+        assert.strictEqual(repeated.id, reversal.id)
+      }),
+    ),
+  )
 
   it.effect("revenue posted atomic publication preserves metadata and one event on replay", () => {
     const events: EventEnvelope[] = []
     return withAccounting(
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const { accounting } = yield* prepareRevenuePosting
         const input = {
           principal,
@@ -1214,7 +1273,7 @@ describe("accounting contract", () => {
 
   it.effect("revenue posted atomic publication rolls back when messaging append fails", () =>
     withAccounting(
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const { accounting } = yield* prepareRevenuePosting
         const input = {
           principal,
@@ -1234,32 +1293,38 @@ describe("accounting contract", () => {
       }),
       capabilities,
       makeFailOnceMessagingLayer(),
-    ))
+    ),
+  )
 
   it.effect("rejects an unbalanced journal", () =>
-    withAccounting(Effect.gen(function*() {
-      const accounting = yield* AccountingService
-      const cash = yield* accounting.createAccount({
-        principal,
-        tenantId,
-        code: "1000",
-        name: "Cash",
-        type: "asset",
-      })
-      const error = yield* Effect.flip(accounting.postJournal({
-        principal,
-        tenantId,
-        reference: "BAD-1",
-        lines: [
-          { accountId: cash.id, debit: "10.00", credit: "0" },
-          { accountId: cash.id, debit: "0", credit: "9.00" },
-        ],
-      }))
-      assert.instanceOf(error, UnbalancedJournal)
-    })))
+    withAccounting(
+      Effect.gen(function* () {
+        const accounting = yield* AccountingService
+        const cash = yield* accounting.createAccount({
+          principal,
+          tenantId,
+          code: "1000",
+          name: "Cash",
+          type: "asset",
+        })
+        const error = yield* Effect.flip(
+          accounting.postJournal({
+            principal,
+            tenantId,
+            reference: "BAD-1",
+            lines: [
+              { accountId: cash.id, debit: "10.00", credit: "0" },
+              { accountId: cash.id, debit: "0", credit: "9.00" },
+            ],
+          }),
+        )
+        assert.instanceOf(error, UnbalancedJournal)
+      }),
+    ),
+  )
 
   it.effect("approves an artifact after its signing key rotates", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const oldKey = yield* generateEd25519FinancialVerificationSigner("old-key")
       const currentKey = yield* generateEd25519FinancialVerificationSigner("current-key")
       let signer = oldKey.signer
@@ -1274,29 +1339,35 @@ describe("accounting contract", () => {
         verify: (payload: Uint8Array, signature: Uint8Array) => signer.verify(payload, signature),
       }
       const legalEntityId = "00000000-0000-4000-8000-000000000003"
-      const authorization = makeAuthorizationTestLayer([
-        AccountingCapabilities.legalEntityConfigure,
-        AccountingCapabilities.financialEngineActivate,
-        AccountingCapabilities.financialEvidenceRecord,
-      ].map((capability) => ({
-        userAccountId: principal.userAccountId,
-        tenantId,
-        capability,
-      })))
+      const authorization = makeAuthorizationTestLayer(
+        [
+          AccountingCapabilities.legalEntityConfigure,
+          AccountingCapabilities.financialEngineActivate,
+          AccountingCapabilities.financialEvidenceRecord,
+        ].map((capability) => ({
+          userAccountId: principal.userAccountId,
+          tenantId,
+          capability,
+        })),
+      )
       const accounting = yield* Effect.provide(
         Effect.service(AccountingService),
         makeAccountingTestLayer().pipe(
-          Layer.provide(Layer.mergeAll(
-            authorization,
-            makeMessagingTestLayer(),
-            Layer.succeed(SalesService, salesFacts),
-            Layer.succeed(FinancialVerificationSigner, rotatingSigner),
-            makeFinancialVerificationKeyring([{
-              algorithm: oldKey.signer.algorithm,
-              keyId: oldKey.signer.keyId,
-              verify: oldKey.signer.verify,
-            }]),
-          )),
+          Layer.provide(
+            Layer.mergeAll(
+              authorization,
+              makeMessagingTestLayer(),
+              Layer.succeed(SalesService, salesFacts),
+              Layer.succeed(FinancialVerificationSigner, rotatingSigner),
+              makeFinancialVerificationKeyring([
+                {
+                  algorithm: oldKey.signer.algorithm,
+                  keyId: oldKey.signer.keyId,
+                  verify: oldKey.signer.verify,
+                },
+              ]),
+            ),
+          ),
         ),
       )
       yield* accounting.configureLegalEntity({
@@ -1353,5 +1424,6 @@ describe("accounting contract", () => {
       assert.strictEqual(artifact.signingKeyId, "old-key")
       assert.strictEqual(rotatingSigner.keyId, "current-key")
       assert.strictEqual(approved.status, "approved")
-    }))
+    }),
+  )
 })

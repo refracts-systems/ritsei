@@ -1,0 +1,16 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": {
+    "correctness": "error"
+  },
+  "ignorePatterns": [
+    "vendor/**",
+    "**/node_modules/**",
+    ".auto/**",
+    "**/dist/**",
+    "apps/web/src/ui/generated/**",
+    "apps/web/src/shared/contracts/generated/**",
+    "apps/web/dist/**",
+    "db/migrations/**/snapshot.json"
+  ]
+}

@@ -8,9 +8,7 @@ import { decodeRouteInput } from "./route-input.ts"
 
 const RouteInput = Schema.Struct({
   id: Schema.optionalKey(Schema.String.check(Schema.isUUID())),
-  search: Schema.optionalKey(
-    Schema.String.check(Schema.isTrimmed()).check(Schema.isPattern(/\S/)),
-  ),
+  search: Schema.optionalKey(Schema.String.check(Schema.isTrimmed()).check(Schema.isPattern(/\S/))),
   status: Schema.optionalKey(TenantMembershipStatus),
 })
 
@@ -29,11 +27,7 @@ export default function AccessRoute() {
       description="Connect a valid session to administer tenant access."
     >
       {(route) => (
-        <Access
-          selectedUserAccountId={route.id}
-          search={route.search}
-          status={route.status}
-        />
+        <Access selectedUserAccountId={route.id} search={route.search} status={route.status} />
       )}
     </DecodedConnectedSessionRoute>
   )

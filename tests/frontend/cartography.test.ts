@@ -20,7 +20,7 @@ const accounts = [
 it.effect(
   "keeps the cartographic fallback semantic and keyboard accessible",
   () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const { page, url, errors } = yield* builtApp
       yield* Effect.promise(async () => {
         await page.route("**/api/user-accounts", (route) =>
@@ -28,7 +28,8 @@ it.effect(
             status: 200,
             contentType: "application/json",
             body: JSON.stringify(accounts),
-          }))
+          }),
+        )
         await connectToTenant(page, url, "token", tenantId, "User accounts")
         await page.getByRole("link", { name: "User accounts", exact: true }).click()
         await page.waitForURL("**/user-accounts")
@@ -44,7 +45,8 @@ it.effect(
         await page.keyboard.press("Enter")
         assert.equal(await activeMarker.getAttribute("aria-pressed"), "true")
         assert.isTrue(
-          await page.getByText("Showing active accounts in the table above.", { exact: true })
+          await page
+            .getByText("Showing active accounts in the table above.", { exact: true })
             .isVisible(),
         )
         assert.equal(

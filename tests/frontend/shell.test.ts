@@ -5,7 +5,7 @@ import { builtApp, connectToTenant, mockLocalAuth } from "./browser.ts"
 it.effect(
   "builds the SPA, signs in, navigates, and changes theme",
   () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const { page, url, errors } = yield* builtApp
       yield* Effect.promise(async () => {
         await connectToTenant(
@@ -19,19 +19,15 @@ it.effect(
         const before = await page.locator("main").evaluate((node) => getComputedStyle(node).color)
         await page.getByRole("button", { name: "Dark theme" }).click()
         assert.equal(
-          await page.getByRole("button", { name: "Dark theme" }).getAttribute(
-            "aria-pressed",
-          ),
+          await page.getByRole("button", { name: "Dark theme" }).getAttribute("aria-pressed"),
           "true",
         )
         assert.notEqual(
           await page.locator("main").evaluate((node) => getComputedStyle(node).color),
           before,
         )
-        await page.getByRole("link", { name: "User accounts", exact: true })
-          .click()
-        await page.getByRole("heading", { name: "User accounts", exact: true })
-          .waitFor()
+        await page.getByRole("link", { name: "User accounts", exact: true }).click()
+        await page.getByRole("heading", { name: "User accounts", exact: true }).waitFor()
         await page.goBack()
         await page.getByRole("heading", { name: "My work" }).waitFor()
 
@@ -42,7 +38,7 @@ it.effect(
         assert.isTrue(await page.getByRole("link", { name: "Access", exact: true }).isVisible())
         assert.equal(await page.title(), "RITSEI · Operational workspace")
 
-        const navigationToggle = page.locator("button[aria-controls=\"global-navigation\"]")
+        const navigationToggle = page.locator('button[aria-controls="global-navigation"]')
         const sidebar = page.locator("#global-navigation")
         const expandedSidebar = await sidebar.boundingBox()
         assert.exists(expandedSidebar)
@@ -67,9 +63,9 @@ it.effect(
         assert.equal(await navigationToggle.getAttribute("aria-expanded"), "true")
         assert.isNull(await sidebar.getAttribute("aria-hidden"))
         assert.isTrue(
-          await page.getByRole("link", { name: "My work" }).evaluate((element) =>
-            document.activeElement === element
-          ),
+          await page
+            .getByRole("link", { name: "My work" })
+            .evaluate((element) => document.activeElement === element),
         )
 
         await page.keyboard.press("Escape")
@@ -84,10 +80,7 @@ it.effect(
         await page.getByRole("heading", { name: "Page not found" }).waitFor()
         assert.deepEqual(errors, [])
         const stored = await page.evaluate(() =>
-          JSON.stringify([
-            Object.entries(localStorage),
-            Object.entries(sessionStorage),
-          ])
+          JSON.stringify([Object.entries(localStorage), Object.entries(sessionStorage)]),
         )
         assert.notInclude(stored, "test-session")
         assert.notInclude(stored, "not-a-uuid")
@@ -99,7 +92,7 @@ it.effect(
 it.effect(
   "switches tenants, logs out, and recovers from an expired session",
   () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const { page, url, errors } = yield* builtApp
       const firstTenant = "01900000-0000-7000-8000-000000000010"
       const secondTenant = "01900000-0000-7000-8000-000000000011"
@@ -134,17 +127,19 @@ it.effect(
         await page.getByRole("button", { name: "Sign in locally", exact: true }).click()
         await page.getByRole("heading", { name: "My work", exact: true }).waitFor()
         const tenantSelect = page.getByRole("combobox", { name: "Active tenant", exact: true })
-        const switched = page.waitForResponse((response) =>
-          new URL(response.url()).pathname === "/api/auth/session"
-          && response.request().headers()["x-tenant-id"] === secondTenant
+        const switched = page.waitForResponse(
+          (response) =>
+            new URL(response.url()).pathname === "/api/auth/session" &&
+            response.request().headers()["x-tenant-id"] === secondTenant,
         )
         await tenantSelect.selectOption(secondTenant)
         await switched
         assert.equal(await tenantSelect.inputValue(), secondTenant)
         assert.equal(sessionTenantHeaders.at(-1), secondTenant)
 
-        const logoutResponse = page.waitForResponse((response) =>
-          new URL(response.url()).pathname === "/api/auth/logout" && response.status() === 204
+        const logoutResponse = page.waitForResponse(
+          (response) =>
+            new URL(response.url()).pathname === "/api/auth/logout" && response.status() === 204,
         )
         await page.getByRole("button", { name: "Sign out", exact: true }).click()
         const dialog = page.getByRole("dialog", { name: "Sign out of RITSEI?" })
@@ -160,7 +155,8 @@ it.effect(
             status: 401,
             contentType: "application/json",
             body: JSON.stringify({ _tag: "ApiUnauthorized", code: "unauthorized" }),
-          }))
+          }),
+        )
         await page.getByRole("link", { name: "User accounts", exact: true }).click()
         await page.getByRole("button", { name: "Sign in locally", exact: true }).waitFor()
         assert.deepEqual(errors, [])

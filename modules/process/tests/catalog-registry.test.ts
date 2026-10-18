@@ -20,7 +20,7 @@ import {
 
 describe("catalog compatibility", () => {
   it.effect("resolves registered PUBLIC actions and events", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const registry = yield* makeProcessCatalogRegistry([
         ...IdentityTypedActionCatalog,
         ...IdentityTypedEventCatalog,
@@ -51,39 +51,47 @@ describe("catalog compatibility", () => {
       assert.strictEqual(action?.id, "inventory.stock.adjust")
       assert.strictEqual(event?.id, "process.order_confirmation.completed")
       assert.strictEqual(registry.entries.length, 17)
-    }))
+    }),
+  )
 
   it.effect("rejects unregistered actions and events", () =>
-    Effect.gen(function*() {
-      const registry = yield* makeProcessCatalogRegistry([
-        ProcessOrderConfirmationCompletedEvent,
+    Effect.gen(function* () {
+      const registry = yield* makeProcessCatalogRegistry([ProcessOrderConfirmationCompletedEvent])
+
+      assert.isUndefined(
+        registry.resolveReleasedCapability({
+          kind: "DomainAction",
+          id: "sales.order.confirm",
+          version: 1,
+        }),
+      )
+      assert.isUndefined(
+        registry.resolveReleasedCapability({
+          kind: "DomainEvent",
+          id: "process.order_confirmation.missing",
+          version: 1,
+        }),
+      )
+
+      const privateRegistry = yield* makeProcessCatalogRegistry([
+        {
+          ...ProcessOrderConfirmationCompletedEvent,
+          id: "process.private.example",
+          stability: "PRIVATE",
+        },
       ])
-
-      assert.isUndefined(registry.resolveReleasedCapability({
-        kind: "DomainAction",
-        id: "sales.order.confirm",
-        version: 1,
-      }))
-      assert.isUndefined(registry.resolveReleasedCapability({
-        kind: "DomainEvent",
-        id: "process.order_confirmation.missing",
-        version: 1,
-      }))
-
-      const privateRegistry = yield* makeProcessCatalogRegistry([{
-        ...ProcessOrderConfirmationCompletedEvent,
-        id: "process.private.example",
-        stability: "PRIVATE",
-      }])
-      assert.isUndefined(privateRegistry.resolveReleasedCapability({
-        kind: "DomainEvent",
-        id: "process.private.example",
-        version: 1,
-      }))
-    }))
+      assert.isUndefined(
+        privateRegistry.resolveReleasedCapability({
+          kind: "DomainEvent",
+          id: "process.private.example",
+          version: 1,
+        }),
+      )
+    }),
+  )
 
   it.effect("rejects duplicate catalog identities", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const failure = yield* Effect.flip(
         makeProcessCatalogRegistry([
           ProcessOrderConfirmationCompletedEvent,
@@ -94,10 +102,11 @@ describe("catalog compatibility", () => {
       assert.instanceOf(failure, ProcessCatalogConflict)
       assert.strictEqual(failure.id, ProcessOrderConfirmationCompletedEvent.id)
       assert.strictEqual(failure.version, 1)
-    }))
+    }),
+  )
 
   it.effect("validates catalog lookup input", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const failure = yield* Effect.flip(
         Schema.decodeUnknownEffect(ResolveProcessCatalogInput)({
           kind: "DomainAction",
@@ -107,5 +116,6 @@ describe("catalog compatibility", () => {
       )
 
       assert.strictEqual(failure._tag, "SchemaError")
-    }))
+    }),
+  )
 })

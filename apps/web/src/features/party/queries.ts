@@ -43,10 +43,8 @@ const partyDetailKey = (id: string) => [...partyDetailsKey, id] as const
 const relatedPartyPathsKey = (id: string, input: ListRelatedPartyPathsInput) =>
   ["party", "related-paths", id, input] as const
 
-const invalidatePartyCollection = (
-  client: ReturnType<typeof useQueryClient>,
-  tenantId: string,
-) => client.invalidateQueries({ queryKey: serverQueryKey(tenantId, partyCollectionKey) })
+const invalidatePartyCollection = (client: ReturnType<typeof useQueryClient>, tenantId: string) =>
+  client.invalidateQueries({ queryKey: serverQueryKey(tenantId, partyCollectionKey) })
 
 const invalidatePartyDetails = (
   client: ReturnType<typeof useQueryClient>,
@@ -91,10 +89,7 @@ export function createRelatedPartyPathsQuery(
   })
 }
 
-export function createPartyMutation(
-  scope: ApiScope,
-  afterSuccess?: (party: Party) => void,
-) {
+export function createPartyMutation(scope: ApiScope, afterSuccess?: (party: Party) => void) {
   const client = useQueryClient()
   return useMutation<Party, RequestFailure, CreatePartyInput>(() => ({
     mutationFn: (input) => runRequest(scope, createParty(input)),
@@ -119,11 +114,7 @@ export function createLegalEntityMutation(scope: ApiScope) {
 
 export function createBranchMutation(scope: ApiScope) {
   const client = useQueryClient()
-  return useMutation<
-    Branch,
-    RequestFailure,
-    CreateBranchInput & { legalEntityId: string }
-  >(() => ({
+  return useMutation<Branch, RequestFailure, CreateBranchInput & { legalEntityId: string }>(() => ({
     mutationFn: ({ legalEntityId, ...input }) =>
       runRequest(scope, createBranch(legalEntityId, input)),
     onSuccess: () => invalidatePartyDetails(client, scope.tenantId),

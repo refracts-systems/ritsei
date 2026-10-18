@@ -93,21 +93,18 @@ const inventoryService: InventoryServiceContract = {
   completeTransfer: unused,
 }
 
-const TestHttpServices = Layer.mergeAll(
-  Path.layer,
-  Etag.layerWeak,
-  HttpPlatform.layer,
-).pipe(Layer.provideMerge(FileSystem.layerNoop({})))
+const TestHttpServices = Layer.mergeAll(Path.layer, Etag.layerWeak, HttpPlatform.layer).pipe(
+  Layer.provideMerge(FileSystem.layerNoop({})),
+)
 
 it.layer(TestHttpServices)("inventory API read projections", (it) => {
   it.effect("forwards tenant and bearer context to every inventory read", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const bearer = Layer.succeed(BearerAuth, {
         bearer: (effect) => Effect.provideService(effect, CurrentPrincipal, principal),
       })
-      const bearerClient = HttpApiMiddleware.layerClient(
-        BearerAuth,
-        ({ request, next }) => next(HttpClientRequest.bearerToken(request, "inventory-token")),
+      const bearerClient = HttpApiMiddleware.layerClient(BearerAuth, ({ request, next }) =>
+        next(HttpClientRequest.bearerToken(request, "inventory-token")),
       )
       const handlers = InventoryHandlers.pipe(
         Layer.provide(bearer),
@@ -159,5 +156,6 @@ it.layer(TestHttpServices)("inventory API read projections", (it) => {
         }),
         [movement],
       )
-    }))
+    }),
+  )
 })

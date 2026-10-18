@@ -36,31 +36,34 @@ export const makeFinancialStoreObservationLayer = (
   configuration: RitseiRuntimeConfiguration,
 ) => {
   const postgresql = makePostgresqlFinancialStoreObservation()
-  const providers = configuration.financialAuthority === "postgresql"
-    ? postgresql.pipe(
-      Effect.map(({ collector, scanner }) => [{
-        authority: "postgresql" as const,
-        collector,
-        scanner,
-      }]),
-    )
-    : Effect.all([
-      postgresql,
-      makeTigerBeetleFinancialStoreObservation(configuration.tigerBeetle),
-    ]).pipe(
-      Effect.map(([postgresqlProvider, tigerbeetleProvider]) => [
-        {
-          authority: "postgresql" as const,
-          collector: postgresqlProvider.collector,
-          scanner: postgresqlProvider.scanner,
-        },
-        {
-          authority: "tigerbeetle" as const,
-          collector: tigerbeetleProvider.collector,
-          scanner: tigerbeetleProvider.scanner,
-        },
-      ]),
-    )
+  const providers =
+    configuration.financialAuthority === "postgresql"
+      ? postgresql.pipe(
+          Effect.map(({ collector, scanner }) => [
+            {
+              authority: "postgresql" as const,
+              collector,
+              scanner,
+            },
+          ]),
+        )
+      : Effect.all([
+          postgresql,
+          makeTigerBeetleFinancialStoreObservation(configuration.tigerBeetle),
+        ]).pipe(
+          Effect.map(([postgresqlProvider, tigerbeetleProvider]) => [
+            {
+              authority: "postgresql" as const,
+              collector: postgresqlProvider.collector,
+              scanner: postgresqlProvider.scanner,
+            },
+            {
+              authority: "tigerbeetle" as const,
+              collector: tigerbeetleProvider.collector,
+              scanner: tigerbeetleProvider.scanner,
+            },
+          ]),
+        )
   return Layer.effect(
     FinancialStoreObservationRegistry,
     providers.pipe(Effect.map(makeFinancialStoreObservationRegistry)),

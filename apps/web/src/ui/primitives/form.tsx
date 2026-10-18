@@ -3,12 +3,10 @@ import { omit } from "solid-js"
 
 export type FormValue = Record<string, FormDataEntryValue>
 
-export type FormProps =
-  & Omit<JSX.FormHTMLAttributes<HTMLFormElement>, "class" | "onSubmit">
-  & {
-    class?: JSX.ClassValue
-    onSubmit: (value: FormValue, event: SubmitEvent) => void | Promise<void>
-  }
+export type FormProps = Omit<JSX.FormHTMLAttributes<HTMLFormElement>, "class" | "onSubmit"> & {
+  class?: JSX.ClassValue
+  onSubmit: (value: FormValue, event: SubmitEvent) => void | Promise<void>
+}
 
 /** A native form shell; callers may decode the submitted value with Effect Schema. */
 export function Form(props: FormProps) {

@@ -9,9 +9,8 @@ type ButtonBaseProps = Omit<JSX.ButtonHTMLAttributes<HTMLButtonElement>, "class"
   class?: JSX.ClassValue
 }
 
-export type ButtonProps =
-  & ButtonBaseProps
-  & (
+export type ButtonProps = ButtonBaseProps &
+  (
     | { iconOnly: true; "aria-label": string }
     | { iconOnly?: false | undefined; "aria-label"?: string }
   )

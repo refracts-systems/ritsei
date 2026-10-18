@@ -21,7 +21,9 @@ export function BulkOperation(props: BulkOperationProps) {
           {props.description}
         </div>
         {props.selectedCount !== undefined && (
-          <p aria-live="polite">{props.selectedLabel ?? "Selected"}: {props.selectedCount}</p>
+          <p aria-live="polite">
+            {props.selectedLabel ?? "Selected"}: {props.selectedCount}
+          </p>
         )}
       </header>
       <div>{props.children}</div>

@@ -32,7 +32,9 @@ export function AuthCallback() {
   return (
     <section class={[surface(), layout.stack]} aria-labelledby="callback-heading">
       <h1 id="callback-heading">Sign-in</h1>
-      <p role="status" aria-live="polite">{message()}</p>
+      <p role="status" aria-live="polite">
+        {message()}
+      </p>
       <Show
         when={message().startsWith("Sign-in could") || message().startsWith("Sign-in succeeded")}
       >

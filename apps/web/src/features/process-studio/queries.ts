@@ -29,15 +29,10 @@ import {
 
 const processCollectionKey = ["process", "collection"] as const
 
-const invalidate = (
-  client: ReturnType<typeof useQueryClient>,
-  tenantId: string,
-) => client.invalidateQueries({ queryKey: ["tenant", tenantId, ...processCollectionKey] })
+const invalidate = (client: ReturnType<typeof useQueryClient>, tenantId: string) =>
+  client.invalidateQueries({ queryKey: ["tenant", tenantId, ...processCollectionKey] })
 
-export function createProcessCatalogQuery(
-  scope: ApiScope,
-  input: ListProcessCatalogInput = {},
-) {
+export function createProcessCatalogQuery(scope: ApiScope, input: ListProcessCatalogInput = {}) {
   return createServerQuery<readonly ProcessCatalogDescriptor[], RequestFailure>({
     tenantId: scope.tenantId,
     key: [...processCollectionKey, "catalog", input],

@@ -11,13 +11,7 @@ const NonEmptyString = Schema.String.check(
 )
 const PositiveInt = Schema.Int.check(Schema.isGreaterThan(0))
 const OpenApiPath = NonEmptyString.check(Schema.isPattern(/^\/\S*$/))
-export const SupportedOpenApiMethod = Schema.Literals([
-  "get",
-  "post",
-  "put",
-  "patch",
-  "delete",
-])
+export const SupportedOpenApiMethod = Schema.Literals(["get", "post", "put", "patch", "delete"])
 export type SupportedOpenApiMethod = Schema.Schema.Type<typeof SupportedOpenApiMethod>
 
 const MaxDocumentSectionBytes = 512 * 1024
@@ -26,10 +20,11 @@ const JsonObject = Schema.Record(Schema.String, Schema.Json)
 type JsonObjectValue = Schema.Schema.Type<typeof JsonObject>
 const jsonByteLength = (value: JsonObjectValue): number =>
   utf8Encoder.encode(JSON.stringify(value)).byteLength
-const BoundedJsonObject = JsonObject.check(Schema.makeFilter(
-  (value) => jsonByteLength(value) <= MaxDocumentSectionBytes,
-  { expected: `a JSON object <= ${MaxDocumentSectionBytes} UTF-8 bytes` },
-))
+const BoundedJsonObject = JsonObject.check(
+  Schema.makeFilter((value) => jsonByteLength(value) <= MaxDocumentSectionBytes, {
+    expected: `a JSON object <= ${MaxDocumentSectionBytes} UTF-8 bytes`,
+  }),
+)
 
 export const OpenApiDocument = Schema.Struct({
   openapi: Schema.Literal("3.2.0"),
@@ -93,7 +88,7 @@ export const validateOpenApiImport = (
   OpenApiOperationSelection,
   ExternalActionNotAllowlisted | ExternalPayloadInvalid | Schema.SchemaError
 > =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const decoded = yield* Schema.decodeUnknownEffect(OpenApiImportRequest)(input)
     if (!documentContainsSelectedOperation(decoded.document.paths, decoded.operation)) {
       return yield* Effect.fail(

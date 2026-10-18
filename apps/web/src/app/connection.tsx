@@ -22,9 +22,12 @@ export function Connection() {
   const [message, setMessage] = createSignal("")
 
   onSettled(() => {
-    void getAuthConfiguration().then(setConfiguration).catch(() => {
-      setMessage("Authentication configuration is unavailable.")
-    }).finally(() => setLoading(false))
+    void getAuthConfiguration()
+      .then(setConfiguration)
+      .catch(() => {
+        setMessage("Authentication configuration is unavailable.")
+      })
+      .finally(() => setLoading(false))
   })
 
   const connect = async () => {

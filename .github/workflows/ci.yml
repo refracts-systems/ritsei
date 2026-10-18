@@ -46,10 +46,11 @@ jobs:
             pnpm exec tsx tooling/check-commit-message.ts "$RUNNER_TEMP/pr-title"
           fi
 
-      # `deno lint` was retired with the Node migration; `tsc` in `pnpm run check`
-      # plus ast-grep boundary rules cover the lint surface for now.
       - name: Format
         run: pnpm run fmt:check
+
+      - name: Lint
+        run: pnpm run lint
 
       - name: Type check
         run: pnpm run check

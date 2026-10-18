@@ -62,7 +62,7 @@ const readEnvironment = () =>
   })
 
 const findOrCreateUser = (input: BootstrapEnvironment) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const users = yield* UserAccountService
     const email = input.email.trim().toLowerCase()
     const existing = (yield* users.list()).find((user) => user.email === email)
@@ -71,23 +71,25 @@ const findOrCreateUser = (input: BootstrapEnvironment) =>
       Effect.catch((error) =>
         error instanceof UserAccountAlreadyExists
           ? Effect.map(users.list(), (accounts) =>
-            accounts.find((account) => account.email === email))
-          : Effect.fail(error)
+              accounts.find((account) => account.email === email),
+            )
+          : Effect.fail(error),
       ),
       Effect.flatMap((account) =>
         account === undefined
           ? Effect.fail(new Error("bootstrap account disappeared"))
-          : Effect.succeed(account)
+          : Effect.succeed(account),
       ),
     )
   })
 
 const bindExternalSubject = (input: BootstrapEnvironment, userAccountId: string) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     if (input.externalSubject === undefined) return
     const configuration = yield* readRuntimeConfiguration()
-    const issuer = input.externalIssuer
-      ?? (configuration.authentication?.profile === "oidc"
+    const issuer =
+      input.externalIssuer ??
+      (configuration.authentication?.profile === "oidc"
         ? configuration.authentication.issuerUrl
         : undefined)
     if (issuer === undefined) {
@@ -98,16 +100,20 @@ const bindExternalSubject = (input: BootstrapEnvironment, userAccountId: string)
   })
 
 const ensureMembershipAndCapabilities = (principal: Principal, tenantId: string) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const authorization = yield* AuthorizationService
-    const member = yield* authorization.getMember({
-      userAccountId: principal.userAccountId,
-      tenantId,
-    }).pipe(
-      Effect.catch((error) =>
-        error instanceof TenantMembershipNotFound ? Effect.succeed(undefined) : Effect.fail(error)
-      ),
-    )
+    const member = yield* authorization
+      .getMember({
+        userAccountId: principal.userAccountId,
+        tenantId,
+      })
+      .pipe(
+        Effect.catch((error) =>
+          error instanceof TenantMembershipNotFound
+            ? Effect.succeed(undefined)
+            : Effect.fail(error),
+        ),
+      )
     if (member === undefined) {
       yield* authorization.addMember({
         userAccountId: principal.userAccountId,
@@ -122,20 +128,24 @@ const ensureMembershipAndCapabilities = (principal: Principal, tenantId: string)
     })
     for (const capability of bootstrapCapabilities) {
       if (grants.some((grant) => grant.capability === capability)) continue
-      yield* authorization.grant({
-        userAccountId: principal.userAccountId,
-        tenantId,
-        capability,
-      }).pipe(
-        Effect.catch((error) =>
-          error instanceof CapabilityAlreadyGranted ? Effect.succeed(undefined) : Effect.fail(error)
-        ),
-      )
+      yield* authorization
+        .grant({
+          userAccountId: principal.userAccountId,
+          tenantId,
+          capability,
+        })
+        .pipe(
+          Effect.catch((error) =>
+            error instanceof CapabilityAlreadyGranted
+              ? Effect.succeed(undefined)
+              : Effect.fail(error),
+          ),
+        )
     }
   })
 
 const provision = (input: BootstrapEnvironment) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const auth = yield* AuthService
     const user = yield* findOrCreateUser(input)
     yield* bindExternalSubject(input, user.id)
@@ -165,7 +175,7 @@ const provision = (input: BootstrapEnvironment) =>
       postingEnabled: input.postingEnabled,
     }).pipe(
       Effect.catch((error) =>
-        error instanceof TenantAlreadyExists ? Effect.succeed(undefined) : Effect.fail(error)
+        error instanceof TenantAlreadyExists ? Effect.succeed(undefined) : Effect.fail(error),
       ),
     )
     if (result === undefined) {
@@ -178,7 +188,7 @@ const provision = (input: BootstrapEnvironment) =>
   })
 
 const run = Effect.scoped(
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const input = yield* readEnvironment()
     const configuration = yield* readRuntimeConfiguration()
     const url = process.env["DATABASE_URL"]

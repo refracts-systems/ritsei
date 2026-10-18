@@ -105,33 +105,53 @@ export class CurrentPrincipal extends Context.Service<CurrentPrincipal, Principa
   "RITSEI/Http/CurrentPrincipal",
 ) {}
 
-export class CurrentRuntimeConfiguration
-  extends Context.Service<CurrentRuntimeConfiguration, RitseiRuntimeConfiguration>()(
-    "RITSEI/Http/CurrentRuntimeConfiguration",
-  )
-{}
+export class CurrentRuntimeConfiguration extends Context.Service<
+  CurrentRuntimeConfiguration,
+  RitseiRuntimeConfiguration
+>()("RITSEI/Http/CurrentRuntimeConfiguration") {}
 
-export class ApiUnauthorized extends Schema.TaggedError<ApiUnauthorized>()("ApiUnauthorized", {
-  code: Schema.Literal("unauthorized"),
-}, { httpApiStatus: 401 }) {}
-export class ApiForbidden extends Schema.TaggedError<ApiForbidden>()("ApiForbidden", {
-  code: Schema.Literal("forbidden"),
-}, { httpApiStatus: 403 }) {}
-export class ApiNotFound extends Schema.TaggedError<ApiNotFound>()("ApiNotFound", {
-  code: Schema.String,
-}, { httpApiStatus: 404 }) {}
-export class ApiConflict extends Schema.TaggedError<ApiConflict>()("ApiConflict", {
-  code: Schema.String,
-}, { httpApiStatus: 409 }) {}
-export class ApiServiceUnavailable
-  extends Schema.TaggedError<ApiServiceUnavailable>()("ApiServiceUnavailable", {
+export class ApiUnauthorized extends Schema.TaggedError<ApiUnauthorized>()(
+  "ApiUnauthorized",
+  {
+    code: Schema.Literal("unauthorized"),
+  },
+  { httpApiStatus: 401 },
+) {}
+export class ApiForbidden extends Schema.TaggedError<ApiForbidden>()(
+  "ApiForbidden",
+  {
+    code: Schema.Literal("forbidden"),
+  },
+  { httpApiStatus: 403 },
+) {}
+export class ApiNotFound extends Schema.TaggedError<ApiNotFound>()(
+  "ApiNotFound",
+  {
+    code: Schema.String,
+  },
+  { httpApiStatus: 404 },
+) {}
+export class ApiConflict extends Schema.TaggedError<ApiConflict>()(
+  "ApiConflict",
+  {
+    code: Schema.String,
+  },
+  { httpApiStatus: 409 },
+) {}
+export class ApiServiceUnavailable extends Schema.TaggedError<ApiServiceUnavailable>()(
+  "ApiServiceUnavailable",
+  {
     code: Schema.Literal("service_unavailable"),
-  }, { httpApiStatus: 503 })
-{}
+  },
+  { httpApiStatus: 503 },
+) {}
 
-export class BearerAuth extends HttpApiMiddleware.Service<BearerAuth, {
-  provides: CurrentPrincipal
-}>()("RITSEI/Http/BearerAuth", {
+export class BearerAuth extends HttpApiMiddleware.Service<
+  BearerAuth,
+  {
+    provides: CurrentPrincipal
+  }
+>()("RITSEI/Http/BearerAuth", {
   error: [ApiUnauthorized, ApiServiceUnavailable],
   security: { bearer: HttpApiSecurity.bearer },
 }) {}
@@ -151,14 +171,9 @@ const ShortString = Schema.String.check(
 )
 const BoundedAuthArray = <S extends Schema.Constraint>(schema: S) =>
   Schema.Array(schema).check(Schema.isMaxLength(32))
-const Email = Schema.String.check(
-  Schema.isPattern(/^[^\s@]+@[^\s@]+$/),
-  Schema.isMaxLength(320),
-)
+const Email = Schema.String.check(Schema.isPattern(/^[^\s@]+@[^\s@]+$/), Schema.isMaxLength(320))
 const CurrencyCode = Schema.String.check(Schema.isPattern(/^[A-Za-z]{3}$/))
-const PositiveInt = Schema.Int.check(
-  Schema.isBetween({ minimum: 1, maximum: 2_147_483_647 }),
-)
+const PositiveInt = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 2_147_483_647 }))
 const FiscalYearStartMonth = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 12 }))
 const BoundedArray = <S extends Schema.Constraint>(schema: S) =>
   Schema.Array(schema).check(Schema.isMaxLength(MaxApiCollectionItems))
@@ -200,13 +215,8 @@ const CreatedFinancialVerificationArtifact = FinancialVerificationArtifact.pipe(
 const FinancialStagingEvidenceList = BoundedArray(FinancialStagingEvidenceRecord)
 const FinancialStagingEvidenceAppendPayload = Schema.Struct({
   evidence: FinancialStagingEvidence,
-  canonicalizationVersion: Schema.Literal(
-    FINANCIAL_STAGING_EVIDENCE_CANONICALIZATION_VERSION,
-  ),
-  evidenceHash: Schema.String.check(
-    Schema.isPattern(/^[0-9a-f]{64}$/),
-    Schema.isMaxLength(64),
-  ),
+  canonicalizationVersion: Schema.Literal(FINANCIAL_STAGING_EVIDENCE_CANONICALIZATION_VERSION),
+  evidenceHash: Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/), Schema.isMaxLength(64)),
 })
 const FinancialStagingEvidenceLookupQuery = Schema.Struct({
   legalEntityId: Schema.optionalKey(Uuid),
@@ -214,12 +224,15 @@ const FinancialStagingEvidenceLookupQuery = Schema.Struct({
   cohortId: Schema.optionalKey(ShortString),
   deploymentRevision: Schema.optionalKey(ShortString),
   limit: Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: MaxApiCollectionItems })),
-}).check(Schema.makeFilter(
-  (query) =>
-    query.gateId !== undefined || query.cohortId !== undefined
-    || query.deploymentRevision !== undefined,
-  { expected: "staging evidence lookup requires gate, cohort, or deployment scope" },
-))
+}).check(
+  Schema.makeFilter(
+    (query) =>
+      query.gateId !== undefined ||
+      query.cohortId !== undefined ||
+      query.deploymentRevision !== undefined,
+    { expected: "staging evidence lookup requires gate, cohort, or deployment scope" },
+  ),
+)
 const CreatedTenantMembership = TenantMembership.pipe(HttpApiSchema.status(201))
 export const AuthProfile = Schema.Literals(["transitional-local", "oidc"])
 const LocalAuthConfiguration = Schema.Struct({
@@ -250,10 +263,12 @@ export const AuthSession = Schema.Struct({
 const CreatedOrderConfirmation = OrderConfirmationResult.pipe(HttpApiSchema.status(201))
 const CreatedOrderCancellation = OrderCancellationResult.pipe(HttpApiSchema.status(201))
 const CreatedOrderFulfillment = OrderFulfillmentResult.pipe(HttpApiSchema.status(201))
-const AccountingReadLimit = Schema.optionalKey(Schema.NumberFromString.pipe(
-  Schema.check(Schema.isInt()),
-  Schema.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
-))
+const AccountingReadLimit = Schema.optionalKey(
+  Schema.NumberFromString.pipe(
+    Schema.check(Schema.isInt()),
+    Schema.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
+  ),
+)
 const ProcessReadLimit = AccountingReadLimit
 const ProcessInboxResponse = Schema.Struct({
   runtimeInstances: BoundedArray(ProcessRuntimeInstance),
@@ -318,10 +333,12 @@ const Parties = HttpApiGroup.make("Parties").add(
     query: {
       search: Schema.optionalKey(ShortString),
       kind: Schema.optionalKey(PartyKind),
-      limit: Schema.optionalKey(Schema.NumberFromString.pipe(
-        Schema.check(Schema.isInt()),
-        Schema.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
-      )),
+      limit: Schema.optionalKey(
+        Schema.NumberFromString.pipe(
+          Schema.check(Schema.isInt()),
+          Schema.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
+        ),
+      ),
     },
     success: Schema.Array(PartyDirectoryEntry),
     error: errors,
@@ -406,10 +423,12 @@ const Parties = HttpApiGroup.make("Parties").add(
     params: { id: Uuid },
     headers: tenantHeaders,
     query: {
-      limit: Schema.optionalKey(Schema.NumberFromString.pipe(
-        Schema.check(Schema.isInt()),
-        Schema.check(Schema.isBetween({ minimum: 1, maximum: 100 })),
-      )),
+      limit: Schema.optionalKey(
+        Schema.NumberFromString.pipe(
+          Schema.check(Schema.isInt()),
+          Schema.check(Schema.isBetween({ minimum: 1, maximum: 100 })),
+        ),
+      ),
     },
     success: Schema.Array(RelatedPartyPath),
     error: errors,
@@ -426,15 +445,19 @@ const Authorization = HttpApiGroup.make("Authorization").add(
   HttpApiEndpoint.get("listMembers", "/tenant-memberships", {
     headers: tenantHeaders,
     query: {
-      search: Schema.optionalKey(Schema.Trim.pipe(
-        Schema.check(Schema.isPattern(/\S/)),
-        Schema.check(Schema.isMaxLength(256)),
-      )),
+      search: Schema.optionalKey(
+        Schema.Trim.pipe(
+          Schema.check(Schema.isPattern(/\S/)),
+          Schema.check(Schema.isMaxLength(256)),
+        ),
+      ),
       status: Schema.optionalKey(TenantMembershipStatus),
-      limit: Schema.optionalKey(Schema.NumberFromString.pipe(
-        Schema.check(Schema.isInt()),
-        Schema.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
-      )),
+      limit: Schema.optionalKey(
+        Schema.NumberFromString.pipe(
+          Schema.check(Schema.isInt()),
+          Schema.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
+        ),
+      ),
     },
     success: Schema.Array(TenantMembership),
     error: errors,
@@ -485,10 +508,12 @@ const Sales = HttpApiGroup.make("Sales").add(
     headers: tenantHeaders,
     query: {
       search: Schema.optionalKey(ShortString),
-      limit: Schema.optionalKey(Schema.NumberFromString.pipe(
-        Schema.check(Schema.isInt()),
-        Schema.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
-      )),
+      limit: Schema.optionalKey(
+        Schema.NumberFromString.pipe(
+          Schema.check(Schema.isInt()),
+          Schema.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
+        ),
+      ),
     },
     success: Schema.Array(Customer),
     error: errors,
@@ -510,10 +535,12 @@ const Sales = HttpApiGroup.make("Sales").add(
     query: {
       customerId: Schema.optionalKey(Uuid),
       status: Schema.optionalKey(QuotationStatus),
-      limit: Schema.optionalKey(Schema.NumberFromString.pipe(
-        Schema.check(Schema.isInt()),
-        Schema.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
-      )),
+      limit: Schema.optionalKey(
+        Schema.NumberFromString.pipe(
+          Schema.check(Schema.isInt()),
+          Schema.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
+        ),
+      ),
     },
     success: Schema.Array(Quotation),
     error: errors,
@@ -535,10 +562,12 @@ const Sales = HttpApiGroup.make("Sales").add(
     query: {
       customerId: Schema.optionalKey(Uuid),
       status: Schema.optionalKey(SalesOrderStatus),
-      limit: Schema.optionalKey(Schema.NumberFromString.pipe(
-        Schema.check(Schema.isInt()),
-        Schema.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
-      )),
+      limit: Schema.optionalKey(
+        Schema.NumberFromString.pipe(
+          Schema.check(Schema.isInt()),
+          Schema.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
+        ),
+      ),
     },
     success: Schema.Array(SalesOrder),
     error: errors,
@@ -584,10 +613,12 @@ const Inventory = HttpApiGroup.make("Inventory").add(
     headers: tenantHeaders,
     query: {
       legalEntityId: Schema.optionalKey(Uuid),
-      limit: Schema.optionalKey(Schema.NumberFromString.pipe(
-        Schema.check(Schema.isInt()),
-        Schema.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
-      )),
+      limit: Schema.optionalKey(
+        Schema.NumberFromString.pipe(
+          Schema.check(Schema.isInt()),
+          Schema.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
+        ),
+      ),
     },
     success: Schema.Array(Warehouse),
     error: errors,
@@ -596,10 +627,12 @@ const Inventory = HttpApiGroup.make("Inventory").add(
     headers: tenantHeaders,
     query: {
       search: Schema.optionalKey(ShortString),
-      limit: Schema.optionalKey(Schema.NumberFromString.pipe(
-        Schema.check(Schema.isInt()),
-        Schema.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
-      )),
+      limit: Schema.optionalKey(
+        Schema.NumberFromString.pipe(
+          Schema.check(Schema.isInt()),
+          Schema.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
+        ),
+      ),
     },
     success: Schema.Array(Item),
     error: errors,
@@ -609,10 +642,12 @@ const Inventory = HttpApiGroup.make("Inventory").add(
     query: {
       warehouseId: Schema.optionalKey(Uuid),
       itemId: Schema.optionalKey(Uuid),
-      limit: Schema.optionalKey(Schema.NumberFromString.pipe(
-        Schema.check(Schema.isInt()),
-        Schema.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
-      )),
+      limit: Schema.optionalKey(
+        Schema.NumberFromString.pipe(
+          Schema.check(Schema.isInt()),
+          Schema.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
+        ),
+      ),
     },
     success: Schema.Array(StockBalance),
     error: errors,
@@ -623,10 +658,12 @@ const Inventory = HttpApiGroup.make("Inventory").add(
       warehouseId: Schema.optionalKey(Uuid),
       itemId: Schema.optionalKey(Uuid),
       status: Schema.optionalKey(StockReservationStatus),
-      limit: Schema.optionalKey(Schema.NumberFromString.pipe(
-        Schema.check(Schema.isInt()),
-        Schema.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
-      )),
+      limit: Schema.optionalKey(
+        Schema.NumberFromString.pipe(
+          Schema.check(Schema.isInt()),
+          Schema.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
+        ),
+      ),
     },
     success: Schema.Array(StockReservation),
     error: errors,
@@ -636,10 +673,12 @@ const Inventory = HttpApiGroup.make("Inventory").add(
     query: {
       warehouseId: Schema.optionalKey(Uuid),
       status: Schema.optionalKey(StockTransferStatus),
-      limit: Schema.optionalKey(Schema.NumberFromString.pipe(
-        Schema.check(Schema.isInt()),
-        Schema.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
-      )),
+      limit: Schema.optionalKey(
+        Schema.NumberFromString.pipe(
+          Schema.check(Schema.isInt()),
+          Schema.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
+        ),
+      ),
     },
     success: Schema.Array(StockTransfer),
     error: errors,
@@ -650,10 +689,12 @@ const Inventory = HttpApiGroup.make("Inventory").add(
       warehouseId: Schema.optionalKey(Uuid),
       itemId: Schema.optionalKey(Uuid),
       kind: Schema.optionalKey(StockMovementKind),
-      limit: Schema.optionalKey(Schema.NumberFromString.pipe(
-        Schema.check(Schema.isInt()),
-        Schema.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
-      )),
+      limit: Schema.optionalKey(
+        Schema.NumberFromString.pipe(
+          Schema.check(Schema.isInt()),
+          Schema.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
+        ),
+      ),
     },
     success: Schema.Array(StockMovement),
     error: errors,
@@ -758,10 +799,12 @@ const Procurement = HttpApiGroup.make("Procurement").add(
   HttpApiEndpoint.get("listSupplierAccounts", "/procurement/supplier-accounts", {
     headers: tenantHeaders,
     query: {
-      limit: Schema.optionalKey(Schema.NumberFromString.pipe(
-        Schema.check(Schema.isInt()),
-        Schema.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
-      )),
+      limit: Schema.optionalKey(
+        Schema.NumberFromString.pipe(
+          Schema.check(Schema.isInt()),
+          Schema.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
+        ),
+      ),
     },
     success: Schema.Array(SupplierAccount),
     error: errors,
@@ -777,10 +820,12 @@ const Procurement = HttpApiGroup.make("Procurement").add(
     query: {
       supplierAccountId: Schema.optionalKey(Uuid),
       status: Schema.optionalKey(PurchaseOrderStatus),
-      limit: Schema.optionalKey(Schema.NumberFromString.pipe(
-        Schema.check(Schema.isInt()),
-        Schema.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
-      )),
+      limit: Schema.optionalKey(
+        Schema.NumberFromString.pipe(
+          Schema.check(Schema.isInt()),
+          Schema.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
+        ),
+      ),
     },
     success: Schema.Array(PurchaseOrder),
     error: errors,
@@ -817,10 +862,12 @@ const Procurement = HttpApiGroup.make("Procurement").add(
     params: { id: Uuid },
     headers: tenantHeaders,
     query: {
-      limit: Schema.optionalKey(Schema.NumberFromString.pipe(
-        Schema.check(Schema.isInt()),
-        Schema.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
-      )),
+      limit: Schema.optionalKey(
+        Schema.NumberFromString.pipe(
+          Schema.check(Schema.isInt()),
+          Schema.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
+        ),
+      ),
     },
     success: Schema.Array(GoodsReceipt),
     error: errors,
@@ -1001,26 +1048,18 @@ const Accounting = HttpApiGroup.make("Accounting").add(
       error: errors,
     },
   ).middleware(BearerAuth),
-  HttpApiEndpoint.post(
-    "recordFinancialStagingEvidence",
-    "/accounting/financial-staging-evidence",
-    {
-      headers: tenantHeaders,
-      payload: FinancialStagingEvidenceAppendPayload,
-      success: FinancialStagingEvidenceRecord.pipe(HttpApiSchema.status(201)),
-      error: errors,
-    },
-  ).middleware(BearerAuth),
-  HttpApiEndpoint.get(
-    "listFinancialStagingEvidence",
-    "/accounting/financial-staging-evidence",
-    {
-      headers: tenantHeaders,
-      query: FinancialStagingEvidenceLookupQuery,
-      success: FinancialStagingEvidenceList,
-      error: errors,
-    },
-  ).middleware(BearerAuth),
+  HttpApiEndpoint.post("recordFinancialStagingEvidence", "/accounting/financial-staging-evidence", {
+    headers: tenantHeaders,
+    payload: FinancialStagingEvidenceAppendPayload,
+    success: FinancialStagingEvidenceRecord.pipe(HttpApiSchema.status(201)),
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.get("listFinancialStagingEvidence", "/accounting/financial-staging-evidence", {
+    headers: tenantHeaders,
+    query: FinancialStagingEvidenceLookupQuery,
+    success: FinancialStagingEvidenceList,
+    error: errors,
+  }).middleware(BearerAuth),
   HttpApiEndpoint.post(
     "approveTigerBeetleCutover",
     "/accounting/legal-entities/:id/tigerbeetle/approve",

@@ -91,6 +91,6 @@ The dependency matrix and enforcement decision are in
              │  package.json       │
              │                     │
              │ type check          │
-             │ fmt (dprint)        │
+             │ fmt (oxfmt)         │
              │ tasks               │
              └─────────────────────┘

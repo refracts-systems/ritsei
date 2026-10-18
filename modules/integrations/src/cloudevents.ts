@@ -49,14 +49,15 @@ export type NormalizedExternalEvent = {
 export const normalizeCloudEvent = (
   input: NormalizeExternalEventInput,
 ): Effect.Effect<NormalizedExternalEvent, ExternalPayloadInvalid> =>
-  Effect.gen(function*() {
-    const identifier = typeof input.expectedType === "string" && input.expectedType.trim() !== ""
-      ? input.expectedType.slice(0, MaxFieldLength)
-      : "external-event"
+  Effect.gen(function* () {
+    const identifier =
+      typeof input.expectedType === "string" && input.expectedType.trim() !== ""
+        ? input.expectedType.slice(0, MaxFieldLength)
+        : "external-event"
     if (
-      !Schema.is(Uuid)(input.tenantId)
-      || !Schema.is(BoundedNonEmptyString)(input.connectorId)
-      || !Schema.is(BoundedNonEmptyString)(input.expectedType)
+      !Schema.is(Uuid)(input.tenantId) ||
+      !Schema.is(BoundedNonEmptyString)(input.connectorId) ||
+      !Schema.is(BoundedNonEmptyString)(input.expectedType)
     ) {
       return yield* Effect.fail(
         new ExternalPayloadInvalid({
@@ -66,11 +67,12 @@ export const normalizeCloudEvent = (
       )
     }
     const envelope = yield* Schema.decodeUnknownEffect(CloudEventsEnvelope)(input.envelope).pipe(
-      Effect.mapError(() =>
-        new ExternalPayloadInvalid({
-          boundary: "integration.cloudevents.envelope",
-          identifier,
-        })
+      Effect.mapError(
+        () =>
+          new ExternalPayloadInvalid({
+            boundary: "integration.cloudevents.envelope",
+            identifier,
+          }),
       ),
     )
     if (envelope.type !== input.expectedType) {
@@ -82,11 +84,12 @@ export const normalizeCloudEvent = (
       )
     }
     const payload = yield* decodeExternalSchema(input.payloadSchema, envelope.data).pipe(
-      Effect.mapError(() =>
-        new ExternalPayloadInvalid({
-          boundary: "integration.cloudevents.payload",
-          identifier,
-        })
+      Effect.mapError(
+        () =>
+          new ExternalPayloadInvalid({
+            boundary: "integration.cloudevents.payload",
+            identifier,
+          }),
       ),
     )
     return {

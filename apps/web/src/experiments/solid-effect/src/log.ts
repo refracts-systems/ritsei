@@ -5,13 +5,7 @@
 
 import { createStore } from "solid-js"
 
-export type LogKind =
-  | "start"
-  | "success"
-  | "retry"
-  | "interrupt"
-  | "compensate"
-  | "error"
+export type LogKind = "start" | "success" | "retry" | "interrupt" | "compensate" | "error"
 
 export interface LogEntry {
   id: number

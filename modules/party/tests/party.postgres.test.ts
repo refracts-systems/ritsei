@@ -32,7 +32,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "enforces scoped external identifier uniqueness in PostgreSQL",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
         const userAccountService = yield* makeUserAccountService.pipe(
@@ -45,7 +45,7 @@ it.effect.skipIf(databaseUrl === undefined)(
         )
         const principal = { userAccountId: "party-integration", sessionId: "session" }
         const tenant = yield* auth.createTenant({ slug: `party-${uuidv7()}` })
-        yield* Effect.gen(function*() {
+        yield* Effect.gen(function* () {
           const authorization = yield* AuthorizationService
           const messaging = yield* makeMessagingService.pipe(
             Effect.provideService(Database, database),
@@ -61,20 +61,23 @@ it.effect.skipIf(databaseUrl === undefined)(
             kind: "organization",
             name: "First",
           })
-          const [createdEvent] = yield* Effect.promise(() =>
-            client<{
-              event_type: string
-              event_version: number
-              aggregate_type: string
-              aggregate_id: string
-              payload: { partyId: string; kind: string }
-            }[]>`
+          const [createdEvent] = yield* Effect.promise(
+            () =>
+              client<
+                {
+                  event_type: string
+                  event_version: number
+                  aggregate_type: string
+                  aggregate_id: string
+                  payload: { partyId: string; kind: string }
+                }[]
+              >`
               select event_type, event_version, aggregate_type, aggregate_id, payload
               from messaging.event_outbox
               where tenant_id = ${tenant.id}
                 and event_type = ${PartyCreatedEvent.id}
                 and aggregate_id = ${first.id}
-            `
+            `,
           )
           assert.deepStrictEqual(createdEvent, {
             event_type: PartyCreatedEvent.id,
@@ -103,52 +106,56 @@ it.effect.skipIf(databaseUrl === undefined)(
             yield* Effect.flip(party.attachIdentifier({ ...identifier, partyId: second.id })),
             ExternalIdentifierAlreadyAssigned,
           )
-          const invalidProvider = yield* postgresFailure(() =>
-            client`
+          const invalidProvider = yield* postgresFailure(
+            () =>
+              client`
               insert into party.party_identifiers
                 (tenant_id, party_id, provider, scheme, scope, value)
               values
                 (${tenant.id}, ${first.id}, ' gs1 ', 'GLN', 'global', ${uuidv7()})
-            `
+            `,
           )
           assert.strictEqual((invalidProvider as { code?: string }).code, "23514")
           assert.strictEqual(
             (invalidProvider as { constraint_name?: string }).constraint_name,
             "party_identifiers_provider_check",
           )
-          const invalidScheme = yield* postgresFailure(() =>
-            client`
+          const invalidScheme = yield* postgresFailure(
+            () =>
+              client`
               insert into party.party_identifiers
                 (tenant_id, party_id, provider, scheme, scope, value)
               values
                 (${tenant.id}, ${first.id}, 'GS1', ' gln ', 'global', ${uuidv7()})
-            `
+            `,
           )
           assert.strictEqual((invalidScheme as { code?: string }).code, "23514")
           assert.strictEqual(
             (invalidScheme as { constraint_name?: string }).constraint_name,
             "party_identifiers_scheme_check",
           )
-          const invalidScope = yield* postgresFailure(() =>
-            client`
+          const invalidScope = yield* postgresFailure(
+            () =>
+              client`
               insert into party.party_identifiers
                 (tenant_id, party_id, provider, scheme, scope, value)
               values
                 (${tenant.id}, ${first.id}, 'GS1', 'GLN', ' ', ${uuidv7()})
-            `
+            `,
           )
           assert.strictEqual((invalidScope as { code?: string }).code, "23514")
           assert.strictEqual(
             (invalidScope as { constraint_name?: string }).constraint_name,
             "party_identifiers_scope_check",
           )
-          const invalidValue = yield* postgresFailure(() =>
-            client`
+          const invalidValue = yield* postgresFailure(
+            () =>
+              client`
               insert into party.party_identifiers
                 (tenant_id, party_id, provider, scheme, scope, value)
               values
                 (${tenant.id}, ${first.id}, 'GS1', 'GLN', 'global', ${` ${uuidv7()} `})
-            `
+            `,
           )
           assert.strictEqual((invalidValue as { code?: string }).code, "23514")
           assert.strictEqual(
@@ -171,14 +178,15 @@ it.effect.skipIf(databaseUrl === undefined)(
             ]),
           ),
         )
-      })),
+      }),
+    ),
 )
 
 it.effect.skipIf(databaseUrl === undefined)(
   "enforces legal entity ownership and branch uniqueness in PostgreSQL",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
         const userAccountService = yield* makeUserAccountService.pipe(
@@ -251,7 +259,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           },
         ])
 
-        yield* Effect.gen(function*() {
+        yield* Effect.gen(function* () {
           const authorization = yield* AuthorizationService
           const party = yield* makePartyService.pipe(
             Effect.provideService(Database, database),
@@ -306,21 +314,25 @@ it.effect.skipIf(databaseUrl === undefined)(
           assert.strictEqual(firstIdentifier.legalEntityId, legalEntity.id)
           assert.strictEqual(secondIdentifier.legalEntityId, secondLegalEntity.id)
           assert.instanceOf(
-            yield* Effect.flip(party.attachIdentifier({
-              ...scopedIdentifier,
-              partyId: organization.id,
-              legalEntityId: legalEntity.id,
-            })),
+            yield* Effect.flip(
+              party.attachIdentifier({
+                ...scopedIdentifier,
+                partyId: organization.id,
+                legalEntityId: legalEntity.id,
+              }),
+            ),
             ExternalIdentifierAlreadyAssigned,
           )
           assert.instanceOf(
-            yield* Effect.flip(party.createRelationship({
-              principal,
-              tenantId: tenant.id,
-              partyId: person.id,
-              legalEntityId: legalEntity.id,
-              kind: "supplier",
-            })),
+            yield* Effect.flip(
+              party.createRelationship({
+                principal,
+                tenantId: tenant.id,
+                partyId: person.id,
+                legalEntityId: legalEntity.id,
+                kind: "supplier",
+              }),
+            ),
             PartyRelationshipRoleNotAssigned,
           )
           yield* party.assignRole({
@@ -363,16 +375,19 @@ it.effect.skipIf(databaseUrl === undefined)(
             sourcePartyId: organization.id,
             limit: 10,
           })
-          const baseline = yield* Effect.promise(() =>
-            client<{
-              tenant_id: string
-              source_party_id: string
-              target_party_id: string
-              legal_entity_id: string
-              relationship_id: string
-              relationship_kind: "customer" | "supplier" | "employee" | "partner"
-              depth: number
-            }[]>`
+          const baseline = yield* Effect.promise(
+            () =>
+              client<
+                {
+                  tenant_id: string
+                  source_party_id: string
+                  target_party_id: string
+                  legal_entity_id: string
+                  relationship_id: string
+                  relationship_kind: "customer" | "supplier" | "employee" | "partner"
+                  depth: number
+                }[]
+              >`
               select
                 relationship.tenant_id,
                 relationship.party_id as source_party_id,
@@ -391,7 +406,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                 and entity.organization_party_id <> ${organization.id}
               order by relationship.legal_entity_id, relationship.id
               limit 10
-            `
+            `,
           )
           assert.deepStrictEqual(
             graphPaths,
@@ -413,19 +428,22 @@ it.effect.skipIf(databaseUrl === undefined)(
           })
           assert.strictEqual(limitedGraphPaths.length, 1)
           assert.isFalse(graphPaths.some((path) => path.targetPartyId === organization.id))
-          const projectedPaths = yield* Effect.promise(() =>
-            client<{ source_party_id: string; target_party_id: string }[]>`
+          const projectedPaths = yield* Effect.promise(
+            () =>
+              client<{ source_party_id: string; target_party_id: string }[]>`
               select source_party_id, target_party_id
               from party.related_party_paths
               where tenant_id = ${tenant.id}
                 and source_party_id = ${organization.id}
               order by legal_entity_id, relationship_id
-            `
+            `,
           )
-          assert.deepStrictEqual(projectedPaths, [{
-            source_party_id: organization.id,
-            target_party_id: secondOrganization.id,
-          }])
+          assert.deepStrictEqual(projectedPaths, [
+            {
+              source_party_id: organization.id,
+              target_party_id: secondOrganization.id,
+            },
+          ])
           assert.deepStrictEqual(
             yield* party.findRelatedPartyPaths({
               principal,
@@ -435,8 +453,9 @@ it.effect.skipIf(databaseUrl === undefined)(
             }),
             [],
           )
-          const explain = yield* Effect.promise(() =>
-            client<{ "QUERY PLAN": unknown }[]>`
+          const explain = yield* Effect.promise(
+            () =>
+              client<{ "QUERY PLAN": unknown }[]>`
               explain (analyze, buffers, format json)
               select
                 tenant_id,
@@ -451,24 +470,26 @@ it.effect.skipIf(databaseUrl === undefined)(
                 and source_party_id = ${organization.id}
               order by depth, legal_entity_id, relationship_id
               limit 10
-            `
+            `,
           )
           const explainPlan = explain[0]?.["QUERY PLAN"]
           const explainRoot = Array.isArray(explainPlan)
-            ? explainPlan[0] as { Plan?: { "Actual Rows"?: number; "Node Type"?: string } }
+            ? (explainPlan[0] as { Plan?: { "Actual Rows"?: number; "Node Type"?: string } })
             : undefined
           assert.strictEqual(explainRoot?.Plan?.["Node Type"], "Limit")
           assert.isAtMost(explainRoot?.Plan?.["Actual Rows"] ?? Number.POSITIVE_INFINITY, 10)
           assert.isTrue(JSON.stringify(explainPlan).includes("Execution Time"))
-          assert.deepStrictEqual(graphPaths, [{
-            tenantId: tenant.id,
-            sourcePartyId: organization.id,
-            targetPartyId: secondOrganization.id,
-            legalEntityId: secondLegalEntity.id,
-            relationshipId: relatedRelationship.id,
-            relationshipKind: "customer",
-            depth: 2,
-          }])
+          assert.deepStrictEqual(graphPaths, [
+            {
+              tenantId: tenant.id,
+              sourcePartyId: organization.id,
+              targetPartyId: secondOrganization.id,
+              legalEntityId: secondLegalEntity.id,
+              relationshipId: relatedRelationship.id,
+              relationshipKind: "customer",
+              depth: 2,
+            },
+          ])
           assert.deepStrictEqual(
             yield* party.getRelationship({
               principal,
@@ -478,55 +499,65 @@ it.effect.skipIf(databaseUrl === undefined)(
             relationship,
           )
           assert.instanceOf(
-            yield* Effect.flip(party.getRelationship({
-              principal,
-              tenantId: otherTenant.id,
-              relationshipId: relationship.id,
-            })),
+            yield* Effect.flip(
+              party.getRelationship({
+                principal,
+                tenantId: otherTenant.id,
+                relationshipId: relationship.id,
+              }),
+            ),
             PartyRelationshipNotFound,
           )
           assert.instanceOf(
-            yield* Effect.flip(party.createRelationship({
-              principal,
-              tenantId: tenant.id,
-              partyId: organization.id,
-              legalEntityId: legalEntity.id,
-              kind: "customer",
-            })),
+            yield* Effect.flip(
+              party.createRelationship({
+                principal,
+                tenantId: tenant.id,
+                partyId: organization.id,
+                legalEntityId: legalEntity.id,
+                kind: "customer",
+              }),
+            ),
             PartyRelationshipAlreadyExists,
           )
           assert.instanceOf(
-            yield* Effect.flip(party.createLegalEntity({
-              principal,
-              tenantId: tenant.id,
-              organizationId: organization.id,
-            })),
+            yield* Effect.flip(
+              party.createLegalEntity({
+                principal,
+                tenantId: tenant.id,
+                organizationId: organization.id,
+              }),
+            ),
             LegalEntityAlreadyExists,
           )
           assert.instanceOf(
-            yield* Effect.flip(party.createLegalEntity({
-              principal,
-              tenantId: tenant.id,
-              organizationId: person.id,
-            })),
+            yield* Effect.flip(
+              party.createLegalEntity({
+                principal,
+                tenantId: tenant.id,
+                organizationId: person.id,
+              }),
+            ),
             OrganizationRequired,
           )
-          const invalidLegalEntity = yield* postgresFailure(() =>
-            client`
+          const invalidLegalEntity = yield* postgresFailure(
+            () =>
+              client`
               insert into party.legal_entities (tenant_id, organization_party_id)
               values (${tenant.id}, ${person.id})
-            `
+            `,
           )
           assert.strictEqual((invalidLegalEntity as { code?: string }).code, "23514")
           assert.strictEqual(
             (invalidLegalEntity as { constraint_name?: string }).constraint_name,
             "legal_entities_organization_party_kind_check",
           )
-          const invalidPartyKindChange = yield* postgresFailure(() =>
-            client`
+          const invalidPartyKindChange = yield* postgresFailure(
+            () =>
+              client`
               update party.parties set kind = 'person'
               where tenant_id = ${tenant.id} and id = ${organization.id}
-            `
+            `,
           )
           assert.strictEqual((invalidPartyKindChange as { code?: string }).code, "23514")
           assert.strictEqual(
@@ -552,14 +583,11 @@ it.effect.skipIf(databaseUrl === undefined)(
             search: "Scope",
             kind: "organization",
           })
-          assert.deepStrictEqual(directory.map(({ party }) => party.id), [
-            organization.id,
-            secondOrganization.id,
-          ])
           assert.deepStrictEqual(
-            yield* party.list({ principal, tenantId: otherTenant.id }),
-            [],
+            directory.map(({ party }) => party.id),
+            [organization.id, secondOrganization.id],
           )
+          assert.deepStrictEqual(yield* party.list({ principal, tenantId: otherTenant.id }), [])
           const detail = yield* party.getDetail({
             principal,
             tenantId: tenant.id,
@@ -575,23 +603,26 @@ it.effect.skipIf(databaseUrl === undefined)(
           )
 
           assert.instanceOf(
-            yield* Effect.flip(party.createBranch({
-              principal,
-              tenantId: tenant.id,
-              legalEntityId: legalEntity.id,
-              name: "Jakarta",
-            })),
+            yield* Effect.flip(
+              party.createBranch({
+                principal,
+                tenantId: tenant.id,
+                legalEntityId: legalEntity.id,
+                name: "Jakarta",
+              }),
+            ),
             BranchAlreadyExists,
           )
         }).pipe(Effect.provide(authorizationLayer))
-      })),
+      }),
+    ),
 )
 
 it.effect.skipIf(databaseUrl === undefined)(
   "enforces identity-party representation scope in PostgreSQL",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
         const userAccountService = yield* makeUserAccountService.pipe(
@@ -635,7 +666,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           },
         ])
 
-        yield* Effect.gen(function*() {
+        yield* Effect.gen(function* () {
           const authorization = yield* AuthorizationService
           const party = yield* makePartyService.pipe(
             Effect.provideService(Database, database),
@@ -656,12 +687,13 @@ it.effect.skipIf(databaseUrl === undefined)(
           }
           const representation = yield* party.createPartyRepresentation(input)
           assert.strictEqual(representation.active, true)
-          const blankKind = yield* postgresFailure(() =>
-            client`
+          const blankKind = yield* postgresFailure(
+            () =>
+              client`
               insert into party.party_representations
                 (tenant_id, user_account_id, party_id, kind)
               values (${tenant.id}, ${userAccount.id}, ${representedParty.id}, '   ')
-            `
+            `,
           )
           assert.strictEqual((blankKind as { code?: string }).code, "23514")
           assert.strictEqual(
@@ -686,14 +718,17 @@ it.effect.skipIf(databaseUrl === undefined)(
           })
           assert.deepStrictEqual(detail.representations, [inactive])
           assert.instanceOf(
-            yield* Effect.flip(party.setPartyRepresentationActive({
-              principal,
-              tenantId: tenant.id,
-              representationId: "00000000-0000-0000-0000-000000000000",
-              active: true,
-            })),
+            yield* Effect.flip(
+              party.setPartyRepresentationActive({
+                principal,
+                tenantId: tenant.id,
+                representationId: "00000000-0000-0000-0000-000000000000",
+                active: true,
+              }),
+            ),
             PartyRepresentationNotFound,
           )
         }).pipe(Effect.provide(authorizationLayer))
-      })),
+      }),
+    ),
 )

@@ -144,12 +144,12 @@ export const runMigrations = (
   client: Sql,
   directory = "db/migrations",
 ): Effect.Effect<void, DatabaseFailure | MigrationFailure> =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     yield* validatePostgresVersion(asPostgresClient(client)).pipe(
       Effect.mapError((cause) =>
         cause instanceof DatabaseFailure
           ? cause
-          : new DatabaseFailure({ operation: "version-check", cause })
+          : new DatabaseFailure({ operation: "version-check", cause }),
       ),
     )
 
@@ -172,8 +172,8 @@ export const runMigrations = (
         cause instanceof MigrationFailure
           ? cause
           : cause instanceof MigrationCatalogError
-          ? new MigrationFailure({ filename: directory, cause })
-          : new DatabaseFailure({ operation: "migration", cause }),
+            ? new MigrationFailure({ filename: directory, cause })
+            : new DatabaseFailure({ operation: "migration", cause }),
     })
   })
 

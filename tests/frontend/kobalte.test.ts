@@ -14,7 +14,7 @@ const fixture = Effect.acquireRelease(
     const outDir = await mkdtemp(join(tmpdir(), "ritsei-kobalte-build-"))
     await writeFile(
       `${root}/index.html`,
-      "<!doctype html><html lang=\"en\"><head><title>Kobalte dialog probe</title></head><body><main id=\"root\"></main><script type=\"module\" src=\"/main.tsx\"></script></body></html>",
+      '<!doctype html><html lang="en"><head><title>Kobalte dialog probe</title></head><body><main id="root"></main><script type="module" src="/main.tsx"></script></body></html>',
       "utf8",
     )
     await writeFile(
@@ -43,7 +43,7 @@ render(() => <KobalteDialogProbe />, document.getElementById("root")!)
 it.effect(
   "validates the Kobalte dialog interaction and accessibility contract",
   () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const { root, outDir } = yield* fixture
       const server = yield* Effect.acquireRelease(
         Effect.promise(() =>
@@ -52,13 +52,14 @@ it.effect(
             root,
             build: { outDir },
             preview: { host: "127.0.0.1", port: 0, strictPort: true },
-          })
+          }),
         ),
         (server) =>
-          Effect.promise(() =>
-            new Promise<void>((resolve, reject) => {
-              server.httpServer.close((error) => error ? reject(error) : resolve())
-            })
+          Effect.promise(
+            () =>
+              new Promise<void>((resolve, reject) => {
+                server.httpServer.close((error) => (error ? reject(error) : resolve()))
+              }),
           ),
       )
       const address = server.httpServer.address()
@@ -92,16 +93,16 @@ it.effect(
           "Verify keyboard focus and dismissal.",
         )
         assert.isTrue(
-          await page.evaluate(() => document.activeElement?.closest("[role=\"dialog\"]") !== null),
+          await page.evaluate(() => document.activeElement?.closest('[role="dialog"]') !== null),
         )
 
         await page.keyboard.press("Tab")
         assert.isTrue(
-          await page.evaluate(() => document.activeElement?.closest("[role=\"dialog\"]") !== null),
+          await page.evaluate(() => document.activeElement?.closest('[role="dialog"]') !== null),
         )
         await page.keyboard.press("Shift+Tab")
         assert.isTrue(
-          await page.evaluate(() => document.activeElement?.closest("[role=\"dialog\"]") !== null),
+          await page.evaluate(() => document.activeElement?.closest('[role="dialog"]') !== null),
         )
 
         await dialog.press("Escape")
@@ -127,7 +128,7 @@ it.effect(
 it.effect(
   "validates the RITSEI Kobalte dialog wrapper in the application",
   () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const { page, url, errors } = yield* builtApp
       yield* Effect.promise(async () => {
         await connectToTenant(
@@ -152,13 +153,8 @@ it.effect(
 
         await page.keyboard.press("Escape")
         await dialog.waitFor({ state: "hidden" })
-        await page.waitForFunction(
-          () => document.activeElement?.textContent === "Sign out",
-        )
-        assert.equal(
-          await page.evaluate(() => document.activeElement?.textContent),
-          "Sign out",
-        )
+        await page.waitForFunction(() => document.activeElement?.textContent === "Sign out")
+        assert.equal(await page.evaluate(() => document.activeElement?.textContent), "Sign out")
 
         await trigger.click()
         await dialog.getByRole("button", { name: "Sign out", exact: true }).click()

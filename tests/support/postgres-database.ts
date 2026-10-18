@@ -24,7 +24,7 @@ export const withTemporaryDatabase = <A, E, R>(
       ).pipe(
         Effect.ensuring(
           Effect.promise(() =>
-            admin.unsafe(`drop database if exists "${databaseName}" with (force)`)
+            admin.unsafe(`drop database if exists "${databaseName}" with (force)`),
           ),
         ),
       ),

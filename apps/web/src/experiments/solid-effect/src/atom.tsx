@@ -49,9 +49,7 @@ function useRegistry() {
 function useAtomValue<A>(atom: () => Atom.Atom<A>): () => A {
   const registry = useRegistry()
   const current = createMemo(atom)
-  const [value, setValue] = createSignal<A>(
-    untrack(() => registry.get(current())) as any,
-  )
+  const [value, setValue] = createSignal<A>(untrack(() => registry.get(current())) as any)
 
   createEffect(
     () => current(),
@@ -97,9 +95,7 @@ function AtomTypeahead() {
   }
   const failure = () => {
     const result = searchResult()
-    return AsyncResult.isFailure(result)
-      ? Cause.squash(result.cause)
-      : undefined
+    return AsyncResult.isFailure(result) ? Cause.squash(result.cause) : undefined
   }
   const results = () => AsyncResult.getOrElse(searchResult(), () => [] as Package[])
 
@@ -134,9 +130,7 @@ function AtomTypeahead() {
               {(error) => (
                 <div class="error-box">
                   <p>Search gave up after retries: {String(error())}</p>
-                  <button onClick={() => runSearch(q().trim())}>
-                    Try again
-                  </button>
+                  <button onClick={() => runSearch(q().trim())}>Try again</button>
                 </div>
               )}
             </Match>
@@ -157,9 +151,7 @@ function AtomTypeahead() {
                             <span class="pkg-name">{pkg.name}</span>
                             <span class="pkg-desc">{pkg.description}</span>
                           </div>
-                          <span class="pkg-downloads">
-                            {formatDownloads(pkg.downloads)}/wk
-                          </span>
+                          <span class="pkg-downloads">{formatDownloads(pkg.downloads)}/wk</span>
                         </li>
                       )}
                     </For>
@@ -210,75 +202,75 @@ function AtomCheckout() {
   const declineCardAtom = Atom.make(false)
   const ordersAtom = Atom.make(Effect.promise(() => fetchOrders()))
 
-  const checkoutAtom = Atom.fn<CheckoutArgs>()((args, get) => {
-    let reservation: Reservation | undefined
-    let charge: Charge | undefined
-    const amount = args.items.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0,
-    )
+  const checkoutAtom = Atom.fn<CheckoutArgs>()(
+    (args, get) => {
+      let reservation: Reservation | undefined
+      let charge: Charge | undefined
+      const amount = args.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
-    const compensate = () =>
-      Effect.gen(function*() {
-        if (charge) yield* refundCharge(charge)
-        if (reservation) yield* releaseReservation(reservation)
-      })
-
-    const setNotice = (notice: Notice) =>
-      Effect.sync(() => {
-        get.registry.set(phaseAtom, "idle")
-        get.registry.set(noticeAtom, notice)
-      })
-
-    const workflow = Effect.gen(function*() {
-      yield* Effect.sync(() => {
-        get.registry.set(noticeAtom, null)
-        get.registry.set(phaseAtom, "reserving")
-      })
-      reservation = yield* reserveInventory(args.items)
-      yield* Effect.sync(() => get.registry.set(phaseAtom, "charging"))
-      charge = yield* chargeCard(amount, args.decline)
-      yield* Effect.sync(() => get.registry.set(phaseAtom, "finalizing"))
-      const order = yield* createOrder(args.items, reservation, charge)
-      yield* Effect.sync(() => {
-        get.registry.set(phaseAtom, "idle")
-        get.registry.set(noticeAtom, {
-          kind: "success",
-          text: `Order ${order.id} confirmed — $${order.total.toFixed(2)}`,
+      const compensate = () =>
+        Effect.gen(function* () {
+          if (charge) yield* refundCharge(charge)
+          if (reservation) yield* releaseReservation(reservation)
         })
-        get.registry.refresh(ordersAtom)
-      })
-      return order
-    })
 
-    return workflow.pipe(
-      Effect.catchIf(
-        (error): error is CardDeclinedError => error instanceof CardDeclinedError,
-        (error) =>
+      const setNotice = (notice: Notice) =>
+        Effect.sync(() => {
+          get.registry.set(phaseAtom, "idle")
+          get.registry.set(noticeAtom, notice)
+        })
+
+      const workflow = Effect.gen(function* () {
+        yield* Effect.sync(() => {
+          get.registry.set(noticeAtom, null)
+          get.registry.set(phaseAtom, "reserving")
+        })
+        reservation = yield* reserveInventory(args.items)
+        yield* Effect.sync(() => get.registry.set(phaseAtom, "charging"))
+        charge = yield* chargeCard(amount, args.decline)
+        yield* Effect.sync(() => get.registry.set(phaseAtom, "finalizing"))
+        const order = yield* createOrder(args.items, reservation, charge)
+        yield* Effect.sync(() => {
+          get.registry.set(phaseAtom, "idle")
+          get.registry.set(noticeAtom, {
+            kind: "success",
+            text: `Order ${order.id} confirmed — $${order.total.toFixed(2)}`,
+          })
+          get.registry.refresh(ordersAtom)
+        })
+        return order
+      })
+
+      return workflow.pipe(
+        Effect.catchIf(
+          (error): error is CardDeclinedError => error instanceof CardDeclinedError,
+          (error) =>
+            compensate().pipe(
+              Effect.andThen(
+                setNotice({
+                  kind: "error",
+                  text: `Card declined for $${error.amount.toFixed(
+                    2,
+                  )} — refunds/releases applied, cart untouched`,
+                }),
+              ),
+              Effect.andThen(Effect.fail(error)),
+            ),
+        ),
+        Effect.onInterrupt(() =>
           compensate().pipe(
             Effect.andThen(
               setNotice({
-                kind: "error",
-                text: `Card declined for $${
-                  error.amount.toFixed(2)
-                } — refunds/releases applied, cart untouched`,
+                kind: "info",
+                text: "Checkout cancelled — compensations ran, cart untouched",
               }),
             ),
-            Effect.andThen(Effect.fail(error)),
           ),
-      ),
-      Effect.onInterrupt(() =>
-        compensate().pipe(
-          Effect.andThen(
-            setNotice({
-              kind: "info",
-              text: "Checkout cancelled — compensations ran, cart untouched",
-            }),
-          ),
-        )
-      ),
-    )
-  }, { concurrent: false })
+        ),
+      )
+    },
+    { concurrent: false },
+  )
 
   const [cart, setCart] = useAtom(() => cartAtom)
   const [phase] = useAtom(() => phaseAtom)
@@ -307,9 +299,8 @@ function AtomCheckout() {
       <header>
         <h2>Checkout saga</h2>
         <p>
-          <code>Atom.fn</code>{" "}
-          owns the cancellable workflow. State writes happen through the registry, while Effect
-          handles typed decline and interruption compensation.
+          <code>Atom.fn</code> owns the cancellable workflow. State writes happen through the
+          registry, while Effect handles typed decline and interruption compensation.
         </p>
       </header>
 
@@ -324,11 +315,10 @@ function AtomCheckout() {
                   onClick={() =>
                     setCart(
                       cart().map((current, index) =>
-                        index === i()
-                          ? { ...current, quantity: current.quantity - 1 }
-                          : current
+                        index === i() ? { ...current, quantity: current.quantity - 1 } : current,
                       ),
-                    )}
+                    )
+                  }
                 >
                   −
                 </button>
@@ -338,18 +328,15 @@ function AtomCheckout() {
                   onClick={() =>
                     setCart(
                       cart().map((current, index) =>
-                        index === i()
-                          ? { ...current, quantity: current.quantity + 1 }
-                          : current
+                        index === i() ? { ...current, quantity: current.quantity + 1 } : current,
                       ),
-                    )}
+                    )
+                  }
                 >
                   +
                 </button>
               </span>
-              <span class="cart-price">
-                ${(item.price * item.quantity).toFixed(2)}
-              </span>
+              <span class="cart-price">${(item.price * item.quantity).toFixed(2)}</span>
             </div>
           )}
         </For>
@@ -379,7 +366,8 @@ function AtomCheckout() {
                 runCheckout({
                   items: cart().map((item) => ({ ...item })),
                   decline: declineCard(),
-                })}
+                })
+              }
             >
               Place order — ${total().toFixed(2)}
             </button>
@@ -411,14 +399,8 @@ function AtomCheckout() {
       </Show>
 
       <h3>Your orders</h3>
-      <Show
-        when={!ordersLoading()}
-        fallback={<p class="loading">Loading orders…</p>}
-      >
-        <Show
-          when={orders().length > 0}
-          fallback={<p class="empty">No orders yet.</p>}
-        >
+      <Show when={!ordersLoading()} fallback={<p class="loading">Loading orders…</p>}>
+        <Show when={orders().length > 0} fallback={<p class="empty">No orders yet.</p>}>
           <ul class="orders">
             <For each={orders()}>
               {(order) => (
@@ -447,8 +429,8 @@ export function AtomDemos() {
           <strong>Registry comparison</strong>
           <span>
             These are the same two flows using Effect Atom primitives. The released
-            <code>@effect/atom-solid</code>{" "}
-            adapter is still Solid 1-only, so this Solid 2 tab uses the equivalent bridge above.
+            <code>@effect/atom-solid</code> adapter is still Solid 1-only, so this Solid 2 tab uses
+            the equivalent bridge above.
           </span>
         </section>
         <AtomTypeahead />

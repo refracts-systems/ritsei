@@ -37,10 +37,7 @@ describe("financial readiness proofs", () => {
       ],
     )
     assert.strictEqual(financialFailureExecutionMatrix.length, 13)
-    assert.strictEqual(
-      new Set(financialFailureExecutionMatrix.map((row) => row.point)).size,
-      13,
-    )
+    assert.strictEqual(new Set(financialFailureExecutionMatrix.map((row) => row.point)).size, 13)
     for (const row of financialFailureExecutionMatrix) {
       assert.isNotEmpty(row.hook)
       assert.isNotEmpty(row.recovery)
@@ -55,7 +52,7 @@ describe("financial readiness proofs", () => {
   })
 
   it.effect("rejects verification versions outside PostgreSQL smallint range", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const mappingVersionFailure = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialVerificationEvidence.fields.mappingVersion)(32768),
       )
@@ -64,20 +61,22 @@ describe("financial readiness proofs", () => {
         Schema.decodeUnknownEffect(FinancialVerificationEvidence.fields.schemaVersion)(32768),
       )
       assert.strictEqual(schemaVersionFailure._tag, "SchemaError")
-    }))
+    }),
+  )
 
   it.effect("rejects verification counts above PostgreSQL integer range", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const failure = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialVerificationEvidence.fields.accountCount)(
           2_147_483_648,
         ),
       )
       assert.strictEqual(failure._tag, "SchemaError")
-    }))
+    }),
+  )
 
   it.effect("rejects financial transfers with identical accounts", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const failure = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialTransferFact)({
           operationId: "operation-1",
@@ -92,10 +91,11 @@ describe("financial readiness proofs", () => {
         }),
       )
       assert.strictEqual(failure._tag, "SchemaError")
-    }))
+    }),
+  )
 
   it.effect("rejects malformed financial fact account identities", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       for (const field of ["debitAccountId", "creditAccountId"] as const) {
         const failure = yield* Effect.flip(
           Schema.decodeUnknownEffect(FinancialTransferFact.fields[field])("not-a-uuid"),
@@ -106,32 +106,28 @@ describe("financial readiness proofs", () => {
         Schema.decodeUnknownEffect(FinancialBalanceFact.fields.accountId)("not-a-uuid"),
       )
       assert.strictEqual(balanceFailure._tag, "SchemaError")
-    }))
+    }),
+  )
 
   it.effect("rejects financial fact mapping versions outside PostgreSQL integer range", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const operationFailure = yield* Effect.flip(
-        Schema.decodeUnknownEffect(FinancialOperationFact.fields.mappingVersion)(
-          2_147_483_648,
-        ),
+        Schema.decodeUnknownEffect(FinancialOperationFact.fields.mappingVersion)(2_147_483_648),
       )
       assert.strictEqual(operationFailure._tag, "SchemaError")
       const transferFailure = yield* Effect.flip(
-        Schema.decodeUnknownEffect(FinancialTransferFact.fields.mappingVersion)(
-          2_147_483_648,
-        ),
+        Schema.decodeUnknownEffect(FinancialTransferFact.fields.mappingVersion)(2_147_483_648),
       )
       assert.strictEqual(transferFailure._tag, "SchemaError")
       const balanceFailure = yield* Effect.flip(
-        Schema.decodeUnknownEffect(FinancialBalanceFact.fields.mappingVersion)(
-          2_147_483_648,
-        ),
+        Schema.decodeUnknownEffect(FinancialBalanceFact.fields.mappingVersion)(2_147_483_648),
       )
       assert.strictEqual(balanceFailure._tag, "SchemaError")
-    }))
+    }),
+  )
 
   it.effect("rejects financial transfer positions outside PostgreSQL integer range", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const negative = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialTransferFact.fields.position)(-1),
       )
@@ -140,10 +136,11 @@ describe("financial readiness proofs", () => {
         Schema.decodeUnknownEffect(FinancialTransferFact.fields.position)(2_147_483_648),
       )
       assert.strictEqual(overflow._tag, "SchemaError")
-    }))
+    }),
+  )
 
   it.effect("preserves rejected financial operation fact status", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const operation = yield* Schema.decodeUnknownEffect(FinancialOperationFact)({
         operationId: "rejected-operation",
         status: "rejected",
@@ -151,10 +148,11 @@ describe("financial readiness proofs", () => {
         mappingVersion: 1,
       })
       assert.strictEqual(operation.status, "rejected")
-    }))
+    }),
+  )
 
   it.effect("rejects financial transfer amounts outside the positive U128 range", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const zero = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialTransferFact.fields.amountMinor)("0"),
       )
@@ -165,10 +163,11 @@ describe("financial readiness proofs", () => {
         ),
       )
       assert.strictEqual(overflow._tag, "SchemaError")
-    }))
+    }),
+  )
 
   it.effect("rejects verification evidence that completes before it starts", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const failure = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialVerificationEvidence)({
           tenantId: "00000000-0000-4000-8000-000000000001",
@@ -200,40 +199,49 @@ describe("financial readiness proofs", () => {
         }),
       )
       assert.strictEqual(failure._tag, "SchemaError")
-    }))
+    }),
+  )
 
   it.effect("rebuilds the same cross-store facts to the same hash", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const source = {
-        operations: [{
-          operationId: "op-1",
-          status: "reconciled" as const,
-          currency: "USD",
-          mappingVersion: 1,
-        }],
-        transfers: [{
-          operationId: "op-1",
-          position: 0,
-          status: "accepted" as const,
-          transferId: "transfer-1",
-          debitAccountId: "cash",
-          creditAccountId: "revenue",
-          amountMinor: "100",
-          currency: "USD",
-          mappingVersion: 1,
-        }],
-        balances: [{
-          accountId: "cash",
-          currency: "USD",
-          mappingVersion: 1,
-          debitsPostedMinor: "100",
-          creditsPostedMinor: "0",
-        }],
-        projections: [{
-          operationId: "op-1",
-          journalStatus: "posted" as const,
-          transferIds: ["transfer-1"],
-        }],
+        operations: [
+          {
+            operationId: "op-1",
+            status: "reconciled" as const,
+            currency: "USD",
+            mappingVersion: 1,
+          },
+        ],
+        transfers: [
+          {
+            operationId: "op-1",
+            position: 0,
+            status: "accepted" as const,
+            transferId: "transfer-1",
+            debitAccountId: "cash",
+            creditAccountId: "revenue",
+            amountMinor: "100",
+            currency: "USD",
+            mappingVersion: 1,
+          },
+        ],
+        balances: [
+          {
+            accountId: "cash",
+            currency: "USD",
+            mappingVersion: 1,
+            debitsPostedMinor: "100",
+            creditsPostedMinor: "0",
+          },
+        ],
+        projections: [
+          {
+            operationId: "op-1",
+            journalStatus: "posted" as const,
+            transferIds: ["transfer-1"],
+          },
+        ],
       }
       const target = {
         operations: [...source.operations],
@@ -324,10 +332,7 @@ describe("financial readiness proofs", () => {
       assert.isFalse(missingTransfer.ok)
       assert.strictEqual(missingTransfer.mismatches[0]!.kind, "missing_transfer")
 
-      const unexpectedTransfer = compareFinancialFactSnapshots(
-        { ...source, transfers: [] },
-        target,
-      )
+      const unexpectedTransfer = compareFinancialFactSnapshots({ ...source, transfers: [] }, target)
       assert.isFalse(unexpectedTransfer.ok)
       assert.strictEqual(unexpectedTransfer.mismatches[0]!.kind, "unexpected_transfer")
 
@@ -344,7 +349,8 @@ describe("financial readiness proofs", () => {
       })
       assert.isFalse(projectionMismatch.ok)
       assert.strictEqual(projectionMismatch.mismatches[0]!.kind, "projection_mismatch")
-    }))
+    }),
+  )
 
   it("requires exact account-level opening-balance equality", () => {
     const source = [
@@ -365,7 +371,10 @@ describe("financial readiness proofs", () => {
         creditsMinor: "12500",
       },
     ]
-    const equal = verifyOpeningBalances(source, source.map((entry) => ({ ...entry })))
+    const equal = verifyOpeningBalances(
+      source,
+      source.map((entry) => ({ ...entry })),
+    )
     assert.isTrue(equal.ok)
     assert.deepStrictEqual(equal.mismatches, [])
     assert.strictEqual(equal.sourceDebitMinor, "12500")

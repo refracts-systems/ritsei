@@ -19,12 +19,13 @@ it.effect.skipIf(databaseUrl === undefined)(
   "persists operator control for unknown external outcome after crash recovery",
   () =>
     withTemporaryDatabase(databaseUrl!, (client: Sql) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         yield* runMigrations(client)
-        const [tenant] = yield* Effect.promise(() =>
-          client<{ id: string }[]>`
+        const [tenant] = yield* Effect.promise(
+          () =>
+            client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
-          `
+          `,
         )
         const database = makePostgresDatabase(client)
         const checkpointStore = yield* makePostgresProcessCheckpointStore.pipe(
@@ -67,13 +68,16 @@ it.effect.skipIf(databaseUrl === undefined)(
           Effect.provideService(Database, database),
         )
         const replay = yield* restartedStore.record(input)
-        const conflict = yield* Effect.flip(restartedStore.record({
-          ...input,
-          action: "compensate",
-        }))
+        const conflict = yield* Effect.flip(
+          restartedStore.record({
+            ...input,
+            action: "compensate",
+          }),
+        )
 
         assert.strictEqual(replay.id, first.id)
         assert.strictEqual(replay.action, "manual_recovery")
         assert.instanceOf(conflict, ProcessOperatorConflict)
-      })),
+      }),
+    ),
 )

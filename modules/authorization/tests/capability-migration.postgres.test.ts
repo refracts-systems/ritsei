@@ -13,9 +13,7 @@ import { makeUserAccountService, UserAccountService } from "../../identity/mod.t
 const databaseUrl = process.env["DATABASE_URL"]
 const latestMigration = "20260808045828_capability_naming_conventions"
 
-const withPreviousMigrations = <A, E, R>(
-  use: (directory: string) => Effect.Effect<A, E, R>,
-) =>
+const withPreviousMigrations = <A, E, R>(use: (directory: string) => Effect.Effect<A, E, R>) =>
   Effect.acquireUseRelease(
     Effect.promise(async () => {
       const directory = await mkdtemp(join(tmpdir(), "ritsei-migrations-"))
@@ -37,7 +35,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "migrates legacy capability grants to canonical identifiers",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         yield* withPreviousMigrations((directory) => runMigrations(client, directory))
 
         const database = makePostgresDatabase(client)
@@ -60,11 +58,12 @@ it.effect.skipIf(databaseUrl === undefined)(
           "inventory.stock.transfer.confirm",
         ]
 
-        yield* Effect.promise(() =>
-          client`
+        yield* Effect.promise(
+          () =>
+            client`
           insert into "authorization"."tenant_memberships" (user_account_id, tenant_id)
           values (${user.id}, ${tenant.id})
-        `
+        `,
         )
         yield* Effect.promise(async () => {
           for (const capability of legacyCapabilities) {
@@ -77,28 +76,33 @@ it.effect.skipIf(databaseUrl === undefined)(
 
         yield* runMigrations(client)
 
-        const rows = yield* Effect.promise(() =>
-          client<{ capability: string }[]>`
+        const rows = yield* Effect.promise(
+          () =>
+            client<{ capability: string }[]>`
           select capability
           from "authorization"."memberships"
           where user_account_id = ${user.id} and tenant_id = ${tenant.id}
           order by capability
-        `
+        `,
         )
-        assert.deepStrictEqual(rows.map(({ capability }) => capability), [
-          "authorization.capability.grant",
-          "authorization.tenant_membership.activate",
-          "authorization.tenant_membership.add",
-          "authorization.tenant_membership.read",
-          "authorization.tenant_membership.remove",
-          "authorization.tenant_membership.suspend",
-          "identity.user_account.create",
-          "identity.user_account.update",
-          "inventory.stock_transfer.confirm",
-          "party.party_representation.activate",
-          "party.party_representation.create",
-          "party.party_representation.deactivate",
-          "party.party_role.assign",
-        ])
-      })),
+        assert.deepStrictEqual(
+          rows.map(({ capability }) => capability),
+          [
+            "authorization.capability.grant",
+            "authorization.tenant_membership.activate",
+            "authorization.tenant_membership.add",
+            "authorization.tenant_membership.read",
+            "authorization.tenant_membership.remove",
+            "authorization.tenant_membership.suspend",
+            "identity.user_account.create",
+            "identity.user_account.update",
+            "inventory.stock_transfer.confirm",
+            "party.party_representation.activate",
+            "party.party_representation.create",
+            "party.party_representation.deactivate",
+            "party.party_role.assign",
+          ],
+        )
+      }),
+    ),
 )

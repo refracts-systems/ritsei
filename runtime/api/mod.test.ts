@@ -31,7 +31,8 @@ it.effect("accepts the exact large amount at the API journal boundary", () =>
         credit: "0.00",
       }),
     )
-  }))
+  }),
+)
 
 it("parses request body size declarations fail-closed", () => {
   assert.strictEqual(parseContentLength("12"), 12)
@@ -50,22 +51,23 @@ it.effect("rejects streamed request bodies over the transport limit", () =>
             "POST",
             "/echo",
             Effect.flatMap(HttpServerRequest.HttpServerRequest, (request) =>
-              Effect.map(request.text, HttpServerResponse.text)),
+              Effect.map(request.text, HttpServerResponse.text),
+            ),
           ),
           requestBodyLimitLayer,
         ),
         { disableLogger: true },
-      )
+      ),
     ),
     ({ handler }) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const response = yield* Effect.promise(() =>
           handler(
             new Request("http://localhost/echo", {
               method: "POST",
               body: "x".repeat(MAX_REQUEST_BODY_BYTES + 1),
             }),
-          )
+          ),
         )
         assert.strictEqual(response.status, 413)
         assert.deepStrictEqual(yield* Effect.promise(() => response.json()), {
@@ -73,7 +75,8 @@ it.effect("rejects streamed request bodies over the transport limit", () =>
         })
       }),
     ({ dispose }) => Effect.promise(dispose),
-  ))
+  ),
+)
 
 it.effect("rejects invalid body length declarations before route decoding", () =>
   Effect.acquireUseRelease(
@@ -84,15 +87,16 @@ it.effect("rejects invalid body length declarations before route decoding", () =
             "POST",
             "/echo",
             Effect.flatMap(HttpServerRequest.HttpServerRequest, (request) =>
-              Effect.map(request.text, HttpServerResponse.text)),
+              Effect.map(request.text, HttpServerResponse.text),
+            ),
           ),
           requestBodyLimitLayer,
         ),
         { disableLogger: true },
-      )
+      ),
     ),
     ({ handler }) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const invalid = yield* Effect.promise(() =>
           handler(
             new Request("http://localhost/echo", {
@@ -100,7 +104,7 @@ it.effect("rejects invalid body length declarations before route decoding", () =
               headers: { "content-length": "12x" },
               body: "x",
             }),
-          )
+          ),
         )
         assert.strictEqual(invalid.status, 400)
         assert.deepStrictEqual(yield* Effect.promise(() => invalid.json()), {
@@ -114,7 +118,7 @@ it.effect("rejects invalid body length declarations before route decoding", () =
               headers: { "content-length": String(MAX_REQUEST_BODY_BYTES + 1) },
               body: "x",
             }),
-          )
+          ),
         )
         assert.strictEqual(oversized.status, 413)
         assert.deepStrictEqual(yield* Effect.promise(() => oversized.json()), {
@@ -122,7 +126,8 @@ it.effect("rejects invalid body length declarations before route decoding", () =
         })
       }),
     ({ dispose }) => Effect.promise(dispose),
-  ))
+  ),
+)
 
 it.effect("rejects malformed UTF-8 before route decoding", () =>
   Effect.acquireUseRelease(
@@ -132,25 +137,24 @@ it.effect("rejects malformed UTF-8 before route decoding", () =>
           HttpRouter.add(
             "POST",
             "/echo",
-            Effect.flatMap(
-              HttpServerRequest.HttpServerRequest,
-              (request) => Effect.map(request.text, HttpServerResponse.text),
+            Effect.flatMap(HttpServerRequest.HttpServerRequest, (request) =>
+              Effect.map(request.text, HttpServerResponse.text),
             ),
           ),
           requestBodyLimitLayer,
         ),
         { disableLogger: true },
-      )
+      ),
     ),
     ({ handler }) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const response = yield* Effect.promise(() =>
           handler(
             new Request("http://localhost/echo", {
               method: "POST",
               body: new Uint8Array([0xff]),
             }),
-          )
+          ),
         )
         assert.strictEqual(response.status, 400)
         assert.deepStrictEqual(yield* Effect.promise(() => response.json()), {
@@ -158,7 +162,8 @@ it.effect("rejects malformed UTF-8 before route decoding", () =>
         })
       }),
     ({ dispose }) => Effect.promise(dispose),
-  ))
+  ),
+)
 
 it.effect("derives routing and OpenAPI from the Effect HttpApi contract", () =>
   Effect.sync(() => {
@@ -246,4 +251,5 @@ it.effect("derives routing and OpenAPI from the Effect HttpApi contract", () =>
     assert.ok(specification.paths["/tenant-memberships/{userAccountId}/suspend"]?.post)
     assert.ok(specification.paths["/tenant-memberships/{userAccountId}/activate"]?.post)
     assert.ok(specification.paths["/tenant-memberships/{userAccountId}"]?.delete)
-  }))
+  }),
+)

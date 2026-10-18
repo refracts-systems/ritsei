@@ -23,15 +23,13 @@ const acceptedEvidence = (checks: readonly string[]) => ({
 
 describe("frontend gate evidence", () => {
   it("requires behavioral tests alongside documentary checks and preserves upstream dependencies", () => {
-    for (
-      const [id, test] of [
-        ["frontend.shell", "tests/frontend/shell.test.ts"],
-        ["frontend.application-boundaries", "tests/frontend/workflow.test.ts"],
-        ["frontend.design-system", "apps/web/src/ui/accessibility.test.ts"],
-        ["frontend.design-system", "tests/frontend/kobalte.test.ts"],
-        ["frontend.accessibility-performance", "apps/web/src/ui/accessibility.test.ts"],
-      ]
-    ) {
+    for (const [id, test] of [
+      ["frontend.shell", "tests/frontend/shell.test.ts"],
+      ["frontend.application-boundaries", "tests/frontend/workflow.test.ts"],
+      ["frontend.design-system", "apps/web/src/ui/accessibility.test.ts"],
+      ["frontend.design-system", "tests/frontend/kobalte.test.ts"],
+      ["frontend.accessibility-performance", "apps/web/src/ui/accessibility.test.ts"],
+    ]) {
       const gate = gates.find((gate) => gate.id === id)!
       const files = gate.commands!.flatMap((command) => command.args.slice(2))
       assert.include(files, test)
@@ -68,24 +66,23 @@ describe("frontend gate evidence", () => {
   })
 
   it("fails closed on absent, malformed, incomplete, or duplicate reports", () => {
-    for (
-      const text of [
-        undefined,
-        "",
-        "not json",
-        "null",
-        "[]",
-        "{}",
-        "{\"testResults\":{}}",
-        report(null),
-        report({ name: "test.ts", status: "passed" }),
-        report({ ...suite(), assertionResults: [null] }),
-        report({ ...suite(), assertionResults: [{}] }),
-        report({ ...suite(), name: "" }),
-        report(suite(), suite()),
-        report(suite(), null),
-      ]
-    ) assert.equal(parsePassedTestFiles(text).size, 0)
+    for (const text of [
+      undefined,
+      "",
+      "not json",
+      "null",
+      "[]",
+      "{}",
+      '{"testResults":{}}',
+      report(null),
+      report({ name: "test.ts", status: "passed" }),
+      report({ ...suite(), assertionResults: [null] }),
+      report({ ...suite(), assertionResults: [{}] }),
+      report({ ...suite(), name: "" }),
+      report(suite(), suite()),
+      report(suite(), null),
+    ])
+      assert.equal(parsePassedTestFiles(text).size, 0)
   })
 
   it("requires reviewed, passing checks and existing proof for both manual gates", () => {
@@ -94,21 +91,20 @@ describe("frontend gate evidence", () => {
       const evaluate = (value: unknown) =>
         evaluateFrontendEvidence(JSON.stringify(value), checks, (path) => path === proof)
       assert.isTrue(evaluate(valid))
-      for (
-        const invalid of [
-          null,
-          {},
-          { ...valid, status: "blocked" },
-          { ...valid, status: "failed" },
-          { ...valid, reviewer: " " },
-          { ...valid, reviewDate: "" },
-          { ...valid, reviewDate: "2026-02-30" },
-          { ...valid, checks: {} },
-          { ...valid, checks: [] },
-          { ...valid, checks: { ...valid.checks, [checks[0]!]: { status: "blocked", proof } } },
-          { ...valid, checks: { ...valid.checks, [checks[0]!]: { status: "passed" } } },
-        ]
-      ) assert.isFalse(evaluate(invalid))
+      for (const invalid of [
+        null,
+        {},
+        { ...valid, status: "blocked" },
+        { ...valid, status: "failed" },
+        { ...valid, reviewer: " " },
+        { ...valid, reviewDate: "" },
+        { ...valid, reviewDate: "2026-02-30" },
+        { ...valid, checks: {} },
+        { ...valid, checks: [] },
+        { ...valid, checks: { ...valid.checks, [checks[0]!]: { status: "blocked", proof } } },
+        { ...valid, checks: { ...valid.checks, [checks[0]!]: { status: "passed" } } },
+      ])
+        assert.isFalse(evaluate(invalid))
       assert.isFalse(evaluateFrontendEvidence(JSON.stringify(valid), checks, () => false))
       assert.isFalse(evaluateFrontendEvidence(undefined, checks, () => true))
       assert.isFalse(evaluateFrontendEvidence("broken json", checks, () => true))
@@ -165,62 +161,68 @@ describe("frontend gate evidence", () => {
 
     assert.isTrue(evaluate(value))
     assert.isFalse(evaluate({ ...value, status: "passed" }))
-    assert.isFalse(evaluate({
-      ...value,
-      checks: {
-        ...checks,
-        "kobalte-solid2-compatibility": {
-          ...checks["kobalte-solid2-compatibility"],
-          riskAcceptance: {
-            ...(checks["kobalte-solid2-compatibility"].riskAcceptance as Record<string, unknown>),
-            id: "other-risk",
+    assert.isFalse(
+      evaluate({
+        ...value,
+        checks: {
+          ...checks,
+          "kobalte-solid2-compatibility": {
+            ...checks["kobalte-solid2-compatibility"],
+            riskAcceptance: {
+              ...(checks["kobalte-solid2-compatibility"].riskAcceptance as Record<string, unknown>),
+              id: "other-risk",
+            },
           },
         },
-      },
-    }))
-    assert.isFalse(evaluate({
-      ...value,
-      checks: {
-        ...checks,
-        "kobalte-solid2-compatibility": {
-          ...checks["kobalte-solid2-compatibility"],
-          productionApproval: {
-            status: "approved_with_risk",
-            primitives: [{
-              name: "Select",
-              contract: "apps/web/src/ui/select.tsx",
-              usage: "apps/web/src/features/identity/accounts.tsx",
-              browserTest: "tests/frontend/kobalte.test.ts",
-            }],
+      }),
+    )
+    assert.isFalse(
+      evaluate({
+        ...value,
+        checks: {
+          ...checks,
+          "kobalte-solid2-compatibility": {
+            ...checks["kobalte-solid2-compatibility"],
+            productionApproval: {
+              status: "approved_with_risk",
+              primitives: [
+                {
+                  name: "Select",
+                  contract: "apps/web/src/ui/select.tsx",
+                  usage: "apps/web/src/features/identity/accounts.tsx",
+                  browserTest: "tests/frontend/kobalte.test.ts",
+                },
+              ],
+            },
           },
         },
-      },
-    }))
+      }),
+    )
   })
 
   it("rejects unsafe proof paths before consulting the filesystem", () => {
     const checks = frontendEvidence["frontend.design-system"].checks
-    for (
-      const path of [
-        "../secret",
-        "/tmp/proof",
-        "docs/operations/../secret",
-        "docs/operations/./proof",
-        "docs/operations//proof",
-        "docs/operations/",
-        "docs/operations/\\secret",
-        "https://example.com/proof",
-        "docs/operations/%2e%2e/secret",
-        "C:\\proof",
-      ]
-    ) {
+    for (const path of [
+      "../secret",
+      "/tmp/proof",
+      "docs/operations/../secret",
+      "docs/operations/./proof",
+      "docs/operations//proof",
+      "docs/operations/",
+      "docs/operations/\\secret",
+      "https://example.com/proof",
+      "docs/operations/%2e%2e/secret",
+      "C:\\proof",
+    ]) {
       const valid = acceptedEvidence(checks)
       valid.checks[checks[0]!] = { status: "passed", proof: path }
       let unsafeRead = false
-      assert.isFalse(evaluateFrontendEvidence(JSON.stringify(valid), checks, (requested) => {
-        if (requested === path) unsafeRead = true
-        return true
-      }))
+      assert.isFalse(
+        evaluateFrontendEvidence(JSON.stringify(valid), checks, (requested) => {
+          if (requested === path) unsafeRead = true
+          return true
+        }),
+      )
       assert.isFalse(unsafeRead)
     }
   })

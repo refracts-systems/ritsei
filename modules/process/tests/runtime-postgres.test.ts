@@ -15,36 +15,38 @@ import {
 
 const databaseUrl = process.env["DATABASE_URL"]
 
-const makeCheckpoint = (tenantId: string) => ({
-  instanceId: uuidv7(),
-  tenantId,
-  processDefinitionId: uuidv7(),
-  processDefinitionVersion: 1,
-  catalogVersion: 1,
-  environment: "TEST",
-  status: "running",
-  failureKind: null,
-  currentNodeId: "start",
-  revision: 0,
-  completedStepIds: [],
-  stepExecutions: [],
-  consumedEventIds: [],
-  scheduledTimerIds: [],
-  correlationId: "runtime-correlation-1",
-  causationId: null,
-  executionPrincipal: "process-principal-1",
-} as const)
+const makeCheckpoint = (tenantId: string) =>
+  ({
+    instanceId: uuidv7(),
+    tenantId,
+    processDefinitionId: uuidv7(),
+    processDefinitionVersion: 1,
+    catalogVersion: 1,
+    environment: "TEST",
+    status: "running",
+    failureKind: null,
+    currentNodeId: "start",
+    revision: 0,
+    completedStepIds: [],
+    stepExecutions: [],
+    consumedEventIds: [],
+    scheduledTimerIds: [],
+    correlationId: "runtime-correlation-1",
+    causationId: null,
+    executionPrincipal: "process-principal-1",
+  }) as const
 
 it.effect.skipIf(databaseUrl === undefined)(
   "proves crash recovery and restart with duplicate event safety and exact catalog version",
   () =>
     withTemporaryDatabase(databaseUrl!, (client: Sql) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         yield* runMigrations(client)
-        const [tenant] = yield* Effect.promise(() =>
-          client<{ id: string }[]>`
+        const [tenant] = yield* Effect.promise(
+          () =>
+            client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
-          `
+          `,
         )
         const database = makePostgresDatabase(client)
         const store = yield* makePostgresProcessCheckpointStore.pipe(
@@ -79,5 +81,6 @@ it.effect.skipIf(databaseUrl === undefined)(
         assert.instanceOf(stale, ProcessCheckpointRevisionConflict)
         assert.strictEqual(stale.expectedRevision, 2)
         assert.strictEqual(stale.actualRevision, 1)
-      })),
+      }),
+    ),
 )

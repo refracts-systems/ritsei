@@ -22,7 +22,7 @@ import {
 } from "../mod.ts"
 
 it.effect("defines versioned post-commit event and leased job contracts", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const event = yield* Schema.decodeUnknownEffect(DomainEventEnvelope)({
       eventId: "018f3f77-0c5a-7cc0-8b62-6a163d214123",
       eventType: "process.order_confirmation.completed",
@@ -62,12 +62,7 @@ it.effect("defines versioned post-commit event and leased job contracts", () =>
 
     assert.strictEqual(event.eventVersion, 1)
     assert.strictEqual(
-      new Set([
-        event.commandId,
-        event.correlationId,
-        event.causationId,
-        event.idempotencyKey,
-      ]).size,
+      new Set([event.commandId, event.correlationId, event.causationId, event.idempotencyKey]).size,
       4,
     )
     assert.strictEqual(job.status, "pending")
@@ -141,10 +136,11 @@ it.effect("defines versioned post-commit event and leased job contracts", () =>
     assert.strictEqual(invalidIdentity._tag, "SchemaError")
     assert.strictEqual(invalidJobType._tag, "SchemaError")
     assert.strictEqual(invalidPayload._tag, "SchemaError")
-  }))
+  }),
+)
 
 it.effect("validates Process post-commit job payloads", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const payload = {
       eventId: "018f3f77-0c5a-7cc0-8b62-6a163d214123",
       workflowRunId: "018f3f77-0c5a-7cc0-8b62-6a163d214127",
@@ -162,10 +158,11 @@ it.effect("validates Process post-commit job payloads", () =>
       }),
     )
     assert.strictEqual(invalidEvent._tag, "SchemaError")
-  }))
+  }),
+)
 
 it.effect("validates order fulfillment completed event payloads", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const payload = {
       workflowRunId: "018f3f77-0c5a-7cc0-8b62-6a163d214127",
       confirmationWorkflowRunId: "018f3f77-0c5a-7cc0-8b62-6a163d214132",
@@ -181,10 +178,11 @@ it.effect("validates order fulfillment completed event payloads", () =>
       }),
     )
     assert.strictEqual(invalidWorkflow._tag, "SchemaError")
-  }))
+  }),
+)
 
 it.effect("validates order cancellation completed event payloads", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const payload = {
       workflowRunId: "018f3f77-0c5a-7cc0-8b62-6a163d214127",
       confirmationWorkflowRunId: "018f3f77-0c5a-7cc0-8b62-6a163d214132",
@@ -201,10 +199,11 @@ it.effect("validates order cancellation completed event payloads", () =>
       }),
     )
     assert.strictEqual(invalidJournal._tag, "SchemaError")
-  }))
+  }),
+)
 
 it.effect("validates order confirmation completed event payloads", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const payload = {
       workflowRunId: "018f3f77-0c5a-7cc0-8b62-6a163d214127",
       orderId: "018f3f77-0c5a-7cc0-8b62-6a163d214125",
@@ -220,10 +219,11 @@ it.effect("validates order confirmation completed event payloads", () =>
       }),
     )
     assert.strictEqual(invalidReservation._tag, "SchemaError")
-  }))
+  }),
+)
 
 it.effect("validates workflow run identities and recovery metadata", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const run = {
       id: "018f3f77-0c5a-7cc0-8b62-6a163d214127",
       tenantId: "018f3f77-0c5a-7cc0-8b62-6a163d214124",
@@ -274,10 +274,11 @@ it.effect("validates workflow run identities and recovery metadata", () =>
     assert.strictEqual(invalidRunningRecovery._tag, "SchemaError")
     assert.strictEqual(invalidSucceededRecovery._tag, "SchemaError")
     assert.strictEqual(invalidCompletedRecovery._tag, "SchemaError")
-  }))
+  }),
+)
 
 it.effect("validates lifecycle result identities", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const invalidWorkflowRunId = yield* Effect.flip(
       Schema.decodeUnknownEffect(OrderFulfillmentResult.fields.workflowRunId)("not-a-uuid"),
     )
@@ -291,10 +292,11 @@ it.effect("validates lifecycle result identities", () =>
     assert.strictEqual(invalidWorkflowRunId._tag, "SchemaError")
     assert.strictEqual(invalidEventId._tag, "SchemaError")
     assert.strictEqual(invalidJobId._tag, "SchemaError")
-  }))
+  }),
+)
 
 it.effect("validates workflow error identities and recovery reasons", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const invalidIdentity = yield* Effect.flip(
       Schema.decodeUnknownEffect(WorkflowRunNotFound)({
         _tag: "WorkflowRunNotFound",
@@ -313,18 +315,20 @@ it.effect("validates workflow error identities and recovery reasons", () =>
 
     assert.strictEqual(invalidIdentity._tag, "SchemaError")
     assert.strictEqual(invalidReason._tag, "SchemaError")
-  }))
+  }),
+)
 
 it.effect("validates scoped workflow tenant identities", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const invalidTenant = yield* Effect.flip(
       Schema.decodeUnknownEffect(ConfirmOrderConfirmationInput.fields.tenantId)("not-a-uuid"),
     )
     assert.strictEqual(invalidTenant._tag, "SchemaError")
-  }))
+  }),
+)
 
 it.effect("defines cancellation and fulfillment command payloads", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const input = {
       orderId: "018f3f77-0c5a-7cc0-8b62-6a163d214125",
       commandId: "command-1",
@@ -336,10 +340,11 @@ it.effect("defines cancellation and fulfillment command payloads", () =>
 
     assert.deepStrictEqual(cancellation, { ...input, causationId: null })
     assert.deepStrictEqual(fulfillment, cancellation)
-  }))
+  }),
+)
 
 it.effect("defines the server-derived order confirmation payload", () =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const payload = yield* Schema.decodeUnknownEffect(OrderConfirmationPayload)({
       orderId: "018f3f77-0c5a-7cc0-8b62-6a163d214125",
       warehouseId: "018f3f77-0c5a-7cc0-8b62-6a163d214128",
@@ -366,4 +371,5 @@ it.effect("defines the server-derived order confirmation payload", () =>
       }),
     )
     assert.strictEqual(invalidIdentity._tag, "SchemaError")
-  }))
+  }),
+)

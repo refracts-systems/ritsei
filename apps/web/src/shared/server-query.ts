@@ -2,14 +2,15 @@ import { useQuery } from "@tanstack/solid-query"
 
 export type ServerQueryCache = "lookup" | "collection" | "detail"
 
-export type ServerQueryKey = readonly [string, ...readonly unknown[]]
+export type ServerQueryKey = readonly [string, ...(readonly unknown[])]
 
 export interface ServerQueryOptions<TData> {
   readonly tenantId: string
   readonly key: ServerQueryKey
-  readonly load: (
-    context: { readonly signal: AbortSignal; readonly tenantId: string },
-  ) => Promise<TData>
+  readonly load: (context: {
+    readonly signal: AbortSignal
+    readonly tenantId: string
+  }) => Promise<TData>
   readonly cache?: ServerQueryCache
   readonly throwOnError?: boolean
 }

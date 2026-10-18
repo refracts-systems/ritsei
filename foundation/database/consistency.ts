@@ -38,9 +38,7 @@ export class ReplicaConsistencyFailure extends Schema.TaggedError<ReplicaConsist
 ) {}
 
 export interface PostgresReadYourWritesService {
-  readonly capture: (
-    tenantId: string,
-  ) => Effect.Effect<ConsistencyToken, ReplicaConsistencyFailure>
+  readonly capture: (tenantId: string) => Effect.Effect<ConsistencyToken, ReplicaConsistencyFailure>
   readonly wait: (
     tenantId: string,
     token: string,
