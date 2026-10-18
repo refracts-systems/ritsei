@@ -30,7 +30,7 @@
 - This index owns the dependency graph and global exit conditions.
 - Each subroadmap owns one delivery track and its phase gates.
 - Architecture documents own current semantics; ADRs own difficult-to-reverse decisions.
-- `tooling/roadmap-completion/registry.ts` and `deno task roadmap:measure` are the mechanical status
+- `tooling/roadmap-completion/registry.ts` and `pnpm run roadmap:measure` are the mechanical status
   source. They distinguish implementation markers, executable checks, and validated operational
   evidence; prose status must not contradict their output.
 
@@ -61,12 +61,12 @@ itself publish a product release, activate an unregistered connector provider, o
 particular deployment profile. Numeric labels such as `0.8` and `1.0` are historical roadmap
 milestones and gate IDs, not product SemVer.
 
-Only `METRIC` lines emitted by `deno task roadmap:measure` are live counters. Other subroadmap
+Only `METRIC` lines emitted by `pnpm run roadmap:measure` are live counters. Other subroadmap
 measures are required exit or activation evidence until a named evaluator emits them.
 
 ## Current position
 
-This snapshot was updated on September 3, 2026. Run `deno task roadmap:measure` for the live state.
+This snapshot was updated on September 3, 2026. Run `pnpm run roadmap:measure` for the live state.
 
 | Area                | Measured position                                                                 | Next decision                                                            |
 | ------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
@@ -180,7 +180,7 @@ particular connector provider, approve a deployment profile, or publish a produc
 Run:
 
 ```sh
-deno task roadmap:measure
+pnpm run roadmap:measure
 ```
 
 The command reports the following stable measures:

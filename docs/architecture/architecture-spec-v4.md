@@ -59,6 +59,7 @@
 >   [`../decisions/0021-define-p0-scope-and-identity-model.md`](../decisions/0021-define-p0-scope-and-identity-model.md)
 > - Effect v4 beta.103 update:
 >   [`../decisions/0022-update-effect-v4-to-beta-103.md`](../decisions/0022-update-effect-v4-to-beta-103.md)
+> - Package-manager migration (current): [`../decisions/0087-adopt-node-lts-and-pnpm-toolchain.md`](../decisions/0087-adopt-node-lts-and-pnpm-toolchain.md)
 > - Deno package dependency resolution (historical):
 >   [`../decisions/0050-use-package-json-for-deno-dependency-resolution.md`](../decisions/0050-use-package-json-for-deno-dependency-resolution.md)
 > - Dependency ownership by application boundary:
@@ -67,7 +68,7 @@
 >   [`../decisions/0051-adopt-uuidv7-for-persistent-identities.md`](../decisions/0051-adopt-uuidv7-for-persistent-identities.md)
 > - Jurisdiction localization:
 >   [`../decisions/0016-isolate-jurisdiction-localization.md`](../decisions/0016-isolate-jurisdiction-localization.md)
-> - Native Deno Effect adapter:
+> - Native Deno Effect adapter (superseded by ADR-0087):
 >   [`../decisions/0017-use-effect-platform-deno.md`](../decisions/0017-use-effect-platform-deno.md)
 > - Typed Process Studio:
 >   [`../decisions/0018-adopt-typed-process-studio.md`](../decisions/0018-adopt-typed-process-studio.md)
@@ -98,11 +99,11 @@ principles.
 | ------------------ | --------------------------------------------------------------------- |
 | Language           | TypeScript strict                                                     |
 | Application model  | Effect                                                                |
-| Runtime            | Deno                                                                  |
+| Runtime            | Node.js 24 LTS                                                        |
 | Identity / IAM     | Provider-neutral OIDC/OAuth2 `IdentityProvider`; ZITADEL recommended |
 | Application AuthZ  | RITSEI Authorization module with canonical PostgreSQL policy facts |
 | Relationship AuthZ | Native PostgreSQL `RelationshipEngine`; optional SpiceDB adapter     |
-| HTTP               | Effect v4 `HttpApi` / `HttpRouter` with native `@effect/platform-deno` |
+| HTTP               | Effect v4 `HttpApi` / `HttpRouter` with native `@effect/platform-node` |
 | Database           | PostgreSQL 19+ logical transactional platform for non-ledger state    |
 | Persistent IDs     | UUIDv7 for new entity, event, and index-visible identities            |
 | Financial execution | TigerBeetle through the FinancialLedgerPort, activation-gated        |
@@ -112,7 +113,7 @@ principles.
 | Overload isolation | Workload planes, bounded admission, and reserved command capacity      |
 | Source/derived isolation | Class A source-of-truth paths do not depend on Class B/C derived capabilities |
 | Analytic plane     | Domain-owned facts, versioned metrics, and rebuildable projections     |
-| Native compute     | Optional Zig through `Deno.dlopen`                                    |
+| Native compute     | Optional Zig through typed FFI bindings                              |
 | Frontend           | Vite-based SolidJS 2.0 SPA with a separate backend                    |
 | Contracts          | Effect Schema                                                         |
 
@@ -123,12 +124,13 @@ relationship coordination, SoD, and final authorization evidence. Owning domains
 policy, current-state validation, and command semantics; the financial ledger engine enforces the
 accepted transfer-level constraints through the FinancialLedgerPort.
 
-Deno remains the runtime and primary toolchain. npm ecosystem dependencies are declared by the
-workspace boundary that owns their consumption: the root `package.json` owns repository-wide packages
+Node.js remains the runtime and primary toolchain with pnpm as the package manager. npm ecosystem
+dependencies are declared by the workspace boundary that owns their consumption: the root
+`package.json` owns repository-wide packages
 and tooling, while `apps/web/package.json` owns dependencies used exclusively by the web application.
-Each owner keeps its exact dependency versions; Deno uses `preferPackageJson: true` and
-`nodeModulesDir: "auto"` so package exports and peers resolve through the conventional local
-`node_modules` topology. The Effect and Deno adapter packages are aligned on `4.0.0`; vendored
+Each owner keeps its exact dependency versions; pnpm resolves package exports and peers through the
+conventional local `node_modules` topology and records the full resolution in
+`pnpm-lock.yaml`. The Effect and Node adapter packages are aligned on `4.0.0`; vendored
 Effect source and the Drizzle subtree remain reference-only.
 
 ### Dependency Ownership
@@ -137,31 +139,30 @@ Effect source and the Drizzle subtree remain reference-only.
              Dependency ownership
 
        package.json                 apps/web/package.json
-       repo-wide npm/JSR             web-only runtime/dev deps
+       repo-wide npm deps           web-only runtime/dev deps
        deps and tooling              (exact pins live here)
                 │                              │
                 └──────────────┬───────────────┘
                                ▼
-                         deno install
+                          pnpm install
                                │
                     ┌──────────┴──────────┐
                     ▼                     ▼
-               node_modules           deno.lock
+               node_modules           pnpm-lock.yaml
 
-             deno.json owns workspace orchestration,
-             runtime, compiler, tasks, formatting,
-             linting, and permissions.
+             package.json scripts own workspace orchestration,
+             type checking, tasks, and tooling entrypoints.
 ```
 
-The root `package.json` owns repository-wide npm, JSR, and development dependencies. The
+The root `package.json` owns repository-wide npm and development dependencies. The
 `apps/web/package.json` manifest owns dependencies exclusively consumed by the web application, with
-exact versions kept next to the application boundary. `deno.lock` records the single resolved
+exact versions kept next to the application boundary. `pnpm-lock.yaml` records the single resolved
 dependency graph, while `node_modules` provides the conventional local package topology required by
 npm ecosystem dependencies.
 
-`deno.json` owns Deno runtime and toolchain behavior: workspace membership, compiler behavior, runtime
-permissions, tasks, formatting, and linting. Internal `modules/*` directories remain modular-monolith
-boundaries, not workspace package boundaries by default.
+Root `package.json` scripts own workspace orchestration: workspace membership (`pnpm-workspace.yaml`),
+type checking, task entrypoints, and formatting (`dprint`). Internal `modules/*` directories remain
+modular-monolith boundaries, not workspace package boundaries by default.
 
 ## Repository Shape
 
@@ -194,8 +195,8 @@ ritsei/
 │   └── web/                 # Vite + SolidJS 2.0 SPA
 ├── native/ritsei-calc/
 ├── db/                      # schema, migrations, policies, and seeds
-├── deno.json
 ├── package.json
+├── pnpm-workspace.yaml
 └── drizzle.config.ts
 ```
 
@@ -601,8 +602,8 @@ held PostgreSQL transaction or an unkeyed retry. See [`financial-ledger.md`](./f
 ## HTTP Contract
 
 HTTP routing is Effect-native. `HttpApi` owns endpoint schemas, errors, and OpenAPI metadata;
-`HttpApiBuilder` and `HttpRouter` own server routing. The canonical `@effect/platform-deno` adapter
-owns native `Deno.serve` integration and `DenoRuntime` owns process execution. Application code must
+`HttpApiBuilder` and `HttpRouter` own server routing. The canonical `@effect/platform-node` adapter
+owns native server integration and `NodeRuntime` owns process execution. Application code must
 not import `node:http`, call `Deno.serve` directly, or use third-party routing frameworks. Authentication,
 tenant selection, authorization order, 401/403/404/503 behavior, and explainable denial rules are
 owned by [`api.md`](./api.md).

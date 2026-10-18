@@ -34,7 +34,7 @@
       "dependencyPolicy": {
         "pinned": true,
         "automaticUpgrades": false,
-        "lockfile": "deno.lock"
+        "lockfile": "pnpm-lock.yaml"
       },
       "productionApproval": {
         "status": "approved_with_risk",

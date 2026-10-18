@@ -110,5 +110,6 @@ current system; ADRs preserve decision history.
 | [`0084`](./0084-establish-explicit-progressive-trust-boundaries.md) | Establish explicit progressive trust boundaries | Proposed |
 | [`0085`](./0085-separate-tanstack-adapters-from-semantic-ui-contracts.md) | Separate TanStack adapters from semantic UI contracts | Accepted |
 | [`0086`](./0086-promote-solid-effect-bridge-to-production-boundary.md) | Promote the Solid 2 × Effect bridge to the production boundary | Accepted |
+| [`0087`](./0087-adopt-node-lts-and-pnpm-toolchain.md) | Adopt Node.js LTS and pnpm as the repository toolchain | Accepted |
 
 Accepted ADRs must not be rewritten to alter history. Create a new ADR and use `Supersedes`.

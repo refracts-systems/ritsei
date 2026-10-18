@@ -47,7 +47,7 @@ cd /mnt/c/Users/ricky/Documents/ritsei
 nix develop
 ```
 
-`flake.nix` supplies Deno, Node.js, pnpm, ast-grep, Git, Go, Zig, `protoc`,
+`flake.nix` supplies Node.js 24, pnpm, ast-grep, Git, Go, Zig, `protoc`,
 PostgreSQL 19, TigerBeetle, and Playwright's Chromium browsers. The npm
 `playwright` and `tigerbeetle-node` pins in `package.json` must match the nixpkgs
 releases; the flake fails evaluation with an explicit message when they drift, so
@@ -67,7 +67,7 @@ worktree remains on Windows.
 
 Some npm packages ship prebuilt executables linked against
 `/lib64/ld-linux-x86-64.so.2`, which NixOS does not provide by default. Fallow
-(`deno task fallow:*`, used by `boundary:lint` and `fallow:audit`) is one of
+(`pnpm run fallow:*`, used by `boundary:lint` and `fallow:audit`) is one of
 them. Enable `nix-ld` in the NixOS-WSL system configuration:
 
 ```nix
@@ -76,7 +76,7 @@ programs.nix-ld.enable = true;
 
 Playwright does not need `nix-ld`: the shell sets `PLAYWRIGHT_BROWSERS_PATH` to
 the nixpkgs Chromium and headless shell and disables browser downloads, so skip
-`deno task --cwd apps/web browser:install` inside `nix develop`.
+`pnpm --dir apps/web run browser:install` inside `nix develop`.
 
 ## 3. Initialize PostgreSQL 19 in WSL
 
@@ -95,9 +95,9 @@ createdb --host="$PGHOST" --port="$PGPORT" --username="$PGUSER" "$PGDATABASE" 2>
 Then install the repository dependencies and apply migrations:
 
 ```sh
-deno install
+pnpm install
 cp .env.example .env
-deno task db:migrate
+pnpm run db:migrate
 ```
 
 Stop the local database when finished:
@@ -111,8 +111,8 @@ pg_ctl --pgdata="$PGDATA" stop
 PowerShell can invoke the same WSL shell without changing the repository path:
 
 ```powershell
-wsl -d NixOS --cd /mnt/c/Users/ricky/Documents/ritsei nix develop --command deno task check
-wsl -d NixOS --cd /mnt/c/Users/ricky/Documents/ritsei nix develop --command deno task test
+wsl -d NixOS --cd /mnt/c/Users/ricky/Documents/ritsei nix develop --command pnpm run check
+wsl -d NixOS --cd /mnt/c/Users/ricky/Documents/ritsei nix develop --command pnpm run test
 ```
 
 ## Ubuntu on WSL2 with multi-user Nix
@@ -150,7 +150,7 @@ nix develop
 
 Ubuntu provides `/lib64/ld-linux-x86-64.so.2`, so prebuilt npm binaries such as
 Fallow run without `nix-ld`. If another version manager such as mise also adds
-Deno or Node.js to `PATH`, confirm that `which deno` resolves to `/nix/store`
+Node.js to `PATH`, confirm that `which node` resolves to `/nix/store`
 inside the shell, or run commands through `nix develop --command`. Continue with
 [Initialize PostgreSQL 19 in WSL](#3-initialize-postgresql-19-in-wsl).
 

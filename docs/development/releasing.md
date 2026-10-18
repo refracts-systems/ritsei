@@ -39,8 +39,8 @@ promise a build artifact, package distribution, production deployment, or suppor
 The current source tree also provides an artifact-backed build path:
 
 ```sh
-deno task check
-deno task production:artifacts
+pnpm run check
+pnpm run production:artifacts
 ```
 
 The command produces reproducible API, worker, migrator, migration, and frontend artifacts under
@@ -81,14 +81,14 @@ Run the full release gate with PostgreSQL 19 or newer available:
 
 ```sh
 export DATABASE_URL=postgres://postgres:postgres@localhost:5432/ritsei
-deno run --allow-read --allow-env --allow-net runtime/migrator/mod.ts
-deno task release:check
+pnpm run migrate
+pnpm run release:check
 ```
 
 After creating the annotated tag, validate its metadata locally:
 
 ```sh
-deno task release:metadata vX.Y.Z
+pnpm run release:metadata vX.Y.Z
 ```
 
 The gate covers formatting, linting, type checking, migration graph validation, roadmap measurement,

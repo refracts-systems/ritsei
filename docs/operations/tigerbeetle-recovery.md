@@ -237,10 +237,10 @@ backup/restore, or cutover evidence.
 Safe automated evidence:
 
 ```sh
-deno task test modules/accounting/tests/financial-readiness.test.ts
-deno task test modules/accounting/tests/financial-ledger.test.ts
-deno task test platform/tigerbeetle/tests/tigerbeetle.test.ts
-deno task test runtime/worker/worker.test.ts
+pnpm run test modules/accounting/tests/financial-readiness.test.ts
+pnpm run test modules/accounting/tests/financial-ledger.test.ts
+pnpm run test platform/tigerbeetle/tests/tigerbeetle.test.ts
+pnpm run test runtime/worker/worker.test.ts
 ```
 
 PostgreSQL rehearsals must use `withTemporaryDatabase` and never a production URL. The live
@@ -288,7 +288,7 @@ The machine-readable gate record is
 The final checker is:
 
 ```sh
-deno task financial:gate
+pnpm run financial:gate
 ```
 
 Each gate declares its accepted evidence classes. Operational gates require `staging-real` or

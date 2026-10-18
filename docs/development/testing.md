@@ -33,13 +33,13 @@ Every behavioral change should select the smallest useful combination of:
 
 ## Test Framework
 
-All TypeScript tests use `@effect/vitest` and run through Deno tasks. Effect
+All TypeScript tests use `@effect/vitest` and run through pnpm scripts. Effect
 programs, including scoped resources, use `it.effect`; pure synchronous tests
 use regular `it`. Tests return Effects directly rather than invoking Effect
 runtime runners. Test discovery is limited to `apps/`, `foundation/`, `modules/`,
 `platform/`, `runtime/`, and `tests/`; vendored reference trees are excluded. The
 contract-test configuration discovers every module, foundation, platform, and runtime test plus
-architecture tests, so adding a business module does not require registering it in `deno.json`.
+architecture tests, so adding a business module does not require registering it in `package.json`.
 Structural `ast-grep` YAML rule tests remain on the `ast-grep` runner.
 
 ## Public Contract Tests
