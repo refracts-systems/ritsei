@@ -92,8 +92,11 @@ it.effect(
           await page.locator(`#${descriptionId}`).textContent(),
           "Verify keyboard focus and dismissal.",
         )
-        assert.isTrue(
-          await page.evaluate(() => document.activeElement?.closest('[role="dialog"]') !== null),
+        // Kobalte moves initial focus asynchronously after the dialog mounts.
+        await page.waitForFunction(
+          () => document.activeElement?.closest('[role="dialog"]') !== null,
+          undefined,
+          { timeout: 5_000 },
         )
 
         await page.keyboard.press("Tab")
