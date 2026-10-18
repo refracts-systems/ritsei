@@ -11,3 +11,11 @@ allowBuilds:
   dprint: true
   esbuild: true
   lefthook: true
+
+permissions:
+  drizzle-kit:
+    skills: true
+  fallow:
+    skills: true
+  solid-js:
+    skills: true
