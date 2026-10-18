@@ -112,8 +112,8 @@ const appendCapability = (
   ref.className = "capability"
   card.append(ref)
   const found = catalog.find((entry) =>
-    entry.kind === node.capability?.kind &&
-    entry.id === node.capability.id && entry.version === node.capability.version
+    entry.kind === node.capability?.kind
+    && entry.id === node.capability.id && entry.version === node.capability.version
   )
   if (found !== undefined) {
     const description = text(found.title)

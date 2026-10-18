@@ -1,12 +1,12 @@
 import * as Effect from "effect/Effect"
 
-import { type ExternalActionCatalogEntry, type ExternalEventCatalogEntry } from "./contract.ts"
-import { ExternalActionNotAllowlisted, ExternalPayloadInvalid } from "./errors.ts"
 import {
   type ExternalCatalogEntry,
   type ExternalSimulationResult,
   simulateWithoutSideEffect,
 } from "./catalog.ts"
+import { type ExternalActionCatalogEntry, type ExternalEventCatalogEntry } from "./contract.ts"
+import { ExternalActionNotAllowlisted, ExternalPayloadInvalid } from "./errors.ts"
 
 export type { ExternalCatalogEntry }
 
@@ -113,7 +113,7 @@ export const simulateProcessExternalAction = (
   ProcessExternalSimulationResult,
   ExternalActionNotAllowlisted | ExternalPayloadInvalid
 > =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const catalog = toProcessExternalCatalogEntry(input.action)
     if (catalog === undefined || catalog.kind !== "ExternalAction") {
       return yield* Effect.fail(

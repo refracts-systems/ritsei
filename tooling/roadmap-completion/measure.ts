@@ -1,7 +1,10 @@
+import { spawnSync } from "node:child_process"
+import { lstatSync, readFileSync, statSync } from "node:fs"
+import { readdir, readFile, stat } from "node:fs/promises"
+
 import { evaluateFinancialManifest } from "../financial-gate.ts"
 import { collectSourceFiles } from "../source-files.ts"
 import { evaluateFrontendEvidence, frontendEvidence } from "./frontend-evidence.ts"
-import { parsePassedTestFiles } from "./test-report.ts"
 import {
   type Gate,
   type GateCommand,
@@ -10,6 +13,7 @@ import {
   gates,
   roadmapTracks,
 } from "./registry.ts"
+import { parsePassedTestFiles } from "./test-report.ts"
 
 type GateResult = {
   readonly gate: Gate
@@ -19,7 +23,7 @@ type GateResult = {
 
 const readText = async (path: string): Promise<string | undefined> => {
   try {
-    return await Deno.readTextFile(path)
+    return await readFile(path, "utf8")
   } catch {
     return undefined
   }
@@ -27,9 +31,9 @@ const readText = async (path: string): Promise<string | undefined> => {
 
 const readRequirement = async (requirement: GateRequirement): Promise<string | undefined> => {
   try {
-    const info = await Deno.stat(requirement.path)
-    if (info.isFile) return await Deno.readTextFile(requirement.path)
-    if (!info.isDirectory) return undefined
+    const info = await stat(requirement.path)
+    if (info.isFile()) return await readFile(requirement.path, "utf8")
+    if (!info.isDirectory()) return undefined
 
     const files = await collectSourceFiles(requirement.path)
     return files.map(({ source }) => source).join("\n")
@@ -53,7 +57,7 @@ const gateTestFiles = (gate: Gate): readonly string[] => {
       command.args[0] !== "task" || command.args[1] !== "test"
     )
   ) {
-    throw new Error(`${gate.id} must use targeted deno task test commands`)
+    throw new Error(`${gate.id} must use targeted pnpm run test commands`)
   }
   return (gate.commands ?? []).flatMap((command: GateCommand) => command.args.slice(2))
 }
@@ -78,24 +82,27 @@ const testGateResults = async (gates: readonly Gate[]): Promise<Map<string, bool
   const { filesByGate, files } = collectTestFiles(gates)
   if (files.size === 0) return new Map()
 
-  const result = await new Deno.Command("deno", {
-    args: ["task", "test", "--reporter=json", ...files],
-    stdout: "piped",
-    stderr: "piped",
-  }).output()
-  const passedFiles = parsePassedTestFiles(new TextDecoder().decode(result.stdout))
+  const result = spawnSync(
+    "pnpm",
+    ["run", "test", "--reporter=json", ...files],
+    {
+      encoding: "utf8",
+      shell: process.platform === "win32",
+    },
+  )
+  const passedFiles = parsePassedTestFiles(result.stdout)
   return new Map(
     [...filesByGate].map(([id, testFiles]) => [
       id,
-      result.success && testFiles.every((file) => testFilePassed(passedFiles, file)),
+      result.status === 0 && testFiles.every((file) => testFilePassed(passedFiles, file)),
     ]),
   )
 }
 
 const readRoadmapFiles = async (): Promise<readonly string[]> => {
   const files: string[] = []
-  for await (const entry of Deno.readDir("docs/roadmap")) {
-    if (entry.isFile && entry.name.endsWith(".md") && entry.name !== "README.md") {
+  for (const entry of await readdir("docs/roadmap", { withFileTypes: true })) {
+    if (entry.isFile() && entry.name.endsWith(".md") && entry.name !== "README.md") {
       files.push(`docs/roadmap/${entry.name}`)
     }
   }
@@ -165,20 +172,19 @@ const validateRoadmapTracks = async () => {
 await validateRoadmapTracks()
 
 const runDomainMeasure = async (): Promise<Map<string, boolean>> => {
-  const output = await new Deno.Command("deno", {
-    args: ["run", "--allow-read", "--allow-run", "tooling/domain-maturity/measure.ts"],
-    stdout: "piped",
-    stderr: "piped",
-  }).output()
-  const stdout = new TextDecoder().decode(output.stdout)
-  const stderr = new TextDecoder().decode(output.stderr)
-  if (output.code !== 0) console.error(stderr)
+  const output = spawnSync("tsx", ["tooling/domain-maturity/measure.ts"], {
+    encoding: "utf8",
+    shell: process.platform === "win32",
+  })
+  const stdout = output.stdout
+  const stderr = output.stderr
+  if (output.status !== 0) console.error(stderr)
   const results = new Map<string, boolean>()
   for (const gate of gates) {
     if (gate.kind !== "domain" || gate.domain === undefined) continue
     results.set(
       gate.domain,
-      output.code === 0 && new RegExp(`^PASS ${gate.domain} `, "m").test(stdout),
+      output.status === 0 && new RegExp(`^PASS ${gate.domain} `, "m").test(stdout),
     )
   }
   return results
@@ -198,9 +204,9 @@ const frontendProofExists = (path: string): boolean => {
   try {
     const parts = path.split("/")
     for (let index = 1; index <= parts.length; index++) {
-      if (Deno.lstatSync(parts.slice(0, index).join("/")).isSymlink) return false
+      if (lstatSync(parts.slice(0, index).join("/")).isSymbolicLink()) return false
     }
-    return Deno.statSync(path).isFile && Deno.readTextFileSync(path).trim().length > 0
+    return statSync(path).isFile() && readFileSync(path, "utf8").trim().length > 0
   } catch {
     return false
   }
@@ -245,9 +251,9 @@ for (const gate of gates) {
   }
   if (gate.kind === "markers") {
     const markers = dependenciesPassed && await markersPass(gate.requirements ?? [])
-    const commands = markers &&
-      (gate.commands === undefined || gate.commands.length === 0 ||
-        executableGateResults.get(gate.id) === true)
+    const commands = markers
+      && (gate.commands === undefined || gate.commands.length === 0
+        || executableGateResults.get(gate.id) === true)
     const evidence = frontendResults.get(gate.id) ?? true
     const passed = markers && commands && evidence
     results.set(gate.id, {

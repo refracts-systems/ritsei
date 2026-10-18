@@ -22,7 +22,7 @@ import {
 } from "../mod.ts"
 
 it.effect("defines versioned post-commit event and leased job contracts", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const event = yield* Schema.decodeUnknownEffect(DomainEventEnvelope)({
       eventId: "018f3f77-0c5a-7cc0-8b62-6a163d214123",
       eventType: "process.order_confirmation.completed",
@@ -144,7 +144,7 @@ it.effect("defines versioned post-commit event and leased job contracts", () =>
   }))
 
 it.effect("validates Process post-commit job payloads", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const payload = {
       eventId: "018f3f77-0c5a-7cc0-8b62-6a163d214123",
       workflowRunId: "018f3f77-0c5a-7cc0-8b62-6a163d214127",
@@ -165,7 +165,7 @@ it.effect("validates Process post-commit job payloads", () =>
   }))
 
 it.effect("validates order fulfillment completed event payloads", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const payload = {
       workflowRunId: "018f3f77-0c5a-7cc0-8b62-6a163d214127",
       confirmationWorkflowRunId: "018f3f77-0c5a-7cc0-8b62-6a163d214132",
@@ -184,7 +184,7 @@ it.effect("validates order fulfillment completed event payloads", () =>
   }))
 
 it.effect("validates order cancellation completed event payloads", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const payload = {
       workflowRunId: "018f3f77-0c5a-7cc0-8b62-6a163d214127",
       confirmationWorkflowRunId: "018f3f77-0c5a-7cc0-8b62-6a163d214132",
@@ -204,7 +204,7 @@ it.effect("validates order cancellation completed event payloads", () =>
   }))
 
 it.effect("validates order confirmation completed event payloads", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const payload = {
       workflowRunId: "018f3f77-0c5a-7cc0-8b62-6a163d214127",
       orderId: "018f3f77-0c5a-7cc0-8b62-6a163d214125",
@@ -223,7 +223,7 @@ it.effect("validates order confirmation completed event payloads", () =>
   }))
 
 it.effect("validates workflow run identities and recovery metadata", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const run = {
       id: "018f3f77-0c5a-7cc0-8b62-6a163d214127",
       tenantId: "018f3f77-0c5a-7cc0-8b62-6a163d214124",
@@ -277,7 +277,7 @@ it.effect("validates workflow run identities and recovery metadata", () =>
   }))
 
 it.effect("validates lifecycle result identities", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const invalidWorkflowRunId = yield* Effect.flip(
       Schema.decodeUnknownEffect(OrderFulfillmentResult.fields.workflowRunId)("not-a-uuid"),
     )
@@ -294,7 +294,7 @@ it.effect("validates lifecycle result identities", () =>
   }))
 
 it.effect("validates workflow error identities and recovery reasons", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const invalidIdentity = yield* Effect.flip(
       Schema.decodeUnknownEffect(WorkflowRunNotFound)({
         _tag: "WorkflowRunNotFound",
@@ -316,7 +316,7 @@ it.effect("validates workflow error identities and recovery reasons", () =>
   }))
 
 it.effect("validates scoped workflow tenant identities", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const invalidTenant = yield* Effect.flip(
       Schema.decodeUnknownEffect(ConfirmOrderConfirmationInput.fields.tenantId)("not-a-uuid"),
     )
@@ -324,7 +324,7 @@ it.effect("validates scoped workflow tenant identities", () =>
   }))
 
 it.effect("defines cancellation and fulfillment command payloads", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const input = {
       orderId: "018f3f77-0c5a-7cc0-8b62-6a163d214125",
       commandId: "command-1",
@@ -339,7 +339,7 @@ it.effect("defines cancellation and fulfillment command payloads", () =>
   }))
 
 it.effect("defines the server-derived order confirmation payload", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const payload = yield* Schema.decodeUnknownEffect(OrderConfirmationPayload)({
       orderId: "018f3f77-0c5a-7cc0-8b62-6a163d214125",
       warehouseId: "018f3f77-0c5a-7cc0-8b62-6a163d214128",

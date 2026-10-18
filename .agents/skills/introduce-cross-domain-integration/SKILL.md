@@ -63,10 +63,10 @@ Run the package-entrypoint and cycle checker, then contract and transaction test
 # Deterministic Tools
 
 ```sh
-deno task boundary:lint
-deno task boundary:test
-deno task check:affected
-deno task check
+pnpm run boundary:lint
+pnpm run boundary:test
+pnpm run check:affected
+pnpm run check
 ```
 
 `boundary:lint` rejects cross-package private imports and dependency cycles.

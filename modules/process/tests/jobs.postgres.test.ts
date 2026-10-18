@@ -4,25 +4,25 @@ import * as Layer from "effect/Layer"
 import * as TestClock from "effect/testing/TestClock"
 import type { Sql } from "postgres"
 
-import { AuthorizationService, makeAuthorizationTestLayer } from "../../authorization/mod.ts"
-import { AccountingService, makeAccountingService } from "../../accounting/mod.ts"
-import { InventoryService, makeInventoryService } from "../../inventory/mod.ts"
 import { Database, uuidv7 } from "../../../foundation/mod.ts"
 import { makePostgresDatabase, runMigrations } from "../../../platform/mod.ts"
+import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
+import { AccountingService, makeAccountingService } from "../../accounting/mod.ts"
+import { AuthorizationService, makeAuthorizationTestLayer } from "../../authorization/mod.ts"
+import { InventoryService, makeInventoryService } from "../../inventory/mod.ts"
 import { makeMessagingService, MessagingService } from "../../messaging/mod.ts"
+import { makeSalesService, SalesService } from "../../sales/mod.ts"
 import {
   makeProcessService,
   ProcessJobLeaseLost,
   ProcessJobMaxAttempts,
   ProcessJobNotFound,
 } from "../mod.ts"
-import { makeSalesService, SalesService } from "../../sales/mod.ts"
-import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
 
-const databaseUrl = Deno.env.get("DATABASE_URL")
+const databaseUrl = process.env["DATABASE_URL"]
 
 const makeProcess = (client: Sql) =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const database = makePostgresDatabase(client)
     const authorization = yield* AuthorizationService
     const requirements = Layer.merge(
@@ -66,7 +66,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
       TestClock.withLive(
-        Effect.gen(function* () {
+        Effect.gen(function*() {
           yield* runMigrations(client)
           const [tenant] = yield* Effect.promise(() =>
             client<{ id: string }[]>`
@@ -228,7 +228,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
       TestClock.withLive(
-        Effect.gen(function* () {
+        Effect.gen(function*() {
           yield* runMigrations(client)
           const [tenant] = yield* Effect.promise(() =>
             client<{ id: string }[]>`
@@ -269,7 +269,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
       TestClock.withLive(
-        Effect.gen(function* () {
+        Effect.gen(function*() {
           yield* runMigrations(client)
           const [tenant] = yield* Effect.promise(() =>
             client<{ id: string }[]>`

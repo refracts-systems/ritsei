@@ -1,11 +1,11 @@
 import { assert, describe, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 
-import { FinancialLedgerPort, makeFinancialLedgerTestLayer } from "../mod.ts"
 import {
   assertFinancialLedgerConformance,
   LARGE_FINANCIAL_MINOR,
 } from "../../../tests/support/financial-ledger-conformance.ts"
+import { FinancialLedgerPort, makeFinancialLedgerTestLayer } from "../mod.ts"
 
 const tenantId = "tenant-a"
 const legalEntityId = "legal-entity-a"
@@ -35,7 +35,7 @@ const withLedger = <A, E>(program: Effect.Effect<A, E, FinancialLedgerPort>, opt
 
 describe("financial ledger contract", () => {
   it.effect("conforms to the exact large-amount ledger contract", () =>
-    withLedger(Effect.gen(function* () {
+    withLedger(Effect.gen(function*() {
       const ledger = yield* FinancialLedgerPort
       yield* assertFinancialLedgerConformance(
         ledger,
@@ -57,7 +57,7 @@ describe("financial ledger contract", () => {
     })))
 
   it.effect("accepts balanced journals and replays the same operation", () =>
-    withLedger(Effect.gen(function* () {
+    withLedger(Effect.gen(function*() {
       const ledger = yield* FinancialLedgerPort
       yield* ledger.createExecutionAccount(account("cash"))
       yield* ledger.createExecutionAccount(account("revenue"))
@@ -85,7 +85,7 @@ describe("financial ledger contract", () => {
 
   it.effect("resolves a lost response with the same operation identity", () =>
     withLedger(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const ledger = yield* FinancialLedgerPort
         yield* ledger.createExecutionAccount(account("cash"))
         yield* ledger.createExecutionAccount(account("revenue"))
@@ -104,7 +104,7 @@ describe("financial ledger contract", () => {
     ))
 
   it.effect("rejects invalid journals and missing execution accounts", () =>
-    withLedger(Effect.gen(function* () {
+    withLedger(Effect.gen(function*() {
       const ledger = yield* FinancialLedgerPort
       const unbalanced = yield* ledger.postJournal({
         ...journal("unbalanced"),
@@ -135,7 +135,7 @@ describe("financial ledger contract", () => {
 
   it.effect("enforces account constraints and fail-closed availability", () =>
     withLedger(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const ledger = yield* FinancialLedgerPort
         yield* ledger.createExecutionAccount({
           ...account("cash"),
@@ -180,7 +180,7 @@ describe("financial ledger contract", () => {
     ))
 
   it.effect("keeps balance reads provider-neutral", () =>
-    withLedger(Effect.gen(function* () {
+    withLedger(Effect.gen(function*() {
       const ledger = yield* FinancialLedgerPort
       yield* ledger.createExecutionAccount(account("cash"))
       const balance = yield* ledger.getBalance({
@@ -199,7 +199,7 @@ describe("financial ledger contract", () => {
 
   it.effect("keeps provider outage distinct from rejection", () =>
     withLedger(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const ledger = yield* FinancialLedgerPort
         yield* ledger.createExecutionAccount(account("cash"))
         yield* ledger.createExecutionAccount(account("revenue"))
@@ -214,7 +214,7 @@ describe("financial ledger contract", () => {
 
   it.effect("recovers from a transient provider outage with the same transfer identity", () =>
     withLedger(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const ledger = yield* FinancialLedgerPort
         yield* ledger.createExecutionAccount(account("cash"))
         yield* ledger.createExecutionAccount(account("revenue"))

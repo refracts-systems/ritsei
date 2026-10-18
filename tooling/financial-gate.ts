@@ -1,3 +1,7 @@
+import { readFile } from "node:fs/promises"
+
+import { isMain } from "./entrypoint.ts"
+
 export type EvidenceClass =
   | "repo-proof"
   | "local-real"
@@ -86,8 +90,8 @@ const isEvidenceClass = (value: unknown): value is EvidenceClass =>
 const isFailureCategory = (
   value: unknown,
 ): value is FinancialGateEvidence["failureCategory"] =>
-  typeof value === "string" &&
-  failureCategories.has(value as FinancialGateEvidence["failureCategory"])
+  typeof value === "string"
+  && failureCategories.has(value as FinancialGateEvidence["failureCategory"])
 
 const isObserved = (value: unknown): value is FinancialGateEvidence["observed"] =>
   value === "PASS" || value === "FAIL"
@@ -121,9 +125,9 @@ const isSummary = (value: unknown): value is FinancialManifest["summary"] => {
 
 const isManifest = (value: unknown): value is FinancialManifest => {
   if (!isRecord(value)) return false
-  return typeof value.schemaVersion === "number" && typeof value.reviewedAt === "string" &&
-    typeof value.baselineCommit === "string" && isSummary(value.summary) &&
-    Array.isArray(value.gates) && value.gates.every(isFinancialGateEvidence)
+  return typeof value.schemaVersion === "number" && typeof value.reviewedAt === "string"
+    && typeof value.baselineCommit === "string" && isSummary(value.summary)
+    && Array.isArray(value.gates) && value.gates.every(isFinancialGateEvidence)
 }
 
 const parseManifest = (value: unknown): FinancialManifest => {
@@ -142,8 +146,8 @@ const indexGates = (manifest: FinancialManifest): Map<string, FinancialGateEvide
     .filter((id, index, ids) => ids.indexOf(id) !== index)
 
   if (
-    missingIds.length > 0 || duplicateIds.length > 0 ||
-    manifest.gates.length !== requiredFinancialGateIds.length
+    missingIds.length > 0 || duplicateIds.length > 0
+    || manifest.gates.length !== requiredFinancialGateIds.length
   ) {
     throw new Error(
       `Evidence manifest must contain exactly 16 unique gates; missing=${
@@ -159,8 +163,8 @@ const evaluateGates = (gatesById: ReadonlyMap<string, FinancialGateEvidence>) =>
     const gate = gatesById.get(id)!
     return {
       gate,
-      passes: gate.observed === "PASS" &&
-        gate.acceptedEvidenceClasses.includes(gate.evidenceClass),
+      passes: gate.observed === "PASS"
+        && gate.acceptedEvidenceClasses.includes(gate.evidenceClass),
     }
   })
 
@@ -170,12 +174,12 @@ const validateSummary = (
   failed: number,
 ) => {
   if (
-    manifest.summary.passed !== passed || manifest.summary.failed !== failed ||
-    manifest.summary.total !== requiredFinancialGateIds.length
+    manifest.summary.passed !== passed || manifest.summary.failed !== failed
+    || manifest.summary.total !== requiredFinancialGateIds.length
   ) {
     throw new Error(
-      `Manifest summary is stale; expected passed=${passed}, failed=${failed}, ` +
-        `total=${requiredFinancialGateIds.length}.`,
+      `Manifest summary is stale; expected passed=${passed}, failed=${failed}, `
+        + `total=${requiredFinancialGateIds.length}.`,
     )
   }
 }
@@ -189,26 +193,26 @@ export const evaluateFinancialManifest = (value: unknown): FinancialEvaluation =
   return { manifest, gates, passed, failed }
 }
 
-if (import.meta.main) {
-  const manifestPath = Deno.args[0] ??
-    "docs/operations/financial-readiness-evidence-2026-08-18.json"
+if (isMain(import.meta.url)) {
+  const manifestPath = process.argv.slice(2)[0]
+    ?? "docs/operations/financial-readiness-evidence-2026-08-18.json"
   const failClosed = (message: string): never => {
     console.error(message)
     console.error("NO-GO — PostgreSQL remains the default financial engine.")
-    Deno.exit(1)
+    process.exit(1)
   }
 
   let evaluation: FinancialEvaluation
   try {
-    evaluation = evaluateFinancialManifest(JSON.parse(await Deno.readTextFile(manifestPath)))
+    evaluation = evaluateFinancialManifest(JSON.parse(await readFile(manifestPath, "utf8")))
   } catch (error) {
     failClosed(`Unable to validate evidence manifest ${manifestPath}: ${String(error)}`)
   }
 
   for (const { gate, passes } of evaluation!.gates) {
     console.log(
-      `${passes ? "PASS" : "FAIL"} ${gate.id} ` +
-        `[observed=${gate.observed}, evidence=${gate.evidenceClass}, accepted=${
+      `${passes ? "PASS" : "FAIL"} ${gate.id} `
+        + `[observed=${gate.observed}, evidence=${gate.evidenceClass}, accepted=${
           gate.acceptedEvidenceClasses.join("|")
         }] ${gate.title}`,
     )

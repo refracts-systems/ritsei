@@ -38,7 +38,7 @@ const PartyTest = makePartyTestLayer().pipe(
 )
 
 it.effect("lists and composes tenant-scoped Party administration facts", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const service = yield* PartyService
     const organization = yield* service.create({
       principal,

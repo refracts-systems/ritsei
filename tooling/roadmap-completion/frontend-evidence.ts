@@ -51,12 +51,12 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value)
 
 const isDate = (value: unknown): value is string =>
-  typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) &&
-  new Date(value).toISOString().slice(0, 10) === value
+  typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)
+  && new Date(value).toISOString().slice(0, 10) === value
 
 const isSafePath = (value: unknown, prefix: string): value is string =>
-  typeof value === "string" && value.startsWith(prefix) &&
-  value.split("/").every((part) => /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(part))
+  typeof value === "string" && value.startsWith(prefix)
+  && value.split("/").every((part) => /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(part))
 
 // Proofs are repository-relative files, never URLs, absolute paths, or traversal.
 export const isFrontendProofPath = (value: unknown): value is string =>
@@ -81,31 +81,32 @@ const isRiskApproval = (
 
   const compatibility = check.compatibility
   if (
-    !isRecord(compatibility) || compatibility.bundle !== "passed" ||
-    compatibility.build !== "passed"
+    !isRecord(compatibility) || compatibility.bundle !== "passed"
+    || compatibility.build !== "passed"
   ) return false
 
   const behavior = check.behavior
   if (
-    !isRecord(behavior) || behavior.status !== "passed" ||
-    behavior.browserTest !== rule.behaviorTest ||
-    !isFrontendBrowserTestPath(behavior.browserTest) ||
-    !fileExists(behavior.browserTest)
+    !isRecord(behavior) || behavior.status !== "passed"
+    || behavior.browserTest !== rule.behaviorTest
+    || !isFrontendBrowserTestPath(behavior.browserTest)
+    || !fileExists(behavior.browserTest)
   ) return false
 
   const acceptance = check.riskAcceptance
   if (
-    !isRecord(acceptance) || acceptance.status !== "accepted" ||
-    acceptance.id !== rule.riskId ||
-    typeof acceptance.acceptedBy !== "string" || acceptance.acceptedBy.trim() === "" ||
-    !isDate(acceptance.acceptedDate) ||
-    typeof acceptance.rollback !== "string" || acceptance.rollback.trim() === ""
+    !isRecord(acceptance) || acceptance.status !== "accepted"
+    || acceptance.id !== rule.riskId
+    || typeof acceptance.acceptedBy !== "string" || acceptance.acceptedBy.trim() === ""
+    || !isDate(acceptance.acceptedDate)
+    || typeof acceptance.rollback !== "string" || acceptance.rollback.trim() === ""
   ) return false
 
   const dependencyPolicy = check.dependencyPolicy
   if (
-    !isRecord(dependencyPolicy) || dependencyPolicy.pinned !== true ||
-    dependencyPolicy.automaticUpgrades !== false || dependencyPolicy.lockfile !== "deno.lock"
+    !isRecord(dependencyPolicy) || dependencyPolicy.pinned !== true
+    || dependencyPolicy.automaticUpgrades !== false
+    || dependencyPolicy.lockfile !== "pnpm-lock.yaml"
   ) return false
 
   const production = check.productionApproval
@@ -116,9 +117,9 @@ const isRiskApproval = (
   return production.primitives.every((primitive) => {
     if (!isRecord(primitive) || typeof primitive.name !== "string") return false
     if (!rule.approvedPrimitives.includes(primitive.name)) return false
-    return isFrontendUiPath(primitive.contract) && fileExists(primitive.contract) &&
-      isFrontendUsagePath(primitive.usage) && fileExists(primitive.usage) &&
-      isFrontendBrowserTestPath(primitive.browserTest) && fileExists(primitive.browserTest)
+    return isFrontendUiPath(primitive.contract) && fileExists(primitive.contract)
+      && isFrontendUsagePath(primitive.usage) && fileExists(primitive.usage)
+      && isFrontendBrowserTestPath(primitive.browserTest) && fileExists(primitive.browserTest)
   })
 }
 
@@ -136,11 +137,11 @@ export const evaluateFrontendEvidence = (
   try {
     const evidence: unknown = JSON.parse(text ?? "")
     if (
-      !isRecord(evidence) ||
-      (evidence.status !== "passed" && evidence.status !== "approved_with_risk") ||
-      typeof evidence.reviewer !== "string" || evidence.reviewer.trim() === "" ||
-      !isDate(evidence.reviewDate) ||
-      !isRecord(evidence.checks) || requiredChecks.length === 0
+      !isRecord(evidence)
+      || (evidence.status !== "passed" && evidence.status !== "approved_with_risk")
+      || typeof evidence.reviewer !== "string" || evidence.reviewer.trim() === ""
+      || !isDate(evidence.reviewDate)
+      || !isRecord(evidence.checks) || requiredChecks.length === 0
     ) return false
 
     const checks = evidence.checks
@@ -152,8 +153,8 @@ export const evaluateFrontendEvidence = (
       }
       if (check.status === "passed") return "passed" as const
       if (
-        check.status === "approved_with_risk" &&
-        isRiskApproval(name, check, options.riskPolicy ?? {}, fileExists)
+        check.status === "approved_with_risk"
+        && isRiskApproval(name, check, options.riskPolicy ?? {}, fileExists)
       ) return "approved_with_risk" as const
       return undefined
     })

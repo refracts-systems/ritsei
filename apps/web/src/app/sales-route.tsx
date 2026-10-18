@@ -1,6 +1,6 @@
 import { useLocation, useParams } from "@solidjs/router"
-import { createMemo, Show } from "solid-js"
 import * as Schema from "effect/Schema"
+import { createMemo, Show } from "solid-js"
 import { Sales } from "../features/sales/sales.tsx"
 import { ConnectedSessionRoute } from "./connected-route.tsx"
 import { decodeRouteInput } from "./route-input.ts"

@@ -1,8 +1,9 @@
 import { assert, describe, it } from "@effect/vitest"
+import { readFileSync } from "node:fs"
 
 import { disposableDatabaseName } from "../../tooling/postgresql-19/rehearse.ts"
 
-const read = (path: string) => Deno.readTextFileSync(path)
+const read = (path: string) => readFileSync(path, "utf8")
 
 describe("PostgreSQL 19 capability boundaries", () => {
   it("keeps the Party graph read projection tied to relational facts", () => {
@@ -12,7 +13,7 @@ describe("PostgreSQL 19 capability boundaries", () => {
     assert.isTrue(migration.includes("GRAPH_TABLE"))
     assert.isTrue(migration.includes("party_relationships"))
     assert.isTrue(migration.includes("legal_entity_organization_edges"))
-    assert.isTrue(migration.includes('WHERE graph_path."active"'))
+    assert.isTrue(migration.includes("WHERE graph_path.\"active\""))
     assert.isFalse(migration.includes("INSERT INTO"))
     assert.isFalse(migration.includes("UPDATE "))
     assert.isFalse(migration.includes("DELETE FROM"))

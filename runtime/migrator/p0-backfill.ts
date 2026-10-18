@@ -1,7 +1,10 @@
 import "../../tooling/load-env.ts"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import { createReadStream } from "node:fs"
 import postgres, { type Sql } from "postgres"
+
+import { isMain } from "../../tooling/entrypoint.ts"
 
 const Uuid = Schema.String.check(Schema.isPattern(
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
@@ -74,8 +77,8 @@ const assertExactCoverage = (
   const duplicates = duplicateKeys(mappings)
   if (missing.length > 0 || unknown.length > 0 || duplicates.length > 0) {
     throw new P0BackfillFailure(
-      `${resource} mapping must cover each row exactly once; missing=${missing.join(",")}; ` +
-        `unknown=${unknown.join(",")}; duplicates=${duplicates.join(",")}`,
+      `${resource} mapping must cover each row exactly once; missing=${missing.join(",")}; `
+        + `unknown=${unknown.join(",")}; duplicates=${duplicates.join(",")}`,
     )
   }
 }
@@ -116,7 +119,7 @@ export const decodeP0BackfillJson = (text: string, path: string) => {
 }
 
 export const applyP0Backfill = (client: Sql, input: unknown) =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const decoded = yield* decodeP0BackfillInput(input)
     yield* Effect.tryPromise({
       try: () =>
@@ -188,32 +191,56 @@ export const applyP0Backfill = (client: Sql, input: unknown) =>
     })
   })
 
-const readBoundedTextFile = async (path: string): Promise<string> => {
-  const file = await Deno.open(path, { read: true })
-  try {
-    const chunks: Array<Uint8Array> = []
+const readBoundedTextFile = (path: string): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const decoder = new TextDecoder("utf-8", { fatal: true })
+    const stream = createReadStream(path, { highWaterMark: 64 * 1024 })
     let total = 0
-    while (true) {
-      const chunk = new Uint8Array(Math.min(64 * 1024, MAX_P0_BACKFILL_BYTES - total + 1))
-      const count = await file.read(chunk)
-      if (count === null) break
-      total += count
-      if (total > MAX_P0_BACKFILL_BYTES) {
-        throw new P0BackfillFailure(`${path}: mapping file exceeds ${MAX_P0_BACKFILL_BYTES} bytes`)
+    let text = ""
+    const decode = (chunk: Buffer | undefined, streaming: boolean) => {
+      try {
+        return decoder.decode(chunk, { stream: streaming })
+      } catch {
+        return undefined
       }
-      chunks.push(chunk.subarray(0, count))
     }
-    const bytes = new Uint8Array(total)
-    let offset = 0
-    for (const chunk of chunks) {
-      bytes.set(chunk, offset)
-      offset += chunk.byteLength
-    }
-    return new TextDecoder("utf-8", { fatal: true }).decode(bytes)
-  } finally {
-    file.close()
-  }
-}
+    stream.on("error", (cause) =>
+      reject(
+        cause instanceof P0BackfillFailure
+          ? cause
+          : new P0BackfillFailure(`${path}: unable to read mapping file: ${failureMessage(cause)}`),
+      ))
+    stream.on("data", (data: Buffer | string) => {
+      if (typeof data === "string") {
+        stream.destroy()
+        reject(new P0BackfillFailure(`${path}: mapping file is not valid UTF-8`))
+        return
+      }
+      total += data.byteLength
+      if (total > MAX_P0_BACKFILL_BYTES) {
+        stream.destroy()
+        reject(
+          new P0BackfillFailure(`${path}: mapping file exceeds ${MAX_P0_BACKFILL_BYTES} bytes`),
+        )
+        return
+      }
+      const decoded = decode(data, true)
+      if (decoded === undefined) {
+        stream.destroy()
+        reject(new P0BackfillFailure(`${path}: mapping file is not valid UTF-8`))
+        return
+      }
+      text += decoded
+    })
+    stream.on("end", () => {
+      const tail = decode(undefined, false)
+      if (tail === undefined) {
+        reject(new P0BackfillFailure(`${path}: mapping file is not valid UTF-8`))
+        return
+      }
+      resolve(text + tail)
+    })
+  })
 
 export const readP0BackfillFile = (path: string) =>
   Effect.tryPromise({
@@ -224,16 +251,16 @@ export const readP0BackfillFile = (path: string) =>
         : new P0BackfillFailure(`${path}: unable to read mapping file: ${failureMessage(cause)}`),
   }).pipe(Effect.flatMap((text) => decodeP0BackfillJson(text, path)))
 
-if (import.meta.main) {
-  const databaseUrl = Deno.env.get("DATABASE_URL")
-  const inputPath = Deno.args[0] ?? Deno.env.get("P0_BACKFILL_FILE")
+if (isMain(import.meta.url)) {
+  const databaseUrl = process.env["DATABASE_URL"]
+  const inputPath = process.argv[2] ?? process.env["P0_BACKFILL_FILE"]
   if (databaseUrl === undefined || databaseUrl.trim() === "") {
     console.error("DATABASE_URL is required; .env.local is loaded automatically")
-    Deno.exit(1)
+    process.exit(1)
   }
   if (inputPath === undefined || inputPath.trim() === "") {
-    console.error("Usage: deno run -A runtime/migrator/p0-backfill.ts -- <mapping.json>")
-    Deno.exit(1)
+    console.error("Usage: pnpm p0:backfill -- <mapping.json>")
+    process.exit(1)
   }
 
   const client = postgres(databaseUrl)
@@ -245,7 +272,7 @@ if (import.meta.main) {
   )
   if (result._tag === "Failure") {
     console.error(result.cause)
-    Deno.exit(1)
+    process.exit(1)
   }
   console.log("P0 backfill completed")
 }

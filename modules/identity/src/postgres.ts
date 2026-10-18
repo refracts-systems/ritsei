@@ -51,12 +51,12 @@ const isDuplicateExternalSubject = (error: unknown) =>
 const isMissingExternalSubjectUser = (error: unknown) =>
   isDatabaseConstraint(error, "external_subject_mappings_user_account_id_fkey", "23503")
 
-export const makeUserAccountPostgresStore = Effect.gen(function* () {
+export const makeUserAccountPostgresStore = Effect.gen(function*() {
   const database = yield* Database
   const clock = yield* Clock.Clock
   const now = () => new Date(clock.currentTimeMillisUnsafe())
 
-  const create = Effect.fn("UserAccountStore.create")(function* (email: string) {
+  const create = Effect.fn("UserAccountStore.create")(function*(email: string) {
     const rows = yield* database.query(
       (db) => db.insert(userAccounts).values({ email }).returning(selectUserAccount),
       "user-account.create",
@@ -68,7 +68,7 @@ export const makeUserAccountPostgresStore = Effect.gen(function* () {
     return toUserAccount(rows[0]!)
   })
 
-  const getById = Effect.fn("UserAccountStore.getById")(function* (id: string) {
+  const getById = Effect.fn("UserAccountStore.getById")(function*(id: string) {
     const rows = yield* database.query(
       (db) => db.select(selectUserAccount).from(userAccounts).where(eq(userAccounts.id, id)),
       "user-account.get",
@@ -80,7 +80,7 @@ export const makeUserAccountPostgresStore = Effect.gen(function* () {
   })
 
   const resolveExternalSubject = Effect.fn("UserAccountStore.resolveExternalSubject")(
-    function* (issuer: string, subject: string) {
+    function*(issuer: string, subject: string) {
       const rows = yield* database.query(
         (db) =>
           db.select(selectUserAccount)
@@ -100,7 +100,7 @@ export const makeUserAccountPostgresStore = Effect.gen(function* () {
   )
 
   const bindExternalSubject = Effect.fn("UserAccountStore.bindExternalSubject")(
-    function* (issuer: string, subject: string, userAccountId: string) {
+    function*(issuer: string, subject: string, userAccountId: string) {
       const account = yield* getById(userAccountId)
       const existing = yield* database.query(
         (db) =>
@@ -156,7 +156,7 @@ export const makeUserAccountPostgresStore = Effect.gen(function* () {
     },
   )
 
-  const getByIds = Effect.fn("UserAccountStore.getByIds")(function* (ids: readonly string[]) {
+  const getByIds = Effect.fn("UserAccountStore.getByIds")(function*(ids: readonly string[]) {
     if (ids.length === 0) return []
     const rows = yield* database.query(
       (db) =>
@@ -168,7 +168,7 @@ export const makeUserAccountPostgresStore = Effect.gen(function* () {
   })
 
   const getAuthenticationState = Effect.fn("UserAccountStore.getAuthenticationState")(
-    function* (id: string) {
+    function*(id: string) {
       const rows = yield* database.query(
         (db) =>
           db.select(selectAuthenticationState).from(userAccounts).where(eq(userAccounts.id, id)),
@@ -181,7 +181,7 @@ export const makeUserAccountPostgresStore = Effect.gen(function* () {
     },
   )
 
-  const list = Effect.fn("UserAccountStore.list")(function* () {
+  const list = Effect.fn("UserAccountStore.list")(function*() {
     const rows = yield* database.query(
       (db) =>
         db.select(selectUserAccount).from(userAccounts).orderBy(
@@ -193,7 +193,7 @@ export const makeUserAccountPostgresStore = Effect.gen(function* () {
     return rows.map(toUserAccount)
   })
 
-  const update = Effect.fn("UserAccountStore.update")(function* (id: string, email: string) {
+  const update = Effect.fn("UserAccountStore.update")(function*(id: string, email: string) {
     const rows = yield* database.query(
       (db) =>
         db.update(userAccounts).set({ email, updatedAt: now() }).where(eq(userAccounts.id, id))
@@ -210,7 +210,7 @@ export const makeUserAccountPostgresStore = Effect.gen(function* () {
       : toUserAccount(row)
   })
 
-  const disable = Effect.fn("UserAccountStore.disable")(function* (id: string) {
+  const disable = Effect.fn("UserAccountStore.disable")(function*(id: string) {
     const timestamp = now()
     const rows = yield* database.query(
       (db) =>
@@ -228,7 +228,7 @@ export const makeUserAccountPostgresStore = Effect.gen(function* () {
       : toUserAccount(row)
   })
 
-  const enable = Effect.fn("UserAccountStore.enable")(function* (id: string) {
+  const enable = Effect.fn("UserAccountStore.enable")(function*(id: string) {
     const rows = yield* database.query(
       (db) =>
         db.update(userAccounts).set({ status: "active", disabledAt: null, updatedAt: now() }).where(
@@ -242,7 +242,7 @@ export const makeUserAccountPostgresStore = Effect.gen(function* () {
       : toUserAccount(row)
   })
 
-  const remove = Effect.fn("UserAccountStore.remove")(function* (id: string) {
+  const remove = Effect.fn("UserAccountStore.remove")(function*(id: string) {
     const rows = yield* database.query(
       (db) =>
         db.delete(userAccounts).where(eq(userAccounts.id, id)).returning({ id: userAccounts.id }),

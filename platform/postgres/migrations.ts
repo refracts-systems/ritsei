@@ -1,5 +1,5 @@
-import { drizzle } from "drizzle-orm/postgres-js"
 import { type MigrationMeta, readMigrationFiles } from "drizzle-orm/migrator"
+import { drizzle } from "drizzle-orm/postgres-js"
 import { migrate as drizzleMigrate } from "drizzle-orm/postgres-js/migrator"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
@@ -144,7 +144,7 @@ export const runMigrations = (
   client: Sql,
   directory = "db/migrations",
 ): Effect.Effect<void, DatabaseFailure | MigrationFailure> =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     yield* validatePostgresVersion(asPostgresClient(client)).pipe(
       Effect.mapError((cause) =>
         cause instanceof DatabaseFailure

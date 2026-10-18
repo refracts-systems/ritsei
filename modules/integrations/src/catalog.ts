@@ -31,7 +31,7 @@ const Uuid = Schema.String.check(Schema.isUUID())
 export const simulateWithoutSideEffect = (
   input: SimulateExternalActionInput,
 ): Effect.Effect<ExternalSimulationResult, ExternalActionNotAllowlisted | ExternalPayloadInvalid> =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const identifier = typeof input.action?.id === "string" && input.action.id.trim() !== ""
       ? input.action.id.slice(0, 256)
       : "external-action"

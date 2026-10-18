@@ -172,7 +172,7 @@ export function effectAction<Args extends unknown[], A, R = never>(
 
   // Solid's action transaction provides the optimistic UI boundary; each
   // yielded Effect below provides the interruptible application step.
-  const base = action(function* (...args: Args) {
+  const base = action(function*(...args: Args) {
     const iterator = genFn(...args)
     let step = iterator.next()
     while (!step.done) {

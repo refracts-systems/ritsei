@@ -1,8 +1,10 @@
-import { defineConfig } from "vite"
 import solid from "@solidjs/vite-plugin"
+import { defineConfig } from "vite"
 
+// Absolute so the build works regardless of the invoking directory:
+// the repository root stays the CWD for scripted builds (see tooling scripts).
 export default defineConfig({
-  root: "apps/web",
+  root: import.meta.dirname,
   plugins: [solid()],
   resolve: { dedupe: ["solid-js"] },
   server: {

@@ -1,31 +1,31 @@
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
-import { makeTigerBeetleFinancialLedger, type TigerBeetleFinancialLedgerConfig } from "../mod.ts"
 import { uuidv7 } from "../../../foundation/ids/mod.ts"
 import {
   assertFinancialLedgerConformance,
   LARGE_FINANCIAL_MINOR,
 } from "../../../tests/support/financial-ledger-conformance.ts"
+import { makeTigerBeetleFinancialLedger, type TigerBeetleFinancialLedgerConfig } from "../mod.ts"
 
-const enabled = Deno.env.get("TIGERBEETLE_INTEGRATION") === "1"
-const addresses = (Deno.env.get("TIGERBEETLE_REPLICA_ADDRESSES") ?? "127.0.0.1:3000")
+const enabled = process.env["TIGERBEETLE_INTEGRATION"] === "1"
+const addresses = (process.env["TIGERBEETLE_REPLICA_ADDRESSES"] ?? "127.0.0.1:3000")
   .split(",")
   .map((address) => address.trim())
   .filter((address) => address.length > 0)
 
 const config: TigerBeetleFinancialLedgerConfig = {
-  clusterId: BigInt(Deno.env.get("TIGERBEETLE_CLUSTER_ID") ?? "0"),
+  clusterId: BigInt(process.env["TIGERBEETLE_CLUSTER_ID"] ?? "0"),
   replicaAddresses: addresses,
-  ledger: Number.parseInt(Deno.env.get("TIGERBEETLE_LEDGER") ?? "1", 10),
-  code: Number.parseInt(Deno.env.get("TIGERBEETLE_CODE") ?? "1", 10),
-  currency: (Deno.env.get("TIGERBEETLE_CURRENCY") ?? "USD").toUpperCase(),
+  ledger: Number.parseInt(process.env["TIGERBEETLE_LEDGER"] ?? "1", 10),
+  code: Number.parseInt(process.env["TIGERBEETLE_CODE"] ?? "1", 10),
+  currency: (process.env["TIGERBEETLE_CURRENCY"] ?? "USD").toUpperCase(),
 }
 
 it.effect.skipIf(!enabled)(
   "posts an accepted journal to a local TigerBeetle cluster",
   () =>
     Effect.scoped(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const ledger = yield* makeTigerBeetleFinancialLedger(config)
         const suffix = uuidv7()
         yield* assertFinancialLedgerConformance(

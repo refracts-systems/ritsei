@@ -1,5 +1,5 @@
-import { createUniqueId, untrack } from "solid-js"
 import type { JSX } from "@solidjs/web"
+import { createUniqueId, untrack } from "solid-js"
 import { css } from "../generated/css/index.js"
 
 export interface FormFieldProps {
@@ -26,8 +26,8 @@ export function FormField(props: FormFieldProps) {
   const descriptionId = `${id}-help`
   const errorId = `${id}-error`
   const describedBy = () =>
-    [props.helperText && descriptionId, props.error && errorId].filter(Boolean).join(" ") ||
-    undefined
+    [props.helperText && descriptionId, props.error && errorId].filter(Boolean).join(" ")
+    || undefined
   const controlProps = () => ({
     id,
     "aria-describedby": describedBy(),

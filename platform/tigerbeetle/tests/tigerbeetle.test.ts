@@ -58,25 +58,25 @@ type FakeState = {
 }
 
 const sameAccount = (left: Account, right: Account) =>
-  left.id === right.id &&
-  left.user_data_32 === right.user_data_32 &&
-  left.ledger === right.ledger &&
-  left.code === right.code &&
-  left.flags === right.flags
+  left.id === right.id
+  && left.user_data_32 === right.user_data_32
+  && left.ledger === right.ledger
+  && left.code === right.code
+  && left.flags === right.flags
 
 const sameTransfer = (left: Transfer, right: Transfer) =>
-  left.id === right.id &&
-  left.debit_account_id === right.debit_account_id &&
-  left.credit_account_id === right.credit_account_id &&
-  left.amount === right.amount &&
-  left.pending_id === right.pending_id &&
-  left.user_data_128 === right.user_data_128 &&
-  left.user_data_64 === right.user_data_64 &&
-  left.user_data_32 === right.user_data_32 &&
-  left.timeout === right.timeout &&
-  left.ledger === right.ledger &&
-  left.code === right.code &&
-  left.flags === right.flags
+  left.id === right.id
+  && left.debit_account_id === right.debit_account_id
+  && left.credit_account_id === right.credit_account_id
+  && left.amount === right.amount
+  && left.pending_id === right.pending_id
+  && left.user_data_128 === right.user_data_128
+  && left.user_data_64 === right.user_data_64
+  && left.user_data_32 === right.user_data_32
+  && left.timeout === right.timeout
+  && left.ledger === right.ledger
+  && left.code === right.code
+  && left.flags === right.flags
 
 const promise = <A>(value: A) => Promise.resolve(value)
 
@@ -197,7 +197,7 @@ const makeState = (): FakeState => ({
 describe("TigerBeetle financial adapter", () => {
   it.effect("creates linked transfers, replays by deterministic IDs, and cleans up", () => {
     const state = makeState()
-    return Effect.scoped(Effect.gen(function* () {
+    return Effect.scoped(Effect.gen(function*() {
       const ledger = yield* makeTigerBeetleFinancialLedger(config, () => makeFakeClient(state))
       assert.strictEqual(
         (yield* ledger.createExecutionAccount(accountInput("cash")))._tag,
@@ -242,7 +242,7 @@ describe("TigerBeetle financial adapter", () => {
 
   it.effect("observes a bounded inventory and rejects an unscoped scan", () => {
     const state = makeState()
-    return Effect.scoped(Effect.gen(function* () {
+    return Effect.scoped(Effect.gen(function*() {
       const ledger = yield* makeTigerBeetleFinancialLedger(config, () => makeFakeClient(state))
       yield* ledger.createExecutionAccount(accountInput("cash"))
       yield* ledger.createExecutionAccount(accountInput("revenue"))
@@ -287,7 +287,7 @@ describe("TigerBeetle financial adapter", () => {
 
   it.effect("links multiple transfers into one journal operation", () => {
     const state = makeState()
-    return Effect.scoped(Effect.gen(function* () {
+    return Effect.scoped(Effect.gen(function*() {
       const ledger = yield* makeTigerBeetleFinancialLedger(config, () => makeFakeClient(state))
       for (const accountId of ["cash", "cash-2", "revenue", "revenue-2"]) {
         yield* ledger.createExecutionAccount(accountInput(accountId))
@@ -310,7 +310,7 @@ describe("TigerBeetle financial adapter", () => {
 
   it.effect("uses a new transfer identity for a new mapping version", () => {
     const state = makeState()
-    return Effect.scoped(Effect.gen(function* () {
+    return Effect.scoped(Effect.gen(function*() {
       const ledger = yield* makeTigerBeetleFinancialLedger(config, () => makeFakeClient(state))
       yield* ledger.createExecutionAccount(accountInput("cash"))
       yield* ledger.createExecutionAccount(accountInput("revenue"))
@@ -328,7 +328,7 @@ describe("TigerBeetle financial adapter", () => {
   it.effect("turns a lost response into an unknown outcome, then resolves it", () => {
     const state = makeState()
     state.failNextTransferResponse = true
-    return Effect.scoped(Effect.gen(function* () {
+    return Effect.scoped(Effect.gen(function*() {
       const ledger = yield* makeTigerBeetleFinancialLedger(config, () => makeFakeClient(state))
       yield* ledger.createExecutionAccount(accountInput("cash"))
       yield* ledger.createExecutionAccount(accountInput("revenue"))
@@ -353,7 +353,7 @@ describe("TigerBeetle financial adapter", () => {
 
   it.effect("fails closed on reconciliation metadata and partial results", () => {
     const state = makeState()
-    return Effect.scoped(Effect.gen(function* () {
+    return Effect.scoped(Effect.gen(function*() {
       const ledger = yield* makeTigerBeetleFinancialLedger(config, () => makeFakeClient(state))
       for (const accountId of ["cash", "cash-2", "revenue", "revenue-2"]) {
         yield* ledger.createExecutionAccount(accountInput(accountId))
@@ -388,7 +388,7 @@ describe("TigerBeetle financial adapter", () => {
 
   it.effect("maps provider rejection and conflicting replay without fallback", () => {
     const state = makeState()
-    return Effect.scoped(Effect.gen(function* () {
+    return Effect.scoped(Effect.gen(function*() {
       const ledger = yield* makeTigerBeetleFinancialLedger(config, () => makeFakeClient(state))
       const rejected = yield* ledger.postJournal(journalInput("missing-account"))
       assert.deepStrictEqual(rejected, {
@@ -410,13 +410,13 @@ describe("TigerBeetle financial adapter", () => {
   })
 
   it.effect("initializes the pinned native client without activating posting", () =>
-    Effect.scoped(Effect.gen(function* () {
+    Effect.scoped(Effect.gen(function*() {
       const ledger = yield* makeTigerBeetleFinancialLedger(config)
       assert.isDefined(ledger)
     })))
 
   it.effect("fails invalid configuration before creating a client", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const failure = yield* Effect.flip(makeTigerBeetleFinancialLedger({
         ...config,
         replicaAddresses: [],
@@ -426,7 +426,7 @@ describe("TigerBeetle financial adapter", () => {
 
   it.effect("destroys the client when the scope closes", () => {
     const state = makeState()
-    return Effect.scoped(Effect.gen(function* () {
+    return Effect.scoped(Effect.gen(function*() {
       yield* makeTigerBeetleFinancialLedger(config, () => makeFakeClient(state))
     })).pipe(Effect.tap(() => Effect.sync(() => assert.isTrue(state.destroyed))))
   })

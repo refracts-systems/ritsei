@@ -1,5 +1,5 @@
-import { createUniqueId } from "solid-js"
 import type { JSX } from "@solidjs/web"
+import { createUniqueId } from "solid-js"
 import { css } from "../generated/css/index.js"
 
 export type FieldProps = {

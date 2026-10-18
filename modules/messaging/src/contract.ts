@@ -25,8 +25,8 @@ const isBoundedJson = (value: Schema.Schema.Type<typeof Schema.Json>): boolean =
     if (depth > MaxPayloadDepth) return false
     if (typeof current === "string") return current.length <= MaxPayloadStringLength
     if (Array.isArray(current)) {
-      return current.length <= MaxPayloadArrayLength &&
-        current.every((item) => visit(item, depth + 1))
+      return current.length <= MaxPayloadArrayLength
+        && current.every((item) => visit(item, depth + 1))
     }
     if (typeof current === "object" && current !== null) {
       return Object.entries(current).every(([key, item]) =>
@@ -36,8 +36,8 @@ const isBoundedJson = (value: Schema.Schema.Type<typeof Schema.Json>): boolean =
     return true
   }
 
-  return visit(value, 0) &&
-    new TextEncoder().encode(JSON.stringify(value)).byteLength <= MaxPayloadBytes
+  return visit(value, 0)
+    && new TextEncoder().encode(JSON.stringify(value)).byteLength <= MaxPayloadBytes
 }
 
 const BoundedJson = Schema.Json.check(Schema.makeFilter(

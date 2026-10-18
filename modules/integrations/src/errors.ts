@@ -8,19 +8,22 @@ export class ExternalActionNotAllowlisted
   extends Schema.TaggedError<ExternalActionNotAllowlisted>()("ExternalActionNotAllowlisted", {
     tenantId: Uuid,
     actionId: NonEmptyString,
-  }) {}
+  })
+{}
 
 export class ExternalAuthorizationDenied
   extends Schema.TaggedError<ExternalAuthorizationDenied>()("ExternalAuthorizationDenied", {
     tenantId: Uuid,
     requiredScope: NonEmptyString,
-  }) {}
+  })
+{}
 
 export class ExternalIdempotencyConflict
   extends Schema.TaggedError<ExternalIdempotencyConflict>()("ExternalIdempotencyConflict", {
     tenantId: Uuid,
     idempotencyKey: NonEmptyString,
-  }) {}
+  })
+{}
 
 export class ExternalPayloadInvalid extends Schema.TaggedError<ExternalPayloadInvalid>()(
   "ExternalPayloadInvalid",
@@ -62,7 +65,8 @@ export class ExternalCompatibilityMismatch
       minimumVersion: PositiveInt,
       maximumVersion: PositiveInt,
     },
-  ) {}
+  )
+{}
 
 export class ExternalPayloadLimitExceeded
   extends Schema.TaggedError<ExternalPayloadLimitExceeded>()("ExternalPayloadLimitExceeded", {
@@ -70,19 +74,22 @@ export class ExternalPayloadLimitExceeded
     operationId: NonEmptyString,
     maxPayloadBytes: PositiveInt,
     actualPayloadBytes: NonNegativeInt,
-  }) {}
+  })
+{}
 
 export class ExternalConnectorNotReviewed
   extends Schema.TaggedError<ExternalConnectorNotReviewed>()("ExternalConnectorNotReviewed", {
     connectorId: NonEmptyString,
     version: PositiveInt,
-  }) {}
+  })
+{}
 
 export class ExternalConnectorRetired
   extends Schema.TaggedError<ExternalConnectorRetired>()("ExternalConnectorRetired", {
     connectorId: NonEmptyString,
     version: PositiveInt,
-  }) {}
+  })
+{}
 
 export class ExternalConnectorVersionConflict
   extends Schema.TaggedError<ExternalConnectorVersionConflict>()(
@@ -92,4 +99,5 @@ export class ExternalConnectorVersionConflict
       connectorVersion: PositiveInt,
       operationVersion: PositiveInt,
     },
-  ) {}
+  )
+{}

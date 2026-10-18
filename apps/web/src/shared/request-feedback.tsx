@@ -1,8 +1,8 @@
 import type { JSX } from "@solidjs/web"
 import { Errored, Loading, Show } from "solid-js"
-import { failureMessage, type RequestFailure } from "./api.ts"
 import { layout } from "../ui/foundations/layout.ts"
 import { Button } from "../ui/primitives/button.tsx"
+import { failureMessage, type RequestFailure } from "./api.ts"
 
 export interface CommandFeedbackProps {
   readonly area?: string
@@ -57,8 +57,8 @@ export function QueryBoundary(props: QueryBoundaryProps) {
       ? ""
       : `${props.errorPrefix} `
   const retryLabel = () =>
-    props.retryLabel ??
-      (props.variant === "retry"
+    props.retryLabel
+      ?? (props.variant === "retry"
         ? `Retry ${props.label}`
         : props.retryPrefix === undefined
         ? `Try loading ${props.label} again`

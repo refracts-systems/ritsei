@@ -1,23 +1,23 @@
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 
-import { makePostgresqlFinancialLedger } from "../mod.ts"
 import { Database, uuidv7 } from "../../../foundation/mod.ts"
 import { makePostgresDatabase, runMigrations } from "../../../platform/mod.ts"
-import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
 import {
   assertFinancialLedgerConformance,
   LARGE_FINANCIAL_MAJOR,
   LARGE_FINANCIAL_MINOR,
 } from "../../../tests/support/financial-ledger-conformance.ts"
+import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
+import { makePostgresqlFinancialLedger } from "../mod.ts"
 
-const databaseUrl = Deno.env.get("DATABASE_URL")
+const databaseUrl = process.env["DATABASE_URL"]
 
 it.effect.skipIf(databaseUrl === undefined)(
   "keeps PostgreSQL ledger operations idempotent and tenant-scoped",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
         const [tenant] = yield* Effect.promise(() =>

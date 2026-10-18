@@ -3,23 +3,22 @@
 // and interruption finalizers (onInterrupt) — all declared on the program,
 // none of it visible to the Solid components that consume them.
 
-import { Context, Data, Effect, Layer, Schedule } from "effect";
-import { log } from "./log";
+import { Context, Data, Effect, Layer, Schedule } from "effect"
+import { log } from "./log"
 
 // ---------------------------------------------------------------------------
 // Search (read path)
 // ---------------------------------------------------------------------------
 
 export interface Package {
-  name: string;
-  description: string;
-  downloads: number;
+  name: string
+  description: string
+  downloads: number
 }
 
-export class TransientNetworkError
-  extends Data.TaggedError("TransientNetwork")<{
-    query: string;
-  }> {}
+export class TransientNetworkError extends Data.TaggedError("TransientNetwork")<{
+  query: string
+}> {}
 
 const REGISTRY: Package[] = [
   {
@@ -162,7 +161,7 @@ const REGISTRY: Package[] = [
     description: "Fast, disk-efficient package manager",
     downloads: 8_900_000,
   },
-];
+]
 
 /** A service the search program *requires* (the `R` channel): latency and
  * failure characteristics come from the environment, not the call site. The
@@ -176,7 +175,7 @@ export class SearchConfig extends Context.Service<
 export const SearchConfigLive = Layer.succeed(SearchConfig, {
   flakiness: 0.35,
   baseLatencyMs: 250,
-});
+})
 
 /**
  * Search the fake registry. The program:
@@ -189,46 +188,42 @@ export const SearchConfigLive = Layer.succeed(SearchConfig, {
  *    supersedes the flight and `runEffect` interrupts the fiber.
  */
 export function searchPackages(query: string) {
-  const attempt = Effect.gen(function* () {
-    const { flakiness, baseLatencyMs } = yield* SearchConfig;
-    yield* Effect.sleep(baseLatencyMs + Math.random() * 550);
+  const attempt = Effect.gen(function*() {
+    const { flakiness, baseLatencyMs } = yield* SearchConfig
+    yield* Effect.sleep(baseLatencyMs + Math.random() * 550)
     if (Math.random() < flakiness) {
       yield* Effect.sync(() =>
         log(
           "retry",
           `search "${query}" hit a transient error — retrying with backoff`,
         )
-      );
-      return yield* new TransientNetworkError({ query });
+      )
+      return yield* new TransientNetworkError({ query })
     }
-    const q = query.toLowerCase();
+    const q = query.toLowerCase()
     return REGISTRY.filter(
       (p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.description.toLowerCase().includes(q),
-    ).sort((a, b) => b.downloads - a.downloads);
-  });
+        p.name.toLowerCase().includes(q)
+        || p.description.toLowerCase().includes(q),
+    ).sort((a, b) => b.downloads - a.downloads)
+  })
 
-  return Effect.gen(function* () {
-    yield* Effect.sync(() => log("start", `search "${query}" — fiber started`));
+  return Effect.gen(function*() {
+    yield* Effect.sync(() => log("start", `search "${query}" — fiber started`))
     return yield* attempt.pipe(
       Effect.retry({
         schedule: Schedule.exponential(150),
         times: 3,
         while: (e) => e._tag === "TransientNetwork",
       }),
-    );
+    )
   }).pipe(
     Effect.timeout(4000),
     Effect.tap((results) =>
-      Effect.sync(() =>
-        log("success", `search "${query}" → ${results.length} results`)
-      )
+      Effect.sync(() => log("success", `search "${query}" → ${results.length} results`))
     ),
     Effect.tapError((e) =>
-      Effect.sync(() =>
-        log("error", `search "${query}" failed for good: ${e._tag}`)
-      )
+      Effect.sync(() => log("error", `search "${query}" failed for good: ${e._tag}`))
     ),
     Effect.onInterrupt(() =>
       Effect.sync(() =>
@@ -238,7 +233,7 @@ export function searchPackages(query: string) {
         )
       )
     ),
-  );
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -246,89 +241,83 @@ export function searchPackages(query: string) {
 // ---------------------------------------------------------------------------
 
 export interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
+  id: string
+  name: string
+  price: number
+  quantity: number
 }
 
 export interface Reservation {
-  id: string;
-  items: CartItem[];
+  id: string
+  items: CartItem[]
 }
 
 export interface Charge {
-  id: string;
-  amount: number;
+  id: string
+  amount: number
 }
 
 export interface Order {
-  id: string;
-  items: CartItem[];
-  total: number;
-  placedAt: string;
+  id: string
+  items: CartItem[]
+  total: number
+  placedAt: string
 }
 
 export class CardDeclinedError extends Data.TaggedError("CardDeclined")<{
-  amount: number;
+  amount: number
 }> {}
 
 // Module-level "database" for placed orders.
-let ORDERS: Order[] = [];
-let seq = 0;
+let ORDERS: Order[] = []
+let seq = 0
 
 export function fetchOrders(): Promise<Order[]> {
   return Effect.runPromise(
     Effect.sleep(300).pipe(Effect.map(() => ORDERS.map((o) => ({ ...o })))),
-  );
+  )
 }
 
 /** Step 1 — hold inventory. ~900ms. */
 export function reserveInventory(items: CartItem[]) {
-  return Effect.gen(function* () {
-    yield* Effect.sync(() => log("start", "reserveInventory — placing hold"));
-    yield* Effect.sleep(900);
-    const reservation: Reservation = { id: `rsv_${++seq}`, items };
-    yield* Effect.sync(() =>
-      log("success", `reserveInventory → ${reservation.id} held`)
-    );
-    return reservation;
+  return Effect.gen(function*() {
+    yield* Effect.sync(() => log("start", "reserveInventory — placing hold"))
+    yield* Effect.sleep(900)
+    const reservation: Reservation = { id: `rsv_${++seq}`, items }
+    yield* Effect.sync(() => log("success", `reserveInventory → ${reservation.id} held`))
+    return reservation
   }).pipe(
     Effect.onInterrupt(() =>
-      Effect.sync(() =>
-        log("interrupt", "reserveInventory interrupted — no hold placed")
-      )
+      Effect.sync(() => log("interrupt", "reserveInventory interrupted — no hold placed"))
     ),
-  );
+  )
 }
 
 /** Compensation for step 1 — release a hold that was successfully placed. */
 export function releaseReservation(reservation: Reservation) {
-  return Effect.gen(function* () {
-    yield* Effect.sleep(400);
+  return Effect.gen(function*() {
+    yield* Effect.sleep(400)
     yield* Effect.sync(() =>
       log(
         "compensate",
         `releaseReservation → ${reservation.id} released (saga compensation)`,
       )
-    );
-  });
+    )
+  })
 }
 
 /** Compensation for step 2 — refund a charge that fully settled (the
  * mid-flight case is covered by chargeCard's own onInterrupt finalizer). */
 export function refundCharge(charge: Charge) {
-  return Effect.gen(function* () {
-    yield* Effect.sleep(400);
+  return Effect.gen(function*() {
+    yield* Effect.sleep(400)
     yield* Effect.sync(() =>
       log(
         "compensate",
-        `refundCharge → ${charge.id} refunded $${
-          charge.amount.toFixed(2)
-        } (saga compensation)`,
+        `refundCharge → ${charge.id} refunded $${charge.amount.toFixed(2)} (saga compensation)`,
       )
-    );
-  });
+    )
+  })
 }
 
 /**
@@ -339,33 +328,25 @@ export function refundCharge(charge: Charge) {
  * via a finalizer on the program itself.
  */
 export function chargeCard(amount: number, declineCard: boolean) {
-  const attempt = Effect.gen(function* () {
-    yield* Effect.sleep(2600);
-    if (declineCard) return yield* new CardDeclinedError({ amount });
-    const charge: Charge = { id: `ch_${++seq}`, amount };
-    yield* Effect.sync(() =>
-      log("success", `chargeCard → ${charge.id} for $${amount.toFixed(2)}`)
-    );
-    return charge;
-  });
+  const attempt = Effect.gen(function*() {
+    yield* Effect.sleep(2600)
+    if (declineCard) return yield* new CardDeclinedError({ amount })
+    const charge: Charge = { id: `ch_${++seq}`, amount }
+    yield* Effect.sync(() => log("success", `chargeCard → ${charge.id} for $${amount.toFixed(2)}`))
+    return charge
+  })
 
-  return Effect.gen(function* () {
-    yield* Effect.sync(() =>
-      log("start", `chargeCard — authorizing $${amount.toFixed(2)}`)
-    );
-    return yield* attempt;
+  return Effect.gen(function*() {
+    yield* Effect.sync(() => log("start", `chargeCard — authorizing $${amount.toFixed(2)}`))
+    return yield* attempt
   }).pipe(
     Effect.tapError((e) =>
-      Effect.sync(() =>
-        log("error", `chargeCard failed: ${e._tag} ($${e.amount.toFixed(2)})`)
-      )
+      Effect.sync(() => log("error", `chargeCard failed: ${e._tag} ($${e.amount.toFixed(2)})`))
     ),
     Effect.onInterrupt(() =>
-      Effect.sync(() =>
-        log("compensate", "chargeCard interrupted — voiding card authorization")
-      )
+      Effect.sync(() => log("compensate", "chargeCard interrupted — voiding card authorization"))
     ),
-  );
+  )
 }
 
 /** Step 3 — finalize the order. ~700ms. */
@@ -374,27 +355,23 @@ export function createOrder(
   reservation: Reservation,
   charge: Charge,
 ) {
-  return Effect.gen(function* () {
+  return Effect.gen(function*() {
     yield* Effect.sync(() =>
       log("start", `createOrder — committing ${reservation.id} + ${charge.id}`)
-    );
-    yield* Effect.sleep(700);
+    )
+    yield* Effect.sleep(700)
     const order: Order = {
       id: `ord_${++seq}`,
       items,
       total: charge.amount,
       placedAt: new Date().toLocaleTimeString(),
-    };
-    ORDERS = [order, ...ORDERS];
-    yield* Effect.sync(() =>
-      log("success", `createOrder → ${order.id} confirmed`)
-    );
-    return order;
+    }
+    ORDERS = [order, ...ORDERS]
+    yield* Effect.sync(() => log("success", `createOrder → ${order.id} confirmed`))
+    return order
   }).pipe(
     Effect.onInterrupt(() =>
-      Effect.sync(() =>
-        log("interrupt", "createOrder interrupted before commit")
-      )
+      Effect.sync(() => log("interrupt", "createOrder interrupted before commit"))
     ),
-  );
+  )
 }

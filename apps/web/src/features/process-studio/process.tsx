@@ -1,5 +1,6 @@
 import type { JSX } from "@solidjs/web"
 import { createEffect, createSignal, For, onSettled, Show, useContext } from "solid-js"
+import { failureMessage } from "../../shared/api.ts"
 import type {
   OperateRuntimeInput,
   ProcessCatalogDescriptor,
@@ -9,7 +10,6 @@ import type {
   ProcessStaticValidation,
   ProcessWorkflowRun,
 } from "../../shared/contracts/generated/process.ts"
-import { failureMessage } from "../../shared/api.ts"
 import { CommandFeedback, QueryBoundary } from "../../shared/request-feedback.tsx"
 import { ApiRuntime, type ApiScope } from "../../shared/runtime.ts"
 import { layout } from "../../ui/foundations/layout.ts"
@@ -18,13 +18,13 @@ import { EntityWorkspace } from "../../ui/patterns/entity-workspace.tsx"
 import { Badge } from "../../ui/primitives/badge.tsx"
 import { Button } from "../../ui/primitives/button.tsx"
 import { createDialogOpenChange, Dialog } from "../../ui/primitives/dialog.tsx"
-import { Form } from "../../ui/primitives/form.tsx"
 import { FormField } from "../../ui/primitives/form-field.tsx"
+import { Form } from "../../ui/primitives/form.tsx"
 import { Input } from "../../ui/primitives/input.tsx"
 import { Tabs } from "../../ui/primitives/tabs.tsx"
 import { surface } from "../../ui/recipes/surface.ts"
-import { mountProcessDesigner, type ProcessDesignerMount } from "./designer.ts"
 import { type DesignerModel, validateDesignerModel } from "./designer-model.ts"
+import { mountProcessDesigner, type ProcessDesignerMount } from "./designer.ts"
 import {
   createProcessCatalogQuery,
   createProcessControlsQuery,

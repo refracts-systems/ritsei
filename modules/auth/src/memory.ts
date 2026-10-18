@@ -18,7 +18,7 @@ export const makeMemoryAuthLayer = (
 ) =>
   Layer.effect(
     AuthService,
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const clock = yield* Clock.Clock
       const storedTenants = new Map<string, Tenant>()
       const storedSessions = new Map<
@@ -34,7 +34,7 @@ export const makeMemoryAuthLayer = (
         )
       })
 
-      const createTenant = Effect.fn("auth.createTenant")(function* (input: unknown) {
+      const createTenant = Effect.fn("auth.createTenant")(function*(input: unknown) {
         const decoded = yield* Schema.decodeUnknownEffect(CreateTenantInput)(input)
         const slug = decoded.slug.trim().toLowerCase()
         const timezone = decoded.timezone?.trim() ?? "UTC"
@@ -46,7 +46,7 @@ export const makeMemoryAuthLayer = (
         return tenant
       })
 
-      const issueSession = Effect.fn("auth.issueSession")(function* (input: unknown) {
+      const issueSession = Effect.fn("auth.issueSession")(function*(input: unknown) {
         const decoded = yield* Schema.decodeUnknownEffect(IssueSessionInput)(input)
         if (validUserAccountIds !== undefined && !validUserAccountIds.has(decoded.userAccountId)) {
           return yield* Effect.fail(
@@ -77,12 +77,12 @@ export const makeMemoryAuthLayer = (
         }
       })
 
-      const authenticate = Effect.fn("auth.authenticate")(function* (token: string) {
+      const authenticate = Effect.fn("auth.authenticate")(function*(token: string) {
         const session = storedSessions.get(token)
         if (
-          session === undefined ||
-          session.expiresAt <= clock.currentTimeMillisUnsafe() ||
-          disabledUserAccountIds.has(session.userAccountId)
+          session === undefined
+          || session.expiresAt <= clock.currentTimeMillisUnsafe()
+          || disabledUserAccountIds.has(session.userAccountId)
         ) return yield* Effect.fail(new InvalidSessionToken({}))
         return {
           userAccountId: session.userAccountId,
@@ -91,7 +91,7 @@ export const makeMemoryAuthLayer = (
         }
       })
 
-      const revoke = Effect.fn("auth.revoke")(function* (sessionId: string) {
+      const revoke = Effect.fn("auth.revoke")(function*(sessionId: string) {
         if (sessionId.startsWith("external:")) return
         for (const [token, session] of storedSessions) {
           if (session.sessionId === sessionId) {

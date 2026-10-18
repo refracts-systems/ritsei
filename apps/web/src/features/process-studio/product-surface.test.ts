@@ -1,12 +1,12 @@
 import { assert, describe, it } from "@effect/vitest"
 
+import { toProcessIr, validateDesignerModel } from "./designer-model.ts"
 import {
   getProcessStudioTemplate,
   makeProcessStudioDraft,
   ProcessStudioTemplates,
   serializeProcessStudioDraft,
 } from "./product-surface.ts"
-import { toProcessIr, validateDesignerModel } from "./designer-model.ts"
 
 describe("Process Studio product surface", () => {
   it("provides structurally valid starter drafts without catalog authority", () => {

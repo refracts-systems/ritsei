@@ -3,18 +3,18 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 
 import {
+  EventEnvelopeShape,
+  makeMessagingTestLayer,
+  MessagingService,
+} from "../../messaging/mod.ts"
+import { ProcurementPurchaseOrderConfirmedEvent } from "../../procurement/mod.ts"
+import {
   CommunicationService,
   CommunicationStateFailure,
   CommunicationTestTransport,
   makeCommunicationTestLayer,
   UnsupportedCommunicationEvent,
 } from "../mod.ts"
-import {
-  EventEnvelopeShape,
-  makeMessagingTestLayer,
-  MessagingService,
-} from "../../messaging/mod.ts"
-import { ProcurementPurchaseOrderConfirmedEvent } from "../../procurement/mod.ts"
 
 const tenantId = "01990000-0000-7000-8000-000000000001"
 const purchaseOrderId = "01990000-0000-7000-8000-000000000002"
@@ -59,7 +59,7 @@ const withCommunication = <A, E>(
 
 it.effect("derives one intent, renders once, and retries the same artifact", () =>
   withCommunication(
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const messaging = yield* MessagingService
       yield* messaging.append(event)
       const service = yield* CommunicationService
@@ -95,7 +95,7 @@ it.effect("derives one intent, renders once, and retries the same artifact", () 
 
 it.effect("rejects unsupported source events before creating a communication", () =>
   withCommunication(
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const messaging = yield* MessagingService
       const unsupportedEvent = { ...event, eventType: "billing.invoice.issued" }
       yield* messaging.append(unsupportedEvent)
@@ -116,7 +116,7 @@ it.effect("rejects unsupported source events before creating a communication", (
 
 it.effect("does not retry a communication before its first delivery attempt", () =>
   withCommunication(
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const messaging = yield* MessagingService
       yield* messaging.append(event)
       const service = yield* CommunicationService

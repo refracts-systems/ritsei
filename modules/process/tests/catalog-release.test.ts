@@ -12,7 +12,7 @@ import {
 } from "../mod.ts"
 
 it.effect("validates a released process against exact catalog compatibility", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const registry = yield* makeProcessCatalogRegistry([
       ...InventoryTypedActionCatalog,
       ...ProcessTypedEventCatalog,
@@ -40,7 +40,7 @@ it.effect("validates a released process against exact catalog compatibility", ()
   }))
 
 it.effect("rejects unregistered actions before a released process", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const registry = yield* makeProcessCatalogRegistry([ProcessOrderConfirmationCompletedEvent])
     const failure = yield* Effect.flip(validateProcessRelease(registry, {
       definitionId: "018f3f77-0c5a-7cc0-8b62-6a163d214123",
@@ -58,7 +58,7 @@ it.effect("rejects unregistered actions before a released process", () =>
   }))
 
 it.effect("rejects a private event from a released process", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const privateEvent = {
       ...ProcessOrderConfirmationCompletedEvent,
       id: "process.private.example",
@@ -80,7 +80,7 @@ it.effect("rejects a private event from a released process", () =>
   }))
 
 it.effect("keeps duplicate catalog identities out of release validation", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const failure = yield* Effect.flip(
       makeProcessCatalogRegistry([
         InventoryTypedActionCatalog[0]!,

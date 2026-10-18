@@ -1,6 +1,6 @@
 import { css } from "../generated/css/index.js"
-import type { IconName } from "./registry.ts"
 import { phosphorClass } from "./providers/phosphor.ts"
+import type { IconName } from "./registry.ts"
 import { defaultIconVariant, type IconSize, type IconTone, type IconVariant } from "./semantics.ts"
 
 const sizeStyles: Record<IconSize, string> = {

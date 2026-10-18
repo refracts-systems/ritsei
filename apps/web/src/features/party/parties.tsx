@@ -1,6 +1,6 @@
 import { useNavigate } from "@solidjs/router"
-import type { RequestFailure } from "../../shared/api.ts"
 import { createSignal, For, Show, untrack, useContext } from "solid-js"
+import type { RequestFailure } from "../../shared/api.ts"
 import type {
   ListPartiesInput,
   PartyDetail as PartyDetailValue,
@@ -16,8 +16,8 @@ import { EntityWorkspace } from "../../ui/patterns/entity-workspace.tsx"
 import { Badge } from "../../ui/primitives/badge.tsx"
 import { Button } from "../../ui/primitives/button.tsx"
 import { createDialogOpenChange, Dialog } from "../../ui/primitives/dialog.tsx"
-import { Form, type FormValue } from "../../ui/primitives/form.tsx"
 import { FormField } from "../../ui/primitives/form-field.tsx"
+import { Form, type FormValue } from "../../ui/primitives/form.tsx"
 import { Input } from "../../ui/primitives/input.tsx"
 import { Select } from "../../ui/primitives/select.tsx"
 import { surface } from "../../ui/recipes/surface.ts"
@@ -397,8 +397,8 @@ function AttachIdentifierCommand(props: {
             const scopeValue = requiredText(value.scope)
             const identifierValue = requiredText(value.value)
             if (
-              provider === null || scheme === null || scopeValue === null ||
-              identifierValue === null
+              provider === null || scheme === null || scopeValue === null
+              || identifierValue === null
             ) {
               setInvalid(true)
               return
@@ -490,8 +490,8 @@ function CreateRelationshipCommand(props: {
                 const legalEntityId = requiredText(value.legalEntityId)
                 const kind = value.kind
                 if (
-                  legalEntityId === null ||
-                  !eligibleKinds().some((option) => option.value === kind)
+                  legalEntityId === null
+                  || !eligibleKinds().some((option) => option.value === kind)
                 ) return
                 mutation.mutate({
                   partyId: props.detail.party.id,
@@ -785,8 +785,8 @@ function PartyFacts(props: {
   reload: () => Promise<unknown>
 }) {
   const nameForLegalEntity = (legalEntityId: string) =>
-    props.legalEntities().find((entry) => entry.legalEntityId === legalEntityId)?.party.name ??
-      legalEntityId
+    props.legalEntities().find((entry) => entry.legalEntityId === legalEntityId)?.party.name
+      ?? legalEntityId
   return (
     <div class={layout.stack}>
       <dl class={layout.detailList}>

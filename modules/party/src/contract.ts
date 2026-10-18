@@ -1,9 +1,9 @@
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import type { DatabaseFailure } from "../../../foundation/mod.ts"
 import { Principal } from "../../auth/mod.ts"
 import type { AuthorizationDenied } from "../../authorization/mod.ts"
-import type { DatabaseFailure } from "../../../foundation/mod.ts"
 import type { EventIdempotencyConflict } from "../../messaging/mod.ts"
 import type {
   BranchAlreadyExists,

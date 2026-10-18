@@ -65,7 +65,7 @@ const connectAndOpenInventory = async (page: Page, url: string) => {
 it.effect(
   "connects Inventory reads and runs stock commands through the backend surface",
   () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const { page, url, errors } = yield* builtApp
       let balances: StockBalance[] = [{
         tenantId,
@@ -134,8 +134,8 @@ it.effect(
               route,
               200,
               [item, secondItem].filter((candidate) =>
-                search === null || candidate.sku.toLocaleLowerCase().includes(search) ||
-                candidate.name.toLocaleLowerCase().includes(search)
+                search === null || candidate.sku.toLocaleLowerCase().includes(search)
+                || candidate.name.toLocaleLowerCase().includes(search)
               ),
             )
           }

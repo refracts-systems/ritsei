@@ -5,7 +5,7 @@ import { probeKobalteCompatibility } from "../../tooling/frontend/compatibility.
 it.effect(
   "bundles the Kobalte Solid 2 dialog probe without activating it",
   () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const result = yield* Effect.promise(probeKobalteCompatibility)
       assert.equal(result.build, "passed")
       assert.equal(result.behavior, "unreviewed")

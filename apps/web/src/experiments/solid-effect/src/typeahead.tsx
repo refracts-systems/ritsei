@@ -8,27 +8,18 @@
 // interrupted by Solid closing the flight's iterator. No debounce, no
 // AbortController, no request bookkeeping anywhere in this component.
 
-import {
-  createMemo,
-  createSignal,
-  Errored,
-  For,
-  isPending,
-  latest,
-  Loading,
-  Show,
-} from "solid-js";
-import { type Package, searchPackages } from "./api";
-import { runEffect } from "./solid-effect";
+import { createMemo, createSignal, Errored, For, isPending, latest, Loading, Show } from "solid-js"
+import { type Package, searchPackages } from "./api"
+import { runEffect } from "./solid-effect"
 
 function formatDownloads(n: number) {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
-  if (n >= 1_000) return Math.round(n / 1_000) + "k";
-  return String(n);
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M"
+  if (n >= 1_000) return Math.round(n / 1_000) + "k"
+  return String(n)
 }
 
 function Results(props: { results: () => Package[]; query: string }) {
-  const list = () => latest(props.results);
+  const list = () => latest(props.results)
   return (
     <div class={{ results: true, stale: isPending(props.results) }}>
       <Show
@@ -58,31 +49,29 @@ function Results(props: { results: () => Package[]; query: string }) {
         </ul>
       </Show>
     </div>
-  );
+  )
 }
 
 export function Typeahead() {
-  const [query, setQuery] = createSignal("");
+  const [query, setQuery] = createSignal("")
 
   // The whole data layer. searchPackages carries retry w/ backoff, timeout,
   // typed transient errors, and interruption finalizers — declared over
   // there, invisible here.
   const results = createMemo<Package[]>(() => {
-    const q = query().trim();
-    if (!q) return [];
-    return runEffect(searchPackages(q));
-  });
+    const q = query().trim()
+    if (!q) return []
+    return runEffect(searchPackages(q))
+  })
 
   return (
     <section class="panel">
       <header>
         <h2>Typeahead search</h2>
         <p>
-          Each keystroke starts an Effect fiber (retry ×3 w/ exponential
-          backoff, 4s timeout, ~35% transient failure rate). Superseded flights
-          are{" "}
-          <em>interrupted</em>, not ignored — Solid closes the stale iterator,
-          {" "}
+          Each keystroke starts an Effect fiber (retry ×3 w/ exponential backoff, 4s timeout, ~35%
+          transient failure rate). Superseded flights are{" "}
+          <em>interrupted</em>, not ignored — Solid closes the stale iterator,{" "}
           <code>runEffect</code> interrupts the fiber.
         </p>
       </header>
@@ -113,5 +102,5 @@ export function Typeahead() {
         )}
       </Show>
     </section>
-  );
+  )
 }

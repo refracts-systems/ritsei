@@ -1,8 +1,12 @@
 import { assert } from "@effect/vitest"
 import * as Effect from "effect/Effect"
+import { spawnSync } from "node:child_process"
+import { mkdtemp, rm } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { chromium } from "playwright"
-import { preview } from "vite"
 import type { Page } from "playwright"
+import { preview } from "vite"
 
 type MockLocalAuthOptions = Readonly<{
   memberships?: readonly {
@@ -74,38 +78,26 @@ export const connectToTenant = async (
   await page.getByRole("heading", { name: heading, exact: true }).waitFor()
 }
 
-export const builtApp = Effect.gen(function* () {
+export const builtApp = Effect.gen(function*() {
   const outDir = yield* Effect.acquireRelease(
-    Effect.promise(() => Deno.makeTempDir({ prefix: "ritsei-web-" })),
-    (path) => Effect.promise(() => Deno.remove(path, { recursive: true })),
+    Effect.promise(() => mkdtemp(join(tmpdir(), "ritsei-web-"))),
+    (path) => Effect.promise(() => rm(path, { recursive: true })),
   )
-  const child = yield* Effect.acquireRelease(
-    Effect.sync(() =>
-      new Deno.Command("deno", {
-        args: ["task", "--cwd", "apps/web", "build", "--outDir", outDir],
-        stdout: "piped",
-        stderr: "piped",
-      }).spawn()
-    ),
-    (child) =>
-      Effect.promise(async () => {
-        try {
-          child.kill("SIGTERM")
-        } catch (cause) {
-          if (
-            !(cause instanceof Deno.errors.NotFound) &&
-            !(cause instanceof TypeError)
-          ) throw cause
-        }
-        await child.status
-      }),
+  const isWindows = process.platform === "win32"
+  const output = yield* Effect.sync(() =>
+    spawnSync(
+      "pnpm",
+      [
+        "--dir",
+        "apps/web",
+        "build",
+        "--outDir",
+        isWindows ? `"${outDir}"` : outDir,
+      ],
+      { encoding: "utf8", shell: isWindows },
+    )
   )
-  const output = yield* Effect.promise(() => child.output())
-  assert.isTrue(
-    output.success,
-    new TextDecoder().decode(output.stdout) +
-      new TextDecoder().decode(output.stderr),
-  )
+  assert.isTrue(output.status === 0, output.stdout + output.stderr)
   const server = yield* Effect.acquireRelease(
     Effect.promise(() =>
       preview({

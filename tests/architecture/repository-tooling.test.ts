@@ -1,11 +1,11 @@
 import { assert, describe, it } from "@effect/vitest"
 
+import { analyzeAiBoundary, analyzePublicPackageImports } from "../../tooling/architecture.ts"
 import { validateSkillDocument } from "../../tooling/check-agent-skills.ts"
 import {
   evaluateFinancialManifest,
   requiredFinancialGateIds,
 } from "../../tooling/financial-gate.ts"
-import { analyzeAiBoundary, analyzePublicPackageImports } from "../../tooling/architecture.ts"
 import {
   type Gate,
   gates,
@@ -125,12 +125,12 @@ describe("repository tooling", () => {
 
   it("rejects cross-package imports outside public entry points", () => {
     const failures = analyzePublicPackageImports([
-      { path: "modules/a/mod.ts", source: 'export { A } from "./src/service.ts"' },
+      { path: "modules/a/mod.ts", source: "export { A } from \"./src/service.ts\"" },
       {
         path: "modules/a/src/service.ts",
-        source: 'import { B } from "../../b/src/service.ts"',
+        source: "import { B } from \"../../b/src/service.ts\"",
       },
-      { path: "modules/b/mod.ts", source: 'export { B } from "./src/service.ts"' },
+      { path: "modules/b/mod.ts", source: "export { B } from \"./src/service.ts\"" },
     ], ["a", "b"])
 
     assert.isTrue(failures.some((failure) => failure.includes("must use modules/b/mod.ts")))
@@ -159,7 +159,7 @@ describe("repository tooling", () => {
         path: "modules/integrations/src/reliability-store.ts",
         source: [
           `import { externalReliabilityRecords } from "${integrationSchemaPath}"`,
-          'import { Database } from "../../foundation/mod.ts"',
+          "import { Database } from \"../../foundation/mod.ts\"",
           "database.transaction(() => undefined)",
         ].join("\n"),
       }]),
@@ -176,7 +176,7 @@ describe("repository tooling", () => {
         path: "modules/integrations/src/governance-store.ts",
         source: [
           `import { externalConnectorGovernance } from "${integrationSchemaPath}"`,
-          'import { Database } from "../../foundation/mod.ts"',
+          "import { Database } from \"../../foundation/mod.ts\"",
           "database.transaction(() => undefined)",
         ].join("\n"),
       }]),
@@ -193,7 +193,7 @@ describe("repository tooling", () => {
       path: "modules/sales/src/recommendations/model.ts",
       source: [
         providerImport("openai", "OpenAI"),
-        ['import { orders } from "../../db/', "schema/sales.ts", '"'].join(""),
+        ["import { orders } from \"../../db/", "schema/sales.ts", "\""].join(""),
         "database.update(orders)",
       ].join("\n"),
     }])

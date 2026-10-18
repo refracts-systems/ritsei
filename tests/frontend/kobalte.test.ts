@@ -1,25 +1,30 @@
+import { AxeBuilder } from "@axe-core/playwright"
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
-import { AxeBuilder } from "@axe-core/playwright"
+import { mkdtemp, rm, writeFile } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { chromium } from "playwright"
 import { build, preview } from "vite"
 import { builtApp, connectToTenant } from "./browser.ts"
 
 const fixture = Effect.acquireRelease(
   Effect.promise(async () => {
-    const root = await Deno.makeTempDir({ dir: "apps/web", prefix: ".kobalte-probe-" })
-    const outDir = await Deno.makeTempDir({ prefix: "ritsei-kobalte-build-" })
-    await Deno.writeTextFile(
+    const root = await mkdtemp(join("apps/web", ".kobalte-probe-"))
+    const outDir = await mkdtemp(join(tmpdir(), "ritsei-kobalte-build-"))
+    await writeFile(
       `${root}/index.html`,
-      '<!doctype html><html lang="en"><head><title>Kobalte dialog probe</title></head><body><main id="root"></main><script type="module" src="/main.tsx"></script></body></html>',
+      "<!doctype html><html lang=\"en\"><head><title>Kobalte dialog probe</title></head><body><main id=\"root\"></main><script type=\"module\" src=\"/main.tsx\"></script></body></html>",
+      "utf8",
     )
-    await Deno.writeTextFile(
+    await writeFile(
       `${root}/main.tsx`,
       `import { render } from "@solidjs/web"
 import { KobalteDialogProbe } from "../src/ui/compatibility/kobalte.tsx"
 
 render(() => <KobalteDialogProbe />, document.getElementById("root")!)
 `,
+      "utf8",
     )
     await build({
       configFile: "apps/web/vite.config.ts",
@@ -30,15 +35,15 @@ render(() => <KobalteDialogProbe />, document.getElementById("root")!)
   }),
   ({ root, outDir }) =>
     Effect.promise(async () => {
-      await Deno.remove(root, { recursive: true })
-      await Deno.remove(outDir, { recursive: true })
+      await rm(root, { recursive: true })
+      await rm(outDir, { recursive: true })
     }),
 )
 
 it.effect(
   "validates the Kobalte dialog interaction and accessibility contract",
   () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const { root, outDir } = yield* fixture
       const server = yield* Effect.acquireRelease(
         Effect.promise(() =>
@@ -87,16 +92,16 @@ it.effect(
           "Verify keyboard focus and dismissal.",
         )
         assert.isTrue(
-          await page.evaluate(() => document.activeElement?.closest('[role="dialog"]') !== null),
+          await page.evaluate(() => document.activeElement?.closest("[role=\"dialog\"]") !== null),
         )
 
         await page.keyboard.press("Tab")
         assert.isTrue(
-          await page.evaluate(() => document.activeElement?.closest('[role="dialog"]') !== null),
+          await page.evaluate(() => document.activeElement?.closest("[role=\"dialog\"]") !== null),
         )
         await page.keyboard.press("Shift+Tab")
         assert.isTrue(
-          await page.evaluate(() => document.activeElement?.closest('[role="dialog"]') !== null),
+          await page.evaluate(() => document.activeElement?.closest("[role=\"dialog\"]") !== null),
         )
 
         await dialog.press("Escape")
@@ -122,7 +127,7 @@ it.effect(
 it.effect(
   "validates the RITSEI Kobalte dialog wrapper in the application",
   () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const { page, url, errors } = yield* builtApp
       yield* Effect.promise(async () => {
         await connectToTenant(

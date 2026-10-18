@@ -10,7 +10,7 @@ const checker = fileURLToPath(new URL("../../tooling/affected-check.ts", import.
 
 describe("affected frontend checks", () => {
   it.effect("selects production frontend scopes, including assets and git deletions", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const directory = yield* Effect.acquireRelease(
         Effect.sync(() => mkdtempSync(join(tmpdir(), "ritsei-affected-"))),
         (path) => Effect.sync(() => rmSync(path, { recursive: true, force: true })),
@@ -20,15 +20,13 @@ describe("affected frontend checks", () => {
         writeFileSync(join(directory, path), "")
       }
       const run = (...paths: string[]) =>
-        execFileSync("deno", [
-          "run",
-          "--no-config",
-          "--allow-read",
-          "--allow-run",
+        execFileSync("pnpm", [
+          "exec",
+          "tsx",
           checker,
           "--dry-run",
           ...paths,
-        ], { cwd: directory, encoding: "utf8" })
+        ], { cwd: directory, encoding: "utf8", shell: process.platform === "win32" })
       const git = (...args: string[]) => execFileSync("git", args, { cwd: directory })
       const selected = ["tests/frontend/shell.test.ts", "apps/web/src/ui/button.test.tsx"]
       const experiment = "apps/web/src/experiments/solid-effect/example.test.ts"
@@ -48,12 +46,12 @@ describe("affected frontend checks", () => {
         const output = run(path)
         for (const test of selected) assert.include(output, test, path)
         assert.notInclude(output, experiment)
-        assert.notInclude(output, "deno task test:related")
-        assert.include(output, "$ deno task test ")
+        assert.notInclude(output, "test:related")
+        assert.include(output, "$ pnpm run test ")
       }
       assert.include(run(experiment), "No affected tests")
       assert.include(run("package.json"), "Broad repository change")
-      assert.include(run("deno.lock"), "$ deno task test\n")
+      assert.include(run("pnpm-lock.yaml"), "$ pnpm run test\n")
       git("init", "-q")
       git("add", ".")
       git(

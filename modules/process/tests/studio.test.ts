@@ -2,13 +2,13 @@ import { assert, describe, it } from "@effect/vitest"
 import * as Clock from "effect/Clock"
 import * as Effect from "effect/Effect"
 
+import { Database, type DatabaseService } from "../../../foundation/mod.ts"
 import {
   AuthorizationDenied,
   AuthorizationService,
   type AuthorizationService as AuthorizationServiceShape,
   type CapabilityType,
 } from "../../authorization/mod.ts"
-import { Database, type DatabaseService } from "../../../foundation/mod.ts"
 import { makeProcessStudioService, ProcessCapabilities } from "../mod.ts"
 
 const tenantId = "01930000-0000-7000-8000-000000000001"
@@ -69,7 +69,7 @@ const provideStudio = (allow: boolean) =>
 
 describe("Process Studio service", () => {
   it.effect("discovers public catalog entries and validates exact references", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const service = yield* provideStudio(true)
       const catalog = yield* service.listCatalog({
         principal,
@@ -95,7 +95,7 @@ describe("Process Studio service", () => {
     }))
 
   it.effect("denies Process Studio reads before touching persistence", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const service = yield* provideStudio(false)
       const error = yield* Effect.flip(service.listCatalog({
         principal,

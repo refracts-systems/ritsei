@@ -3,12 +3,12 @@ import { sql } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Result from "effect/Result"
 
-import { EventIdempotencyConflict, makeMessagingService } from "../mod.ts"
 import { Database, DatabaseFailure, uuidv7 } from "../../../foundation/mod.ts"
 import { makePostgresDatabase, runMigrations } from "../../../platform/mod.ts"
 import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
+import { EventIdempotencyConflict, makeMessagingService } from "../mod.ts"
 
-const databaseUrl = Deno.env.get("DATABASE_URL")
+const databaseUrl = process.env["DATABASE_URL"]
 const postgresFailure = (effect: () => Promise<unknown>) =>
   Effect.tryPromise({ try: effect, catch: (cause) => cause }).pipe(Effect.flip)
 
@@ -33,7 +33,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "rejects blank persisted messaging identities",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const [tenant] = yield* Effect.promise(() =>
           client<{ id: string }[]>`
@@ -175,7 +175,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "keeps event occurrence and tenant identity immutable for replay",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const [tenant] = yield* Effect.promise(() =>
           client<{ id: string }[]>`
@@ -237,7 +237,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "keeps completed receipt identity immutable for duplicate suppression",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const [tenant] = yield* Effect.promise(() =>
           client<{ id: string }[]>`
@@ -294,7 +294,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "joins an ambient transaction and rolls back a successful append",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const [tenant] = yield* Effect.promise(() =>
           client<{ id: string }[]>`
@@ -328,7 +328,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "maps invalid persisted event payloads to the stable database failure",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const [tenant] = yield* Effect.promise(() =>
           client<{ id: string }[]>`
@@ -362,7 +362,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "rejects invalid event envelopes before opening a PostgreSQL transaction",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const [tenant] = yield* Effect.promise(() =>
           client<{ id: string }[]>`
@@ -391,7 +391,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "concurrently appends one event and rejects a mismatched envelope in PostgreSQL",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const [tenant] = yield* Effect.promise(() =>
           client<{ id: string }[]>`
@@ -425,7 +425,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "scopes event idempotency by event type and version",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const [tenant] = yield* Effect.promise(() =>
           client<{ id: string }[]>`
@@ -460,7 +460,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "scopes event idempotency by event type",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const [tenant] = yield* Effect.promise(() =>
           client<{ id: string }[]>`
@@ -504,7 +504,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "keeps event and idempotency identities tenant-scoped",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const tenants = yield* Effect.promise(() =>
           client<{ id: string }[]>`
@@ -543,7 +543,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "scopes consumer receipts by tenant",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const tenants = yield* Effect.promise(() =>
           client<{ id: string }[]>`
@@ -641,7 +641,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "rejects cross-tenant receipts and rolls back their local mutation",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const tenants = yield* Effect.promise(() =>
           client<{ id: string }[]>`
@@ -690,7 +690,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "concurrent mismatched envelopes produce one event and one typed conflict",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const [tenant] = yield* Effect.promise(() =>
           client<{ id: string }[]>`
@@ -729,7 +729,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "concurrent event ID collision produces one event and one typed conflict",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const [tenant] = yield* Effect.promise(() =>
           client<{ id: string }[]>`
@@ -771,7 +771,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "suppresses duplicates and lets failed consumers retry after receipt rollback",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const [tenant] = yield* Effect.promise(() =>
           client<{ id: string }[]>`
@@ -848,7 +848,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "rejects receipt replay when source event identity changes",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const [tenant] = yield* Effect.promise(() =>
           client<{ id: string }[]>`
@@ -890,7 +890,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "rejects a missing source before running the consumer effect",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const [tenant] = yield* Effect.promise(() =>
           client<{ id: string }[]>`
@@ -928,7 +928,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "lets distinct consumers independently complete the same event",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const [tenant] = yield* Effect.promise(() =>
           client<{ id: string }[]>`
@@ -982,7 +982,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "rolls back the losing concurrent consumer's non-idempotent local mutation",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const [tenant] = yield* Effect.promise(() =>
           client<{ id: string }[]>`
@@ -1040,7 +1040,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "commits one derived event and receipt across concurrent duplicate consumers",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const [tenant] = yield* Effect.promise(() =>
           client<{ id: string }[]>`

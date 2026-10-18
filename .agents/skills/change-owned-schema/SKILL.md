@@ -54,8 +54,8 @@ Choose the minimum structural change. Decide which guarantees belong in Effect S
 ## 3. Implement
 
 1. Change only the owner’s `db/schema/<schema>.ts` file and export it from `db/schema/index.ts` if new.
-2. Run `deno task db:generate --name=<short_name>`.
-3. For unsupported DDL, run `deno task db:generate --custom --name=<short_name>` and edit the generated SQL.
+2. Run `pnpm run db:generate --name=<short_name>`.
+3. For unsupported DDL, run `pnpm run db:generate --custom --name=<short_name>` and edit the generated SQL.
 4. Add required migration headers without renaming the generated directory.
 5. Update the owning service’s typed error mapping and tests.
 6. Add a PostgreSQL invariant test when the database enforces behavior that an in-memory layer cannot prove.
@@ -67,14 +67,14 @@ Review generated SQL and snapshot ancestry before running migration checks. Rehe
 # Deterministic Tools
 
 ```sh
-deno task db:generate --help
-deno task db:check
-deno task boundary:lint
-deno task test
-deno task check
+pnpm run db:generate --help
+pnpm run db:check
+pnpm run boundary:lint
+pnpm run test
+pnpm run check
 ```
 
-Use `deno task db:migrate` only with an explicitly selected database. Do not run destructive or production migration commands without the repository’s existing review and permission controls.
+Use `pnpm run db:migrate` only with an explicitly selected database. Do not run destructive or production migration commands without the repository’s existing review and permission controls.
 
 # Required Checks
 

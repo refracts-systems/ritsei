@@ -83,7 +83,7 @@ it("keeps a separate envelope from external payloads", () => {
 })
 
 it.effect("validates external schemas at the contract boundary", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     yield* Schema.decodeUnknownEffect(createPayment.inputSchema)({ amount: "10.00" })
     yield* Schema.decodeUnknownEffect(createPayment.outputSchema)({ providerPaymentId: "pay-1" })
     yield* Schema.decodeUnknownEffect(paymentSettled.payloadSchema)({ providerPaymentId: "pay-1" })

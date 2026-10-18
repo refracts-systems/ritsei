@@ -52,7 +52,7 @@ describe("document rendering contracts", () => {
   })
 
   it.effect("creates deterministic snapshots and render job identity", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const first = yield* makeDocumentSnapshot({
         snapshotId,
         tenantId,
@@ -86,7 +86,7 @@ describe("document rendering contracts", () => {
     }))
 
   it.effect("rejects static HTML capabilities that require JavaScript", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const requirements = {
         ...requestInput(),
         capabilities: ["css", "javascript"] as const,
@@ -106,7 +106,7 @@ describe("document rendering contracts", () => {
     }))
 
   it.effect("rejects render inputs over the declared budget", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const error = yield* Effect.flip(validateDocumentRenderPolicy(
         requestInput(),
         {
@@ -125,7 +125,7 @@ describe("document rendering contracts", () => {
     }))
 
   it.effect("deduplicates artifacts and rejects stale writers", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const store = makeMemoryDocumentArtifactStore()
       const bytes = new Uint8Array([1, 2, 3])
       const contentHash = yield* sha256Hex(bytes)

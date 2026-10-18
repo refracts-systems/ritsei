@@ -4,20 +4,20 @@ import type { Sql } from "postgres"
 
 import { Database, uuidv7 } from "../../../foundation/mod.ts"
 import { makePostgresDatabase, runMigrations } from "../../../platform/mod.ts"
+import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
 import {
   makePostgresProcessReleaseStore,
   ProcessDeploymentConflict,
   ProcessReleaseConflict,
 } from "../mod.ts"
-import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
 
-const databaseUrl = Deno.env.get("DATABASE_URL")
+const databaseUrl = process.env["DATABASE_URL"]
 
 it.effect.skipIf(databaseUrl === undefined)(
   "proves release immutability, promotion audit, and environment binding",
   () =>
     withTemporaryDatabase(databaseUrl!, (client: Sql) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const [tenant] = yield* Effect.promise(() =>
           client<{ id: string }[]>`

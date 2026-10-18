@@ -21,7 +21,7 @@ export class RequestFailure extends Schema.TaggedError<RequestFailure>()("Fronte
   ]),
 }) {}
 
-export const connectionTenant = Effect.gen(function* () {
+export const connectionTenant = Effect.gen(function*() {
   return yield* BrowserConnection
 })
 
@@ -142,7 +142,7 @@ export const responseListMatches = <A extends object>(
   expected: Readonly<Record<string, unknown>>,
 ) => values.every((value) => responseMatches(value, expected))
 
-export const requestJson = Effect.fn("Frontend.requestJson")(function* (
+export const requestJson = Effect.fn("Frontend.requestJson")(function*(
   path: string,
   method: "GET" | "POST" | "PATCH" | "DELETE" = "GET",
   payload?: unknown,

@@ -1,5 +1,5 @@
-export { makePostgresMessagingService as makeMessagingService } from "./postgres.ts"
-export { makeMessagingTestLayer } from "./memory.ts"
-export { MessagingLive } from "./layers.ts"
 export { MessagingService } from "./contract.ts"
 export type { MessagingService as MessagingServiceShape } from "./contract.ts"
+export { MessagingLive } from "./layers.ts"
+export { makeMessagingTestLayer } from "./memory.ts"
+export { makePostgresMessagingService as makeMessagingService } from "./postgres.ts"

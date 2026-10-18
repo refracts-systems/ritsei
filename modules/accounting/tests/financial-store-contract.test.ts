@@ -27,7 +27,7 @@ const watermark = (authority: "postgresql" | "tigerbeetle", value: string) => ({
 
 describe("financial readiness contracts", () => {
   it.effect("routes observations by authority and hashes both boundaries", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const source = watermark("postgresql", "source")
       const target = watermark("tigerbeetle", "target")
       const registry = makeFinancialStoreObservationRegistry([

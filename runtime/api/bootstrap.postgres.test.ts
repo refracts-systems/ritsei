@@ -2,26 +2,26 @@ import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 
+import { Database, uuidv7 } from "../../foundation/mod.ts"
+import { AccountingService, makeAccountingService } from "../../modules/accounting/mod.ts"
 import { AuthService, makeAuthService, TenantAlreadyExists } from "../../modules/auth/mod.ts"
 import { AuthorizationService, makeAuthorizationService } from "../../modules/authorization/mod.ts"
-import { AccountingService, makeAccountingService } from "../../modules/accounting/mod.ts"
 import { makeUserAccountService, UserAccountService } from "../../modules/identity/mod.ts"
 import { InventoryService, makeInventoryService } from "../../modules/inventory/mod.ts"
 import { makeMessagingService, MessagingService } from "../../modules/messaging/mod.ts"
 import { makePartyService, PartyService } from "../../modules/party/mod.ts"
 import { makeSalesService, SalesService } from "../../modules/sales/mod.ts"
-import { Database, uuidv7 } from "../../foundation/mod.ts"
 import { makePostgresDatabase, runMigrations, WebCryptoLive } from "../../platform/mod.ts"
 import { withTemporaryDatabase } from "../../tests/support/postgres-database.ts"
 import { bootstrapTenant } from "./bootstrap.ts"
 
-const databaseUrl = Deno.env.get("DATABASE_URL")
+const databaseUrl = process.env["DATABASE_URL"]
 
 it.effect.skipIf(databaseUrl === undefined)(
   "bootstraps the tenant scope vertical slice against PostgreSQL",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
         const databaseLayer = Layer.succeed(Database, database)

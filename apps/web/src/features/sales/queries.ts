@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/solid-query"
+import type { RequestFailure } from "../../shared/api.ts"
 import type {
   ConfirmOrderInput,
   CreateCustomerInput,
@@ -11,9 +12,8 @@ import type {
   Quotation,
   SalesOrder,
 } from "../../shared/contracts/generated/sales.ts"
-import type { RequestFailure } from "../../shared/api.ts"
-import { createServerQuery, serverQueryKey } from "../../shared/server-query.ts"
 import { type ApiScope, runRequest } from "../../shared/runtime.ts"
+import { createServerQuery, serverQueryKey } from "../../shared/server-query.ts"
 import {
   cancelOrder,
   confirmOrder,

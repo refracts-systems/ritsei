@@ -22,7 +22,7 @@ import {
   Loading,
   refresh,
   Show,
-} from "solid-js";
+} from "solid-js"
 import {
   CardDeclinedError,
   type CartItem,
@@ -35,21 +35,21 @@ import {
   releaseReservation,
   type Reservation,
   reserveInventory,
-} from "./api";
-import { ActionInterruptedError, effectAction } from "./solid-effect";
+} from "./api"
+import { ActionInterruptedError, effectAction } from "./solid-effect"
 
-type Phase = "idle" | "reserving" | "charging" | "finalizing";
+type Phase = "idle" | "reserving" | "charging" | "finalizing"
 
 interface Notice {
-  kind: "success" | "error" | "info";
-  text: string;
+  kind: "success" | "error" | "info"
+  text: string
 }
 
 const STEPS: { phase: Phase; label: string }[] = [
   { phase: "reserving", label: "Reserve inventory" },
   { phase: "charging", label: "Charge card" },
   { phase: "finalizing", label: "Create order" },
-];
+]
 
 const INITIAL_CART: CartItem[] = [
   {
@@ -60,101 +60,99 @@ const INITIAL_CART: CartItem[] = [
   },
   { id: "sku_fiber", name: "Fiber (interruptible)", price: 24.5, quantity: 2 },
   { id: "sku_boundary", name: "Boundary (loading)", price: 9.75, quantity: 1 },
-];
+]
 
 export function Checkout() {
   const [cart, setCart] = createStore<CartItem[]>(
     INITIAL_CART.map((i) => ({ ...i })),
-  );
+  )
   const [orders] = createOptimisticStore<Order[]>(
     async () => fetchOrders(),
     [],
-  );
+  )
 
   // Transition-scoped: writes inside the action revert automatically when it
   // settles — success, failure, or cancellation.
-  const [phase, setPhase] = createOptimistic<Phase>("idle");
+  const [phase, setPhase] = createOptimistic<Phase>("idle")
   // Plain signal: survives the optimistic revert, carries the outcome.
-  const [notice, setNotice] = createSignal<Notice | null>(null);
-  const [declineCard, setDeclineCard] = createSignal(false);
+  const [notice, setNotice] = createSignal<Notice | null>(null)
+  const [declineCard, setDeclineCard] = createSignal(false)
 
-  const total = () =>
-    cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const total = () => cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
   const placeOrder = effectAction(
-    function* (items: CartItem[], decline: boolean) {
-      let reservation: Reservation | undefined;
-      let charge: Charge | undefined;
-      setNotice(null);
+    function*(items: CartItem[], decline: boolean) {
+      let reservation: Reservation | undefined
+      let charge: Charge | undefined
+      setNotice(null)
       try {
-        setPhase("reserving");
-        reservation = yield reserveInventory(items);
-        setPhase("charging");
+        setPhase("reserving")
+        reservation = yield reserveInventory(items)
+        setPhase("charging")
         charge = yield chargeCard(
           items.reduce((sum, item) => sum + item.price * item.quantity, 0),
           decline,
-        );
-        setPhase("finalizing");
-        const order = yield createOrder(items, reservation, charge);
+        )
+        setPhase("finalizing")
+        const order = yield createOrder(items, reservation, charge)
         setNotice({
           kind: "success",
           text: `Order ${order.id} confirmed — $${order.total.toFixed(2)}`,
-        });
-        refresh(orders);
-        return order;
+        })
+        refresh(orders)
+        return order
       } catch (e) {
         // Saga compensation, in reverse order of what committed. Mid-step
         // cleanup (voiding a half-done authorization) already ran via the
         // interrupted step's own finalizers.
-        if (charge) yield refundCharge(charge);
-        if (reservation) yield releaseReservation(reservation);
+        if (charge) yield refundCharge(charge)
+        if (reservation) yield releaseReservation(reservation)
         if (e instanceof CardDeclinedError) {
           setNotice({
             kind: "error",
             text: `Card declined for $${
               e.amount.toFixed(2)
             } — refunds/releases applied, cart untouched`,
-          });
+          })
         } else if (e instanceof ActionInterruptedError) {
           setNotice({
             kind: "info",
             text: "Checkout cancelled — compensations ran, cart untouched",
-          });
+          })
         }
-        throw e; // reject the action → optimistic phase reverts to "idle"
+        throw e // reject the action → optimistic phase reverts to "idle"
       }
     },
-  );
+  )
 
-  let placeOrderButton: HTMLButtonElement | undefined;
+  let placeOrderButton: HTMLButtonElement | undefined
   const restorePlaceOrderFocus = () => {
-    requestAnimationFrame(() => placeOrderButton?.focus());
-  };
+    requestAnimationFrame(() => placeOrderButton?.focus())
+  }
   const submitOrder = () => {
     placeOrder(
       cart.map((item) => ({ ...item })),
       declineCard(),
-    ).catch(() => {}).finally(restorePlaceOrderFocus);
-  };
+    ).catch(() => {}).finally(restorePlaceOrderFocus)
+  }
 
-  const inFlight = () => phase() !== "idle";
+  const inFlight = () => phase() !== "idle"
   const stepState = (step: Phase) => {
-    const order: Phase[] = ["reserving", "charging", "finalizing"];
-    const current = order.indexOf(phase());
-    const target = order.indexOf(step);
-    if (current === -1) return "";
-    return target < current ? "done" : target === current ? "active" : "";
-  };
+    const order: Phase[] = ["reserving", "charging", "finalizing"]
+    const current = order.indexOf(phase())
+    const target = order.indexOf(step)
+    if (current === -1) return ""
+    return target < current ? "done" : target === current ? "active" : ""
+  }
 
   return (
     <section class="panel">
       <header>
         <h2>Checkout saga</h2>
         <p>
-          Three Effect steps inside one Solid action transaction. Cancel
-          mid-charge (it takes ~2.6s) or toggle the decline: the fiber is
-          interrupted, compensations run server-side, and the optimistic UI
-          reverts — automatically on both sides.
+          Three Effect steps inside one Solid action transaction. Cancel mid-charge (it takes ~2.6s)
+          or toggle the decline: the fiber is interrupted, compensations run server-side, and the
+          optimistic UI reverts — automatically on both sides.
         </p>
       </header>
 
@@ -169,7 +167,7 @@ export function Checkout() {
                   disabled={inFlight() || item.quantity <= 1}
                   onClick={() =>
                     setCart((c) => {
-                      c[i()].quantity--;
+                      c[i()].quantity--
                     })}
                 >
                   −
@@ -180,7 +178,7 @@ export function Checkout() {
                   disabled={inFlight()}
                   onClick={() =>
                     setCart((c) => {
-                      c[i()].quantity++;
+                      c[i()].quantity++
                     })}
                 >
                   +
@@ -269,8 +267,7 @@ export function Checkout() {
                 <li>
                   <span class="pkg-name">{order.id}</span>
                   <span class="pkg-desc">
-                    {order.items.length}{" "}
-                    line{order.items.length === 1 ? "" : "s"} · placed{" "}
+                    {order.items.length} line{order.items.length === 1 ? "" : "s"} · placed{" "}
                     {order.placedAt}
                   </span>
                   <span class="cart-price">${order.total.toFixed(2)}</span>
@@ -281,5 +278,5 @@ export function Checkout() {
         </Show>
       </Loading>
     </section>
-  );
+  )
 }

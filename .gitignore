@@ -10,5 +10,8 @@ node_modules/
 .DS_Store
 apps/web/dist/
 deploy/artifacts/output/
+deploy/artifacts/manifest.json
+apps/web/.kobalte-probe-*/
+.vitest/
 apps/web/src/ui/generated/
 apps/web/src/shared/contracts/generated/

@@ -2,21 +2,21 @@ import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 
-import { Principal } from "../../auth/mod.ts"
-import { AuthorizationDenied } from "../../authorization/mod.ts"
 import {
   DatabaseFailure,
   FinancialMajorAmount,
   requireExactMajorToMinor,
 } from "../../../foundation/mod.ts"
+import { Principal } from "../../auth/mod.ts"
+import { AuthorizationDenied } from "../../authorization/mod.ts"
+import { EventEnvelope, EventIdempotencyConflict } from "../../messaging/mod.ts"
+import { SalesOrderInvalidState, SalesOrderNotFound } from "../../sales/mod.ts"
+import * as AccountingErrors from "./errors.ts"
+import { FinancialVerificationEvidence } from "./financial-readiness.ts"
 import {
   FINANCIAL_STAGING_EVIDENCE_CANONICALIZATION_VERSION,
   FinancialStagingEvidence as KernelFinancialStagingEvidence,
 } from "./financial-store-contract.ts"
-import { EventEnvelope, EventIdempotencyConflict } from "../../messaging/mod.ts"
-import { SalesOrderInvalidState, SalesOrderNotFound } from "../../sales/mod.ts"
-import { FinancialVerificationEvidence } from "./financial-readiness.ts"
-import * as AccountingErrors from "./errors.ts"
 
 const NonEmptyString = Schema.String.check(Schema.isPattern(/\S/))
 const TrimmedNonEmptyString = Schema.String.check(Schema.makeFilter(
@@ -170,24 +170,24 @@ export const FinancialCutoverControl = Schema.Struct({
   lastError: Schema.NullOr(NonEmptyString),
 }).check(Schema.makeFilter(
   (control) =>
-    !["approved", "activating", "tigerbeetle"].includes(control.status) ||
-    (
-      control.openingBalanceVerified &&
-      control.historicalBoundaryVerified &&
-      control.reconciliationHealthy &&
-      control.backupRecoveryVerified &&
-      control.unresolvedAcceptedOperations === 0 &&
-      control.cutoverWatermark !== null &&
-      control.verificationHash !== null &&
-      control.evidenceArtifactId !== null &&
-      control.approvedBy !== null &&
-      control.approvedAt !== null
+    !["approved", "activating", "tigerbeetle"].includes(control.status)
+    || (
+      control.openingBalanceVerified
+      && control.historicalBoundaryVerified
+      && control.reconciliationHealthy
+      && control.backupRecoveryVerified
+      && control.unresolvedAcceptedOperations === 0
+      && control.cutoverWatermark !== null
+      && control.verificationHash !== null
+      && control.evidenceArtifactId !== null
+      && control.approvedBy !== null
+      && control.approvedAt !== null
     ),
   { expected: "cutover approval metadata consistent with status" },
 )).check(Schema.makeFilter(
   (control) =>
-    control.status !== "tigerbeetle" ||
-    (control.activatedBy !== null && control.activatedAt !== null),
+    control.status !== "tigerbeetle"
+    || (control.activatedBy !== null && control.activatedAt !== null),
   { expected: "cutover activation metadata consistent with status" },
 ))
 export type FinancialCutoverControl = Schema.Schema.Type<typeof FinancialCutoverControl>
@@ -244,8 +244,8 @@ export const ListFinancialStagingEvidenceInput = Schema.Struct({
   limit: Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 1_000 })),
 }).check(Schema.makeFilter(
   (input) =>
-    input.gateId !== undefined || input.cohortId !== undefined ||
-    input.deploymentRevision !== undefined,
+    input.gateId !== undefined || input.cohortId !== undefined
+    || input.deploymentRevision !== undefined,
   { expected: "staging evidence lookup requires gate, cohort, or deployment scope" },
 ))
 

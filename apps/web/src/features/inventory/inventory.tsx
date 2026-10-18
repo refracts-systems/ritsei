@@ -22,8 +22,8 @@ import { EntityWorkspace } from "../../ui/patterns/entity-workspace.tsx"
 import { Badge } from "../../ui/primitives/badge.tsx"
 import { Button } from "../../ui/primitives/button.tsx"
 import { createDialogOpenChange, Dialog } from "../../ui/primitives/dialog.tsx"
-import { Form } from "../../ui/primitives/form.tsx"
 import { FormField } from "../../ui/primitives/form-field.tsx"
+import { Form } from "../../ui/primitives/form.tsx"
 import { Input } from "../../ui/primitives/input.tsx"
 import { Select } from "../../ui/primitives/select.tsx"
 import { surface } from "../../ui/recipes/surface.ts"
@@ -192,8 +192,8 @@ function CreateWarehouseDialog(props: { reload: () => Promise<unknown> }) {
             const legalEntityId = requiredText(value.legalEntityId)
             const primaryBranchId = requiredText(value.primaryBranchId)
             const name = requiredText(value.name)
-            const valid = legalEntityId !== null && uuidPattern.test(legalEntityId) &&
-              (primaryBranchId === null || uuidPattern.test(primaryBranchId)) && name !== null
+            const valid = legalEntityId !== null && uuidPattern.test(legalEntityId)
+              && (primaryBranchId === null || uuidPattern.test(primaryBranchId)) && name !== null
             if (!valid) {
               setInvalid(true)
               return
@@ -375,9 +375,9 @@ function ReceiveStockDialog(props: {
             const warehouseId = requiredText(value.warehouseId)
             const itemId = requiredText(value.itemId)
             const quantity = requiredText(value.quantity)
-            const valid = warehouseId !== null && uuidPattern.test(warehouseId) &&
-              itemId !== null && uuidPattern.test(itemId) && quantity !== null &&
-              quantityPattern.test(quantity)
+            const valid = warehouseId !== null && uuidPattern.test(warehouseId)
+              && itemId !== null && uuidPattern.test(itemId) && quantity !== null
+              && quantityPattern.test(quantity)
             if (!valid) {
               setInvalid(true)
               return
@@ -469,11 +469,11 @@ function AdjustStockDialog(props: {
             const idempotencyKey = requiredText(value.idempotencyKey)
             const commandId = requiredText(value.commandId)
             const correlationId = requiredText(value.correlationId)
-            const valid = warehouseId !== null && uuidPattern.test(warehouseId) &&
-              itemId !== null && uuidPattern.test(itemId) && adjustment !== null &&
-              signedQuantityPattern.test(adjustment) && unitOfMeasure !== null &&
-              unitPattern.test(unitOfMeasure) && reason !== null && idempotencyKey !== null &&
-              commandId !== null && correlationId !== null
+            const valid = warehouseId !== null && uuidPattern.test(warehouseId)
+              && itemId !== null && uuidPattern.test(itemId) && adjustment !== null
+              && signedQuantityPattern.test(adjustment) && unitOfMeasure !== null
+              && unitPattern.test(unitOfMeasure) && reason !== null && idempotencyKey !== null
+              && commandId !== null && correlationId !== null
             if (!valid) {
               setInvalid(true)
               return
@@ -660,9 +660,9 @@ function ReserveStockDialog(props: {
             const itemId = requiredText(value.itemId)
             const quantity = requiredText(value.quantity)
             const idempotencyKey = requiredText(value.idempotencyKey)
-            const valid = warehouseId !== null && uuidPattern.test(warehouseId) &&
-              itemId !== null && uuidPattern.test(itemId) && quantity !== null &&
-              quantityPattern.test(quantity) && idempotencyKey !== null
+            const valid = warehouseId !== null && uuidPattern.test(warehouseId)
+              && itemId !== null && uuidPattern.test(itemId) && quantity !== null
+              && quantityPattern.test(quantity) && idempotencyKey !== null
             if (!valid) {
               setInvalid(true)
               return
@@ -753,10 +753,10 @@ function CreateTransferDialog(props: {
             const destinationWarehouseId = requiredText(value.destinationWarehouseId)
             const itemId = requiredText(value.itemId)
             const quantity = requiredText(value.quantity)
-            const valid = sourceWarehouseId !== null && uuidPattern.test(sourceWarehouseId) &&
-              destinationWarehouseId !== null && uuidPattern.test(destinationWarehouseId) &&
-              sourceWarehouseId !== destinationWarehouseId && itemId !== null &&
-              uuidPattern.test(itemId) && quantity !== null && quantityPattern.test(quantity)
+            const valid = sourceWarehouseId !== null && uuidPattern.test(sourceWarehouseId)
+              && destinationWarehouseId !== null && uuidPattern.test(destinationWarehouseId)
+              && sourceWarehouseId !== destinationWarehouseId && itemId !== null
+              && uuidPattern.test(itemId) && quantity !== null && quantityPattern.test(quantity)
             if (!valid) {
               setInvalid(true)
               return
@@ -1205,16 +1205,16 @@ function InventoryFilters(props: {
           if (itemId !== null) query.set("itemId", itemId)
           if (search !== null) query.set("search", search)
           if (
-            reservationStatus === "active" || reservationStatus === "released" ||
-            reservationStatus === "fulfilled"
+            reservationStatus === "active" || reservationStatus === "released"
+            || reservationStatus === "fulfilled"
           ) query.set("reservationStatus", reservationStatus)
           if (
-            transferStatus === "draft" || transferStatus === "confirmed" ||
-            transferStatus === "completed"
+            transferStatus === "draft" || transferStatus === "confirmed"
+            || transferStatus === "completed"
           ) query.set("transferStatus", transferStatus)
           if (
-            movementKind === "receipt" || movementKind === "issue" ||
-            movementKind === "reservation" || movementKind === "release"
+            movementKind === "receipt" || movementKind === "issue"
+            || movementKind === "reservation" || movementKind === "release"
           ) query.set("movementKind", movementKind)
           navigate(query.size === 0 ? "/inventory" : `/inventory?${query}`)
         }

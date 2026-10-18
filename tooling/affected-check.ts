@@ -1,13 +1,16 @@
-const textDecoder = new TextDecoder()
+import { spawnSync } from "node:child_process"
+import { readdir, stat } from "node:fs/promises"
+
 const testFilePattern = /\.(?:test|spec)\.(?:ts|tsx)$/
 const sourceFilePattern = /\.(?:ts|tsx|js|jsx)$/
 const broadTestTriggers = new Set([
   "package.json",
-  "deno.json",
-  "deno.lock",
+  "pnpm-lock.yaml",
   "vitest.config.ts",
   "vitest.contract.config.ts",
 ])
+
+const notFound = (cause: unknown) => (cause as NodeJS.ErrnoException).code === "ENOENT"
 
 const normalizePath = (path: string) => path.replaceAll("\\", "/")
 const isTestFile = (path: string) => testFilePattern.test(path)
@@ -15,17 +18,13 @@ const isSourceFile = (path: string) => sourceFilePattern.test(path)
 const isExperiment = (path: string) => path.startsWith("apps/web/src/experiments/solid-effect/")
 
 const gitFiles = async (args: readonly string[]): Promise<readonly string[]> => {
-  const result = await new Deno.Command("git", {
-    args: [...args],
-    stdout: "piped",
-    stderr: "piped",
-  }).output()
+  const result = spawnSync("git", [...args], { encoding: "utf8" })
 
-  if (!result.success) {
-    throw new Error(textDecoder.decode(result.stderr))
+  if (result.status !== 0) {
+    throw new Error(result.stderr ?? "")
   }
 
-  return textDecoder.decode(result.stdout).split("\n").map(normalizePath).filter(Boolean)
+  return result.stdout.split("\n").map(normalizePath).filter(Boolean)
 }
 
 const changedFiles = async (provided: readonly string[]): Promise<readonly string[]> => {
@@ -43,14 +42,14 @@ const collectTests = async (root: string): Promise<readonly string[]> => {
 
   const visit = async (directory: string): Promise<void> => {
     try {
-      for await (const entry of Deno.readDir(directory)) {
+      for (const entry of await readdir(directory, { withFileTypes: true })) {
         const path = `${directory}/${entry.name}`
         if (isExperiment(path + "/")) continue
-        if (entry.isDirectory) await visit(path)
-        else if (entry.isFile && isTestFile(path)) result.push(path)
+        if (entry.isDirectory()) await visit(path)
+        else if (entry.isFile() && isTestFile(path)) result.push(path)
       }
     } catch (cause) {
-      if (!(cause instanceof Deno.errors.NotFound)) throw cause
+      if (!notFound(cause)) throw cause
     }
   }
 
@@ -58,28 +57,28 @@ const collectTests = async (root: string): Promise<readonly string[]> => {
   return result.toSorted()
 }
 
-const run = async (args: readonly string[], dryRun: boolean): Promise<void> => {
+const run = (args: readonly string[], dryRun: boolean): void => {
   console.log(`$ ${args.join(" ")}`)
   if (dryRun) return
 
-  const result = await new Deno.Command(args[0]!, {
-    args: [...args.slice(1)],
-    stdin: "inherit",
-    stdout: "inherit",
-    stderr: "inherit",
-  }).output()
+  // pnpm resolves through pnpm.cmd on Windows, so it needs a shell there;
+  // every caller only spawns pnpm.
+  const result = spawnSync(args[0]!, [...args.slice(1)], {
+    stdio: "inherit",
+    shell: process.platform === "win32",
+  })
 
-  if (!result.success) Deno.exit(result.code)
+  if (result.status !== 0) process.exit(result.status ?? 1)
 }
 
-const args = [...Deno.args]
+const args = [...process.argv.slice(2)]
 const dryRun = args.includes("--dry-run")
 const providedFiles = args.filter((arg) => arg !== "--dry-run")
 const files = await changedFiles(providedFiles)
 
 if (files.length === 0) {
   console.log("No changed files; skipped affected checks.")
-  Deno.exit(0)
+  process.exit(0)
 }
 
 const packageNames = new Set<string>()
@@ -95,9 +94,9 @@ for (const path of files) {
   if (isExperiment(path)) continue
 
   if (
-    path === "AGENTS.md" ||
-    path === "tooling/check-agent-skills.ts" ||
-    path.startsWith(".agents/skills/")
+    path === "AGENTS.md"
+    || path === "tooling/check-agent-skills.ts"
+    || path.startsWith(".agents/skills/")
   ) {
     skillsChanged = true
   }
@@ -181,24 +180,24 @@ for (const root of componentRoots) {
 // Deleted tests can select a scope, but must never become Vitest file filters.
 for (const test of tests) {
   try {
-    await Deno.stat(test)
+    await stat(test)
   } catch (cause) {
-    if (!(cause instanceof Deno.errors.NotFound)) throw cause
+    if (!notFound(cause)) throw cause
     tests.delete(test)
   }
 }
 
-if (skillsChanged) await run(["deno", "task", "skills:check"], dryRun)
+if (skillsChanged) await run(["pnpm", "run", "skills:check"], dryRun)
 
 if (fullSuite) {
   console.log("Broad repository change; running the full test suite.")
-  await run(["deno", "task", "test"], dryRun)
+  await run(["pnpm", "run", "test"], dryRun)
 } else {
   if (relatedSources.size > 0) {
     console.log(
       `Public package change; running related tests for ${[...relatedSources].join(", ")}.`,
     )
-    await run(["deno", "task", "test:related", ...[...relatedSources].toSorted()], dryRun)
+    await run(["pnpm", "run", "test:related", ...[...relatedSources].toSorted()], dryRun)
   }
 
   if (tests.size > 0) {
@@ -206,7 +205,7 @@ if (fullSuite) {
       ? `cross-package (${[...packageNames].toSorted().join(", ")})`
       : "affected"
     console.log(`Running ${scope} tests (${tests.size} files).`)
-    await run(["deno", "task", "test", ...[...tests].toSorted()], dryRun)
+    await run(["pnpm", "run", "test", ...[...tests].toSorted()], dryRun)
   } else if (relatedSources.size === 0) {
     console.log("No affected tests; skipped Vitest.")
   }

@@ -12,8 +12,8 @@ import {
 } from "drizzle-orm/pg-core"
 
 import { tenants } from "./auth.ts"
-import { branches, legalEntities } from "./party.ts"
 import { createdAt, id, updatedAt } from "./common.ts"
+import { branches, legalEntities } from "./party.ts"
 
 export const inventorySchema = pgSchema("inventory")
 export const reservationStatus = inventorySchema.enum(

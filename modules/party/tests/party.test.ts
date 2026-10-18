@@ -4,6 +4,7 @@ import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
 
 import { AuthorizationDenied, makeAuthorizationTestLayer } from "../../authorization/mod.ts"
+import type { EventEnvelopeShape } from "../../messaging/mod.ts"
 import {
   AssignPartyRoleInput,
   AttachExternalIdentifierInput,
@@ -38,7 +39,6 @@ import {
   PartyService,
   SetPartyRepresentationActiveInput,
 } from "../mod.ts"
-import type { EventEnvelopeShape } from "../../messaging/mod.ts"
 import { makePartyMemoryStore } from "../src/memory.ts"
 import { makePartyServiceFromStore } from "../src/service.ts"
 
@@ -74,7 +74,7 @@ const withParty = <A, E>(program: Effect.Effect<A, E, PartyService>) =>
 
 describe("party contract", () => {
   it.effect("authorizes party creation and publishes its owner event", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const published: EventEnvelopeShape[] = []
       const service = yield* Effect.provide(
         makePartyServiceFromStore(Effect.succeed(makePartyMemoryStore())),
@@ -139,7 +139,7 @@ describe("party contract", () => {
     }))
 
   it.effect("creates a party with roles and a scoped external identifier", () =>
-    withParty(Effect.gen(function* () {
+    withParty(Effect.gen(function*() {
       const service = yield* PartyService
       const party = yield* service.create({
         principal,
@@ -350,7 +350,7 @@ describe("party contract", () => {
       },
     ])
     return Effect.provide(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const service = yield* PartyService
         const party = yield* service.create({
           principal,
@@ -429,7 +429,7 @@ describe("party contract", () => {
   })
 
   it.effect("rejects duplicate roles and identifiers in their declared scope", () =>
-    withParty(Effect.gen(function* () {
+    withParty(Effect.gen(function*() {
       const service = yield* PartyService
       const first = yield* service.create({
         principal,
@@ -498,7 +498,7 @@ describe("party contract", () => {
     })))
 
   it.effect("scopes external identifiers by provider and legal entity", () =>
-    withParty(Effect.gen(function* () {
+    withParty(Effect.gen(function*() {
       const service = yield* PartyService
       const first = yield* service.create({
         principal,
@@ -555,7 +555,7 @@ describe("party contract", () => {
     })))
 
   it.effect("reads a tenant-scoped relationship and reports missing relationships", () =>
-    withParty(Effect.gen(function* () {
+    withParty(Effect.gen(function*() {
       const service = yield* PartyService
       const party = yield* service.create({
         principal,
@@ -600,7 +600,7 @@ describe("party contract", () => {
     })))
 
   it.effect("returns bounded active related-party paths", () =>
-    withParty(Effect.gen(function* () {
+    withParty(Effect.gen(function*() {
       const service = yield* PartyService
       const source = yield* service.create({
         principal,
@@ -648,7 +648,7 @@ describe("party contract", () => {
     })))
 
   it.effect("filters reflexive related-party paths", () =>
-    withParty(Effect.gen(function* () {
+    withParty(Effect.gen(function*() {
       const service = yield* PartyService
       const organization = yield* service.create({
         principal,
@@ -696,7 +696,7 @@ describe("party contract", () => {
         })),
     ])
     return Effect.provide(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const service = yield* PartyService
         assert.instanceOf(
           yield* Effect.flip(service.getRelationship({
@@ -712,7 +712,7 @@ describe("party contract", () => {
   })
 
   it.effect("requires an assigned role for a legal entity relationship", () =>
-    withParty(Effect.gen(function* () {
+    withParty(Effect.gen(function*() {
       const service = yield* PartyService
       const party = yield* service.create({
         principal,
@@ -736,7 +736,7 @@ describe("party contract", () => {
     })))
 
   it.effect("requires an organization party and an existing legal entity", () =>
-    withParty(Effect.gen(function* () {
+    withParty(Effect.gen(function*() {
       const service = yield* PartyService
       const person = yield* service.create({
         principal,
@@ -772,7 +772,7 @@ describe("party contract", () => {
       },
     ])
     return Effect.provide(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const service = yield* PartyService
         const party = yield* service.create({
           principal,
@@ -812,7 +812,7 @@ describe("party contract", () => {
       },
     ])
     return Effect.provide(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const service = yield* PartyService
         const party = yield* service.create({
           principal,

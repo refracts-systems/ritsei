@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/solid-query"
+import type { RequestFailure } from "../../shared/api.ts"
 import type {
   AddTenantMembershipInput,
   CapabilityDefinition,
@@ -7,9 +8,8 @@ import type {
   ListTenantMembershipsInput,
   TenantMembership,
 } from "../../shared/contracts/generated/authorization.ts"
-import type { RequestFailure } from "../../shared/api.ts"
-import { createServerQuery, serverQueryKey } from "../../shared/server-query.ts"
 import { type ApiScope, runRequest } from "../../shared/runtime.ts"
+import { createServerQuery, serverQueryKey } from "../../shared/server-query.ts"
 import {
   activateMembership,
   addMembership,

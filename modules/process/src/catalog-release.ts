@@ -37,13 +37,14 @@ export class ProcessReleaseValidationFailed
       id: Schema.String.check(Schema.isPattern(/\S/)),
       version: PositiveInt,
     },
-  ) {}
+  )
+{}
 
 export const validateProcessRelease = (
   registry: ProcessCatalogRegistry,
   input: unknown,
 ): Effect.Effect<ProcessReleaseValidation, ProcessReleaseValidationFailed | Schema.SchemaError> =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const decoded = yield* Schema.decodeUnknownEffect(ProcessReleaseRequest)(input)
     // An unregistered capability can never enter a released process.
     for (const reference of decoded.references) {

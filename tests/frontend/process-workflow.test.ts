@@ -105,7 +105,7 @@ const job: ProcessJobInboxItem = {
 it.effect(
   "connects Process Studio catalog, designer validation, monitor, inbox, and recovery controls",
   () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const { page, url, errors } = yield* builtApp
       let runtime = makeRuntime()
       let inboxRuntime: ProcessRuntimeInstance[] = [runtime]

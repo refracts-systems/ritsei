@@ -5,12 +5,12 @@ import postgres from "postgres"
 
 import { makePostgresDatabase } from "../mod.ts"
 
-const databaseUrl = Deno.env.get("DATABASE_URL")
+const databaseUrl = process.env["DATABASE_URL"]
 
 it.effect.skipIf(databaseUrl === undefined)(
   "postgres transaction commits a typed query",
   () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const client = yield* Effect.acquireRelease(
         Effect.sync(() => postgres(databaseUrl!)),
         (connection) => Effect.promise(() => connection.end()),

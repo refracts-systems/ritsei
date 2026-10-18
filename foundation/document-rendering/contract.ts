@@ -302,7 +302,8 @@ export class UnsupportedDocumentCapability
       rendererFamily: DocumentRendererFamily,
       capability: DocumentCapability,
     },
-  ) {}
+  )
+{}
 
 export class DocumentRenderPolicyViolation
   extends Schema.TaggedError<DocumentRenderPolicyViolation>()(
@@ -314,7 +315,8 @@ export class DocumentRenderPolicyViolation
         "network_disabled",
       ]),
     },
-  ) {}
+  )
+{}
 
 export class DocumentRenderLimitExceeded extends Schema.TaggedError<DocumentRenderLimitExceeded>()(
   "DocumentRenderLimitExceeded",
@@ -350,7 +352,8 @@ export class DocumentArtifactInvalidContent
       artifactId: NonEmptyString,
       reason: NonEmptyString,
     },
-  ) {}
+  )
+{}
 
 export const DocumentRenderPolicy = Schema.Struct({
   rendererFamily: DocumentRendererFamily,
@@ -388,13 +391,13 @@ export const sha256Hex = (input: string | Uint8Array) =>
   })
 
 export const hashJson = (input: unknown) =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const decoded = yield* Schema.decodeUnknownEffect(Schema.Json)(input)
     return yield* sha256Hex(canonicalizeJson(decoded))
   })
 
 export const makeDocumentSnapshot = (input: unknown) =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const decoded = yield* Schema.decodeUnknownEffect(DocumentSnapshotInput)(input)
     const checksum = yield* hashJson({
       tenantId: decoded.tenantId,
@@ -420,7 +423,7 @@ export const documentContextFromSnapshot = (snapshot: DocumentSnapshot): Documen
 })
 
 export const makeDocumentAst = (input: unknown) =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const decoded = yield* Schema.decodeUnknownEffect(DocumentAstInput)(input)
     const checksum = yield* hashJson({
       snapshotId: decoded.snapshotId,
@@ -436,7 +439,7 @@ export const makeDocumentAst = (input: unknown) =>
   })
 
 export const makeDocumentRenderRequest = (input: unknown) =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const decoded = yield* Schema.decodeUnknownEffect(DocumentRenderRequestInput)(input)
     const renderFingerprint = yield* hashJson({
       tenantId: decoded.tenantId,
@@ -470,7 +473,7 @@ export const documentRenderIdempotencyKey = (
 ) => `document-render:${request.tenantId}:${request.renderFingerprint}`
 
 export const makeDocumentRenderJobPayload = (input: unknown) =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const request = yield* Schema.decodeUnknownEffect(DocumentRenderRequest)(input)
     return {
       jobVersion: 1,
@@ -553,7 +556,7 @@ const validateRenderLimits = (
 }
 
 export const validateDocumentRenderPolicy = (requirements: unknown, policy: unknown) =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const decodedRequirements = yield* Schema.decodeUnknownEffect(DocumentRenderRequestInput)(
       requirements,
     )

@@ -1,5 +1,7 @@
 import * as Effect from "effect/Effect"
 
+import { isMain } from "../entrypoint.ts"
+
 import {
   documentContextFromSnapshot,
   type DocumentRenderPolicy,
@@ -21,7 +23,7 @@ const samplePng = Uint8Array.from(
   ),
   (character) => character.charCodeAt(0),
 )
-const parsedIterations = Number(Deno.args[0] ?? "10")
+const parsedIterations = Number(process.argv.slice(2)[0] ?? "10")
 const iterations = Number.isInteger(parsedIterations) && parsedIterations > 0
   ? parsedIterations
   : 10
@@ -51,7 +53,7 @@ const benchmarkFixture = (fixture: BenchmarkFixture) =>
       skipped: true,
       reason: "publishing capability is outside the pdfnative transactional adapter",
     })
-    : Effect.gen(function* () {
+    : Effect.gen(function*() {
       const snapshot = yield* makeDocumentSnapshot({
         snapshotId,
         tenantId,
@@ -112,7 +114,7 @@ const benchmarkFixture = (fixture: BenchmarkFixture) =>
 
 const benchmark = Effect.all(documentBenchmarkCorpus.map(benchmarkFixture))
 
-if (import.meta.main) {
+if (isMain(import.meta.url)) {
   const results = await Effect.runPromise(benchmark)
   console.log(JSON.stringify({
     benchmark: "pdfnative-document-render",

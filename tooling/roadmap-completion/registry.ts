@@ -751,7 +751,7 @@ export const gates: readonly Gate[] = [
         "CREATE PROPERTY GRAPH",
         "GRAPH_TABLE",
         "legal_entity_organization_edges",
-        'WHERE graph_path."active"',
+        "WHERE graph_path.\"active\"",
       ),
       marker(
         "modules/party/src/contract.ts",
@@ -798,9 +798,9 @@ export const gates: readonly Gate[] = [
       file("docs/operations/postgresql-19-evidence-2026-08-31.json"),
       marker(
         "docs/operations/postgresql-19-evidence-2026-08-31.json",
-        '"productionEligible": false',
-        '"indexValidAfter": true',
-        '"checksum":',
+        "\"productionEligible\": false",
+        "\"indexValidAfter\": true",
+        "\"checksum\":",
       ),
     ],
   },

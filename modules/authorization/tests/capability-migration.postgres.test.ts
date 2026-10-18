@@ -1,13 +1,16 @@
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
+import { copyFile, mkdir, mkdtemp, readdir, rm } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 
-import { makeAuthService } from "../../auth/mod.ts"
-import { makeUserAccountService, UserAccountService } from "../../identity/mod.ts"
 import { Database, uuidv7 } from "../../../foundation/mod.ts"
 import { makePostgresDatabase, runMigrations, WebCryptoLive } from "../../../platform/mod.ts"
 import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
+import { makeAuthService } from "../../auth/mod.ts"
+import { makeUserAccountService, UserAccountService } from "../../identity/mod.ts"
 
-const databaseUrl = Deno.env.get("DATABASE_URL")
+const databaseUrl = process.env["DATABASE_URL"]
 const latestMigration = "20260808045828_capability_naming_conventions"
 
 const withPreviousMigrations = <A, E, R>(
@@ -15,26 +18,26 @@ const withPreviousMigrations = <A, E, R>(
 ) =>
   Effect.acquireUseRelease(
     Effect.promise(async () => {
-      const directory = await Deno.makeTempDir({ prefix: "ritsei-migrations-" })
-      for await (const entry of Deno.readDir("db/migrations")) {
-        if (!entry.isDirectory || entry.name >= latestMigration) continue
+      const directory = await mkdtemp(join(tmpdir(), "ritsei-migrations-"))
+      for (const entry of await readdir("db/migrations", { withFileTypes: true })) {
+        if (!entry.isDirectory() || entry.name >= latestMigration) continue
         const source = `db/migrations/${entry.name}`
         const target = `${directory}/${entry.name}`
-        await Deno.mkdir(target, { recursive: true })
-        await Deno.copyFile(`${source}/migration.sql`, `${target}/migration.sql`)
-        await Deno.copyFile(`${source}/snapshot.json`, `${target}/snapshot.json`)
+        await mkdir(target, { recursive: true })
+        await copyFile(`${source}/migration.sql`, `${target}/migration.sql`)
+        await copyFile(`${source}/snapshot.json`, `${target}/snapshot.json`)
       }
       return directory
     }),
     use,
-    (directory) => Effect.promise(() => Deno.remove(directory, { recursive: true })),
+    (directory) => Effect.promise(() => rm(directory, { recursive: true })),
   )
 
 it.effect.skipIf(databaseUrl === undefined)(
   "migrates legacy capability grants to canonical identifiers",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* withPreviousMigrations((directory) => runMigrations(client, directory))
 
         const database = makePostgresDatabase(client)

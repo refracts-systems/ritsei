@@ -17,15 +17,6 @@ import {
 } from "../../accounting/mod.ts"
 import { getCapabilityDefinition, isKnownCapability } from "../../authorization/mod.ts"
 import {
-  CreatePartyInput,
-  Party,
-  PartyCreateAction,
-  PartyCreatedEvent,
-  PartyCreatedEventPayload,
-  PartyTypedActionCatalog,
-  PartyTypedEventCatalog,
-} from "../../party/mod.ts"
-import {
   CreateUserAccountForTenantInput,
   IdentityCreateUserAccountAction,
   IdentityTypedActionCatalog,
@@ -34,16 +25,6 @@ import {
   UserAccountCreatedEvent,
   UserAccountCreatedEventPayload,
 } from "../../identity/mod.ts"
-import {
-  ConfirmPurchaseOrderInput,
-  ProcurementConfirmPurchaseOrderAction,
-  ProcurementPurchaseOrderConfirmedEvent,
-  ProcurementTypedActionCatalog,
-  ProcurementTypedEventCatalog,
-  PurchaseOrder,
-  PurchaseOrderConfirmedEventPayload,
-} from "../../procurement/mod.ts"
-import { type DomainActionCatalogEntry, type DomainEventCatalogEntry } from "../mod.ts"
 import {
   AdjustStockInput,
   InventoryAdjustStockAction,
@@ -54,6 +35,15 @@ import {
   StockCorrection,
 } from "../../inventory/mod.ts"
 import {
+  CreatePartyInput,
+  Party,
+  PartyCreateAction,
+  PartyCreatedEvent,
+  PartyCreatedEventPayload,
+  PartyTypedActionCatalog,
+  PartyTypedEventCatalog,
+} from "../../party/mod.ts"
+import {
   OrderCancellationCompletedEventPayload,
   OrderConfirmationCompletedEventPayload,
   OrderFulfillmentCompletedEventPayload,
@@ -63,6 +53,15 @@ import {
   ProcessTypedEventCatalog,
 } from "../../process/mod.ts"
 import {
+  ConfirmPurchaseOrderInput,
+  ProcurementConfirmPurchaseOrderAction,
+  ProcurementPurchaseOrderConfirmedEvent,
+  ProcurementTypedActionCatalog,
+  ProcurementTypedEventCatalog,
+  PurchaseOrder,
+  PurchaseOrderConfirmedEventPayload,
+} from "../../procurement/mod.ts"
+import {
   ConfirmOrderInput,
   SalesConfirmOrderAction,
   SalesOrder,
@@ -71,6 +70,7 @@ import {
   SalesTypedActionCatalog,
   SalesTypedEventCatalog,
 } from "../../sales/mod.ts"
+import { type DomainActionCatalogEntry, type DomainEventCatalogEntry } from "../mod.ts"
 
 const actions: ReadonlyArray<DomainActionCatalogEntry> = [
   ...InventoryTypedActionCatalog,
@@ -112,7 +112,7 @@ const assertPayloadFields = (
 
 describe("catalog compatibility", () => {
   it.effect("keeps identities, capability metadata, and schemas compatible", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const identities = [...actions, ...events].map((entry) => `${entry.id}@${entry.version}`)
       assert.strictEqual(new Set(identities).size, identities.length)
 

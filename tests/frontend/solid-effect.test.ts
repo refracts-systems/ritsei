@@ -1,23 +1,22 @@
+import { AxeBuilder } from "@axe-core/playwright"
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
-import { AxeBuilder } from "@axe-core/playwright"
+import { spawnSync } from "node:child_process"
 import { chromium } from "playwright"
 import { preview } from "vite"
 
 const experimentRoot = "apps/web/src/experiments/solid-effect"
 
-const builtSolidEffect = Effect.gen(function* () {
-  const output = yield* Effect.promise(() =>
-    new Deno.Command("pnpm", {
-      args: ["--dir", experimentRoot, "build"],
-      stdout: "piped",
-      stderr: "piped",
-    }).output()
+const builtSolidEffect = Effect.gen(function*() {
+  const output = yield* Effect.sync(() =>
+    spawnSync("pnpm", ["--dir", experimentRoot, "build"], {
+      encoding: "utf8",
+      shell: process.platform === "win32",
+    })
   )
   assert.isTrue(
-    output.success,
-    new TextDecoder().decode(output.stdout) +
-      new TextDecoder().decode(output.stderr),
+    output.status === 0,
+    output.stdout + output.stderr,
   )
 
   const server = yield* Effect.acquireRelease(
@@ -64,7 +63,7 @@ const builtSolidEffect = Effect.gen(function* () {
 it.effect(
   "proves effectAction cancellation, compensation, focus restoration, and accessibility",
   () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const { page, errors, url } = yield* builtSolidEffect
       yield* Effect.promise(async () => {
         await page.goto(url)
@@ -74,7 +73,7 @@ it.effect(
         const placeOrder = page.getByRole("button", { name: /Place order/ })
         await placeOrder.focus()
         await placeOrder.click()
-        await page.locator('li[aria-current="step"]', { hasText: "Charge card" })
+        await page.locator("li[aria-current=\"step\"]", { hasText: "Charge card" })
           .waitFor()
 
         const cancel = page.getByRole("button", { name: "Cancel checkout" })

@@ -8,8 +8,8 @@ import {
   purchaseReceipts,
   supplierAccounts,
 } from "../../../db/schema/procurement.ts"
-import { PartyService } from "../../party/mod.ts"
 import { requireExactMajorToMinor } from "../../../foundation/mod.ts"
+import { PartyService } from "../../party/mod.ts"
 import type {
   CreateSupplierAccountInput,
   GoodsReceipt,
@@ -150,8 +150,8 @@ export const sameReceiptLines = (
   )
   return orderedLeft.length === orderedRight.length && orderedLeft.every((line, index) => {
     const existing = orderedRight[index]!
-    return line.purchaseOrderLineId === existing.purchaseOrderLineId &&
-      line.quantity === existing.quantity
+    return line.purchaseOrderLineId === existing.purchaseOrderLineId
+      && line.quantity === existing.quantity
   })
 }
 

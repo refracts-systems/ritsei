@@ -1,7 +1,7 @@
 import { assert, it } from "@effect/vitest"
 
-import { ApiConflict, ApiForbidden, ApiNotFound, ApiServiceUnavailable } from "./api.ts"
 import { ReplicaConsistencyFailure } from "../../foundation/mod.ts"
+import { ApiConflict, ApiForbidden, ApiNotFound, ApiServiceUnavailable } from "./api.ts"
 import { toCoreApiError } from "./handlers.ts"
 
 it("maps closed-world core failures to stable HTTP errors", () => {

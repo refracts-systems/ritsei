@@ -3,6 +3,8 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 
 import { AuthorizationDenied, makeAuthorizationTestLayer } from "../../authorization/mod.ts"
+import { makeMessagingTestLayer } from "../../messaging/mod.ts"
+import { SalesService } from "../../sales/mod.ts"
 import {
   AccountingCapabilities,
   AccountingService,
@@ -10,8 +12,6 @@ import {
   makeAccountingTestLayer,
 } from "../mod.ts"
 import { hashFinancialStagingEvidence } from "../mod.ts"
-import { makeMessagingTestLayer } from "../../messaging/mod.ts"
-import { SalesService } from "../../sales/mod.ts"
 
 const principal = { userAccountId: "staging-operator", sessionId: "staging-session" }
 const tenantId = "00000000-0000-4000-8000-000000000001"
@@ -85,7 +85,7 @@ const deniedLayer = makeAccountingTestLayer().pipe(
 )
 
 it.effect("denies staging evidence lookup without its read capability", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const accounting = yield* AccountingService
     const denied = yield* Effect.flip(accounting.listFinancialStagingEvidence({
       principal,
@@ -97,7 +97,7 @@ it.effect("denies staging evidence lookup without its read capability", () =>
   }).pipe(Effect.provide(deniedLayer)))
 
 it.effect("records staging evidence through the authorized Accounting contract", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const accounting = yield* AccountingService
     yield* accounting.configureLegalEntity({
       principal,

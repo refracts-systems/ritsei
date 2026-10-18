@@ -1,6 +1,6 @@
+import { AxeBuilder } from "@axe-core/playwright"
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
-import { AxeBuilder } from "@axe-core/playwright"
 import { builtApp, connectToTenant } from "./browser.ts"
 
 const tenantId = "018f3f77-0c5a-7cc0-8b62-6a163d214124"
@@ -20,7 +20,7 @@ const accounts = [
 it.effect(
   "keeps the cartographic fallback semantic and keyboard accessible",
   () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const { page, url, errors } = yield* builtApp
       yield* Effect.promise(async () => {
         await page.route("**/api/user-accounts", (route) =>

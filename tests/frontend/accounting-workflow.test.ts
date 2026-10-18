@@ -30,7 +30,7 @@ const connectAndOpenAccounting = async (page: Page, url: string) => {
 it.effect(
   "connects Accounting configuration, account, and journal workflows through the backend surface",
   () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const { page, url, errors } = yield* builtApp
       let configurations: AccountingConfiguration[] = []
       let accounts: Account[] = []
@@ -72,8 +72,8 @@ it.effect(
             return fulfillJson(route, 200, journals)
           }
           if (
-            path === `/accounting/legal-entities/${legalEntityId}/configuration` &&
-            method === "POST"
+            path === `/accounting/legal-entities/${legalEntityId}/configuration`
+            && method === "POST"
           ) {
             configurations = [{
               tenantId,
@@ -207,8 +207,8 @@ it.effect(
         await periodDialog.getByRole("textbox", { name: "Legal entity ID", exact: true }).fill(
           legalEntityId,
         )
-        await periodDialog.locator('input[name="startsOn"]').fill("2026-01-01")
-        await periodDialog.locator('input[name="endsOn"]').fill("2026-12-31")
+        await periodDialog.locator("input[name=\"startsOn\"]").fill("2026-01-01")
+        await periodDialog.locator("input[name=\"endsOn\"]").fill("2026-12-31")
         await periodDialog.getByRole("button", { name: "Open period", exact: true }).click()
         await periodDialog.waitFor({ state: "hidden" })
         await page.getByText("2026-01-01", { exact: true }).waitFor()
@@ -243,8 +243,8 @@ it.effect(
 
         assert.deepEqual(
           requests.find((request) =>
-            request.path === `/accounting/legal-entities/${legalEntityId}/configuration` &&
-            request.method === "POST"
+            request.path === `/accounting/legal-entities/${legalEntityId}/configuration`
+            && request.method === "POST"
           )?.body,
           {
             baseCurrency: "USD",
@@ -328,7 +328,7 @@ it.effect(
 it.effect(
   "keeps Accounting authorization, malformed responses, conflicts, and unknown outcomes explicit",
   () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const { page, url, errors } = yield* builtApp
       const accounts: Account[] = [
         {
@@ -472,8 +472,8 @@ it.effect(
         await periodDialog.getByRole("textbox", { name: "Legal entity ID", exact: true }).fill(
           legalEntityId,
         )
-        await periodDialog.locator('input[name="startsOn"]').fill("2026-01-01")
-        await periodDialog.locator('input[name="endsOn"]').fill("2026-12-31")
+        await periodDialog.locator("input[name=\"startsOn\"]").fill("2026-01-01")
+        await periodDialog.locator("input[name=\"endsOn\"]").fill("2026-12-31")
         await periodDialog.getByRole("button", { name: "Open period", exact: true }).click()
         await periodDialog.getByRole("alert").filter({ hasText: "may have saved" }).waitFor()
         assert.isFalse(

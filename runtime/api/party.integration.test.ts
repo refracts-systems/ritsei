@@ -1,12 +1,12 @@
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import * as FileSystem from "effect/FileSystem"
-import * as Layer from "effect/Layer"
-import * as HttpClientRequest from "effect/http/HttpClientRequest"
-import * as Path from "effect/Path"
 import { Etag, HttpPlatform } from "effect/http"
 import * as HttpApiMiddleware from "effect/http-api/HttpApiMiddleware"
 import * as HttpApiTest from "effect/http-api/HttpApiTest"
+import * as HttpClientRequest from "effect/http/HttpClientRequest"
+import * as Layer from "effect/Layer"
+import * as Path from "effect/Path"
 
 import { makeAuthorizationTestLayer } from "../../modules/authorization/mod.ts"
 import { makePartyTestLayer, PartyCapabilities } from "../../modules/party/mod.ts"
@@ -40,7 +40,7 @@ const capabilities = [
 
 it.layer(TestHttpServices)("Party API", (it) => {
   it.effect("serves the complete active tenant administration surface", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const authorization = makeAuthorizationTestLayer(capabilities.map((capability) => ({
         userAccountId: principal.userAccountId,
         tenantId,

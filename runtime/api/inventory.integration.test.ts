@@ -1,17 +1,17 @@
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import * as FileSystem from "effect/FileSystem"
-import * as Layer from "effect/Layer"
-import * as HttpClientRequest from "effect/http/HttpClientRequest"
-import * as Path from "effect/Path"
 import { Etag, HttpPlatform } from "effect/http"
 import * as HttpApiMiddleware from "effect/http-api/HttpApiMiddleware"
 import * as HttpApiTest from "effect/http-api/HttpApiTest"
+import * as HttpClientRequest from "effect/http/HttpClientRequest"
+import * as Layer from "effect/Layer"
+import * as Path from "effect/Path"
 
-import { BearerAuth, CurrentPrincipal, RitseiApi } from "./api.ts"
-import { InventoryHandlers } from "./handlers.ts"
 import type { InventoryService as InventoryServiceContract } from "../../modules/inventory/mod.ts"
 import { InventoryService } from "../../modules/inventory/mod.ts"
+import { BearerAuth, CurrentPrincipal, RitseiApi } from "./api.ts"
+import { InventoryHandlers } from "./handlers.ts"
 
 const tenantId = "018f1000-0000-7000-8000-000000000001"
 const warehouseId = "018f1000-0000-7000-8000-000000000002"
@@ -101,7 +101,7 @@ const TestHttpServices = Layer.mergeAll(
 
 it.layer(TestHttpServices)("inventory API read projections", (it) => {
   it.effect("forwards tenant and bearer context to every inventory read", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const bearer = Layer.succeed(BearerAuth, {
         bearer: (effect) => Effect.provideService(effect, CurrentPrincipal, principal),
       })

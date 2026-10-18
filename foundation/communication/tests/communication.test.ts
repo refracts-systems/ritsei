@@ -51,7 +51,7 @@ const intent = {
 }
 
 it.effect("creates a versioned intent without coupling it to a provider", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const created = yield* makeCommunicationIntent(
       Object.fromEntries(Object.entries(intent).filter(([key]) => key !== "communicationId")),
     )
@@ -67,7 +67,7 @@ it.effect("creates a versioned intent without coupling it to a provider", () =>
   }))
 
 it.effect("keeps logical audience separate from resolved recipient snapshot", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const snapshot = yield* Schema.decodeUnknownEffect(RecipientSnapshot)({
       audience: intent.audience,
       to: [{ address: "finance@example.com", displayName: "Finance" }],
@@ -83,7 +83,7 @@ it.effect("keeps logical audience separate from resolved recipient snapshot", ()
   }))
 
 it.effect("rejects unsafe email links and malformed table rows", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const unsafe = yield* Effect.flip(
       Schema.decodeUnknownEffect(EmailMessage)({
         subject: "Purchase order",
@@ -104,7 +104,7 @@ it.effect("rejects unsafe email links and malformed table rows", () =>
   }))
 
 it.effect("keeps unknown provider outcomes on attempts while communication reconciles", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const communication = yield* Schema.decodeUnknownEffect(Communication)({
       communicationId,
       tenantId,
@@ -138,7 +138,7 @@ it.effect("keeps unknown provider outcomes on attempts while communication recon
   }))
 
 it.effect("binds an email artifact to an existing document artifact reference", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const context = yield* Schema.decodeUnknownEffect(CommunicationContext)({
       contextType: "purchase-order-approved-context",
       contextVersion: 1,

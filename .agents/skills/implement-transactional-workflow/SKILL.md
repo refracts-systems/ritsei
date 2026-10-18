@@ -64,10 +64,10 @@ Test success, rollback, constraint failure, duplicate/idempotent execution, and 
 # Deterministic Tools
 
 ```sh
-deno task check:affected
-deno task db:check
-deno task boundary:lint
-deno task check
+pnpm run check:affected
+pnpm run db:check
+pnpm run boundary:lint
+pnpm run check
 ```
 
 When `DATABASE_URL` is available, run the focused PostgreSQL invariant test and clean-database migration test.

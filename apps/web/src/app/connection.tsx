@@ -1,3 +1,4 @@
+import { useNavigate } from "@solidjs/router"
 import { createSignal, onSettled, Show, useContext } from "solid-js"
 import type { AuthConfiguration } from "../shared/contracts/generated/auth.ts"
 import { layout } from "../ui/foundations/layout.ts"
@@ -11,7 +12,6 @@ import {
   getAuthSession,
 } from "./auth-client.ts"
 import { SessionContext } from "./session.ts"
-import { useNavigate } from "@solidjs/router"
 
 export function Connection() {
   const session = useContext(SessionContext)

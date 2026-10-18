@@ -1,5 +1,5 @@
-import { assert, it } from "@effect/vitest"
 import { AxeBuilder } from "@axe-core/playwright"
+import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import type { Page, Route } from "playwright"
 import { builtApp, connectToTenant } from "./browser.ts"
@@ -30,7 +30,7 @@ const connect = (page: Page, url: string) =>
 it.effect(
   "creates, reads, and updates tenant-linked accounts",
   () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const { page, url, errors } = yield* builtApp
       let currentEmail = originalEmail
       const currentStatus: "active" | "disabled" = "active"
@@ -176,7 +176,7 @@ it.effect(
 it.effect(
   "does not convert authorization, malformed responses, or unknown outcomes into success",
   () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const { page, url, errors } = yield* builtApp
       let mode:
         | "forbidden-list"

@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/solid-query"
+import type { RequestFailure } from "../../shared/api.ts"
 import type {
   AdjustStockInput,
   CreateItemInput,
@@ -20,9 +21,8 @@ import type {
   StockTransfer,
   Warehouse,
 } from "../../shared/contracts/generated/inventory.ts"
-import type { RequestFailure } from "../../shared/api.ts"
-import { createServerQuery, serverQueryKey } from "../../shared/server-query.ts"
 import { type ApiScope, runRequest } from "../../shared/runtime.ts"
+import { createServerQuery, serverQueryKey } from "../../shared/server-query.ts"
 import {
   adjustStock,
   completeTransfer,

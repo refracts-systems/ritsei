@@ -1,21 +1,23 @@
 import "../../tooling/load-env.ts"
-import * as DenoHttpServer from "@effect/platform-deno/DenoHttpServer"
-import * as DenoRuntime from "@effect/platform-deno/DenoRuntime"
+import * as NodeHttpServer from "@effect/platform-node/NodeHttpServer"
+import * as NodeRuntime from "@effect/platform-node/NodeRuntime"
 import * as Effect from "effect/Effect"
-import * as Layer from "effect/Layer"
-import * as HttpRouter from "effect/http/HttpRouter"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
 import * as HttpApiScalar from "effect/http-api/HttpApiScalar"
+import * as HttpRouter from "effect/http/HttpRouter"
+import * as Layer from "effect/Layer"
 import postgres, { type Sql } from "postgres"
 
 import type { PostgresClient } from "../../foundation/mod.ts"
 import { validatePostgresVersion } from "../../platform/mod.ts"
-import { RitseiApi } from "./api.ts"
-import { ApiHandlers, BearerAuthLive } from "./handlers.ts"
-import { CurrentRuntimeConfiguration } from "./api.ts"
-import { requestBodyLimitLayer } from "./request-limits.ts"
-import { serviceLayers } from "../layers.ts"
+import { isMain } from "../../tooling/entrypoint.ts"
+import { createNodeServer } from "../adapters/node-server.ts"
 import { readRuntimeConfiguration, type RitseiRuntimeConfiguration } from "../config.ts"
+import { serviceLayers } from "../layers.ts"
+import { RitseiApi } from "./api.ts"
+import { CurrentRuntimeConfiguration } from "./api.ts"
+import { ApiHandlers, BearerAuthLive } from "./handlers.ts"
+import { requestBodyLimitLayer } from "./request-limits.ts"
 
 export { serviceLayers } from "../layers.ts"
 
@@ -43,14 +45,14 @@ export const makeApiLayer = (
 
   return Layer.mergeAll(apiLayer, requestBodyLimitLayer).pipe(
     HttpRouter.serve,
-    Layer.provide(DenoHttpServer.layer({ port })),
+    Layer.provide(NodeHttpServer.layer(createNodeServer, { port })),
     Layer.provide(services),
   )
 }
 
 export const startApi = (url: string, port = 8000) =>
   Effect.scoped(
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const configuration = yield* readRuntimeConfiguration()
       const client = postgres(url)
       yield* Effect.addFinalizer(() => Effect.promise(() => client.end()))
@@ -66,12 +68,12 @@ export const startApi = (url: string, port = 8000) =>
     }),
   )
 
-if (import.meta.main) {
-  const url = Deno.env.get("DATABASE_URL")
+if (isMain(import.meta.url)) {
+  const url = process.env["DATABASE_URL"]
   if (url === undefined || url.trim() === "") {
     console.error("DATABASE_URL is required")
-    Deno.exit(1)
+    process.exit(1)
   }
-  const port = Number.parseInt(Deno.env.get("PORT") ?? "8000", 10)
-  startApi(url, port).pipe(DenoRuntime.runMain)
+  const port = Number.parseInt(process.env["PORT"] ?? "8000", 10)
+  startApi(url, port).pipe(NodeRuntime.runMain)
 }

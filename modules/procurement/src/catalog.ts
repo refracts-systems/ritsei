@@ -1,14 +1,14 @@
+import { DatabaseFailure } from "../../../foundation/mod.ts"
 import { AuthorizationDenied } from "../../authorization/mod.ts"
 import { defineActionCatalogEntry } from "../../catalog/mod.ts"
-import { DatabaseFailure } from "../../../foundation/mod.ts"
 import { EventIdempotencyConflict } from "../../messaging/mod.ts"
+import { ProcurementCapabilities } from "./capabilities.ts"
 import { ConfirmPurchaseOrderInput, PurchaseOrder } from "./contract.ts"
 import {
   PurchaseOrderConfirmationIdempotencyConflict,
   PurchaseOrderInvalidState,
   PurchaseOrderNotFound,
 } from "./errors.ts"
-import { ProcurementCapabilities } from "./capabilities.ts"
 import { ProcurementPurchaseOrderConfirmedEvent } from "./events.ts"
 
 export const ProcurementConfirmPurchaseOrderAction = defineActionCatalogEntry({

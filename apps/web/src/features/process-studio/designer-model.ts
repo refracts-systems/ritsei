@@ -260,8 +260,8 @@ const capabilityIssue = (node: DesignerNode): DesignerValidationIssue | undefine
     }
   }
   if (
-    node.capability === undefined || !/\S/.test(node.capability.id) ||
-    !Number.isSafeInteger(node.capability.version) || node.capability.version < 1
+    node.capability === undefined || !/\S/.test(node.capability.id)
+    || !Number.isSafeInteger(node.capability.version) || node.capability.version < 1
   ) {
     return {
       code: "missing_capability",
@@ -280,8 +280,8 @@ const mappingIssue = (
   node: DesignerNode,
   mapping: TypedMapping,
 ): DesignerValidationIssue | undefined =>
-  !/\S/.test(mapping.sourcePath) || !/\S/.test(mapping.targetPath) ||
-    mapping.sourceType !== mapping.targetType
+  !/\S/.test(mapping.sourcePath) || !/\S/.test(mapping.targetPath)
+    || mapping.sourceType !== mapping.targetType
     ? {
       code: "invalid_mapping",
       nodeId: node.id,

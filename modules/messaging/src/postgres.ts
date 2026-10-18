@@ -29,7 +29,7 @@ const decodePersistedEvent = (row: Parameters<typeof toEvent>[0], operation: str
   )
 
 export const makePostgresMessagingService = Effect.fn("Messaging.makePostgresService")(
-  function* () {
+  function*() {
     const database = yield* Database
 
     const findReceipt = (input: ConsumeOnceInput) =>
@@ -63,11 +63,11 @@ export const makePostgresMessagingService = Effect.fn("Messaging.makePostgresSer
         cause: new Error("consumer receipt event identity does not match source"),
       })
 
-    const append = Effect.fn("MessagingService.append")(function* (input: unknown) {
+    const append = Effect.fn("MessagingService.append")(function*(input: unknown) {
       const decoded = yield* Schema.decodeUnknownEffect(AppendEventInput)(input)
       const occurredAt = new Date(decoded.occurredAt)
       return yield* database.withTransaction(
-        Effect.gen(function* () {
+        Effect.gen(function*() {
           const inserted = yield* database.query(
             (db) =>
               db.insert(eventOutbox).values({
@@ -117,7 +117,7 @@ export const makePostgresMessagingService = Effect.fn("Messaging.makePostgresSer
       )
     })
 
-    const getEvent = Effect.fn("MessagingService.getEvent")(function* (input: unknown) {
+    const getEvent = Effect.fn("MessagingService.getEvent")(function*(input: unknown) {
       const decoded = yield* Schema.decodeUnknownEffect(GetEventInput)(input)
       const rows = yield* database.query(
         (db) =>
@@ -133,10 +133,10 @@ export const makePostgresMessagingService = Effect.fn("Messaging.makePostgresSer
     })
 
     const consumeOnce = <A, E, R>(input: unknown, effect: Effect.Effect<A, E, R>) =>
-      Effect.fn("MessagingService.consumeOnce")(function* () {
+      Effect.fn("MessagingService.consumeOnce")(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(ConsumeOnceInput)(input)
         const result = yield* database.withTransaction(
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const source = yield* findEventIdentity(decoded)
             if (source === undefined) {
               return yield* Effect.fail(

@@ -1,0 +1,22 @@
+{
+  "plugins": [
+    "https://plugins.dprint.dev/typescript-0.95.13.wasm"
+  ],
+  "typescript": {
+    "indentWidth": 2,
+    "useTabs": false,
+    "lineWidth": 100,
+    "quoteStyle": "alwaysDouble",
+    "semiColons": "asi"
+  },
+  "excludes": [
+    "vendor/**",
+    "**/node_modules/**",
+    ".auto/**",
+    "**/dist/**",
+    "apps/web/src/ui/generated/**",
+    "apps/web/src/shared/contracts/generated/**",
+    "apps/web/dist/**",
+    "db/migrations/**/snapshot.json"
+  ]
+}

@@ -15,8 +15,8 @@ import { EntityWorkspace } from "../../ui/patterns/entity-workspace.tsx"
 import { Badge } from "../../ui/primitives/badge.tsx"
 import { Button } from "../../ui/primitives/button.tsx"
 import { createDialogOpenChange, Dialog } from "../../ui/primitives/dialog.tsx"
-import { Form } from "../../ui/primitives/form.tsx"
 import { FormField } from "../../ui/primitives/form-field.tsx"
+import { Form } from "../../ui/primitives/form.tsx"
 import { Input } from "../../ui/primitives/input.tsx"
 import { Select } from "../../ui/primitives/select.tsx"
 import { surface } from "../../ui/recipes/surface.ts"
@@ -183,8 +183,8 @@ function CreateQuotationDialog(props: {
               const customerId = requiredText(value.customerId)
               const total = requiredText(value.total)
               if (
-                customerId === null || !uuidPattern.test(customerId) || total === null ||
-                !moneyPattern.test(total)
+                customerId === null || !uuidPattern.test(customerId) || total === null
+                || !moneyPattern.test(total)
               ) {
                 setInvalid(true)
                 return
@@ -291,11 +291,11 @@ function CreateOrderDialog(props: {
               const itemId = requiredText(form.get("itemId"))
               const quantity = requiredText(form.get("quantity"))
               const unitPrice = requiredText(form.get("unitPrice"))
-              const valid = customerId !== null && uuidPattern.test(customerId) &&
-                (quotationId === null || uuidPattern.test(quotationId)) &&
-                itemId !== null && uuidPattern.test(itemId) &&
-                quantity !== null && quantityPattern.test(quantity) &&
-                unitPrice !== null && moneyPattern.test(unitPrice)
+              const valid = customerId !== null && uuidPattern.test(customerId)
+                && (quotationId === null || uuidPattern.test(quotationId))
+                && itemId !== null && uuidPattern.test(itemId)
+                && quantity !== null && quantityPattern.test(quantity)
+                && unitPrice !== null && moneyPattern.test(unitPrice)
               if (!valid) {
                 setInvalid(true)
                 return

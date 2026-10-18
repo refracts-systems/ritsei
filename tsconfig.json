@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "jsxImportSource": "@solidjs/web",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "types": ["node"]
+  },
+  "include": [
+    "*.config.ts",
+    "apps/web/*.config.ts",
+    "apps/web/src/features/process-studio/**/*",
+    "foundation/**/*.ts",
+    "modules/**/*.ts",
+    "platform/**/*.ts",
+    "runtime/**/*.ts",
+    "tooling/**/*.ts",
+    "tests/**/*.ts",
+    "db/**/*.ts"
+  ],
+  "exclude": ["vendor/**", "**/node_modules/**", ".auto/**"]
+}

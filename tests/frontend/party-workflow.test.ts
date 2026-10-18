@@ -44,7 +44,7 @@ const connectAndOpenParties = async (page: Page, url: string) => {
 it.effect(
   "creates and administers Party master, legal, relationship, and representation facts",
   () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const { page, url, errors } = yield* builtApp
       const entries: Array<{
         party: typeof northwind
@@ -95,8 +95,8 @@ it.effect(
               route,
               200,
               entries.filter((entry) =>
-                (search === undefined || entry.party.name.toLocaleLowerCase().includes(search)) &&
-                (kind === null || entry.party.kind === kind)
+                (search === undefined || entry.party.name.toLocaleLowerCase().includes(search))
+                && (kind === null || entry.party.kind === kind)
               ),
             )
           }
@@ -326,7 +326,7 @@ it.effect(
 it.effect(
   "keeps Party authorization, malformed data, and unknown command outcomes visible",
   () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const { page, url, errors } = yield* builtApp
       let mode: "forbidden" | "malformed" | "loaded" | "unknown-create" = "forbidden"
 

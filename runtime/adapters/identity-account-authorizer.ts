@@ -10,7 +10,7 @@ import {
 
 export const IdentityAccountAuthorizerLive = Layer.effect(
   IdentityAccountAuthorizer,
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const authorization = yield* AuthorizationService
     return {
       authorize: (input: {

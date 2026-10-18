@@ -1,5 +1,7 @@
 import { build } from "vite"
 
+import { isMain } from "../entrypoint.ts"
+
 // A real bundler probe: package metadata alone does not prove Solid 2 compatibility.
 const probeSolidPackage = async (entry: string) => {
   try {
@@ -69,9 +71,9 @@ export const probeBoneyardCoreCompatibility = async () => {
   }
 }
 
-if (import.meta.main) {
+if (isMain(import.meta.url)) {
   const result = await probeKobalteCompatibility()
   console.log(JSON.stringify(result, null, 2))
   // A successful bundle still needs the dialog's browser/accessibility evidence.
-  if (result.build === "blocked") Deno.exit(1)
+  if (result.build === "blocked") process.exit(1)
 }

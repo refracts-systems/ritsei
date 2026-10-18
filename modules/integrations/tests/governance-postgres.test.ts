@@ -3,15 +3,15 @@ import * as Effect from "effect/Effect"
 
 import { Database } from "../../../foundation/mod.ts"
 import { makePostgresDatabase, runMigrations } from "../../../platform/mod.ts"
+import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
 import {
   ExternalConnectorNotReviewed,
   ExternalConnectorRetired,
   ExternalIdempotencyConflict,
   makePostgresExternalGovernanceStore,
 } from "../mod.ts"
-import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
 
-const databaseUrl = Deno.env.get("DATABASE_URL")
+const databaseUrl = process.env["DATABASE_URL"]
 const occurredAt = "2026-08-30T00:00:00.000Z"
 const retentionUntil = "2026-09-30T00:00:00.000Z"
 
@@ -47,7 +47,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "proves durable unreviewed operation rejection, connector version, retention, and audit",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const [tenant] = yield* Effect.promise(() =>
           client<{ id: string }[]>`

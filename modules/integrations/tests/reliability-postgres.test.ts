@@ -3,15 +3,15 @@ import * as Effect from "effect/Effect"
 
 import { Database } from "../../../foundation/mod.ts"
 import { makePostgresDatabase, runMigrations } from "../../../platform/mod.ts"
+import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
 import {
   ExternalCompatibilityMismatch,
   ExternalIdempotencyConflict,
   ExternalPayloadLimitExceeded,
   makePostgresExternalReliabilityStore,
 } from "../mod.ts"
-import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
 
-const databaseUrl = Deno.env.get("DATABASE_URL")
+const databaseUrl = process.env["DATABASE_URL"]
 const sentAtMs = Date.parse("2026-08-30T00:00:00.000Z")
 
 const makeInput = (tenantId: string, overrides: Record<string, unknown> = {}) => ({
@@ -43,7 +43,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "proves durable replay protection, redaction, compatibility, payload limit, dead letter, and health metric",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const [tenant] = yield* Effect.promise(() =>
           client<{ id: string }[]>`

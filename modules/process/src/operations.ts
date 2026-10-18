@@ -68,7 +68,8 @@ export class ProcessOperatorActionUnavailable
       instanceId: Uuid,
       action: NonEmptyString,
     },
-  ) {}
+  )
+{}
 
 // manual recovery is required for unknown external outcomes and compensation failures.
 // compensation is an explicit operator action, never an implicit database rollback.
@@ -114,9 +115,9 @@ export const makeProcessOperatorService = (): ProcessOperatorService => ({
         ? "retry"
         : compensation === "not_started" && step?.status === "command_succeeded"
         ? "compensate"
-        : checkpoint.failureKind === "unknown_external_outcome" ||
-            checkpoint.failureKind === "compensation_failure" ||
-            checkpoint.status === "manual_recovery"
+        : checkpoint.failureKind === "unknown_external_outcome"
+            || checkpoint.failureKind === "compensation_failure"
+            || checkpoint.status === "manual_recovery"
         ? "manual_recovery"
         : "none",
       correlationId: checkpoint.correlationId,

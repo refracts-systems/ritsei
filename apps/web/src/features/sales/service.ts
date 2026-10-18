@@ -1,6 +1,19 @@
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import {
+  BrowserConnection,
+  decodeInput,
+  decodeResponse,
+  definedFields,
+  mutationRequest,
+  querySuffix,
+  RequestFailure,
+  requestJson,
+  responseListMatches,
+  responseMatches,
+  routeWithId,
+} from "../../shared/api.ts"
+import {
   ConfirmOrderInput,
   CreateCustomerInput,
   CreateOrderInput,
@@ -16,19 +29,6 @@ import {
   SalesOrder,
   salesRoutes,
 } from "../../shared/contracts/generated/sales.ts"
-import {
-  BrowserConnection,
-  decodeInput,
-  decodeResponse,
-  definedFields,
-  mutationRequest,
-  querySuffix,
-  RequestFailure,
-  requestJson,
-  responseListMatches,
-  responseMatches,
-  routeWithId,
-} from "../../shared/api.ts"
 
 const Uuid = Schema.String.check(Schema.isUUID())
 const CustomerList = Schema.Array(Customer).check(Schema.isMaxLength(200))
@@ -36,7 +36,7 @@ const QuotationList = Schema.Array(Quotation).check(Schema.isMaxLength(200))
 const SalesOrderList = Schema.Array(SalesOrder).check(Schema.isMaxLength(200))
 
 export const listCustomers = Effect.fn("Frontend.Sales.listCustomers")(
-  function* (input: unknown = {}) {
+  function*(input: unknown = {}) {
     const decoded = yield* decodeInput(ListCustomersInput, input)
     const body = yield* requestJson(`${salesRoutes.listCustomers}${querySuffix(decoded)}`)
     const customers = yield* decodeResponse(CustomerList, body, "invalid-response")
@@ -48,7 +48,7 @@ export const listCustomers = Effect.fn("Frontend.Sales.listCustomers")(
   },
 )
 
-export const getCustomer = Effect.fn("Frontend.Sales.getCustomer")(function* (id: unknown) {
+export const getCustomer = Effect.fn("Frontend.Sales.getCustomer")(function*(id: unknown) {
   const decoded = yield* decodeInput(GetCustomerInput, { customerId: id })
   const body = yield* requestJson(routeWithId(salesRoutes.getCustomer, decoded.customerId))
   const customer = yield* decodeResponse(Customer, body, "invalid-response")
@@ -65,7 +65,7 @@ export const getCustomer = Effect.fn("Frontend.Sales.getCustomer")(function* (id
 })
 
 export const createCustomer = Effect.fn("Frontend.Sales.createCustomer")(
-  function* (input: unknown) {
+  function*(input: unknown) {
     const decoded = yield* decodeInput(CreateCustomerInput, input)
     const connection = yield* BrowserConnection
     const body = yield* mutationRequest(salesRoutes.createCustomer, decoded)
@@ -84,7 +84,7 @@ export const createCustomer = Effect.fn("Frontend.Sales.createCustomer")(
 )
 
 export const listQuotations = Effect.fn("Frontend.Sales.listQuotations")(
-  function* (input: unknown = {}) {
+  function*(input: unknown = {}) {
     const decoded = yield* decodeInput(ListQuotationsInput, input)
     const body = yield* requestJson(`${salesRoutes.listQuotations}${querySuffix(decoded)}`)
     const quotations = yield* decodeResponse(QuotationList, body, "invalid-response")
@@ -101,7 +101,7 @@ export const listQuotations = Effect.fn("Frontend.Sales.listQuotations")(
   },
 )
 
-export const getQuotation = Effect.fn("Frontend.Sales.getQuotation")(function* (id: unknown) {
+export const getQuotation = Effect.fn("Frontend.Sales.getQuotation")(function*(id: unknown) {
   const decoded = yield* decodeInput(GetQuotationInput, { quotationId: id })
   const body = yield* requestJson(routeWithId(salesRoutes.getQuotation, decoded.quotationId))
   const quotation = yield* decodeResponse(Quotation, body, "invalid-response")
@@ -118,7 +118,7 @@ export const getQuotation = Effect.fn("Frontend.Sales.getQuotation")(function* (
 })
 
 export const createQuotation = Effect.fn("Frontend.Sales.createQuotation")(
-  function* (input: unknown) {
+  function*(input: unknown) {
     const decoded = yield* decodeInput(CreateQuotationInput, input)
     const connection = yield* BrowserConnection
     const body = yield* mutationRequest(salesRoutes.createQuotation, decoded)
@@ -138,7 +138,7 @@ export const createQuotation = Effect.fn("Frontend.Sales.createQuotation")(
 )
 
 export const listOrders = Effect.fn("Frontend.Sales.listOrders")(
-  function* (input: unknown = {}) {
+  function*(input: unknown = {}) {
     const decoded = yield* decodeInput(ListOrdersInput, input)
     const body = yield* requestJson(`${salesRoutes.listOrders}${querySuffix(decoded)}`)
     const orders = yield* decodeResponse(SalesOrderList, body, "invalid-response")
@@ -155,7 +155,7 @@ export const listOrders = Effect.fn("Frontend.Sales.listOrders")(
   },
 )
 
-export const getOrder = Effect.fn("Frontend.Sales.getOrder")(function* (id: unknown) {
+export const getOrder = Effect.fn("Frontend.Sales.getOrder")(function*(id: unknown) {
   const decoded = yield* decodeInput(GetOrderInput, { orderId: id })
   const body = yield* requestJson(routeWithId(salesRoutes.getOrder, decoded.orderId))
   const order = yield* decodeResponse(SalesOrder, body, "invalid-response")
@@ -171,7 +171,7 @@ export const getOrder = Effect.fn("Frontend.Sales.getOrder")(function* (id: unkn
   return order
 })
 
-export const createOrder = Effect.fn("Frontend.Sales.createOrder")(function* (input: unknown) {
+export const createOrder = Effect.fn("Frontend.Sales.createOrder")(function*(input: unknown) {
   const decoded = yield* decodeInput(CreateOrderInput, input)
   const connection = yield* BrowserConnection
   const body = yield* mutationRequest(salesRoutes.createOrder, decoded)
@@ -192,7 +192,7 @@ export const createOrder = Effect.fn("Frontend.Sales.createOrder")(function* (in
 // Fallow: confirm and cancel are paired lifecycle adapters with the same verified mutation shape.
 // fallow-ignore-next-line code-duplication
 export const confirmOrder = Effect.fn("Frontend.Sales.confirmOrder")(
-  function* (id: unknown, input: unknown) {
+  function*(id: unknown, input: unknown) {
     const decodedId = yield* decodeInput(Uuid, id)
     const decoded = yield* decodeInput(ConfirmOrderInput, input)
     const connection = yield* BrowserConnection
@@ -216,7 +216,7 @@ export const confirmOrder = Effect.fn("Frontend.Sales.confirmOrder")(
 
 // Fallow: confirm and cancel are paired lifecycle adapters with the same verified mutation shape.
 // fallow-ignore-next-line code-duplication
-export const cancelOrder = Effect.fn("Frontend.Sales.cancelOrder")(function* (id: unknown) {
+export const cancelOrder = Effect.fn("Frontend.Sales.cancelOrder")(function*(id: unknown) {
   const decodedId = yield* decodeInput(Uuid, id)
   const connection = yield* BrowserConnection
   const body = yield* mutationRequest(routeWithId(salesRoutes.cancelOrder, decodedId))

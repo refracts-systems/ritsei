@@ -74,32 +74,32 @@ Customization may extend behavior, but it must not invalidate business truth:
 
 ## Developer setup
 
-Install dependencies through Deno:
+Requires Node.js 24.x LTS and pnpm 12.14.0. Install dependencies with pnpm:
 
 ```sh
-deno install
+pnpm install
 ```
 
 Run the primary validation workflow:
 
 ```sh
-deno task check
-DATABASE_URL=postgres://... deno task db:check
-deno task db:migrate
-deno task check:affected
-deno task boundary:test
-deno task boundary:lint
-deno task fallow:audit
+pnpm run check
+DATABASE_URL=postgres://... pnpm run db:check
+pnpm run db:migrate
+pnpm run check:affected
+pnpm run boundary:test
+pnpm run boundary:lint
+pnpm run fallow:audit
 ```
 
-`deno task check:affected` runs only checks and tests affected by the current
-worktree diff. Use `deno task test` for the full suite in CI or before release.
+`pnpm run check:affected` runs only checks and tests affected by the current
+worktree diff. Use `pnpm run test` for the full suite in CI or before release.
 
 Fallow supplies generic dead-code, duplication, health, and boundary analysis:
-use `deno task fallow` for the full scan, focused `deno task fallow:*` tasks for
-review, and `deno task fallow:audit` for the baseline-backed changed-set gate.
+use `pnpm run fallow` for the full scan, focused `pnpm run fallow:*` tasks for
+review, and `pnpm run fallow:audit` for the baseline-backed changed-set gate.
 
-`deno task db:generate`, `deno task db:check`, and `deno task db:migrate` use the
+`pnpm run db:generate`, `pnpm run db:check`, and `pnpm run db:migrate` use the
 pinned Drizzle migration workflow and require `DATABASE_URL`, either directly
 or through `.env` / `.env.local`. `db:generate` creates migration files;
 `db:migrate` applies them.

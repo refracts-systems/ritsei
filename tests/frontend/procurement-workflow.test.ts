@@ -47,7 +47,7 @@ const connectAndOpenProcurement = async (page: Page, url: string) => {
 it.effect(
   "administers supplier accounts and runs the purchase-order lifecycle",
   () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const { page, url, errors } = yield* builtApp
       const accounts = [supplierAccount]
       let order: PurchaseOrder = draftOrder
@@ -80,8 +80,8 @@ it.effect(
             const status = requestUrl.searchParams.get("status")
             const supplier = requestUrl.searchParams.get("supplierAccountId")
             const matches = [order].filter((candidate) =>
-              (status === null || candidate.status === status) &&
-              (supplier === null || candidate.supplierAccountId === supplier)
+              (status === null || candidate.status === status)
+              && (supplier === null || candidate.supplierAccountId === supplier)
             )
             return fulfillJson(route, 200, matches)
           }

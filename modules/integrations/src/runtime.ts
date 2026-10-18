@@ -140,9 +140,9 @@ export const makeExternalConnectorRuntime = (options: {
       Effect.flatMap((result) => {
         if (Result.isSuccess(result)) return Effect.succeed(result.success)
         if (
-          result.failure instanceof ExternalProviderFailure &&
-          result.failure.retryable &&
-          attempt < input.action.retryPolicy.maxAttempts
+          result.failure instanceof ExternalProviderFailure
+          && result.failure.retryable
+          && attempt < input.action.retryPolicy.maxAttempts
         ) {
           return invokeWithBoundedRetry(input, attempt + 1)
         }
@@ -151,7 +151,7 @@ export const makeExternalConnectorRuntime = (options: {
     )
 
   const invokeAction: ExternalConnectorRuntime["invokeAction"] = (input) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const identifier = catalogIdentifier(input.action, "external-action")
       if (!isValidActionInvocation(input)) {
         return yield* Effect.fail(
@@ -186,8 +186,8 @@ export const makeExternalConnectorRuntime = (options: {
       const existing = yield* store.getInvocation(input.tenantId, input.idempotencyKey)
       if (existing !== undefined) {
         if (
-          existing.actionId !== input.action.id ||
-          existing.actionVersion !== input.action.version
+          existing.actionId !== input.action.id
+          || existing.actionVersion !== input.action.version
         ) {
           return yield* Effect.fail(
             new ExternalIdempotencyConflict({
@@ -248,7 +248,7 @@ export const makeExternalConnectorRuntime = (options: {
   ) => store.getEvent(tenantId, source, providerEventId)
 
   const ingestEvent: ExternalConnectorRuntime["ingestEvent"] = (input) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const identifier = catalogIdentifier(input.event, "external-event")
       if (!isValidEventRegistration(input) || input.event.stability !== "PUBLIC") {
         return yield* Effect.fail(

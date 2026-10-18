@@ -1,9 +1,9 @@
-import { createSignal, onSettled, Show, useContext } from "solid-js"
 import { useNavigate } from "@solidjs/router"
-import { finishOidcLogin, getAuthConfiguration, getAuthSession } from "./auth-client.ts"
-import { SessionContext } from "./session.ts"
+import { createSignal, onSettled, Show, useContext } from "solid-js"
 import { layout } from "../ui/foundations/layout.ts"
 import { surface } from "../ui/recipes/surface.ts"
+import { finishOidcLogin, getAuthConfiguration, getAuthSession } from "./auth-client.ts"
+import { SessionContext } from "./session.ts"
 
 export function AuthCallback() {
   const session = useContext(SessionContext)

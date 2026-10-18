@@ -4,6 +4,14 @@ import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
 
 import {
+  Database,
+  DatabaseFailure,
+  type DatabaseService,
+  type DrizzleDatabase,
+  type DrizzleTransaction,
+} from "../../../foundation/mod.ts"
+import type { EventEnvelopeShape } from "../../messaging/mod.ts"
+import {
   CreateUserAccountForTenantInput,
   ExternalSubjectAlreadyBound,
   ExternalSubjectNotFound,
@@ -20,16 +28,8 @@ import {
   UserAccountNotFound,
   UserAccountService,
 } from "../mod.ts"
-import type { EventEnvelopeShape } from "../../messaging/mod.ts"
 import { makeUserAccountMemoryStore } from "../src/memory.ts"
 import { makeUserAccountServiceFromStore } from "../src/service.ts"
-import {
-  Database,
-  DatabaseFailure,
-  type DatabaseService,
-  type DrizzleDatabase,
-  type DrizzleTransaction,
-} from "../../../foundation/mod.ts"
 
 const identityTenantId = "00000000-0000-4000-8000-000000000001"
 const identityDeniedTenantId = "00000000-0000-4000-8000-000000000002"
@@ -40,7 +40,7 @@ const withUserAccount = <A, E>(program: Effect.Effect<A, E, UserAccountService>)
 
 describe("user account contract", () => {
   it.effect("authorizes tenant account creation and publishes its owner event", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const published: EventEnvelopeShape[] = []
       const service = yield* Effect.provide(
         makeUserAccountServiceFromStore(Effect.succeed(makeUserAccountMemoryStore())),
@@ -99,7 +99,7 @@ describe("user account contract", () => {
 
   it.effect("creates a normalized user account", () =>
     withUserAccount(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const userAccount = yield* UserAccountService.use((service) =>
           service.create({ email: "  USER@Example.COM " })
         )
@@ -124,7 +124,7 @@ describe("user account contract", () => {
 
   it.effect("binds and resolves an issuer-scoped external subject", () =>
     withUserAccount(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const service = yield* UserAccountService
         const account = yield* service.create({ email: "external@example.com" })
         const subject = { issuer: "https://issuer.example.test", subject: "subject-1" }
@@ -151,7 +151,7 @@ describe("user account contract", () => {
 
   it.effect("rejects duplicate email", () =>
     withUserAccount(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const create = UserAccountService.use((service) =>
           service.create({ email: "duplicate@example.com" })
         )
@@ -165,7 +165,7 @@ describe("user account contract", () => {
 
   it.effect("lists, updates, and removes user accounts", () =>
     withUserAccount(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const service = yield* UserAccountService
         const created = yield* service.create({ email: "before@example.com" })
         assert.strictEqual((yield* service.getById(created.id)).id, created.id)
@@ -181,7 +181,7 @@ describe("user account contract", () => {
 
   it.effect("rejects duplicate and missing updates", () =>
     withUserAccount(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const service = yield* UserAccountService
         const invalidId = yield* Effect.flip(
           Schema.decodeUnknownEffect(UpdateUserAccountInput)({
@@ -228,7 +228,7 @@ describe("user account contract", () => {
     }
 
     return Effect.provide(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const service = yield* makeUserAccountService
         assert.instanceOf(
           yield* Effect.flip(service.create({ email: "failure@example.com" })),
@@ -248,7 +248,7 @@ describe("user account contract", () => {
 
   it.effect("disables and enables authentication state", () =>
     withUserAccount(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const service = yield* UserAccountService
         const created = yield* service.create({ email: "status@example.com" })
         assert.strictEqual(
@@ -271,7 +271,7 @@ describe("user account contract", () => {
 
   it.effect("reads multiple accounts and rejects missing lifecycle records", () =>
     withUserAccount(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const service = yield* UserAccountService
         const created = yield* service.create({ email: "many@example.com" })
         assert.deepStrictEqual(yield* service.getByIds([]), [])
@@ -296,7 +296,7 @@ describe("user account contract", () => {
 
   it.effect("rejects invalid input", () =>
     withUserAccount(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const error = yield* Effect.flip(
           UserAccountService.use((service) => service.create({ email: 42 })),
         )

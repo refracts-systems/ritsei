@@ -19,8 +19,8 @@ import {
 } from "drizzle-orm/pg-core"
 
 import { tenants } from "./auth.ts"
-import { legalEntities } from "./party.ts"
 import { createdAt, id, money, updatedAt, uuidv7 } from "./common.ts"
+import { legalEntities } from "./party.ts"
 
 export const accountingSchema = pgSchema("accounting")
 export const accountType = accountingSchema.enum(

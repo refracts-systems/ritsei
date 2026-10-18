@@ -2,10 +2,10 @@ import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 
-import { Principal } from "../../auth/mod.ts"
-import { Database, type DatabaseService } from "../../../foundation/mod.ts"
-import { tenantMemberships } from "../../../db/schema/authorization.ts"
 import { and, eq } from "drizzle-orm"
+import { tenantMemberships } from "../../../db/schema/authorization.ts"
+import { Database, type DatabaseService } from "../../../foundation/mod.ts"
+import { Principal } from "../../auth/mod.ts"
 
 export const RelationshipInput = Schema.Struct({
   principal: Principal,
@@ -83,7 +83,7 @@ export const makeMemoryRelationshipEngine = (
 ): RelationshipEngine => {
   const allowed = new Set(allowedRelationships.map((input) => relationshipKey(input)))
   return {
-    evaluate: Effect.fn("RelationshipEngine.evaluate")(function* (input: unknown) {
+    evaluate: Effect.fn("RelationshipEngine.evaluate")(function*(input: unknown) {
       const decoded = yield* Schema.decodeUnknownEffect(RelationshipInput)(input)
       if (defaultResult === "stale" || defaultResult === "unavailable") {
         return unavailable(decoded, defaultResult)
@@ -105,7 +105,7 @@ export const makeMemoryRelationshipEngine = (
 }
 
 export const makePostgresRelationshipEngine = (database: DatabaseService): RelationshipEngine => ({
-  evaluate: Effect.fn("RelationshipEngine.evaluate")(function* (input: unknown) {
+  evaluate: Effect.fn("RelationshipEngine.evaluate")(function*(input: unknown) {
     const decoded = yield* Schema.decodeUnknownEffect(RelationshipInput)(input)
     if (decoded.resourceType !== "tenant" || decoded.relationship !== "member") {
       return unknown(decoded)
@@ -138,6 +138,6 @@ export const makePostgresRelationshipEngine = (database: DatabaseService): Relat
 const relationshipKey = (input: RelationshipInput) =>
   `${input.principal.userAccountId}:${input.tenantId}:${input.resourceType}:${input.resourceId}:${input.relationship}`
 
-export const makeRelationshipEngine = Effect.gen(function* () {
+export const makeRelationshipEngine = Effect.gen(function*() {
   return makePostgresRelationshipEngine(yield* Database)
 })

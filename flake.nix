@@ -27,7 +27,6 @@
         {
           default = pkgs.mkShell {
             packages = with pkgs; [
-              deno
               nodejs_24
               pnpm_12
               ast-grep

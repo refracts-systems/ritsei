@@ -4,6 +4,9 @@ import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
 import type { Sql } from "postgres"
 
+import { Database, uuidv7 } from "../../../foundation/mod.ts"
+import { makePostgresDatabase, runMigrations } from "../../../platform/mod.ts"
+import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
 import {
   AccountingCapabilities,
   AccountingService,
@@ -20,10 +23,9 @@ import {
   makeInventoryService,
   StockReservationInvalidState,
 } from "../../inventory/mod.ts"
-import { Database, uuidv7 } from "../../../foundation/mod.ts"
-import { makePostgresDatabase, runMigrations } from "../../../platform/mod.ts"
 import { EventEnvelope, makeMessagingService, MessagingService } from "../../messaging/mod.ts"
 import { makePartyService, PartyCapabilities } from "../../party/mod.ts"
+import { makeSalesService, SalesCapabilities, SalesService } from "../../sales/mod.ts"
 import {
   makeProcessService,
   OrderCancellationCompletedEventPayload,
@@ -45,10 +47,8 @@ import {
   WorkflowResultCorrupt,
   WorkflowRun,
 } from "../mod.ts"
-import { makeSalesService, SalesCapabilities, SalesService } from "../../sales/mod.ts"
-import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
 
-const databaseUrl = Deno.env.get("DATABASE_URL")
+const databaseUrl = process.env["DATABASE_URL"]
 const principal = { userAccountId: "order-lifecycle", sessionId: "session" }
 
 const capabilities = [
@@ -89,7 +89,7 @@ const readCounts = (client: Sql, tenantId: string) =>
   `
 
 const makeFixture = (client: Sql, tenantId: string, label: string) =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const database = makePostgresDatabase(client)
     const authorization = yield* AuthorizationService
     const requirements = Layer.merge(
@@ -221,7 +221,7 @@ const makeFixture = (client: Sql, tenantId: string, label: string) =>
   })
 
 const prepare = (client: Sql, label: string) =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     yield* runMigrations(client)
     const [tenant] = yield* Effect.promise(() =>
       client<{ id: string }[]>`
@@ -246,7 +246,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "cancellation atomic success, replay, conflict, and linked reversal",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const { authorization, tenantId, process, order, warehouse, legalEntity, widget, cable } =
           yield* prepare(
             client,
@@ -894,7 +894,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "fulfillment rolls back prior reservation changes when a later reservation is invalid",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const { tenantId, process, order, warehouse, legalEntity } = yield* prepare(
           client,
           "FULFILL-ROLLBACK",
@@ -996,7 +996,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "fulfillment success, replay, conflict, and atomic cancellation rejection",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const { authorization, tenantId, process, order, warehouse, legalEntity, widget, cable } =
           yield* prepare(
             client,
@@ -1412,7 +1412,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "cancellation atomic rollback when revenue reversal fails",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const { tenantId, process, order, warehouse, legalEntity } = yield* prepare(
           client,
           "REVERSE-FAIL",
@@ -1473,7 +1473,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "cancel and fulfillment require a succeeded confirmation without changing counts",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const { tenantId, process, order } = yield* prepare(client, "MISSING")
         const before = (yield* Effect.promise(() => readCounts(client, tenantId)))[0]!
         const lifecycleInput = {
@@ -1512,7 +1512,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "rejects a mixed cancellation and fulfillment race with one durable winner",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const { tenantId, process, order, warehouse, legalEntity } = yield* prepare(
           client,
           "MIXED-RACE",
@@ -1618,7 +1618,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "scopes order lifecycle workflow idempotency by tenant",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const [tenant, otherTenant, fulfillmentTenant, otherFulfillmentTenant] = yield* Effect
           .promise(() =>

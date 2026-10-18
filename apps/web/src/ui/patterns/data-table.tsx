@@ -1,7 +1,7 @@
 import type { JSX } from "@solidjs/web"
 import { For, Show } from "solid-js"
-import { css } from "../generated/css/index.js"
 import { layout } from "../foundations/layout.ts"
+import { css } from "../generated/css/index.js"
 import { surface } from "../recipes/surface.ts"
 
 export interface DataColumn<Row> {

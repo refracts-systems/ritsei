@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, gte, inArray, lte } from "drizzle-orm"
 import * as Clock from "effect/Clock"
-import * as Base64Url from "effect/encoding/Base64Url"
 import * as Effect from "effect/Effect"
+import * as Base64Url from "effect/encoding/Base64Url"
 import * as Option from "effect/Option"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
@@ -18,37 +18,11 @@ import {
   legalEntityAccountingConfigurations,
   revenuePostingProfiles,
 } from "../../../db/schema/accounting.ts"
-import { AuthorizationService } from "../../authorization/mod.ts"
-import { AccountingCapabilities } from "./capabilities.ts"
 import { Database, DatabaseFailure, isDatabaseConstraint, uuidv7 } from "../../../foundation/mod.ts"
-import {
-  FinancialVerificationKeyring,
-  FinancialVerificationSigner,
-} from "./verification-contract.ts"
+import { AuthorizationService } from "../../authorization/mod.ts"
 import { MessagingService } from "../../messaging/mod.ts"
 import { SalesService } from "../../sales/mod.ts"
-import { AccountingRevenuePostedEvent, RevenuePostedEventPayload } from "./events.ts"
-import {
-  FinancialStagingEvidenceStore,
-  makePostgresFinancialStagingEvidenceStore,
-} from "./financial-staging-evidence.ts"
-import {
-  type ExecutionAccountOutcome,
-  type FinancialAccountConstraint,
-  FinancialLedgerPort,
-} from "./financial-ledger.ts"
-import {
-  FinancialVerificationEvidence,
-  hashFinancialVerificationEvidence,
-} from "./financial-readiness.ts"
-import { withAccountingOperationNames } from "./service-wrappers.ts"
-import {
-  normalizeLines,
-  revenueReference,
-  reversalReference,
-  utcDate,
-  validateLines,
-} from "./domain-helpers.ts"
+import { AccountingCapabilities } from "./capabilities.ts"
 import {
   Account,
   AccountingService,
@@ -76,6 +50,13 @@ import {
   ReverseRevenueForOrderInput,
 } from "./contract.ts"
 import {
+  normalizeLines,
+  revenueReference,
+  reversalReference,
+  utcDate,
+  validateLines,
+} from "./domain-helpers.ts"
+import {
   AccountAlreadyExists,
   AccountingConfigurationAlreadyExists,
   AccountingLegalEntityNotFound,
@@ -96,6 +77,25 @@ import {
   RevenuePostingProfileAlreadyExists,
   RevenuePostingProfileNotFound,
 } from "./errors.ts"
+import { AccountingRevenuePostedEvent, RevenuePostedEventPayload } from "./events.ts"
+import {
+  type ExecutionAccountOutcome,
+  type FinancialAccountConstraint,
+  FinancialLedgerPort,
+} from "./financial-ledger.ts"
+import {
+  FinancialVerificationEvidence,
+  hashFinancialVerificationEvidence,
+} from "./financial-readiness.ts"
+import {
+  FinancialStagingEvidenceStore,
+  makePostgresFinancialStagingEvidenceStore,
+} from "./financial-staging-evidence.ts"
+import { withAccountingOperationNames } from "./service-wrappers.ts"
+import {
+  FinancialVerificationKeyring,
+  FinancialVerificationSigner,
+} from "./verification-contract.ts"
 
 const decodeFinancialVerificationSignature = (
   signature: string,
@@ -164,7 +164,7 @@ const revenuePostingProfileSelection = {
   revenueAccountId: revenuePostingProfiles.revenueAccountId,
 }
 
-export const makeAccountingService = Effect.gen(function* () {
+export const makeAccountingService = Effect.gen(function*() {
   const database = yield* Database
   const authorization = yield* AuthorizationService
   const messaging = yield* MessagingService
@@ -324,7 +324,7 @@ export const makeAccountingService = Effect.gen(function* () {
       ? "credits_must_not_exceed_debits"
       : "debits_must_not_exceed_credits"
   const ensureLegacyEngine = (tenantId: string, legalEntityId: string) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const [configuration] = yield* database.query(
         (db) =>
           db.select({ financialEngine: legalEntityAccountingConfigurations.financialEngine })
@@ -339,7 +339,7 @@ export const makeAccountingService = Effect.gen(function* () {
       }
     })
   const ensureLegacyTenantEngine = (tenantId: string) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const [configuration] = yield* database.query(
         (db) =>
           db.select({ legalEntityId: legalEntityAccountingConfigurations.legalEntityId })
@@ -374,7 +374,7 @@ export const makeAccountingService = Effect.gen(function* () {
 
   const service: AccountingService = {
     listAccountingConfigurations: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(ListAccountingConfigurationsInput)(
           input,
         )
@@ -404,7 +404,7 @@ export const makeAccountingService = Effect.gen(function* () {
     // Fallow: memory and PostgreSQL adapters intentionally mirror public account-read authorization.
     // fallow-ignore-next-line code-duplication
     listAccounts: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(ListAccountsInput)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -425,7 +425,7 @@ export const makeAccountingService = Effect.gen(function* () {
     // Fallow: memory and PostgreSQL adapters intentionally mirror public period-read authorization.
     // fallow-ignore-next-line code-duplication
     listAccountingPeriods: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(ListAccountingPeriodsInput)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -452,7 +452,7 @@ export const makeAccountingService = Effect.gen(function* () {
         return rows
       }),
     listRevenuePostingProfiles: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(ListRevenuePostingProfilesInput)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -478,7 +478,7 @@ export const makeAccountingService = Effect.gen(function* () {
     // Fallow: memory and PostgreSQL adapters intentionally mirror public read authorization.
     // fallow-ignore-next-line code-duplication
     listJournalEntries: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(ListJournalEntriesInput)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -529,7 +529,7 @@ export const makeAccountingService = Effect.gen(function* () {
         }))
       }),
     recordFinancialStagingEvidence: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(RecordFinancialStagingEvidenceInput)(
           input,
         )
@@ -574,7 +574,7 @@ export const makeAccountingService = Effect.gen(function* () {
         return result.record
       }),
     listFinancialStagingEvidence: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(ListFinancialStagingEvidenceInput)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -593,7 +593,7 @@ export const makeAccountingService = Effect.gen(function* () {
         })
       }),
     recordFinancialVerificationArtifact: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(RecordFinancialVerificationArtifactInput)(
           input,
         )
@@ -725,7 +725,7 @@ export const makeAccountingService = Effect.gen(function* () {
         return toVerificationArtifact(inserted!)
       }),
     prepareTigerBeetleCutover: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(PrepareTigerBeetleCutoverInput)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -733,7 +733,7 @@ export const makeAccountingService = Effect.gen(function* () {
           capability: AccountingCapabilities.financialEngineActivate,
         })
         return yield* database.withTransaction(
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const [configuration] = yield* database.query(
               (db) =>
                 db.select({ financialEngine: legalEntityAccountingConfigurations.financialEngine })
@@ -792,7 +792,7 @@ export const makeAccountingService = Effect.gen(function* () {
         )
       }),
     approveTigerBeetleCutover: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(ApproveTigerBeetleCutoverInput)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -800,7 +800,7 @@ export const makeAccountingService = Effect.gen(function* () {
           capability: AccountingCapabilities.financialEngineActivate,
         })
         return yield* database.withTransaction(
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const [current] = yield* loadCutoverControl(
               decoded.tenantId,
               decoded.legalEntityId,
@@ -867,19 +867,19 @@ export const makeAccountingService = Effect.gen(function* () {
             }
             const artifact = toVerificationArtifact(artifactRow)
             if (
-              artifact.legalEntityId !== decoded.legalEntityId ||
-              artifact.evidence.currency !== configuration.baseCurrency ||
-              artifact.status !== "verified" ||
-              artifact.evidence.kind !== "cutover_rehearsal" ||
-              artifact.evidence.mismatchCount !== 0 ||
-              artifact.evidence.targetWatermark.trim() === ""
+              artifact.legalEntityId !== decoded.legalEntityId
+              || artifact.evidence.currency !== configuration.baseCurrency
+              || artifact.status !== "verified"
+              || artifact.evidence.kind !== "cutover_rehearsal"
+              || artifact.evidence.mismatchCount !== 0
+              || artifact.evidence.targetWatermark.trim() === ""
             ) {
               return yield* Effect.fail(
                 new FinancialVerificationArtifactInvalid({
                   tenantId: decoded.tenantId,
                   legalEntityId: decoded.legalEntityId,
-                  reason: artifact.legalEntityId !== decoded.legalEntityId ||
-                      artifact.evidence.currency !== configuration.baseCurrency
+                  reason: artifact.legalEntityId !== decoded.legalEntityId
+                      || artifact.evidence.currency !== configuration.baseCurrency
                     ? "scope_mismatch"
                     : artifact.evidence.mismatchCount > 0
                     ? "mismatch"
@@ -888,8 +888,8 @@ export const makeAccountingService = Effect.gen(function* () {
               )
             }
             if (
-              Option.isNone(keyringOption) &&
-              (Option.isNone(signerOption) || artifact.signingKeyId !== signerOption.value.keyId)
+              Option.isNone(keyringOption)
+              && (Option.isNone(signerOption) || artifact.signingKeyId !== signerOption.value.keyId)
             ) {
               return yield* Effect.fail(
                 new FinancialVerificationArtifactInvalid({
@@ -992,17 +992,17 @@ export const makeAccountingService = Effect.gen(function* () {
               "accounting.financial_cutover.approve.checkpoint",
             )
             if (
-              checkpoint === undefined ||
-              checkpoint.sourceWatermark !== artifact.evidence.sourceWatermark ||
-              checkpoint.targetWatermark !== artifact.evidence.targetWatermark ||
-              checkpoint.sourceSnapshotRef !== artifact.evidence.sourceSnapshotRef ||
-              checkpoint.targetSnapshotRef !== artifact.evidence.targetSnapshotRef ||
-              checkpoint.operationSetHash !== artifact.evidence.operationSetHash ||
-              checkpoint.accountBalanceHash !== artifact.evidence.accountBalanceHash ||
-              checkpoint.transferSetHash !== artifact.evidence.transferSetHash ||
-              checkpoint.projectionHash !== artifact.evidence.projectionHash ||
-              checkpoint.mismatchCount !== 0 ||
-              checkpoint.orphanCount !== 0
+              checkpoint === undefined
+              || checkpoint.sourceWatermark !== artifact.evidence.sourceWatermark
+              || checkpoint.targetWatermark !== artifact.evidence.targetWatermark
+              || checkpoint.sourceSnapshotRef !== artifact.evidence.sourceSnapshotRef
+              || checkpoint.targetSnapshotRef !== artifact.evidence.targetSnapshotRef
+              || checkpoint.operationSetHash !== artifact.evidence.operationSetHash
+              || checkpoint.accountBalanceHash !== artifact.evidence.accountBalanceHash
+              || checkpoint.transferSetHash !== artifact.evidence.transferSetHash
+              || checkpoint.projectionHash !== artifact.evidence.projectionHash
+              || checkpoint.mismatchCount !== 0
+              || checkpoint.orphanCount !== 0
             ) {
               return yield* cutoverBlocked(
                 decoded.tenantId,
@@ -1038,7 +1038,7 @@ export const makeAccountingService = Effect.gen(function* () {
         )
       }),
     activateTigerBeetleCutover: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(ActivateTigerBeetleCutoverInput)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -1053,7 +1053,7 @@ export const makeAccountingService = Effect.gen(function* () {
           )
         }
         const activating = yield* database.withTransaction(
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const [current] = yield* loadCutoverControl(
               decoded.tenantId,
               decoded.legalEntityId,
@@ -1160,7 +1160,7 @@ export const makeAccountingService = Effect.gen(function* () {
           }
         }
         return yield* database.withTransaction(
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             yield* database.query(
               (db) =>
                 db.update(legalEntityAccountingConfigurations).set({
@@ -1203,7 +1203,7 @@ export const makeAccountingService = Effect.gen(function* () {
         )
       }),
     configureLegalEntity: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(ConfigureLegalEntityInput)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -1266,7 +1266,7 @@ export const makeAccountingService = Effect.gen(function* () {
         return { ...rows[0]!, precision: 2 as const }
       }),
     createAccount: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(CreateAccountInput)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -1299,7 +1299,7 @@ export const makeAccountingService = Effect.gen(function* () {
         return rows[0]!
       }),
     configureRevenuePosting: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(ConfigureRevenuePostingInput)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -1357,7 +1357,7 @@ export const makeAccountingService = Effect.gen(function* () {
         return rows[0]!
       }),
     openPeriod: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(OpenPeriodInput)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -1391,7 +1391,7 @@ export const makeAccountingService = Effect.gen(function* () {
         return rows[0]!
       }),
     closePeriod: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(ClosePeriodInput)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -1472,7 +1472,7 @@ export const makeAccountingService = Effect.gen(function* () {
         return period.period
       }),
     postRevenueForOrder: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(PostRevenueForOrderInput)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -1486,7 +1486,7 @@ export const makeAccountingService = Effect.gen(function* () {
         const causationId = decoded.causationId?.trim() ?? null
         const loadExisting = () =>
           database.withTransaction(
-            Effect.gen(function* () {
+            Effect.gen(function*() {
               const amount = yield* sales.getConfirmedOrderTotal({
                 principal: decoded.principal,
                 tenantId: decoded.tenantId,
@@ -1545,9 +1545,9 @@ export const makeAccountingService = Effect.gen(function* () {
                 credit: String(line.credit ?? "0"),
               }))
               if (
-                profile === undefined || actualLines.length !== expectedLines.length ||
-                JSON.stringify(normalizeLines(actualLines)) !==
-                  JSON.stringify(normalizeLines(expectedLines))
+                profile === undefined || actualLines.length !== expectedLines.length
+                || JSON.stringify(normalizeLines(actualLines))
+                  !== JSON.stringify(normalizeLines(expectedLines))
               ) {
                 return yield* Effect.fail(
                   new JournalIdempotencyConflict({ tenantId: decoded.tenantId, reference }),
@@ -1571,7 +1571,7 @@ export const makeAccountingService = Effect.gen(function* () {
         const existing = yield* loadExisting()
         if (existing !== undefined) return existing
         const journal = yield* database.withTransaction(
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const amount = yield* sales.getConfirmedOrderTotal({
               principal: decoded.principal,
               tenantId: decoded.tenantId,
@@ -1667,7 +1667,7 @@ export const makeAccountingService = Effect.gen(function* () {
             (error): error is DatabaseFailure =>
               isDatabaseConstraint(error, "journal_entries_reference_key"),
             () =>
-              Effect.gen(function* () {
+              Effect.gen(function*() {
                 const existing = yield* loadExisting()
                 if (existing === undefined) {
                   return yield* Effect.fail(
@@ -1697,7 +1697,7 @@ export const makeAccountingService = Effect.gen(function* () {
         return journal.journal
       }),
     reverseRevenueForOrder: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(ReverseRevenueForOrderInput)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -1725,9 +1725,9 @@ export const makeAccountingService = Effect.gen(function* () {
               source: typeof sourceForExisting,
             ) => {
               if (
-                entry === undefined || source === undefined || entry.status !== "reversed" ||
-                entry.postedAt === null || source.status !== "posted" ||
-                entry.reversesEntryId !== source.id
+                entry === undefined || source === undefined || entry.status !== "reversed"
+                || entry.postedAt === null || source.status !== "posted"
+                || entry.reversesEntryId !== source.id
               ) return false
               const sourceLines = await tx.select(journalLineSelection).from(journalLines).where(
                 and(
@@ -1751,9 +1751,9 @@ export const makeAccountingService = Effect.gen(function* () {
                 debit: String(line.debit ?? "0"),
                 credit: String(line.credit ?? "0"),
               }))
-              return expectedLines.length === actualLines.length &&
-                JSON.stringify(normalizeLines(expectedLines)) ===
-                  JSON.stringify(normalizeLines(actualLines))
+              return expectedLines.length === actualLines.length
+                && JSON.stringify(normalizeLines(expectedLines))
+                  === JSON.stringify(normalizeLines(actualLines))
             }
             if (existing !== undefined) {
               return (await matchesSourceLines(existing, sourceForExisting))
@@ -1905,7 +1905,7 @@ export const makeAccountingService = Effect.gen(function* () {
         return journal.journal
       }),
     postJournal: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(PostJournalInput)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -1918,7 +1918,7 @@ export const makeAccountingService = Effect.gen(function* () {
         const reference = decoded.reference.trim()
 
         const loadExisting = () =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const entries = yield* database.query(
               (db) =>
                 db.select(journalEntrySelection)
@@ -1958,8 +1958,8 @@ export const makeAccountingService = Effect.gen(function* () {
               credit: String(line.credit ?? "0"),
             }))
             if (
-              JSON.stringify(normalizeLines(storedLines)) !==
-                JSON.stringify(normalizeLines(decoded.lines))
+              JSON.stringify(normalizeLines(storedLines))
+                !== JSON.stringify(normalizeLines(decoded.lines))
             ) {
               return yield* Effect.fail(
                 new JournalIdempotencyConflict({
@@ -2008,8 +2008,8 @@ export const makeAccountingService = Effect.gen(function* () {
                 credit: String(line.credit ?? "0"),
               }))
               if (
-                JSON.stringify(normalizeLines(storedLines)) !==
-                  JSON.stringify(normalizeLines(decoded.lines))
+                JSON.stringify(normalizeLines(storedLines))
+                  !== JSON.stringify(normalizeLines(decoded.lines))
               ) {
                 return { _tag: "idempotency-conflict" as const }
               }

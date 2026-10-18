@@ -1,7 +1,6 @@
 import * as Effect from "effect/Effect"
 
 import { uuidv7 } from "../../../foundation/mod.ts"
-import type { PartyStore } from "./store.ts"
 import type {
   Branch,
   ExternalIdentifier,
@@ -29,6 +28,7 @@ import {
   PartyRepresentationUserAccountNotFound,
   PartyRoleAlreadyAssigned,
 } from "./errors.ts"
+import type { PartyStore } from "./store.ts"
 
 export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>): PartyStore => {
   const stored = new Map<string, Party>()
@@ -45,10 +45,10 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
         const normalizedSearch = search?.toLocaleLowerCase()
         return [...stored.values()]
           .filter((party) =>
-            party.tenantId === tenantId &&
-            (kind === null || party.kind === kind) &&
-            (normalizedSearch === undefined ||
-              party.name.toLocaleLowerCase().includes(normalizedSearch))
+            party.tenantId === tenantId
+            && (kind === null || party.kind === kind)
+            && (normalizedSearch === undefined
+              || party.name.toLocaleLowerCase().includes(normalizedSearch))
           )
           .sort((left, right) =>
             left.name.localeCompare(right.name) || left.id.localeCompare(right.id)
@@ -63,7 +63,7 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
       }),
   )
   const getDetail = Effect.fn("PartyStore.memory.getDetail")(
-    function* (tenantId: string, partyId: string) {
+    function*(tenantId: string, partyId: string) {
       const party = stored.get(partyId)
       if (party === undefined || party.tenantId !== tenantId) {
         return yield* Effect.fail(new PartyNotFound({ tenantId, partyId }))
@@ -84,9 +84,9 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
             identifier.tenantId === tenantId && identifier.partyId === partyId
           )
           .sort((left, right) =>
-            left.provider.localeCompare(right.provider) ||
-            left.scheme.localeCompare(right.scheme) || left.scope.localeCompare(right.scope) ||
-            left.value.localeCompare(right.value) || left.id.localeCompare(right.id)
+            left.provider.localeCompare(right.provider)
+            || left.scheme.localeCompare(right.scheme) || left.scope.localeCompare(right.scope)
+            || left.value.localeCompare(right.value) || left.id.localeCompare(right.id)
           ),
         legalEntity,
         branches: legalEntity === null ? [] : [...branches.values()]
@@ -101,16 +101,18 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
             relationship.tenantId === tenantId && relationship.partyId === partyId
           )
           .sort((left, right) =>
-            left.kind.localeCompare(right.kind) ||
-            left.legalEntityId.localeCompare(right.legalEntityId) || left.id.localeCompare(right.id)
+            left.kind.localeCompare(right.kind)
+            || left.legalEntityId.localeCompare(right.legalEntityId)
+            || left.id.localeCompare(right.id)
           ),
         representations: [...representations.values()]
           .filter((representation) =>
             representation.tenantId === tenantId && representation.partyId === partyId
           )
           .sort((left, right) =>
-            left.kind.localeCompare(right.kind) ||
-            left.userAccountId.localeCompare(right.userAccountId) || left.id.localeCompare(right.id)
+            left.kind.localeCompare(right.kind)
+            || left.userAccountId.localeCompare(right.userAccountId)
+            || left.id.localeCompare(right.id)
           ),
       } satisfies PartyDetail
     },
@@ -127,7 +129,7 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
     })
   )
   const createLegalEntity = Effect.fn("PartyStore.memory.createLegalEntity")(
-    function* (tenantId: string, organizationId: string) {
+    function*(tenantId: string, organizationId: string) {
       const party = stored.get(organizationId)
       if (party === undefined || party.tenantId !== tenantId) {
         return yield* Effect.fail(new PartyNotFound({ tenantId, partyId: organizationId }))
@@ -146,7 +148,7 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
     },
   )
   const createBranch = Effect.fn("PartyStore.memory.createBranch")(
-    function* (
+    function*(
       tenantId: string,
       legalEntityId: string,
       name: string,
@@ -177,7 +179,7 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
     },
   )
   const createPartyRepresentation = Effect.fn("PartyStore.memory.createPartyRepresentation")(
-    function* (
+    function*(
       tenantId: string,
       userAccountId: string,
       partyId: string,
@@ -193,8 +195,8 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
       }
       if (
         [...representations.values()].some((x) =>
-          x.tenantId === tenantId && x.userAccountId === userAccountId && x.partyId === partyId &&
-          x.kind === kind
+          x.tenantId === tenantId && x.userAccountId === userAccountId && x.partyId === partyId
+          && x.kind === kind
         )
       ) {
         return yield* Effect.fail(
@@ -207,7 +209,7 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
     },
   )
   const setPartyRepresentationActive = Effect.fn("PartyStore.memory.setPartyRepresentationActive")(
-    function* (tenantId: string, representationId: string, active: boolean) {
+    function*(tenantId: string, representationId: string, active: boolean) {
       const current = representations.get(representationId)
       if (current === undefined || current.tenantId !== tenantId) {
         return yield* Effect.fail(new PartyRepresentationNotFound({ tenantId, representationId }))
@@ -218,7 +220,7 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
     },
   )
   const assignRole = Effect.fn("PartyStore.memory.assignRole")(
-    function* (tenantId: string, partyId: string, role: PartyRole) {
+    function*(tenantId: string, partyId: string, role: PartyRole) {
       if (stored.get(partyId)?.tenantId !== tenantId) {
         return yield* Effect.fail(new PartyNotFound({ tenantId, partyId }))
       }
@@ -230,7 +232,7 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
     },
   )
   const createRelationship = Effect.fn("PartyStore.memory.createRelationship")(
-    function* (
+    function*(
       tenantId: string,
       partyId: string,
       legalEntityId: string,
@@ -257,7 +259,7 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
     },
   )
   const getRelationship = Effect.fn("PartyStore.memory.getRelationship")(
-    function* (tenantId: string, relationshipId: string) {
+    function*(tenantId: string, relationshipId: string) {
       const result = [...relationships.values()].find((x) =>
         x.tenantId === tenantId && x.id === relationshipId
       )
@@ -272,8 +274,8 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
       Effect.sync(() =>
         [...relationships.values()]
           .filter((relationship) =>
-            relationship.tenantId === tenantId && relationship.partyId === sourcePartyId &&
-            relationship.active
+            relationship.tenantId === tenantId && relationship.partyId === sourcePartyId
+            && relationship.active
           )
           .map((relationship) => ({
             tenantId,
@@ -286,14 +288,14 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
           }))
           .filter((path) => path.targetPartyId !== sourcePartyId)
           .sort((left, right) =>
-            left.legalEntityId.localeCompare(right.legalEntityId) ||
-            left.relationshipId.localeCompare(right.relationshipId)
+            left.legalEntityId.localeCompare(right.legalEntityId)
+            || left.relationshipId.localeCompare(right.relationshipId)
           )
           .slice(0, limit)
       ),
   )
   const attachIdentifier = Effect.fn("PartyStore.memory.attachIdentifier")(
-    function* (
+    function*(
       tenantId: string,
       partyId: string,
       provider: string,

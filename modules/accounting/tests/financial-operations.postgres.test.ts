@@ -6,6 +6,25 @@ import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
 
 import {
+  Database,
+  DatabaseFailure,
+  type DatabaseService,
+  DurableJobEnqueuer,
+  FencingContextService,
+  uuidv7,
+} from "../../../foundation/mod.ts"
+import { makePostgresDatabase, runMigrations } from "../../../platform/mod.ts"
+import { LARGE_FINANCIAL_MAJOR } from "../../../tests/support/financial-ledger-conformance.ts"
+import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
+import { makeAuthorizationTestLayer } from "../../authorization/mod.ts"
+import {
+  EventIdempotencyConflict,
+  makeMessagingService,
+  MessagingService,
+} from "../../messaging/mod.ts"
+import { makeProcessJobEnqueuer } from "../../process/mod.ts"
+import { SalesService } from "../../sales/mod.ts"
+import {
   AccountingCapabilities,
   AccountingFinancialOperationReconciledEvent,
   FinancialLedgerPort,
@@ -22,15 +41,6 @@ import {
   makeFinancialOperationFailpointLayer,
   makeFinancialOperationService,
 } from "../mod.ts"
-import { makeAuthorizationTestLayer } from "../../authorization/mod.ts"
-import {
-  Database,
-  DatabaseFailure,
-  type DatabaseService,
-  DurableJobEnqueuer,
-  FencingContextService,
-  uuidv7,
-} from "../../../foundation/mod.ts"
 import {
   type FinancialStoreInventoryType,
   FinancialStoreObservationFailure,
@@ -38,18 +48,8 @@ import {
   type FinancialStoreWatermarkType,
   hashFinancialStoreWatermarks,
 } from "../mod.ts"
-import { makePostgresDatabase, runMigrations } from "../../../platform/mod.ts"
-import {
-  EventIdempotencyConflict,
-  makeMessagingService,
-  MessagingService,
-} from "../../messaging/mod.ts"
-import { SalesService } from "../../sales/mod.ts"
-import { makeProcessJobEnqueuer } from "../../process/mod.ts"
-import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
-import { LARGE_FINANCIAL_MAJOR } from "../../../tests/support/financial-ledger-conformance.ts"
 
-const databaseUrl = Deno.env.get("DATABASE_URL")
+const databaseUrl = process.env["DATABASE_URL"]
 const postgresFailure = (effect: () => Promise<unknown>) =>
   Effect.tryPromise({ try: effect, catch: (cause) => cause }).pipe(Effect.flip)
 
@@ -75,7 +75,7 @@ it.effect.skipIf(databaseUrl === undefined)(
     withTemporaryDatabase(
       databaseUrl!,
       (client) =>
-        Effect.gen(function* () {
+        Effect.gen(function*() {
           yield* runMigrations(client)
           const database = makePostgresDatabase(client)
           const [tenant] = yield* Effect.promise(() =>
@@ -646,8 +646,8 @@ it.effect.skipIf(databaseUrl === undefined)(
             postJournal: (input: unknown) =>
               ledger.postJournal(input).pipe(
                 Effect.map((outcome) =>
-                  outcome._tag === "accepted" &&
-                    outcome.operationId === submissionIdentityOperationId
+                  outcome._tag === "accepted"
+                    && outcome.operationId === submissionIdentityOperationId
                     ? { ...outcome, operationId: `foreign-${uuidv7()}` }
                     : outcome
                 ),
@@ -1846,8 +1846,8 @@ it.effect.skipIf(databaseUrl === undefined)(
                   })
                 }
                 if (
-                  operationId === behavior.unknownOperationId &&
-                  behavior.unknownReason !== undefined
+                  operationId === behavior.unknownOperationId
+                  && behavior.unknownReason !== undefined
                 ) {
                   return Effect.succeed({
                     _tag: "unknown" as const,

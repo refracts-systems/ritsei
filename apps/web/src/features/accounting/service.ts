@@ -1,6 +1,18 @@
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import {
+  BrowserConnection,
+  decodeInput,
+  decodeResponse,
+  definedFields,
+  mutationRequest,
+  querySuffix,
+  RequestFailure,
+  requestJson,
+  responseListMatches,
+  responseMatches,
+} from "../../shared/api.ts"
+import {
   Account,
   AccountingConfiguration,
   AccountingPeriod,
@@ -19,18 +31,6 @@ import {
   PostJournalInput,
   RevenuePostingProfile,
 } from "../../shared/contracts/generated/accounting.ts"
-import {
-  BrowserConnection,
-  decodeInput,
-  decodeResponse,
-  definedFields,
-  mutationRequest,
-  querySuffix,
-  RequestFailure,
-  requestJson,
-  responseListMatches,
-  responseMatches,
-} from "../../shared/api.ts"
 
 const ConfigurationList = Schema.Array(AccountingConfiguration).check(Schema.isMaxLength(200))
 const AccountList = Schema.Array(Account).check(Schema.isMaxLength(200))
@@ -66,7 +66,7 @@ const validJournal = (journal: JournalEntry): boolean => {
 }
 
 export const listConfigurations = Effect.fn("Frontend.Accounting.listConfigurations")(
-  function* (input: unknown = {}) {
+  function*(input: unknown = {}) {
     const decoded = yield* decodeInput(ListAccountingConfigurationsInput, input)
     const body = yield* requestJson(`${accountingRoutes.listConfigurations}${querySuffix(decoded)}`)
     const configurations = yield* decodeResponse(ConfigurationList, body)
@@ -84,7 +84,7 @@ export const listConfigurations = Effect.fn("Frontend.Accounting.listConfigurati
 )
 
 export const listAccounts = Effect.fn("Frontend.Accounting.listAccounts")(
-  function* (input: unknown = {}) {
+  function*(input: unknown = {}) {
     const decoded = yield* decodeInput(ListAccountsInput, input)
     const body = yield* requestJson(`${accountingRoutes.listAccounts}${querySuffix(decoded)}`)
     const accounts = yield* decodeResponse(AccountList, body)
@@ -102,7 +102,7 @@ export const listAccounts = Effect.fn("Frontend.Accounting.listAccounts")(
 )
 
 export const listPeriods = Effect.fn("Frontend.Accounting.listPeriods")(
-  function* (input: unknown = {}) {
+  function*(input: unknown = {}) {
     const decoded = yield* decodeInput(ListAccountingPeriodsInput, input)
     const body = yield* requestJson(`${accountingRoutes.listPeriods}${querySuffix(decoded)}`)
     const periods = yield* decodeResponse(PeriodList, body)
@@ -121,7 +121,7 @@ export const listPeriods = Effect.fn("Frontend.Accounting.listPeriods")(
 
 export const listRevenuePostingProfiles = Effect.fn(
   "Frontend.Accounting.listRevenuePostingProfiles",
-)(function* (input: unknown = {}) {
+)(function*(input: unknown = {}) {
   const decoded = yield* decodeInput(ListRevenuePostingProfilesInput, input)
   const body = yield* requestJson(
     `${accountingRoutes.listRevenuePostingProfiles}${querySuffix(decoded)}`,
@@ -140,7 +140,7 @@ export const listRevenuePostingProfiles = Effect.fn(
 })
 
 export const configureLegalEntity = Effect.fn("Frontend.Accounting.configureLegalEntity")(
-  function* (legalEntityId: unknown, input: unknown) {
+  function*(legalEntityId: unknown, input: unknown) {
     const decodedId = yield* decodeInput(Schema.String.check(Schema.isUUID()), legalEntityId)
     const decoded = yield* decodeInput(ConfigureLegalEntityInput, input)
     const body = yield* mutationRequest(
@@ -172,7 +172,7 @@ export const configureLegalEntity = Effect.fn("Frontend.Accounting.configureLega
 
 export const configureRevenuePosting = Effect.fn(
   "Frontend.Accounting.configureRevenuePosting",
-)(function* (input: unknown) {
+)(function*(input: unknown) {
   const decoded = yield* decodeInput(ConfigureRevenuePostingInput, input)
   const body = yield* mutationRequest(accountingRoutes.configureRevenuePosting, decoded)
   const profile = yield* decodeResponse(RevenuePostingProfile, body, "unknown-outcome")
@@ -191,7 +191,7 @@ export const configureRevenuePosting = Effect.fn(
 })
 
 export const openPeriod = Effect.fn("Frontend.Accounting.openPeriod")(
-  function* (input: unknown) {
+  function*(input: unknown) {
     const decoded = yield* decodeInput(OpenPeriodInput, input)
     const body = yield* mutationRequest(accountingRoutes.openPeriod, decoded)
     const period = yield* decodeResponse(AccountingPeriod, body, "unknown-outcome")
@@ -212,7 +212,7 @@ export const openPeriod = Effect.fn("Frontend.Accounting.openPeriod")(
 )
 
 export const closePeriod = Effect.fn("Frontend.Accounting.closePeriod")(
-  function* (periodId: unknown, input: unknown) {
+  function*(periodId: unknown, input: unknown) {
     const decodedId = yield* decodeInput(Schema.String.check(Schema.isUUID()), periodId)
     const decoded = yield* decodeInput(ClosePeriodInput, input)
     const body = yield* mutationRequest(
@@ -236,7 +236,7 @@ export const closePeriod = Effect.fn("Frontend.Accounting.closePeriod")(
 )
 
 export const createAccount = Effect.fn("Frontend.Accounting.createAccount")(
-  function* (input: unknown) {
+  function*(input: unknown) {
     const decoded = yield* decodeInput(CreateAccountInput, input)
     const body = yield* mutationRequest(accountingRoutes.createAccount, decoded)
     const account = yield* decodeResponse(Account, body, "unknown-outcome")
@@ -256,7 +256,7 @@ export const createAccount = Effect.fn("Frontend.Accounting.createAccount")(
 )
 
 export const postJournal = Effect.fn("Frontend.Accounting.postJournal")(
-  function* (input: unknown) {
+  function*(input: unknown) {
     const decoded = yield* decodeInput(PostJournalInput, input)
     const body = yield* mutationRequest(accountingRoutes.postJournal, decoded)
     const journal = yield* decodeResponse(JournalEntry, body, "unknown-outcome")
@@ -275,7 +275,7 @@ export const postJournal = Effect.fn("Frontend.Accounting.postJournal")(
 )
 
 export const listJournals = Effect.fn("Frontend.Accounting.listJournals")(
-  function* (input: unknown = {}) {
+  function*(input: unknown = {}) {
     const decoded = yield* decodeInput(ListJournalEntriesInput, input)
     const body = yield* requestJson(`${accountingRoutes.listJournals}${querySuffix(decoded)}`)
     const journals = yield* decodeResponse(JournalEntryList, body)
@@ -284,8 +284,8 @@ export const listJournals = Effect.fn("Frontend.Accounting.listJournals")(
       !responseListMatches(journals, {
         tenantId: connection.tenantId,
         ...definedFields({ status: decoded.status }),
-      }) ||
-      journals.some((journal) => !validJournal(journal))
+      })
+      || journals.some((journal) => !validJournal(journal))
     ) {
       return yield* Effect.fail(new RequestFailure({ kind: "invalid-response" }))
     }

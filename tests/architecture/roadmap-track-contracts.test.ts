@@ -1,6 +1,7 @@
 import { assert, describe, it } from "@effect/vitest"
+import { readFileSync } from "node:fs"
 
-const read = (path: string) => Deno.readTextFileSync(path)
+const read = (path: string) => readFileSync(path, "utf8")
 
 describe("roadmap track contracts", () => {
   it("keeps workload classification separate from authorization and business authority", () => {

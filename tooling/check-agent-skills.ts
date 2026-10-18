@@ -1,4 +1,7 @@
-import { dirname, relative, resolve } from "@std/path"
+import { readdir, readFile, stat } from "node:fs/promises"
+import { dirname, relative, resolve } from "node:path"
+
+import { isMain } from "./entrypoint.ts"
 
 const requiredHeadings = [
   "# Purpose",
@@ -17,9 +20,9 @@ const requiredHeadings = [
 
 const unquote = (value: string) => {
   const trimmed = value.trim()
-  return trimmed.length >= 2 &&
-      ((trimmed.startsWith('"') && trimmed.endsWith('"')) ||
-        (trimmed.startsWith("'") && trimmed.endsWith("'")))
+  return trimmed.length >= 2
+      && ((trimmed.startsWith("\"") && trimmed.endsWith("\""))
+        || (trimmed.startsWith("'") && trimmed.endsWith("'")))
     ? trimmed.slice(1, -1)
     : trimmed
 }
@@ -30,7 +33,8 @@ export const validateSkillDocument = (
   external: boolean,
 ): readonly string[] => {
   const failures: string[] = []
-  const lines = content.split("\n")
+  // Normalize CRLF working-tree checkouts so exact heading matches are portable.
+  const lines = content.split("\r\n").join("\n").split("\n")
   const frontmatterEnd = lines.slice(1).findIndex((line) => line.trim() === "---") + 1
 
   if (lines[0]?.trim() !== "---" || frontmatterEnd <= 0) {
@@ -67,10 +71,10 @@ const normalizePath = (path: string) => path.replaceAll("\\", "/")
 const collectSkillFiles = async (directory: string): Promise<readonly string[]> => {
   const files: string[] = []
   const visit = async (path: string) => {
-    for await (const entry of Deno.readDir(path)) {
+    for (const entry of await readdir(path, { withFileTypes: true })) {
       const child = `${path}/${entry.name}`
-      if (entry.isDirectory) await visit(child)
-      else if (entry.isFile && entry.name === "SKILL.md") files.push(child)
+      if (entry.isDirectory()) await visit(child)
+      else if (entry.isFile() && entry.name === "SKILL.md") files.push(child)
     }
   }
   await visit(directory)
@@ -79,7 +83,7 @@ const collectSkillFiles = async (directory: string): Promise<readonly string[]> 
 
 const validateLinks = async (path: string, content: string): Promise<readonly string[]> => {
   const failures: string[] = []
-  const repositoryRoot = resolve(Deno.cwd())
+  const repositoryRoot = resolve(process.cwd())
 
   for (const match of content.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)) {
     const rawTarget = match[1]!.trim().replace(/^<|>$/g, "")
@@ -93,9 +97,9 @@ const validateLinks = async (path: string, content: string): Promise<readonly st
       continue
     }
     try {
-      await Deno.stat(resolved)
+      await stat(resolved)
     } catch (cause) {
-      if (cause instanceof Deno.errors.NotFound) {
+      if ((cause as NodeJS.ErrnoException).code === "ENOENT") {
         failures.push(`${path}: broken relative link ${rawTarget}`)
       } else throw cause
     }
@@ -114,7 +118,7 @@ export const checkAgentSkills = async (): Promise<readonly string[]> => {
   let repositoryNativeCount = 0
 
   for (const path of skillFiles) {
-    const content = await Deno.readTextFile(path)
+    const content = await readFile(path, "utf8")
     const name = normalizePath(dirname(path)).split("/").at(-1)!
     const external = externalSkills.has(name)
     if (!external) repositoryNativeCount++
@@ -126,11 +130,11 @@ export const checkAgentSkills = async (): Promise<readonly string[]> => {
   return failures.toSorted()
 }
 
-if (import.meta.main) {
+if (isMain(import.meta.url)) {
   const failures = await checkAgentSkills()
   if (failures.length > 0) {
     console.error(failures.join("\n"))
-    Deno.exit(1)
+    process.exit(1)
   }
   console.log("agent skills valid")
 }

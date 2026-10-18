@@ -1,30 +1,15 @@
 import * as Clock from "effect/Clock"
-import * as Base64Url from "effect/encoding/Base64Url"
 import * as Effect from "effect/Effect"
+import * as Base64Url from "effect/encoding/Base64Url"
 import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 
-import { AuthorizationService } from "../../authorization/mod.ts"
-import { AccountingCapabilities } from "./capabilities.ts"
-import {
-  FinancialVerificationKeyring,
-  FinancialVerificationSigner,
-} from "./verification-contract.ts"
 import { uuidv7 } from "../../../foundation/mod.ts"
+import { AuthorizationService } from "../../authorization/mod.ts"
 import { MessagingService } from "../../messaging/mod.ts"
 import { SalesService } from "../../sales/mod.ts"
-import { AccountingRevenuePostedEvent } from "./events.ts"
-import { hashFinancialVerificationEvidence } from "./financial-readiness.ts"
-import { makeMemoryFinancialStagingEvidenceStore } from "./financial-staging-evidence.ts"
-import { withAccountingOperationNames } from "./service-wrappers.ts"
-import {
-  normalizeLines,
-  revenueReference,
-  reversalReference,
-  utcDate,
-  validateLines,
-} from "./domain-helpers.ts"
+import { AccountingCapabilities } from "./capabilities.ts"
 import {
   Account,
   AccountingConfiguration,
@@ -55,6 +40,13 @@ import {
   ReverseRevenueForOrderInput,
 } from "./contract.ts"
 import {
+  normalizeLines,
+  revenueReference,
+  reversalReference,
+  utcDate,
+  validateLines,
+} from "./domain-helpers.ts"
+import {
   AccountAlreadyExists,
   AccountingConfigurationAlreadyExists,
   AccountingLegalEntityNotFound,
@@ -73,6 +65,14 @@ import {
   RevenuePostingProfileAlreadyExists,
   RevenuePostingProfileNotFound,
 } from "./errors.ts"
+import { AccountingRevenuePostedEvent } from "./events.ts"
+import { hashFinancialVerificationEvidence } from "./financial-readiness.ts"
+import { makeMemoryFinancialStagingEvidenceStore } from "./financial-staging-evidence.ts"
+import { withAccountingOperationNames } from "./service-wrappers.ts"
+import {
+  FinancialVerificationKeyring,
+  FinancialVerificationSigner,
+} from "./verification-contract.ts"
 
 const decodeFinancialVerificationSignature = (
   signature: string,
@@ -87,7 +87,7 @@ const decodeFinancialVerificationSignature = (
 export const makeAccountingTestLayer = () =>
   Layer.effect(
     AccountingService,
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const authorization = yield* AuthorizationService
       const messaging = yield* MessagingService
       const sales = yield* SalesService
@@ -134,7 +134,7 @@ export const makeAccountingTestLayer = () =>
       }
       const service: AccountingService = {
         listAccountingConfigurations: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(ListAccountingConfigurationsInput)(
               input,
             )
@@ -145,9 +145,9 @@ export const makeAccountingTestLayer = () =>
             })
             return [...configurations.values()]
               .filter((configuration) =>
-                configuration.tenantId === decoded.tenantId &&
-                (decoded.legalEntityId === undefined ||
-                  configuration.legalEntityId === decoded.legalEntityId)
+                configuration.tenantId === decoded.tenantId
+                && (decoded.legalEntityId === undefined
+                  || configuration.legalEntityId === decoded.legalEntityId)
               )
               .toSorted((left, right) => left.legalEntityId.localeCompare(right.legalEntityId))
               .slice(0, decoded.limit ?? 200)
@@ -155,7 +155,7 @@ export const makeAccountingTestLayer = () =>
         // Fallow: memory and PostgreSQL adapters intentionally mirror public account-read authorization.
         // fallow-ignore-next-line code-duplication
         listAccounts: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(ListAccountsInput)(input)
             yield* authorization.authorize({
               principal: decoded.principal,
@@ -164,8 +164,8 @@ export const makeAccountingTestLayer = () =>
             })
             return [...storedAccounts.values()]
               .filter((account) =>
-                account.tenantId === decoded.tenantId &&
-                (decoded.type === undefined || account.type === decoded.type)
+                account.tenantId === decoded.tenantId
+                && (decoded.type === undefined || account.type === decoded.type)
               )
               .toSorted((left, right) => left.code.localeCompare(right.code))
               .slice(0, decoded.limit ?? 200)
@@ -173,7 +173,7 @@ export const makeAccountingTestLayer = () =>
         // Fallow: memory and PostgreSQL adapters intentionally mirror public period-read authorization.
         // fallow-ignore-next-line code-duplication
         listAccountingPeriods: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(ListAccountingPeriodsInput)(input)
             yield* authorization.authorize({
               principal: decoded.principal,
@@ -182,16 +182,16 @@ export const makeAccountingTestLayer = () =>
             })
             return [...periods.values()]
               .filter((period) =>
-                period.tenantId === decoded.tenantId &&
-                (decoded.legalEntityId === undefined ||
-                  period.legalEntityId === decoded.legalEntityId) &&
-                (decoded.status === undefined || period.status === decoded.status)
+                period.tenantId === decoded.tenantId
+                && (decoded.legalEntityId === undefined
+                  || period.legalEntityId === decoded.legalEntityId)
+                && (decoded.status === undefined || period.status === decoded.status)
               )
               .toSorted((left, right) => left.startsOn.localeCompare(right.startsOn))
               .slice(0, decoded.limit ?? 200)
           }),
         listRevenuePostingProfiles: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(ListRevenuePostingProfilesInput)(
               input,
             )
@@ -202,9 +202,9 @@ export const makeAccountingTestLayer = () =>
             })
             return [...profiles.values()]
               .filter((profile) =>
-                profile.tenantId === decoded.tenantId &&
-                (decoded.legalEntityId === undefined ||
-                  profile.legalEntityId === decoded.legalEntityId)
+                profile.tenantId === decoded.tenantId
+                && (decoded.legalEntityId === undefined
+                  || profile.legalEntityId === decoded.legalEntityId)
               )
               .toSorted((left, right) => left.legalEntityId.localeCompare(right.legalEntityId))
               .slice(0, decoded.limit ?? 200)
@@ -212,7 +212,7 @@ export const makeAccountingTestLayer = () =>
         // Fallow: memory and PostgreSQL adapters intentionally mirror public read authorization.
         // fallow-ignore-next-line code-duplication
         listJournalEntries: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(ListJournalEntriesInput)(input)
             yield* authorization.authorize({
               principal: decoded.principal,
@@ -221,14 +221,14 @@ export const makeAccountingTestLayer = () =>
             })
             return [...storedJournals.values()]
               .filter((journal) =>
-                journal.tenantId === decoded.tenantId &&
-                (decoded.status === undefined || journal.status === decoded.status)
+                journal.tenantId === decoded.tenantId
+                && (decoded.status === undefined || journal.status === decoded.status)
               )
               .toSorted((left, right) => right.postedAt.localeCompare(left.postedAt))
               .slice(0, decoded.limit ?? 200)
           }),
         recordFinancialStagingEvidence: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(RecordFinancialStagingEvidenceInput)(
               input,
             )
@@ -272,7 +272,7 @@ export const makeAccountingTestLayer = () =>
             return result.record
           }),
         listFinancialStagingEvidence: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(ListFinancialStagingEvidenceInput)(
               input,
             )
@@ -295,7 +295,7 @@ export const makeAccountingTestLayer = () =>
             })
           }),
         recordFinancialVerificationArtifact: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(
               RecordFinancialVerificationArtifactInput,
             )(input)
@@ -364,7 +364,7 @@ export const makeAccountingTestLayer = () =>
             return artifact
           }),
         prepareTigerBeetleCutover: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(PrepareTigerBeetleCutoverInput)(input)
             yield* authorization.authorize({
               principal: decoded.principal,
@@ -397,7 +397,7 @@ export const makeAccountingTestLayer = () =>
             return current
           }),
         approveTigerBeetleCutover: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(ApproveTigerBeetleCutoverInput)(input)
             yield* authorization.authorize({
               principal: decoded.principal,
@@ -437,18 +437,18 @@ export const makeAccountingTestLayer = () =>
               )
             }
             if (
-              artifact.legalEntityId !== decoded.legalEntityId ||
-              artifact.evidence.currency !== configuration?.baseCurrency ||
-              artifact.status !== "verified" ||
-              artifact.evidence.kind !== "cutover_rehearsal" ||
-              artifact.evidence.mismatchCount !== 0
+              artifact.legalEntityId !== decoded.legalEntityId
+              || artifact.evidence.currency !== configuration?.baseCurrency
+              || artifact.status !== "verified"
+              || artifact.evidence.kind !== "cutover_rehearsal"
+              || artifact.evidence.mismatchCount !== 0
             ) {
               return yield* Effect.fail(
                 new FinancialVerificationArtifactInvalid({
                   tenantId: decoded.tenantId,
                   legalEntityId: decoded.legalEntityId,
-                  reason: artifact.legalEntityId !== decoded.legalEntityId ||
-                      artifact.evidence.currency !== configuration?.baseCurrency
+                  reason: artifact.legalEntityId !== decoded.legalEntityId
+                      || artifact.evidence.currency !== configuration?.baseCurrency
                     ? "scope_mismatch"
                     : artifact.evidence.mismatchCount > 0
                     ? "mismatch"
@@ -457,8 +457,8 @@ export const makeAccountingTestLayer = () =>
               )
             }
             if (
-              Option.isNone(keyringOption) &&
-              (Option.isNone(signerOption) || artifact.signingKeyId !== signerOption.value.keyId)
+              Option.isNone(keyringOption)
+              && (Option.isNone(signerOption) || artifact.signingKeyId !== signerOption.value.keyId)
             ) {
               return yield* Effect.fail(
                 new FinancialVerificationArtifactInvalid({
@@ -533,7 +533,7 @@ export const makeAccountingTestLayer = () =>
             return approved
           }),
         activateTigerBeetleCutover: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(ActivateTigerBeetleCutoverInput)(
               input,
             )
@@ -553,7 +553,7 @@ export const makeAccountingTestLayer = () =>
             )
           }),
         configureLegalEntity: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(ConfigureLegalEntityInput)(input)
             yield* authorization.authorize({
               principal: decoded.principal,
@@ -592,7 +592,7 @@ export const makeAccountingTestLayer = () =>
             return configuration
           }),
         createAccount: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(CreateAccountInput)(input)
             yield* authorization.authorize({
               principal: decoded.principal,
@@ -620,7 +620,7 @@ export const makeAccountingTestLayer = () =>
             return account
           }),
         configureRevenuePosting: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(ConfigureRevenuePostingInput)(input)
             yield* authorization.authorize({
               principal: decoded.principal,
@@ -661,7 +661,7 @@ export const makeAccountingTestLayer = () =>
             return profile
           }),
         openPeriod: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(OpenPeriodInput)(input)
             yield* authorization.authorize({
               principal: decoded.principal,
@@ -669,9 +669,9 @@ export const makeAccountingTestLayer = () =>
               capability: AccountingCapabilities.periodOpen,
             })
             const overlap = [...periods.values()].some((period) =>
-              period.tenantId === decoded.tenantId &&
-              period.legalEntityId === decoded.legalEntityId &&
-              period.startsOn <= decoded.endsOn && decoded.startsOn <= period.endsOn
+              period.tenantId === decoded.tenantId
+              && period.legalEntityId === decoded.legalEntityId
+              && period.startsOn <= decoded.endsOn && decoded.startsOn <= period.endsOn
             )
             if (overlap) {
               return yield* Effect.fail(
@@ -693,7 +693,7 @@ export const makeAccountingTestLayer = () =>
             return period
           }),
         closePeriod: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(ClosePeriodInput)(input)
             yield* authorization.authorize({
               principal: decoded.principal,
@@ -702,8 +702,8 @@ export const makeAccountingTestLayer = () =>
             })
             const period = periods.get(decoded.periodId)
             if (
-              period === undefined || period.tenantId !== decoded.tenantId ||
-              period.legalEntityId !== decoded.legalEntityId
+              period === undefined || period.tenantId !== decoded.tenantId
+              || period.legalEntityId !== decoded.legalEntityId
             ) {
               return yield* Effect.fail(
                 new AccountingPeriodNotFound({
@@ -718,7 +718,7 @@ export const makeAccountingTestLayer = () =>
             return closed
           }),
         postRevenueForOrder: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(PostRevenueForOrderInput)(input)
             yield* authorization.authorize({
               principal: decoded.principal,
@@ -755,11 +755,11 @@ export const makeAccountingTestLayer = () =>
             }
             const today = utcDate(clock)
             if (
-              configurations.get(key)?.postingEnabled !== true ||
-              ![...periods.values()].some((period) =>
-                period.tenantId === decoded.tenantId &&
-                period.legalEntityId === decoded.legalEntityId &&
-                period.status === "open" && period.startsOn <= today && today <= period.endsOn
+              configurations.get(key)?.postingEnabled !== true
+              || ![...periods.values()].some((period) =>
+                period.tenantId === decoded.tenantId
+                && period.legalEntityId === decoded.legalEntityId
+                && period.status === "open" && period.startsOn <= today && today <= period.endsOn
               )
             ) {
               return yield* Effect.fail(
@@ -803,7 +803,7 @@ export const makeAccountingTestLayer = () =>
             return journal
           }),
         reverseRevenueForOrder: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(ReverseRevenueForOrderInput)(input)
             yield* authorization.authorize({
               principal: decoded.principal,
@@ -824,11 +824,11 @@ export const makeAccountingTestLayer = () =>
             }
             const today = utcDate(clock)
             if (
-              configurations.get(key)?.postingEnabled !== true ||
-              ![...periods.values()].some((period) =>
-                period.tenantId === decoded.tenantId &&
-                period.legalEntityId === decoded.legalEntityId &&
-                period.status === "open" && period.startsOn <= today && today <= period.endsOn
+              configurations.get(key)?.postingEnabled !== true
+              || ![...periods.values()].some((period) =>
+                period.tenantId === decoded.tenantId
+                && period.legalEntityId === decoded.legalEntityId
+                && period.status === "open" && period.startsOn <= today && today <= period.endsOn
               )
             ) {
               return yield* Effect.fail(
@@ -867,7 +867,7 @@ export const makeAccountingTestLayer = () =>
             return journal
           }),
         postJournal: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(PostJournalInput)(input)
             yield* authorization.authorize({
               principal: decoded.principal,
@@ -888,8 +888,8 @@ export const makeAccountingTestLayer = () =>
             const existing = storedJournals.get(key)
             if (existing !== undefined) {
               if (
-                JSON.stringify(normalizeLines(existing.lines)) !==
-                  JSON.stringify(normalizeLines(decoded.lines))
+                JSON.stringify(normalizeLines(existing.lines))
+                  !== JSON.stringify(normalizeLines(decoded.lines))
               ) {
                 return yield* Effect.fail(
                   new JournalIdempotencyConflict({

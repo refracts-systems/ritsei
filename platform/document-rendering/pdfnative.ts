@@ -14,6 +14,7 @@ import {
   registerFonts,
 } from "pdfnative"
 
+import { uuidv7 } from "../../foundation/ids/mod.ts"
 import {
   DocumentArtifact,
   DocumentArtifactStatus,
@@ -30,7 +31,6 @@ import {
   sha256Hex,
   validateDocumentRenderPolicy,
 } from "../../foundation/mod.ts"
-import { uuidv7 } from "../../foundation/ids/mod.ts"
 
 const fontLoader = (load: () => Promise<unknown>): FontLoader => async () => {
   const module = await load()
@@ -38,8 +38,8 @@ const fontLoader = (load: () => Promise<unknown>): FontLoader => async () => {
     ? module.default
     : module
   if (
-    typeof font !== "object" || font === null || !("fontName" in font) ||
-    !("ttfBase64" in font)
+    typeof font !== "object" || font === null || !("fontName" in font)
+    || !("ttfBase64" in font)
   ) {
     throw new TypeError("pdfnative font module did not expose FontData")
   }
@@ -123,7 +123,7 @@ const loadAsset = (
   assetId: string,
   resolveAsset: PdfNativeAssetResolver | undefined,
 ) =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const bytes = resolveAsset === undefined ? undefined : yield* resolveAsset(assetId)
     if (bytes === undefined) {
       return yield* Effect.fail(
@@ -181,7 +181,7 @@ const toImageBlocks = (
   node: Extract<DocumentNode, { _tag: "image" }>,
   resolveAsset: PdfNativeAssetResolver | undefined,
 ) =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const bytes = yield* loadAsset(node.assetId, resolveAsset)
     const blocks: PdfDocumentBlock[] = [{
       type: "image",
@@ -196,7 +196,7 @@ const toSignatureBlocks = (
   node: Extract<DocumentNode, { _tag: "signature" }>,
   resolveAsset: PdfNativeAssetResolver | undefined,
 ) =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const bytes = yield* loadAsset(node.assetId, resolveAsset)
     const blocks: PdfDocumentBlock[] = [
       { type: "paragraph", text: node.label },
@@ -209,7 +209,7 @@ const toPdfBlocks = (
   nodes: ReadonlyArray<DocumentNode>,
   resolveAsset: PdfNativeAssetResolver | undefined,
 ) =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const blockResults = yield* Effect.all(
       nodes.map((node) => {
         switch (node._tag) {
@@ -231,7 +231,7 @@ const toPdfBlocks = (
   })
 
 const decodeInput = (input: DocumentRenderInput) =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const context = yield* Schema.decodeUnknownEffect(DocumentContext)(input.context)
     const ast = yield* Schema.decodeUnknownEffect(DocumentAst)(input.ast)
     const request = yield* Schema.decodeUnknownEffect(DocumentRenderRequest)(input.request)
@@ -244,9 +244,9 @@ const validateInputReferences = (
   request: DocumentRenderRequest,
 ) => {
   if (
-    context.tenantId !== request.tenantId ||
-    context.snapshotId !== request.snapshotId ||
-    context.snapshotChecksum !== request.snapshotChecksum
+    context.tenantId !== request.tenantId
+    || context.snapshotId !== request.snapshotId
+    || context.snapshotChecksum !== request.snapshotChecksum
   ) {
     return Effect.fail(
       rendererFailure(
@@ -327,7 +327,7 @@ const makeDocumentArtifact = (
   bytes: Uint8Array,
   pageCount: number,
 ) =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const contentHash = yield* sha256Hex(bytes)
     const metadata = yield* Schema.decodeUnknownEffect(DocumentArtifact)({
       artifactId: uuidv7(),
@@ -356,7 +356,7 @@ const renderPdfNativeDocument = (
   options: PdfNativeRendererOptions,
   policy: DocumentRenderPolicy,
 ) =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const { context, ast, request } = yield* decodeInput(input)
     yield* validateInputReferences(context, ast, request)
     yield* validateDocumentRenderPolicy(request, policy)

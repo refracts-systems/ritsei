@@ -4,6 +4,12 @@ import * as Layer from "effect/Layer"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 
+import { Database, DatabaseFailure, uuidv7 } from "../../../foundation/mod.ts"
+import { makePostgresDatabase, runMigrations } from "../../../platform/mod.ts"
+import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
+import { AuthorizationService, makeAuthorizationTestLayer } from "../../authorization/mod.ts"
+import { makeMessagingService, MessagingService } from "../../messaging/mod.ts"
+import { SalesService } from "../../sales/mod.ts"
 import {
   AccountingCapabilities,
   AccountingPeriodNotOpen,
@@ -12,18 +18,12 @@ import {
   JournalIdempotencyConflict,
   makeAccountingService,
 } from "../mod.ts"
-import { AuthorizationService, makeAuthorizationTestLayer } from "../../authorization/mod.ts"
-import { Database, DatabaseFailure, uuidv7 } from "../../../foundation/mod.ts"
-import { makePostgresDatabase, runMigrations } from "../../../platform/mod.ts"
-import { makeMessagingService, MessagingService } from "../../messaging/mod.ts"
-import { SalesService } from "../../sales/mod.ts"
-import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
 
 const salesFacts = {
   getConfirmedOrderTotal: () => Effect.succeed("10.00"),
 } as unknown as SalesService
 
-const databaseUrl = Deno.env.get("DATABASE_URL")
+const databaseUrl = process.env["DATABASE_URL"]
 
 const postgresFailure = (effect: () => Promise<unknown>) =>
   Effect.tryPromise({ try: effect, catch: (cause) => cause }).pipe(Effect.flip)
@@ -34,7 +34,7 @@ it.effect.skipIf(databaseUrl === undefined)(
     withTemporaryDatabase(
       databaseUrl!,
       (client) =>
-        Effect.gen(function* () {
+        Effect.gen(function*() {
           yield* runMigrations(client)
 
           const [tenant] = yield* Effect.promise(() =>
@@ -207,7 +207,7 @@ it.effect.skipIf(databaseUrl === undefined)(
     withTemporaryDatabase(
       databaseUrl!,
       (client) =>
-        Effect.gen(function* () {
+        Effect.gen(function*() {
           yield* runMigrations(client)
           const database = makePostgresDatabase(client)
           const [tenant] = yield* Effect.promise(() =>
@@ -337,7 +337,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             },
           ])
 
-          yield* Effect.gen(function* () {
+          yield* Effect.gen(function*() {
             const authorization = yield* AuthorizationService
             const messaging = yield* makeMessagingService.pipe(
               Effect.provideService(Database, database),
@@ -727,7 +727,7 @@ it.effect.skipIf(databaseUrl === undefined)(
     withTemporaryDatabase(
       databaseUrl!,
       (client) =>
-        Effect.gen(function* () {
+        Effect.gen(function*() {
           yield* runMigrations(client)
           const database = makePostgresDatabase(client)
           const [tenant] = yield* Effect.promise(() =>
@@ -790,7 +790,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             ),
           )
 
-          yield* Effect.gen(function* () {
+          yield* Effect.gen(function*() {
             const authorization = yield* AuthorizationService
             const messaging = yield* makeMessagingService.pipe(
               Effect.provideService(Database, database),
@@ -853,7 +853,7 @@ it.effect.skipIf(databaseUrl === undefined)(
     withTemporaryDatabase(
       databaseUrl!,
       (client) =>
-        Effect.gen(function* () {
+        Effect.gen(function*() {
           yield* runMigrations(client)
 
           const [tenant] = yield* Effect.promise(() =>
@@ -1110,7 +1110,7 @@ it.effect.skipIf(databaseUrl === undefined)(
     withTemporaryDatabase(
       databaseUrl!,
       (client) =>
-        Effect.gen(function* () {
+        Effect.gen(function*() {
           yield* runMigrations(client)
 
           const [tenant] = yield* Effect.promise(() =>

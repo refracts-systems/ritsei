@@ -1,9 +1,9 @@
-import { createUniqueId, For, omit, Show } from "solid-js"
 import type { JSX } from "@solidjs/web"
+import { createUniqueId, For, omit, Show } from "solid-js"
 import { css } from "../../generated/css/index.js"
-import { motionStyles } from "../../motion/index.ts"
-import type { InteractionIntent } from "../../interaction/contract.ts"
 import type { MarkerTone, VisualIntent } from "../../grammar/visual-intent.ts"
+import type { InteractionIntent } from "../../interaction/contract.ts"
+import { motionStyles } from "../../motion/index.ts"
 import {
   buildBoundaryPath,
   buildContourPaths,
@@ -24,7 +24,8 @@ export interface CartographyFieldProps extends
   Omit<
     JSX.HTMLAttributes<HTMLElement>,
     "aria-busy" | "aria-describedby" | "aria-labelledby" | "children" | "class" | "role"
-  > {
+  >
+{
   readonly intent: VisualIntent
   readonly selectedMarkerId?: string
   readonly onInteraction?: (intent: InteractionIntent) => void

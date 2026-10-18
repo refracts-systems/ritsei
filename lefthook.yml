@@ -3,12 +3,12 @@ assert_lefthook_installed: true
 
 pre-commit:
   commands:
-    deno-format:
+    format:
       glob: "*.{ts,tsx,js,jsx,json,jsonc}"
-      run: deno fmt {staged_files}
+      run: pnpm exec dprint fmt {staged_files}
       stage_fixed: true
 
 commit-msg:
   commands:
     conventional:
-      run: deno run --allow-read tooling/check-commit-message.ts {1}
+      run: pnpm exec tsx tooling/check-commit-message.ts {1}

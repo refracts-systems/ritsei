@@ -20,8 +20,6 @@ import {
   legalEntityAccountingConfigurations,
   revenuePostingProfiles,
 } from "../../../db/schema/accounting.ts"
-import { AuthorizationDenied, AuthorizationService } from "../../authorization/mod.ts"
-import { Principal } from "../../auth/mod.ts"
 import {
   Database,
   DatabaseFailure,
@@ -34,15 +32,12 @@ import {
   isDatabaseConstraint,
   requireExactMajorToMinor,
 } from "../../../foundation/mod.ts"
-import {
-  type FinancialStoreInventory,
-  FinancialStoreObservationFailure,
-  FinancialStoreObservationRegistry,
-  hashFinancialStoreWatermarks,
-} from "./financial-store-contract.ts"
+import { Principal } from "../../auth/mod.ts"
+import { AuthorizationDenied, AuthorizationService } from "../../authorization/mod.ts"
 import { EventEnvelope, EventIdempotencyConflict, MessagingService } from "../../messaging/mod.ts"
 import { SalesOrderInvalidState, SalesOrderNotFound, SalesService } from "../../sales/mod.ts"
 import { AccountingCapabilities } from "./capabilities.ts"
+import { AccountingFinancialOperationReconciledEvent } from "./events.ts"
 import {
   type FinancialAccountConstraint,
   type FinancialExecutionOutcome,
@@ -56,7 +51,12 @@ import {
   type FinancialVerificationEvidence,
   hashFinancialFactSnapshot,
 } from "./financial-readiness.ts"
-import { AccountingFinancialOperationReconciledEvent } from "./events.ts"
+import {
+  type FinancialStoreInventory,
+  FinancialStoreObservationFailure,
+  FinancialStoreObservationRegistry,
+  hashFinancialStoreWatermarks,
+} from "./financial-store-contract.ts"
 import {
   AccountingPeriodNotOpen,
   AccountNotFound,
@@ -111,32 +111,32 @@ const financialOperationStatusMatchesMetadata = (operation: {
   readonly recoveryReason: string | null
   readonly reconciledAt: string | null
 }) => {
-  const hasNoTerminalMetadata = operation.engineAcceptedAt === null &&
-    operation.rejectionReason === null &&
-    operation.recoveryReason === null &&
-    operation.reconciledAt === null
+  const hasNoTerminalMetadata = operation.engineAcceptedAt === null
+    && operation.rejectionReason === null
+    && operation.recoveryReason === null
+    && operation.reconciledAt === null
   switch (operation.status) {
     case "intent":
     case "submitted":
     case "unknown":
       return hasNoTerminalMetadata
     case "accepted":
-      return operation.engineAcceptedAt !== null &&
-        operation.rejectionReason === null &&
-        operation.recoveryReason === null &&
-        operation.reconciledAt === null
+      return operation.engineAcceptedAt !== null
+        && operation.rejectionReason === null
+        && operation.recoveryReason === null
+        && operation.reconciledAt === null
     case "rejected":
-      return operation.engineAcceptedAt === null &&
-        operation.rejectionReason !== null &&
-        operation.recoveryReason === null &&
-        operation.reconciledAt === null
+      return operation.engineAcceptedAt === null
+        && operation.rejectionReason !== null
+        && operation.recoveryReason === null
+        && operation.reconciledAt === null
     case "manual_recovery":
       return operation.recoveryReason !== null && operation.reconciledAt === null
     case "reconciled":
-      return operation.engineAcceptedAt !== null &&
-        operation.rejectionReason === null &&
-        operation.recoveryReason === null &&
-        operation.reconciledAt !== null
+      return operation.engineAcceptedAt !== null
+        && operation.rejectionReason === null
+        && operation.recoveryReason === null
+        && operation.reconciledAt !== null
   }
 }
 
@@ -159,7 +159,8 @@ export class FinancialOperationInjectedFailure
   extends Schema.TaggedError<FinancialOperationInjectedFailure>()(
     "FinancialOperationInjectedFailure",
     { point: FinancialOperationFailpointName },
-  ) {}
+  )
+{}
 
 export interface FinancialOperationFailpointService {
   readonly hit: (
@@ -328,8 +329,8 @@ export const FinancialReconciliationCheckpoint = Schema.Struct({
   checkedAt: InstantString,
 }).check(Schema.makeFilter(
   (checkpoint) =>
-    checkpoint.status !== "verified" ||
-    (checkpoint.mismatchCount === 0 && checkpoint.orphanCount === 0),
+    checkpoint.status !== "verified"
+    || (checkpoint.mismatchCount === 0 && checkpoint.orphanCount === 0),
   { expected: "verified financial checkpoints must have zero mismatches and orphans" },
 ))
 
@@ -363,7 +364,8 @@ export class FinancialOperationNotFound
   extends Schema.TaggedError<FinancialOperationNotFound>()("FinancialOperationNotFound", {
     tenantId: Uuid,
     operationId: NonEmptyString,
-  }) {}
+  })
+{}
 
 export class FinancialOperationFenceRejected
   extends Schema.TaggedError<FinancialOperationFenceRejected>()(
@@ -373,19 +375,22 @@ export class FinancialOperationFenceRejected
       operationId: NonEmptyString,
       reason: Schema.Literals(["scope_mismatch", "stale_generation"]),
     },
-  ) {}
+  )
+{}
 
 export class FinancialOperationConflict
   extends Schema.TaggedError<FinancialOperationConflict>()("FinancialOperationConflict", {
     tenantId: Uuid,
     operationId: NonEmptyString,
-  }) {}
+  })
+{}
 
 export class FinancialLedgerNotConfigured
   extends Schema.TaggedError<FinancialLedgerNotConfigured>()(
     "FinancialLedgerNotConfigured",
     {},
-  ) {}
+  )
+{}
 
 export class FinancialLedgerNotActivated extends Schema.TaggedError<FinancialLedgerNotActivated>()(
   "FinancialLedgerNotActivated",
@@ -401,13 +406,15 @@ export class FinancialRevenueAmountMismatch
   extends Schema.TaggedError<FinancialRevenueAmountMismatch>()(
     "FinancialRevenueAmountMismatch",
     { tenantId: Uuid, orderId: Uuid },
-  ) {}
+  )
+{}
 
 export class FinancialOperationReconciliationConflict
   extends Schema.TaggedError<FinancialOperationReconciliationConflict>()(
     "FinancialOperationReconciliationConflict",
     { operationId: NonEmptyString },
-  ) {}
+  )
+{}
 
 export class FinancialProjectionRebuildBlocked
   extends Schema.TaggedError<FinancialProjectionRebuildBlocked>()(
@@ -418,37 +425,43 @@ export class FinancialProjectionRebuildBlocked
       operationId: NonEmptyString,
       reason: Schema.Literals(["unavailable", "not_found", "mapping_mismatch"]),
     },
-  ) {}
+  )
+{}
 
 export class FinancialReversalSourceRequired
   extends Schema.TaggedError<FinancialReversalSourceRequired>()(
     "FinancialReversalSourceRequired",
     {},
-  ) {}
+  )
+{}
 
 export class FinancialReversalSourceNotFound
   extends Schema.TaggedError<FinancialReversalSourceNotFound>()(
     "FinancialReversalSourceNotFound",
     { tenantId: Uuid, sourceJournalId: Uuid },
-  ) {}
+  )
+{}
 
 export class FinancialReversalSourceNotPosted
   extends Schema.TaggedError<FinancialReversalSourceNotPosted>()(
     "FinancialReversalSourceNotPosted",
     { tenantId: Uuid, sourceJournalId: Uuid },
-  ) {}
+  )
+{}
 
 export class FinancialReversalSourceNotReady
   extends Schema.TaggedError<FinancialReversalSourceNotReady>()(
     "FinancialReversalSourceNotReady",
     { tenantId: Uuid, sourceJournalId: Uuid },
-  ) {}
+  )
+{}
 
 export class FinancialReversalAlreadyExists
   extends Schema.TaggedError<FinancialReversalAlreadyExists>()(
     "FinancialReversalAlreadyExists",
     { tenantId: Uuid, sourceJournalId: Uuid },
-  ) {}
+  )
+{}
 
 export class FinancialCurrencyMismatch extends Schema.TaggedError<FinancialCurrencyMismatch>()(
   "FinancialCurrencyMismatch",
@@ -470,7 +483,8 @@ export class FinancialReconciliationCheckpointEvidenceInvalid
         "rejected",
       ]),
     },
-  ) {}
+  )
+{}
 
 export class FinancialReconciliationCheckpointConflict
   extends Schema.TaggedError<FinancialReconciliationCheckpointConflict>()(
@@ -480,7 +494,8 @@ export class FinancialReconciliationCheckpointConflict
       legalEntityId: Uuid,
       recoveryWatermark: NonEmptyString,
     },
-  ) {}
+  )
+{}
 
 export interface FinancialOperationService {
   readonly createJournalIntent: (
@@ -800,7 +815,7 @@ const persistReconciliationCheckpointIdempotently = ({
   matchesCheckpointRequest,
 }: ReconciliationCheckpointPersistenceInput) =>
   database.withTransaction(
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const [checkpoint] = yield* database.query(
         (db) =>
           db.insert(financialReconciliationCheckpoints).values({
@@ -848,13 +863,13 @@ const persistReconciliationCheckpointIdempotently = ({
   ).pipe(
     Effect.catchIf(
       (error) =>
-        error instanceof DatabaseFailure &&
-        isDatabaseConstraint(
+        error instanceof DatabaseFailure
+        && isDatabaseConstraint(
           error,
           "financial_reconciliation_checkpoints_scope_watermark_key",
         ),
       () =>
-        Effect.gen(function* () {
+        Effect.gen(function*() {
           const [winner] = yield* loadExistingCheckpoint()
           if (winner === undefined) {
             return yield* Effect.fail(
@@ -904,7 +919,7 @@ const fingerprint = (input: FinancialIntentFingerprintInput): string =>
 const validateLines = (
   lines: readonly CreateFinancialJournalIntentInput["lines"][number][],
 ): Effect.Effect<void, InvalidJournalLine | UnbalancedJournal> =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     if (lines.length === 0) {
       return yield* Effect.fail(new UnbalancedJournal({ debit: "0", credit: "0" }))
     }
@@ -1050,10 +1065,10 @@ const projectedFinancialTransferMatches = (
   expectedPair: FinancialProjectionTransferPair,
   transferId: string | undefined,
 ) =>
-  existing.debitAccountId === expectedPair.debitAccountId &&
-  existing.creditAccountId === expectedPair.creditAccountId &&
-  String(existing.amountMinor) === expectedPair.amountMinor &&
-  (existing.engineTransferId === null || existing.engineTransferId === transferId)
+  existing.debitAccountId === expectedPair.debitAccountId
+  && existing.creditAccountId === expectedPair.creditAccountId
+  && String(existing.amountMinor) === expectedPair.amountMinor
+  && (existing.engineTransferId === null || existing.engineTransferId === transferId)
 
 const classifyProjectedTransferRows = ({
   projected,
@@ -1072,8 +1087,8 @@ const classifyProjectedTransferRows = ({
   )
   const projectionMismatch = expectedPairs.some((expectedPair) => {
     const existing = projectedByPosition.get(expectedPair.position)
-    return existing !== undefined &&
-      !projectedFinancialTransferMatches(
+    return existing !== undefined
+      && !projectedFinancialTransferMatches(
         existing,
         expectedPair,
         transferIds[expectedPair.position],
@@ -1175,7 +1190,7 @@ type ReconciliationAssessment = Readonly<{
  * provider, authorization, or persistence effects.
  */
 const buildReconciliationAssessment = (input: ReconciliationAssessmentInput) =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const inventory = classifyReconciliationInventory({
       target: input.target,
       orphanTransfers: input.orphanTransfers,
@@ -1208,11 +1223,11 @@ const buildReconciliationAssessment = (input: ReconciliationAssessmentInput) =>
       ),
     )
     if (
-      input.expectedFactHashes !== undefined &&
-      (input.expectedFactHashes.operationSetHash !== evidence.operationSetHash ||
-        input.expectedFactHashes.accountBalanceHash !== evidence.accountBalanceHash ||
-        input.expectedFactHashes.transferSetHash !== evidence.transferSetHash ||
-        input.expectedFactHashes.projectionHash !== evidence.projectionHash)
+      input.expectedFactHashes !== undefined
+      && (input.expectedFactHashes.operationSetHash !== evidence.operationSetHash
+        || input.expectedFactHashes.accountBalanceHash !== evidence.accountBalanceHash
+        || input.expectedFactHashes.transferSetHash !== evidence.transferSetHash
+        || input.expectedFactHashes.projectionHash !== evidence.projectionHash)
     ) {
       return yield* Effect.fail(
         new FinancialReconciliationCheckpointEvidenceInvalid({
@@ -1222,9 +1237,9 @@ const buildReconciliationAssessment = (input: ReconciliationAssessmentInput) =>
         }),
       )
     }
-    const status = evidence.mismatchCount === 0 &&
-        inventory.inventoryMismatchCount === 0 &&
-        inventory.uniqueOrphans.length === 0
+    const status = evidence.mismatchCount === 0
+        && inventory.inventoryMismatchCount === 0
+        && inventory.uniqueOrphans.length === 0
       ? "verified"
       : "blocked"
     return {
@@ -1242,7 +1257,7 @@ const balanceConstraintForAccountType = (
     ? "credits_must_not_exceed_debits"
     : "debits_must_not_exceed_credits"
 
-export const makeFinancialOperationService = Effect.gen(function* () {
+export const makeFinancialOperationService = Effect.gen(function*() {
   const database = yield* Database
   const authorization = yield* AuthorizationService
   const ledgerOption = yield* Effect.serviceOption(FinancialLedgerPort)
@@ -1271,7 +1286,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
     )
 
   const loadOperationOrFail = (tenantId: string, operationId: string, lock = false) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const [row] = yield* loadOperation(tenantId, operationId, lock)
       if (row === undefined) {
         return yield* Effect.fail(new FinancialOperationNotFound({ tenantId, operationId }))
@@ -1288,7 +1303,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
     operationId: string,
     executionFence: ExecutionFence | null,
   ) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       if (executionFence === null) return
       if (executionFence.scope !== financialOperationFenceScope(tenantId, operationId)) {
         return yield* Effect.fail(
@@ -1340,7 +1355,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
     executionFence: ExecutionFence | null = null,
   ) =>
     database.withTransaction(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const now = currentTime()
         yield* hit("before_projection_commit")
         const current = yield* loadOperationOrFail(tenantId, operationId, true)
@@ -1423,11 +1438,11 @@ export const makeFinancialOperationService = Effect.gen(function* () {
     observedEngine: "postgresql" | "tigerbeetle" | null = null,
     executionFence: ExecutionFence | null = null,
   ) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const now = currentTime()
       yield* hit("before_receipt_commit")
       const receipt = yield* database.withTransaction(
-        Effect.gen(function* () {
+        Effect.gen(function*() {
           const current = yield* loadOperationOrFail(tenantId, operationId, true)
           yield* acceptExecutionFence(current, tenantId, operationId, executionFence)
           if (outcome.operationId !== current.operationId) {
@@ -1483,14 +1498,14 @@ export const makeFinancialOperationService = Effect.gen(function* () {
             expectedTransfers.sort((left, right) => left.position - right.position)
             const transferIds = outcome.transferIds
             const transferIdsUnique = new Set(transferIds).size === transferIds.length
-            const mappingMatches = outcome.mappingVersion === current.mappingVersion &&
-              outcome.transferCount === expectedTransfers.length &&
-              transferIds.length === expectedTransfers.length &&
-              transferIdsUnique &&
-              expectedTransfers.every((transfer) =>
-                transferIds[transfer.position] !== undefined &&
-                (transfer.engineTransferId === null ||
-                  transfer.engineTransferId === transferIds[transfer.position])
+            const mappingMatches = outcome.mappingVersion === current.mappingVersion
+              && outcome.transferCount === expectedTransfers.length
+              && transferIds.length === expectedTransfers.length
+              && transferIdsUnique
+              && expectedTransfers.every((transfer) =>
+                transferIds[transfer.position] !== undefined
+                && (transfer.engineTransferId === null
+                  || transfer.engineTransferId === transferIds[transfer.position])
               )
             if (!mappingMatches) {
               const [updated] = yield* database.query(
@@ -1630,7 +1645,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
     outcome: Extract<FinancialExecutionOutcome, { readonly _tag: "accepted" }>,
   ) =>
     database.withTransaction(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const now = currentTime()
         const current = yield* loadOperationOrFail(tenantId, operationId, true)
         if (current.status !== "accepted" && current.status !== "reconciled") return current
@@ -1670,9 +1685,9 @@ export const makeFinancialOperationService = Effect.gen(function* () {
           "accounting.financial_projection_rebuild.journal.get",
         )
         if (
-          journal !== undefined &&
-          (journal.status !== desiredJournalStatus ||
-            journal.reversesEntryId !== desiredReversesEntryId || journal.postedAt === null)
+          journal !== undefined
+          && (journal.status !== desiredJournalStatus
+            || journal.reversesEntryId !== desiredReversesEntryId || journal.postedAt === null)
         ) {
           yield* database.query(
             (db) =>
@@ -1739,7 +1754,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
 
   const quarantineProjection = (tenantId: string, operationId: string) =>
     database.withTransaction(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const now = currentTime()
         const current = yield* loadOperationOrFail(tenantId, operationId, true)
         if (current.status === "manual_recovery") return current
@@ -1775,7 +1790,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
     )
 
   const reconcileFinancialCheckpoint = (input: unknown) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const parsed = yield* Schema.decodeUnknownEffect(ReconcileFinancialCheckpointInput)(input)
       let decoded = {
         ...parsed,
@@ -1824,13 +1839,13 @@ export const makeFinancialOperationService = Effect.gen(function* () {
           parsed.targetSnapshotRef,
         ]
         if (
-          suppliedWatermarks.some((value) => value !== undefined) &&
-          (suppliedWatermarks.some((value) => value === undefined) ||
-            parsed.recoveryWatermark?.trim() !== `observation:${recoveryHash}` ||
-            parsed.sourceWatermark?.trim() !== sourceWatermark.value ||
-            parsed.targetWatermark?.trim() !== targetWatermark.value ||
-            parsed.sourceSnapshotRef?.trim() !== sourceWatermark.snapshotRef ||
-            parsed.targetSnapshotRef?.trim() !== targetWatermark.snapshotRef)
+          suppliedWatermarks.some((value) => value !== undefined)
+          && (suppliedWatermarks.some((value) => value === undefined)
+            || parsed.recoveryWatermark?.trim() !== `observation:${recoveryHash}`
+            || parsed.sourceWatermark?.trim() !== sourceWatermark.value
+            || parsed.targetWatermark?.trim() !== targetWatermark.value
+            || parsed.sourceSnapshotRef?.trim() !== sourceWatermark.snapshotRef
+            || parsed.targetSnapshotRef?.trim() !== targetWatermark.snapshotRef)
         ) {
           return yield* Effect.fail(
             new FinancialStoreObservationFailure({ scope, reason: "invalid_watermark" }),
@@ -1947,10 +1962,10 @@ export const makeFinancialOperationService = Effect.gen(function* () {
           transferSetHash: artifact.transferSetHash,
           projectionHash: artifact.projectionHash,
         }
-        const provenanceMatches = artifact.sourceWatermark === decoded.sourceWatermark &&
-          artifact.targetWatermark === decoded.targetWatermark &&
-          artifact.sourceSnapshotRef === decoded.sourceSnapshotRef &&
-          artifact.targetSnapshotRef === decoded.targetSnapshotRef
+        const provenanceMatches = artifact.sourceWatermark === decoded.sourceWatermark
+          && artifact.targetWatermark === decoded.targetWatermark
+          && artifact.sourceSnapshotRef === decoded.sourceSnapshotRef
+          && artifact.targetSnapshotRef === decoded.targetSnapshotRef
         if (!provenanceMatches) {
           return yield* Effect.fail(
             new FinancialReconciliationCheckpointEvidenceInvalid({
@@ -1982,11 +1997,11 @@ export const makeFinancialOperationService = Effect.gen(function* () {
         readonly targetSnapshotRef: string
         readonly evidenceArtifactId: string | null
       }) =>
-        row.sourceWatermark === decoded.sourceWatermark &&
-        row.targetWatermark === decoded.targetWatermark &&
-        row.sourceSnapshotRef === decoded.sourceSnapshotRef &&
-        row.targetSnapshotRef === decoded.targetSnapshotRef &&
-        row.evidenceArtifactId === decoded.evidenceArtifactId
+        row.sourceWatermark === decoded.sourceWatermark
+        && row.targetWatermark === decoded.targetWatermark
+        && row.sourceSnapshotRef === decoded.sourceSnapshotRef
+        && row.targetSnapshotRef === decoded.targetSnapshotRef
+        && row.evidenceArtifactId === decoded.evidenceArtifactId
       const existing = yield* loadExistingCheckpoint()
       if (existing[0] !== undefined) {
         if (!matchesCheckpointRequest(existing[0])) {
@@ -2031,10 +2046,10 @@ export const makeFinancialOperationService = Effect.gen(function* () {
       const mappingVersions = new Set(operations.map((operation) => operation.mappingVersion))
       const [checkpointMappingVersion] = mappingVersions
       if (
-        mappingVersions.size > 1 ||
-        (checkpointMappingVersion !== undefined &&
-          evidenceArtifactMappingVersion !== undefined &&
-          checkpointMappingVersion !== evidenceArtifactMappingVersion)
+        mappingVersions.size > 1
+        || (checkpointMappingVersion !== undefined
+          && evidenceArtifactMappingVersion !== undefined
+          && checkpointMappingVersion !== evidenceArtifactMappingVersion)
       ) {
         return yield* Effect.fail(
           new FinancialReconciliationCheckpointEvidenceInvalid({
@@ -2147,8 +2162,8 @@ export const makeFinancialOperationService = Effect.gen(function* () {
             operationId: operation.operationId,
             position: transfer.position,
             status: transfer.status,
-            transferId: transfer.engineTransferId ?? expectedTransferIds[transfer.position] ??
-              `missing:${transfer.position}`,
+            transferId: transfer.engineTransferId ?? expectedTransferIds[transfer.position]
+              ?? `missing:${transfer.position}`,
             debitAccountId: transfer.debitAccountId,
             creditAccountId: transfer.creditAccountId,
             amountMinor: String(transfer.amountMinor),
@@ -2163,8 +2178,8 @@ export const makeFinancialOperationService = Effect.gen(function* () {
           operationId: operation.operationId,
           journalStatus: operation.journalStatus,
           transferIds: projected.map((transfer) =>
-            transfer.engineTransferId ?? expectedTransferIds[transfer.position] ??
-              `missing:${transfer.position}`
+            transfer.engineTransferId ?? expectedTransferIds[transfer.position]
+              ?? `missing:${transfer.position}`
           ),
         })
         if (outcome._tag === "accepted") {
@@ -2202,9 +2217,9 @@ export const makeFinancialOperationService = Effect.gen(function* () {
             }
           }
           if (
-            outcome.transferCount !== expectedTransferIds.length ||
-            outcome.transferIds.length !== expectedTransferIds.length ||
-            outcome.transferIds.some((id, index) => id !== expectedTransferIds[index])
+            outcome.transferCount !== expectedTransferIds.length
+            || outcome.transferIds.length !== expectedTransferIds.length
+            || outcome.transferIds.some((id, index) => id !== expectedTransferIds[index])
           ) {
             for (const transferId of outcome.transferIds) {
               if (!expectedTransferIds.includes(transferId)) {
@@ -2321,7 +2336,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
     operation: FinancialProjectionRebuildOperation,
     ledger: FinancialLedgerPort,
   ) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const lines = yield* database.query(
         (db) =>
           db.select({
@@ -2364,12 +2379,12 @@ export const makeFinancialOperationService = Effect.gen(function* () {
       }
       const expected = yield* ledger.expectedTransferIds(journalInput)
       const expectedPairs = pairMinorTransfers(journalInput.lines)
-      const identitiesMatch = outcome.operationId === operation.operationId &&
-        outcome.mappingVersion === operation.mappingVersion &&
-        outcome.transferCount === expected.length &&
-        outcome.transferIds.length === expected.length &&
-        outcome.transferIds.every((id, index) => id === expected[index]) &&
-        expectedPairs.length === expected.length
+      const identitiesMatch = outcome.operationId === operation.operationId
+        && outcome.mappingVersion === operation.mappingVersion
+        && outcome.transferCount === expected.length
+        && outcome.transferIds.length === expected.length
+        && outcome.transferIds.every((id, index) => id === expected[index])
+        && expectedPairs.length === expected.length
       if (!identitiesMatch) return { _tag: "quarantine" as const }
       const projected = yield* database.query(
         (db) =>
@@ -2400,13 +2415,13 @@ export const makeFinancialOperationService = Effect.gen(function* () {
     operation: FinancialProjectionRebuildOperation,
     plan: FinancialProjectionRebuildPlan,
   ) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       if (plan._tag === "quarantine") {
         yield* quarantineProjection(tenantId, operation.operationId)
         return { _tag: "quarantined" as const }
       }
       const rebuilt = yield* database.withTransaction(
-        Effect.gen(function* () {
+        Effect.gen(function*() {
           for (const expectedPair of plan.missingTransfers) {
             yield* database.query(
               (db) =>
@@ -2453,7 +2468,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
     | DatabaseFailure
     | Schema.SchemaError
   > =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const plan = yield* inspectFinancialProjection(tenantId, operation, ledger)
       return yield* applyFinancialProjectionRepair(tenantId, operation, plan)
     })
@@ -2494,7 +2509,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
     legalEntityId: string,
     authority: FinancialLedgerAuthority,
   ): Effect.Effect<FinancialProjectionReportRows, DatabaseFailure> =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const finalOperations = yield* database.query(
         (db) =>
           db.select(operationSelection).from(financialOperations).where(and(
@@ -2594,7 +2609,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
     ledger: FinancialLedgerPort,
     balanceRows: readonly FinancialProjectionReportBalanceRow[],
   ) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const balanceTargets = new Map<string, FinancialProjectionReportBalanceRow>()
       for (const row of balanceRows) {
         balanceTargets.set(
@@ -2641,7 +2656,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
     legalEntityId: string,
     transferRows: readonly FinancialProjectionReportTransferRow[],
   ) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const reportTransfers = [] as Array<FinancialFactSnapshot["transfers"][number]>
       for (const row of transferRows) {
         if (row.engineTransferId === null) {
@@ -2676,7 +2691,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
     transferRows: readonly FinancialProjectionReportTransferRow[],
     journalRows: readonly FinancialProjectionReportJournalRow[],
   ) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const transfersByOperation = new Map<string, string[]>()
       for (const row of transferRows) {
         if (row.engineTransferId === null) continue
@@ -2691,10 +2706,10 @@ export const makeFinancialOperationService = Effect.gen(function* () {
       for (const operation of finalOperations) {
         const journalStatus = journalStatusByOperation.get(operation.operationId)
         const transferIds = transfersByOperation.get(operation.operationId)
-        const transferIdsAreComplete = transferIds !== undefined &&
-          transferIds.length > 0 &&
-          Object.keys(transferIds).length === transferIds.length &&
-          transferIds.every((id) => id !== undefined)
+        const transferIdsAreComplete = transferIds !== undefined
+          && transferIds.length > 0
+          && Object.keys(transferIds).length === transferIds.length
+          && transferIds.every((id) => id !== undefined)
         if (journalStatus === undefined || !transferIdsAreComplete) {
           return yield* Effect.fail(
             new FinancialProjectionRebuildBlocked({
@@ -2728,7 +2743,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
       readonly legalEntityId: string
       readonly balances: readonly FinancialFactSnapshot["balances"][number][]
     }>) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const reportTransfers = yield* buildFinancialProjectionTransferFacts(
         tenantId,
         legalEntityId,
@@ -2756,7 +2771,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
     })
 
   const rebuildFinancialProjections = (input: unknown) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const decoded = yield* Schema.decodeUnknownEffect(RebuildFinancialProjectionInput)(input)
       yield* authorization.authorize({
         principal: decoded.principal,
@@ -2822,7 +2837,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
     })
 
   const submit = (input: unknown, jobType: string) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const parsed = yield* Schema.decodeUnknownEffect(FinancialOperationCommandInput)(input)
       const decoded = { ...parsed, operationId: parsed.operationId.trim() }
       const fenceOption = yield* Effect.serviceOption(FencingContextService)
@@ -2830,8 +2845,8 @@ export const makeFinancialOperationService = Effect.gen(function* () {
       const operation = yield* loadOperationOrFail(decoded.tenantId, decoded.operationId)
       const reconcileRequested = jobType === reconcileJobType
       if (
-        operation.status === "reconciled" || operation.status === "rejected" ||
-        operation.status === "manual_recovery"
+        operation.status === "reconciled" || operation.status === "rejected"
+        || operation.status === "manual_recovery"
       ) return toOperation(operation)
       if (Option.isNone(ledgerOption)) {
         return yield* Effect.fail(new FinancialLedgerNotConfigured({}))
@@ -2867,7 +2882,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
       }
 
       const state = yield* database.withTransaction(
-        Effect.gen(function* () {
+        Effect.gen(function*() {
           const current = yield* loadOperationOrFail(decoded.tenantId, decoded.operationId, true)
           yield* acceptExecutionFence(
             current,
@@ -2876,8 +2891,8 @@ export const makeFinancialOperationService = Effect.gen(function* () {
             executionFence,
           )
           if (
-            current.status === "reconciled" || current.status === "rejected" ||
-            current.status === "manual_recovery"
+            current.status === "reconciled" || current.status === "rejected"
+            || current.status === "manual_recovery"
           ) {
             return {
               operation: current,
@@ -2913,11 +2928,11 @@ export const makeFinancialOperationService = Effect.gen(function* () {
             }
           }
           if (
-            reconcileRequested || current.status === "submitted" || current.status === "unknown" ||
-            current.status === "accepted"
+            reconcileRequested || current.status === "submitted" || current.status === "unknown"
+            || current.status === "accepted"
           ) {
-            const operation = current.status === "unknown" ||
-                (reconcileRequested && current.status === "intent")
+            const operation = current.status === "unknown"
+                || (reconcileRequested && current.status === "intent")
               ? (yield* database.query(
                 (db) =>
                   db.update(financialOperations).set({
@@ -2966,8 +2981,8 @@ export const makeFinancialOperationService = Effect.gen(function* () {
             "accounting.financial_operation.submit.period",
           )
           if (
-            !current.engineVerified || current.engine !== ledgerOption.value.authority ||
-            configuration?.financialEngine !== current.engine
+            !current.engineVerified || current.engine !== ledgerOption.value.authority
+            || configuration?.financialEngine !== current.engine
           ) {
             return {
               operation: current,
@@ -3144,7 +3159,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
       }
       const expectedTransferIds = yield* ledger.expectedTransferIds(journalInput)
       const transferIdentitiesPersisted = yield* database.withTransaction(
-        Effect.gen(function* () {
+        Effect.gen(function*() {
           const current = yield* loadOperationOrFail(decoded.tenantId, decoded.operationId, true)
           yield* acceptExecutionFence(
             current,
@@ -3206,7 +3221,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
         )
       }
       yield* database.withTransaction(
-        Effect.gen(function* () {
+        Effect.gen(function*() {
           const current = yield* loadOperationOrFail(decoded.tenantId, decoded.operationId, true)
           yield* acceptExecutionFence(
             current,
@@ -3221,7 +3236,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
       // The provider call cannot share the PostgreSQL transaction. Recheck the fence at the
       // narrowest possible boundary; deterministic provider identities handle a race after it.
       yield* database.withTransaction(
-        Effect.gen(function* () {
+        Effect.gen(function*() {
           const current = yield* loadOperationOrFail(decoded.tenantId, decoded.operationId, true)
           yield* acceptExecutionFence(
             current,
@@ -3241,11 +3256,9 @@ export const makeFinancialOperationService = Effect.gen(function* () {
       }
       if (outcome._tag === "accepted") {
         if (
-          outcome.transferCount !== expectedTransferIds.length ||
-          outcome.transferIds.length !== expectedTransferIds.length ||
-          outcome.transferIds.some((id, index) =>
-            id !== expectedTransferIds[index]
-          )
+          outcome.transferCount !== expectedTransferIds.length
+          || outcome.transferIds.length !== expectedTransferIds.length
+          || outcome.transferIds.some((id, index) => id !== expectedTransferIds[index])
         ) {
           outcome = {
             _tag: "manual_recovery",
@@ -3272,7 +3285,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
       | typeof AccountingCapabilities.revenuePost = AccountingCapabilities.journalPost,
     operationTypeOverride?: "journal_post" | "journal_reverse" | "revenue_post",
   ) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const selectedAuthority = Option.isSome(ledgerOption)
         ? ledgerOption.value.authority
         : undefined
@@ -3302,7 +3315,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
       const now = currentTime()
       yield* hit("before_intent_commit")
       const operation = yield* database.withTransaction(
-        Effect.gen(function* () {
+        Effect.gen(function*() {
           const [existing] = yield* database.query(
             (db) =>
               db.select(operationSelection).from(financialOperations).where(
@@ -3367,10 +3380,10 @@ export const makeFinancialOperationService = Effect.gen(function* () {
             "accounting.financial_operation.intent.period",
           )
           if (
-            configuration === undefined ||
-            (selectedAuthority !== undefined &&
-              configuration.financialEngine !== selectedAuthority) ||
-            cutover?.status !== configuration.financialEngine
+            configuration === undefined
+            || (selectedAuthority !== undefined
+              && configuration.financialEngine !== selectedAuthority)
+            || cutover?.status !== configuration.financialEngine
           ) {
             return yield* Effect.fail(
               new FinancialLedgerNotActivated({
@@ -3399,9 +3412,9 @@ export const makeFinancialOperationService = Effect.gen(function* () {
                 )).for("update"),
               "accounting.financial_operation.intent.revenue_profile",
             )
-            const profileMatches = profile !== undefined && decoded.lines.length === 2 &&
-              decoded.lines[0]!.accountId === profile.receivableAccountId &&
-              decoded.lines[1]!.accountId === profile.revenueAccountId
+            const profileMatches = profile !== undefined && decoded.lines.length === 2
+              && decoded.lines[0]!.accountId === profile.receivableAccountId
+              && decoded.lines[1]!.accountId === profile.revenueAccountId
             if (!profileMatches) {
               return yield* Effect.fail(
                 new FinancialOperationConflict({
@@ -3474,12 +3487,12 @@ export const makeFinancialOperationService = Effect.gen(function* () {
               "accounting.financial_operation.intent.source_operation",
             )
             if (
-              sourceOperation === undefined ||
-              sourceOperation.legalEntityId !== decoded.legalEntityId ||
-              sourceOperation.currency !== decoded.currency ||
-              !sourceOperation.engineVerified ||
-              sourceOperation.engine !== configuration.financialEngine ||
-              sourceOperation.status !== "reconciled"
+              sourceOperation === undefined
+              || sourceOperation.legalEntityId !== decoded.legalEntityId
+              || sourceOperation.currency !== decoded.currency
+              || !sourceOperation.engineVerified
+              || sourceOperation.engine !== configuration.financialEngine
+              || sourceOperation.status !== "reconciled"
             ) {
               return yield* Effect.fail(
                 new FinancialReversalSourceNotReady({
@@ -3609,10 +3622,10 @@ export const makeFinancialOperationService = Effect.gen(function* () {
       ).pipe(
         Effect.catchIf(
           (error) =>
-            error instanceof DatabaseFailure &&
-            isDatabaseConstraint(error, "journal_entries_reference_key"),
+            error instanceof DatabaseFailure
+            && isDatabaseConstraint(error, "journal_entries_reference_key"),
           () =>
-            Effect.gen(function* () {
+            Effect.gen(function*() {
               const [concurrent] = yield* loadOperation(decoded.tenantId, decoded.operationId)
               if (
                 concurrent !== undefined && concurrent.requestFingerprint === requestFingerprint
@@ -3629,10 +3642,10 @@ export const makeFinancialOperationService = Effect.gen(function* () {
         ),
         Effect.catchIf(
           (error) =>
-            error instanceof DatabaseFailure &&
-            isDatabaseConstraint(error, "financial_operations_tenant_operation_key"),
+            error instanceof DatabaseFailure
+            && isDatabaseConstraint(error, "financial_operations_tenant_operation_key"),
           () =>
-            Effect.gen(function* () {
+            Effect.gen(function*() {
               const [concurrent] = yield* loadOperation(decoded.tenantId, decoded.operationId)
               if (
                 concurrent !== undefined && concurrent.requestFingerprint === requestFingerprint
@@ -3649,9 +3662,9 @@ export const makeFinancialOperationService = Effect.gen(function* () {
         ),
         Effect.catchIf(
           (error) =>
-            error instanceof DatabaseFailure &&
-            sourceJournalIdForConflict !== null &&
-            isDatabaseConstraint(error, "financial_operations_tenant_source_journal_key"),
+            error instanceof DatabaseFailure
+            && sourceJournalIdForConflict !== null
+            && isDatabaseConstraint(error, "financial_operations_tenant_source_journal_key"),
           () =>
             Effect.fail(
               new FinancialReversalAlreadyExists({
@@ -3666,7 +3679,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
     })
 
   const createRevenueIntent = (input: unknown) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const decoded = yield* Schema.decodeUnknownEffect(CreateFinancialRevenueIntentInput)(input)
       yield* authorization.authorize({
         principal: decoded.principal,
@@ -3730,7 +3743,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
     })
 
   const createReversalIntent = (input: unknown) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const decoded = yield* Schema.decodeUnknownEffect(CreateFinancialReversalIntentInput)(input)
       yield* authorization.authorize({
         principal: decoded.principal,

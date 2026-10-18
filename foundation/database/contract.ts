@@ -42,16 +42,17 @@ export const isDatabaseConstraint = (
 ) => {
   if (!(error instanceof DatabaseFailure)) return false
   const cause = unwrapCause(error.cause)
-  return typeof cause === "object" && cause !== null &&
-    "code" in cause && cause.code === code &&
-    (("constraint" in cause && cause.constraint === constraint) ||
-      ("constraint_name" in cause && cause.constraint_name === constraint))
+  return typeof cause === "object" && cause !== null
+    && "code" in cause && cause.code === code
+    && (("constraint" in cause && cause.constraint === constraint)
+      || ("constraint_name" in cause && cause.constraint_name === constraint))
 }
 
 export class UnsupportedPostgresVersion
   extends Schema.TaggedError<UnsupportedPostgresVersion>()("UnsupportedPostgresVersion", {
     serverVersionNum: Schema.String,
-  }) {
+  })
+{
   override get message() {
     return `PostgreSQL 19 or newer is required; server_version_num is ${this.serverVersionNum}.`
   }

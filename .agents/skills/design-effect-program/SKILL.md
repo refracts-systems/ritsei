@@ -129,9 +129,9 @@ This explanatory trace complements repository boundary checks; it is not a subst
 # Deterministic Tools
 
 ```sh
-deno task architecture:check
-deno task boundary:lint
-deno task check
+pnpm run architecture:check
+pnpm run boundary:lint
+pnpm run check
 ```
 
 Run the smallest focused `@effect/vitest` test that proves the changed success and failure flow.

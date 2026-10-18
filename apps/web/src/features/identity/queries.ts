@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/solid-query"
-import type { UserAccount } from "../../shared/contracts/generated/identity.ts"
 import { type RequestFailure } from "../../shared/api.ts"
-import { createServerQuery, serverQueryKey } from "../../shared/server-query.ts"
+import type { UserAccount } from "../../shared/contracts/generated/identity.ts"
 import { type ApiScope, runRequest } from "../../shared/runtime.ts"
+import { createServerQuery, serverQueryKey } from "../../shared/server-query.ts"
 import { createAccount, getAccount, listAccounts, updateAccount } from "./service.ts"
 
 const accountsKey = ["identity", "accounts"] as const

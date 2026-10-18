@@ -3,19 +3,19 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
 
-import { AuthorizationDenied, makeAuthorizationTestLayer } from "../../authorization/mod.ts"
 import { DatabaseFailure } from "../../../foundation/mod.ts"
-import { FinancialVerificationSigner } from "../mod.ts"
 import {
   generateEd25519FinancialVerificationSigner,
   makeFinancialVerificationKeyring,
 } from "../../../platform/mod.ts"
-import { SalesService } from "../../sales/mod.ts"
+import { AuthorizationDenied, makeAuthorizationTestLayer } from "../../authorization/mod.ts"
 import {
   type EventEnvelope,
   makeMessagingTestLayer,
   MessagingService,
 } from "../../messaging/mod.ts"
+import { SalesService } from "../../sales/mod.ts"
+import { FinancialVerificationSigner } from "../mod.ts"
 import {
   Account,
   AccountingCapabilities,
@@ -132,7 +132,7 @@ const makeFailOnceMessagingLayer = () => {
   ).pipe(Layer.provide(makeMessagingTestLayer()))
 }
 
-const prepareRevenuePosting = Effect.gen(function* () {
+const prepareRevenuePosting = Effect.gen(function*() {
   const accounting = yield* AccountingService
   yield* accounting.configureLegalEntity({
     principal,
@@ -176,7 +176,7 @@ const prepareRevenuePosting = Effect.gen(function* () {
 
 describe("accounting contract", () => {
   it.effect("configures a legal entity once", () =>
-    withAccounting(Effect.gen(function* () {
+    withAccounting(Effect.gen(function*() {
       const accounting = yield* AccountingService
       const malformedLegalEntity = yield* Effect.flip(
         Schema.decodeUnknownEffect(ConfigureLegalEntityInput.fields.legalEntityId)(
@@ -236,7 +236,7 @@ describe("accounting contract", () => {
 
   it.effect("requires the legal entity configuration capability", () =>
     withAccounting(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const accounting = yield* AccountingService
         const error = yield* Effect.flip(accounting.configureLegalEntity({
           principal,
@@ -253,7 +253,7 @@ describe("accounting contract", () => {
     ))
 
   it.effect("denies accounting capability in an ungranted tenant", () =>
-    withAccounting(Effect.gen(function* () {
+    withAccounting(Effect.gen(function*() {
       const accounting = yield* AccountingService
       assert.instanceOf(
         yield* Effect.flip(accounting.createAccount({
@@ -268,7 +268,7 @@ describe("accounting contract", () => {
     })))
 
   it.effect("posts a balanced journal", () =>
-    withAccounting(Effect.gen(function* () {
+    withAccounting(Effect.gen(function*() {
       const accounting = yield* AccountingService
       const cash = yield* accounting.createAccount({
         principal,
@@ -383,7 +383,7 @@ describe("accounting contract", () => {
     })))
 
   it.effect("rejects non-timezone-qualified journal posted timestamps", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const dateOnly = yield* Effect.flip(
         Schema.decodeUnknownEffect(JournalEntry.fields.postedAt)("2026-08-20"),
       )
@@ -395,7 +395,7 @@ describe("accounting contract", () => {
     }))
 
   it.effect("rejects malformed journal entry identities", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       for (const field of ["id", "tenantId", "reversesEntryId"] as const) {
         const failure = yield* Effect.flip(
           Schema.decodeUnknownEffect(JournalEntry.fields[field])("not-a-uuid"),
@@ -405,7 +405,7 @@ describe("accounting contract", () => {
     }))
 
   it.effect("rejects contradictory journal reversal state", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const base = {
         id: "00000000-0000-4000-8000-000000000030",
         tenantId,
@@ -458,7 +458,7 @@ describe("accounting contract", () => {
     }))
 
   it.effect("rejects malformed revenue posting profile identities", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       for (
         const field of [
           "tenantId",
@@ -475,7 +475,7 @@ describe("accounting contract", () => {
     }))
 
   it.effect("rejects duplicate revenue posting accounts", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const inputFailure = yield* Effect.flip(
         Schema.decodeUnknownEffect(ConfigureRevenuePostingInput)({
           principal,
@@ -510,7 +510,7 @@ describe("accounting contract", () => {
     }))
 
   it.effect("rejects malformed accounting period identities", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       for (const field of ["id", "tenantId", "legalEntityId"] as const) {
         const failure = yield* Effect.flip(
           Schema.decodeUnknownEffect(AccountingPeriod.fields[field])("not-a-uuid"),
@@ -520,7 +520,7 @@ describe("accounting contract", () => {
     }))
 
   it.effect("rejects reversed accounting period dates", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const invalidCalendarDate = yield* Effect.flip(
         Schema.decodeUnknownEffect(OpenPeriodInput.fields.startsOn)("2026-02-30"),
       )
@@ -557,7 +557,7 @@ describe("accounting contract", () => {
     }))
 
   it.effect("rejects malformed journal line account identities", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const failure = yield* Effect.flip(
         Schema.decodeUnknownEffect(JournalLine.fields.accountId)("not-a-uuid"),
       )
@@ -565,7 +565,7 @@ describe("accounting contract", () => {
     }))
 
   it.effect("rejects zero-sided and double-sided journal lines", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const zeroSided = yield* Effect.flip(
         Schema.decodeUnknownEffect(JournalLine)({
           accountId: "account-1",
@@ -585,7 +585,7 @@ describe("accounting contract", () => {
     }))
 
   it.effect("rejects blank journal references", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const failure = yield* Effect.flip(
         Schema.decodeUnknownEffect(JournalEntry.fields.reference)("   "),
       )
@@ -593,7 +593,7 @@ describe("accounting contract", () => {
     }))
 
   it.effect("rejects malformed revenue order identities", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const failure = yield* Effect.flip(
         Schema.decodeUnknownEffect(PostRevenueForOrderInput.fields.orderId)("not-a-uuid"),
       )
@@ -601,7 +601,7 @@ describe("accounting contract", () => {
     }))
 
   it.effect("rejects financial operation mapping versions outside PostgreSQL integer range", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const failure = yield* Effect.flip(
         Schema.decodeUnknownEffect(CreateFinancialRevenueIntentInput.fields.mappingVersion)(
           2_147_483_648,
@@ -611,7 +611,7 @@ describe("accounting contract", () => {
     }))
 
   it.effect("rejects blank financial operation identities", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       for (const operationId of ["", "   "]) {
         const failure = yield* Effect.flip(
           Schema.decodeUnknownEffect(FinancialOperation.fields.operationId)(operationId),
@@ -621,7 +621,7 @@ describe("accounting contract", () => {
     }))
 
   it.effect("rejects unresolved cutover operation counts outside PostgreSQL integer range", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const negative = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialCutoverControl.fields.unresolvedAcceptedOperations)(
           -1,
@@ -637,7 +637,7 @@ describe("accounting contract", () => {
     }))
 
   it.effect("rejects blank financial operation terminal metadata", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       for (
         const field of [
           "engineAcceptedAt",
@@ -654,7 +654,7 @@ describe("accounting contract", () => {
     }))
 
   it.effect("rejects mismatched financial operation source identities", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const operation = {
         id: "00000000-0000-4000-8000-000000000020",
         tenantId,
@@ -736,7 +736,7 @@ describe("accounting contract", () => {
     }))
 
   it.effect("rejects invalid financial intent journal line amounts", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const input = {
         principal,
         tenantId,
@@ -763,7 +763,7 @@ describe("accounting contract", () => {
     }))
 
   it.effect("rejects malformed cutover control timestamps", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const dateOnly = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialCutoverControl.fields.approvedAt)("2026-08-20"),
       )
@@ -777,7 +777,7 @@ describe("accounting contract", () => {
     }))
 
   it.effect("rejects contradictory cutover control status metadata", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const base = {
         tenantId,
         legalEntityId: "00000000-0000-4000-8000-000000000041",
@@ -823,7 +823,7 @@ describe("accounting contract", () => {
     }))
 
   it.effect("rejects financial operation status metadata contradictions", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const operation = {
         id: "00000000-0000-4000-8000-000000000030",
         tenantId,
@@ -866,7 +866,7 @@ describe("accounting contract", () => {
     }))
 
   it.effect("rejects malformed accounting input tenant identities", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const failure = yield* Effect.flip(
         Schema.decodeUnknownEffect(CreateAccountInput)({
           principal,
@@ -908,7 +908,7 @@ describe("accounting contract", () => {
     }))
 
   it.effect("rejects malformed account identities", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       for (const field of ["id", "tenantId"] as const) {
         const failure = yield* Effect.flip(
           Schema.decodeUnknownEffect(Account.fields[field])("not-a-uuid"),
@@ -918,7 +918,7 @@ describe("accounting contract", () => {
     }))
 
   it.effect("rejects malformed accounting configuration identities", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const lowercaseCurrency = yield* Effect.flip(
         Schema.decodeUnknownEffect(AccountingConfiguration.fields.baseCurrency)("usd"),
       )
@@ -932,7 +932,7 @@ describe("accounting contract", () => {
     }))
 
   it.effect("rejects malformed financial verification artifact timestamps", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const dateOnly = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialVerificationArtifact.fields.createdAt)("2026-08-20"),
       )
@@ -946,7 +946,7 @@ describe("accounting contract", () => {
     }))
 
   it.effect("rejects financial operation attempts outside PostgreSQL integer range", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const negative = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialOperation.fields.attempts)(-1),
       )
@@ -958,7 +958,7 @@ describe("accounting contract", () => {
     }))
 
   it.effect("rejects financial checkpoint counts outside PostgreSQL integer range", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const negative = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialReconciliationCheckpoint.fields.mismatchCount)(-1),
       )
@@ -972,7 +972,7 @@ describe("accounting contract", () => {
     }))
 
   it.effect("rejects verified financial checkpoints with mismatch evidence", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const failure = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialReconciliationCheckpoint)({
           id: "00000000-0000-4000-8000-000000000030",
@@ -1000,7 +1000,7 @@ describe("accounting contract", () => {
     }))
 
   it.effect("rejects malformed financial checkpoint timestamps", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const dateOnly = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialReconciliationCheckpoint.fields.checkedAt)(
           "2026-08-20",
@@ -1016,7 +1016,7 @@ describe("accounting contract", () => {
     }))
 
   it.effect("rejects malformed financial operation timestamps", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const scheduled = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialOperation.fields.scheduledAt)("2026-08-20"),
       )
@@ -1032,7 +1032,7 @@ describe("accounting contract", () => {
     }))
 
   it.effect("accepts revenue posting without a caller amount", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const decoded = yield* Schema.decodeUnknownEffect(PostRevenueForOrderInput)({
         principal,
         tenantId,
@@ -1047,7 +1047,7 @@ describe("accounting contract", () => {
     }))
 
   it.effect("rejects malformed revenue reversal identities", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const failure = yield* Effect.flip(
         Schema.decodeUnknownEffect(ReverseRevenueForOrderInput.fields.orderId)("not-a-uuid"),
       )
@@ -1061,7 +1061,7 @@ describe("accounting contract", () => {
     }))
 
   it.effect("posts revenue in an open period", () =>
-    withAccounting(Effect.gen(function* () {
+    withAccounting(Effect.gen(function*() {
       const invalidTenant = yield* Effect.flip(
         Schema.decodeUnknownEffect(PostRevenueForOrderInput)({
           principal,
@@ -1101,7 +1101,7 @@ describe("accounting contract", () => {
     })))
 
   it.effect("rejects revenue posting after the period closes", () =>
-    withAccounting(Effect.gen(function* () {
+    withAccounting(Effect.gen(function*() {
       const { accounting, period } = yield* prepareRevenuePosting
       yield* accounting.closePeriod({
         principal,
@@ -1123,7 +1123,7 @@ describe("accounting contract", () => {
     })))
 
   it.effect("reverses posted revenue idempotently", () =>
-    withAccounting(Effect.gen(function* () {
+    withAccounting(Effect.gen(function*() {
       const { accounting } = yield* prepareRevenuePosting
       const posted = yield* accounting.postRevenueForOrder({
         principal,
@@ -1152,7 +1152,7 @@ describe("accounting contract", () => {
   it.effect("revenue posted atomic publication preserves metadata and one event on replay", () => {
     const events: EventEnvelope[] = []
     return withAccounting(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const { accounting } = yield* prepareRevenuePosting
         const input = {
           principal,
@@ -1214,7 +1214,7 @@ describe("accounting contract", () => {
 
   it.effect("revenue posted atomic publication rolls back when messaging append fails", () =>
     withAccounting(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const { accounting } = yield* prepareRevenuePosting
         const input = {
           principal,
@@ -1237,7 +1237,7 @@ describe("accounting contract", () => {
     ))
 
   it.effect("rejects an unbalanced journal", () =>
-    withAccounting(Effect.gen(function* () {
+    withAccounting(Effect.gen(function*() {
       const accounting = yield* AccountingService
       const cash = yield* accounting.createAccount({
         principal,
@@ -1259,7 +1259,7 @@ describe("accounting contract", () => {
     })))
 
   it.effect("approves an artifact after its signing key rotates", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const oldKey = yield* generateEd25519FinancialVerificationSigner("old-key")
       const currentKey = yield* generateEd25519FinancialVerificationSigner("current-key")
       let signer = oldKey.signer

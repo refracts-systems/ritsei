@@ -5,9 +5,12 @@ import * as Effect from "effect/Effect"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 
-import { AuthorizationDenied, AuthorizationService } from "../../authorization/mod.ts"
-import { Principal } from "../../auth/mod.ts"
-import { type DomainActionCatalogEntry, type DomainEventCatalogEntry } from "../../catalog/mod.ts"
+import {
+  processJobs,
+  processOperatorControls,
+  processRuntimeCheckpoints,
+  workflowRuns,
+} from "../../../db/schema/process.ts"
 import {
   Database,
   DatabaseFailure,
@@ -16,6 +19,9 @@ import {
   uuidv7,
 } from "../../../foundation/mod.ts"
 import { AccountingTypedActionCatalog, AccountingTypedEventCatalog } from "../../accounting/mod.ts"
+import { Principal } from "../../auth/mod.ts"
+import { AuthorizationDenied, AuthorizationService } from "../../authorization/mod.ts"
+import { type DomainActionCatalogEntry, type DomainEventCatalogEntry } from "../../catalog/mod.ts"
 import { IdentityTypedActionCatalog, IdentityTypedEventCatalog } from "../../identity/mod.ts"
 import { InventoryTypedActionCatalog, InventoryTypedEventCatalog } from "../../inventory/mod.ts"
 import { PartyTypedActionCatalog, PartyTypedEventCatalog } from "../../party/mod.ts"
@@ -24,12 +30,6 @@ import {
   ProcurementTypedEventCatalog,
 } from "../../procurement/mod.ts"
 import { SalesTypedActionCatalog, SalesTypedEventCatalog } from "../../sales/mod.ts"
-import {
-  processJobs,
-  processOperatorControls,
-  processRuntimeCheckpoints,
-  workflowRuns,
-} from "../../../db/schema/process.ts"
 import { ProcessCapabilities } from "./capabilities.ts"
 import {
   makeProcessCatalogRegistry,
@@ -42,6 +42,7 @@ import {
   validateProcessRelease,
 } from "./catalog-release.ts"
 import { ProcessTypedEventCatalog } from "./catalog.ts"
+import { ProcessOperatorControl } from "./operations-store.ts"
 import {
   makeProcessOperatorService,
   ProcessCompensationStatus,
@@ -49,6 +50,7 @@ import {
   ProcessOperatorActionUnavailable,
   ProcessOperatorConflict,
 } from "./operations.ts"
+import { ProcessCheckpointRevisionConflict } from "./runtime-store.ts"
 import {
   ProcessCheckpoint,
   ProcessCheckpointInvalid,
@@ -57,9 +59,7 @@ import {
   ProcessRuntimeStatus,
   recoverCheckpoint,
 } from "./runtime.ts"
-import { ProcessCheckpointRevisionConflict } from "./runtime-store.ts"
 import { ProcessWorkflowType } from "./service.ts"
-import { ProcessOperatorControl } from "./operations-store.ts"
 
 const Uuid = Schema.String.check(Schema.isUUID())
 const NonEmptyString = Schema.String.check(Schema.isPattern(/\S/))
@@ -306,14 +306,16 @@ export class ProcessRuntimeInstanceNotFound
   extends Schema.TaggedError<ProcessRuntimeInstanceNotFound>()("ProcessRuntimeInstanceNotFound", {
     tenantId: Uuid,
     instanceId: Uuid,
-  }) {}
+  })
+{}
 
 export class ProcessStudioRecordCorrupt
   extends Schema.TaggedError<ProcessStudioRecordCorrupt>()("ProcessStudioRecordCorrupt", {
     tenantId: Uuid,
     recordId: Uuid,
     recordType: NonEmptyString,
-  }) {}
+  })
+{}
 
 type StudioFailure =
   | Schema.SchemaError
@@ -450,18 +452,18 @@ const decodeCheckpointRow = (row: {
     // Fallow: runtime checkpoint selection intentionally verifies every tenant and version invariant.
     // fallow-ignore-next-line complexity
     Effect.flatMap((checkpoint) =>
-      checkpoint.instanceId === row.id &&
-        checkpoint.tenantId === row.tenantId &&
-        checkpoint.processDefinitionId === row.processDefinitionId &&
-        checkpoint.processDefinitionVersion === row.processDefinitionVersion &&
-        checkpoint.catalogVersion === row.catalogVersion &&
-        checkpoint.environment === row.environment &&
-        checkpoint.status === row.status &&
-        checkpoint.failureKind === row.failureKind &&
-        checkpoint.currentNodeId === row.currentNodeId &&
-        checkpoint.revision === row.revision &&
-        checkpoint.correlationId === row.correlationId &&
-        checkpoint.executionPrincipal === row.executionPrincipal
+      checkpoint.instanceId === row.id
+        && checkpoint.tenantId === row.tenantId
+        && checkpoint.processDefinitionId === row.processDefinitionId
+        && checkpoint.processDefinitionVersion === row.processDefinitionVersion
+        && checkpoint.catalogVersion === row.catalogVersion
+        && checkpoint.environment === row.environment
+        && checkpoint.status === row.status
+        && checkpoint.failureKind === row.failureKind
+        && checkpoint.currentNodeId === row.currentNodeId
+        && checkpoint.revision === row.revision
+        && checkpoint.correlationId === row.correlationId
+        && checkpoint.executionPrincipal === row.executionPrincipal
         ? Effect.succeed(checkpoint)
         : Effect.fail(
           new ProcessCheckpointInvalid({
@@ -631,11 +633,11 @@ const sameOperatorControl = (
     readonly reason: string
   },
 ) =>
-  row.instanceId === input.instanceId && row.action === input.action &&
-  row.actorPrincipalId === input.actorPrincipalId && row.idempotencyKey === input.idempotencyKey &&
-  row.reason === input.reason
+  row.instanceId === input.instanceId && row.action === input.action
+  && row.actorPrincipalId === input.actorPrincipalId && row.idempotencyKey === input.idempotencyKey
+  && row.reason === input.reason
 
-export const makeProcessStudioService = Effect.gen(function* () {
+export const makeProcessStudioService = Effect.gen(function*() {
   const authorization = yield* AuthorizationService
   const database = yield* Database
   const clock = yield* Clock.Clock
@@ -650,7 +652,7 @@ export const makeProcessStudioService = Effect.gen(function* () {
   ) => authorization.authorize({ principal, tenantId, capability })
 
   const listCatalog = (input: unknown) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const decoded = yield* Schema.decodeUnknownEffect(ListProcessCatalogInput)(input)
       yield* authorize(decoded.principal, decoded.tenantId, ProcessCapabilities.catalogRead)
       const entries = decoded.kind === undefined
@@ -660,7 +662,7 @@ export const makeProcessStudioService = Effect.gen(function* () {
     })
 
   const validateDefinition = (input: unknown) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const decoded = yield* Schema.decodeUnknownEffect(ValidateProcessDefinitionInput)(input)
       yield* authorize(decoded.principal, decoded.tenantId, ProcessCapabilities.definitionValidate)
       return yield* validateProcessRelease(registry, {
@@ -672,7 +674,7 @@ export const makeProcessStudioService = Effect.gen(function* () {
     })
 
   const listRuntimeInstances = (input: unknown) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const decoded = yield* Schema.decodeUnknownEffect(ListProcessRuntimeInstancesInput)(input)
       yield* authorize(decoded.principal, decoded.tenantId, ProcessCapabilities.monitorRead)
       const rows = yield* database.query(
@@ -686,7 +688,7 @@ export const makeProcessStudioService = Effect.gen(function* () {
     })
 
   const getRuntimeInstance = (input: unknown) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const decoded = yield* Schema.decodeUnknownEffect(GetProcessRuntimeInstanceInput)(input)
       yield* authorize(decoded.principal, decoded.tenantId, ProcessCapabilities.monitorRead)
       const rows = yield* database.query(
@@ -710,7 +712,7 @@ export const makeProcessStudioService = Effect.gen(function* () {
     })
 
   const listWorkflowRuns = (input: unknown) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const decoded = yield* Schema.decodeUnknownEffect(ListProcessWorkflowRunsInput)(input)
       yield* authorize(decoded.principal, decoded.tenantId, ProcessCapabilities.monitorRead)
       const rows = yield* database.query(
@@ -741,7 +743,7 @@ export const makeProcessStudioService = Effect.gen(function* () {
     })
 
   const listOperatorInbox = (input: unknown) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const decoded = yield* Schema.decodeUnknownEffect(ListProcessOperatorInboxInput)(input)
       yield* authorize(decoded.principal, decoded.tenantId, ProcessCapabilities.inboxRead)
       const limit = decoded.limit ?? 200
@@ -810,7 +812,7 @@ export const makeProcessStudioService = Effect.gen(function* () {
     })
 
   const listOperatorControls = (input: unknown) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const decoded = yield* Schema.decodeUnknownEffect(ListProcessOperatorControlsInput)(input)
       yield* authorize(decoded.principal, decoded.tenantId, ProcessCapabilities.historyRead)
       const rows = yield* database.query(
@@ -859,12 +861,12 @@ export const makeProcessStudioService = Effect.gen(function* () {
     )
 
   const operateRuntime = (input: unknown) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const decoded = yield* Schema.decodeUnknownEffect(ProcessRuntimeOperatorInput)(input)
       yield* authorize(decoded.principal, decoded.tenantId, operatorCapability(decoded.action))
       const actorPrincipalId = decoded.principal.userAccountId
       const operation = database.withTransaction(
-        Effect.gen(function* () {
+        Effect.gen(function*() {
           const existingRows = yield* database.query(
             (db) =>
               db.select({
@@ -976,8 +978,8 @@ export const makeProcessStudioService = Effect.gen(function* () {
       const outcome = yield* operation.pipe(Effect.result)
       if (Result.isSuccess(outcome)) return outcome.success
       if (
-        outcome.failure instanceof DatabaseFailure &&
-        isDatabaseConstraint(outcome.failure, "operator_controls_tenant_id_key")
+        outcome.failure instanceof DatabaseFailure
+        && isDatabaseConstraint(outcome.failure, "operator_controls_tenant_id_key")
       ) {
         const rows = yield* database.query(
           (db) =>

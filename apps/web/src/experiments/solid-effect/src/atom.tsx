@@ -1,7 +1,8 @@
-import { Cause, Effect } from "effect";
-import * as AsyncResult from "effect/reactivity/AsyncResult";
-import * as Atom from "effect/reactivity/Atom";
-import * as AtomRegistry from "effect/reactivity/AtomRegistry";
+import type { JSX } from "@solidjs/web"
+import { Cause, Effect } from "effect"
+import * as AsyncResult from "effect/reactivity/AsyncResult"
+import * as Atom from "effect/reactivity/Atom"
+import * as AtomRegistry from "effect/reactivity/AtomRegistry"
 import {
   createContext,
   createEffect,
@@ -14,8 +15,7 @@ import {
   Switch,
   untrack,
   useContext,
-} from "solid-js";
-import type { JSX } from "@solidjs/web";
+} from "solid-js"
 import {
   CardDeclinedError,
   type CartItem,
@@ -31,27 +31,27 @@ import {
   reserveInventory,
   SearchConfigLive,
   searchPackages,
-} from "./api";
+} from "./api"
 
 // @effect/atom-solid@4.0.0 still imports Solid 1-only APIs. This tiny
 // Solid 2 bridge keeps the same RegistryProvider/useAtom surface over Atom's
 // public registry until the official binding has a Solid 2 peer-compatible release.
-const RegistryContext = createContext<AtomRegistry.AtomRegistry>();
+const RegistryContext = createContext<AtomRegistry.AtomRegistry>()
 
 function useRegistry() {
-  const registry = useContext(RegistryContext);
+  const registry = useContext(RegistryContext)
   if (!registry) {
-    throw new Error("Atom components must be rendered inside RegistryProvider");
+    throw new Error("Atom components must be rendered inside RegistryProvider")
   }
-  return registry;
+  return registry
 }
 
 function useAtomValue<A>(atom: () => Atom.Atom<A>): () => A {
-  const registry = useRegistry();
-  const current = createMemo(atom);
+  const registry = useRegistry()
+  const current = createMemo(atom)
   const [value, setValue] = createSignal<A>(
     untrack(() => registry.get(current())) as any,
-  );
+  )
 
   createEffect(
     () => current(),
@@ -59,58 +59,56 @@ function useAtomValue<A>(atom: () => Atom.Atom<A>): () => A {
       registry.subscribe(currentAtom, (next) => setValue(() => next), {
         immediate: true,
       }),
-  );
+  )
 
-  return value as () => A;
+  return value as () => A
 }
 
 function useAtom<R, W>(atom: () => Atom.Writable<R, W>) {
-  const registry = useRegistry();
-  const current = createMemo(atom);
-  const value = useAtomValue(current);
-  return [value, (next: W) => registry.set(current(), next)] as const;
+  const registry = useRegistry()
+  const current = createMemo(atom)
+  const value = useAtomValue(current)
+  return [value, (next: W) => registry.set(current(), next)] as const
 }
 
 function RegistryProvider(props: { children: JSX.Element }) {
-  const registry = AtomRegistry.make();
-  onCleanup(() => registry.dispose());
-  return <RegistryContext value={registry}>{props.children}</RegistryContext>;
+  const registry = AtomRegistry.make()
+  onCleanup(() => registry.dispose())
+  return <RegistryContext value={registry}>{props.children}</RegistryContext>
 }
 
 function formatDownloads(n: number) {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
-  if (n >= 1_000) return Math.round(n / 1_000) + "k";
-  return String(n);
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M"
+  if (n >= 1_000) return Math.round(n / 1_000) + "k"
+  return String(n)
 }
 
 function AtomTypeahead() {
-  const [query, setQuery] = createSignal("");
+  const [query, setQuery] = createSignal("")
   const searchAtom = Atom.fn<string>()(
     (value) => searchPackages(value).pipe(Effect.provide(SearchConfigLive)),
     { concurrent: false },
-  );
-  const [searchResult, runSearch] = useAtom(() => searchAtom);
+  )
+  const [searchResult, runSearch] = useAtom(() => searchAtom)
 
   const pending = () => {
-    const result = searchResult();
-    return result.waiting || AsyncResult.isInitial(result);
-  };
+    const result = searchResult()
+    return result.waiting || AsyncResult.isInitial(result)
+  }
   const failure = () => {
-    const result = searchResult();
+    const result = searchResult()
     return AsyncResult.isFailure(result)
       ? Cause.squash(result.cause)
-      : undefined;
-  };
-  const results = () =>
-    AsyncResult.getOrElse(searchResult(), () => [] as Package[]);
+      : undefined
+  }
+  const results = () => AsyncResult.getOrElse(searchResult(), () => [] as Package[])
 
   return (
     <section class="panel">
       <header>
         <h2>Typeahead search</h2>
         <p>
-          The same search Effect runs through{" "}
-          <code>Atom.fn</code>. Writes update one registry atom;
+          The same search Effect runs through <code>Atom.fn</code>. Writes update one registry atom;
           <code>concurrent: false</code> interrupts the previous request.
         </p>
       </header>
@@ -122,10 +120,10 @@ function AtomTypeahead() {
         placeholder="Search packages… (try typing “solid” quickly)"
         value={query()}
         onInput={(e) => {
-          const value = e.currentTarget.value;
-          const normalized = value.trim();
-          setQuery(value);
-          runSearch(normalized || Atom.Reset);
+          const value = e.currentTarget.value
+          const normalized = value.trim()
+          setQuery(value)
+          runSearch(normalized || Atom.Reset)
         }}
         autofocus
       />
@@ -173,26 +171,26 @@ function AtomTypeahead() {
         )}
       </Show>
     </section>
-  );
+  )
 }
 
-type Phase = "idle" | "reserving" | "charging" | "finalizing";
+type Phase = "idle" | "reserving" | "charging" | "finalizing"
 
 type Notice = {
-  kind: "success" | "error" | "info";
-  text: string;
-};
+  kind: "success" | "error" | "info"
+  text: string
+}
 
 type CheckoutArgs = {
-  items: CartItem[];
-  decline: boolean;
-};
+  items: CartItem[]
+  decline: boolean
+}
 
 const STEPS: { phase: Phase; label: string }[] = [
   { phase: "reserving", label: "Reserve inventory" },
   { phase: "charging", label: "Charge card" },
   { phase: "finalizing", label: "Create order" },
-];
+]
 
 const INITIAL_CART: CartItem[] = [
   {
@@ -203,60 +201,59 @@ const INITIAL_CART: CartItem[] = [
   },
   { id: "sku_fiber", name: "Fiber (interruptible)", price: 24.5, quantity: 2 },
   { id: "sku_boundary", name: "Boundary (loading)", price: 9.75, quantity: 1 },
-];
+]
 
 function AtomCheckout() {
-  const cartAtom = Atom.make(INITIAL_CART.map((item) => ({ ...item })));
-  const phaseAtom = Atom.make<Phase>("idle");
-  const noticeAtom = Atom.make<Notice | null>(null);
-  const declineCardAtom = Atom.make(false);
-  const ordersAtom = Atom.make(Effect.promise(() => fetchOrders()));
+  const cartAtom = Atom.make(INITIAL_CART.map((item) => ({ ...item })))
+  const phaseAtom = Atom.make<Phase>("idle")
+  const noticeAtom = Atom.make<Notice | null>(null)
+  const declineCardAtom = Atom.make(false)
+  const ordersAtom = Atom.make(Effect.promise(() => fetchOrders()))
 
   const checkoutAtom = Atom.fn<CheckoutArgs>()((args, get) => {
-    let reservation: Reservation | undefined;
-    let charge: Charge | undefined;
+    let reservation: Reservation | undefined
+    let charge: Charge | undefined
     const amount = args.items.reduce(
       (sum, item) => sum + item.price * item.quantity,
       0,
-    );
+    )
 
     const compensate = () =>
-      Effect.gen(function* () {
-        if (charge) yield* refundCharge(charge);
-        if (reservation) yield* releaseReservation(reservation);
-      });
+      Effect.gen(function*() {
+        if (charge) yield* refundCharge(charge)
+        if (reservation) yield* releaseReservation(reservation)
+      })
 
     const setNotice = (notice: Notice) =>
       Effect.sync(() => {
-        get.registry.set(phaseAtom, "idle");
-        get.registry.set(noticeAtom, notice);
-      });
+        get.registry.set(phaseAtom, "idle")
+        get.registry.set(noticeAtom, notice)
+      })
 
-    const workflow = Effect.gen(function* () {
+    const workflow = Effect.gen(function*() {
       yield* Effect.sync(() => {
-        get.registry.set(noticeAtom, null);
-        get.registry.set(phaseAtom, "reserving");
-      });
-      reservation = yield* reserveInventory(args.items);
-      yield* Effect.sync(() => get.registry.set(phaseAtom, "charging"));
-      charge = yield* chargeCard(amount, args.decline);
-      yield* Effect.sync(() => get.registry.set(phaseAtom, "finalizing"));
-      const order = yield* createOrder(args.items, reservation, charge);
+        get.registry.set(noticeAtom, null)
+        get.registry.set(phaseAtom, "reserving")
+      })
+      reservation = yield* reserveInventory(args.items)
+      yield* Effect.sync(() => get.registry.set(phaseAtom, "charging"))
+      charge = yield* chargeCard(amount, args.decline)
+      yield* Effect.sync(() => get.registry.set(phaseAtom, "finalizing"))
+      const order = yield* createOrder(args.items, reservation, charge)
       yield* Effect.sync(() => {
-        get.registry.set(phaseAtom, "idle");
+        get.registry.set(phaseAtom, "idle")
         get.registry.set(noticeAtom, {
           kind: "success",
           text: `Order ${order.id} confirmed — $${order.total.toFixed(2)}`,
-        });
-        get.registry.refresh(ordersAtom);
-      });
-      return order;
-    });
+        })
+        get.registry.refresh(ordersAtom)
+      })
+      return order
+    })
 
     return workflow.pipe(
       Effect.catchIf(
-        (error): error is CardDeclinedError =>
-          error instanceof CardDeclinedError,
+        (error): error is CardDeclinedError => error instanceof CardDeclinedError,
         (error) =>
           compensate().pipe(
             Effect.andThen(
@@ -280,32 +277,30 @@ function AtomCheckout() {
           ),
         )
       ),
-    );
-  }, { concurrent: false });
+    )
+  }, { concurrent: false })
 
-  const [cart, setCart] = useAtom(() => cartAtom);
-  const [phase] = useAtom(() => phaseAtom);
-  const [notice] = useAtom(() => noticeAtom);
-  const [declineCard, setDeclineCard] = useAtom(() => declineCardAtom);
-  const ordersResult = useAtomValue(() => ordersAtom);
-  const [, runCheckout] = useAtom(() => checkoutAtom);
+  const [cart, setCart] = useAtom(() => cartAtom)
+  const [phase] = useAtom(() => phaseAtom)
+  const [notice] = useAtom(() => noticeAtom)
+  const [declineCard, setDeclineCard] = useAtom(() => declineCardAtom)
+  const ordersResult = useAtomValue(() => ordersAtom)
+  const [, runCheckout] = useAtom(() => checkoutAtom)
 
-  const total = () =>
-    cart().reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const inFlight = () => phase() !== "idle";
-  const orders = () =>
-    AsyncResult.getOrElse(ordersResult(), () => [] as Order[]);
+  const total = () => cart().reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const inFlight = () => phase() !== "idle"
+  const orders = () => AsyncResult.getOrElse(ordersResult(), () => [] as Order[])
   const ordersLoading = () => {
-    const result = ordersResult();
-    return result.waiting || AsyncResult.isInitial(result);
-  };
+    const result = ordersResult()
+    return result.waiting || AsyncResult.isInitial(result)
+  }
   const stepState = (step: Phase) => {
-    const order: Phase[] = ["reserving", "charging", "finalizing"];
-    const current = order.indexOf(phase());
-    const target = order.indexOf(step);
-    if (current === -1) return "";
-    return target < current ? "done" : target === current ? "active" : "";
-  };
+    const order: Phase[] = ["reserving", "charging", "finalizing"]
+    const current = order.indexOf(phase())
+    const target = order.indexOf(step)
+    if (current === -1) return ""
+    return target < current ? "done" : target === current ? "active" : ""
+  }
 
   return (
     <section class="panel">
@@ -313,9 +308,8 @@ function AtomCheckout() {
         <h2>Checkout saga</h2>
         <p>
           <code>Atom.fn</code>{" "}
-          owns the cancellable workflow. State writes happen through the
-          registry, while Effect handles typed decline and interruption
-          compensation.
+          owns the cancellable workflow. State writes happen through the registry, while Effect
+          handles typed decline and interruption compensation.
         </p>
       </header>
 
@@ -413,8 +407,7 @@ function AtomCheckout() {
       </ol>
 
       <Show when={notice()}>
-        {(current) => <p class={`notice ${current().kind}`}>{current().text}
-        </p>}
+        {(current) => <p class={`notice ${current().kind}`}>{current().text}</p>}
       </Show>
 
       <h3>Your orders</h3>
@@ -432,8 +425,7 @@ function AtomCheckout() {
                 <li>
                   <span class="pkg-name">{order.id}</span>
                   <span class="pkg-desc">
-                    {order.items.length}{" "}
-                    line{order.items.length === 1 ? "" : "s"} · placed{" "}
+                    {order.items.length} line{order.items.length === 1 ? "" : "s"} · placed{" "}
                     {order.placedAt}
                   </span>
                   <span class="cart-price">${order.total.toFixed(2)}</span>
@@ -444,7 +436,7 @@ function AtomCheckout() {
         </Show>
       </Show>
     </section>
-  );
+  )
 }
 
 export function AtomDemos() {
@@ -454,16 +446,14 @@ export function AtomDemos() {
         <section class="comparison-note">
           <strong>Registry comparison</strong>
           <span>
-            These are the same two flows using Effect Atom primitives. The
-            released
+            These are the same two flows using Effect Atom primitives. The released
             <code>@effect/atom-solid</code>{" "}
-            adapter is still Solid 1-only, so this Solid 2 tab uses the
-            equivalent bridge above.
+            adapter is still Solid 1-only, so this Solid 2 tab uses the equivalent bridge above.
           </span>
         </section>
         <AtomTypeahead />
         <AtomCheckout />
       </div>
     </RegistryProvider>
-  );
+  )
 }

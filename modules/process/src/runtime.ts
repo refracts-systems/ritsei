@@ -98,7 +98,8 @@ export type ProcessFailureKind = Schema.Schema.Type<typeof ProcessFailureKind>
 export class ProcessCheckpointInvalid
   extends Schema.TaggedError<ProcessCheckpointInvalid>()("ProcessCheckpointInvalid", {
     reason: NonEmptyString,
-  }) {}
+  })
+{}
 
 export class ProcessRuntimeVersionConflict
   extends Schema.TaggedError<ProcessRuntimeVersionConflict>()(
@@ -108,7 +109,8 @@ export class ProcessRuntimeVersionConflict
       pinnedCatalogVersion: PositiveInt,
       requestedCatalogVersion: PositiveInt,
     },
-  ) {}
+  )
+{}
 
 export class ProcessStepConflict extends Schema.TaggedError<ProcessStepConflict>()(
   "ProcessStepConflict",
@@ -172,8 +174,8 @@ export const makeProcessRuntime = (): ProcessRuntime => ({
       current.idempotencyKey === execution.idempotencyKey
     )
     if (
-      existingByStep !== undefined &&
-      existingByStep.idempotencyKey === execution.idempotencyKey
+      existingByStep !== undefined
+      && existingByStep.idempotencyKey === execution.idempotencyKey
     ) {
       return Effect.succeed(checkpoint)
     }

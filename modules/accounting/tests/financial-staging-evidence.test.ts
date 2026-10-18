@@ -2,12 +2,12 @@ import { assert, describe, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 
 import { FinancialStagingEvidenceConflict, FinancialStagingEvidenceInvalid } from "../mod.ts"
+import { FINANCIAL_STAGING_EVIDENCE_CANONICALIZATION_VERSION } from "../mod.ts"
+import { hashFinancialStagingEvidence } from "../mod.ts"
 import {
   makeMemoryFinancialStagingEvidenceStore,
   verifyFinancialStagingEvidenceRecord,
 } from "../src/financial-staging-evidence.ts"
-import { FINANCIAL_STAGING_EVIDENCE_CANONICALIZATION_VERSION } from "../mod.ts"
-import { hashFinancialStagingEvidence } from "../mod.ts"
 
 const tenantId = "00000000-0000-7000-8000-000000000001"
 const legalEntityId = "00000000-0000-7000-8000-000000000002"
@@ -52,7 +52,7 @@ const append = (
   store: ReturnType<typeof makeMemoryFinancialStagingEvidenceStore>,
   evidence: ReturnType<typeof makeEvidence>,
 ) =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const evidenceHash = yield* hashFinancialStagingEvidence(evidence)
     return yield* store.append({
       tenantId,
@@ -64,7 +64,7 @@ const append = (
 
 describe("financial staging evidence store", () => {
   it.effect("appends once and supports scoped gate, cohort, and deployment lookup", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const store = makeMemoryFinancialStagingEvidenceStore()
       const first = yield* append(
         store,
@@ -96,7 +96,7 @@ describe("financial staging evidence store", () => {
     }))
 
   it.effect("is idempotent, rejects conflicting content, and verifies reads", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const store = makeMemoryFinancialStagingEvidenceStore()
       const evidence = makeEvidence("00000000-0000-7000-8000-000000000005")
       const first = yield* append(store, evidence)

@@ -1,4 +1,4 @@
-import { generate as uuidv7 } from "@std/uuid/v7"
+import { v7 as uuidv7 } from "uuid"
 
 /** Generate a new UUIDv7 for an application-created persistent identity. */
 export { uuidv7 }

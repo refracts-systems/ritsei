@@ -4,17 +4,17 @@ import type { Sql } from "postgres"
 
 import { userAccounts } from "../../../db/schema/identity.ts"
 import {
-  makePostgresDatabase,
-  makePostgresReadYourWrites,
-  validatePostgresVersion,
-} from "../mod.ts"
-import {
   DatabaseFailure,
   isDatabaseConstraint,
   type PostgresClient,
   ReplicaConsistencyFailure,
   UnsupportedPostgresVersion,
 } from "../../../foundation/database/mod.ts"
+import {
+  makePostgresDatabase,
+  makePostgresReadYourWrites,
+  validatePostgresVersion,
+} from "../mod.ts"
 
 const makeClient = (version = "190000") => {
   const queries: Array<{ sql: string; parameters: readonly unknown[] }> = []
@@ -76,7 +76,7 @@ const tenantId = "018f0000-0000-7000-8000-000000000001"
 
 describe("database service", () => {
   it.effect("executes typed Drizzle queries", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const { client, queries } = makeClient()
       const database = makePostgresDatabase(client)
 
@@ -100,7 +100,7 @@ describe("database service", () => {
     }))
 
   it.effect("rejects PostgreSQL versions below 19", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const { client } = makeClient("180000")
       const error = yield* Effect.flip(
         validatePostgresVersion(client as unknown as PostgresClient),
@@ -110,7 +110,7 @@ describe("database service", () => {
     }))
 
   it.effect("captures and waits for an opaque PostgreSQL consistency token", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const primary = makeConsistencyClient()
       const replica = makeConsistencyClient()
       const service = yield* makePostgresReadYourWrites(
@@ -127,14 +127,14 @@ describe("database service", () => {
       )
       assert.isTrue(
         replica.queries.some((query) =>
-          query ===
-            "WAIT FOR LSN '0/306EE20' WITH (MODE 'standby_replay', TIMEOUT '500ms', NO_THROW)"
+          query
+            === "WAIT FOR LSN '0/306EE20' WITH (MODE 'standby_replay', TIMEOUT '500ms', NO_THROW)"
         ),
       )
     }))
 
   it.effect("rejects tampered and cross-tenant consistency tokens", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const primary = makeConsistencyClient()
       const replica = makeConsistencyClient()
       const service = yield* makePostgresReadYourWrites(
@@ -154,7 +154,7 @@ describe("database service", () => {
     }))
 
   it.effect("rejects expired consistency tokens", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const { client: primary } = makeConsistencyClient()
       const { client: replica } = makeConsistencyClient()
       let now = 1_000
@@ -172,7 +172,7 @@ describe("database service", () => {
     }))
 
   it.effect("rejects promotion and timeline mismatches before replica reads", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const primary = makeConsistencyClient()
       const promotedReplica = makeConsistencyClient({ systemIdentifier: "different-cluster" })
       const service = yield* makePostgresReadYourWrites(
@@ -200,7 +200,7 @@ describe("database service", () => {
     }))
 
   it.effect("maps non-recovery and unknown replica wait statuses", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const primary = makeConsistencyClient()
       const notInRecovery = makeConsistencyClient({ status: "not in recovery" })
       const service = yield* makePostgresReadYourWrites(
@@ -226,7 +226,7 @@ describe("database service", () => {
     }))
 
   it.effect("maps bounded replica wait timeouts", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const primary = makeConsistencyClient()
       const replica = makeConsistencyClient({ status: "timeout" })
       const service = yield* makePostgresReadYourWrites(

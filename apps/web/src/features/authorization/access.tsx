@@ -1,5 +1,6 @@
 import { useNavigate } from "@solidjs/router"
 import { createMemo, createSignal, Show, untrack, useContext } from "solid-js"
+import { failureMessage, type RequestFailure } from "../../shared/api.ts"
 import type {
   Capability,
   CapabilityDefinition,
@@ -7,7 +8,6 @@ import type {
   TenantMembership,
   TenantMembershipStatus,
 } from "../../shared/contracts/generated/authorization.ts"
-import { failureMessage, type RequestFailure } from "../../shared/api.ts"
 import { QueryBoundary } from "../../shared/request-feedback.tsx"
 import { ApiRuntime } from "../../shared/runtime.ts"
 import { layout } from "../../ui/foundations/layout.ts"
@@ -16,8 +16,8 @@ import { EntityWorkspace } from "../../ui/patterns/entity-workspace.tsx"
 import { Badge } from "../../ui/primitives/badge.tsx"
 import { Button } from "../../ui/primitives/button.tsx"
 import { createDialogOpenChange, Dialog } from "../../ui/primitives/dialog.tsx"
-import { Form, type FormValue } from "../../ui/primitives/form.tsx"
 import { FormField } from "../../ui/primitives/form-field.tsx"
+import { Form, type FormValue } from "../../ui/primitives/form.tsx"
 import { Input } from "../../ui/primitives/input.tsx"
 import { Select } from "../../ui/primitives/select.tsx"
 import { surface } from "../../ui/recipes/surface.ts"
@@ -559,8 +559,8 @@ function GrantCapabilityDialog(props: {
           variant="primary"
           type="button"
           loading={mutation.isPending}
-          disabled={capability() === "" || !acknowledged() ||
-            mutation.error?.kind === "unknown-outcome"}
+          disabled={capability() === "" || !acknowledged()
+            || mutation.error?.kind === "unknown-outcome"}
           onClick={() => {
             const selectedCapability = capability()
             if (selectedCapability === "") return

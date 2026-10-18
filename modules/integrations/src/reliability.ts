@@ -68,8 +68,8 @@ export const assessExternalDelivery = (
   ExternalCompatibilityMismatch | ExternalPayloadLimitExceeded
 > => {
   if (
-    input.connectorVersion < input.compatibilityRange.minimumVersion ||
-    input.connectorVersion > input.compatibilityRange.maximumVersion
+    input.connectorVersion < input.compatibilityRange.minimumVersion
+    || input.connectorVersion > input.compatibilityRange.maximumVersion
   ) {
     return Effect.fail(
       new ExternalCompatibilityMismatch({

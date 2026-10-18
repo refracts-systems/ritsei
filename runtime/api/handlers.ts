@@ -1,9 +1,16 @@
 import * as Effect from "effect/Effect"
-import * as Layer from "effect/Layer"
-import * as Redacted from "effect/Redacted"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
 import * as HttpApiSchema from "effect/http-api/HttpApiSchema"
+import * as Layer from "effect/Layer"
+import * as Redacted from "effect/Redacted"
 
+import {
+  CurrentConsistencyToken,
+  DatabaseFailure,
+  PostgresReadYourWrites,
+  ReplicaConsistencyFailure,
+} from "../../foundation/mod.ts"
+import { AccountingService, FinancialOperationService } from "../../modules/accounting/mod.ts"
 import {
   AuthService,
   ExternalProviderUnavailable,
@@ -19,18 +26,11 @@ import {
   UserAccountNotFound,
   UserAccountService,
 } from "../../modules/identity/mod.ts"
-import {
-  CurrentConsistencyToken,
-  DatabaseFailure,
-  PostgresReadYourWrites,
-  ReplicaConsistencyFailure,
-} from "../../foundation/mod.ts"
-import { PartyService } from "../../modules/party/mod.ts"
-import { SalesService } from "../../modules/sales/mod.ts"
 import { InventoryService } from "../../modules/inventory/mod.ts"
-import { AccountingService, FinancialOperationService } from "../../modules/accounting/mod.ts"
+import { PartyService } from "../../modules/party/mod.ts"
 import { ProcessService, ProcessStudioService } from "../../modules/process/mod.ts"
 import { ProcurementService } from "../../modules/procurement/mod.ts"
+import { SalesService } from "../../modules/sales/mod.ts"
 import {
   ApiConflict,
   ApiForbidden,
@@ -219,7 +219,7 @@ const AuthenticationHandlers = HttpApiBuilder.group(
   RitseiApi,
   "Authentication",
   (handlers) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const auth = yield* AuthService
       const userAccounts = yield* UserAccountService
       const authorization = yield* AuthorizationService
@@ -248,15 +248,15 @@ const AuthenticationHandlers = HttpApiBuilder.group(
           if (authentication?.profile !== "transitional-local") {
             return Effect.fail(new ApiForbidden({ code: "forbidden" }))
           }
-          const account = authentication.userAccountId === undefined &&
-              authentication.userAccountEmail !== undefined
+          const account = authentication.userAccountId === undefined
+              && authentication.userAccountEmail !== undefined
             ? Effect.map(
               userAccounts.list(),
               (accounts) =>
                 accounts.find((candidate) => candidate.email === authentication.userAccountEmail),
             )
             : Effect.succeed(undefined)
-          return Effect.gen(function* () {
+          return Effect.gen(function*() {
             const resolved = yield* account
             const userAccountId = authentication.userAccountId ?? resolved?.id
             if (userAccountId === undefined) {
@@ -273,7 +273,7 @@ const AuthenticationHandlers = HttpApiBuilder.group(
           )
         })
         .handle("session", (request) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const principal = yield* CurrentPrincipal
             const userAccount = yield* userAccounts.getById(principal.userAccountId)
             const memberships = yield* authorization.listAccessibleTenants({
@@ -308,7 +308,7 @@ const AuthenticationHandlers = HttpApiBuilder.group(
             ),
           ))
         .handle("logout", () =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const principal = yield* CurrentPrincipal
             yield* auth.revoke(principal.sessionId).pipe(
               Effect.catch((error) =>
@@ -329,7 +329,7 @@ const AuthenticationHandlers = HttpApiBuilder.group(
 
 export const BearerAuthLive = Layer.effect(
   BearerAuth,
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const auth = yield* AuthService
     return {
       bearer: (effect, options) =>
@@ -358,15 +358,15 @@ export const UserAccountHandlers = HttpApiBuilder.group(
   RitseiApi,
   "UserAccounts",
   (handlers) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const authorization = yield* AuthorizationService
       const userAccounts = yield* UserAccountService
       return handlers
         .handle(
           "create",
-          Effect.fn("Http.UserAccounts.create")(function* ({ headers, payload }) {
+          Effect.fn("Http.UserAccounts.create")(function*({ headers, payload }) {
             const principal = yield* CurrentPrincipal
-            return yield* coreApiEffect(Effect.gen(function* () {
+            return yield* coreApiEffect(Effect.gen(function*() {
               const userAccount = yield* userAccounts.createForTenant({
                 principal,
                 tenantId: headers["x-tenant-id"],
@@ -382,9 +382,9 @@ export const UserAccountHandlers = HttpApiBuilder.group(
         )
         .handle(
           "list",
-          Effect.fn("Http.UserAccounts.list")(function* ({ headers }) {
+          Effect.fn("Http.UserAccounts.list")(function*({ headers }) {
             const principal = yield* CurrentPrincipal
-            return yield* coreApiEffect(Effect.gen(function* () {
+            return yield* coreApiEffect(Effect.gen(function*() {
               yield* authorization.authorize({
                 principal,
                 tenantId: headers["x-tenant-id"],
@@ -400,9 +400,9 @@ export const UserAccountHandlers = HttpApiBuilder.group(
         )
         .handle(
           "get",
-          Effect.fn("Http.UserAccounts.get")(function* ({ headers, params }) {
+          Effect.fn("Http.UserAccounts.get")(function*({ headers, params }) {
             const principal = yield* CurrentPrincipal
-            return yield* coreApiEffect(Effect.gen(function* () {
+            return yield* coreApiEffect(Effect.gen(function*() {
               yield* authorization.authorize({
                 principal,
                 tenantId: headers["x-tenant-id"],
@@ -418,9 +418,9 @@ export const UserAccountHandlers = HttpApiBuilder.group(
         )
         .handle(
           "update",
-          Effect.fn("Http.UserAccounts.update")(function* ({ headers, params, payload }) {
+          Effect.fn("Http.UserAccounts.update")(function*({ headers, params, payload }) {
             const principal = yield* CurrentPrincipal
-            return yield* coreApiEffect(Effect.gen(function* () {
+            return yield* coreApiEffect(Effect.gen(function*() {
               yield* authorization.authorize({
                 principal,
                 tenantId: headers["x-tenant-id"],
@@ -441,12 +441,12 @@ export const PartyHandlers = HttpApiBuilder.group(
   RitseiApi,
   "Parties",
   (handlers) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const party = yield* PartyService
       return handlers
         .handle(
           "list",
-          Effect.fn("Http.Parties.list")(function* ({ headers, query }) {
+          Effect.fn("Http.Parties.list")(function*({ headers, query }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(party.list({
               principal,
@@ -457,7 +457,7 @@ export const PartyHandlers = HttpApiBuilder.group(
         )
         .handle(
           "get",
-          Effect.fn("Http.Parties.get")(function* ({ headers, params }) {
+          Effect.fn("Http.Parties.get")(function*({ headers, params }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(party.getDetail({
               principal,
@@ -468,7 +468,7 @@ export const PartyHandlers = HttpApiBuilder.group(
         )
         .handle(
           "create",
-          Effect.fn("Http.Parties.create")(function* ({ headers, payload }) {
+          Effect.fn("Http.Parties.create")(function*({ headers, payload }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               party.create({ principal, tenantId: headers["x-tenant-id"], ...payload }),
@@ -477,7 +477,7 @@ export const PartyHandlers = HttpApiBuilder.group(
         )
         .handle(
           "createLegalEntity",
-          Effect.fn("Http.Parties.createLegalEntity")(function* ({ headers, params }) {
+          Effect.fn("Http.Parties.createLegalEntity")(function*({ headers, params }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(party.createLegalEntity({
               principal,
@@ -488,7 +488,7 @@ export const PartyHandlers = HttpApiBuilder.group(
         )
         .handle(
           "createBranch",
-          Effect.fn("Http.Parties.createBranch")(function* ({ headers, params, payload }) {
+          Effect.fn("Http.Parties.createBranch")(function*({ headers, params, payload }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(party.createBranch({
               principal,
@@ -500,7 +500,7 @@ export const PartyHandlers = HttpApiBuilder.group(
         )
         .handle(
           "assignRole",
-          Effect.fn("Http.Parties.assignRole")(function* ({ headers, params, payload }) {
+          Effect.fn("Http.Parties.assignRole")(function*({ headers, params, payload }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(party.assignRole({
               principal,
@@ -512,7 +512,7 @@ export const PartyHandlers = HttpApiBuilder.group(
         )
         .handle(
           "attachIdentifier",
-          Effect.fn("Http.Parties.attachIdentifier")(function* ({ headers, params, payload }) {
+          Effect.fn("Http.Parties.attachIdentifier")(function*({ headers, params, payload }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(party.attachIdentifier({
               principal,
@@ -524,7 +524,7 @@ export const PartyHandlers = HttpApiBuilder.group(
         )
         .handle(
           "createRelationship",
-          Effect.fn("Http.Parties.createRelationship")(function* ({ headers, params, payload }) {
+          Effect.fn("Http.Parties.createRelationship")(function*({ headers, params, payload }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(party.createRelationship({
               principal,
@@ -536,7 +536,7 @@ export const PartyHandlers = HttpApiBuilder.group(
         )
         .handle(
           "createRepresentation",
-          Effect.fn("Http.Parties.createRepresentation")(function* ({
+          Effect.fn("Http.Parties.createRepresentation")(function*({
             headers,
             params,
             payload,
@@ -552,7 +552,7 @@ export const PartyHandlers = HttpApiBuilder.group(
         )
         .handle(
           "setRepresentationActive",
-          Effect.fn("Http.Parties.setRepresentationActive")(function* ({
+          Effect.fn("Http.Parties.setRepresentationActive")(function*({
             headers,
             params,
             payload,
@@ -568,7 +568,7 @@ export const PartyHandlers = HttpApiBuilder.group(
         )
         .handle(
           "findRelatedPartyPaths",
-          Effect.fn("Http.Parties.findRelatedPartyPaths")(function* ({ headers, params, query }) {
+          Effect.fn("Http.Parties.findRelatedPartyPaths")(function*({ headers, params, query }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(party.findRelatedPartyPaths({
               principal,
@@ -585,7 +585,7 @@ export const AuthorizationHandlers = HttpApiBuilder.group(
   RitseiApi,
   "Authorization",
   (handlers) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const authorization = yield* AuthorizationService
       const authorize = (
         principal: typeof CurrentPrincipal.Service,
@@ -595,9 +595,9 @@ export const AuthorizationHandlers = HttpApiBuilder.group(
       return handlers
         .handle(
           "addMember",
-          Effect.fn("Http.Authorization.addMember")(function* ({ headers, payload }) {
+          Effect.fn("Http.Authorization.addMember")(function*({ headers, payload }) {
             const principal = yield* CurrentPrincipal
-            return yield* coreApiEffect(Effect.gen(function* () {
+            return yield* coreApiEffect(Effect.gen(function*() {
               yield* authorize(
                 principal,
                 headers["x-tenant-id"],
@@ -612,9 +612,9 @@ export const AuthorizationHandlers = HttpApiBuilder.group(
         )
         .handle(
           "listMembers",
-          Effect.fn("Http.Authorization.listMembers")(function* ({ headers, query }) {
+          Effect.fn("Http.Authorization.listMembers")(function*({ headers, query }) {
             const principal = yield* CurrentPrincipal
-            return yield* coreApiEffect(Effect.gen(function* () {
+            return yield* coreApiEffect(Effect.gen(function*() {
               yield* authorize(
                 principal,
                 headers["x-tenant-id"],
@@ -629,9 +629,9 @@ export const AuthorizationHandlers = HttpApiBuilder.group(
         )
         .handle(
           "getMember",
-          Effect.fn("Http.Authorization.getMember")(function* ({ headers, params }) {
+          Effect.fn("Http.Authorization.getMember")(function*({ headers, params }) {
             const principal = yield* CurrentPrincipal
-            return yield* coreApiEffect(Effect.gen(function* () {
+            return yield* coreApiEffect(Effect.gen(function*() {
               yield* authorize(
                 principal,
                 headers["x-tenant-id"],
@@ -646,9 +646,9 @@ export const AuthorizationHandlers = HttpApiBuilder.group(
         )
         .handle(
           "listDirectGrants",
-          Effect.fn("Http.Authorization.listDirectGrants")(function* ({ headers, params }) {
+          Effect.fn("Http.Authorization.listDirectGrants")(function*({ headers, params }) {
             const principal = yield* CurrentPrincipal
-            return yield* coreApiEffect(Effect.gen(function* () {
+            return yield* coreApiEffect(Effect.gen(function*() {
               yield* authorize(
                 principal,
                 headers["x-tenant-id"],
@@ -668,9 +668,9 @@ export const AuthorizationHandlers = HttpApiBuilder.group(
         )
         .handle(
           "listCapabilityDefinitions",
-          Effect.fn("Http.Authorization.listCapabilityDefinitions")(function* ({ headers }) {
+          Effect.fn("Http.Authorization.listCapabilityDefinitions")(function*({ headers }) {
             const principal = yield* CurrentPrincipal
-            return yield* coreApiEffect(Effect.gen(function* () {
+            return yield* coreApiEffect(Effect.gen(function*() {
               yield* authorize(
                 principal,
                 headers["x-tenant-id"],
@@ -682,9 +682,9 @@ export const AuthorizationHandlers = HttpApiBuilder.group(
         )
         .handle(
           "suspendMember",
-          Effect.fn("Http.Authorization.suspendMember")(function* ({ headers, params }) {
+          Effect.fn("Http.Authorization.suspendMember")(function*({ headers, params }) {
             const principal = yield* CurrentPrincipal
-            return yield* coreApiEffect(Effect.gen(function* () {
+            return yield* coreApiEffect(Effect.gen(function*() {
               yield* authorize(
                 principal,
                 headers["x-tenant-id"],
@@ -699,9 +699,9 @@ export const AuthorizationHandlers = HttpApiBuilder.group(
         )
         .handle(
           "activateMember",
-          Effect.fn("Http.Authorization.activateMember")(function* ({ headers, params }) {
+          Effect.fn("Http.Authorization.activateMember")(function*({ headers, params }) {
             const principal = yield* CurrentPrincipal
-            return yield* coreApiEffect(Effect.gen(function* () {
+            return yield* coreApiEffect(Effect.gen(function*() {
               yield* authorize(
                 principal,
                 headers["x-tenant-id"],
@@ -716,9 +716,9 @@ export const AuthorizationHandlers = HttpApiBuilder.group(
         )
         .handle(
           "removeMember",
-          Effect.fn("Http.Authorization.removeMember")(function* ({ headers, params }) {
+          Effect.fn("Http.Authorization.removeMember")(function*({ headers, params }) {
             const principal = yield* CurrentPrincipal
-            return yield* coreApiEffect(Effect.gen(function* () {
+            return yield* coreApiEffect(Effect.gen(function*() {
               yield* authorize(
                 principal,
                 headers["x-tenant-id"],
@@ -733,9 +733,9 @@ export const AuthorizationHandlers = HttpApiBuilder.group(
         )
         .handle(
           "grant",
-          Effect.fn("Http.Authorization.grant")(function* ({ headers, payload }) {
+          Effect.fn("Http.Authorization.grant")(function*({ headers, payload }) {
             const principal = yield* CurrentPrincipal
-            return yield* coreApiEffect(Effect.gen(function* () {
+            return yield* coreApiEffect(Effect.gen(function*() {
               yield* authorize(
                 principal,
                 headers["x-tenant-id"],
@@ -756,12 +756,12 @@ export const SalesHandlers = HttpApiBuilder.group(
   RitseiApi,
   "Sales",
   (handlers) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const sales = yield* SalesService
       return handlers
         .handle(
           "listCustomers",
-          Effect.fn("Http.Sales.listCustomers")(function* ({ headers, query }) {
+          Effect.fn("Http.Sales.listCustomers")(function*({ headers, query }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               sales.listCustomers({ principal, tenantId: headers["x-tenant-id"], ...query }),
@@ -770,7 +770,7 @@ export const SalesHandlers = HttpApiBuilder.group(
         )
         .handle(
           "getCustomer",
-          Effect.fn("Http.Sales.getCustomer")(function* ({ headers, params }) {
+          Effect.fn("Http.Sales.getCustomer")(function*({ headers, params }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               sales.getCustomer({
@@ -783,7 +783,7 @@ export const SalesHandlers = HttpApiBuilder.group(
         )
         .handle(
           "createCustomer",
-          Effect.fn("Http.Sales.createCustomer")(function* ({ headers, payload }) {
+          Effect.fn("Http.Sales.createCustomer")(function*({ headers, payload }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               sales.createCustomer({ principal, tenantId: headers["x-tenant-id"], ...payload }),
@@ -792,7 +792,7 @@ export const SalesHandlers = HttpApiBuilder.group(
         )
         .handle(
           "listQuotations",
-          Effect.fn("Http.Sales.listQuotations")(function* ({ headers, query }) {
+          Effect.fn("Http.Sales.listQuotations")(function*({ headers, query }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               sales.listQuotations({ principal, tenantId: headers["x-tenant-id"], ...query }),
@@ -801,7 +801,7 @@ export const SalesHandlers = HttpApiBuilder.group(
         )
         .handle(
           "getQuotation",
-          Effect.fn("Http.Sales.getQuotation")(function* ({ headers, params }) {
+          Effect.fn("Http.Sales.getQuotation")(function*({ headers, params }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               sales.getQuotation({
@@ -814,7 +814,7 @@ export const SalesHandlers = HttpApiBuilder.group(
         )
         .handle(
           "createQuotation",
-          Effect.fn("Http.Sales.createQuotation")(function* ({ headers, payload }) {
+          Effect.fn("Http.Sales.createQuotation")(function*({ headers, payload }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               sales.createQuotation({ principal, tenantId: headers["x-tenant-id"], ...payload }),
@@ -823,7 +823,7 @@ export const SalesHandlers = HttpApiBuilder.group(
         )
         .handle(
           "listOrders",
-          Effect.fn("Http.Sales.listOrders")(function* ({ headers, query }) {
+          Effect.fn("Http.Sales.listOrders")(function*({ headers, query }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               sales.listOrders({ principal, tenantId: headers["x-tenant-id"], ...query }),
@@ -832,7 +832,7 @@ export const SalesHandlers = HttpApiBuilder.group(
         )
         .handle(
           "getOrder",
-          Effect.fn("Http.Sales.getOrder")(function* ({ headers, params }) {
+          Effect.fn("Http.Sales.getOrder")(function*({ headers, params }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               sales.getOrder({
@@ -845,7 +845,7 @@ export const SalesHandlers = HttpApiBuilder.group(
         )
         .handle(
           "createOrder",
-          Effect.fn("Http.Sales.createOrder")(function* ({ headers, payload }) {
+          Effect.fn("Http.Sales.createOrder")(function*({ headers, payload }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               sales.createOrder({ principal, tenantId: headers["x-tenant-id"], ...payload }),
@@ -854,7 +854,7 @@ export const SalesHandlers = HttpApiBuilder.group(
         )
         .handle(
           "confirmOrder",
-          Effect.fn("Http.Sales.confirmOrder")(function* ({ headers, params, payload }) {
+          Effect.fn("Http.Sales.confirmOrder")(function*({ headers, params, payload }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               sales.confirmOrder({
@@ -868,7 +868,7 @@ export const SalesHandlers = HttpApiBuilder.group(
         )
         .handle(
           "cancelOrder",
-          Effect.fn("Http.Sales.cancelOrder")(function* ({ headers, params }) {
+          Effect.fn("Http.Sales.cancelOrder")(function*({ headers, params }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               sales.cancelConfirmedOrder({
@@ -886,12 +886,12 @@ export const InventoryHandlers = HttpApiBuilder.group(
   RitseiApi,
   "Inventory",
   (handlers) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const inventory = yield* InventoryService
       return handlers
         .handle(
           "listWarehouses",
-          Effect.fn("Http.Inventory.listWarehouses")(function* ({ headers, query }) {
+          Effect.fn("Http.Inventory.listWarehouses")(function*({ headers, query }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               inventory.listWarehouses({ principal, tenantId: headers["x-tenant-id"], ...query }),
@@ -900,7 +900,7 @@ export const InventoryHandlers = HttpApiBuilder.group(
         )
         .handle(
           "listItems",
-          Effect.fn("Http.Inventory.listItems")(function* ({ headers, query }) {
+          Effect.fn("Http.Inventory.listItems")(function*({ headers, query }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               inventory.listItems({ principal, tenantId: headers["x-tenant-id"], ...query }),
@@ -909,7 +909,7 @@ export const InventoryHandlers = HttpApiBuilder.group(
         )
         .handle(
           "listStockBalances",
-          Effect.fn("Http.Inventory.listStockBalances")(function* ({ headers, query }) {
+          Effect.fn("Http.Inventory.listStockBalances")(function*({ headers, query }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               inventory.listStockBalances({
@@ -922,7 +922,7 @@ export const InventoryHandlers = HttpApiBuilder.group(
         )
         .handle(
           "listStockReservations",
-          Effect.fn("Http.Inventory.listStockReservations")(function* ({ headers, query }) {
+          Effect.fn("Http.Inventory.listStockReservations")(function*({ headers, query }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               inventory.listStockReservations({
@@ -935,7 +935,7 @@ export const InventoryHandlers = HttpApiBuilder.group(
         )
         .handle(
           "listStockTransfers",
-          Effect.fn("Http.Inventory.listStockTransfers")(function* ({ headers, query }) {
+          Effect.fn("Http.Inventory.listStockTransfers")(function*({ headers, query }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               inventory.listStockTransfers({
@@ -948,7 +948,7 @@ export const InventoryHandlers = HttpApiBuilder.group(
         )
         .handle(
           "listStockMovements",
-          Effect.fn("Http.Inventory.listStockMovements")(function* ({ headers, query }) {
+          Effect.fn("Http.Inventory.listStockMovements")(function*({ headers, query }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               inventory.listStockMovements({
@@ -961,7 +961,7 @@ export const InventoryHandlers = HttpApiBuilder.group(
         )
         .handle(
           "createWarehouse",
-          Effect.fn("Http.Inventory.createWarehouse")(function* ({ headers, payload }) {
+          Effect.fn("Http.Inventory.createWarehouse")(function*({ headers, payload }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               inventory.createWarehouse({
@@ -974,7 +974,7 @@ export const InventoryHandlers = HttpApiBuilder.group(
         )
         .handle(
           "createItem",
-          Effect.fn("Http.Inventory.createItem")(function* ({ headers, payload }) {
+          Effect.fn("Http.Inventory.createItem")(function*({ headers, payload }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               inventory.createItem({ principal, tenantId: headers["x-tenant-id"], ...payload }),
@@ -983,7 +983,7 @@ export const InventoryHandlers = HttpApiBuilder.group(
         )
         .handle(
           "adjustStock",
-          Effect.fn("Http.Inventory.adjustStock")(function* ({ headers, payload }) {
+          Effect.fn("Http.Inventory.adjustStock")(function*({ headers, payload }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               inventory.adjustStock({ principal, tenantId: headers["x-tenant-id"], ...payload }),
@@ -992,7 +992,7 @@ export const InventoryHandlers = HttpApiBuilder.group(
         )
         .handle(
           "receiveStock",
-          Effect.fn("Http.Inventory.receiveStock")(function* ({ headers, payload }) {
+          Effect.fn("Http.Inventory.receiveStock")(function*({ headers, payload }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               inventory.receiveStock({ principal, tenantId: headers["x-tenant-id"], ...payload }),
@@ -1001,7 +1001,7 @@ export const InventoryHandlers = HttpApiBuilder.group(
         )
         .handle(
           "reserveStock",
-          Effect.fn("Http.Inventory.reserveStock")(function* ({ headers, payload }) {
+          Effect.fn("Http.Inventory.reserveStock")(function*({ headers, payload }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               inventory.reserveStock({ principal, tenantId: headers["x-tenant-id"], ...payload }),
@@ -1010,7 +1010,7 @@ export const InventoryHandlers = HttpApiBuilder.group(
         )
         .handle(
           "releaseReservation",
-          Effect.fn("Http.Inventory.releaseReservation")(function* ({ headers, params }) {
+          Effect.fn("Http.Inventory.releaseReservation")(function*({ headers, params }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               inventory.releaseReservation({
@@ -1023,7 +1023,7 @@ export const InventoryHandlers = HttpApiBuilder.group(
         )
         .handle(
           "fulfillReservation",
-          Effect.fn("Http.Inventory.fulfillReservation")(function* ({ headers, params }) {
+          Effect.fn("Http.Inventory.fulfillReservation")(function*({ headers, params }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               inventory.fulfillReservation({
@@ -1036,7 +1036,7 @@ export const InventoryHandlers = HttpApiBuilder.group(
         )
         .handle(
           "createTransfer",
-          Effect.fn("Http.Inventory.createTransfer")(function* ({ headers, payload }) {
+          Effect.fn("Http.Inventory.createTransfer")(function*({ headers, payload }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               inventory.createTransfer({ principal, tenantId: headers["x-tenant-id"], ...payload }),
@@ -1045,7 +1045,7 @@ export const InventoryHandlers = HttpApiBuilder.group(
         )
         .handle(
           "confirmTransfer",
-          Effect.fn("Http.Inventory.confirmTransfer")(function* ({ headers, params }) {
+          Effect.fn("Http.Inventory.confirmTransfer")(function*({ headers, params }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               inventory.confirmTransfer({
@@ -1058,7 +1058,7 @@ export const InventoryHandlers = HttpApiBuilder.group(
         )
         .handle(
           "completeTransfer",
-          Effect.fn("Http.Inventory.completeTransfer")(function* ({ headers, params }) {
+          Effect.fn("Http.Inventory.completeTransfer")(function*({ headers, params }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               inventory.completeTransfer({
@@ -1076,13 +1076,13 @@ export const ProcurementHandlers = HttpApiBuilder.group(
   RitseiApi,
   "Procurement",
   (handlers) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const procurement = yield* ProcurementService
       const readYourWrites = yield* Effect.serviceOption(PostgresReadYourWrites)
       return handlers
         .handle(
           "listSupplierAccounts",
-          Effect.fn("Http.Procurement.listSupplierAccounts")(function* ({ headers, query }) {
+          Effect.fn("Http.Procurement.listSupplierAccounts")(function*({ headers, query }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(procurement.listSupplierAccounts({
               principal,
@@ -1093,7 +1093,7 @@ export const ProcurementHandlers = HttpApiBuilder.group(
         )
         .handle(
           "createSupplierAccount",
-          Effect.fn("Http.Procurement.createSupplierAccount")(function* ({ headers, payload }) {
+          Effect.fn("Http.Procurement.createSupplierAccount")(function*({ headers, payload }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(procurement.createSupplierAccount({
               principal,
@@ -1104,7 +1104,7 @@ export const ProcurementHandlers = HttpApiBuilder.group(
         )
         .handle(
           "listPurchaseOrders",
-          Effect.fn("Http.Procurement.listPurchaseOrders")(function* ({ headers, query }) {
+          Effect.fn("Http.Procurement.listPurchaseOrders")(function*({ headers, query }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(procurement.listPurchaseOrders({
               principal,
@@ -1115,7 +1115,7 @@ export const ProcurementHandlers = HttpApiBuilder.group(
         )
         .handle(
           "createPurchaseOrder",
-          Effect.fn("Http.Procurement.createPurchaseOrder")(function* ({ headers, payload }) {
+          Effect.fn("Http.Procurement.createPurchaseOrder")(function*({ headers, payload }) {
             const principal = yield* CurrentPrincipal
             const order = yield* coreApiEffect(procurement.createPurchaseOrder({
               principal,
@@ -1137,7 +1137,7 @@ export const ProcurementHandlers = HttpApiBuilder.group(
         )
         .handle(
           "getPurchaseOrder",
-          Effect.fn("Http.Procurement.getPurchaseOrder")(function* ({ headers, params }) {
+          Effect.fn("Http.Procurement.getPurchaseOrder")(function*({ headers, params }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(procurement.getPurchaseOrder({
               principal,
@@ -1154,7 +1154,7 @@ export const ProcurementHandlers = HttpApiBuilder.group(
         .handle(
           "confirmPurchaseOrder",
           Effect.fn("Http.Procurement.confirmPurchaseOrder")(
-            function* ({ headers, params, payload }) {
+            function*({ headers, params, payload }) {
               const principal = yield* CurrentPrincipal
               return yield* coreApiEffect(procurement.confirmPurchaseOrder({
                 principal,
@@ -1167,7 +1167,7 @@ export const ProcurementHandlers = HttpApiBuilder.group(
         )
         .handle(
           "cancelPurchaseOrder",
-          Effect.fn("Http.Procurement.cancelPurchaseOrder")(function* ({ headers, params }) {
+          Effect.fn("Http.Procurement.cancelPurchaseOrder")(function*({ headers, params }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(procurement.cancelPurchaseOrder({
               principal,
@@ -1179,7 +1179,7 @@ export const ProcurementHandlers = HttpApiBuilder.group(
         .handle(
           "listPurchaseReceipts",
           Effect.fn("Http.Procurement.listPurchaseReceipts")(
-            function* ({ headers, params, query }) {
+            function*({ headers, params, query }) {
               const principal = yield* CurrentPrincipal
               return yield* coreApiEffect(procurement.listPurchaseReceipts({
                 principal,
@@ -1193,7 +1193,7 @@ export const ProcurementHandlers = HttpApiBuilder.group(
         .handle(
           "receivePurchaseOrder",
           Effect.fn("Http.Procurement.receivePurchaseOrder")(
-            function* ({ headers, params, payload }) {
+            function*({ headers, params, payload }) {
               const principal = yield* CurrentPrincipal
               return yield* coreApiEffect(procurement.receivePurchaseOrder({
                 principal,
@@ -1211,13 +1211,13 @@ export const ProcessHandlers = HttpApiBuilder.group(
   RitseiApi,
   "Process",
   (handlers) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const process = yield* ProcessService
       const studio = yield* ProcessStudioService
       return handlers
         .handle(
           "confirmOrder",
-          Effect.fn("Http.Process.confirmOrder")(function* ({ headers, payload }) {
+          Effect.fn("Http.Process.confirmOrder")(function*({ headers, payload }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               process.confirmOrder({ principal, tenantId: headers["x-tenant-id"], ...payload }),
@@ -1226,7 +1226,7 @@ export const ProcessHandlers = HttpApiBuilder.group(
         )
         .handle(
           "cancelOrder",
-          Effect.fn("Http.Process.cancelOrder")(function* ({ headers, payload }) {
+          Effect.fn("Http.Process.cancelOrder")(function*({ headers, payload }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               process.cancelOrder({ principal, tenantId: headers["x-tenant-id"], ...payload }),
@@ -1235,7 +1235,7 @@ export const ProcessHandlers = HttpApiBuilder.group(
         )
         .handle(
           "fulfillOrder",
-          Effect.fn("Http.Process.fulfillOrder")(function* ({ headers, payload }) {
+          Effect.fn("Http.Process.fulfillOrder")(function*({ headers, payload }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               process.fulfillOrder({ principal, tenantId: headers["x-tenant-id"], ...payload }),
@@ -1244,7 +1244,7 @@ export const ProcessHandlers = HttpApiBuilder.group(
         )
         .handle(
           "recoverOrder",
-          Effect.fn("Http.Process.recoverOrder")(function* ({ headers, payload }) {
+          Effect.fn("Http.Process.recoverOrder")(function*({ headers, payload }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               process.recoverOrder({ principal, tenantId: headers["x-tenant-id"], ...payload }),
@@ -1253,7 +1253,7 @@ export const ProcessHandlers = HttpApiBuilder.group(
         )
         .handle(
           "manualRecovery",
-          Effect.fn("Http.Process.manualRecovery")(function* ({ headers, payload }) {
+          Effect.fn("Http.Process.manualRecovery")(function*({ headers, payload }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               process.markManualRecovery({
@@ -1266,7 +1266,7 @@ export const ProcessHandlers = HttpApiBuilder.group(
         )
         .handle(
           "listCatalog",
-          Effect.fn("Http.Process.listCatalog")(function* ({ headers, query }) {
+          Effect.fn("Http.Process.listCatalog")(function*({ headers, query }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               studio.listCatalog({ principal, tenantId: headers["x-tenant-id"], ...query }),
@@ -1275,7 +1275,7 @@ export const ProcessHandlers = HttpApiBuilder.group(
         )
         .handle(
           "validateDefinition",
-          Effect.fn("Http.Process.validateDefinition")(function* ({ headers, payload }) {
+          Effect.fn("Http.Process.validateDefinition")(function*({ headers, payload }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               studio.validateDefinition({
@@ -1288,7 +1288,7 @@ export const ProcessHandlers = HttpApiBuilder.group(
         )
         .handle(
           "listRuntimeInstances",
-          Effect.fn("Http.Process.listRuntimeInstances")(function* ({ headers, query }) {
+          Effect.fn("Http.Process.listRuntimeInstances")(function*({ headers, query }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               studio.listRuntimeInstances({
@@ -1301,7 +1301,7 @@ export const ProcessHandlers = HttpApiBuilder.group(
         )
         .handle(
           "listWorkflowRuns",
-          Effect.fn("Http.Process.listWorkflowRuns")(function* ({ headers, query }) {
+          Effect.fn("Http.Process.listWorkflowRuns")(function*({ headers, query }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               studio.listWorkflowRuns({ principal, tenantId: headers["x-tenant-id"], ...query }),
@@ -1310,7 +1310,7 @@ export const ProcessHandlers = HttpApiBuilder.group(
         )
         .handle(
           "listOperatorInbox",
-          Effect.fn("Http.Process.listOperatorInbox")(function* ({ headers, query }) {
+          Effect.fn("Http.Process.listOperatorInbox")(function*({ headers, query }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               studio.listOperatorInbox({ principal, tenantId: headers["x-tenant-id"], ...query }),
@@ -1319,7 +1319,7 @@ export const ProcessHandlers = HttpApiBuilder.group(
         )
         .handle(
           "listOperatorControls",
-          Effect.fn("Http.Process.listOperatorControls")(function* ({ headers, query }) {
+          Effect.fn("Http.Process.listOperatorControls")(function*({ headers, query }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               studio.listOperatorControls({
@@ -1332,7 +1332,7 @@ export const ProcessHandlers = HttpApiBuilder.group(
         )
         .handle(
           "operateRuntime",
-          Effect.fn("Http.Process.operateRuntime")(function* ({ headers, params, payload }) {
+          Effect.fn("Http.Process.operateRuntime")(function*({ headers, params, payload }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               studio.operateRuntime({
@@ -1351,13 +1351,13 @@ export const AccountingHandlers = HttpApiBuilder.group(
   RitseiApi,
   "Accounting",
   (handlers) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const accounting = yield* AccountingService
       const financialOperations = yield* FinancialOperationService
       return handlers
         .handle(
           "listConfigurations",
-          Effect.fn("Http.Accounting.listConfigurations")(function* ({ headers, query }) {
+          Effect.fn("Http.Accounting.listConfigurations")(function*({ headers, query }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               accounting.listAccountingConfigurations({
@@ -1370,7 +1370,7 @@ export const AccountingHandlers = HttpApiBuilder.group(
         )
         .handle(
           "listAccounts",
-          Effect.fn("Http.Accounting.listAccounts")(function* ({ headers, query }) {
+          Effect.fn("Http.Accounting.listAccounts")(function*({ headers, query }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               accounting.listAccounts({
@@ -1383,7 +1383,7 @@ export const AccountingHandlers = HttpApiBuilder.group(
         )
         .handle(
           "listPeriods",
-          Effect.fn("Http.Accounting.listPeriods")(function* ({ headers, query }) {
+          Effect.fn("Http.Accounting.listPeriods")(function*({ headers, query }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               accounting.listAccountingPeriods({
@@ -1396,7 +1396,7 @@ export const AccountingHandlers = HttpApiBuilder.group(
         )
         .handle(
           "listRevenuePostingProfiles",
-          Effect.fn("Http.Accounting.listRevenuePostingProfiles")(function* ({ headers, query }) {
+          Effect.fn("Http.Accounting.listRevenuePostingProfiles")(function*({ headers, query }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               accounting.listRevenuePostingProfiles({
@@ -1409,7 +1409,7 @@ export const AccountingHandlers = HttpApiBuilder.group(
         )
         .handle(
           "listJournals",
-          Effect.fn("Http.Accounting.listJournals")(function* ({ headers, query }) {
+          Effect.fn("Http.Accounting.listJournals")(function*({ headers, query }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               accounting.listJournalEntries({
@@ -1422,7 +1422,7 @@ export const AccountingHandlers = HttpApiBuilder.group(
         )
         .handle(
           "prepareTigerBeetleCutover",
-          Effect.fn("Http.Accounting.prepareTigerBeetleCutover")(function* ({ headers, params }) {
+          Effect.fn("Http.Accounting.prepareTigerBeetleCutover")(function*({ headers, params }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               accounting.prepareTigerBeetleCutover({
@@ -1436,7 +1436,7 @@ export const AccountingHandlers = HttpApiBuilder.group(
         .handle(
           "recordFinancialVerificationArtifact",
           Effect.fn("Http.Accounting.recordFinancialVerificationArtifact")(
-            function* ({ headers, payload }) {
+            function*({ headers, payload }) {
               const principal = yield* CurrentPrincipal
               return yield* coreApiEffect(
                 accounting.recordFinancialVerificationArtifact({
@@ -1451,7 +1451,7 @@ export const AccountingHandlers = HttpApiBuilder.group(
         .handle(
           "recordFinancialStagingEvidence",
           Effect.fn("Http.Accounting.recordFinancialStagingEvidence")(
-            function* ({ headers, payload }) {
+            function*({ headers, payload }) {
               const principal = yield* CurrentPrincipal
               return yield* coreApiEffect(
                 accounting.recordFinancialStagingEvidence({
@@ -1465,7 +1465,7 @@ export const AccountingHandlers = HttpApiBuilder.group(
         )
         .handle(
           "listFinancialStagingEvidence",
-          Effect.fn("Http.Accounting.listFinancialStagingEvidence")(function* ({ headers, query }) {
+          Effect.fn("Http.Accounting.listFinancialStagingEvidence")(function*({ headers, query }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               accounting.listFinancialStagingEvidence({
@@ -1479,7 +1479,7 @@ export const AccountingHandlers = HttpApiBuilder.group(
         .handle(
           "approveTigerBeetleCutover",
           Effect.fn("Http.Accounting.approveTigerBeetleCutover")(
-            function* ({ headers, params, payload }) {
+            function*({ headers, params, payload }) {
               const principal = yield* CurrentPrincipal
               return yield* coreApiEffect(
                 accounting.approveTigerBeetleCutover({
@@ -1494,7 +1494,7 @@ export const AccountingHandlers = HttpApiBuilder.group(
         )
         .handle(
           "activateTigerBeetleCutover",
-          Effect.fn("Http.Accounting.activateTigerBeetleCutover")(function* ({ headers, params }) {
+          Effect.fn("Http.Accounting.activateTigerBeetleCutover")(function*({ headers, params }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               accounting.activateTigerBeetleCutover({
@@ -1508,7 +1508,7 @@ export const AccountingHandlers = HttpApiBuilder.group(
         .handle(
           "configureLegalEntity",
           Effect.fn("Http.Accounting.configureLegalEntity")(
-            function* ({ headers, params, payload }) {
+            function*({ headers, params, payload }) {
               const principal = yield* CurrentPrincipal
               return yield* coreApiEffect(
                 accounting.configureLegalEntity({
@@ -1523,7 +1523,7 @@ export const AccountingHandlers = HttpApiBuilder.group(
         )
         .handle(
           "createAccount",
-          Effect.fn("Http.Accounting.createAccount")(function* ({ headers, payload }) {
+          Effect.fn("Http.Accounting.createAccount")(function*({ headers, payload }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               accounting.createAccount({ principal, tenantId: headers["x-tenant-id"], ...payload }),
@@ -1532,7 +1532,7 @@ export const AccountingHandlers = HttpApiBuilder.group(
         )
         .handle(
           "postJournal",
-          Effect.fn("Http.Accounting.postJournal")(function* ({ headers, payload }) {
+          Effect.fn("Http.Accounting.postJournal")(function*({ headers, payload }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               accounting.postJournal({ principal, tenantId: headers["x-tenant-id"], ...payload }),
@@ -1541,7 +1541,7 @@ export const AccountingHandlers = HttpApiBuilder.group(
         )
         .handle(
           "configureRevenuePosting",
-          Effect.fn("Http.Accounting.configureRevenuePosting")(function* ({ headers, payload }) {
+          Effect.fn("Http.Accounting.configureRevenuePosting")(function*({ headers, payload }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               accounting.configureRevenuePosting({
@@ -1554,7 +1554,7 @@ export const AccountingHandlers = HttpApiBuilder.group(
         )
         .handle(
           "openPeriod",
-          Effect.fn("Http.Accounting.openPeriod")(function* ({ headers, payload }) {
+          Effect.fn("Http.Accounting.openPeriod")(function*({ headers, payload }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               accounting.openPeriod({
@@ -1567,7 +1567,7 @@ export const AccountingHandlers = HttpApiBuilder.group(
         )
         .handle(
           "closePeriod",
-          Effect.fn("Http.Accounting.closePeriod")(function* ({ headers, params, payload }) {
+          Effect.fn("Http.Accounting.closePeriod")(function*({ headers, params, payload }) {
             const principal = yield* CurrentPrincipal
             return yield* coreApiEffect(
               accounting.closePeriod({
@@ -1582,7 +1582,7 @@ export const AccountingHandlers = HttpApiBuilder.group(
         .handle(
           "rebuildFinancialProjections",
           Effect.fn("Http.Accounting.rebuildFinancialProjections")(
-            function* ({ headers, payload }) {
+            function*({ headers, payload }) {
               const principal = yield* CurrentPrincipal
               return yield* coreApiEffect(
                 financialOperations.rebuildFinancialProjections({
@@ -1597,7 +1597,7 @@ export const AccountingHandlers = HttpApiBuilder.group(
         .handle(
           "reconcileFinancialCheckpoint",
           Effect.fn("Http.Accounting.reconcileFinancialCheckpoint")(
-            function* ({ headers, payload }) {
+            function*({ headers, payload }) {
               const principal = yield* CurrentPrincipal
               return yield* coreApiEffect(
                 financialOperations.reconcileFinancialCheckpoint({
@@ -1612,7 +1612,7 @@ export const AccountingHandlers = HttpApiBuilder.group(
         .handle(
           "createFinancialJournalIntent",
           Effect.fn("Http.Accounting.createFinancialJournalIntent")(
-            function* ({ headers, payload }) {
+            function*({ headers, payload }) {
               const principal = yield* CurrentPrincipal
               return yield* coreApiEffect(
                 financialOperations.createJournalIntent({
@@ -1627,7 +1627,7 @@ export const AccountingHandlers = HttpApiBuilder.group(
         .handle(
           "createFinancialRevenueIntent",
           Effect.fn("Http.Accounting.createFinancialRevenueIntent")(
-            function* ({ headers, payload }) {
+            function*({ headers, payload }) {
               const principal = yield* CurrentPrincipal
               return yield* coreApiEffect(
                 financialOperations.createRevenueIntent({
@@ -1642,7 +1642,7 @@ export const AccountingHandlers = HttpApiBuilder.group(
         .handle(
           "createFinancialReversalIntent",
           Effect.fn("Http.Accounting.createFinancialReversalIntent")(
-            function* ({ headers, payload }) {
+            function*({ headers, payload }) {
               const principal = yield* CurrentPrincipal
               return yield* coreApiEffect(
                 financialOperations.createReversalIntent({

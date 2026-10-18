@@ -49,14 +49,14 @@ export type NormalizedExternalEvent = {
 export const normalizeCloudEvent = (
   input: NormalizeExternalEventInput,
 ): Effect.Effect<NormalizedExternalEvent, ExternalPayloadInvalid> =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const identifier = typeof input.expectedType === "string" && input.expectedType.trim() !== ""
       ? input.expectedType.slice(0, MaxFieldLength)
       : "external-event"
     if (
-      !Schema.is(Uuid)(input.tenantId) ||
-      !Schema.is(BoundedNonEmptyString)(input.connectorId) ||
-      !Schema.is(BoundedNonEmptyString)(input.expectedType)
+      !Schema.is(Uuid)(input.tenantId)
+      || !Schema.is(BoundedNonEmptyString)(input.connectorId)
+      || !Schema.is(BoundedNonEmptyString)(input.expectedType)
     ) {
       return yield* Effect.fail(
         new ExternalPayloadInvalid({

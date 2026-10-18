@@ -1,4 +1,8 @@
+import { writeFile } from "node:fs/promises"
+
 import postgres from "postgres"
+
+import { isMain } from "../entrypoint.ts"
 
 export const disposableDatabaseName = (databaseUrl: string) => {
   const name = decodeURIComponent(new URL(databaseUrl).pathname.slice(1))
@@ -8,14 +12,14 @@ export const disposableDatabaseName = (databaseUrl: string) => {
   return name
 }
 
-const databaseUrl = Deno.env.get("RITSEI_DISPOSABLE_DATABASE_URL")
-if (import.meta.main && databaseUrl === undefined) {
+const databaseUrl = process.env["RITSEI_DISPOSABLE_DATABASE_URL"]
+if (isMain(import.meta.url) && databaseUrl === undefined) {
   throw new Error("RITSEI_DISPOSABLE_DATABASE_URL is required")
 }
 
-if (import.meta.main) {
+if (isMain(import.meta.url)) {
   const databaseName = disposableDatabaseName(databaseUrl!)
-  if (Deno.env.get("RITSEI_CONFIRM_DISPOSABLE_DATABASE") !== databaseName) {
+  if (process.env["RITSEI_CONFIRM_DISPOSABLE_DATABASE"] !== databaseName) {
     throw new Error(
       `set RITSEI_CONFIRM_DISPOSABLE_DATABASE=${databaseName} to allow destructive work`,
     )
@@ -130,9 +134,9 @@ if (import.meta.main) {
       },
     }
     const output = `${JSON.stringify(evidence, null, 2)}\n`
-    const outputPath = Deno.env.get("RITSEI_POSTGRES19_EVIDENCE_PATH")
+    const outputPath = process.env["RITSEI_POSTGRES19_EVIDENCE_PATH"]
     if (outputPath === undefined) console.log(output)
-    else await Deno.writeTextFile(outputPath, output)
+    else await writeFile(outputPath, output, "utf8")
   } finally {
     await sql.end()
   }

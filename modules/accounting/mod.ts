@@ -1,3 +1,13 @@
+export { AccountingCapabilities } from "./src/capabilities.ts"
+export {
+  AccountingFinancialOperationPostAction,
+  AccountingFinancialOperationReconciledEvent,
+  AccountingRevenuePostAction,
+  AccountingRevenuePostedEvent,
+  AccountingTypedActionCatalog,
+  AccountingTypedEventCatalog,
+  RevenuePostedEventPayload,
+} from "./src/catalog.ts"
 export * from "./src/financial-store-contract.ts"
 export type {
   FinancialBackupRestoreEvidence as FinancialBackupRestoreEvidenceType,
@@ -15,16 +25,6 @@ export type {
   FinancialStoreWatermark as FinancialStoreWatermarkType,
 } from "./src/financial-store-contract.ts"
 export * from "./src/verification-contract.ts"
-export { AccountingCapabilities } from "./src/capabilities.ts"
-export {
-  AccountingFinancialOperationPostAction,
-  AccountingFinancialOperationReconciledEvent,
-  AccountingRevenuePostAction,
-  AccountingRevenuePostedEvent,
-  AccountingTypedActionCatalog,
-  AccountingTypedEventCatalog,
-  RevenuePostedEventPayload,
-} from "./src/catalog.ts"
 
 export {
   CreateFinancialJournalIntentInput,
@@ -127,10 +127,6 @@ export {
   PostFinancialJournalInput,
 } from "./src/financial-ledger.ts"
 export {
-  makePostgresqlFinancialLedger,
-  makePostgresqlFinancialLedgerLayer,
-} from "./src/postgresql-ledger.ts"
-export {
   makePostgresqlFinancialStoreObservation,
   makePostgresqlFinancialStoreObservationLayer,
 } from "./src/financial-observation.ts"
@@ -142,6 +138,10 @@ export {
   makeAccountingTestLive,
   makeFinancialOperationsTestLive,
 } from "./src/layers.ts"
+export {
+  makePostgresqlFinancialLedger,
+  makePostgresqlFinancialLedgerLayer,
+} from "./src/postgresql-ledger.ts"
 
 export {
   Account,

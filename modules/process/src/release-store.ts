@@ -148,14 +148,14 @@ const toDeployment = (row: {
 }): ProcessDeployment => ({ ...row, createdAt: row.createdAt.toISOString() })
 
 const sameRelease = (release: ProcessReleaseArtifact, input: ProcessReleaseInput): boolean =>
-  release.tenantId === input.tenantId &&
-  release.definitionId === input.validation.definitionId &&
-  release.definitionVersion === input.validation.definitionVersion &&
-  release.catalogVersion === input.validation.catalogVersion &&
-  release.checksum === input.checksum &&
-  release.approvedBy === input.approvedBy &&
-  release.approvalReason === input.approvalReason &&
-  release.releasedBy === input.releasedBy
+  release.tenantId === input.tenantId
+  && release.definitionId === input.validation.definitionId
+  && release.definitionVersion === input.validation.definitionVersion
+  && release.catalogVersion === input.validation.catalogVersion
+  && release.checksum === input.checksum
+  && release.approvedBy === input.approvedBy
+  && release.approvalReason === input.approvalReason
+  && release.releasedBy === input.releasedBy
 
 type ReleaseRecord =
   | { readonly _tag: "Recorded"; readonly release: ProcessReleaseArtifact }
@@ -236,8 +236,8 @@ const recordDeployment = async (
   const existing = existingRows[0]
   if (existing !== undefined) {
     const deployment = toDeployment(existing)
-    return deployment.deployedBy === input.deployedBy &&
-        deployment.promotionReason === input.promotionReason
+    return deployment.deployedBy === input.deployedBy
+        && deployment.promotionReason === input.promotionReason
       ? { _tag: "Recorded", deployment }
       : { _tag: "Conflict" }
   }
@@ -263,11 +263,11 @@ const recordDeployment = async (
   return { _tag: "Recorded", deployment }
 }
 
-export const makePostgresProcessReleaseStore = Effect.gen(function* () {
+export const makePostgresProcessReleaseStore = Effect.gen(function*() {
   const database = yield* Database
   return {
     release: (input: unknown) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(ProcessReleaseInput)(input)
         const result = yield* database.transaction(
           (transaction) => recordRelease(transaction, decoded),
@@ -294,7 +294,7 @@ export const makePostgresProcessReleaseStore = Effect.gen(function* () {
         return yield* Effect.fail(result.failure)
       }),
     deploy: (input: unknown) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(ProcessDeploymentInput)(input)
         const result = yield* database.transaction(
           (transaction) => recordDeployment(transaction, decoded),
@@ -339,7 +339,7 @@ export const makeMemoryProcessReleaseStore = (): ProcessReleaseStore => {
   const deployments = new Map<string, ProcessDeployment>()
   return {
     release: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(ProcessReleaseInput)(input)
         const key =
           `${decoded.tenantId}:${decoded.validation.definitionId}:${decoded.validation.definitionVersion}`
@@ -371,7 +371,7 @@ export const makeMemoryProcessReleaseStore = (): ProcessReleaseStore => {
         return release
       }),
     deploy: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(ProcessDeploymentInput)(input)
         const release = [...releases.values()].find((candidate) =>
           candidate.id === decoded.releaseId && candidate.tenantId === decoded.tenantId
@@ -388,8 +388,8 @@ export const makeMemoryProcessReleaseStore = (): ProcessReleaseStore => {
         const existing = deployments.get(key)
         if (existing !== undefined) {
           if (
-            existing.deployedBy === decoded.deployedBy &&
-            existing.promotionReason === decoded.promotionReason
+            existing.deployedBy === decoded.deployedBy
+            && existing.promotionReason === decoded.promotionReason
           ) return existing
           return yield* Effect.fail(
             new ProcessDeploymentConflict({

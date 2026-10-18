@@ -2,13 +2,19 @@ import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 
+import { AccountingService, makeAccountingTestLayer } from "../../modules/accounting/mod.ts"
 import { AuthService, makeAuthTestLayer, TenantAlreadyExists } from "../../modules/auth/mod.ts"
 import {
   AuthorizationDenied,
   AuthorizationService,
   makeAuthorizationTestLayer,
 } from "../../modules/authorization/mod.ts"
-import { AccountingService, makeAccountingTestLayer } from "../../modules/accounting/mod.ts"
+import {
+  InventoryService,
+  makeInventoryTestLayer,
+  StockTransferDifferentLegalEntity,
+} from "../../modules/inventory/mod.ts"
+import { makeMessagingTestLayer } from "../../modules/messaging/mod.ts"
 import {
   ExternalIdentifierAlreadyAssigned,
   LegalEntityNotFound,
@@ -16,12 +22,6 @@ import {
   PartyCapabilities,
   PartyService,
 } from "../../modules/party/mod.ts"
-import {
-  InventoryService,
-  makeInventoryTestLayer,
-  StockTransferDifferentLegalEntity,
-} from "../../modules/inventory/mod.ts"
-import { makeMessagingTestLayer } from "../../modules/messaging/mod.ts"
 import { SalesService } from "../../modules/sales/mod.ts"
 import { bootstrapTenant } from "./bootstrap.ts"
 
@@ -72,7 +72,7 @@ const withBootstrap = <A, E>(
 }
 
 it.effect("bootstraps the tenant scope vertical slice", () =>
-  withBootstrap(Effect.gen(function* () {
+  withBootstrap(Effect.gen(function*() {
     const authorization = yield* AuthorizationService
     const result = yield* bootstrapTenant(input)
 
@@ -102,7 +102,7 @@ it.effect("bootstraps the tenant scope vertical slice", () =>
   })))
 
 it.effect("preserves typed failure boundaries around the bootstrap result", () =>
-  withBootstrap(Effect.gen(function* () {
+  withBootstrap(Effect.gen(function*() {
     const auth = yield* AuthService
     const authorization = yield* AuthorizationService
     const party = yield* PartyService

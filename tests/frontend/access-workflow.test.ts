@@ -70,7 +70,7 @@ const connectAndOpenAccess = async (page: Page, url: string) => {
 it.effect(
   "administers tenant memberships and direct capability grants with explicit impact confirmation",
   () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const { page, url, errors } = yield* builtApp
       const memberships: Membership[] = [
         { userAccountId: activeMemberId, tenantId, status: "active" },
@@ -103,9 +103,9 @@ it.effect(
               route,
               200,
               memberships.filter((membership) =>
-                (search === undefined || search === null ||
-                  membership.userAccountId.toLocaleLowerCase().includes(search)) &&
-                (status === null || membership.status === status)
+                (search === undefined || search === null
+                  || membership.userAccountId.toLocaleLowerCase().includes(search))
+                && (status === null || membership.status === status)
               ),
             )
           }
@@ -218,7 +218,7 @@ it.effect(
         await grantButton.click()
         await page.getByRole("cell", { name: "party.read", exact: true }).waitFor()
         assert.deepEqual(grantBody, { userAccountId: addedMemberId, capability: "party.read" })
-        await page.locator('section[aria-labelledby="permission-summary-heading"]')
+        await page.locator("section[aria-labelledby=\"permission-summary-heading\"]")
           .getByText("Direct tenant grants", { exact: true })
           .waitFor()
         await page.getByText(/individual grant revocation/).waitFor()
@@ -281,7 +281,7 @@ it.effect(
 it.effect(
   "keeps denied, malformed, and unknown authorization outcomes recoverable",
   () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const { page, url, errors } = yield* builtApp
       const membership = { userAccountId: activeMemberId, tenantId, status: "active" as const }
       let mode: "forbidden" | "malformed" | "loaded" | "unknown-grant" = "forbidden"

@@ -3,11 +3,10 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
 
-import { AuthorizationService } from "../../authorization/mod.ts"
 import { uuidv7 } from "../../../foundation/mod.ts"
-import { InventoryCapabilities } from "./capabilities.ts"
+import { AuthorizationService } from "../../authorization/mod.ts"
 import { MessagingService } from "../../messaging/mod.ts"
-import { InventoryStockCorrectedEvent } from "./events.ts"
+import { InventoryCapabilities } from "./capabilities.ts"
 import {
   AdjustStockInput,
   CompleteStockTransferInput,
@@ -53,6 +52,7 @@ import {
   StockUnavailable,
   WarehouseAlreadyExists,
 } from "./errors.ts"
+import { InventoryStockCorrectedEvent } from "./events.ts"
 
 const referenceFailure = (tenantId: string, warehouseId: string, itemId: string) =>
   new InventoryReferenceNotFound({ tenantId, warehouseId, itemId })
@@ -60,7 +60,7 @@ const referenceFailure = (tenantId: string, warehouseId: string, itemId: string)
 export const makeInventoryMemoryLayer = () =>
   Layer.effect(
     InventoryService,
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const authorization = yield* AuthorizationService
       const messaging = yield* MessagingService
       const clock = yield* Clock.Clock
@@ -81,7 +81,7 @@ export const makeInventoryMemoryLayer = () =>
         authorization.authorize({ principal, tenantId, capability })
       const service: InventoryService = {
         listWarehouses: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(ListWarehousesInput)(input)
             yield* authorize(
               decoded.principal,
@@ -90,30 +90,30 @@ export const makeInventoryMemoryLayer = () =>
             )
             return [...storedWarehouses.values()]
               .filter((warehouse) =>
-                warehouse.tenantId === decoded.tenantId &&
-                (decoded.legalEntityId === undefined ||
-                  warehouse.legalEntityId === decoded.legalEntityId)
+                warehouse.tenantId === decoded.tenantId
+                && (decoded.legalEntityId === undefined
+                  || warehouse.legalEntityId === decoded.legalEntityId)
               )
               .sort((left, right) => left.id.localeCompare(right.id))
               .slice(0, decoded.limit ?? 200)
           }),
         listItems: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(ListItemsInput)(input)
             yield* authorize(decoded.principal, decoded.tenantId, InventoryCapabilities.itemRead)
             const search = decoded.search?.toLocaleLowerCase()
             return [...storedItems.values()]
               .filter((item) =>
-                item.tenantId === decoded.tenantId &&
-                (search === undefined ||
-                  item.sku.toLocaleLowerCase().includes(search) ||
-                  item.name.toLocaleLowerCase().includes(search))
+                item.tenantId === decoded.tenantId
+                && (search === undefined
+                  || item.sku.toLocaleLowerCase().includes(search)
+                  || item.name.toLocaleLowerCase().includes(search))
               )
               .sort((left, right) => left.id.localeCompare(right.id))
               .slice(0, decoded.limit ?? 200)
           }),
         listStockBalances: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(ListStockBalancesInput)(input)
             yield* authorize(decoded.principal, decoded.tenantId, InventoryCapabilities.stockRead)
             return [...balances.entries()]
@@ -121,9 +121,9 @@ export const makeInventoryMemoryLayer = () =>
                 const [tenantId, warehouseId, itemId] = key.split(":")
                 const item = storedItems.get(itemId ?? "")
                 if (
-                  tenantId !== decoded.tenantId || item === undefined ||
-                  (decoded.warehouseId !== undefined && warehouseId !== decoded.warehouseId) ||
-                  (decoded.itemId !== undefined && itemId !== decoded.itemId)
+                  tenantId !== decoded.tenantId || item === undefined
+                  || (decoded.warehouseId !== undefined && warehouseId !== decoded.warehouseId)
+                  || (decoded.itemId !== undefined && itemId !== decoded.itemId)
                 ) return []
                 return [{
                   tenantId,
@@ -142,51 +142,51 @@ export const makeInventoryMemoryLayer = () =>
               .slice(0, decoded.limit ?? 200)
           }),
         listStockReservations: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(ListStockReservationsInput)(input)
             yield* authorize(decoded.principal, decoded.tenantId, InventoryCapabilities.stockRead)
             return [...storedReservations.values()]
               .filter((reservation) =>
-                reservation.tenantId === decoded.tenantId &&
-                (decoded.warehouseId === undefined ||
-                  reservation.warehouseId === decoded.warehouseId) &&
-                (decoded.itemId === undefined || reservation.itemId === decoded.itemId) &&
-                (decoded.status === undefined || reservation.status === decoded.status)
+                reservation.tenantId === decoded.tenantId
+                && (decoded.warehouseId === undefined
+                  || reservation.warehouseId === decoded.warehouseId)
+                && (decoded.itemId === undefined || reservation.itemId === decoded.itemId)
+                && (decoded.status === undefined || reservation.status === decoded.status)
               )
               .sort((left, right) => left.id.localeCompare(right.id))
               .slice(0, decoded.limit ?? 200)
           }),
         listStockTransfers: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(ListStockTransfersInput)(input)
             yield* authorize(decoded.principal, decoded.tenantId, InventoryCapabilities.stockRead)
             return [...storedTransfers.values()]
               .filter((transfer) =>
-                transfer.tenantId === decoded.tenantId &&
-                (decoded.warehouseId === undefined ||
-                  transfer.sourceWarehouseId === decoded.warehouseId ||
-                  transfer.destinationWarehouseId === decoded.warehouseId) &&
-                (decoded.status === undefined || transfer.status === decoded.status)
+                transfer.tenantId === decoded.tenantId
+                && (decoded.warehouseId === undefined
+                  || transfer.sourceWarehouseId === decoded.warehouseId
+                  || transfer.destinationWarehouseId === decoded.warehouseId)
+                && (decoded.status === undefined || transfer.status === decoded.status)
               )
               .sort((left, right) => left.id.localeCompare(right.id))
               .slice(0, decoded.limit ?? 200)
           }),
         listStockMovements: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(ListStockMovementsInput)(input)
             yield* authorize(decoded.principal, decoded.tenantId, InventoryCapabilities.stockRead)
             return storedMovements
               .filter((movement) =>
-                movement.tenantId === decoded.tenantId &&
-                (decoded.warehouseId === undefined ||
-                  movement.warehouseId === decoded.warehouseId) &&
-                (decoded.itemId === undefined || movement.itemId === decoded.itemId) &&
-                (decoded.kind === undefined || movement.kind === decoded.kind)
+                movement.tenantId === decoded.tenantId
+                && (decoded.warehouseId === undefined
+                  || movement.warehouseId === decoded.warehouseId)
+                && (decoded.itemId === undefined || movement.itemId === decoded.itemId)
+                && (decoded.kind === undefined || movement.kind === decoded.kind)
               )
               .slice(0, decoded.limit ?? 200)
           }),
         createWarehouse: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(CreateWarehouseInput)(input)
             yield* authorize(
               decoded.principal,
@@ -214,7 +214,7 @@ export const makeInventoryMemoryLayer = () =>
             return value
           }),
         createItem: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(CreateItemInput)(input)
             yield* authorize(decoded.principal, decoded.tenantId, InventoryCapabilities.itemCreate)
             const sku = decoded.sku.trim().toUpperCase()
@@ -237,7 +237,7 @@ export const makeInventoryMemoryLayer = () =>
             return value
           }),
         receiveStock: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(ReceiveStockInput)(input)
             yield* authorize(
               decoded.principal,
@@ -246,16 +246,16 @@ export const makeInventoryMemoryLayer = () =>
             )
             const warehouse = storedWarehouses.get(decoded.warehouseId)
             if (
-              warehouse?.tenantId !== decoded.tenantId ||
-              storedItems.get(decoded.itemId)?.tenantId !== decoded.tenantId
+              warehouse?.tenantId !== decoded.tenantId
+              || storedItems.get(decoded.itemId)?.tenantId !== decoded.tenantId
             ) {
               return yield* Effect.fail(
                 referenceFailure(decoded.tenantId, decoded.warehouseId, decoded.itemId),
               )
             }
             if (
-              decoded.legalEntityId !== undefined &&
-              warehouse.legalEntityId !== decoded.legalEntityId
+              decoded.legalEntityId !== undefined
+              && warehouse.legalEntityId !== decoded.legalEntityId
             ) {
               return yield* Effect.fail(
                 new InventoryWarehouseLegalEntityMismatch({
@@ -290,7 +290,7 @@ export const makeInventoryMemoryLayer = () =>
             }
           }),
         adjustStock: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(AdjustStockInput)(input)
             yield* authorize(decoded.principal, decoded.tenantId, InventoryCapabilities.stockAdjust)
             const unitOfMeasure = decoded.unitOfMeasure.trim().toUpperCase()
@@ -303,11 +303,11 @@ export const makeInventoryMemoryLayer = () =>
             const existing = correctionsByIdempotencyKey.get(key)
             if (existing !== undefined) {
               if (
-                existing.warehouseId !== decoded.warehouseId ||
-                existing.itemId !== decoded.itemId ||
-                existing.adjustment !== decoded.adjustment ||
-                existing.unitOfMeasure !== unitOfMeasure ||
-                existing.reason !== reason
+                existing.warehouseId !== decoded.warehouseId
+                || existing.itemId !== decoded.itemId
+                || existing.adjustment !== decoded.adjustment
+                || existing.unitOfMeasure !== unitOfMeasure
+                || existing.reason !== reason
               ) {
                 return yield* Effect.fail(
                   new StockCorrectionIdempotencyConflict({
@@ -320,8 +320,8 @@ export const makeInventoryMemoryLayer = () =>
             }
             const item = storedItems.get(decoded.itemId)
             if (
-              storedWarehouses.get(decoded.warehouseId)?.tenantId !== decoded.tenantId ||
-              item?.tenantId !== decoded.tenantId
+              storedWarehouses.get(decoded.warehouseId)?.tenantId !== decoded.tenantId
+              || item?.tenantId !== decoded.tenantId
             ) {
               return yield* Effect.fail(
                 referenceFailure(decoded.tenantId, decoded.warehouseId, decoded.itemId),
@@ -397,7 +397,7 @@ export const makeInventoryMemoryLayer = () =>
             return correction
           }),
         reserveStock: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(ReserveStockInput)(input)
             yield* authorize(
               decoded.principal,
@@ -407,8 +407,8 @@ export const makeInventoryMemoryLayer = () =>
             if (decoded.legalEntityId !== undefined) {
               const warehouse = storedWarehouses.get(decoded.warehouseId)
               if (
-                warehouse?.tenantId !== decoded.tenantId ||
-                warehouse?.legalEntityId !== decoded.legalEntityId
+                warehouse?.tenantId !== decoded.tenantId
+                || warehouse?.legalEntityId !== decoded.legalEntityId
               ) {
                 return yield* Effect.fail(
                   new StockReservationLegalEntityMismatch({
@@ -428,9 +428,9 @@ export const makeInventoryMemoryLayer = () =>
               : storedReservations.get(reservationIdsByIdempotencyKey.get(idempotencyKey) ?? "")
             if (existing !== undefined) {
               if (
-                existing.warehouseId !== decoded.warehouseId ||
-                existing.itemId !== decoded.itemId ||
-                existing.quantity !== decoded.quantity
+                existing.warehouseId !== decoded.warehouseId
+                || existing.itemId !== decoded.itemId
+                || existing.quantity !== decoded.quantity
               ) {
                 return yield* Effect.fail(
                   new StockReservationIdempotencyConflict({
@@ -482,7 +482,7 @@ export const makeInventoryMemoryLayer = () =>
             return reservation
           }),
         releaseReservation: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(ReleaseReservationInput)(input)
             yield* authorize(
               decoded.principal,
@@ -529,7 +529,7 @@ export const makeInventoryMemoryLayer = () =>
             return released
           }),
         fulfillReservation: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(FulfillReservationInput)(input)
             yield* authorize(
               decoded.principal,
@@ -578,7 +578,7 @@ export const makeInventoryMemoryLayer = () =>
             return fulfilled
           }),
         createTransfer: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(CreateStockTransferInput)(input)
             yield* authorize(
               decoded.principal,
@@ -662,7 +662,7 @@ export const makeInventoryMemoryLayer = () =>
             return transfer
           }),
         confirmTransfer: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(ConfirmStockTransferInput)(input)
             yield* authorize(
               decoded.principal,
@@ -684,8 +684,8 @@ export const makeInventoryMemoryLayer = () =>
                 `${decoded.tenantId}:${transfer.sourceWarehouseId}:${line.itemId}`,
               )
               if (
-                balance === undefined ||
-                balance.onHand - balance.reserved < BigInt(line.quantity)
+                balance === undefined
+                || balance.onHand - balance.reserved < BigInt(line.quantity)
               ) {
                 return yield* Effect.fail(
                   new StockUnavailable({
@@ -723,7 +723,7 @@ export const makeInventoryMemoryLayer = () =>
             return confirmed
           }),
         completeTransfer: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(CompleteStockTransferInput)(input)
             yield* authorize(
               decoded.principal,

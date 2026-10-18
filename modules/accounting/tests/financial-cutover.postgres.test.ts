@@ -3,6 +3,17 @@ import * as Effect from "effect/Effect"
 import * as Base64Url from "effect/encoding/Base64Url"
 import * as Layer from "effect/Layer"
 
+import { Database, DatabaseFailure, DurableJobEnqueuer, uuidv7 } from "../../../foundation/mod.ts"
+import {
+  generateEd25519FinancialVerificationSigner,
+  makePostgresDatabase,
+  runMigrations,
+} from "../../../platform/mod.ts"
+import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
+import { makeAuthorizationTestLayer } from "../../authorization/mod.ts"
+import { makeMessagingService, MessagingService } from "../../messaging/mod.ts"
+import { makeProcessJobEnqueuer } from "../../process/mod.ts"
+import { SalesService } from "../../sales/mod.ts"
 import {
   AccountingCapabilities,
   FinancialEngineCutoverBlocked,
@@ -15,8 +26,6 @@ import {
   makeFinancialOperationService,
   type ReconcileFinancialCheckpointInputType,
 } from "../mod.ts"
-import { makeAuthorizationTestLayer } from "../../authorization/mod.ts"
-import { Database, DatabaseFailure, DurableJobEnqueuer, uuidv7 } from "../../../foundation/mod.ts"
 import {
   type FinancialStoreInventoryType,
   FinancialStoreObservationRegistry,
@@ -24,17 +33,8 @@ import {
   FinancialVerificationSigner,
   hashFinancialStoreWatermarks,
 } from "../mod.ts"
-import {
-  generateEd25519FinancialVerificationSigner,
-  makePostgresDatabase,
-  runMigrations,
-} from "../../../platform/mod.ts"
-import { makeMessagingService, MessagingService } from "../../messaging/mod.ts"
-import { makeProcessJobEnqueuer } from "../../process/mod.ts"
-import { SalesService } from "../../sales/mod.ts"
-import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
 
-const databaseUrl = Deno.env.get("DATABASE_URL")
+const databaseUrl = process.env["DATABASE_URL"]
 const sales = {} as SalesService
 
 it.effect.skipIf(databaseUrl === undefined)(
@@ -43,7 +43,7 @@ it.effect.skipIf(databaseUrl === undefined)(
     withTemporaryDatabase(
       databaseUrl!,
       (client) =>
-        Effect.gen(function* () {
+        Effect.gen(function*() {
           yield* runMigrations(client)
           const database = makePostgresDatabase(client)
           const [tenant] = yield* Effect.promise(() =>
@@ -380,7 +380,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             input: ReconcileFinancialCheckpointInputType,
             consistency: FinancialStoreWatermarkType["consistency"] = "bounded",
           ) =>
-            Effect.gen(function* () {
+            Effect.gen(function*() {
               const sourceWatermark: FinancialStoreWatermarkType = {
                 ...observedSourceWatermark,
                 scope: `tenant:${input.tenantId}/legal-entity:${input.legalEntityId}`,

@@ -31,7 +31,7 @@ const checkpointInput = {
 } as const
 
 it.effect("proves crash recovery from a serialized checkpoint", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const checkpoint = yield* Schema.decodeUnknownEffect(ProcessCheckpoint)(checkpointInput)
     const runtime = makeProcessRuntime()
     const scheduled = yield* runtime.scheduleTimer(checkpoint, "timer-1")
@@ -42,7 +42,7 @@ it.effect("proves crash recovery from a serialized checkpoint", () =>
   }))
 
 it.effect("suppresses a duplicate event and duplicate command", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const checkpoint = yield* Schema.decodeUnknownEffect(ProcessCheckpoint)(checkpointInput)
     const runtime = makeProcessRuntime()
     const execution = {
@@ -79,7 +79,7 @@ it.effect("suppresses a duplicate event and duplicate command", () =>
   }))
 
 it.effect("pins the exact catalog version", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const checkpoint = yield* Schema.decodeUnknownEffect(ProcessCheckpoint)(checkpointInput)
     const runtime = makeProcessRuntime()
     const pinned = yield* runtime.pinCatalogVersion(checkpoint, 1)
@@ -92,7 +92,7 @@ it.effect("pins the exact catalog version", () =>
   }))
 
 it.effect("validates the bounded Process IR node kinds", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const definition = yield* Schema.decodeUnknownEffect(ProcessDefinition)({
       id: checkpointInput.processDefinitionId,
       version: 1,

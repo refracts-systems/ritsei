@@ -24,7 +24,7 @@ const withAuthorization = <A, E>(program: Effect.Effect<A, E, AuthorizationServi
 
 describe("authorization contract", () => {
   it.effect("allows an explicit tenant-scoped capability", () =>
-    withAuthorization(Effect.gen(function* () {
+    withAuthorization(Effect.gen(function*() {
       const service = yield* AuthorizationService
       const decision = yield* service.authorize({
         principal,
@@ -37,7 +37,7 @@ describe("authorization contract", () => {
 
   it.effect("authorizes Process Studio reads and runtime controls only when granted", () =>
     Effect.provide(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const service = yield* AuthorizationService
         for (
           const capability of [
@@ -63,7 +63,7 @@ describe("authorization contract", () => {
     ))
 
   it.effect("denies by default and on scope mismatch", () =>
-    withAuthorization(Effect.gen(function* () {
+    withAuthorization(Effect.gen(function*() {
       const service = yield* AuthorizationService
       const error = yield* Effect.flip(service.authorize({
         principal,
@@ -74,14 +74,14 @@ describe("authorization contract", () => {
     })))
 
   it.effect("rejects duplicate grants", () =>
-    withAuthorization(Effect.gen(function* () {
+    withAuthorization(Effect.gen(function*() {
       const service = yield* AuthorizationService
       const error = yield* Effect.flip(service.grant(initialGrant))
       assert.instanceOf(error, CapabilityAlreadyGranted)
     })))
 
   it.effect("suspends tenant access without deleting the global account", () =>
-    withAuthorization(Effect.gen(function* () {
+    withAuthorization(Effect.gen(function*() {
       const service = yield* AuthorizationService
       yield* service.suspendMember({
         userAccountId: principal.userAccountId,
@@ -111,7 +111,7 @@ describe("authorization contract", () => {
 
   it.effect("lists memberships with optional status and limit filters", () =>
     Effect.provide(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const service = yield* AuthorizationService
         yield* service.addMember({ userAccountId: "user-c", tenantId: "tenant-a" })
         yield* service.addMember({ userAccountId: "user-a", tenantId: "tenant-a" })
@@ -145,7 +145,7 @@ describe("authorization contract", () => {
 
   it.effect("lists only active tenants for the requested user account", () =>
     Effect.provide(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const service = yield* AuthorizationService
         yield* service.addMember({ userAccountId: principal.userAccountId, tenantId: "tenant-b" })
         yield* service.addMember({ userAccountId: principal.userAccountId, tenantId: "tenant-c" })
@@ -171,7 +171,7 @@ describe("authorization contract", () => {
 
   it.effect("lists direct grants deterministically across suspension and tenant boundaries", () =>
     Effect.provide(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const service = yield* AuthorizationService
         const input = { userAccountId: principal.userAccountId, tenantId: "tenant-a" }
 
@@ -206,7 +206,7 @@ describe("authorization contract", () => {
 
   it.effect("manages membership lifecycle and rejects missing members", () =>
     Effect.provide(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const service = yield* AuthorizationService
         const added = yield* service.addMember({
           userAccountId: "new-user",

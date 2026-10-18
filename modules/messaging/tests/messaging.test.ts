@@ -3,6 +3,7 @@ import * as Effect from "effect/Effect"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 
+import { DatabaseFailure } from "../../../foundation/mod.ts"
 import {
   ConsumerReceipt,
   EventEnvelope,
@@ -10,7 +11,6 @@ import {
   makeMessagingTestLayer,
   MessagingService,
 } from "../mod.ts"
-import { DatabaseFailure } from "../../../foundation/mod.ts"
 
 const event = (overrides: Record<string, unknown> = {}) => ({
   eventId: "018f3f77-0c5a-7cc0-8b62-6a163d214123",
@@ -30,7 +30,7 @@ const event = (overrides: Record<string, unknown> = {}) => ({
 })
 
 it.effect("bounds public JSON payload resources", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const oversizedString = yield* Effect.flip(
       Schema.decodeUnknownEffect(EventEnvelope)({ ...event(), payload: "x".repeat(64 * 1024 + 1) }),
     )
@@ -49,7 +49,7 @@ it.effect("bounds public JSON payload resources", () =>
   }))
 
 it.effect("rejects malformed envelope and receipt timestamps", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const invalidEnvelope = yield* Effect.flip(
       Schema.decodeUnknownEffect(EventEnvelope)({
         ...event(),
@@ -100,7 +100,7 @@ it.effect("rejects malformed envelope and receipt timestamps", () =>
   }))
 
 it.effect("rejects malformed idempotency-conflict identities", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const invalid = yield* Effect.flip(
       Schema.decodeUnknownEffect(EventIdempotencyConflict)({
         _tag: "EventIdempotencyConflict",
@@ -115,7 +115,7 @@ it.effect("rejects malformed idempotency-conflict identities", () =>
   }))
 
 it.effect("appends idempotently and rejects a mismatched envelope", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const messaging = yield* MessagingService
     const first = yield* messaging.append(event())
     const duplicate = yield* messaging.append(event())
@@ -126,7 +126,7 @@ it.effect("appends idempotently and rejects a mismatched envelope", () =>
   }).pipe(Effect.provide(makeMessagingTestLayer())))
 
 it.effect("loads events through a tenant-scoped public query", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const messaging = yield* MessagingService
     const source = yield* messaging.append(event())
 
@@ -153,7 +153,7 @@ it.effect("loads events through a tenant-scoped public query", () =>
   }).pipe(Effect.provide(makeMessagingTestLayer())))
 
 it.effect("suppresses a duplicate event consumer effect with one consumer receipt", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const messaging = yield* MessagingService
     yield* messaging.append(event())
     const input = {
@@ -180,7 +180,7 @@ it.effect("suppresses a duplicate event consumer effect with one consumer receip
   }).pipe(Effect.provide(makeMessagingTestLayer())))
 
 it.effect("suppresses concurrent duplicate consumer effects in the test layer", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const messaging = yield* MessagingService
     yield* messaging.append(event())
     const input = {
@@ -206,7 +206,7 @@ it.effect("suppresses concurrent duplicate consumer effects in the test layer", 
   }).pipe(Effect.provide(makeMessagingTestLayer())))
 
 it.effect("rolls back the consumer receipt when the consumer effect fails", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const messaging = yield* MessagingService
     yield* messaging.append(event())
     const input = {
@@ -225,7 +225,7 @@ it.effect("rolls back the consumer receipt when the consumer effect fails", () =
   }).pipe(Effect.provide(makeMessagingTestLayer())))
 
 it.effect("requires a tenant-matching source event and rolls back the consumer effect", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const messaging = yield* MessagingService
     const source = event()
     const foreignTenantId = "018f3f77-0c5a-7cc0-8b62-6a163d214126"
@@ -240,7 +240,7 @@ it.effect("requires a tenant-matching source event and rolls back the consumer e
     let executions = 0
     const consume = messaging.consumeOnce(
       input,
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         executions++
         return yield* messaging.append(event({
           eventId: derivedEventId,

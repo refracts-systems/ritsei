@@ -37,7 +37,7 @@ export const assertFinancialLedgerConformance = (
   input: ConformanceJournal,
   expectedAuthority: Authority,
 ) =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     assert.strictEqual(ledger.authority, expectedAuthority)
     assert.strictEqual(input.lines.length, 2)
 

@@ -16,16 +16,16 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Deno
-        uses: denoland/setup-deno@v2
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          deno-version: v2.x
+          node-version: 24
 
-      - name: Install ast-grep
-        run: cargo install ast-grep --locked
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
 
       - name: Install dependencies
-        run: deno install --frozen
+        run: pnpm install --frozen-lockfile
 
       - name: Commit and PR message validation
         env:
@@ -39,44 +39,43 @@ jobs:
           elif [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
             echo "Initial branch push; the pull request check will validate its full commit range."
           else
-            deno run --allow-read --allow-run tooling/check-commit-range.ts "$BASE_SHA" "$HEAD_SHA"
+            pnpm exec tsx tooling/check-commit-range.ts "$BASE_SHA" "$HEAD_SHA"
           fi
           if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
             printf '%s\n' "$PR_TITLE" > "$RUNNER_TEMP/pr-title"
-            deno run --allow-read tooling/check-commit-message.ts "$RUNNER_TEMP/pr-title"
+            pnpm exec tsx tooling/check-commit-message.ts "$RUNNER_TEMP/pr-title"
           fi
 
+      # `deno lint` was retired with the Node migration; `tsc` in `pnpm run check`
+      # plus ast-grep boundary rules cover the lint surface for now.
       - name: Format
-        run: deno fmt --check
-
-      - name: Lint
-        run: deno lint
+        run: pnpm run fmt:check
 
       - name: Type check
-        run: deno task check
+        run: pnpm run check
 
       - name: Drizzle migration graph
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/ritsei
-        run: deno task db:check
+        run: pnpm run db:check
 
       - name: Roadmap measurement
-        run: deno task roadmap:measure
+        run: pnpm run roadmap:measure
 
       - name: Agent skills
-        run: deno task skills:check
+        run: pnpm run skills:check
 
       - name: Boundary tests
-        run: deno task boundary:test
+        run: pnpm run boundary:test
 
       - name: Boundary lint
-        run: deno task boundary:lint
+        run: pnpm run boundary:lint
 
       - name: Tests
-        run: deno task test
+        run: pnpm run test
 
       - name: Fallow audit
-        run: deno task fallow:audit
+        run: pnpm run fallow:audit
 
   nix:
     runs-on: ubuntu-latest

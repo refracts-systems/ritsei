@@ -43,14 +43,14 @@ const asyncWork = {
 
 describe("workload classification", () => {
   it.effect("accepts command, query, and async metadata", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       for (const metadata of [command, query, asyncWork]) {
         assert.deepStrictEqual(yield* classifyWorkload(metadata), metadata)
       }
     }))
 
   it.effect("rejects unbounded or topology-shaped metadata", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       for (
         const invalid of [
           { ...command, deadlineMs: 0 },

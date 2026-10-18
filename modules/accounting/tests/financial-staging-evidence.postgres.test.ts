@@ -1,24 +1,24 @@
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 
-import { FinancialStagingEvidenceInvalid } from "../mod.ts"
-import { makePostgresFinancialStagingEvidenceStore } from "../src/financial-staging-evidence.ts"
-import {
-  FINANCIAL_STAGING_EVIDENCE_CANONICALIZATION_VERSION,
-  hashFinancialStagingEvidence,
-} from "../mod.ts"
 import { Database } from "../../../foundation/database/mod.ts"
 import { uuidv7 } from "../../../foundation/ids/mod.ts"
 import { makePostgresDatabase, runMigrations } from "../../../platform/mod.ts"
 import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
+import { FinancialStagingEvidenceInvalid } from "../mod.ts"
+import {
+  FINANCIAL_STAGING_EVIDENCE_CANONICALIZATION_VERSION,
+  hashFinancialStagingEvidence,
+} from "../mod.ts"
+import { makePostgresFinancialStagingEvidenceStore } from "../src/financial-staging-evidence.ts"
 
-const databaseUrl = Deno.env.get("DATABASE_URL")
+const databaseUrl = process.env["DATABASE_URL"]
 
 it.effect.skipIf(databaseUrl === undefined)(
   "protects append-only staging evidence and verifies persisted reads",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
         const [tenant] = yield* Effect.promise(() =>

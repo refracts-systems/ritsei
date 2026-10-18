@@ -1,10 +1,10 @@
 import * as Effect from "effect/Effect"
-import * as Result from "effect/Result"
-import * as Stream from "effect/Stream"
 import * as HttpMethod from "effect/http/HttpMethod"
 import * as HttpRouter from "effect/http/HttpRouter"
 import * as HttpServerRequest from "effect/http/HttpServerRequest"
 import * as HttpServerResponse from "effect/http/HttpServerResponse"
+import * as Result from "effect/Result"
+import * as Stream from "effect/Stream"
 import type * as Types from "effect/Types"
 
 export const MAX_REQUEST_BODY_BYTES = 1_048_576
@@ -93,7 +93,7 @@ const requestBodyLimitMiddleware = (
   Types.unhandled,
   HttpServerRequest.HttpServerRequest
 > =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const request = yield* HttpServerRequest.HttpServerRequest
     if (!HttpMethod.hasBody(request.method)) return yield* effect
 

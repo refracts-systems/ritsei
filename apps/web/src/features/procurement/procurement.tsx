@@ -14,8 +14,8 @@ import { EntityWorkspace } from "../../ui/patterns/entity-workspace.tsx"
 import { Badge } from "../../ui/primitives/badge.tsx"
 import { Button } from "../../ui/primitives/button.tsx"
 import { createDialogOpenChange, Dialog } from "../../ui/primitives/dialog.tsx"
-import { Form } from "../../ui/primitives/form.tsx"
 import { FormField } from "../../ui/primitives/form-field.tsx"
+import { Form } from "../../ui/primitives/form.tsx"
 import { Input } from "../../ui/primitives/input.tsx"
 import { Select } from "../../ui/primitives/select.tsx"
 import { surface } from "../../ui/recipes/surface.ts"
@@ -186,13 +186,13 @@ function CreatePurchaseOrderDialog(props: {
               // Fallow: purchase-order line validation intentionally remains adjacent to submission.
               // fallow-ignore-next-line complexity
               const validLines = lines.every((line) =>
-                line.itemId !== null && uuidPattern.test(line.itemId) &&
-                line.quantity !== null && quantityPattern.test(line.quantity) &&
-                line.unitPrice !== null && moneyPattern.test(line.unitPrice)
+                line.itemId !== null && uuidPattern.test(line.itemId)
+                && line.quantity !== null && quantityPattern.test(line.quantity)
+                && line.unitPrice !== null && moneyPattern.test(line.unitPrice)
               )
               if (
-                supplierAccountId === null || !uuidPattern.test(supplierAccountId) ||
-                lines.length === 0 || !validLines
+                supplierAccountId === null || !uuidPattern.test(supplierAccountId)
+                || lines.length === 0 || !validLines
               ) {
                 setInvalid(true)
                 return
@@ -469,9 +469,9 @@ function ReceivePurchaseOrderDialog(props: {
               const quantity = requiredText(form.get(`receipt-quantity-${line.id}`))
               return quantity === null ? [] : [{ purchaseOrderLineId: line.id, quantity }]
             })
-            const valid = warehouseId !== null && uuidPattern.test(warehouseId) &&
-              idempotencyKey !== null && lines.length > 0 &&
-              lines.every((line) => quantityPattern.test(line.quantity))
+            const valid = warehouseId !== null && uuidPattern.test(warehouseId)
+              && idempotencyKey !== null && lines.length > 0
+              && lines.every((line) => quantityPattern.test(line.quantity))
             if (!valid) {
               setInvalid(true)
               return

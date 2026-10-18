@@ -38,11 +38,10 @@
   "ignoreDependencies": [
     "@axe-core/playwright",
     "@effect/vitest",
+    "@effect/platform-node",
     "@effect/platform-node-shared",
     "@effect/sql-pg",
-    "@std/fs",
-    "@std/media-types",
-    "@std/streams",
+    "uuid",
     "effect"
   ],
   "ignoreExports": [

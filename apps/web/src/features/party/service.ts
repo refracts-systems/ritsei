@@ -1,6 +1,17 @@
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import {
+  decodeInput,
+  decodeResponse,
+  mutationRequest,
+  querySuffix,
+  RequestFailure,
+  requestJson,
+  responseListMatches,
+  responseMatches,
+  routeWithId,
+} from "../../shared/api.ts"
+import {
   AssignPartyRoleInput,
   AttachPartyIdentifierInput,
   Branch,
@@ -21,23 +32,12 @@ import {
   RelatedPartyPath,
   SetPartyRepresentationActiveInput,
 } from "../../shared/contracts/generated/party.ts"
-import {
-  decodeInput,
-  decodeResponse,
-  mutationRequest,
-  querySuffix,
-  RequestFailure,
-  requestJson,
-  responseListMatches,
-  responseMatches,
-  routeWithId,
-} from "../../shared/api.ts"
 
 const PartyDirectory = Schema.Array(PartyDirectoryEntry).check(Schema.isMaxLength(200))
 const PartyId = Schema.String.check(Schema.isUUID())
 
 export const listParties = Effect.fn("Frontend.Party.listParties")(
-  function* (input: unknown = {}) {
+  function*(input: unknown = {}) {
     const decoded = yield* decodeInput(ListPartiesInput, input)
     const body = yield* requestJson(`${partyRoutes.list}${querySuffix(decoded)}`)
     return yield* decodeResponse(PartyDirectory, body, "invalid-response")
@@ -45,7 +45,7 @@ export const listParties = Effect.fn("Frontend.Party.listParties")(
 )
 
 export const getPartyDetail = Effect.fn("Frontend.Party.getPartyDetail")(
-  function* (id: unknown) {
+  function*(id: unknown) {
     const decodedId = yield* decodeInput(PartyId, id)
     const body = yield* requestJson(routeWithId(partyRoutes.get, decodedId))
     const detail = yield* decodeResponse(PartyDetail, body, "invalid-response")
@@ -57,7 +57,7 @@ export const getPartyDetail = Effect.fn("Frontend.Party.getPartyDetail")(
 )
 
 export const findRelatedPartyPaths = Effect.fn("Frontend.Party.findRelatedPartyPaths")(
-  function* (partyId: unknown, input: unknown = {}) {
+  function*(partyId: unknown, input: unknown = {}) {
     const decodedId = yield* decodeInput(PartyId, partyId)
     const decoded = yield* decodeInput(ListRelatedPartyPathsInput, input)
     const body = yield* requestJson(
@@ -76,7 +76,7 @@ export const findRelatedPartyPaths = Effect.fn("Frontend.Party.findRelatedPartyP
 )
 
 export const createParty = Effect.fn("Frontend.Party.createParty")(
-  function* (input: unknown) {
+  function*(input: unknown) {
     const decoded = yield* decodeInput(CreatePartyInput, input)
     const body = yield* mutationRequest(partyRoutes.create, "POST", decoded)
     return yield* decodeResponse(Party, body, "unknown-outcome")
@@ -84,7 +84,7 @@ export const createParty = Effect.fn("Frontend.Party.createParty")(
 )
 
 export const createLegalEntity = Effect.fn("Frontend.Party.createLegalEntity")(
-  function* (partyId: unknown) {
+  function*(partyId: unknown) {
     const decodedPartyId = yield* decodeInput(PartyId, partyId)
     const body = yield* mutationRequest(
       routeWithId(partyRoutes.createLegalEntity, decodedPartyId),
@@ -99,7 +99,7 @@ export const createLegalEntity = Effect.fn("Frontend.Party.createLegalEntity")(
 )
 
 export const createBranch = Effect.fn("Frontend.Party.createBranch")(
-  function* (legalEntityId: unknown, input: unknown) {
+  function*(legalEntityId: unknown, input: unknown) {
     const decodedId = yield* decodeInput(PartyId, legalEntityId)
     const decoded = yield* decodeInput(CreateBranchInput, input)
     const body = yield* mutationRequest(
@@ -116,7 +116,7 @@ export const createBranch = Effect.fn("Frontend.Party.createBranch")(
 )
 
 export const assignPartyRole = Effect.fn("Frontend.Party.assignPartyRole")(
-  function* (partyId: unknown, input: unknown) {
+  function*(partyId: unknown, input: unknown) {
     const decodedId = yield* decodeInput(PartyId, partyId)
     const decoded = yield* decodeInput(AssignPartyRoleInput, input)
     yield* mutationRequest(routeWithId(partyRoutes.assignRole, decodedId), "POST", decoded)
@@ -124,7 +124,7 @@ export const assignPartyRole = Effect.fn("Frontend.Party.assignPartyRole")(
 )
 
 export const attachPartyIdentifier = Effect.fn("Frontend.Party.attachPartyIdentifier")(
-  function* (partyId: unknown, input: unknown) {
+  function*(partyId: unknown, input: unknown) {
     const decodedId = yield* decodeInput(PartyId, partyId)
     const decoded = yield* decodeInput(AttachPartyIdentifierInput, input)
     const body = yield* mutationRequest(
@@ -146,7 +146,7 @@ export const attachPartyIdentifier = Effect.fn("Frontend.Party.attachPartyIdenti
 )
 
 export const createPartyRelationship = Effect.fn("Frontend.Party.createPartyRelationship")(
-  function* (partyId: unknown, input: unknown) {
+  function*(partyId: unknown, input: unknown) {
     const decodedId = yield* decodeInput(PartyId, partyId)
     const decoded = yield* decodeInput(CreatePartyRelationshipInput, input)
     const body = yield* mutationRequest(
@@ -169,7 +169,7 @@ export const createPartyRelationship = Effect.fn("Frontend.Party.createPartyRela
 )
 
 export const createPartyRepresentation = Effect.fn("Frontend.Party.createPartyRepresentation")(
-  function* (partyId: unknown, input: unknown) {
+  function*(partyId: unknown, input: unknown) {
     const decodedId = yield* decodeInput(PartyId, partyId)
     const decoded = yield* decodeInput(CreatePartyRepresentationInput, input)
     const body = yield* mutationRequest(
@@ -193,7 +193,7 @@ export const createPartyRepresentation = Effect.fn("Frontend.Party.createPartyRe
 
 export const setPartyRepresentationActive = Effect.fn(
   "Frontend.Party.setPartyRepresentationActive",
-)(function* (representationId: unknown, input: unknown) {
+)(function*(representationId: unknown, input: unknown) {
   const decodedId = yield* decodeInput(PartyId, representationId)
   const decoded = yield* decodeInput(SetPartyRepresentationActiveInput, input)
   const body = yield* mutationRequest(

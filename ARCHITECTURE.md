@@ -12,7 +12,8 @@ The authoritative architecture specification is:
 
 ## Core Architecture
 
-- Runtime: Deno
+- Runtime: Node.js 24 LTS
+- Package manager: pnpm 12
 - Language: TypeScript strict
 - Application model: Effect-based typed transitions, services, and commands
 - Database: PostgreSQL 19+
@@ -27,7 +28,7 @@ The authoritative architecture specification is:
 - Source/derived non-interference: source-of-truth critical paths remain independent of derived capabilities
 - Analytics: domain-owned facts, versioned metrics, rebuildable projections, and no primary fallback
 - Search: PostgreSQL-first, rebuildable, and provider-replaceable
-- Native compute: optional Zig through `Deno.dlopen`
+- Native compute: optional Zig through typed FFI bindings
 - Process composition target: typed catalogs, deterministic Process IR, and a
   governed Process Studio
 
@@ -75,24 +76,21 @@ The dependency matrix and enforcement decision are in
              │    package.json     │
              │                     │
              │ npm dependencies    │
-             │ JSR dependencies    │
              │ dev dependencies    │
              └──────────┬──────────┘
                         │
                         ▼
-                  deno install
+                  pnpm install
                         │
               ┌─────────┴─────────┐
               ▼                   ▼
-         node_modules         deno.lock
+         node_modules         pnpm-lock.yaml
 
 
              ┌─────────────────────┐
-             │      deno.json      │
+             │  package.json       │
              │                     │
-             │ runtime             │
-             │ permissions         │
-             │ compiler            │
-             │ fmt / lint          │
+             │ type check          │
+             │ fmt (dprint)        │
              │ tasks               │
              └─────────────────────┘

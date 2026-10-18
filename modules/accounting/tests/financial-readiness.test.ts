@@ -55,7 +55,7 @@ describe("financial readiness proofs", () => {
   })
 
   it.effect("rejects verification versions outside PostgreSQL smallint range", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const mappingVersionFailure = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialVerificationEvidence.fields.mappingVersion)(32768),
       )
@@ -67,7 +67,7 @@ describe("financial readiness proofs", () => {
     }))
 
   it.effect("rejects verification counts above PostgreSQL integer range", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const failure = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialVerificationEvidence.fields.accountCount)(
           2_147_483_648,
@@ -77,7 +77,7 @@ describe("financial readiness proofs", () => {
     }))
 
   it.effect("rejects financial transfers with identical accounts", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const failure = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialTransferFact)({
           operationId: "operation-1",
@@ -95,7 +95,7 @@ describe("financial readiness proofs", () => {
     }))
 
   it.effect("rejects malformed financial fact account identities", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       for (const field of ["debitAccountId", "creditAccountId"] as const) {
         const failure = yield* Effect.flip(
           Schema.decodeUnknownEffect(FinancialTransferFact.fields[field])("not-a-uuid"),
@@ -109,7 +109,7 @@ describe("financial readiness proofs", () => {
     }))
 
   it.effect("rejects financial fact mapping versions outside PostgreSQL integer range", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const operationFailure = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialOperationFact.fields.mappingVersion)(
           2_147_483_648,
@@ -131,7 +131,7 @@ describe("financial readiness proofs", () => {
     }))
 
   it.effect("rejects financial transfer positions outside PostgreSQL integer range", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const negative = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialTransferFact.fields.position)(-1),
       )
@@ -143,7 +143,7 @@ describe("financial readiness proofs", () => {
     }))
 
   it.effect("preserves rejected financial operation fact status", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const operation = yield* Schema.decodeUnknownEffect(FinancialOperationFact)({
         operationId: "rejected-operation",
         status: "rejected",
@@ -154,7 +154,7 @@ describe("financial readiness proofs", () => {
     }))
 
   it.effect("rejects financial transfer amounts outside the positive U128 range", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const zero = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialTransferFact.fields.amountMinor)("0"),
       )
@@ -168,7 +168,7 @@ describe("financial readiness proofs", () => {
     }))
 
   it.effect("rejects verification evidence that completes before it starts", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const failure = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialVerificationEvidence)({
           tenantId: "00000000-0000-4000-8000-000000000001",
@@ -203,7 +203,7 @@ describe("financial readiness proofs", () => {
     }))
 
   it.effect("rebuilds the same cross-store facts to the same hash", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const source = {
         operations: [{
           operationId: "op-1",

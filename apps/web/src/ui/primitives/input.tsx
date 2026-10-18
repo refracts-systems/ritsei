@@ -1,5 +1,5 @@
-import { omit } from "solid-js"
 import type { JSX } from "@solidjs/web"
+import { omit } from "solid-js"
 import { control } from "../recipes/control.ts"
 
 type InputProps = Omit<JSX.InputHTMLAttributes<HTMLInputElement>, "class"> & {

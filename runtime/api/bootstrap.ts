@@ -1,18 +1,25 @@
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 
-import { AuthService, CreateTenantInput, Principal, Tenant } from "../../modules/auth/mod.ts"
-import {
-  AuthorizationCapabilities,
-  AuthorizationService,
-  Capability,
-} from "../../modules/authorization/mod.ts"
 import {
   AccountingCapabilities,
   AccountingConfiguration,
   AccountingService,
   ConfigureLegalEntityInput,
 } from "../../modules/accounting/mod.ts"
+import { AuthService, CreateTenantInput, Principal, Tenant } from "../../modules/auth/mod.ts"
+import {
+  AuthorizationCapabilities,
+  AuthorizationService,
+  Capability,
+} from "../../modules/authorization/mod.ts"
+import { IdentityCapabilities } from "../../modules/identity/mod.ts"
+import {
+  CreateWarehouseInput,
+  InventoryCapabilities,
+  InventoryService,
+  Warehouse,
+} from "../../modules/inventory/mod.ts"
 import {
   Branch,
   CreateBranchInput,
@@ -23,13 +30,6 @@ import {
   PartyCapabilities,
   PartyService,
 } from "../../modules/party/mod.ts"
-import {
-  CreateWarehouseInput,
-  InventoryCapabilities,
-  InventoryService,
-  Warehouse,
-} from "../../modules/inventory/mod.ts"
-import { IdentityCapabilities } from "../../modules/identity/mod.ts"
 
 const NonBlankString = Schema.String.check(Schema.isPattern(/\S/))
 
@@ -80,7 +80,7 @@ export const bootstrapCapabilities = [
 ] as const satisfies readonly Capability[]
 
 export const bootstrapTenant = (input: unknown) =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const decoded = yield* Schema.decodeUnknownEffect(BootstrapTenantInput)(input)
     const auth = yield* AuthService
     const authorization = yield* AuthorizationService

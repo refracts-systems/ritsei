@@ -130,10 +130,10 @@ const parseUrl = (value: string): string | undefined => {
   try {
     const url = new URL(value)
     const normalized = value.trim()
-    const loopback = url.hostname === "127.0.0.1" || url.hostname === "localhost" ||
-      url.hostname === "[::1]" || url.hostname === "::1"
-    return url.username === "" && url.password === "" && url.hash === "" &&
-        (url.protocol === "https:" || (url.protocol === "http:" && loopback))
+    const loopback = url.hostname === "127.0.0.1" || url.hostname === "localhost"
+      || url.hostname === "[::1]" || url.hostname === "::1"
+    return url.username === "" && url.password === "" && url.hash === ""
+        && (url.protocol === "https:" || (url.protocol === "http:" && loopback))
       ? normalized
       : undefined
   } catch {
@@ -156,10 +156,10 @@ const parsePostgresReadYourWritesConfiguration = (
   const maxWaitMs = parseSafeInteger(raw.maxWaitMs)
   const tokenTtlMs = parseSafeInteger(raw.tokenTtlMs)
   if (
-    raw.replicaUrl.trim().length === 0 || raw.placementId.trim().length === 0 ||
-    new TextEncoder().encode(raw.secret).length < 32 || maxWaitMs === undefined ||
-    maxWaitMs < 1 || maxWaitMs > 30_000 || tokenTtlMs === undefined || tokenTtlMs < 1 ||
-    tokenTtlMs > 3_600_000
+    raw.replicaUrl.trim().length === 0 || raw.placementId.trim().length === 0
+    || new TextEncoder().encode(raw.secret).length < 32 || maxWaitMs === undefined
+    || maxWaitMs < 1 || maxWaitMs > 30_000 || tokenTtlMs === undefined || tokenTtlMs < 1
+    || tokenTtlMs > 3_600_000
   ) {
     return Effect.fail(invalid("invalid_postgres_read_your_writes_configuration"))
   }
@@ -182,9 +182,9 @@ const parseTigerBeetleConfiguration = (
   const code = parseSafeInteger(raw.code)
   const currency = raw.currency.toUpperCase()
   if (
-    clusterId < 0n || clusterId > (1n << 128n) - 1n || ledger === undefined || ledger < 1 ||
-    ledger > 0xffff_ffff || code === undefined || code < 1 || code > 0xffff_ffff ||
-    !/^[A-Z]{3}$/.test(currency)
+    clusterId < 0n || clusterId > (1n << 128n) - 1n || ledger === undefined || ledger < 1
+    || ledger > 0xffff_ffff || code === undefined || code < 1 || code > 0xffff_ffff
+    || !/^[A-Z]{3}$/.test(currency)
   ) {
     return Effect.fail(invalid("invalid_tigerbeetle_configuration"))
   }
@@ -228,8 +228,8 @@ const readTigerBeetleValues = (
   const code = environment.get("TIGERBEETLE_CODE")
   const currency = environment.get("TIGERBEETLE_CURRENCY")
   if (
-    clusterId === undefined || replicaAddresses === undefined || ledger === undefined ||
-    code === undefined || currency === undefined
+    clusterId === undefined || replicaAddresses === undefined || ledger === undefined
+    || code === undefined || currency === undefined
   ) return {}
   return {
     tigerBeetle: { clusterId, replicaAddresses, ledger, code, currency },
@@ -237,7 +237,7 @@ const readTigerBeetleValues = (
 }
 
 export const parseRuntimeConfiguration = (environment: RuntimeEnvironment) =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const financialAuthority = environment.get("RITSEI_FINANCIAL_AUTHORITY") ?? "postgresql"
     const raw = {
       deploymentProfile: environment.get("RITSEI_DEPLOYMENT_PROFILE") ?? "entry",
@@ -267,8 +267,8 @@ export const parseRuntimeConfiguration = (environment: RuntimeEnvironment) =>
     if (decoded.authenticationProfile === undefined) {
       return yield* Effect.fail(invalid("missing_authentication_configuration"))
     }
-    const authentication: AuthenticationConfiguration = decoded.authenticationProfile ===
-        "transitional-local"
+    const authentication: AuthenticationConfiguration = decoded.authenticationProfile
+        === "transitional-local"
       ? {
         profile: "transitional-local",
         ...(decoded.transitionalUserAccountId === undefined
@@ -278,7 +278,7 @@ export const parseRuntimeConfiguration = (environment: RuntimeEnvironment) =>
           ? {}
           : { userAccountEmail: decoded.transitionalUserAccountEmail.trim().toLowerCase() }),
       }
-      : yield* Effect.gen(function* () {
+      : yield* Effect.gen(function*() {
         const values = [
           decoded.oidcIssuerUrl,
           decoded.oidcAudience,
@@ -339,5 +339,5 @@ export const parseRuntimeConfiguration = (environment: RuntimeEnvironment) =>
   })
 
 export const readRuntimeConfiguration = (
-  environment: RuntimeEnvironment = Deno.env,
+  environment: RuntimeEnvironment = { get: (name) => process.env[name] },
 ) => parseRuntimeConfiguration(environment)

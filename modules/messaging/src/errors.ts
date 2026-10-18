@@ -8,4 +8,5 @@ export class EventIdempotencyConflict
     eventType: AppendEventInput.fields.eventType,
     eventVersion: AppendEventInput.fields.eventVersion,
     idempotencyKey: AppendEventInput.fields.idempotencyKey,
-  }) {}
+  })
+{}

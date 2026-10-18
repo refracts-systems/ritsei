@@ -1,12 +1,12 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/solid-query"
 import type { JSX } from "@solidjs/web"
-import { onCleanup, Show, untrack, useContext } from "solid-js"
+import { QueryClient, QueryClientProvider } from "@tanstack/solid-query"
 import * as Layer from "effect/Layer"
+import { onCleanup, Show, untrack, useContext } from "solid-js"
 import { BrowserConnection } from "../shared/api.ts"
 import { ApiRuntime } from "../shared/runtime.ts"
 import type { Session } from "../shared/session.ts"
-import { SessionContext } from "./session.ts"
 import { createRuntime, RuntimeContext } from "../shared/solid-effect.ts"
+import { SessionContext } from "./session.ts"
 
 export function DecodedConnectedSessionRoute<Route>(props: {
   route: () => Route | null

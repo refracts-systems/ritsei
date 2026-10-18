@@ -12,7 +12,7 @@ export const makeInventoryTestLayer = () =>
     InventoryService,
     makeInventoryServiceFromStore(
       Effect.provide(
-        Effect.gen(function* () {
+        Effect.gen(function*() {
           return yield* InventoryService
         }),
         makeInventoryMemoryLayer(),

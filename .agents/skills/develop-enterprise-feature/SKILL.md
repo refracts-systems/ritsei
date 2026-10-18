@@ -208,13 +208,13 @@ Use existing tasks; do not invent equivalent commands. Validate progressively:
 Common commands:
 
 ```sh
-deno task check:affected
-deno task boundary:test
-deno task boundary:lint
-deno task check
+pnpm run check:affected
+pnpm run boundary:test
+pnpm run boundary:lint
+pnpm run check
 ```
 
-When applicable, also run `deno task db:check`, migration validation, focused PostgreSQL tests, API/contract tests, and the commands required by the composed Skills. Report unavailable build targets or blocked infrastructure instead of hiding them. Do not claim that a full suite is necessary when focused proof is sufficient, but do not skip checks required by CI or repository policy.
+When applicable, also run `pnpm run db:check`, migration validation, focused PostgreSQL tests, API/contract tests, and the commands required by the composed Skills. Report unavailable build targets or blocked infrastructure instead of hiding them. Do not claim that a full suite is necessary when focused proof is sufficient, but do not skip checks required by CI or repository policy.
 
 # Required Checks
 

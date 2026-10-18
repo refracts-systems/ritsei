@@ -62,7 +62,7 @@ const withSales = <A, E>(
 ) => {
   const messaging = Layer.effect(
     MessagingService,
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const base = yield* MessagingService
       if (onPublished === undefined) return base
       return {
@@ -82,7 +82,7 @@ const withSales = <A, E>(
 
 describe("sales contract", () => {
   it.effect("validates sales order lifecycle IDs as UUIDs", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const error = yield* Effect.flip(
         Schema.decodeUnknownEffect(ConfirmOrderInput)({
           principal,
@@ -164,7 +164,7 @@ describe("sales contract", () => {
     }))
 
   it.effect("validates sales creation relationship IDs as UUIDs", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const invalidQuotationCustomer = yield* Effect.flip(
         Schema.decodeUnknownEffect(CreateQuotationInput)({
           principal,
@@ -192,7 +192,7 @@ describe("sales contract", () => {
     }))
 
   it.effect("bounds order-line quantities to PostgreSQL bigint", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const error = yield* Effect.flip(
         Schema.decodeUnknownEffect(SalesOrderLine)({
           itemId: "00000000-0000-4000-8000-000000000041",
@@ -206,7 +206,7 @@ describe("sales contract", () => {
   it.effect("publishes one confirmation event across idempotent replay", () => {
     const published: EventEnvelopeShape[] = []
     return withSales(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const sales = yield* SalesService
         const customer = yield* sales.createCustomer({
           principal,
@@ -260,14 +260,14 @@ describe("sales contract", () => {
   })
 
   it.effect("exposes confirmed cancellation only as a coordinator participant", () =>
-    withSales(Effect.gen(function* () {
+    withSales(Effect.gen(function*() {
       const sales = yield* SalesService
       assert.isFalse("cancelOrder" in sales)
       assert.isTrue("cancelConfirmedOrder" in sales)
     })))
 
   it.effect("rejects a quotation belonging to another customer", () =>
-    withSales(Effect.gen(function* () {
+    withSales(Effect.gen(function*() {
       const sales = yield* SalesService
       const quotedCustomer = yield* sales.createCustomer({
         principal,
@@ -304,7 +304,7 @@ describe("sales contract", () => {
     })))
 
   it.effect("lists tenant-scoped customer, quotation, and order projections", () =>
-    withSales(Effect.gen(function* () {
+    withSales(Effect.gen(function*() {
       const sales = yield* SalesService
       const customer = yield* sales.createCustomer({
         principal,
@@ -380,7 +380,7 @@ describe("sales contract", () => {
     })))
 
   it.effect("creates customer, quotation, and order", () =>
-    withSales(Effect.gen(function* () {
+    withSales(Effect.gen(function*() {
       const sales = yield* SalesService
       const customer = yield* sales.createCustomer({
         principal,
@@ -461,7 +461,7 @@ describe("sales contract", () => {
     })))
 
   it.effect("rejects a different confirmation key after confirmation", () =>
-    withSales(Effect.gen(function* () {
+    withSales(Effect.gen(function*() {
       const sales = yield* SalesService
       const customer = yield* sales.createCustomer({
         principal,
@@ -498,7 +498,7 @@ describe("sales contract", () => {
     })))
 
   it.effect("denies sales capability in an ungranted tenant", () =>
-    withSales(Effect.gen(function* () {
+    withSales(Effect.gen(function*() {
       const sales = yield* SalesService
       assert.instanceOf(
         yield* Effect.flip(sales.createCustomer({
@@ -512,7 +512,7 @@ describe("sales contract", () => {
     })))
 
   it.effect("denies sales cancellation in an ungranted tenant", () =>
-    withSales(Effect.gen(function* () {
+    withSales(Effect.gen(function*() {
       const sales = yield* SalesService
       assert.instanceOf(
         yield* Effect.flip(sales.cancelConfirmedOrder({
@@ -525,7 +525,7 @@ describe("sales contract", () => {
     })))
 
   it.effect("denies sales confirmation in an ungranted tenant", () =>
-    withSales(Effect.gen(function* () {
+    withSales(Effect.gen(function*() {
       const sales = yield* SalesService
       assert.instanceOf(
         yield* Effect.flip(sales.confirmOrder({
@@ -540,7 +540,7 @@ describe("sales contract", () => {
     })))
 
   it.effect("denies confirmed-order total reads without capability", () =>
-    withSales(Effect.gen(function* () {
+    withSales(Effect.gen(function*() {
       const sales = yield* SalesService
       assert.instanceOf(
         yield* Effect.flip(sales.getConfirmedOrderTotal({
@@ -553,7 +553,7 @@ describe("sales contract", () => {
     })))
 
   it.effect("enforces tenant email uniqueness", () =>
-    withSales(Effect.gen(function* () {
+    withSales(Effect.gen(function*() {
       const sales = yield* SalesService
       const command = { principal, tenantId, name: "ACME", email: "same@acme.test" }
       const customer = yield* sales.createCustomer(command)

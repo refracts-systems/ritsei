@@ -1,21 +1,21 @@
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 
-import { makeAuthService } from "../../auth/mod.ts"
-import { makeAuthorizationService } from "../mod.ts"
-import { makeUserAccountService, UserAccountService } from "../../identity/mod.ts"
 import { Database, uuidv7 } from "../../../foundation/mod.ts"
 import { makePostgresDatabase, runMigrations, WebCryptoLive } from "../../../platform/mod.ts"
-import { makePostgresRelationshipEngine } from "../mod.ts"
 import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
+import { makeAuthService } from "../../auth/mod.ts"
+import { makeUserAccountService, UserAccountService } from "../../identity/mod.ts"
+import { makeAuthorizationService } from "../mod.ts"
+import { makePostgresRelationshipEngine } from "../mod.ts"
 
-const databaseUrl = Deno.env.get("DATABASE_URL")
+const databaseUrl = process.env["DATABASE_URL"]
 
 it.effect.skipIf(databaseUrl === undefined)(
   "evaluates tenant membership relationships and unknown relationship kinds safely",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
         const userAccounts = yield* makeUserAccountService.pipe(

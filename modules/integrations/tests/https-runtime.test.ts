@@ -51,7 +51,7 @@ const event = defineExternalEvent({
 })
 
 it.effect("proves duplicate delivery, timeout, and unknown outcome handling over HTTPS", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     let attempts = 0
     const deliveryStore = makeMemoryExternalDeliveryStore()
     const runtime = makeHttpsConnectorRuntime({
@@ -115,7 +115,7 @@ it.effect("proves duplicate delivery, timeout, and unknown outcome handling over
   }))
 
 it.effect("rejects oversized webhook resources before signature verification", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     let verified = false
     const runtime = makeHttpsConnectorRuntime({
       authorizeScope: () => Effect.succeed(undefined),
@@ -154,7 +154,7 @@ it.effect("rejects oversized webhook resources before signature verification", (
   }))
 
 it.effect("persists an unknown outcome and refuses an automatic replay", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const runtime = makeHttpsConnectorRuntime({
       authorizeScope: () => Effect.succeed(undefined),
       verifySignature: () => Effect.succeed(true),

@@ -27,5 +27,5 @@ export {
   TenantAlreadyExists,
 } from "./src/errors.ts"
 
-export { makeAuthService } from "./src/service.ts"
 export { AuthLive, makeAuthTestLayer } from "./src/layers.ts"
+export { makeAuthService } from "./src/service.ts"

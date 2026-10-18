@@ -66,7 +66,7 @@ const envelope = (id: string, data: unknown) => ({
 })
 
 it.effect("uses bounded retry and idempotent action receipts", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     let calls = 0
     const runtime = makeExternalConnectorRuntime({
       store: makeMemoryExternalConnectorStore(),
@@ -105,7 +105,7 @@ it.effect("uses bounded retry and idempotent action receipts", () =>
   }))
 
 it.effect("enforces the catalog timeout across bounded retries", () =>
-  TestClock.withLive(Effect.gen(function* () {
+  TestClock.withLive(Effect.gen(function*() {
     let calls = 0
     const timedAction = { ...createPayment, timeoutPolicy: { timeoutMs: 1 } }
     const runtime = makeExternalConnectorRuntime({
@@ -128,7 +128,7 @@ it.effect("enforces the catalog timeout across bounded retries", () =>
   })))
 
 it.effect("keeps an unknown outcome in manual recovery", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     let calls = 0
     const runtime = makeExternalConnectorRuntime({
       authorizeScope: () => Effect.succeed(undefined),
@@ -159,7 +159,7 @@ it.effect("keeps an unknown outcome in manual recovery", () =>
   }))
 
 it.effect("deduplicates WebhookIngestion by provider event identity", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const runtime = makeExternalConnectorRuntime({
       authorizeScope: () => Effect.succeed(undefined),
       invoke: () => Effect.succeed(undefined),

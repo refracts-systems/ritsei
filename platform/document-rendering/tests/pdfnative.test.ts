@@ -38,7 +38,7 @@ const policy: DocumentRenderPolicy = {
 }
 
 const renderInput = () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const snapshot = yield* makeDocumentSnapshot({
       snapshotId,
       tenantId,
@@ -101,7 +101,7 @@ const renderer = makePdfNativeDocumentRenderer({
 
 describe("pdfnative document renderer", () => {
   it.effect("renders the AST corpus with deterministic PDF bytes", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const input = yield* renderInput()
       const first = yield* renderer.render(input)
       const second = yield* renderer.render(input)
@@ -121,7 +121,7 @@ describe("pdfnative document renderer", () => {
     }))
 
   it.effect("fails closed when the native policy does not support a capability", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const input = yield* renderInput()
       const unsupported = yield* Effect.flip(renderer.render({
         ...input,
@@ -131,7 +131,7 @@ describe("pdfnative document renderer", () => {
     }))
 
   it.effect("reports a missing asset as a typed failure", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const input = yield* renderInput()
       const missingAssetRenderer = makePdfNativeDocumentRenderer({
         policy,

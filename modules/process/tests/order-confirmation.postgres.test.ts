@@ -4,6 +4,9 @@ import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
 import type { Sql } from "postgres"
 
+import { Database, uuidv7 } from "../../../foundation/mod.ts"
+import { makePostgresDatabase, runMigrations } from "../../../platform/mod.ts"
+import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
 import {
   AccountingCapabilities,
   AccountingService,
@@ -19,10 +22,9 @@ import {
   InventoryService,
   makeInventoryService,
 } from "../../inventory/mod.ts"
-import { Database, uuidv7 } from "../../../foundation/mod.ts"
-import { makePostgresDatabase, runMigrations } from "../../../platform/mod.ts"
 import { EventEnvelope, makeMessagingService, MessagingService } from "../../messaging/mod.ts"
 import { makePartyService, PartyCapabilities } from "../../party/mod.ts"
+import { makeSalesService, SalesCapabilities, SalesService } from "../../sales/mod.ts"
 import {
   makeProcessService,
   OrderConfirmationCompletedEventPayload,
@@ -39,10 +41,8 @@ import {
   WorkflowResultCorrupt,
   WorkflowRun,
 } from "../mod.ts"
-import { makeSalesService, SalesCapabilities, SalesService } from "../../sales/mod.ts"
-import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
 
-const databaseUrl = Deno.env.get("DATABASE_URL")
+const databaseUrl = process.env["DATABASE_URL"]
 const postgresFailure = (effect: () => Promise<unknown>) =>
   Effect.tryPromise({ try: effect, catch: (cause) => cause }).pipe(Effect.flip)
 const principal = { userAccountId: "order-confirmation", sessionId: "session" }
@@ -80,7 +80,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "rejects contradictory workflow state metadata in PostgreSQL",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const [tenant] = yield* Effect.promise(() =>
           client<{ id: string }[]>`
@@ -269,7 +269,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "enforces Process workflow and job state transitions in PostgreSQL",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const [tenant] = yield* Effect.promise(() =>
           client<{ id: string }[]>`
@@ -379,7 +379,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "commits order confirmation, event, job, and idempotent retries atomically",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
         const [tenant] = yield* Effect.promise(() =>
@@ -395,7 +395,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           })),
         )
 
-        yield* Effect.gen(function* () {
+        yield* Effect.gen(function*() {
           const authorization = yield* AuthorizationService
           const requirements = Layer.merge(
             Layer.succeed(Database, database),
@@ -1058,7 +1058,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "rolls back order, reservation, journal, event, and job on stock failure",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
         const [tenant] = yield* Effect.promise(() =>
@@ -1074,7 +1074,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           })),
         )
 
-        yield* Effect.gen(function* () {
+        yield* Effect.gen(function*() {
           const authorization = yield* AuthorizationService
           const requirements = Layer.merge(
             Layer.succeed(Database, database),
@@ -1201,7 +1201,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "supports concurrent retries and explicit manual recovery state",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
         const [tenant] = yield* Effect.promise(() =>
@@ -1217,7 +1217,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           })),
         )
 
-        yield* Effect.gen(function* () {
+        yield* Effect.gen(function*() {
           const authorization = yield* AuthorizationService
           const requirements = Layer.merge(
             Layer.succeed(Database, database),

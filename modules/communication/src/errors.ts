@@ -10,7 +10,8 @@ export class UnsupportedCommunicationEvent
       eventType: NonEmptyString,
       eventVersion: Schema.Int,
     },
-  ) {}
+  )
+{}
 
 export class CommunicationNotFound extends Schema.TaggedError<CommunicationNotFound>()(
   "CommunicationNotFound",

@@ -93,7 +93,7 @@ export const validateOpenApiImport = (
   OpenApiOperationSelection,
   ExternalActionNotAllowlisted | ExternalPayloadInvalid | Schema.SchemaError
 > =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const decoded = yield* Schema.decodeUnknownEffect(OpenApiImportRequest)(input)
     if (!documentContainsSelectedOperation(decoded.document.paths, decoded.operation)) {
       return yield* Effect.fail(

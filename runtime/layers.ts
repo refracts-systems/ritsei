@@ -1,11 +1,13 @@
 import * as Layer from "effect/Layer"
 import type { Sql } from "postgres"
 
+import { DurableJobEnqueuer } from "../foundation/mod.ts"
 import {
   AccountingService,
   FinancialOperationServiceLive,
   makeAccountingService,
 } from "../modules/accounting/mod.ts"
+import type { FinancialVerificationSignerService } from "../modules/accounting/mod.ts"
 import { AuthService, makeAuthService } from "../modules/auth/mod.ts"
 import { AuthorizationService, makeAuthorizationService } from "../modules/authorization/mod.ts"
 import {
@@ -13,26 +15,24 @@ import {
   makeUserAccountService,
   UserAccountService,
 } from "../modules/identity/mod.ts"
-import { DurableJobEnqueuer } from "../foundation/mod.ts"
-import { PostgresDatabaseLive, PostgresReadYourWritesLive, WebCryptoLive } from "../platform/mod.ts"
+import { InventoryService, makeInventoryService } from "../modules/inventory/mod.ts"
 import { makeMessagingService, MessagingService } from "../modules/messaging/mod.ts"
 import { makePartyService, PartyEventPublisherLive, PartyService } from "../modules/party/mod.ts"
-import { makeSalesService, SalesService } from "../modules/sales/mod.ts"
-import { InventoryService, makeInventoryService } from "../modules/inventory/mod.ts"
-import { ProcurementLive } from "../modules/procurement/mod.ts"
 import {
   makeProcessJobEnqueuer,
   makeProcessService,
   ProcessService,
   ProcessStudioLive,
 } from "../modules/process/mod.ts"
-import type { FinancialVerificationSignerService } from "../modules/accounting/mod.ts"
-import { IdentityAccountAuthorizerLive } from "./adapters/identity-account-authorizer.ts"
-import { makeIdentityProviderLayer } from "./authentication/oidc.ts"
+import { ProcurementLive } from "../modules/procurement/mod.ts"
+import { makeSalesService, SalesService } from "../modules/sales/mod.ts"
+import { PostgresDatabaseLive, PostgresReadYourWritesLive, WebCryptoLive } from "../platform/mod.ts"
 import {
   makeFinancialLedgerLayer,
   makeFinancialStoreObservationLayer,
 } from "./adapters/financial-ledger.ts"
+import { IdentityAccountAuthorizerLive } from "./adapters/identity-account-authorizer.ts"
+import { makeIdentityProviderLayer } from "./authentication/oidc.ts"
 import type { RitseiRuntimeConfiguration } from "./config.ts"
 
 export const serviceLayers = (
@@ -42,8 +42,8 @@ export const serviceLayers = (
   replicaClient?: Sql,
 ) => {
   const DatabaseLive = PostgresDatabaseLive(client)
-  const readYourWrites = configuration.postgresReadYourWrites !== undefined &&
-      replicaClient !== undefined
+  const readYourWrites = configuration.postgresReadYourWrites !== undefined
+      && replicaClient !== undefined
     ? PostgresReadYourWritesLive(client, replicaClient, configuration.postgresReadYourWrites)
     : Layer.empty
   const PlatformCore = Layer.merge(DatabaseLive, readYourWrites)

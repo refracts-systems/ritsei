@@ -3,8 +3,8 @@ import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 
 import { EventEnvelope } from "../../messaging/mod.ts"
-import { IdentityPrincipal } from "./events.ts"
 import type { IdentityAuthorizationDenied, UserAccountAlreadyExists } from "./errors.ts"
+import { IdentityPrincipal } from "./events.ts"
 
 export const UserAccountStatus = Schema.Literals(["active", "disabled"])
 export type UserAccountStatus = Schema.Schema.Type<typeof UserAccountStatus>

@@ -1,11 +1,11 @@
 import { createRouter, useNavigate } from "@solidjs/router"
 import { createSignal, lazy, onSettled, Show, useContext } from "solid-js"
-import { AuthClientFailure, getAuthSession } from "./auth-client.ts"
 import type { AuthSession } from "../shared/contracts/generated/auth.ts"
 import type { Session } from "../shared/session.ts"
 import { layout } from "../ui/foundations/layout.ts"
 import { OperationalWorkspace } from "../ui/patterns/operational-workspace.tsx"
 import { AuthCallback } from "./auth-callback.tsx"
+import { AuthClientFailure, getAuthSession } from "./auth-client.ts"
 import { Connection } from "./connection.tsx"
 import {
   type AuthenticatedUser,

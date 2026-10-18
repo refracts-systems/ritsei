@@ -60,9 +60,9 @@ Run authorization, affected domain/API, contract, and boundary tests.
 # Deterministic Tools
 
 ```sh
-deno task check:affected
-deno task boundary:lint
-deno task check
+pnpm run check:affected
+pnpm run boundary:lint
+pnpm run check
 ```
 
 Effect Schema keeps capability values closed at compile/runtime boundaries; tests prove default deny and scope behavior.

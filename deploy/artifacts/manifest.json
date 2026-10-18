@@ -1,60 +1,61 @@
 {
   "schemaVersion": 1,
-  "sourceRevision": "5a837d432b73291e3aeac1df7ee99d67f94bbe1b",
+  "sourceRevision": "df658cb109687fd48d8949e6e6f55950cb29a7ab",
   "lockfile": {
-    "path": "deno.lock",
-    "sha256": "bd8e24e9371dfc1f43af171b39b02e522d094d602a2ca45dda52e4b0788cc2fc"
+    "path": "pnpm-lock.yaml",
+    "sha256": "a4c44f82b132dcf664b340322d4795c531c27f981300a97f18721a3b4b876c26"
   },
   "toolchain": {
-    "deno": "deno 2.9.6 (stable, release, x86_64-unknown-linux-gnu)\nv8 15.0.245.2-rusty\ntypescript 6.0.3",
-    "frontend": "Vite via deno task --cwd apps/web build"
+    "node": "v24.22.0",
+    "esbuild": "0.28.0",
+    "frontend": "Vite via pnpm --filter @ritsei/web run build"
   },
   "build": {
     "commands": [
-      "deno bundle --no-check --platform=deno runtime/api/mod.ts",
-      "deno bundle --no-check --platform=deno runtime/worker/mod.ts",
-      "deno bundle --no-check --platform=deno runtime/migrator/mod.ts",
-      "deno task --cwd apps/web build"
+      "pnpm exec esbuild --bundle --platform=node --format=esm runtime/api/mod.ts",
+      "pnpm exec esbuild --bundle --platform=node --format=esm runtime/worker/mod.ts",
+      "pnpm exec esbuild --bundle --platform=node --format=esm runtime/migrator/mod.ts",
+      "pnpm --filter @ritsei/web run build"
     ],
     "migrations": "db/migrations is copied beside the migrator bundle"
   },
   "artifacts": [
     {
       "id": "api",
-      "kind": "deno-bundle",
+      "kind": "node-bundle",
       "source": "runtime/api/mod.ts",
-      "path": "deploy/artifacts/output/5a837d432b73291e3aeac1df7ee99d67f94bbe1b/api.js",
+      "path": "deploy/artifacts/output/df658cb109687fd48d8949e6e6f55950cb29a7ab/api.js",
       "files": [
         {
           "path": "api.js",
-          "size": 62387493,
-          "sha256": "1b8bfe18a6f223e6fb597fb8df31f7ca4f245b1b20ec54f6a01f3b36e93f4821"
+          "size": 61266850,
+          "sha256": "aa45796c1a68d7116957d02c4bb1a6be9437f166f08c50b44c7339c4d57080da"
         }
       ]
     },
     {
       "id": "worker",
-      "kind": "deno-bundle",
+      "kind": "node-bundle",
       "source": "runtime/worker/mod.ts",
-      "path": "deploy/artifacts/output/5a837d432b73291e3aeac1df7ee99d67f94bbe1b/worker.js",
+      "path": "deploy/artifacts/output/df658cb109687fd48d8949e6e6f55950cb29a7ab/worker.js",
       "files": [
         {
           "path": "worker.js",
-          "size": 58381053,
-          "sha256": "f29755f9804a81f7efbd7639cf39c3abc75939434b3d10cacba63c5795b2c75e"
+          "size": 57337030,
+          "sha256": "726cf1fa007c8923a8c5d98212023f4fb4ab6a7057999e4984169c8a4d0d7ecc"
         }
       ]
     },
     {
       "id": "migrator",
-      "kind": "deno-bundle",
+      "kind": "node-bundle",
       "source": "runtime/migrator/mod.ts",
-      "path": "deploy/artifacts/output/5a837d432b73291e3aeac1df7ee99d67f94bbe1b/migrator.js",
+      "path": "deploy/artifacts/output/df658cb109687fd48d8949e6e6f55950cb29a7ab/migrator.js",
       "files": [
         {
           "path": "migrator.js",
-          "size": 58070038,
-          "sha256": "e43f0288145d0438e40ef1821959e7d67ac33ec4975a843035c6bf5afc4ab0cf"
+          "size": 56950833,
+          "sha256": "f6f195583f1ff6cf6feac817849a4d208100ab6a008d67373ab13fe028ac682f"
         }
       ]
     },
@@ -62,7 +63,7 @@
       "id": "migrations",
       "kind": "migration-assets",
       "source": "db/migrations",
-      "path": "deploy/artifacts/output/5a837d432b73291e3aeac1df7ee99d67f94bbe1b/migrations",
+      "path": "deploy/artifacts/output/df658cb109687fd48d8949e6e6f55950cb29a7ab/migrations",
       "files": [
         {
           "path": ".gitkeep",
@@ -71,1153 +72,1163 @@
         },
         {
           "path": "20260801133932_hardened_foundation/migration.sql",
-          "size": 12021,
-          "sha256": "b20579462e86d2625c1161dad48750f22a97169d5ef18d112f796c6232ca5c00"
+          "size": 12229,
+          "sha256": "ad2acbddcd1c2faebe6682511c5e76afd1f2e44844ddcb2e879a49f58e50ef31"
         },
         {
           "path": "20260801133932_hardened_foundation/snapshot.json",
-          "size": 49872,
-          "sha256": "c160e6a40ee57303fea8cf4dee895fe92c496b26794e1361d223afc6c58f66bd"
+          "size": 52080,
+          "sha256": "f4760672df80cebe7cbd47d7f2797b3a061dad9f28dbc266375e3e6c8455ecdf"
         },
         {
           "path": "20260801133933_accounting_invariants/migration.sql",
-          "size": 2475,
-          "sha256": "73769cdecfba0cce6dae252844ed346e53398d0c0f8e21f87162eb924f8553a0"
+          "size": 2568,
+          "sha256": "246676a936344b03b1170785c93565ff89fc123846a191bc2944424237f3238b"
         },
         {
           "path": "20260801133933_accounting_invariants/snapshot.json",
-          "size": 49872,
-          "sha256": "c6a297b96d51f81c176f9830602d9dc52de663b926c214cdc29e21b90eb46554"
+          "size": 52080,
+          "sha256": "a1df8a5d7f067d1ec66bbc34e50dca5bfb302b13792f24964681f29a8ea80ca0"
         },
         {
           "path": "20260801141735_tan_slapstick/migration.sql",
-          "size": 2034,
-          "sha256": "7d5c421473e8211d62daf7b665817d7761ea051cfabe352d5f8eaedac71fefc9"
+          "size": 2074,
+          "sha256": "c3a86f69bffb039573badb6eb6aab70977e4ac59220118213a86fda4377418c0"
         },
         {
           "path": "20260801141735_tan_slapstick/snapshot.json",
-          "size": 58483,
-          "sha256": "b6ff029fed3541b8380875aaaa48106a105344b2c8624b84a2105506180687ad"
+          "size": 61080,
+          "sha256": "fe588bdcdb52208ce53ff239c5f9b06f61cda9c1f284be2baff7c2cc220551ce"
         },
         {
           "path": "20260803073609_warehouse_stock_transfers/migration.sql",
-          "size": 2649,
-          "sha256": "44264bf60ecd8147f85f1fe76092562bc7d48e09ae0a4c99fd01f6088d1680c6"
+          "size": 2686,
+          "sha256": "68bbe358cf84c91dd58b1e82fed070aff7cfd4734cc7ed8830dda41eef511ece"
         },
         {
           "path": "20260803073609_warehouse_stock_transfers/snapshot.json",
-          "size": 67672,
-          "sha256": "6a97246be97e2751276659bce0d468cf650ac0d40ff6b927519ff28494cc5b73"
+          "size": 70641,
+          "sha256": "cb94186d15725bc50904e11143937aac9f64ac44543eaeece39fca5a126755be"
         },
         {
           "path": "20260804030317_scope_identity_p0/migration.sql",
-          "size": 1567,
-          "sha256": "ea8c709598a662b3501e5440284f220ab0429d74d17fa91f7e9807489a448af3"
+          "size": 1595,
+          "sha256": "f37a141590f9fc8f4b7d8dbc28b7a63583977fa5680e15b35b54698f36c63d55"
         },
         {
           "path": "20260804030317_scope_identity_p0/snapshot.json",
-          "size": 74223,
-          "sha256": "d350d9699df5f5eb19ae125227aae67d409e62c621f4482213f19ff72a428639"
+          "size": 77480,
+          "sha256": "696df814f0184e82a96254178e3aebf3019710a451440cb4ca0db9a20405082c"
         },
         {
           "path": "20260805134143_bind_inventory_to_legal_entity/migration.sql",
-          "size": 2190,
-          "sha256": "538f98aef3cdcc5a0522c58ebeac4127aea44fa9ae19b9e86695614d1fe527e3"
+          "size": 2205,
+          "sha256": "ddec04dd23ada0c446c19a586ddf413160090af617a6348824ff8a7e531079b2"
         },
         {
           "path": "20260805134143_bind_inventory_to_legal_entity/snapshot.json",
-          "size": 77089,
-          "sha256": "302f39471c6cfbbcd87d8ec3c4147f9a45075151ea7666be33f36b157803f7b7"
+          "size": 80457,
+          "sha256": "45af594fb426eccbde07c40854e5ab32e497d1f3577a089f1b9906bd329b523a"
         },
         {
           "path": "20260805140410_configure_legal_entity_accounting/migration.sql",
-          "size": 1459,
-          "sha256": "b74b6e6f358db7b8fdc2c1757d98ade32688ba356d63a9b8aa11942bfd0a27b7"
+          "size": 1480,
+          "sha256": "aff99d4b12d4598c82bd89438d0f240263097195d2cd26ae94b9cba30b718f8b"
         },
         {
           "path": "20260805140410_configure_legal_entity_accounting/snapshot.json",
-          "size": 81618,
-          "sha256": "19b133ee2fd3d39e8667f4655b2bb6a07004faddbf299f63de2572b5245d36a8"
+          "size": 85161,
+          "sha256": "05b86578befc14dee47c715822e2a614585250ec3fef500828b3c1c74657896f"
         },
         {
           "path": "20260805141242_add_party_relationships/migration.sql",
-          "size": 1391,
-          "sha256": "1f23b2e8621f0387e0d42ae24a64235e14703b238398de7c470a7778e69dde03"
+          "size": 1411,
+          "sha256": "d371d961442d155bda67d45649f0eb3bbcb0a22664bb63642cb9e7daba1d5a6f"
         },
         {
           "path": "20260805141242_add_party_relationships/snapshot.json",
-          "size": 86412,
-          "sha256": "6bc6629ba88f365347d5fa3b3353a51669861414a76cdb33146e860144e4a911"
+          "size": 90160,
+          "sha256": "64ac2de265d19900ca9fda903fb158cd2db81455247490be3ad2994eb4b24511"
         },
         {
           "path": "20260805142303_scope_external_identifiers/migration.sql",
-          "size": 1077,
-          "sha256": "8e3ffeaaed4b95f0a064b3e7cfb528b75678fe76f516d94f01fff65617d9f264"
+          "size": 1087,
+          "sha256": "0264bc9897c91cb5b9ae28cf83945c023f663b959a28a880ab01ba3d7b0db424"
         },
         {
           "path": "20260805142303_scope_external_identifiers/snapshot.json",
-          "size": 89684,
-          "sha256": "94f1afe3e1387287a1284e2ae09586bb1e3dae659f9c103fc10baa114753b12a"
+          "size": 93568,
+          "sha256": "5cb6f4dd69791af1886998559068f0fb1cb236423b0b14312cf214e688c3ba08"
         },
         {
           "path": "20260806145312_identity_party_and_branch_metadata/migration.sql",
-          "size": 1549,
-          "sha256": "86754f6002e01cb129167a9c78491857820033f72e4754f176d6e2711871510a"
+          "size": 1570,
+          "sha256": "7f57570ed5bd0256e2314505ce095f713b2af8f6ef0a22377430157b8fbcfdd5"
         },
         {
           "path": "20260806145312_identity_party_and_branch_metadata/snapshot.json",
-          "size": 95132,
-          "sha256": "458cf78ebb081773af7b20457c53a0f05d775e573e8564b14cde279b24696e6c"
+          "size": 99241,
+          "sha256": "cce911bf870652287ee05e0c97e79dbcb45c8d7008e8df3663fad564029f3c36"
         },
         {
           "path": "20260806160912_rename_user_account_and_party_representation/migration.sql",
-          "size": 3431,
-          "sha256": "fbe76f3ed8bfd46ba1a76711af50efd5bc07ff4c2e4ab1f9e06fc5de5470394d"
+          "size": 3475,
+          "sha256": "6a0a64bcd9fdbc98b08920aa7152fbc8878304897aa515ca801d95660c85d901"
         },
         {
           "path": "20260806160912_rename_user_account_and_party_representation/snapshot.json",
-          "size": 96480,
-          "sha256": "e6a5d4e7f30ec2d7bfb607ee4341271425e05dd18ee0963a054cf97d88c08591"
+          "size": 100604,
+          "sha256": "81bf4f2a5f75397ac289d80d9a35bff7f01521f5dfa210575efb02ea80e50ad9"
         },
         {
           "path": "20260807160937_fresh_mentallo/migration.sql",
-          "size": 1969,
-          "sha256": "0fc67ae9ae82ae7b78192289d26a50a893723943190fca67779f55fcb4177a80"
+          "size": 2010,
+          "sha256": "25609d74aed24e83113b3985743946990d4e0c1a802806fbbb372d546a8990f3"
         },
         {
           "path": "20260807160937_fresh_mentallo/snapshot.json",
-          "size": 99656,
-          "sha256": "672d4fa8b928bcdd2fd296917e5c6cc555631214200b1974e502759838dad058"
+          "size": 103953,
+          "sha256": "4a272dca751209764e03819f3e77abcba4c1ca13d8b282796e6c7dc8645f2331"
         },
         {
           "path": "20260808045828_capability_naming_conventions/migration.sql",
-          "size": 4348,
-          "sha256": "0216ebda35793c1357ba31d4f38678345f67f96fe3f4678fb5d8d3fd27791095"
+          "size": 4465,
+          "sha256": "bf22bfe5e9bb9c89b8924e7887f2ee1ca65cb2d641524db4eff91e976afc2451"
         },
         {
           "path": "20260808045828_capability_naming_conventions/snapshot.json",
-          "size": 99656,
-          "sha256": "914fea57df65050f4d313f9e7adfdbf634d58bf6064d4f1964538ae82e1f9de1"
+          "size": 103953,
+          "sha256": "8e71be0f7bec6c6230303b3b11de9afb2d4488e898c720acf55dc21fdeaf67c5"
         },
         {
           "path": "20260809070932_order_confirmation_workflow/migration.sql",
-          "size": 3899,
-          "sha256": "fcbab599feb3738dd7a4208229b49ac2c5cfca63d826cbccebcdd8c91cf2d9a2"
+          "size": 3969,
+          "sha256": "5d3e206cd81aadd51e4f248e8c62d41869e2a970bd1bc37be994dabbc9b99440"
         },
         {
           "path": "20260809070932_order_confirmation_workflow/snapshot.json",
-          "size": 117000,
-          "sha256": "cbd3825e37743eb81319036cf53984335784343b4e8d72226951c2c908b9d1fd"
+          "size": 122051,
+          "sha256": "f86015f5502e477ac697bce2232b549a768273ddad54b1749ef7835d82a13f0f"
         },
         {
           "path": "20260809072936_process_state_constraints/migration.sql",
-          "size": 801,
-          "sha256": "ab176463b3a36214df25bf36b20297285a84dff68f884b40e461e4a0ad441007"
+          "size": 810,
+          "sha256": "3fd675ddd8d8ab1a75d48db3b7aa0ef8a6f9b6460f6bd83ab05070d1efa3100b"
         },
         {
           "path": "20260809072936_process_state_constraints/snapshot.json",
-          "size": 117959,
-          "sha256": "7ec69d662c8c32c5af5b4c758a337028e73e09ba96b35b45c264f00ca9ebd21d"
+          "size": 123038,
+          "sha256": "38244de3f05ca8cfecbea7f4a8b6b6885fb7f7825dc1f877155118e55bb4c594"
         },
         {
           "path": "20260809165649_sales_order_lines/migration.sql",
-          "size": 953,
-          "sha256": "a8ad369c3d8eeb34a5c32ba6d08b0950fa077fe1f0f4fae0613e335ab5afde51"
+          "size": 971,
+          "sha256": "6020bfa87bd3b255b1c00a1da64aab1b5027e6213e62e35dc08a6542a3a949a7"
         },
         {
           "path": "20260809165649_sales_order_lines/snapshot.json",
-          "size": 122028,
-          "sha256": "2f3b35a24269f7fb6feff8603e75450a963cce1618111ff79f8ed3d059e5ea90"
+          "size": 127288,
+          "sha256": "7bc3991127a657e80daf37e89bbc969503ec5daef5664b03cde11e80bace6969"
         },
         {
           "path": "20260809171716_accounting_revenue_posting/migration.sql",
-          "size": 2804,
-          "sha256": "39eadb95eba5ee244947d064d52cb228d23046c2a7434e3bc988636fb764776f"
+          "size": 2839,
+          "sha256": "47523557bd68ac3f6527f773dd1f0a7bf51cb30799f4e665f799c1abddd76dd4"
         },
         {
           "path": "20260809171716_accounting_revenue_posting/snapshot.json",
-          "size": 131143,
-          "sha256": "784392383f9e3b3dd702d29196929c65bcf8622fcc9459d8e738890b749b5c34"
+          "size": 136778,
+          "sha256": "243b36924f331e8497d0c78e73c93f3b1b9c99fc4117cc7069ff8eb9b0bae6fe"
         },
         {
           "path": "20260809172127_accounting_period_nonoverlap/migration.sql",
-          "size": 382,
-          "sha256": "9f94eb417bcd28e073d3a77c6bfd5b3760e6e228b75aab2a039f8cc2c6465f58"
+          "size": 394,
+          "sha256": "0b177448128321745b5d49ddd89cec8ea0f4f9470c91b3e2a7d6f265019148a2"
         },
         {
           "path": "20260809172127_accounting_period_nonoverlap/snapshot.json",
-          "size": 131143,
-          "sha256": "d03795ef0cf5d0b59838fa8afc40aa0621316a5db21e1d793987d5f6122426e5"
+          "size": 136778,
+          "sha256": "7cf759e7c6dbc96006998ea661a8a14cb7a53c57b519646006fd9554d71ef469"
         },
         {
           "path": "20260812160449_p1_inventory_primitives/migration.sql",
-          "size": 1142,
-          "sha256": "f88c182137accb00d6436193603c1cd288024a6b4116def13d92c5c1934ed07b"
+          "size": 1153,
+          "sha256": "305bba0cfc6cccf6405ca54d133152c961481eade1b622bfe75d1c961ac9fa9c"
         },
         {
           "path": "20260812160449_p1_inventory_primitives/snapshot.json",
-          "size": 133279,
-          "sha256": "ae40141bf72552802233547fa83b076ce5bad6d3fa992dc7bea4087f7b33826c"
+          "size": 138991,
+          "sha256": "5b0617395e53367c64e8411a5dac8dbce8d6c8f64c9d92b450c74aecd8ece251"
         },
         {
           "path": "20260812161217_p2_fixed_money_precision/migration.sql",
-          "size": 330,
-          "sha256": "32a9e423282240316cce15eb22311dc63bf6f0f46cfc7b5669b70ed0f8e2ae83"
+          "size": 334,
+          "sha256": "617f8c0d365ece0b314586f705377e85c036fc2695aaccb85b66cf4f15ad4a8f"
         },
         {
           "path": "20260812161217_p2_fixed_money_precision/snapshot.json",
-          "size": 133266,
-          "sha256": "3ac45d55bf35273fd3b7d40996aef2050a629daf5c5b71088e77d2eceed9b618"
+          "size": 138978,
+          "sha256": "0d00d5e8696b8cdc846f3948aa59c9a9b642e7053a9aed41bc9b6df7dfe89231"
         },
         {
           "path": "20260812164422_messaging_outbox_receipts/migration.sql",
-          "size": 1677,
-          "sha256": "986eee6c74f5611ebee75e69182a222ac5071f6f7848be45255a11a39e7515c0"
+          "size": 1714,
+          "sha256": "c95cb38568063ef2c800b80795196b6b2e68ab4d0df5b3fdcb134ab154362226"
         },
         {
           "path": "20260812164422_messaging_outbox_receipts/snapshot.json",
-          "size": 141363,
-          "sha256": "6de418e48ec1c5a9544f39615e4ec02f065fef06902585610e7f86c9d8772bb0"
+          "size": 147425,
+          "sha256": "70a2afe55cb11760faa52e2d2a69644d25e7cfb52bf1c0a42ea7d746cdfa18fc"
         },
         {
           "path": "20260812175716_retire_process_event_outbox/migration.sql",
-          "size": 456,
-          "sha256": "130ce9ff82852fe466e7708d382f573b3902020288a123db878c263951b19aa8"
+          "size": 473,
+          "sha256": "8be1b18d3fcd706a0e758cf08f65f52ac4b59886ab6b8f38248a0a7304f10c2f"
         },
         {
           "path": "20260812175716_retire_process_event_outbox/snapshot.json",
-          "size": 136066,
-          "sha256": "a9542b549ee9c63608fcbb2dfb1f59c7dbd0c724fe9e7ff8fa98389c2cdb5541"
+          "size": 141900,
+          "sha256": "365b6a7baa29639a2f7ffd7d359d77ffe5406b5e37beae6c5c01bd14d6f787fc"
         },
         {
           "path": "20260814235005_tighten_process_workflow_state/migration.sql",
-          "size": 560,
-          "sha256": "47ac528a5a9868903c57b88b0945aaf719786f8d3a3234e3fe7b399c73723a71"
+          "size": 566,
+          "sha256": "50dc744293c3a2d870d313e9d7475ea523c5dff2661efb509657860c060b8857"
         },
         {
           "path": "20260814235005_tighten_process_workflow_state/snapshot.json",
-          "size": 136181,
-          "sha256": "bbc2e021fffb9a80e794591ac3ea671fae02f2ee41af9a1221043b26ccd96f1e"
+          "size": 142014,
+          "sha256": "dc8931d2118558cac12c66215c24a66ecfd04f7d387e35b5b638d7368a1b1081"
         },
         {
           "path": "20260814235552_constrain_process_workflow_types/migration.sql",
-          "size": 274,
-          "sha256": "151b45f187ca0029b68b117bcb3cca0655e13789dc6c3248f94d6a13694e0ffd"
+          "size": 278,
+          "sha256": "d5d3ca960e38524160aad282f1dac1519d908b081db0d7080a5edc76900222e8"
         },
         {
           "path": "20260814235552_constrain_process_workflow_types/snapshot.json",
-          "size": 136447,
-          "sha256": "e6f3db2f0ec1ccf613149ec4ca34f0d079e3192f00f3a3854b16283f7948da01"
+          "size": 142287,
+          "sha256": "de2ff5ddbff15b39030e6d5e89f289d8b705fb51f3e028b16c6e2ccb6ffe5046"
         },
         {
           "path": "20260814235927_constrain_process_job_types/migration.sql",
-          "size": 301,
-          "sha256": "528b9650a7350b48d2d04bce4551ccf84952077d2dc7bf68023972a45bbfeccd"
+          "size": 305,
+          "sha256": "813ab1b41d76d1a81964ca68ea2d0b16126de7eecf8d1057e49488d8da52e8c0"
         },
         {
           "path": "20260814235927_constrain_process_job_types/snapshot.json",
-          "size": 136740,
-          "sha256": "0ec26759509fd810612e2b75c7b4d869399a597a57469867ab8ddf5824bc984c"
+          "size": 142587,
+          "sha256": "3632351f70bc6d5acf9c2440856c7f6984d324259903c16cae5ab9e0a8924658"
         },
         {
           "path": "20260815000306_constrain_process_routing_metadata/migration.sql",
-          "size": 513,
-          "sha256": "487f2b64742f416c423a0372f1eed5411592906d8c1ca48c81d685fa1fdeb0e6"
+          "size": 519,
+          "sha256": "592475790ba5970d58c516fcbc8696d6075cdf423141fa699b02dc092380189d"
         },
         {
           "path": "20260815000306_constrain_process_routing_metadata/snapshot.json",
-          "size": 137345,
-          "sha256": "29306637d880669674d328abd0139bfd43f079bc0afe5dddd43ce1d1b4804fae"
+          "size": 143213,
+          "sha256": "1c008789696e47d7480bba37c33fa2df27af5c83bc46dff917b2285cca57d188"
         },
         {
           "path": "20260815000731_constrain_messaging_identities/migration.sql",
-          "size": 1336,
-          "sha256": "97b01d54f33e1ec28ffa1a7a259b9daf6071132db4088d4b08944b750e857c2e"
+          "size": 1347,
+          "sha256": "fdc4a286af94c2b4fcc6a1790295fcd44c15766a4358e6eeed16b618a03f7dcd"
         },
         {
           "path": "20260815000731_constrain_messaging_identities/snapshot.json",
-          "size": 139023,
-          "sha256": "d5f5a1174a3669ba688bf9971defacf111b1b436a24a668f3573c436c4331a53"
+          "size": 144947,
+          "sha256": "00643c5d43baa069f94d0d18ff0caa8fa0708804e42ea08644c23124e69573aa"
         },
         {
           "path": "20260816104809_constrain_process_job_lease_state/migration.sql",
-          "size": 278,
-          "sha256": "a1c83f4569e04a2fa9173fc2aefd436c830d0dbc243882449e3ee64f65bf3c5d"
+          "size": 283,
+          "sha256": "9395dd9130b8d86bf78cb0c780c56e030d1faa3b769534c0ca472d0f20ae351b"
         },
         {
           "path": "20260816104809_constrain_process_job_lease_state/snapshot.json",
-          "size": 139300,
-          "sha256": "14b4322a51a0fbb80833f138587c4e9bf2b6cda6c139f22b79b6021240db4819"
+          "size": 145231,
+          "sha256": "ef098133f3897d88950f62354c2368c227ee0d87cc5da9fee9b59cd6456ddc62"
         },
         {
           "path": "20260816105145_constrain_process_job_state/migration.sql",
-          "size": 523,
-          "sha256": "5c406cfe1b0a6ebf9361c785371c48c687262310a10d7bfcac1b3de4c66dc163"
+          "size": 530,
+          "sha256": "ee72af4686f4cffec5a6591c852d05084549ee6e602f10a41db6b55ff21a1384"
         },
         {
           "path": "20260816105145_constrain_process_job_state/snapshot.json",
-          "size": 139840,
-          "sha256": "1c7afbb9d287bbf81b665bce81bdb427817b76c653d50b4e83de73ba6afbd88d"
+          "size": 145778,
+          "sha256": "0005234f6092b254d650f1c399b9aa28d1b6e1becf521a86602cd6cfca4b3e29"
         },
         {
           "path": "20260816105956_constrain_sales_confirmation_metadata/migration.sql",
-          "size": 438,
-          "sha256": "b4982ccad0ee8b941a42031c2a217925ac14aa1b16bc4a4674b793282b982910"
+          "size": 446,
+          "sha256": "a29990715f8e8ffc539305d4abb9a4aebb33e486fae03a7097ae71e724b61bd9"
         },
         {
           "path": "20260816105956_constrain_sales_confirmation_metadata/snapshot.json",
-          "size": 140286,
-          "sha256": "1387cbc2d5a1110e287f72bec8dfe8b1a4b5b66d54f3793b7e0c1908bff75f1c"
+          "size": 146231,
+          "sha256": "47e0327acab97f0cffef201545cd934fec8317f7075da2822c57c9a1a52509ad"
         },
         {
           "path": "20260816110509_constrain_journal_reversal_state/migration.sql",
-          "size": 326,
-          "sha256": "37bbc12230aa14a8bac78f388fde3c9b7a5cdfb73f3ac6cff85e0768983a71a4"
+          "size": 331,
+          "sha256": "c59f313e31b72b247a3559214b6c5a7f2a200d00ae5b763fc61ce01226947fa4"
         },
         {
           "path": "20260816110509_constrain_journal_reversal_state/snapshot.json",
-          "size": 140608,
-          "sha256": "a2189af93e3714a0fec84869c3dfa7d0c795fe9d0ac85fbb5673ecb82a917621"
+          "size": 146560,
+          "sha256": "23fc45a146bbde3bc250c89dd4ddb0a175ccae28ea7cac324cffa5f9b62d3cac"
         },
         {
           "path": "20260816110832_constrain_journal_reference/migration.sql",
-          "size": 215,
-          "sha256": "e0788c24a0ad2da29ccfb3bfe46e2339f24093769d45bafcaf14820b19db4ab2"
+          "size": 219,
+          "sha256": "18cb25e45d7360f9436faea7f872eca2dbb2ca18e3e41d2f1f95a375e741a9bc"
         },
         {
           "path": "20260816110832_constrain_journal_reference/snapshot.json",
-          "size": 140812,
-          "sha256": "5609b17473ef32cf48c7051431d6f8d9c1c3b5b98a557dfb3465406383a8870b"
+          "size": 146771,
+          "sha256": "90b5a78a31aceedf656c99b1db89c2bd38e14edbb56326845c6c9930617e894d"
         },
         {
           "path": "20260817014715_bind_consumer_receipt_event_identity/migration.sql",
-          "size": 1070,
-          "sha256": "f253fb14aad1fc85cbfe61310ffa567a4b6f1abd33170aadbde5a43af0421330"
+          "size": 1100,
+          "sha256": "45225cf0d039fd39998b6feac50142d31b8d76f2ec128f110be8d1c9003e7b3c"
         },
         {
           "path": "20260817014715_bind_consumer_receipt_event_identity/snapshot.json",
-          "size": 140812,
-          "sha256": "a6be87bd9558d0a6f0464ed720fea3cebd54e63d12236f66ca349036951c9853"
+          "size": 146771,
+          "sha256": "4d83ba9082cbfa4ef82c2dae2518f4061c60ad506bfe31ac87c2293952dd63dd"
         },
         {
           "path": "20260817030553_process_job_lease_fencing/migration.sql",
-          "size": 1021,
-          "sha256": "6d328bb70aff6070379715534dbe8df70cb808f2d450858aa4dd310758198d5d"
+          "size": 1039,
+          "sha256": "0e0ab08b875f6060078537abaffbcf9d49e10180ac0de45cfe572195e7f11955"
         },
         {
           "path": "20260817030553_process_job_lease_fencing/snapshot.json",
-          "size": 143121,
-          "sha256": "41084961c855fe688aa2e3e73704a4eda6a4352744068d43af6e01d09ebc91a4"
+          "size": 149166,
+          "sha256": "9b85fb1b1ae6c712e39c647a9a4d433fc273d3054fd16cb8567428d1c0c96020"
         },
         {
           "path": "20260817034150_sales_order_integrity/migration.sql",
-          "size": 4665,
-          "sha256": "adefa12a8ee6ce17b97820297222b70d93fd1ebd4ca0ff3d339f954a02df3cdc"
+          "size": 4814,
+          "sha256": "741d6c8f36a6fd7ab872bc103310dd9f4d20c6a0faa4084613d559737a123b25"
         },
         {
           "path": "20260817034150_sales_order_integrity/snapshot.json",
-          "size": 143121,
-          "sha256": "936f644ecd3972dcad190410eceaccfddc87479749f84d086b4fe4e27a2e0d74"
+          "size": 149166,
+          "sha256": "6baebb8294a91490f5d20a7a5ede3c6bbb93d00e39a3555b157762a115374407"
         },
         {
           "path": "20260817040919_accounting_balance_immutability/migration.sql",
-          "size": 2640,
-          "sha256": "be9ed5c9399e28678004961680ec1566a7a62df29c7f0d65f277a12b3bc538f9"
+          "size": 2742,
+          "sha256": "c2b2e23f7ad5cf6810d3d434e960450b314a71ff4a9d193cd27af1c8aff47cb2"
         },
         {
           "path": "20260817040919_accounting_balance_immutability/snapshot.json",
-          "size": 143121,
-          "sha256": "f89788c846c685450450e058828a59a251487f43636c3ad82f1e7f02f12df14b"
+          "size": 149166,
+          "sha256": "dddbe5c3549f8905eaf7daf1fb742e64c2779782389e4666ab031554cc57df87"
         },
         {
           "path": "20260817041324_accounting_line_locking/migration.sql",
-          "size": 1747,
-          "sha256": "b66995e08d233b1bfb1c6464342ccc8340bcb710e493c130fe1abdb36b1a9c63"
+          "size": 1815,
+          "sha256": "92fec3cc7cf481e443ad303fe410dfc9ce4044aa2a80bb903e7d1228120af06b"
         },
         {
           "path": "20260817041324_accounting_line_locking/snapshot.json",
-          "size": 143121,
-          "sha256": "1fa6b9b93abe2bdc1e1d151e5a3ec3ecccaa433c6cdf8df1b7acdda3aef2423a"
+          "size": 149166,
+          "sha256": "8c45556557acf3dbd68338d291b04fd76dbed18ca134a5d4e762bf3e6704de53"
         },
         {
           "path": "20260817042357_process_state_transition_hardening/migration.sql",
-          "size": 3403,
-          "sha256": "60f55db62e58d978d928315ac395bacad6ee5415d1d5ef70c5967fb19bd2879e"
+          "size": 3521,
+          "sha256": "3da6c2833ac9c3a4103878ac4b5b24fa4c8153560885aa4200e0275ca71ae825"
         },
         {
           "path": "20260817042357_process_state_transition_hardening/snapshot.json",
-          "size": 143121,
-          "sha256": "1c722d89f8557d326e6510817871fbb5e070b38990815652ad8f1bf353a4bfb6"
+          "size": 149166,
+          "sha256": "78a950d5b6d626997d1f481ac232da49eee01ef4fd8fa32c0656efafaf361207"
         },
         {
           "path": "20260817042844_sales_state_transition_hardening/migration.sql",
-          "size": 2835,
-          "sha256": "fc0a71267cf200877b320564e8696f8f02d3b4cd2675ee610950f81a1f83681b"
+          "size": 2920,
+          "sha256": "d2d05efee4232559bdd1d9f1913b62d28bb6ab8b55fd9eb99701d6bef08aa791"
         },
         {
           "path": "20260817042844_sales_state_transition_hardening/snapshot.json",
-          "size": 143121,
-          "sha256": "a45afd4ebe17f25cf0e0c90f8d80c7faaa1d8c5dc76283f42921dc6595410265"
+          "size": 149166,
+          "sha256": "38f3dcbefd0fddc1c62cb1d39584ad33118f86719dc1d54c45eb9599825e2cfb"
         },
         {
           "path": "20260817042922_inventory_state_transition_hardening/migration.sql",
-          "size": 3621,
-          "sha256": "ee1e0fcbdc38a15ac5399d5881516756571ef2f36d8f7a0512f11668c0624ed3"
+          "size": 3729,
+          "sha256": "a8e000412e6c1c62c8de76f6367b7cf1d10490bcfbb2295673e772440c97c0d4"
         },
         {
           "path": "20260817042922_inventory_state_transition_hardening/snapshot.json",
-          "size": 143121,
-          "sha256": "1c2a99f05c9695153bb4724e035cce00fa6a0589fc8cce3f136e4aee5530b095"
+          "size": 149166,
+          "sha256": "37d8b9af1aafd36a6964fb6e34d644c1a0bcbb169248d58a502e27e5baddc067"
         },
         {
           "path": "20260817043121_accounting_state_transition_hardening/migration.sql",
-          "size": 3251,
-          "sha256": "ea7ce5aa9d04640a39711d65fa7080a40b04a66886cdb852fce31a22c8a8d434"
+          "size": 3353,
+          "sha256": "223a84d146a7487118fb3be3df42a6eb7f8df3410746724870fd71e04ed6ddc9"
         },
         {
           "path": "20260817043121_accounting_state_transition_hardening/snapshot.json",
-          "size": 143121,
-          "sha256": "8ffa70de80b5f07a068353ae7cec337e14dc5288ffa7847c3cab02006cc5384c"
+          "size": 149166,
+          "sha256": "df5ab105b839a86911cd98a70f6b8768da57fc6bdaf9edb0d2a89b6010581822"
         },
         {
           "path": "20260817071634_lowly_reavers/migration.sql",
-          "size": 7364,
-          "sha256": "c15c1267e647620943e5484c0a04d4e3b9063d2fcbde4c2ebaaa7b1b13f2d68f"
+          "size": 7476,
+          "sha256": "4faaf4cd87be994755c12aa80144c94fab7298404793a13bf87eb9fa3f3b3464"
         },
         {
           "path": "20260817071634_lowly_reavers/snapshot.json",
-          "size": 163775,
-          "sha256": "bf584a2384e25385e09e2668202c2241dd28f3869f45eb5d5320e0e17a5ef68c"
+          "size": 170614,
+          "sha256": "83982eb92dc1c982a8e9870d1510780891fca54739d838a66f34e432f732bf0d"
         },
         {
           "path": "20260817075018_tiresome_red_wolf/migration.sql",
-          "size": 1038,
-          "sha256": "980e470bb90234f259798f72a409001bd839bb9e7bf6f1b0a0c41bab361a04fa"
+          "size": 1066,
+          "sha256": "c5398230f66200ec2b8afac2f56da2e8dfe359641355deb66b03a0063207a4a6"
         },
         {
           "path": "20260817075018_tiresome_red_wolf/snapshot.json",
-          "size": 163775,
-          "sha256": "7758e672f35c241a7870cf5e5305f01970994d0d0333d857b8b64b84e498c82e"
+          "size": 170614,
+          "sha256": "e138b319af0c9c4fa0af315fe729f4a7522037cfe384351e6afc0eaac926f9b6"
         },
         {
           "path": "20260817080713_far_the_professor/migration.sql",
-          "size": 958,
-          "sha256": "f48ed62c085999b047e88f5c182e1a1159be78e23ba7aa699a723da6373abbff"
+          "size": 967,
+          "sha256": "359b5ba7a6f5c79f06947fbf1ca69760e3b476d8daa0c3dc98a0e2d6f9954ecb"
         },
         {
           "path": "20260817080713_far_the_professor/snapshot.json",
-          "size": 165217,
-          "sha256": "904fc858294140313b4dd00ee6f6442e45ee5cdf1cda2b1983b73b148f986aa1"
+          "size": 172107,
+          "sha256": "748786967e9e1b213e9f5d926c041b3950585bd84e2678d3df89310e48824a74"
         },
         {
           "path": "20260817082224_sloppy_jubilee/migration.sql",
-          "size": 1364,
-          "sha256": "032b0f3067c3f9ba86c880f2a98c3e86a52c81b9845b6892faf91c335735b20e"
+          "size": 1396,
+          "sha256": "bdb51c5cfaccb3ac76355769224548ece3b0311d6fa1be3a83b2322d18a7a4b7"
         },
         {
           "path": "20260817082224_sloppy_jubilee/snapshot.json",
-          "size": 165974,
-          "sha256": "4fb04835a477d6806bc841d7ca542cda3326aba0438229e5c15da2390f5c347f"
+          "size": 172896,
+          "sha256": "7493197c8bae7f201b97412c81a93be3da0cda9886740e3fb88eb508b9f535d7"
         },
         {
           "path": "20260817084651_clear_martin_li/migration.sql",
-          "size": 254,
-          "sha256": "02b10497818e5514cc3fc04e6b4483f9a583bd10f8a7d2f4925f6329dd161622"
+          "size": 259,
+          "sha256": "9049acb644d6c4e29c2dd683d501c0ee2702b4858605db1d214fdd4fe130de15"
         },
         {
           "path": "20260817084651_clear_martin_li/snapshot.json",
-          "size": 165998,
-          "sha256": "d2e65aad044118afa756daa207eb1ea076c996b768654b8a6d42613c72f5650e"
+          "size": 172921,
+          "sha256": "eab682e5f052afcd2401cd8e76be4f6a8f04a40b3d59098c54ae4430c0338372"
         },
         {
           "path": "20260817084730_rich_marten_broadcloak/migration.sql",
-          "size": 526,
-          "sha256": "8bd819423f001f43f15e2c4ab287bc86c2c5d8410e91758a22a7533cb95a290e"
+          "size": 533,
+          "sha256": "0ed536104be9575df38fa3d48839704c37e2f2db4cc059661867780beae1c53b"
         },
         {
           "path": "20260817084730_rich_marten_broadcloak/snapshot.json",
-          "size": 166024,
-          "sha256": "b9c3c4397eb760f055c0b9d0a91a4a767291088ba1ae13290df3af54354cd2df"
+          "size": 172947,
+          "sha256": "28198fb8c9c667d54ed42b63cf5daf91fd048002605972c79940f99968d4ae98"
         },
         {
           "path": "20260817091912_clever_tony_stark/migration.sql",
-          "size": 5044,
-          "sha256": "68d0d1883e832f9ea646cc5eebc7223eaf05e3ea3bdc0dd624ed8c9eacee0ac9"
+          "size": 5149,
+          "sha256": "7587b4a853c10b64b74064a6705469e94f4ea5a9abc4fdff160eec6634736c97"
         },
         {
           "path": "20260817091912_clever_tony_stark/snapshot.json",
-          "size": 166717,
-          "sha256": "b768c53b380142af9bd22b415c78d8f0a1ddc41a88a0ee647b5d94bee9f67079"
+          "size": 173666,
+          "sha256": "15f6120def2ef6fa4738725342b8956d171341fabbaf0e6f0c0dd88242a93052"
         },
         {
           "path": "20260817093044_chubby_lizard/migration.sql",
-          "size": 277,
-          "sha256": "8123660f497ccab62af64711f1743a67d99268f3dc8ae48a053225c5929f317b"
+          "size": 282,
+          "sha256": "3d365545eb0ba7dbc46c33058d3f443d5343702604894ef2533ce3353b6acaa8"
         },
         {
           "path": "20260817093044_chubby_lizard/snapshot.json",
-          "size": 167049,
-          "sha256": "ed0465560c92ada55dd7af7c6c27bde385be2fa9cf2268ac2fd400d773a7fff9"
+          "size": 174011,
+          "sha256": "22ce4e3a27f2c6d77eb1a0b48ba57d57e097f472c1cae2d4bc4f2e4fb02cc959"
         },
         {
           "path": "20260817094312_green_silver_surfer/migration.sql",
-          "size": 2363,
-          "sha256": "069ff90eb43e899427c3014d2b11e9b858cc48199b32516dc03e8e54df67c051"
+          "size": 2411,
+          "sha256": "d1d217abf0fd38b93073ad13f97b69ef5244b252fe5cfce1d71836916ad3bbcd"
         },
         {
           "path": "20260817094312_green_silver_surfer/snapshot.json",
-          "size": 167366,
-          "sha256": "5371341f2cadd5fce20f0590eff0a13e21877611e986dd9c998d982754146d98"
+          "size": 174341,
+          "sha256": "044cd4770d9329884b1ac8d4df70abe30ac7a7ab08692fb1b6dbd9c5ce278e45"
         },
         {
           "path": "20260817121245_tigerbeetle_controlled_activation/migration.sql",
-          "size": 9510,
-          "sha256": "e9bcc8fd9618ab738dda3d741158101af81736af522e2dc3d7e81e872a7bfb09"
+          "size": 9724,
+          "sha256": "1069d5fe20aa9134e659ac697098990b89232f24128a08f40d69b4b334268b2e"
         },
         {
           "path": "20260817121245_tigerbeetle_controlled_activation/snapshot.json",
-          "size": 177140,
-          "sha256": "4158c595433876aa86eedf5391c406ca7b1607a8d8c63d500e462cd849d24546"
+          "size": 184476,
+          "sha256": "7b88299b7d2d24433ad838aa4ab12d54a883f06af4450428742228a749ac9589"
         },
         {
           "path": "20260818012847_financial_verification_evidence/migration.sql",
-          "size": 6613,
-          "sha256": "26a11d2f81285f2a39e9a079564fe077eaf7f7be42380d7cb8996ba6f1353a9c"
+          "size": 6708,
+          "sha256": "d4318333473dbf297bc02401736b8cd60799c5e447514ef197d8c969e5130f66"
         },
         {
           "path": "20260818012847_financial_verification_evidence/snapshot.json",
-          "size": 195965,
-          "sha256": "5d9984d80172bfb2f6107c323cf03ce708235b7140fdd35c360c29fd626101e8"
+          "size": 203998,
+          "sha256": "0f73799d5bb67f5c95cf7462efa83b79a36f33af903c9b68cadd770c8f02c415"
         },
         {
           "path": "20260818014414_financial_reconciliation_checkpoint/migration.sql",
-          "size": 6248,
-          "sha256": "2bdc4e5c78e8dad9e2c7e64bcbdbab95e2f4cec9c49e10919e2460c83f44ba6a"
+          "size": 6330,
+          "sha256": "0b1e2b31a8121d7d20337adcf31ddcfe628f29ab4e8aa05657ca324b0377d2f0"
         },
         {
           "path": "20260818014414_financial_reconciliation_checkpoint/snapshot.json",
-          "size": 216020,
-          "sha256": "15785edfde0189a1c083c9683a04a8e456ab284987dd59bf63b560f2c2ba5e62"
+          "size": 224821,
+          "sha256": "d5588b6080d8fb1d25d9342ffde48571a72dbe2b1565406669fe1a227e7c23f8"
         },
         {
           "path": "20260818235325_default_financial_engine_postgresql/migration.sql",
-          "size": 318,
-          "sha256": "a23af3a472316f2466af29fe8491ab2ba2518cb131fb79c6a224066b22e6c324"
+          "size": 324,
+          "sha256": "a7f81cacb392095d5f0efefbca3e8d22ffc97f9990e07ee1616c96cae9a51679"
         },
         {
           "path": "20260818235325_default_financial_engine_postgresql/snapshot.json",
-          "size": 216019,
-          "sha256": "22a0cbdf5929b058cc01572455ae5608f4f6e81cd0b41b5451e7d8ea078c3067"
+          "size": 224820,
+          "sha256": "18a2cc645a5ecc2f66877dec8f4a1a129d43485e2c2f94686993efcb520fabe7"
         },
         {
           "path": "20260819002501_round_klaw/migration.sql",
-          "size": 923,
-          "sha256": "09602761d9e0efe1f9fedf57d9081f0e4133384f795b800a1124dca11e6a56d3"
+          "size": 933,
+          "sha256": "d23fc9f8638e8acd1a15a80804cade9f1b191cafaf363b1d6d7aa42f4cd404ab"
         },
         {
           "path": "20260819002501_round_klaw/snapshot.json",
-          "size": 216019,
-          "sha256": "94c4ff230ec3a6f78637bf64ba2267ac04315cdbf31eebaace479a6427e5871f"
+          "size": 224820,
+          "sha256": "d93c7019a1186ebb17ff5c3c4b6f99509eb2f34eecf72d1db9665a6364dbf60a"
         },
         {
           "path": "20260819004908_fantastic_unus/migration.sql",
-          "size": 392,
-          "sha256": "292341aae291b76b36704c79abd2224d8f77f701bcc900644fdabc03d10f45fd"
+          "size": 397,
+          "sha256": "1f930633b264e239af807e360bb2b135a21bfa57c2275cae63dc529b6c811117"
         },
         {
           "path": "20260819004908_fantastic_unus/snapshot.json",
-          "size": 216282,
-          "sha256": "a90b7f69f16b3c969029367ede9fedceacf4594bd53ea3c8a5716e8a6f542aa9"
+          "size": 225090,
+          "sha256": "7257af6061ab3296e1226f25000e033101d9eedab57fe5ef9f527a98908274da"
         },
         {
           "path": "20260819012009_financial_reconciliation_event_identity/migration.sql",
-          "size": 324,
-          "sha256": "8e3f8b20b5602eb3285050a6fa31c0230f5f29e45a9de82657fc2c71cb19268f"
+          "size": 329,
+          "sha256": "8dfb9094783874e318207a1f67a1bc090608a1d8fec9ba25852005dc8bd42673"
         },
         {
           "path": "20260819012009_financial_reconciliation_event_identity/snapshot.json",
-          "size": 216603,
-          "sha256": "cf9bb8e68fbbf74eb0b66ef491830bc8fec196a2e61fde511bb67610263f324b"
+          "size": 225424,
+          "sha256": "a765cea3ee68ccedaa97c38c9548035987fe6296eb7c7f14d608d925f6608473"
         },
         {
           "path": "20260819012700_protect_financial_reconciled_event_identity/migration.sql",
-          "size": 2369,
-          "sha256": "2c9bcb3962ec7d9dcffda67bc26e3ff03316d14026a2c167b0301679bd325e4b"
+          "size": 2419,
+          "sha256": "a65bab460025069468043665b08c9f2f7b00a812512e7f2a19b803bf125aefd1"
         },
         {
           "path": "20260819012700_protect_financial_reconciled_event_identity/snapshot.json",
-          "size": 216603,
-          "sha256": "0763de7c8908cb1d369f100655353b613fb88dc58d88574ce7113834fba54b4f"
+          "size": 225424,
+          "sha256": "0abb9c904ff75b1b5675355f3559551137e5891af97e9419b39395ea4266bc43"
         },
         {
           "path": "20260819013408_unique_financial_reconciled_event_identity/migration.sql",
-          "size": 327,
-          "sha256": "c4419248c123b68a4a317b63ee638699aa82f1283df17438f8fa86bc7deed444"
+          "size": 332,
+          "sha256": "49cb0f642d51da3e3f32af6977fb625c91aef631cd03696710800f03f12b7f99"
         },
         {
           "path": "20260819013408_unique_financial_reconciled_event_identity/snapshot.json",
-          "size": 216921,
-          "sha256": "7b37e2beabb7b2ae29a43b2e4c745542b28821611e93f362a0e001fd47d267d1"
+          "size": 225754,
+          "sha256": "5bd69617db64dc37291e57d27b4aa3cec59a2fc642f6c342646e405896f5955d"
         },
         {
           "path": "20260819014358_allow_financial_transfer_quarantine/migration.sql",
-          "size": 1625,
-          "sha256": "1564bf6aaf68b40931bc497f510914529bbad62581dbf50fa89efea21e3922d8"
+          "size": 1665,
+          "sha256": "1f3ac024aad733409a869d3231acf6ba7a1a529b7409e75452ef6cb83f634df5"
         },
         {
           "path": "20260819014358_allow_financial_transfer_quarantine/snapshot.json",
-          "size": 216921,
-          "sha256": "3083ffe874f74d64514926684c30b5ffaae60b390e314e0fbca637cf92bb7a77"
+          "size": 225754,
+          "sha256": "b75a3f47f41c7e0fd7bf087cf863b0a536054c3b2fda0d86434e8ad1c5e7132c"
         },
         {
           "path": "20260819015137_protect_messaging_event_identity/migration.sql",
-          "size": 867,
-          "sha256": "ebb2d731414bd6707c66ee450691acf18a522356f0af061fb9df35f011f5e5f9"
+          "size": 893,
+          "sha256": "bf1c78d1b68cb675b8289a438e7bc71756734aae80bc0844e09d034506b96e31"
         },
         {
           "path": "20260819015137_protect_messaging_event_identity/snapshot.json",
-          "size": 216921,
-          "sha256": "f5a1178cec2f098c7de21313144092a2eb9fc102284ad27f5ff140e0716213bf"
+          "size": 225754,
+          "sha256": "3df9ebe969155286c4e452ee527921bb4abaf5c44d7a8ea5720337218ff39def"
         },
         {
           "path": "20260819015853_protect_messaging_dedupe_identity/migration.sql",
-          "size": 1151,
-          "sha256": "bf8c7992210245aa17e90b9bd9f6f8500bfe3cf1657546e315e5ffbf4e1f6dc7"
+          "size": 1183,
+          "sha256": "0c23d7c446ea4ce35c0bc95860e67ec288e901f4904827a5444b73bc75aed7df"
         },
         {
           "path": "20260819015853_protect_messaging_dedupe_identity/snapshot.json",
-          "size": 216921,
-          "sha256": "04307e02c5f1ed6200c098c35b82aa793f71de0c9c7e1ea893fcdd165886c33e"
+          "size": 225754,
+          "sha256": "3533de65e6917fed6bcb5c6b6b84b2de8e95c890cfc6063b20224877cfa4748a"
         },
         {
           "path": "20260819020632_protect_messaging_receipt_identity/migration.sql",
-          "size": 1179,
-          "sha256": "8eb2b062dca85e9afe0375142cee44492a0aae43634b295ecd9bcecf09e680fa"
+          "size": 1210,
+          "sha256": "6edeb15045502f2bcaf8cd2ab817b8821f5c7aeb4c84b51ea2ea9e4eb9a8cd14"
         },
         {
           "path": "20260819020632_protect_messaging_receipt_identity/snapshot.json",
-          "size": 216921,
-          "sha256": "b6ca0a4c759c93fb5d5680243822ae8071703e82c1056d86f7c94774396307e9"
+          "size": 225754,
+          "sha256": "5dcbaaa0d8ef4b38bf3e71932fc285b0f8b7db8c62dad46cfac72616ff33ab6d"
         },
         {
           "path": "20260819022319_protect_messaging_occurred_at/migration.sql",
-          "size": 1203,
-          "sha256": "94cc3d18918fb1106b5588d433040e8438c66fd530a85f76ac3bfa0514167825"
+          "size": 1236,
+          "sha256": "0297b201ec25991c1f143f70e5a4a96ee96b71a73cb6afce04e15b459708b52e"
         },
         {
           "path": "20260819022319_protect_messaging_occurred_at/snapshot.json",
-          "size": 216921,
-          "sha256": "f3298762fa0c9954ee6b6e10a92a61216561dd53827d4d7607449b4358f0b299"
+          "size": 225754,
+          "sha256": "76fcc923cb6b38fd9416db3b869bd4b9b419eb446d508ca96adfb456327494a0"
         },
         {
           "path": "20260819022953_protect_messaging_receipt_completion/migration.sql",
-          "size": 1332,
-          "sha256": "ae0904e3878e42a5c80772199d9bd29abf2ca31c05526c25a85de7feccad0d99"
+          "size": 1366,
+          "sha256": "a2ee84dc0416c4d8e1aaac6c6578cb580ca9b62d9b9420847355e39bde96c72a"
         },
         {
           "path": "20260819022953_protect_messaging_receipt_completion/snapshot.json",
-          "size": 216921,
-          "sha256": "71ef64edaf7f0137f8091710497326eadd7df9c07ce9c7ba6471987386ca95fd"
+          "size": 225754,
+          "sha256": "536db85e8c7baee122c432de5d270999a397c3445c6689c472b5f61e604bbe1b"
         },
         {
           "path": "20260820081948_constrain_verified_checkpoint_counts/migration.sql",
-          "size": 403,
-          "sha256": "db416a7ca71c2724eddbb173d1d468809ca00e7804ccf74798d6edf136babb19"
+          "size": 409,
+          "sha256": "aa9db774e0ac54a60a64939b5e91d12aa44077bf46226b64e0410ac3549d4797"
         },
         {
           "path": "20260820081948_constrain_verified_checkpoint_counts/snapshot.json",
-          "size": 217229,
-          "sha256": "cfd5cb8db3fc78a9a3bfe73dea5ab72dcf421d0b3a6fd89c871a47721b25847c"
+          "size": 226069,
+          "sha256": "72419c1ccdfd4a740d6949fac5df3c828bf49c5090e20b98a187e31ae444c850"
         },
         {
           "path": "20260821114152_constrain_financial_operation_ids/migration.sql",
-          "size": 345,
-          "sha256": "93381395b78d29197b7f3c893f28c009937561563baa5fc19e25a056943778f5"
+          "size": 350,
+          "sha256": "cb7ee1b25f387124e75a7fba99938f16c6f4afb853747a84dd5e4ce0031315d5"
         },
         {
           "path": "20260821114152_constrain_financial_operation_ids/snapshot.json",
-          "size": 217449,
-          "sha256": "edd634265186d50fd5a385d2610ff1bc9f14d99241489869aa3103a2d6681ea9"
+          "size": 226296,
+          "sha256": "979bb0ad734416ec70fd24e87d14dcf29ca00feb17fcb50141c1ff57e1d74064"
         },
         {
           "path": "20260821170212_constrain_financial_operation_text_fields/migration.sql",
-          "size": 964,
-          "sha256": "8767673fd5914ef41f22d6570646651134826173f12a5973394169101e12a89d"
+          "size": 972,
+          "sha256": "8b8a7e873924ee2be6582cea2ba1e3ac474962bc9cc072530f94ded707660095"
         },
         {
           "path": "20260821170212_constrain_financial_operation_text_fields/snapshot.json",
-          "size": 218474,
-          "sha256": "89cfaecb9dc8991c8096788147aac7be9d21ee5eef343bc9dfacbbbacdc3d026"
+          "size": 227349,
+          "sha256": "614b921667e196ec56106120a2fd54f61403c2823b9ec48aca0013463ee30460"
         },
         {
           "path": "20260822015309_add_supplier_accounts/migration.sql",
-          "size": 1174,
-          "sha256": "44eaf158d26903de1ef01fcb5c29f3dd0d82ebbdd66af8f25870789673b68cfd"
+          "size": 1192,
+          "sha256": "6b313dbc065838aa539296ed3654b08d85a8d2a0d0bbc00e3683b969d6bd414e"
         },
         {
           "path": "20260822015309_add_supplier_accounts/snapshot.json",
-          "size": 221953,
-          "sha256": "34a707a19d5143d1f9313de6ff8aa81c725f83481dc89016b79e7d1a26f1979a"
+          "size": 230973,
+          "sha256": "6057dabfc2aefd9f6ecb76f36a44b8d7393735a2bea1c0fed8fe54396a679f79"
         },
         {
           "path": "20260822023718_add_purchase_orders/migration.sql",
-          "size": 2173,
-          "sha256": "264e71b131c8b04bf57a1b6f281c039caae6ef9b15bb3063069fc64813511d42"
+          "size": 2206,
+          "sha256": "4acef37d116b86fb7636c2cee7a9182a9f957874cebe82bb952a16e4a7e24b05"
         },
         {
           "path": "20260822023718_add_purchase_orders/snapshot.json",
-          "size": 230065,
-          "sha256": "60e4c94e1367d58d61bd2d1ba27ea5ef9cf5e034ae45e4a96c72b7aa1d80e997"
+          "size": 239423,
+          "sha256": "1f3170af8f630d89d2c8e012fcdf1d4c77648e69a9c8f4c6a76846f21b24b3b2"
         },
         {
           "path": "20260822024534_extend_purchase_order_status/migration.sql",
-          "size": 240,
-          "sha256": "dc5736c60f2d82e5e6bec3ec75319d1e8b0825aacd1715eb51c6acf36771b7f3"
+          "size": 245,
+          "sha256": "08e375bc3691793a9a4ccbab300d8ff136c570edd4cb95146801085a778155be"
         },
         {
           "path": "20260822024534_extend_purchase_order_status/snapshot.json",
-          "size": 230086,
-          "sha256": "5185580aea03ccaa4ec5c6f6b69e14b6807f9fd5540e5aaa9785c4a6c22d67ca"
+          "size": 239445,
+          "sha256": "8abbd7dfc0026089690b8fee1fa0f9405041c7141abba6a3609bf1b3666ebe64"
         },
         {
           "path": "20260822025135_confirm_purchase_orders/migration.sql",
-          "size": 1000,
-          "sha256": "a1105ddc63417f423f046fa7fb106f12ac09e52265a021b0c28a73e88e4ee14f"
+          "size": 1013,
+          "sha256": "865585d046c63a4ba92f98e08230cd4440df0f8088765ac60ef969c7d29024ae"
         },
         {
           "path": "20260822025135_confirm_purchase_orders/snapshot.json",
-          "size": 231550,
-          "sha256": "7ffd81c37c46cd229829654e6ba53b0d07dcf3997d003e6f51d4c517590ba31a"
+          "size": 240954,
+          "sha256": "3a0d24b5c253010afa541a6e6ab48b664bd4d18618b0973e1396b27b1f0aeddd"
         },
         {
           "path": "20260822025209_protect_confirmed_purchase_orders/migration.sql",
-          "size": 6135,
-          "sha256": "ee6ec07f9a08cc4bfc7412cffdb0f91c5d0ecf868dd66fccc7af3af3e371f01c"
+          "size": 6320,
+          "sha256": "2a28b5369fb7d21e66d396970aaf0d708a65be324590d5a2ab14a4ce54ea6fc3"
         },
         {
           "path": "20260822025209_protect_confirmed_purchase_orders/snapshot.json",
-          "size": 231550,
-          "sha256": "505b8283dc7b5421e2b2e29f4b753d34a08d38dc9fc9dbc3611a2890879024ed"
+          "size": 240954,
+          "sha256": "136e4f84b204c3a5f8d52e0ba7eeb004a27f38d70c0838a47e4b00b9e8b335cf"
         },
         {
           "path": "20260822032147_extend_purchase_order_cancellation_status/migration.sql",
-          "size": 245,
-          "sha256": "b349a1a15c101689813a1b44f4de8bea0a382942f63e0c1208d66689c3aff741"
+          "size": 251,
+          "sha256": "5bf0436bafaa67cd20971790d11063236e964c47aa49d6a99a179add73880351"
         },
         {
           "path": "20260822032147_extend_purchase_order_cancellation_status/snapshot.json",
-          "size": 231571,
-          "sha256": "3016da1eac5bae5a6ff841387e2940d3b254d488269737b81dfcd68cf4fbf7be"
+          "size": 240976,
+          "sha256": "200940a1e041e96ef8da45f279c14d70bfe635529a6e7ac3992599f490e923a8"
         },
         {
           "path": "20260822032200_cancel_purchase_orders/migration.sql",
-          "size": 641,
-          "sha256": "4000b96c390f884addb2f552a0d3aa799d9891e53a7859daae675f4bde302223"
+          "size": 652,
+          "sha256": "7a20b1d5b80676484a16bcc8c34215af32f87bfaa5f825500c7d1b7083691d29"
         },
         {
           "path": "20260822032200_cancel_purchase_orders/snapshot.json",
-          "size": 231587,
-          "sha256": "76d9de103ee990134c6d49e4d6a96e9fa4024ebfe5a10361545707f6c33b7393"
+          "size": 240992,
+          "sha256": "389bafd0fb4a9cbbd8ca9cb7e801c35579d4d09e29842bfce131e6f3e7fec9fc"
         },
         {
           "path": "20260822032204_protect_cancelled_purchase_orders/migration.sql",
-          "size": 5608,
-          "sha256": "fae81bbd476940eb4cce87af9784eec8c3f44139ed76a4d6665aebb279b501fe"
+          "size": 5773,
+          "sha256": "713a8f3630d754eb063de26eb05b0a3082b2df1b5c1ad3742622a42a779d992e"
         },
         {
           "path": "20260822032204_protect_cancelled_purchase_orders/snapshot.json",
-          "size": 231587,
-          "sha256": "13d233872fe0378d60d1ec7ac0c984d654af7db8d335cd1ec92f7a3ec803783d"
+          "size": 240992,
+          "sha256": "f8697dd4ed4b7efdf189fd6e7b130a08be685c6adcad59516d6fe37bdbf29fcc"
         },
         {
           "path": "20260822074742_add_procurement_goods_receipts/migration.sql",
-          "size": 3199,
-          "sha256": "fb5c7d3659371fd8d35c0b3807c670ef5e17f4795c4bca82d04a8492e455595a"
+          "size": 3240,
+          "sha256": "09497410c665aa9284655df59d93878f531876d6388bbad921d3f9e96cb47e8f"
         },
         {
           "path": "20260822074742_add_procurement_goods_receipts/snapshot.json",
-          "size": 243305,
-          "sha256": "27e12ea9071dc24161e26fc56d1e4430fe1b22036c407e042fc7027bc03cb9fc"
+          "size": 253185,
+          "sha256": "117bce975b355406dc16d19fa98751b2da2d9cb25bed03a667c81b1b73ce8341"
         },
         {
           "path": "20260825110020_add_lease_fencing/migration.sql",
-          "size": 1704,
-          "sha256": "4476a36a16e9c9f3902d086e28886616a0d3b629e4565b5633142d35b1aea122"
+          "size": 1726,
+          "sha256": "785baf97598cc1481da3ecb0014a4e3ad272186c87a6b0398aedaff3a5df26c1"
         },
         {
           "path": "20260825110020_add_lease_fencing/snapshot.json",
-          "size": 247530,
-          "sha256": "a865c35cb336368d344da4e35be39fe8a2ec1b9fb639019248485e66652bb8dd"
+          "size": 257583,
+          "sha256": "c378aa4454b66cafef1e9c682e9c56c54003142a4050cce745ce64641ce2cc1e"
         },
         {
           "path": "20260825202757_bind_sales_orders_to_quotation_customers/migration.sql",
-          "size": 511,
-          "sha256": "f303c390570db52e8a89660c41ca34b79c43e3ea04034796236b41a61ea15eb4"
+          "size": 518,
+          "sha256": "95e48aeef0def078a40834add6977716dc68608496fca75c65deca3f877ccfae"
         },
         {
           "path": "20260825202757_bind_sales_orders_to_quotation_customers/snapshot.json",
-          "size": 248304,
-          "sha256": "7896321b0de8aebc41bddf201bd5d1eea6e785279488990a8fd1607fcd9166c1"
+          "size": 258391,
+          "sha256": "09216797d69058359266e00ee57f9f853950416a4cc6de21cfffc496f9326c42"
         },
         {
           "path": "20260825203751_reject_blank_financial_cutover_metadata/migration.sql",
-          "size": 1302,
-          "sha256": "6564e93ff78e7339e795641003fae97cf8fba997ac78b91e74757d594ca3dbe9"
+          "size": 1319,
+          "sha256": "c8752014fecd689fb2d8543e145464f3bf3c6eceed2cb2720f4452cb29e5b7e1"
         },
         {
           "path": "20260825203751_reject_blank_financial_cutover_metadata/snapshot.json",
-          "size": 248495,
-          "sha256": "c1cb731ce846440c7c6ad9bd0d23c71f1bf99f0c432cceb534ace44173ef680a"
+          "size": 258582,
+          "sha256": "5bf9ce1d0a406c8daa2abdefc732b1b6657bef90d54ce0e943416d696cf940de"
         },
         {
           "path": "20260825204315_bind_purchase_receipts_to_order_items/migration.sql",
-          "size": 922,
-          "sha256": "f8e473695838c79268e6871dd4bc170536f3adb8207fee07553af3e0556a358a"
+          "size": 930,
+          "sha256": "f0fcb1192baf73bf59e4509af02e72468e1d1907007b42b1c9655ce425550a76"
         },
         {
           "path": "20260825204315_bind_purchase_receipts_to_order_items/snapshot.json",
-          "size": 249065,
-          "sha256": "141d10cab8720d6aa26f8a406f22dff892e1588c9579fa019b7f3d91b9e28644"
+          "size": 259170,
+          "sha256": "d636d43b07c0bb6269840736aad53d11f63fb292c9691c9315c2c9ac9f1f17cb"
         },
         {
           "path": "20260825204843_reject_self_reversing_journal_entries/migration.sql",
-          "size": 517,
-          "sha256": "0624f15c2ba1978afb7afeb89fe9302f6f58dcf6c28ea7f8a3f932289cf3b39b"
+          "size": 525,
+          "sha256": "0b1010f558ad0852404b55e0ab550d3ff28b6c2cb41c5109fa2bcb6fb3f04ea6"
         },
         {
           "path": "20260825204843_reject_self_reversing_journal_entries/snapshot.json",
-          "size": 248968,
-          "sha256": "22f23ef0537ff55c9bafac2193c3b2809861a505cfc2f6696da453c6c2cbd4f6"
+          "size": 259071,
+          "sha256": "a1fcb295b81a5ab9c36c01662a6e0995f4e762d07715703116767c8a074ebfa6"
         },
         {
           "path": "20260825205510_enforce_inventory_movement_uom_format/migration.sql",
-          "size": 623,
-          "sha256": "085c7a303064ef8cbe804ddd9ba662f66ea01b033731f64ff3164aa00fcaeef3"
+          "size": 632,
+          "sha256": "a4fea368e25682dcc01f658be3110d45ce13bd20ac8bff0e9723ca10871604ec"
         },
         {
           "path": "20260825205510_enforce_inventory_movement_uom_format/snapshot.json",
-          "size": 249033,
-          "sha256": "0ea1b0c5b0c236c602aa7ea55df3edb2a223ce47338cf6de7f99cca9205c08ae"
+          "size": 259136,
+          "sha256": "4984ab529793631f9ed7f3f48b6c5cb03164f795dd3021150726c77ebb63611c"
         },
         {
           "path": "20260825210248_enforce_sales_customer_email_normalization/migration.sql",
-          "size": 334,
-          "sha256": "7d2fb25c96fbc40e15f23c893238af695a78d4cd2e00615682dde574e22f88ad"
+          "size": 340,
+          "sha256": "c42476071393dec6501b051435f2ea46cafa4538138dc0604966c666807bdda8"
         },
         {
           "path": "20260825210248_enforce_sales_customer_email_normalization/snapshot.json",
-          "size": 249266,
-          "sha256": "63fd1b71312cf38d7870ebdb18e5b1869564b282447b6474bb49fe0566cbf590"
+          "size": 259376,
+          "sha256": "c1d425164bd7cf66c02b9f4b67062a36b023d511755f1684c8edcad1fec91b5a"
         },
         {
           "path": "20260825211026_enforce_legal_entity_organization/migration.sql",
-          "size": 1831,
-          "sha256": "18a52e41487025dd687286806d2b4472f8cbfffd397c932d4fbfd91f35f59508"
+          "size": 1894,
+          "sha256": "fe7c8cace7984d7ecd252c20eb2731ec544e2d0f03e5699d6a82469cce35090d"
         },
         {
           "path": "20260825211026_enforce_legal_entity_organization/snapshot.json",
-          "size": 249266,
-          "sha256": "9031cf572e78a67e9bb0aa91eff08caeeac71b32077857f7a78afec1051206df"
+          "size": 259376,
+          "sha256": "9ddc8ddea6babff7f0caee805fc0c95dd63316d2dcc3c97c50a59a26af5a69c9"
         },
         {
           "path": "20260825211705_enforce_inventory_movement_kind_sign/migration.sql",
-          "size": 391,
-          "sha256": "621be4fa4479aa8e91cd1292b441cf8341c4530f09609118f766159eca238828"
+          "size": 398,
+          "sha256": "ac295710fb82a4f23e0d8a706c9359da4dbea4b1bd9fc1e7c5c3104317bebaec"
         },
         {
           "path": "20260825211705_enforce_inventory_movement_kind_sign/snapshot.json",
-          "size": 249563,
-          "sha256": "88dfbd7533afee4498639178fc04389fa3a093e9c450163184d668c307b7815d"
+          "size": 259680,
+          "sha256": "4db3691e13ee92f95607e0abd6d8bbff56dc6c72b9b74e54fdeb18e44033acd6"
         },
         {
           "path": "20260825212722_enforce_identity_status_disabled_at_coherence/migration.sql",
-          "size": 375,
-          "sha256": "7f69b9c3e749641f5fcb4cdefdb5bb42f0f9460d13336dcf7076830478b0d2ea"
+          "size": 382,
+          "sha256": "bcc77cc2b0c441c93c427758b5f51575b2eab09d84a249a25fbf1f02d79e4057"
         },
         {
           "path": "20260825212722_enforce_identity_status_disabled_at_coherence/snapshot.json",
-          "size": 249861,
-          "sha256": "449a48906caa1a288cf62a13aea6bcc07d7cbcd3209d644d0623e5468ae9cab4"
+          "size": 259985,
+          "sha256": "2c1785e6259b01b2ddd25240be70c9f0233ddd30a7fd0f4190260a7fc56f56bc"
         },
         {
           "path": "20260825213446_enforce_party_representation_kind/migration.sql",
-          "size": 295,
-          "sha256": "aafc9a283f0bc9244c7364e513707f821bea329f88c11ea05100694372324a3d"
+          "size": 301,
+          "sha256": "dd41e91f3fe2cf4f264850cf95316d554cd0cee538259fec9999d97b6f64df40"
         },
         {
           "path": "20260825213446_enforce_party_representation_kind/snapshot.json",
-          "size": 250062,
-          "sha256": "a149673836e7b4f240492669c11a864e73e717b0ac5cba2e7b5bf7fc233cc2da"
+          "size": 260193,
+          "sha256": "fbc29ef91eab9f18010f39caf156a19832cd6a419b11feb2a88c4153e484065d"
         },
         {
           "path": "20260825214139_protect_purchase_receipt_quantities/migration.sql",
-          "size": 2188,
-          "sha256": "2f8ec73a5ea562bc287b2f28184d0b5803ca31c1104b0f44257ceebd66bb5a90"
+          "size": 2266,
+          "sha256": "2b487e3238ea904bbfecd12a0d8996703414b739196f632843dc3b82eb2ca03f"
         },
         {
           "path": "20260825214139_protect_purchase_receipt_quantities/snapshot.json",
-          "size": 250062,
-          "sha256": "c6f65b4e33376fdfdf4418a84c94e739ffed7004a43f0671547e173154d601bb"
+          "size": 260193,
+          "sha256": "c4bc7a19985f8d61e40fe63af17edfbc6d2747960b625e7916864ab8f83f94cd"
         },
         {
           "path": "20260825214827_serious_blink/migration.sql",
-          "size": 825,
-          "sha256": "0fbbd0af6dae977dc6430ee5b9ab7773f439920ea809968f8258b4e360e8d261"
+          "size": 833,
+          "sha256": "e18309d5f5785be2667e5418e4a98f14a54129b8904af9a22532c392ce57bcb1"
         },
         {
           "path": "20260825214827_serious_blink/snapshot.json",
-          "size": 250956,
-          "sha256": "295ffdd2a5246b8df5865a63cd453548661cb0170e50efff19087637743edfe2"
+          "size": 261115,
+          "sha256": "c1adf4e5ffba330a97d4116bf8f1d16af8a411a661420a1ecbe6c5f624dcc712"
         },
         {
           "path": "20260825215451_careless_surge/migration.sql",
-          "size": 339,
-          "sha256": "3d87e14e261b941b41a20a0e4583394f957b1fff6387fd9be5d7c4d593cbf337"
+          "size": 344,
+          "sha256": "65d44df6a7b01b5be6f24632b16340d9a90cb86426613b889e22782bd1d6ebe2"
         },
         {
           "path": "20260825215451_careless_surge/snapshot.json",
-          "size": 251200,
-          "sha256": "4cec2cd763af04b2b3ddf83611a4cd6c42c15768b86a912b751187fcc4ae46e4"
+          "size": 261366,
+          "sha256": "b4647ae5cdeb9ce524bf4e2c11f0351f074a996881f92f18be94fa608f2cdb84"
         },
         {
           "path": "20260825220024_protect_journal_reversal_source/migration.sql",
-          "size": 1154,
-          "sha256": "6703ea6bae70f57a403bc473e4266385d360d96404e025260654f1d0de706b9d"
+          "size": 1193,
+          "sha256": "84092f02e880bc1524c4e6bc6b55a15313fede05c282a6e67f5b0eb2d8763772"
         },
         {
           "path": "20260825220024_protect_journal_reversal_source/snapshot.json",
-          "size": 251200,
-          "sha256": "b82bb5eef32b169b6cfbfc9abaed7a887ec970787b4f76e0202b6e2bb73f987a"
+          "size": 261366,
+          "sha256": "f4928b6c08390d5214d1302248a2ef7bdae95612ae53b3c4e2f604e6f8fe7a55"
         },
         {
           "path": "20260825220642_high_scream/migration.sql",
-          "size": 501,
-          "sha256": "1ced7cb4a2f75dd85d87b2c17bb81b84dea6c69a06665b307c77215d1c538ed8"
+          "size": 508,
+          "sha256": "d1eb928fe0a37d22cc5a653025c6553f0be0d97f0505aa04ab663f80282082c6"
         },
         {
           "path": "20260825220642_high_scream/snapshot.json",
-          "size": 251261,
-          "sha256": "a471e66aac3f15c5b7b236b599d89cb15e06833e5a2aaa1e97ee5355e474cc20"
+          "size": 261427,
+          "sha256": "55ba3b295e93e7c38121b351a297c705757b44b4b3c2fd2deee06c15469aaab7"
         },
         {
           "path": "20260825221155_right_senator_kelly/migration.sql",
-          "size": 605,
-          "sha256": "6370153db67c9b1638397c59210e8f3ba7038009d2feff01f043d55076ff774e"
+          "size": 611,
+          "sha256": "c31e00d3e7eb9345981df98b45a5249255f27428d5346a4125f3894386d70a01"
         },
         {
           "path": "20260825221155_right_senator_kelly/snapshot.json",
-          "size": 252111,
-          "sha256": "05027874ffbab21555d6ffffc198a45aef4ae012333250f051fbb54273d4c46c"
+          "size": 262311,
+          "sha256": "e22cde1b775cfa6ef14d4222f9e4df46158fc70d420c490a5f629567d71df118"
         },
         {
           "path": "20260825221728_protect_stock_transfer_lines/migration.sql",
-          "size": 1593,
-          "sha256": "5807621aa8755a132489ea855417484b57e45eed1bbf812d47282fd50591a5b7"
+          "size": 1646,
+          "sha256": "cb91df5fdd1f7e96f940aa146553dfcd0eebcd8cbaf78b7c7c9a044fb8ab94d3"
         },
         {
           "path": "20260825221728_protect_stock_transfer_lines/snapshot.json",
-          "size": 252111,
-          "sha256": "265806f7d87917295f7bc29af928f89e6c89ff88dc4b08ba0654d255a11bbf8f"
+          "size": 262311,
+          "sha256": "0f749fd19bd1e4c1ab19ee42d7efb529d1895d4605b6e569fdd5a9d703252993"
         },
         {
           "path": "20260825222357_protect_reservation_identity/migration.sql",
-          "size": 1301,
-          "sha256": "c581c133507d96d972f0c87e9a67c91ab4ed2ee788366ecb534f11b107e07b40"
+          "size": 1340,
+          "sha256": "b9a69af88bac47cf602371533f4929e85a8714bde38e5dcfc3b7dfa439b5841e"
         },
         {
           "path": "20260825222357_protect_reservation_identity/snapshot.json",
-          "size": 252111,
-          "sha256": "c3520dbbf834fdc3525c8a99226c08d3fd4c35be176009b7e2da8d665b13c6d0"
+          "size": 262311,
+          "sha256": "fb3d6b279ca8e97e8cf40f89e4b4c7aa2f966c89376b2c7c6b90c5e5e3d0f34d"
         },
         {
           "path": "20260825222948_bind_purchase_receipt_warehouse/migration.sql",
-          "size": 365,
-          "sha256": "c068ac54592a7d9de004fd92209018b754ca4e21d1d9767f9477c1271b4fcd3e"
+          "size": 370,
+          "sha256": "93dd78f0917834219a9d149d5cab16ca3df5fc9f8851d6c125bb6a9175cba0b5"
         },
         {
           "path": "20260825222948_bind_purchase_receipt_warehouse/snapshot.json",
-          "size": 252562,
-          "sha256": "091f4d3f913aa756bbde89682c94b24e7003cf7ef76fe5e3bc06aec8ef0703a9"
+          "size": 262781,
+          "sha256": "57dc1992ebbb98d78809e75d53d2179af56585b6dbafbd15e5b6f0b49044a02c"
         },
         {
           "path": "20260825223524_protect_purchase_receipt_order_state/migration.sql",
-          "size": 1888,
-          "sha256": "229a94e311d7db49c42a425807128c7bf775846de22d02ee0fee00dc8b464e16"
+          "size": 1952,
+          "sha256": "9910296c9ed0b5d8b35e2c05bc64ae7c8a03295d29d2906d290f683650ca56ae"
         },
         {
           "path": "20260825223524_protect_purchase_receipt_order_state/snapshot.json",
-          "size": 252562,
-          "sha256": "4d6baa69a1ee7d75393cfa09c78601e912a4024081030fe2267f1cbbd20653b1"
+          "size": 262781,
+          "sha256": "cfe77a7b95913b2cbda098ccf7dde6d91b0a8dd9f535bb0739b46a8728731ed7"
         },
         {
           "path": "20260825224141_protect_inventory_movements/migration.sql",
-          "size": 652,
-          "sha256": "e3a2e27a7546fb099e4828b4c018ef2a1c78eca387e35b7a665518693e7c6eb8"
+          "size": 674,
+          "sha256": "ad95c4929be3e5b8e7288c7a5c48f7ab8551b87abc8460e40d72aa69f3736d10"
         },
         {
           "path": "20260825224141_protect_inventory_movements/snapshot.json",
-          "size": 252562,
-          "sha256": "6681fbcf1c3f0b14409805813557fe06a205c957a4b9faef3769ea5dc6b64324"
+          "size": 262781,
+          "sha256": "5fa60f0e6bcde9ee8cca85f40267325be27b1cd7fe18a372be7fdecb2ad1953f"
         },
         {
           "path": "20260825224654_protect_purchase_receipt_facts/migration.sql",
-          "size": 904,
-          "sha256": "2fafbb1ec76893c0c45b4f5ba8d481200472afad40629bea540c590a9e985b7f"
+          "size": 930,
+          "sha256": "544c9b486aeb45ea77210dd03564f6beef9cf4ad85c82454ae26fb7f18e4e2c7"
         },
         {
           "path": "20260825224654_protect_purchase_receipt_facts/snapshot.json",
-          "size": 252562,
-          "sha256": "368c3a8b61ad9d4b089788beb1de84df61921bd37cc391f6975372bd25c1ed91"
+          "size": 262781,
+          "sha256": "d3bbc0cf474d1788d7151eae5b164b6fbc77317ae9ace16524876b128ca6e87b"
         },
         {
           "path": "20260825225319_protect_reservation_balance_consistency/migration.sql",
-          "size": 2218,
-          "sha256": "dca5430a8210f988c26be851b1d140737e4079675e638df630f88dc32fac1329"
+          "size": 2285,
+          "sha256": "55e57672fc43930ae3f2038d62d9fbdd7070b0c18ad80dfa208f0748383e3576"
         },
         {
           "path": "20260825225319_protect_reservation_balance_consistency/snapshot.json",
-          "size": 252562,
-          "sha256": "e4ad5462c20839870d3bed871abf4f320250ac12baaec52c2585aa360c6d6fbe"
+          "size": 262781,
+          "sha256": "ff41822c75bd7a1037e656ba1ae8c7a239ef19ca37073ed090dd53e1e6b70132"
         },
         {
           "path": "20260825230751_protect_inventory_movement_references/migration.sql",
-          "size": 2694,
-          "sha256": "7258931fed5d32ceb7ebd07fd401b563179974fe3cd7760ed48d5d3127abc1e6"
+          "size": 2766,
+          "sha256": "bc8baa0d46187f8cd623f1b60f20c0d2f9e4a02ea9cf3dcd55391f6a0fb8fb05"
         },
         {
           "path": "20260825230751_protect_inventory_movement_references/snapshot.json",
-          "size": 252562,
-          "sha256": "d048cecd2de4aba4e573a870d68754492cf6eb5e35ddac498ca2aacfdafd2af8"
+          "size": 262781,
+          "sha256": "28cbd36ee9e3c1f8be15f973e142022fdea5a89511738e2709607816039ca521"
         },
         {
           "path": "20260825231345_protect_inventory_on_hand_consistency/migration.sql",
-          "size": 1825,
-          "sha256": "82a0da53fdee05c211433dd28dfeea9c4e67a20288a4671e10eb7bf91359607d"
+          "size": 1886,
+          "sha256": "555ec580a680912e979cc6ce74ebec4ae96956ec74c0b7f943a33351e597a39c"
         },
         {
           "path": "20260825231345_protect_inventory_on_hand_consistency/snapshot.json",
-          "size": 252562,
-          "sha256": "5d47de8683330acce66e9826b0047288544645d05f56917baebaa09f29611441"
+          "size": 262781,
+          "sha256": "73ec7766e13f4ee0922525a9feb1f5c62a5bcce26f30cdd97664ff9d65d4ebe8"
         },
         {
           "path": "20260825231919_enforce_item_unit_of_measure_format/migration.sql",
-          "size": 436,
-          "sha256": "56aa29ddbebd3d13925a1c6c6ccdfc7b2506cf4b91b3776287ef101a25d095fc"
+          "size": 443,
+          "sha256": "eac912ef291454f88c9d81b44cf3a72cf9513a7b40caf0b4d11074d0f430725b"
         },
         {
           "path": "20260825231919_enforce_item_unit_of_measure_format/snapshot.json",
-          "size": 252623,
-          "sha256": "15c8c262c187727bb23801d0c43bb66138081b7737c4bc9bdacf24f755e7ed5a"
+          "size": 262842,
+          "sha256": "a0563622229ee938ec8e6f8ae0cedbb6a046893de040adea05b3c92e75d42773"
         },
         {
           "path": "20260825232551_protect_completed_transfer_receipts/migration.sql",
-          "size": 2076,
-          "sha256": "828265759b824c46d8edd5e9f931b412e98ab37ed678327ec5d61ef4b8eb548b"
+          "size": 2149,
+          "sha256": "d8a7b32030b156cba6cee4041517341cfbeaf1ae81113f8e87a0c4d7a9048b2b"
         },
         {
           "path": "20260825232551_protect_completed_transfer_receipts/snapshot.json",
-          "size": 252623,
-          "sha256": "f581567bd91ee34ecd678cfc44c75de3f7c143459923b62c45c8f3c5da2f7879"
+          "size": 262842,
+          "sha256": "fa5549e2c044667bcb9bd4563efa5e38b8d80f09ebc582463481ab5fe2d36121"
         },
         {
           "path": "20260825233506_protect_draft_order_totals/migration.sql",
-          "size": 2111,
-          "sha256": "248506aca7f7d1573a2612269f68da2a6badace7f4f657e8c9045219401fa3c6"
+          "size": 2188,
+          "sha256": "47f036b6fe15ac1c931e8c61ae4fc514d5a7d767f80c925716ce82c5169f85bb"
         },
         {
           "path": "20260825233506_protect_draft_order_totals/snapshot.json",
-          "size": 252623,
-          "sha256": "b3b2dc21c90771116a4f123181f3be07f21fabe9b33adade24f615b6dfa0cd00"
+          "size": 262842,
+          "sha256": "6c07bcc21a5347962205ebc1ddde62c87674aedf10e9e90c9b7906fb2910abd1"
         },
         {
           "path": "20260825234950_protect_draft_purchase_order_totals/migration.sql",
-          "size": 2351,
-          "sha256": "580f7df7c7b193a251821761bab97e0d394da236ed95519ce4db10ea48f9ff94"
+          "size": 2428,
+          "sha256": "a699dd779b963cf377436644287e1689ee68d766fe0892920c1a7c4c67cdad88"
         },
         {
           "path": "20260825234950_protect_draft_purchase_order_totals/snapshot.json",
-          "size": 252623,
-          "sha256": "5f6006bb2468915ffb1cfc8dad6f3e179907e360533272ccc62b89c742ba37ce"
+          "size": 262842,
+          "sha256": "dd717cf31bd7edc87f00fa4b47868db43368e0651ff81c69fbdd049dc4a6582e"
         },
         {
           "path": "20260827123010_process_runtime_checkpoints/migration.sql",
-          "size": 2047,
-          "sha256": "4ac8dc882f2fc1c0cb8940a94fc7f9be86e94e659b99f4aa1c478b30bf6801ad"
+          "size": 2078,
+          "sha256": "be574afd72e71172ec2bb187d23052cb13d18ec5596fb47f60f96b094899a580"
         },
         {
           "path": "20260827123010_process_runtime_checkpoints/snapshot.json",
-          "size": 260309,
-          "sha256": "36331285b97ff6f468d540e650acc6bbb635a9f3a980da98750f358638d94188"
+          "size": 270843,
+          "sha256": "32864339cae830c3f71dd1db5b284cbc52e571989153a045d15b61a1fe610835"
         },
         {
           "path": "20260830015729_process_operator_controls/migration.sql",
-          "size": 1352,
-          "sha256": "8971c03fe5f5432b7a0ed01be34ce67448e44a41dd93f4f50926fc398790639d"
+          "size": 1372,
+          "sha256": "d6c98b5302c603079a9197e5fb7a311a523819c64a4b839232c820e8a9381719"
         },
         {
           "path": "20260830015729_process_operator_controls/snapshot.json",
-          "size": 265052,
-          "sha256": "5eac5a2953f431c735b460ea7bd7f883e19e7a2c6a0565c0007b12821abe4236"
+          "size": 275785,
+          "sha256": "087c1775e51bae5003d10186859564b2ac6ee04638a803e57d03445f230808ad"
         },
         {
           "path": "20260830024726_process_release_governance/migration.sql",
-          "size": 4409,
-          "sha256": "b4324b0f3162ff0fe7c1d6815edb1934bdefb0c3ae441720c1c7ed2f55e8240e"
+          "size": 4476,
+          "sha256": "096444b1a214c526fb59a84c0e7e542668b864167ecbe5406c1b44fc0791530e"
         },
         {
           "path": "20260830024726_process_release_governance/snapshot.json",
-          "size": 278975,
-          "sha256": "8ce0ea5177ddf23a84907e1b293c98fcb161ee50ddde5c1a9a9d2505321533f2"
+          "size": 290301,
+          "sha256": "52c3226bcf13e92810c790d36dc66b2681b933ef1c4b03835e8fd3a85294e8a9"
         },
         {
           "path": "20260830073835_harsh_randall_flagg/migration.sql",
-          "size": 2319,
-          "sha256": "101546dfd5353b512d056472a98ac7461ba9f578e41ff115703342ec67439048"
+          "size": 2357,
+          "sha256": "2b1e626e3e3415c3c8079ce1c1738d8f0b04ecca80c12663bfd380ecedbd6779"
         },
         {
           "path": "20260830073835_harsh_randall_flagg/snapshot.json",
-          "size": 287665,
-          "sha256": "75f0b066f054b30c05d1a0112afeca6f487822a21b47d00cfcbd3b88e340ba8b"
+          "size": 299341,
+          "sha256": "f076cf1c59bb8f38d2ffd7303eac7d0afebe86b31f828312b260b0debc2e71bd"
         },
         {
           "path": "20260830081116_familiar_shiver_man/migration.sql",
-          "size": 3247,
-          "sha256": "ef678a34e5cdbb64c5c93545d855056c6cef200d7f3bb548880b46cd7b762554"
+          "size": 3300,
+          "sha256": "b05f3aab3a34f93306c9517856a643c67609a61e13ccde4f5c3bc952fe39878e"
         },
         {
           "path": "20260830081116_familiar_shiver_man/snapshot.json",
-          "size": 300578,
-          "sha256": "6ce2a770fed750a515de638eab54cb21a236b77f8447ea8a6330cb8c5d117df1"
+          "size": 312772,
+          "sha256": "2a04361e069ee0ac53b91100a4072c5da6498401c543f971bdbb70169e4fe522"
         },
         {
           "path": "20260830150157_jittery_zaran/migration.sql",
-          "size": 3615,
-          "sha256": "e7b8a52805a04ee7e132ac30e59ea11f2882656fcef2577f07d905e469504fdd"
+          "size": 3669,
+          "sha256": "c21e51fde290fa26f8563eee61e7d7854e94ffc20b8674f50bb1a99735f884d7"
         },
         {
           "path": "20260830150157_jittery_zaran/snapshot.json",
-          "size": 312768,
-          "sha256": "14a43e2b5d340a76b6b0c19bb8843a53cd00b406efc01ee47e9cf3e637f939d8"
+          "size": 325431,
+          "sha256": "d85d30928f8fc767c5c16f61dbba71c6384d9b3a4132fb74b1a937d1ee6aaf74"
         },
         {
           "path": "20260831124952_add_party_property_graph/migration.sql",
-          "size": 2289,
-          "sha256": "b394d00629262dfb6d94b0d1a1bcee03f4055d99860e788cbdedea119c3cceda"
+          "size": 2353,
+          "sha256": "c3f365443f99101c31212a5be911cb70a682e7e1f35f136cb74f7876156deb26"
         },
         {
           "path": "20260831124952_add_party_property_graph/snapshot.json",
-          "size": 312768,
-          "sha256": "172c5bc9bab1b85fe7255dd8b7656a5022cff374d9fde3996b8b625b854e6d9a"
+          "size": 325431,
+          "sha256": "13689d35f50f4a317ee59d47d8978c7324684eae831dc046c9a09349d0ef5b13"
         },
         {
           "path": "20260901025142_filter_reflexive_party_paths/migration.sql",
-          "size": 1067,
-          "sha256": "7f4245e7db97f2ce6d7acb98cbe24d19847b0599e80a473804ba63802aeabbfa"
+          "size": 1097,
+          "sha256": "489341962fc4db5f046363745ecd0299fee9acc6238ab3e38a40edf06d20a80b"
         },
         {
           "path": "20260901025142_filter_reflexive_party_paths/snapshot.json",
-          "size": 312768,
-          "sha256": "231abbe7c7769f0db690ef828ec9d4e0bf06baa1f69d6da678aff98d8022dd62"
+          "size": 325431,
+          "sha256": "9c1cc895d8b9a0c6c980682f13177aafd3dd15c7236a67e6e60960457b208178"
+        },
+        {
+          "path": "20260914042640_add_external_subject_mappings/migration.sql",
+          "size": 1095,
+          "sha256": "80322ab312693de078650e2aa4af04a320d2a5365b5ba131b383da70ccf434c6"
+        },
+        {
+          "path": "20260914042640_add_external_subject_mappings/snapshot.json",
+          "size": 329067,
+          "sha256": "3f3be3412e876829e327a555e5bd3bd140287e1a3afb8fbac69c3c999e990cc2"
         }
       ]
     },
@@ -1225,17 +1236,37 @@
       "id": "frontend",
       "kind": "vite-dist",
       "source": "apps/web",
-      "path": "deploy/artifacts/output/5a837d432b73291e3aeac1df7ee99d67f94bbe1b/frontend",
+      "path": "deploy/artifacts/output/df658cb109687fd48d8949e6e6f55950cb29a7ab/frontend",
       "files": [
         {
-          "path": "assets/accounts-route-Dch5kGaf.js",
-          "size": 53368,
-          "sha256": "99f2cdf9eab61ea1e6329ade6bc13f7a7ea7a0770f8533b1c91291484a5be75e"
+          "path": "assets/access-route-JynyzY6e.js",
+          "size": 30862,
+          "sha256": "1618631889ce18fcb9c7743a7a89c7dc1bc2c91fefbfb4a0d2a1ce3554b58806"
         },
         {
-          "path": "assets/client-BihiUYgt.js",
-          "size": 12720,
-          "sha256": "bbcd7bdfc6320e5c22b069110b0edcadb6309bf1fc9a2776d443a1d6669bced1"
+          "path": "assets/accounting-route-CcXgICcN.js",
+          "size": 39404,
+          "sha256": "6c2393f55165a2a5c5486bfebfcad71310028a1da23f49e8686e99d1753957af"
+        },
+        {
+          "path": "assets/accounts-route-Cfgn-FW1.js",
+          "size": 24018,
+          "sha256": "7e2a3e2d641f75dda0e46bcbd3869718560f1b47f1a9a4bcb87c5040dd031753"
+        },
+        {
+          "path": "assets/badge-JDIGTd8x.js",
+          "size": 1469,
+          "sha256": "a6356cb8db07b1f4daff254d6f1f47460f2fe31671739102b0d16d5211d8626f"
+        },
+        {
+          "path": "assets/client-Ck93TEsz.js",
+          "size": 12712,
+          "sha256": "aeb71be2ae0e444fc018ff7b5bc95ba8f19879267ed9e89bfb698dfbe1505368"
+        },
+        {
+          "path": "assets/connected-route-PIMiGhFN.js",
+          "size": 54897,
+          "sha256": "16d482f12d746a0383a91d1456958280739cb2a3a6a2d19bd88ba3b9a768ad0a"
         },
         {
           "path": "assets/decode-P1SdD_sz.js",
@@ -1293,14 +1324,24 @@
           "sha256": "bced561d991e3f81c150c08e71f7fa849fcbff523560f6059245f2edce19b600"
         },
         {
-          "path": "assets/index-BFO9AIR2.css",
-          "size": 30054,
-          "sha256": "87cdde615e694c34231997483986aae01cf0ed72b8f79d5347c329639505c613"
+          "path": "assets/index-4fvmHI9s.css",
+          "size": 42806,
+          "sha256": "33c8eaed7d22d744e09b413726e98f406c7d09312e760739f6877cd30ff06dd1"
         },
         {
-          "path": "assets/index-GCe0hVJO.js",
-          "size": 112126,
-          "sha256": "b5aa840d2fe0312cf40b054f37617280086967b180b38a076ca360bcf6d39b7f"
+          "path": "assets/index-BTCBIgJF.js",
+          "size": 186642,
+          "sha256": "5cc9da14d3cbe3dff85c16a88ccef49c21303b38e5d72e7a9df1d502f976e60f"
+        },
+        {
+          "path": "assets/inventory-route-DW6xrGeq.js",
+          "size": 48622,
+          "sha256": "669678f45c48acfc4c1498e4085b73fac79966d81459f653e739e11d915f0d5b"
+        },
+        {
+          "path": "assets/parties-route-B-m1rTeY.js",
+          "size": 36590,
+          "sha256": "f76aa710251e78c5df595b5d53b2d3d4b016a3f28e591a861395625ced084a7d"
         },
         {
           "path": "assets/pretendard-latin-400-normal-BhrLQoBv.woff2",
@@ -1333,19 +1374,49 @@
           "sha256": "e476f124e88472078cf472ac09768331f93f76063a52183ff303a192adea800a"
         },
         {
-          "path": "assets/routing-BwV4UxDe.js",
-          "size": 79061,
-          "sha256": "631733ccc697045bc6a1e6aeb5c3f02f8db38bb02336ce1103f80cb6878800d5"
+          "path": "assets/process-route-GtHUNwxv.js",
+          "size": 82752,
+          "sha256": "7956974cf209fb6af78a64ce1c3d09129a72da2b8ccfed942cc4c202ef85d96a"
         },
         {
-          "path": "assets/serverForms-DEabxH9Z.js",
-          "size": 6694,
-          "sha256": "4e2c396466787464099346377d795f15ec749caf74e1914f1993e88c7f4c43e2"
+          "path": "assets/procurement-route-BTTG2bAY.js",
+          "size": 30400,
+          "sha256": "63446acd6a4d2dc221eaefff5a1ae62116eb1a1ba6f81b9216686e44be962ae0"
+        },
+        {
+          "path": "assets/route-input-_0RuCZ_l.js",
+          "size": 219,
+          "sha256": "2d075447452794455988d8a31ce0cc1727080019633cb1b785be7b026a7809c2"
+        },
+        {
+          "path": "assets/sales-route-BBc8_VFD.js",
+          "size": 31288,
+          "sha256": "e831f5df0514ad50069f4565bfe5b1b53f72507e4eba34e96126212a660133f1"
+        },
+        {
+          "path": "assets/select-CJNFVkU2.js",
+          "size": 659,
+          "sha256": "2a890d531e69697ff018ac46db453947be2f3adc5522af6844e080ac639ed342"
+        },
+        {
+          "path": "assets/serverForms-2ngVAwz9.js",
+          "size": 6687,
+          "sha256": "667157542eb1bfc3e07f8fe1399b9d29beac1f12a25ef5e5257e8a6e5debf290"
+        },
+        {
+          "path": "assets/web-BLteDtav.js",
+          "size": 77959,
+          "sha256": "32ac19531e3517afb92359471bcb0a8de1c2d8c90b9a7378e2adbfe9aad1005a"
         },
         {
           "path": "index.html",
-          "size": 537,
-          "sha256": "6025bcdb916948a5e2838a3ea0ab5bf417977c677d75fbf21f2c3ad186b80789"
+          "size": 554,
+          "sha256": "bb62061cca60573faef0349a4ad876cbb81272c27d78c30e63672ffd3ab04dd1"
+        },
+        {
+          "path": "logo.svg",
+          "size": 4044,
+          "sha256": "5748679afe352a788c1c5dabb4b32617553570a62f55473adc789ec931d2f975"
         }
       ]
     }

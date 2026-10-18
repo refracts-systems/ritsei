@@ -27,7 +27,7 @@ Inspect [`runtime/api/api.ts`](../../../runtime/api/api.ts), [`runtime/api/handl
 # Architecture Rules
 
 - Use Effect v4 `HttpApi`, `HttpApiGroup`, `HttpApiEndpoint`, `HttpApiBuilder`, and `HttpRouter`.
-- The canonical Deno adapter owns native serving and runtime execution.
+- The canonical Node adapter owns native serving and runtime execution.
 - Decode transport input with Effect Schema and call public domain services only.
 - Authentication and authorization are separate; protected behavior is enforced by the backend.
 - Map domain failures to stable transport errors without exposing database details or stack traces.
@@ -58,10 +58,10 @@ Verify generated OpenAPI, typed handler compatibility, security middleware, and 
 # Deterministic Tools
 
 ```sh
-deno task test runtime/api/mod.test.ts tests/architecture/http.test.ts
-deno task boundary:test
-deno task boundary:lint
-deno task check
+pnpm run test runtime/api/mod.test.ts tests/architecture/http.test.ts
+pnpm run boundary:test
+pnpm run boundary:lint
+pnpm run check
 ```
 
 Consult the vendored Effect v4 source before changing HttpApi or Layer code.
@@ -92,7 +92,7 @@ The endpoint is derived from Effect HttpApi, delegates to a public domain servic
 # References
 
 - [ADR-0012: Effect-native HTTP](../../../docs/decisions/0012-use-drizzle-schema-flow-and-effect-http.md)
-- [ADR-0017: Deno adapter](../../../docs/decisions/0017-use-effect-platform-deno.md)
+- [ADR-0087: Node.js LTS and pnpm toolchain](../../../docs/decisions/0087-adopt-node-lts-and-pnpm-toolchain.md) (supersedes the historical Deno adapter, ADR-0017)
 - [HTTP architecture test](../../../tests/architecture/http.test.ts)
 - [API contract](../../../runtime/api/api.ts)
 - [API handlers](../../../runtime/api/handlers.ts)

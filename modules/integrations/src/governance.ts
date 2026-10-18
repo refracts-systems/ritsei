@@ -109,9 +109,9 @@ export const validateExternalOperation = (
     )
   }
   if (
-    action.connectorId !== connector.connectorId ||
-    action.version < connector.compatibilityRange.minimumVersion ||
-    action.version > connector.compatibilityRange.maximumVersion
+    action.connectorId !== connector.connectorId
+    || action.version < connector.compatibilityRange.minimumVersion
+    || action.version > connector.compatibilityRange.maximumVersion
   ) {
     return Effect.fail(
       new ExternalConnectorVersionConflict({
@@ -129,9 +129,9 @@ export const makeDeliveryControl = (
   control: ExternalDeliveryControl,
 ): Effect.Effect<ExternalDeliveryControl, ExternalPayloadInvalid> => {
   if (
-    !Schema.is(ExternalDeliveryControlKind)(control.kind) ||
-    !Schema.is(NonEmptyString)(control.operationId) ||
-    !Schema.is(NonEmptyString)(control.reason)
+    !Schema.is(ExternalDeliveryControlKind)(control.kind)
+    || !Schema.is(NonEmptyString)(control.operationId)
+    || !Schema.is(NonEmptyString)(control.reason)
   ) {
     return Effect.fail(
       new ExternalPayloadInvalid({

@@ -3,8 +3,8 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
 
-import { AuthorizationDenied, makeAuthorizationTestLayer } from "../../authorization/mod.ts"
 import { DatabaseFailure, uuidv7 } from "../../../foundation/mod.ts"
+import { AuthorizationDenied, makeAuthorizationTestLayer } from "../../authorization/mod.ts"
 import {
   type EventEnvelope,
   makeMessagingTestLayer,
@@ -118,7 +118,7 @@ const makeFailOnceMessagingLayer = () => {
 
 describe("inventory contract", () => {
   it.effect("bounds stock adjustments to PostgreSQL bigint", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const error = yield* Effect.flip(
         Schema.decodeUnknownEffect(AdjustStockInput)({
           principal,
@@ -136,7 +136,7 @@ describe("inventory contract", () => {
     }))
 
   it.effect("validates warehouse UUID references at the input boundary", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const invalidTenant = yield* Effect.flip(
         Schema.decodeUnknownEffect(CreateWarehouseInput)({
           principal,
@@ -287,7 +287,7 @@ describe("inventory contract", () => {
     }))
 
   it.effect("bounds positive inventory quantities to PostgreSQL bigint", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const error = yield* Effect.flip(
         Schema.decodeUnknownEffect(StockTransferLine)({
           itemId: "item",
@@ -298,7 +298,7 @@ describe("inventory contract", () => {
     }))
 
   it.effect("bounds stock-balance quantities to PostgreSQL bigint", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const error = yield* Effect.flip(
         Schema.decodeUnknownEffect(StockBalance)({
           tenantId: "00000000-0000-4000-8000-000000000001",
@@ -324,7 +324,7 @@ describe("inventory contract", () => {
     }))
 
   it.effect("denies inventory capability in an ungranted tenant", () =>
-    withInventory(Effect.gen(function* () {
+    withInventory(Effect.gen(function*() {
       const inventory = yield* InventoryService
       assert.instanceOf(
         yield* Effect.flip(inventory.createWarehouse({
@@ -338,7 +338,7 @@ describe("inventory contract", () => {
     })))
 
   it.effect("receives and atomically reserves available stock", () =>
-    withInventory(Effect.gen(function* () {
+    withInventory(Effect.gen(function*() {
       const inventory = yield* InventoryService
       const warehouse = yield* inventory.createWarehouse({
         principal,
@@ -435,7 +435,7 @@ describe("inventory contract", () => {
     })))
 
   it.effect("lists tenant-scoped inventory projections and append-only movement history", () =>
-    withInventory(Effect.gen(function* () {
+    withInventory(Effect.gen(function*() {
       const inventory = yield* InventoryService
       const warehouse = yield* inventory.createWarehouse({
         principal,
@@ -491,7 +491,7 @@ describe("inventory contract", () => {
     })))
 
   it.effect("validates receive warehouse legal entity when supplied", () =>
-    withInventory(Effect.gen(function* () {
+    withInventory(Effect.gen(function*() {
       const inventory = yield* InventoryService
       const warehouse = yield* inventory.createWarehouse({
         principal,
@@ -530,7 +530,7 @@ describe("inventory contract", () => {
     })))
 
   it.effect("applies normalized UOM corrections once and preserves reserved stock", () =>
-    withInventory(Effect.gen(function* () {
+    withInventory(Effect.gen(function*() {
       const inventory = yield* InventoryService
       const invalidTenant = yield* Effect.flip(
         Schema.decodeUnknownEffect(AdjustStockInput)({
@@ -664,7 +664,7 @@ describe("inventory contract", () => {
   it.effect("stock corrected atomic publication preserves metadata and one event on retry", () => {
     const events: EventEnvelope[] = []
     return withInventory(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const inventory = yield* InventoryService
         const warehouse = yield* inventory.createWarehouse({
           principal,
@@ -731,7 +731,7 @@ describe("inventory contract", () => {
 
   it.effect("stock corrected atomic publication rolls back when messaging append fails", () =>
     withInventory(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const inventory = yield* InventoryService
         const warehouse = yield* inventory.createWarehouse({
           principal,
@@ -783,7 +783,7 @@ describe("inventory contract", () => {
 
   it.effect("requires the stock adjustment capability", () =>
     withInventory(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const inventory = yield* InventoryService
         assert.instanceOf(
           yield* Effect.flip(inventory.adjustStock({
@@ -804,7 +804,7 @@ describe("inventory contract", () => {
     ))
 
   it.effect("releases and fulfills active reservations exactly once", () =>
-    withInventory(Effect.gen(function* () {
+    withInventory(Effect.gen(function*() {
       const inventory = yield* InventoryService
       const warehouse = yield* inventory.createWarehouse({
         principal,
@@ -913,7 +913,7 @@ describe("inventory contract", () => {
     })))
 
   it.effect("rejects an idempotency key reused for different stock", () =>
-    withInventory(Effect.gen(function* () {
+    withInventory(Effect.gen(function*() {
       const inventory = yield* InventoryService
       const warehouse = yield* inventory.createWarehouse({
         principal,
@@ -955,7 +955,7 @@ describe("inventory contract", () => {
     })))
 
   it.effect("rejects reservations above available stock", () =>
-    withInventory(Effect.gen(function* () {
+    withInventory(Effect.gen(function*() {
       const inventory = yield* InventoryService
       const warehouse = yield* inventory.createWarehouse({
         principal,
@@ -980,7 +980,7 @@ describe("inventory contract", () => {
     })))
 
   it.effect("moves multiple items only across the confirmed and completed states", () =>
-    withInventory(Effect.gen(function* () {
+    withInventory(Effect.gen(function*() {
       const inventory = yield* InventoryService
       const source = yield* inventory.createWarehouse({
         principal,
@@ -1140,7 +1140,7 @@ describe("inventory contract", () => {
     })))
 
   it.effect("rejects transfers across legal entities", () =>
-    withInventory(Effect.gen(function* () {
+    withInventory(Effect.gen(function*() {
       const inventory = yield* InventoryService
       const source = yield* inventory.createWarehouse({
         principal,
@@ -1171,7 +1171,7 @@ describe("inventory contract", () => {
 
   it.effect("requires a capability to confirm a transfer", () =>
     withInventory(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const inventory = yield* InventoryService
         const source = yield* inventory.createWarehouse({
           principal,
@@ -1212,7 +1212,7 @@ describe("inventory contract", () => {
 
   it.effect("requires a separate capability to complete a transfer", () =>
     withInventory(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const inventory = yield* InventoryService
         const source = yield* inventory.createWarehouse({
           principal,

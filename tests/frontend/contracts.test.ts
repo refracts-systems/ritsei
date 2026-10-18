@@ -1,8 +1,19 @@
-import { readFileSync } from "node:fs"
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import { readFileSync } from "node:fs"
 
+import {
+  Account as BrowserAccountingAccount,
+  AccountingConfiguration as BrowserAccountingConfiguration,
+  accountingRoutes,
+  JournalEntry as BrowserAccountingJournalEntry,
+} from "../../apps/web/src/shared/contracts/generated/accounting.ts"
+import {
+  AuthConfiguration as BrowserAuthConfiguration,
+  authRoutes,
+  AuthSession as BrowserAuthSession,
+} from "../../apps/web/src/shared/contracts/generated/auth.ts"
 import {
   AddTenantMembershipInput as BrowserAddTenantMembershipInput,
   authorizationRoutes,
@@ -13,17 +24,31 @@ import {
   TenantMembership as BrowserTenantMembership,
 } from "../../apps/web/src/shared/contracts/generated/authorization.ts"
 import {
-  AuthConfiguration as BrowserAuthConfiguration,
-  authRoutes,
-  AuthSession as BrowserAuthSession,
-} from "../../apps/web/src/shared/contracts/generated/auth.ts"
-import {
   ApiError,
   CreateUserAccountInput as BrowserCreateUserAccountInput,
   UpdateUserAccountInput as BrowserUpdateUserAccountInput,
   UserAccount as BrowserUserAccount,
   userAccountRoutes,
 } from "../../apps/web/src/shared/contracts/generated/identity.ts"
+import {
+  inventoryRoutes,
+  Item as BrowserInventoryItem,
+  StockBalance as BrowserInventoryStockBalance,
+  Warehouse as BrowserInventoryWarehouse,
+} from "../../apps/web/src/shared/contracts/generated/inventory.ts"
+import {
+  ListPartiesInput as BrowserListPartiesInput,
+  Party as BrowserParty,
+  PartyDetail as BrowserPartyDetail,
+  PartyDirectoryEntry as BrowserPartyDirectoryEntry,
+  partyRoutes,
+} from "../../apps/web/src/shared/contracts/generated/party.ts"
+import { processRoutes } from "../../apps/web/src/shared/contracts/generated/process.ts"
+import {
+  Customer as BrowserSalesCustomer,
+  SalesOrder as BrowserSalesOrder,
+  salesRoutes,
+} from "../../apps/web/src/shared/contracts/generated/sales.ts"
 import {
   CapabilityCatalog,
   CapabilityDefinitions,
@@ -45,13 +70,6 @@ import {
   RitseiApi,
 } from "../../runtime/api/api.ts"
 import {
-  ListPartiesInput as BrowserListPartiesInput,
-  Party as BrowserParty,
-  PartyDetail as BrowserPartyDetail,
-  PartyDirectoryEntry as BrowserPartyDirectoryEntry,
-  partyRoutes,
-} from "../../apps/web/src/shared/contracts/generated/party.ts"
-import {
   accountingSource,
   authorizationSource,
   authSource,
@@ -61,24 +79,6 @@ import {
   salesSource,
   source,
 } from "../../tooling/frontend/contracts.ts"
-import {
-  inventoryRoutes,
-  Item as BrowserInventoryItem,
-  StockBalance as BrowserInventoryStockBalance,
-  Warehouse as BrowserInventoryWarehouse,
-} from "../../apps/web/src/shared/contracts/generated/inventory.ts"
-import {
-  Customer as BrowserSalesCustomer,
-  SalesOrder as BrowserSalesOrder,
-  salesRoutes,
-} from "../../apps/web/src/shared/contracts/generated/sales.ts"
-import {
-  Account as BrowserAccountingAccount,
-  AccountingConfiguration as BrowserAccountingConfiguration,
-  accountingRoutes,
-  JournalEntry as BrowserAccountingJournalEntry,
-} from "../../apps/web/src/shared/contracts/generated/accounting.ts"
-import { processRoutes } from "../../apps/web/src/shared/contracts/generated/process.ts"
 
 const id = "01900000-0000-7000-8000-000000000001"
 const emails = [
@@ -192,7 +192,7 @@ it("generates deterministic browser-only contracts and canonical endpoint paths"
     processSource(),
   )
   assert.notInclude(processSource(), "modules/")
-  assert.notInclude(processSource(), 'from "../../runtime/')
+  assert.notInclude(processSource(), "from \"../../runtime/")
   assert.deepEqual(authRoutes, {
     config: RitseiApi.groups.Authentication.endpoints.config.path,
     devLogin: RitseiApi.groups.Authentication.endpoints.devLogin.path,
@@ -306,7 +306,7 @@ it("generates deterministic browser-only contracts and canonical endpoint paths"
 it.effect("preserves canonical whitespace, Unicode and case validation in browser decoders", () =>
   // Fallow: this contract test intentionally iterates the complete canonical decoder matrix.
   // fallow-ignore-next-line complexity
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     for (const email of emails) {
       const input = { id, email, status: "active" }
       const account = yield* Effect.result(Schema.decodeUnknownEffect(UserAccount)(input))
@@ -357,7 +357,7 @@ it.effect("preserves canonical whitespace, Unicode and case validation in browse
   }))
 
 it.effect("preserves Party projection validation in browser decoders", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const party = {
       id,
       tenantId: "01900000-0000-7000-8000-000000000002",
@@ -405,7 +405,7 @@ it.effect("preserves Party projection validation in browser decoders", () =>
   }))
 
 it.effect("preserves Inventory projection validation and tenant-shaped values", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const tenantId = "01900000-0000-7000-8000-000000000002"
     const warehouse = {
       id,
@@ -446,7 +446,7 @@ it.effect("preserves Inventory projection validation and tenant-shaped values", 
   }))
 
 it.effect("preserves Sales projection validation and tenant-shaped values", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const tenantId = "01900000-0000-7000-8000-000000000002"
     const customer = { id, tenantId, name: "Sales Customer", email: "sales@example.test" }
     const order = {
@@ -476,7 +476,7 @@ it.effect("preserves Sales projection validation and tenant-shaped values", () =
   }))
 
 it.effect("preserves Accounting projection and exact-money validation", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const tenantId = "01900000-0000-7000-8000-000000000002"
     const legalEntityId = "01900000-0000-7000-8000-000000000003"
     const accountId = "01900000-0000-7000-8000-000000000004"
@@ -534,7 +534,7 @@ it.effect("preserves Accounting projection and exact-money validation", () =>
   }))
 
 it.effect("preserves Authorization membership, grant, and catalog validation", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const tenantId = "01900000-0000-7000-8000-000000000002"
     const membership = { userAccountId: id, tenantId, status: "active" }
     const grant = {
@@ -583,7 +583,7 @@ it.effect("preserves Authorization membership, grant, and catalog validation", (
   }))
 
 it.effect("generates the canonical HTTP error wire union without backend error classes", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const canonical = Schema.Union([
       ApiUnauthorized,
       ApiForbidden,

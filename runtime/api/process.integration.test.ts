@@ -1,12 +1,12 @@
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import * as FileSystem from "effect/FileSystem"
-import * as Layer from "effect/Layer"
-import * as HttpClientRequest from "effect/http/HttpClientRequest"
-import * as Path from "effect/Path"
 import { Etag, HttpPlatform } from "effect/http"
 import * as HttpApiMiddleware from "effect/http-api/HttpApiMiddleware"
 import * as HttpApiTest from "effect/http-api/HttpApiTest"
+import * as HttpClientRequest from "effect/http/HttpClientRequest"
+import * as Layer from "effect/Layer"
+import * as Path from "effect/Path"
 
 import {
   type ProcessCatalogDescriptorType,
@@ -134,7 +134,7 @@ const TestHttpServices = Layer.mergeAll(
 
 it.layer(TestHttpServices)("Process API", (it) => {
   it.effect("forwards tenant-scoped typed requests through the Process Studio contract", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const observed: unknown[] = []
       const studio: ProcessStudioServiceShape = {
         listCatalog: (input) => {

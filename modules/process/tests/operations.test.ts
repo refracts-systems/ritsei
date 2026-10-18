@@ -36,7 +36,7 @@ const baseCheckpoint = {
 } as const
 
 it.effect("distinguishes unknown external outcome from manual recovery", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const checkpoint = yield* Schema.decodeUnknownEffect(ProcessCheckpoint)(baseCheckpoint)
     const operator = makeProcessOperatorService()
     const snapshot = operator.inspect(checkpoint)
@@ -49,7 +49,7 @@ it.effect("distinguishes unknown external outcome from manual recovery", () =>
   }))
 
 it.effect("exposes a typed operator control for retry and compensation", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const checkpoint = yield* Schema.decodeUnknownEffect(ProcessCheckpoint)({
       ...baseCheckpoint,
       status: "running",

@@ -224,11 +224,11 @@ const sameAccountInput = (
   left: CreateExecutionAccountInput,
   right: CreateExecutionAccountInput,
 ) =>
-  left.tenantId === right.tenantId && left.legalEntityId === right.legalEntityId &&
-  left.accountId === right.accountId &&
-  left.currency.toUpperCase() === right.currency.toUpperCase() &&
-  left.mappingVersion === right.mappingVersion &&
-  (left.balanceConstraint ?? "none") === (right.balanceConstraint ?? "none")
+  left.tenantId === right.tenantId && left.legalEntityId === right.legalEntityId
+  && left.accountId === right.accountId
+  && left.currency.toUpperCase() === right.currency.toUpperCase()
+  && left.mappingVersion === right.mappingVersion
+  && (left.balanceConstraint ?? "none") === (right.balanceConstraint ?? "none")
 
 const violatesConstraint = (
   account: CreateExecutionAccountInput,
@@ -257,8 +257,8 @@ const validateJournal = (
     const lineDebit = parseMinor(line.debitMinor)
     const lineCredit = parseMinor(line.creditMinor)
     if (
-      lineDebit > U128_MAX || lineCredit > U128_MAX ||
-      (lineDebit > 0n) === (lineCredit > 0n)
+      lineDebit > U128_MAX || lineCredit > U128_MAX
+      || (lineDebit > 0n) === (lineCredit > 0n)
     ) {
       return { _tag: "rejected", operationId: input.operationId, reason: "invalid_amount" }
     }
@@ -292,7 +292,7 @@ export const makeFinancialLedgerTestLayer = (options: TestAdapterOptions = {}) =
       return {
         authority: "tigerbeetle" as const,
         createExecutionAccount: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(CreateExecutionAccountInput)(input)
             const key = accountKey(decoded)
             const existing = accounts.get(key)
@@ -320,17 +320,18 @@ export const makeFinancialLedgerTestLayer = (options: TestAdapterOptions = {}) =
             }
           }),
         expectedTransferIds: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(PostFinancialJournalInput)(input)
             return expectedTestTransferIds(decoded)
           }),
         postJournal: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(PostFinancialJournalInput)(input)
             const failureKey = operationKey(decoded)
             if (
-              options.unavailableFor === decoded.operationId ||
-              options.unavailableOnceFor === decoded.operationId && !unavailableOnce.has(failureKey)
+              options.unavailableFor === decoded.operationId
+              || options.unavailableOnceFor === decoded.operationId
+                && !unavailableOnce.has(failureKey)
             ) {
               unavailableOnce.add(failureKey)
               return {
@@ -340,8 +341,8 @@ export const makeFinancialLedgerTestLayer = (options: TestAdapterOptions = {}) =
               }
             }
             if (
-              options.failBeforeSubmissionFor === decoded.operationId &&
-              !failedBefore.has(failureKey)
+              options.failBeforeSubmissionFor === decoded.operationId
+              && !failedBefore.has(failureKey)
             ) {
               failedBefore.add(failureKey)
               return {
@@ -353,18 +354,18 @@ export const makeFinancialLedgerTestLayer = (options: TestAdapterOptions = {}) =
             const validation = validateJournal(decoded)
             if (validation !== undefined) return validation
             const accountInputs = [...accounts.values()].filter((account) =>
-              account.tenantId === decoded.tenantId &&
-              account.legalEntityId === decoded.legalEntityId &&
-              account.currency.toUpperCase() === decoded.currency.toUpperCase() &&
-              account.mappingVersion === decoded.mappingVersion
+              account.tenantId === decoded.tenantId
+              && account.legalEntityId === decoded.legalEntityId
+              && account.currency.toUpperCase() === decoded.currency.toUpperCase()
+              && account.mappingVersion === decoded.mappingVersion
             )
             const accountIds = new Set(
               [...accounts.values()]
                 .filter((account) =>
-                  account.tenantId === decoded.tenantId &&
-                  account.legalEntityId === decoded.legalEntityId &&
-                  account.currency.toUpperCase() === decoded.currency.toUpperCase() &&
-                  account.mappingVersion === decoded.mappingVersion
+                  account.tenantId === decoded.tenantId
+                  && account.legalEntityId === decoded.legalEntityId
+                  && account.currency.toUpperCase() === decoded.currency.toUpperCase()
+                  && account.mappingVersion === decoded.mappingVersion
                 )
                 .map((account) => account.accountId),
             )
@@ -417,8 +418,8 @@ export const makeFinancialLedgerTestLayer = (options: TestAdapterOptions = {}) =
                 creditsPostedMinor: current.creditsPostedMinor + BigInt(line.creditMinor),
               }
               if (
-                next.debitsPostedMinor > U128_MAX || next.creditsPostedMinor > U128_MAX ||
-                violatesConstraint(account, next)
+                next.debitsPostedMinor > U128_MAX || next.creditsPostedMinor > U128_MAX
+                || violatesConstraint(account, next)
               ) {
                 return {
                   _tag: "rejected" as const,
@@ -431,8 +432,8 @@ export const makeFinancialLedgerTestLayer = (options: TestAdapterOptions = {}) =
             if (
               pairs.length === 0 || decoded.lines.some((line) => {
                 const debit = BigInt(line.debitMinor)
-                return debit > 0n &&
-                  decoded.lines.some((candidate) =>
+                return debit > 0n
+                  && decoded.lines.some((candidate) =>
                     candidate.accountId === line.accountId && BigInt(candidate.creditMinor) > 0n
                   )
               })
@@ -468,7 +469,7 @@ export const makeFinancialLedgerTestLayer = (options: TestAdapterOptions = {}) =
             return outcome
           }),
         reconcileJournal: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(PostFinancialJournalInput)(input)
             if (options.unavailableFor === decoded.operationId) {
               return {
@@ -499,7 +500,7 @@ export const makeFinancialLedgerTestLayer = (options: TestAdapterOptions = {}) =
             }
           }),
         getBalance: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(GetFinancialBalanceInput)(input)
             const exists = [...accounts.values()].some((account) =>
               accountKey(account) === accountKey(decoded)

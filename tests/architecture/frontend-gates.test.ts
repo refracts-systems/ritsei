@@ -76,7 +76,7 @@ describe("frontend gate evidence", () => {
         "null",
         "[]",
         "{}",
-        '{"testResults":{}}',
+        "{\"testResults\":{}}",
         report(null),
         report({ name: "test.ts", status: "passed" }),
         report({ ...suite(), assertionResults: [null] }),
@@ -138,7 +138,7 @@ describe("frontend gate evidence", () => {
       dependencyPolicy: {
         pinned: true,
         automaticUpgrades: false,
-        lockfile: "deno.lock",
+        lockfile: "pnpm-lock.yaml",
       },
       productionApproval: {
         status: "not_activated",

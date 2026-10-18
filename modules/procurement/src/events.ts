@@ -1,7 +1,7 @@
 import * as Schema from "effect/Schema"
 
-import { defineEventCatalogEntry } from "../../catalog/mod.ts"
 import { FinancialMajorAmount } from "../../../foundation/mod.ts"
+import { defineEventCatalogEntry } from "../../catalog/mod.ts"
 
 const Uuid = Schema.String.check(Schema.isUUID())
 

@@ -66,12 +66,12 @@ const sameControl = (
   control: ProcessOperatorControl,
   input: ProcessOperatorControlInputType,
 ): boolean =>
-  control.tenantId === input.tenantId &&
-  control.instanceId === input.instanceId &&
-  control.action === input.action &&
-  control.actorPrincipalId === input.actorPrincipalId &&
-  control.idempotencyKey === input.idempotencyKey &&
-  control.reason === input.reason
+  control.tenantId === input.tenantId
+  && control.instanceId === input.instanceId
+  && control.action === input.action
+  && control.actorPrincipalId === input.actorPrincipalId
+  && control.idempotencyKey === input.idempotencyKey
+  && control.reason === input.reason
 
 type RecordResult =
   | { readonly _tag: "Recorded"; readonly control: ProcessOperatorControl }
@@ -103,11 +103,11 @@ const recordRow = async (
   return { _tag: "Recorded", control: toControl(rows[0]!) }
 }
 
-export const makePostgresProcessOperatorStore = Effect.gen(function* () {
+export const makePostgresProcessOperatorStore = Effect.gen(function*() {
   const database = yield* Database
   return {
     record: (input: unknown) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(ProcessOperatorControlInput)(input)
         const result = yield* database.transaction(
           (transaction) => recordRow(transaction, decoded),
@@ -153,7 +153,7 @@ export const makeMemoryProcessOperatorStore = (): ProcessOperatorStore => {
   const controls = new Map<string, ProcessOperatorControl>()
   return {
     record: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(ProcessOperatorControlInput)(input)
         const key = `${decoded.tenantId}:${decoded.idempotencyKey}`
         const existing = controls.get(key)

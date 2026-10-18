@@ -2,6 +2,19 @@ import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 
 import {
+  connectionTenant,
+  decodeInput,
+  decodeResponse,
+  definedFields,
+  mutationRequest,
+  querySuffix,
+  RequestFailure,
+  requestJson,
+  responseListMatches,
+  responseMatches,
+  routeWithId,
+} from "../../shared/api.ts"
+import {
   ListProcessCatalogInput,
   ListProcessOperatorControlsInput,
   ListProcessOperatorInboxInput,
@@ -17,19 +30,6 @@ import {
   ProcessWorkflowRun,
   ValidateProcessDefinitionInput,
 } from "../../shared/contracts/generated/process.ts"
-import {
-  connectionTenant,
-  decodeInput,
-  decodeResponse,
-  definedFields,
-  mutationRequest,
-  querySuffix,
-  RequestFailure,
-  requestJson,
-  responseListMatches,
-  responseMatches,
-  routeWithId,
-} from "../../shared/api.ts"
 
 const Uuid = Schema.String.check(Schema.isUUID())
 const CatalogList = Schema.Array(ProcessCatalogDescriptor).check(Schema.isMaxLength(200))
@@ -50,14 +50,14 @@ const validProcessValidation = (
     definitionId: expected.definitionId,
     definitionVersion: expected.definitionVersion,
     catalogVersion: expected.catalogVersion,
-  }) &&
-  validation.references.length === expected.references.length &&
-  validation.references.every((reference, index) =>
+  })
+  && validation.references.length === expected.references.length
+  && validation.references.every((reference, index) =>
     responseMatches(reference, expected.references[index]!)
   )
 
 export const listCatalog = Effect.fn("Frontend.Process.listCatalog")(
-  function* (input: unknown = {}) {
+  function*(input: unknown = {}) {
     const decoded = yield* decodeInput(ListProcessCatalogInput, input)
     const body = yield* requestJson(`${processRoutes.listCatalog}${querySuffix(decoded)}`)
     return yield* decodeResponse(CatalogList, body)
@@ -65,7 +65,7 @@ export const listCatalog = Effect.fn("Frontend.Process.listCatalog")(
 )
 
 export const validateDefinition = Effect.fn("Frontend.Process.validateDefinition")(
-  function* (input: unknown) {
+  function*(input: unknown) {
     const decoded = yield* decodeInput(ValidateProcessDefinitionInput, input)
     const body = yield* requestJson(processRoutes.validateDefinition, "POST", decoded)
     const validation = yield* decodeResponse(ProcessStaticValidation, body)
@@ -77,7 +77,7 @@ export const validateDefinition = Effect.fn("Frontend.Process.validateDefinition
 )
 
 export const listRuntimeInstances = Effect.fn("Frontend.Process.listRuntimeInstances")(
-  function* (input: unknown = {}) {
+  function*(input: unknown = {}) {
     const decoded = yield* decodeInput(ListProcessRuntimeInstancesInput, input)
     const body = yield* requestJson(`${processRoutes.listRuntimeInstances}${querySuffix(decoded)}`)
     const instances = yield* decodeResponse(RuntimeList, body)
@@ -95,7 +95,7 @@ export const listRuntimeInstances = Effect.fn("Frontend.Process.listRuntimeInsta
 )
 
 export const listWorkflowRuns = Effect.fn("Frontend.Process.listWorkflowRuns")(
-  function* (input: unknown = {}) {
+  function*(input: unknown = {}) {
     const decoded = yield* decodeInput(ListProcessWorkflowRunsInput, input)
     const body = yield* requestJson(`${processRoutes.listWorkflowRuns}${querySuffix(decoded)}`)
     const runs = yield* decodeResponse(WorkflowList, body)
@@ -113,14 +113,14 @@ export const listWorkflowRuns = Effect.fn("Frontend.Process.listWorkflowRuns")(
 )
 
 export const listOperatorInbox = Effect.fn("Frontend.Process.listOperatorInbox")(
-  function* (input: unknown = {}) {
+  function*(input: unknown = {}) {
     const decoded = yield* decodeInput(ListProcessOperatorInboxInput, input)
     const body = yield* requestJson(`${processRoutes.listOperatorInbox}${querySuffix(decoded)}`)
     const inbox = yield* decodeResponse(Inbox, body)
     const connection = yield* connectionTenant
     if (
-      !responseListMatches(inbox.runtimeInstances, { tenantId: connection.tenantId }) ||
-      !responseListMatches(inbox.jobs, { tenantId: connection.tenantId })
+      !responseListMatches(inbox.runtimeInstances, { tenantId: connection.tenantId })
+      || !responseListMatches(inbox.jobs, { tenantId: connection.tenantId })
     ) {
       return yield* Effect.fail(new RequestFailure({ kind: "invalid-response" }))
     }
@@ -129,7 +129,7 @@ export const listOperatorInbox = Effect.fn("Frontend.Process.listOperatorInbox")
 )
 
 export const listOperatorControls = Effect.fn("Frontend.Process.listOperatorControls")(
-  function* (input: unknown = {}) {
+  function*(input: unknown = {}) {
     const decoded = yield* decodeInput(ListProcessOperatorControlsInput, input)
     const body = yield* requestJson(`${processRoutes.listOperatorControls}${querySuffix(decoded)}`)
     const controls = yield* decodeResponse(ControlList, body)
@@ -147,7 +147,7 @@ export const listOperatorControls = Effect.fn("Frontend.Process.listOperatorCont
 )
 
 export const operateRuntime = Effect.fn("Frontend.Process.operateRuntime")(
-  function* (instanceId: unknown, input: unknown) {
+  function*(instanceId: unknown, input: unknown) {
     const decodedId = yield* decodeInput(Uuid, instanceId)
     const decoded = yield* decodeInput(OperateRuntimeInput, input)
     const body = yield* mutationRequest(

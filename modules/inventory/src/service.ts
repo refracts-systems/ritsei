@@ -6,7 +6,7 @@ import { makeInventoryPostgresService } from "./postgres.ts"
 export const makeInventoryServiceFromStore = <R>(
   store: Effect.Effect<InventoryService, never, R>,
 ): Effect.Effect<InventoryService, never, R> =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const implementation = yield* store
     return {
       listWarehouses: Effect.fn("InventoryService.listWarehouses")((input: unknown) =>

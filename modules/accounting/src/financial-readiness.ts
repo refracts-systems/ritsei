@@ -646,7 +646,7 @@ const sumBalance = (
 export const buildFinancialVerificationEvidence = (
   input: FinancialVerificationEvidenceSource,
 ) =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const comparison = compareFinancialFactSnapshots(input.source, input.target)
     const canonicalSource = canonicalizeFinancialFactSnapshot(input.source)
     const [operationSetHash, accountBalanceHash, transferSetHash, projectionHash] = yield* Effect
@@ -725,10 +725,10 @@ export const verifyOpeningBalances = (
       return sourceEntry[field] !== targetEntry[field]
     })
     if (
-      amount(sourceEntry.debitsMinor) === undefined ||
-      amount(sourceEntry.creditsMinor) === undefined ||
-      amount(targetEntry.debitsMinor) === undefined ||
-      amount(targetEntry.creditsMinor) === undefined
+      amount(sourceEntry.debitsMinor) === undefined
+      || amount(sourceEntry.creditsMinor) === undefined
+      || amount(targetEntry.debitsMinor) === undefined
+      || amount(targetEntry.creditsMinor) === undefined
     ) {
       mismatches.push({ key, kind: "invalid_amount", source: sourceEntry, target: targetEntry })
     } else if (fields.length > 0) {
@@ -747,8 +747,8 @@ export const verifyOpeningBalances = (
   const sourceCreditMinor = sum(source, "creditsMinor").toString()
   const targetCreditMinor = sum(target, "creditsMinor").toString()
   return {
-    ok: mismatches.length === 0 && sourceDebitMinor === targetDebitMinor &&
-      sourceCreditMinor === targetCreditMinor,
+    ok: mismatches.length === 0 && sourceDebitMinor === targetDebitMinor
+      && sourceCreditMinor === targetCreditMinor,
     sourceCount: source.length,
     targetCount: target.length,
     sourceDebitMinor,

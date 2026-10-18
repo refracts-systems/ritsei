@@ -12,10 +12,10 @@ export type {
   CommunicationProcessingResult as CommunicationProcessingResultShape,
   CommunicationService as CommunicationServiceShape,
 } from "./src/contract.ts"
-export type { CommunicationTestLayerOptions } from "./src/layers.ts"
 export {
   CommunicationNotFound,
   CommunicationStateFailure,
   UnsupportedCommunicationEvent,
 } from "./src/errors.ts"
+export type { CommunicationTestLayerOptions } from "./src/layers.ts"
 export { makeCommunicationTestLayer } from "./src/layers.ts"

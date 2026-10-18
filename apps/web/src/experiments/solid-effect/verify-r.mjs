@@ -17,8 +17,8 @@ import {
   createRoot,
   flush,
 } from "solid-js"
-import { createRuntime, runEffect, RuntimeContext } from "./.verify/solid-effect.js"
 import { SearchConfigLive, searchPackages } from "./.verify/api.js"
+import { createRuntime, runEffect, RuntimeContext } from "./.verify/solid-effect.js"
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
@@ -68,9 +68,9 @@ const withoutProvider = await Promise.race([
 ])
 console.log("without provider:", JSON.stringify(withoutProvider))
 
-const pass = withProvider.ok === true &&
-  withProvider.count > 0 &&
-  withoutProvider.ok === false &&
-  /MissingRuntimeContext|RuntimeContext/.test(withoutProvider.error)
+const pass = withProvider.ok === true
+  && withProvider.count > 0
+  && withoutProvider.ok === false
+  && /MissingRuntimeContext|RuntimeContext/.test(withoutProvider.error)
 console.log(pass ? "PASS" : "FAIL")
 process.exit(pass ? 0 : 1)

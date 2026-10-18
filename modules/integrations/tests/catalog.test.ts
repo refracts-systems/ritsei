@@ -33,7 +33,7 @@ const createPayment = defineExternalAction({
 })
 
 it.effect("simulates an allowlisted external catalog action without side effects", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const result = yield* simulateWithoutSideEffect({
       tenantId: "018f3f77-0c5a-7cc0-8b62-6a163d214123",
       action: createPayment,
@@ -48,7 +48,7 @@ it.effect("simulates an allowlisted external catalog action without side effects
   }))
 
 it.effect("rejects malformed catalog metadata and forged schemas before simulation", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     assert.isFalse(validateExternalActionDefinition({
       ...createPayment,
       timeoutPolicy: { timeoutMs: 0 },
@@ -64,7 +64,7 @@ it.effect("rejects malformed catalog metadata and forged schemas before simulati
   }))
 
 it.effect("keeps transport absent from Process IR and uses a separate OAuth scope", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const result = yield* simulateWithoutSideEffect({
       tenantId: "018f3f77-0c5a-7cc0-8b62-6a163d214123",
       action: createPayment,
@@ -77,7 +77,7 @@ it.effect("keeps transport absent from Process IR and uses a separate OAuth scop
   }))
 
 it.effect("rejects invalid simulation input", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const failure = yield* Effect.flip(simulateWithoutSideEffect({
       tenantId: "018f3f77-0c5a-7cc0-8b62-6a163d214123",
       action: createPayment,

@@ -5,15 +5,15 @@ import type { Sql } from "postgres"
 
 import { Database, uuidv7 } from "../../../foundation/mod.ts"
 import { makePostgresDatabase, runMigrations } from "../../../platform/mod.ts"
+import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
 import {
   makePostgresProcessCheckpointStore,
   makeProcessRuntime,
   ProcessCheckpoint,
   ProcessCheckpointRevisionConflict,
 } from "../mod.ts"
-import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
 
-const databaseUrl = Deno.env.get("DATABASE_URL")
+const databaseUrl = process.env["DATABASE_URL"]
 
 const makeCheckpoint = (tenantId: string) => ({
   instanceId: uuidv7(),
@@ -39,7 +39,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "proves crash recovery and restart with duplicate event safety and exact catalog version",
   () =>
     withTemporaryDatabase(databaseUrl!, (client: Sql) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const [tenant] = yield* Effect.promise(() =>
           client<{ id: string }[]>`

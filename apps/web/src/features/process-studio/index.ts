@@ -1,5 +1,3 @@
-export { mountProcessDesigner } from "./designer.ts"
-export type { ProcessDesignerMount } from "./designer.ts"
 export {
   addNode,
   addTypedMapping,
@@ -22,6 +20,8 @@ export type {
   ProcessDesignIr,
   TypedMapping,
 } from "./designer-model.ts"
+export { mountProcessDesigner } from "./designer.ts"
+export type { ProcessDesignerMount } from "./designer.ts"
 export {
   getProcessStudioTemplate,
   makeProcessStudioDraft,

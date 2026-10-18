@@ -16,7 +16,7 @@ it("validates the framework-neutral Boneyard core API", () => {
 it.effect(
   "keeps React and Playwright out of the production core bundle",
   () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const result = yield* Effect.promise(probeBoneyardCoreCompatibility)
 
       assert.equal(result.build, "passed")

@@ -26,7 +26,8 @@ export class PartyRelationshipAlreadyExists
       legalEntityId: Uuid,
       kind: Schema.Literals(["customer", "supplier", "employee", "partner"]),
     },
-  ) {}
+  )
+{}
 export class PartyRelationshipRoleNotAssigned
   extends Schema.TaggedError<PartyRelationshipRoleNotAssigned>()(
     "PartyRelationshipRoleNotAssigned",
@@ -35,7 +36,8 @@ export class PartyRelationshipRoleNotAssigned
       partyId: Uuid,
       kind: Schema.Literals(["customer", "supplier", "employee", "partner"]),
     },
-  ) {}
+  )
+{}
 export class PartyRelationshipNotFound extends Schema.TaggedError<PartyRelationshipNotFound>()(
   "PartyRelationshipNotFound",
   { tenantId: Uuid, relationshipId: Uuid },
@@ -51,7 +53,8 @@ export class ExternalIdentifierAlreadyAssigned
       legalEntityId: Schema.NullOr(Uuid),
       value: Schema.String,
     },
-  ) {}
+  )
+{}
 export class OrganizationRequired extends Schema.TaggedError<OrganizationRequired>()(
   "OrganizationRequired",
   { tenantId: Uuid, partyId: Uuid },
@@ -72,7 +75,8 @@ export class PartyRepresentationUserAccountNotFound
   extends Schema.TaggedError<PartyRepresentationUserAccountNotFound>()(
     "PartyRepresentationUserAccountNotFound",
     { tenantId: Uuid, userAccountId: Uuid },
-  ) {}
+  )
+{}
 export class PartyRepresentationAlreadyExists
   extends Schema.TaggedError<PartyRepresentationAlreadyExists>()(
     "PartyRepresentationAlreadyExists",
@@ -82,7 +86,8 @@ export class PartyRepresentationAlreadyExists
       partyId: Uuid,
       kind: Schema.String,
     },
-  ) {}
+  )
+{}
 export class PartyRepresentationNotFound extends Schema.TaggedError<PartyRepresentationNotFound>()(
   "PartyRepresentationNotFound",
   { tenantId: Uuid, representationId: Uuid },

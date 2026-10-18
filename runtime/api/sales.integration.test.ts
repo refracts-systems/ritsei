@@ -1,16 +1,16 @@
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import * as FileSystem from "effect/FileSystem"
-import * as Layer from "effect/Layer"
-import * as HttpClientRequest from "effect/http/HttpClientRequest"
-import * as Path from "effect/Path"
 import { Etag, HttpPlatform } from "effect/http"
 import * as HttpApiMiddleware from "effect/http-api/HttpApiMiddleware"
 import * as HttpApiTest from "effect/http-api/HttpApiTest"
+import * as HttpClientRequest from "effect/http/HttpClientRequest"
+import * as Layer from "effect/Layer"
+import * as Path from "effect/Path"
 
+import { SalesService, type SalesService as SalesServiceContract } from "../../modules/sales/mod.ts"
 import { BearerAuth, CurrentPrincipal, RitseiApi } from "./api.ts"
 import { SalesHandlers } from "./handlers.ts"
-import { SalesService, type SalesService as SalesServiceContract } from "../../modules/sales/mod.ts"
 
 const tenantId = "018f2000-0000-7000-8000-000000000001"
 const customerId = "018f2000-0000-7000-8000-000000000002"
@@ -76,7 +76,7 @@ const TestHttpServices = Layer.mergeAll(
 
 it.layer(TestHttpServices)("sales API contracts", (it) => {
   it.effect("forwards tenant and bearer context across Sales reads and commands", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const observedInput: { value?: unknown } = {}
       const bearer = Layer.succeed(BearerAuth, {
         bearer: (effect) => Effect.provideService(effect, CurrentPrincipal, principal),

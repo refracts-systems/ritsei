@@ -69,14 +69,14 @@ Run focused contract tests first, then repository policy checks.
 # Deterministic Tools
 
 ```sh
-deno task skills:check
-deno task boundary:test
-deno task boundary:lint
-deno task check:affected
-deno task check
+pnpm run skills:check
+pnpm run boundary:test
+pnpm run boundary:lint
+pnpm run check:affected
+pnpm run check
 ```
 
-Use `deno task db:generate` and `deno task db:check` only when the domain owns persistence changes. No domain scaffolding generator exists; copying semantic boilerplate would hide decisions that must be made explicitly.
+Use `pnpm run db:generate` and `pnpm run db:check` only when the domain owns persistence changes. No domain scaffolding generator exists; copying semantic boilerplate would hide decisions that must be made explicitly.
 
 # Required Checks
 

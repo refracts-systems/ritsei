@@ -27,12 +27,12 @@ describe("architecture boundaries", () => {
     }
     assert.deepStrictEqual(
       frontend(
-        'import { Dialog } from "@kobalte/core/dialog"; import { css } from "./generated/css"',
+        "import { Dialog } from \"@kobalte/core/dialog\"; import { css } from \"./generated/css\"",
         "apps/web/src/ui/button.tsx",
       ),
       [],
     )
-    assert.deepStrictEqual(frontend('import { Button } from "../../ui/mod.ts"'), [])
+    assert.deepStrictEqual(frontend("import { Button } from \"../../ui/mod.ts\""), [])
   })
 
   it("requires leaf RITSEI UI imports instead of catch-all barrels", () => {
@@ -40,7 +40,7 @@ describe("architecture boundaries", () => {
       assert.isNotEmpty(frontend(`import { value } from "${specifier}"`), specifier)
     }
     assert.deepStrictEqual(
-      frontend('import { layout } from "../../ui/foundations/layout.ts"'),
+      frontend("import { layout } from \"../../ui/foundations/layout.ts\""),
       [],
     )
   })
@@ -67,7 +67,7 @@ describe("architecture boundaries", () => {
     }
     assert.deepStrictEqual(
       frontend(
-        'import type { Money } from "../shared/values/money.ts"',
+        "import type { Money } from \"../shared/values/money.ts\"",
         "apps/web/src/ui/button.tsx",
       ),
       [],
@@ -77,16 +77,16 @@ describe("architecture boundaries", () => {
   it("rejects backend runtime imports, reexports, mixed imports, and dynamic imports", () => {
     for (
       const source of [
-        'import { Identity } from "@ritsei/identity"',
-        'import { type User, Identity } from "@ritsei/identity"',
-        'export { Identity } from "@ritsei/identity"',
-        'export * from "@ritsei/identity"',
-        'import "@ritsei/identity"',
-        'const service = import("@ritsei/identity")',
-        'const service = require("@ritsei/identity")',
-        'import { Database } from "../../../../../foundation/mod.ts"',
-        'import type { Private } from "../../../../../modules/identity/src/service.ts"',
-        'import type { Database } from "../../../../../platform/postgres/mod.ts"',
+        "import { Identity } from \"@ritsei/identity\"",
+        "import { type User, Identity } from \"@ritsei/identity\"",
+        "export { Identity } from \"@ritsei/identity\"",
+        "export * from \"@ritsei/identity\"",
+        "import \"@ritsei/identity\"",
+        "const service = import(\"@ritsei/identity\")",
+        "const service = require(\"@ritsei/identity\")",
+        "import { Database } from \"../../../../../foundation/mod.ts\"",
+        "import type { Private } from \"../../../../../modules/identity/src/service.ts\"",
+        "import type { Database } from \"../../../../../platform/postgres/mod.ts\"",
       ]
     ) assert.isNotEmpty(frontend(source), source)
   })
@@ -94,14 +94,14 @@ describe("architecture boundaries", () => {
   it("allows erased public contract types and local generated runtime schemas", () => {
     for (
       const source of [
-        'import type { User } from "@ritsei/identity"',
-        'import { type User } from "@ritsei/identity"',
-        'export type { User } from "@ritsei/identity"',
-        'export { type User } from "@ritsei/identity"',
-        'type User = import("@ritsei/identity").User',
-        'import type { Value } from "../../../../../foundation/mod.ts"',
-        'import { User } from "../../shared/contracts/generated/identity.ts"',
-        '// import { Identity } from "@ritsei/identity"',
+        "import type { User } from \"@ritsei/identity\"",
+        "import { type User } from \"@ritsei/identity\"",
+        "export type { User } from \"@ritsei/identity\"",
+        "export { type User } from \"@ritsei/identity\"",
+        "type User = import(\"@ritsei/identity\").User",
+        "import type { Value } from \"../../../../../foundation/mod.ts\"",
+        "import { User } from \"../../shared/contracts/generated/identity.ts\"",
+        "// import { Identity } from \"@ritsei/identity\"",
       ]
     ) assert.deepStrictEqual(frontend(source), [], source)
   })
@@ -115,9 +115,9 @@ describe("architecture boundaries", () => {
         "apps/web/src/__fixtures__/example.ts",
         "apps/web/src/experiments/solid-effect/src/main.tsx",
       ]
-    ) assert.deepStrictEqual(frontend('import { Identity } from "@ritsei/identity"', path), [])
+    ) assert.deepStrictEqual(frontend("import { Identity } from \"@ritsei/identity\"", path), [])
     assert.isNotEmpty(frontend(
-      'import { Identity } from "@ritsei/identity"',
+      "import { Identity } from \"@ritsei/identity\"",
       "apps/web/src/experiments/production/main.tsx",
     ))
   })

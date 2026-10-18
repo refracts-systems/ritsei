@@ -31,7 +31,7 @@ const toStoredSession = (row: {
 const isMissingUserAccount = (error: unknown) =>
   isDatabaseConstraint(error, "sessions_user_account_id_fkey", "23503")
 
-export const makePostgresAuthStore = Effect.gen(function* () {
+export const makePostgresAuthStore = Effect.gen(function*() {
   const database = yield* Database
   const findTenantBySlug: AuthStore["findTenantBySlug"] = (slug) =>
     database.query(

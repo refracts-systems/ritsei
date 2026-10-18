@@ -1,5 +1,4 @@
 import { useLocation, useNavigate } from "@solidjs/router"
-import { logout as logoutSession } from "./auth-client.ts"
 import type { JSX } from "@solidjs/web"
 import {
   createMemo,
@@ -15,6 +14,7 @@ import {
 import { layout } from "../ui/foundations/layout.ts"
 import { ConfirmDialog } from "../ui/patterns/confirm-dialog.tsx"
 import { Button } from "../ui/primitives/button.tsx"
+import { logout as logoutSession } from "./auth-client.ts"
 import { SessionContext } from "./session.ts"
 
 type NavigationItem = Readonly<{
@@ -99,9 +99,9 @@ const compactTenantId = (tenantId: string): string =>
   `${tenantId.slice(0, 8)}…${tenantId.slice(-4)}`
 
 const isEditableTarget = (target: EventTarget | null): boolean =>
-  target instanceof HTMLInputElement ||
-  target instanceof HTMLTextAreaElement ||
-  (target instanceof HTMLElement && target.isContentEditable)
+  target instanceof HTMLInputElement
+  || target instanceof HTMLTextAreaElement
+  || (target instanceof HTMLElement && target.isContentEditable)
 
 function ContextItem(props: {
   label: string
@@ -203,9 +203,9 @@ export function ApplicationShell(props: { children: JSX.Element }) {
         return
       }
       if (
-        (event.metaKey || event.ctrlKey) &&
-        event.key.toLowerCase() === "b" &&
-        !isEditableTarget(event.target)
+        (event.metaKey || event.ctrlKey)
+        && event.key.toLowerCase() === "b"
+        && !isEditableTarget(event.target)
       ) {
         event.preventDefault()
         toggleNavigation()
@@ -341,8 +341,8 @@ export function ApplicationShell(props: { children: JSX.Element }) {
                           item={item}
                           active={item.href === "/"
                             ? location.pathname === "/"
-                            : location.pathname === item.href ||
-                              location.pathname.startsWith(`${item.href}/`)}
+                            : location.pathname === item.href
+                              || location.pathname.startsWith(`${item.href}/`)}
                           collapsed={collapsed()}
                           closeMobile={closeMobileNavigation}
                           captureFirst={sectionIndex() === 0 && itemIndex() === 0
@@ -369,8 +369,8 @@ export function ApplicationShell(props: { children: JSX.Element }) {
                 {(item) => (
                   <a
                     href={item.href}
-                    data-active={location.pathname === item.href ||
-                        location.pathname.startsWith(`${item.href}/`)
+                    data-active={location.pathname === item.href
+                        || location.pathname.startsWith(`${item.href}/`)
                       ? ""
                       : undefined}
                     aria-current={location.pathname === item.href ? "page" : undefined}

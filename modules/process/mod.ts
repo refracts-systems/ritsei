@@ -1,20 +1,5 @@
 export { ProcessCapabilities } from "./src/capabilities.ts"
 export {
-  ProcessPack,
-  ProcessPackAsset,
-  ProcessPackCapabilityReference,
-  ProcessPackCapabilityResolution,
-  ProcessPackStability,
-  resolveProcessPackCapabilities,
-} from "./src/packs.ts"
-export type {
-  ProcessPack as ProcessPackType,
-  ProcessPackAsset as ProcessPackAssetType,
-  ProcessPackCapabilityReference as ProcessPackCapabilityReferenceType,
-  ProcessPackCapabilityResolution as ProcessPackCapabilityResolutionType,
-  ProcessPackStability as ProcessPackStabilityType,
-} from "./src/packs.ts"
-export {
   makeProcessCatalogRegistry,
   ProcessCatalogCapabilityKind,
   ProcessCatalogConflict,
@@ -36,6 +21,53 @@ export type {
   ProcessReleaseValidation as ProcessReleaseValidationType,
 } from "./src/catalog-release.ts"
 export {
+  OrderCancellationCompletedEventPayload,
+  OrderConfirmationCompletedEventPayload,
+  OrderFulfillmentCompletedEventPayload,
+  ProcessOrderCancellationCompletedEvent,
+  ProcessOrderConfirmationCompletedEvent,
+  ProcessOrderFulfillmentCompletedEvent,
+  ProcessTypedEventCatalog,
+} from "./src/catalog.ts"
+export {
+  makeMemoryProcessOperatorStore,
+  makePostgresProcessOperatorStore,
+  ProcessOperatorStore,
+} from "./src/operations-store.ts"
+export { ProcessOperatorControl } from "./src/operations-store.ts"
+export type {
+  ProcessOperatorControl as ProcessOperatorControlType,
+  ProcessOperatorStore as ProcessOperatorStoreShape,
+} from "./src/operations-store.ts"
+export {
+  makeProcessOperatorService,
+  ProcessCompensationStatus,
+  ProcessOperatorAction,
+  ProcessOperatorActionUnavailable,
+  ProcessOperatorConflict,
+  ProcessOperatorControlInput,
+} from "./src/operations.ts"
+export type {
+  ProcessOperatorControlInput as ProcessOperatorControlInputType,
+  ProcessOperatorService,
+  ProcessOperatorSnapshot,
+} from "./src/operations.ts"
+export {
+  ProcessPack,
+  ProcessPackAsset,
+  ProcessPackCapabilityReference,
+  ProcessPackCapabilityResolution,
+  ProcessPackStability,
+  resolveProcessPackCapabilities,
+} from "./src/packs.ts"
+export type {
+  ProcessPack as ProcessPackType,
+  ProcessPackAsset as ProcessPackAssetType,
+  ProcessPackCapabilityReference as ProcessPackCapabilityReferenceType,
+  ProcessPackCapabilityResolution as ProcessPackCapabilityResolutionType,
+  ProcessPackStability as ProcessPackStabilityType,
+} from "./src/packs.ts"
+export {
   makeMemoryProcessReleaseStore,
   makePostgresProcessReleaseStore,
   ProcessDeployment,
@@ -54,6 +86,13 @@ export type {
   ProcessReleaseInput as ProcessReleaseInputType,
   ProcessReleaseStore as ProcessReleaseStoreShape,
 } from "./src/release-store.ts"
+export {
+  makeMemoryProcessCheckpointStore,
+  makePostgresProcessCheckpointStore,
+  ProcessCheckpointRevisionConflict,
+  ProcessCheckpointStore,
+} from "./src/runtime-store.ts"
+export type { ProcessCheckpointStore as ProcessCheckpointStoreShape } from "./src/runtime-store.ts"
 export {
   makeProcessRuntime,
   ProcessCheckpoint,
@@ -78,36 +117,6 @@ export type {
   ProcessRuntime,
   ProcessStepExecution as ProcessStepExecutionType,
 } from "./src/runtime.ts"
-export {
-  makeProcessOperatorService,
-  ProcessCompensationStatus,
-  ProcessOperatorAction,
-  ProcessOperatorActionUnavailable,
-  ProcessOperatorConflict,
-  ProcessOperatorControlInput,
-} from "./src/operations.ts"
-export type {
-  ProcessOperatorControlInput as ProcessOperatorControlInputType,
-  ProcessOperatorService,
-  ProcessOperatorSnapshot,
-} from "./src/operations.ts"
-export {
-  makeMemoryProcessCheckpointStore,
-  makePostgresProcessCheckpointStore,
-  ProcessCheckpointRevisionConflict,
-  ProcessCheckpointStore,
-} from "./src/runtime-store.ts"
-export type { ProcessCheckpointStore as ProcessCheckpointStoreShape } from "./src/runtime-store.ts"
-export {
-  makeMemoryProcessOperatorStore,
-  makePostgresProcessOperatorStore,
-  ProcessOperatorStore,
-} from "./src/operations-store.ts"
-export { ProcessOperatorControl } from "./src/operations-store.ts"
-export type {
-  ProcessOperatorControl as ProcessOperatorControlType,
-  ProcessOperatorStore as ProcessOperatorStoreShape,
-} from "./src/operations-store.ts"
 export {
   GetProcessRuntimeInstanceInput,
   ListProcessCatalogInput,
@@ -140,16 +149,19 @@ export type {
   ProcessStudioService as ProcessStudioServiceShape,
   ProcessWorkflowRun as ProcessWorkflowRunType,
 } from "./src/studio.ts"
-export {
-  OrderCancellationCompletedEventPayload,
-  OrderConfirmationCompletedEventPayload,
-  OrderFulfillmentCompletedEventPayload,
-  ProcessOrderCancellationCompletedEvent,
-  ProcessOrderConfirmationCompletedEvent,
-  ProcessOrderFulfillmentCompletedEvent,
-  ProcessTypedEventCatalog,
-} from "./src/catalog.ts"
 
+export {
+  ProcessLive,
+  ProcessOperatorMemoryLive,
+  ProcessOperatorPostgresLive,
+  ProcessPostgresLive,
+  ProcessReleaseMemoryLive,
+  ProcessReleasePostgresLive,
+  ProcessRuntimeMemoryLive,
+  ProcessRuntimePostgresLive,
+  ProcessStudioLive,
+  ProcessStudioPostgresLive,
+} from "./src/layers.ts"
 export {
   CancelOrderInput,
   ConfirmOrderConfirmationInput,
@@ -203,15 +215,3 @@ export type {
   ProcessService as ProcessServiceShape,
   WorkflowRun as WorkflowRunType,
 } from "./src/service.ts"
-export {
-  ProcessLive,
-  ProcessOperatorMemoryLive,
-  ProcessOperatorPostgresLive,
-  ProcessPostgresLive,
-  ProcessReleaseMemoryLive,
-  ProcessReleasePostgresLive,
-  ProcessRuntimeMemoryLive,
-  ProcessRuntimePostgresLive,
-  ProcessStudioLive,
-  ProcessStudioPostgresLive,
-} from "./src/layers.ts"

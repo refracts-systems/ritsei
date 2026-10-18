@@ -4,7 +4,7 @@ import * as Effect from "effect/Effect"
 import { checkOwnership } from "../../tooling/schema-ownership.ts"
 
 it.effect("schema ownership registry is valid", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const failures = yield* Effect.promise(() => checkOwnership())
     assert.deepStrictEqual(failures, [])
   }))

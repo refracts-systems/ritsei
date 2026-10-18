@@ -19,8 +19,8 @@ import { EntityWorkspace } from "../../ui/patterns/entity-workspace.tsx"
 import { Badge } from "../../ui/primitives/badge.tsx"
 import { Button } from "../../ui/primitives/button.tsx"
 import { createDialogOpenChange, Dialog } from "../../ui/primitives/dialog.tsx"
-import { Form } from "../../ui/primitives/form.tsx"
 import { FormField } from "../../ui/primitives/form-field.tsx"
+import { Form } from "../../ui/primitives/form.tsx"
 import { Input } from "../../ui/primitives/input.tsx"
 import { Select } from "../../ui/primitives/select.tsx"
 import { surface } from "../../ui/recipes/surface.ts"
@@ -120,10 +120,11 @@ function ConfigureLegalEntityDialog(props: { reload: () => Promise<unknown> }) {
             const fiscalYearStartMonth = Number(requiredText(value.fiscalYearStartMonth))
             const postingEnabled = value.postingEnabled
             if (
-              legalEntityId === null || !uuidPattern.test(legalEntityId) ||
-              baseCurrency === null || !currencyPattern.test(baseCurrency) ||
-              !Number.isInteger(fiscalYearStartMonth) || fiscalYearStartMonth < 1 ||
-              fiscalYearStartMonth > 12 || (postingEnabled !== "true" && postingEnabled !== "false")
+              legalEntityId === null || !uuidPattern.test(legalEntityId)
+              || baseCurrency === null || !currencyPattern.test(baseCurrency)
+              || !Number.isInteger(fiscalYearStartMonth) || fiscalYearStartMonth < 1
+              || fiscalYearStartMonth > 12
+              || (postingEnabled !== "true" && postingEnabled !== "false")
             ) {
               setInvalid(true)
               legalEntityInput?.focus()
@@ -258,9 +259,9 @@ function CreateAccountDialog(props: { reload: () => Promise<unknown> }) {
             const name = requiredText(value.name)
             const type = requiredText(value.type)
             if (
-              code === null || !accountCodePattern.test(code) ||
-              name === null ||
-              !accountTypeOptions.some((option) => option.value === type)
+              code === null || !accountCodePattern.test(code)
+              || name === null
+              || !accountTypeOptions.some((option) => option.value === type)
             ) {
               setInvalid(true)
               codeInput?.focus()
@@ -376,10 +377,10 @@ function ConfigureRevenuePostingDialog(props: {
             const receivableAccountId = requiredText(value.receivableAccountId)
             const revenueAccountId = requiredText(value.revenueAccountId)
             if (
-              legalEntityId === null || !uuidPattern.test(legalEntityId) ||
-              receivableAccountId === null || !uuidPattern.test(receivableAccountId) ||
-              revenueAccountId === null || !uuidPattern.test(revenueAccountId) ||
-              receivableAccountId === revenueAccountId
+              legalEntityId === null || !uuidPattern.test(legalEntityId)
+              || receivableAccountId === null || !uuidPattern.test(receivableAccountId)
+              || revenueAccountId === null || !uuidPattern.test(revenueAccountId)
+              || receivableAccountId === revenueAccountId
             ) {
               setInvalid(true)
               legalEntityInput?.focus()
@@ -499,9 +500,9 @@ function OpenPeriodDialog(props: { reload: () => Promise<unknown> }) {
             const startsOn = requiredText(value.startsOn)
             const endsOn = requiredText(value.endsOn)
             if (
-              legalEntityId === null || !uuidPattern.test(legalEntityId) ||
-              startsOn === null || !isIsoDate(startsOn) ||
-              endsOn === null || !isIsoDate(endsOn) || startsOn > endsOn
+              legalEntityId === null || !uuidPattern.test(legalEntityId)
+              || startsOn === null || !isIsoDate(startsOn)
+              || endsOn === null || !isIsoDate(endsOn) || startsOn > endsOn
             ) {
               setInvalid(true)
               legalEntityInput?.focus()
@@ -686,9 +687,9 @@ function PostJournalDialog(props: {
               // fallow-ignore-next-line complexity
               const validLines = lines.length >= 2 && lines.every((line) => {
                 if (
-                  line.accountId === null || !uuidPattern.test(line.accountId) ||
-                  line.debit === null || !moneyPattern.test(line.debit) ||
-                  line.credit === null || !moneyPattern.test(line.credit)
+                  line.accountId === null || !uuidPattern.test(line.accountId)
+                  || line.debit === null || !moneyPattern.test(line.debit)
+                  || line.credit === null || !moneyPattern.test(line.credit)
                 ) return false
                 const debit = toMinor(line.debit)
                 const credit = toMinor(line.credit)
@@ -702,10 +703,10 @@ function PostJournalDialog(props: {
                 { debit: 0n, credit: 0n },
               )
               if (
-                reference === null ||
-                !validLines ||
-                balanced === false ||
-                balanced.debit !== balanced.credit
+                reference === null
+                || !validLines
+                || balanced === false
+                || balanced.debit !== balanced.credit
               ) {
                 setInvalid(true)
                 referenceInput?.focus()
@@ -873,20 +874,20 @@ function AccountingFilters(props: {
             query.set("legalEntityId", legalEntityId)
           }
           if (
-            accountType !== null &&
-            accountTypeOptions.some((option) => option.value === accountType)
+            accountType !== null
+            && accountTypeOptions.some((option) => option.value === accountType)
           ) {
             query.set("accountType", accountType)
           }
           if (
-            periodStatus !== null &&
-            periodStatusOptions.some((option) => option.value === periodStatus)
+            periodStatus !== null
+            && periodStatusOptions.some((option) => option.value === periodStatus)
           ) {
             query.set("periodStatus", periodStatus)
           }
           if (
-            journalStatus !== null &&
-            journalStatusOptions.some((option) => option.value === journalStatus)
+            journalStatus !== null
+            && journalStatusOptions.some((option) => option.value === journalStatus)
           ) {
             query.set("journalStatus", journalStatus)
           }

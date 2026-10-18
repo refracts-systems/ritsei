@@ -63,7 +63,7 @@ describe("capability naming contract", () => {
   })
 
   it.effect("keeps legacy identifiers outside the assignable capability schema", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       for (const legacy of LegacyCapabilityIds) {
         assert.strictEqual(
           (yield* Effect.flip(Schema.decodeUnknownEffect(Capability)(legacy)))._tag,
@@ -77,7 +77,7 @@ describe("capability naming contract", () => {
     }))
 
   it.effect("validates contributor-shaped identifiers at the schema boundary", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       assert.strictEqual(
         yield* Schema.decodeUnknownEffect(CapabilityId)("plugin_customer.submit"),
         "plugin_customer.submit",

@@ -12,11 +12,10 @@ import {
   stockTransfers,
   warehouses,
 } from "../../../db/schema/inventory.ts"
-import { AuthorizationService } from "../../authorization/mod.ts"
-import { InventoryCapabilities } from "./capabilities.ts"
 import { Database, DatabaseFailure, isDatabaseConstraint, uuidv7 } from "../../../foundation/mod.ts"
+import { AuthorizationService } from "../../authorization/mod.ts"
 import { MessagingService } from "../../messaging/mod.ts"
-import { InventoryStockCorrectedEvent, StockCorrectedEventPayload } from "./events.ts"
+import { InventoryCapabilities } from "./capabilities.ts"
 import {
   AdjustStockInput,
   CompleteStockTransferInput,
@@ -62,6 +61,7 @@ import {
   WarehouseBranchNotFound,
   WarehouseLegalEntityNotFound,
 } from "./errors.ts"
+import { InventoryStockCorrectedEvent, StockCorrectedEventPayload } from "./events.ts"
 
 const referenceFailure = (tenantId: string, warehouseId: string, itemId: string) =>
   new InventoryReferenceNotFound({ tenantId, warehouseId, itemId })
@@ -201,7 +201,7 @@ const mapTransferCreateError = (
 const escapeLikePattern = (value: string) =>
   value.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_")
 
-export const makeInventoryPostgresService = Effect.gen(function* () {
+export const makeInventoryPostgresService = Effect.gen(function*() {
   const database = yield* Database
   const authorization = yield* AuthorizationService
   const messaging = yield* MessagingService
@@ -209,7 +209,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
   const now = () => new Date(clock.currentTimeMillisUnsafe())
   const store = {
     listWarehouses: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(ListWarehousesInput)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -232,7 +232,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
         )
       }),
     listItems: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(ListItemsInput)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -257,7 +257,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
         )
       }),
     listStockBalances: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(ListStockBalancesInput)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -288,7 +288,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
         )
       }),
     listStockReservations: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(ListStockReservationsInput)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -313,7 +313,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
         )
       }),
     listStockTransfers: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(ListStockTransfersInput)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -362,7 +362,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
         )
       }),
     listStockMovements: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(ListStockMovementsInput)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -387,7 +387,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
         )
       }),
     createWarehouse: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(CreateWarehouseInput)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -423,8 +423,8 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
               })
             }
             if (
-              primaryBranchId !== null &&
-              isDatabaseConstraint(error, "warehouses_tenant_legal_entity_branch_fkey", "23503")
+              primaryBranchId !== null
+              && isDatabaseConstraint(error, "warehouses_tenant_legal_entity_branch_fkey", "23503")
             ) {
               return new WarehouseBranchNotFound({
                 tenantId: decoded.tenantId,
@@ -438,7 +438,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
         return rows[0]!
       }),
     createItem: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(CreateItemInput)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -472,7 +472,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
         return rows[0]!
       }),
     receiveStock: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(ReceiveStockInput)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -493,8 +493,8 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
               .where(and(eq(items.tenantId, decoded.tenantId), eq(items.id, decoded.itemId)))
             if (warehouse === undefined || item === undefined) return { _tag: "not-found" as const }
             if (
-              decoded.legalEntityId !== undefined &&
-              warehouse.legalEntityId !== decoded.legalEntityId
+              decoded.legalEntityId !== undefined
+              && warehouse.legalEntityId !== decoded.legalEntityId
             ) {
               return { _tag: "legal-entity-mismatch" as const }
             }
@@ -535,8 +535,8 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
           "inventory.stock.receive",
         ).pipe(
           Effect.mapError((error) =>
-            isDatabaseConstraint(error, "stock_balances_warehouse_fkey", "23503") ||
-              isDatabaseConstraint(error, "stock_balances_item_fkey", "23503")
+            isDatabaseConstraint(error, "stock_balances_warehouse_fkey", "23503")
+              || isDatabaseConstraint(error, "stock_balances_item_fkey", "23503")
               ? referenceFailure(decoded.tenantId, decoded.warehouseId, decoded.itemId)
               : error
           ),
@@ -558,7 +558,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
         return balance.balance
       }),
     adjustStock: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(AdjustStockInput)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -572,7 +572,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
         const causationId = decoded.causationId?.trim() ?? null
         const idempotencyKey = decoded.idempotencyKey.trim()
         const result = yield* database.withTransaction(
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const mutation = yield* database.transaction(
               async (tx) => {
                 const [existing] = await tx.select(correctionSelection)
@@ -586,11 +586,11 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
                   .for("update")
                 if (existing !== undefined) {
                   if (
-                    existing.warehouseId !== decoded.warehouseId ||
-                    existing.itemId !== decoded.itemId ||
-                    existing.adjustment !== decoded.adjustment ||
-                    existing.unitOfMeasure !== unitOfMeasure ||
-                    existing.reason !== reason
+                    existing.warehouseId !== decoded.warehouseId
+                    || existing.itemId !== decoded.itemId
+                    || existing.adjustment !== decoded.adjustment
+                    || existing.unitOfMeasure !== unitOfMeasure
+                    || existing.reason !== reason
                   ) return { _tag: "idempotency-conflict" as const }
                   return { _tag: "existing" as const, correction: toStockCorrection(existing) }
                 }
@@ -640,11 +640,11 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
                     .for("update")
                   if (existingAfterLock !== undefined) {
                     if (
-                      existingAfterLock.warehouseId !== decoded.warehouseId ||
-                      existingAfterLock.itemId !== decoded.itemId ||
-                      existingAfterLock.adjustment !== decoded.adjustment ||
-                      existingAfterLock.unitOfMeasure !== unitOfMeasure ||
-                      existingAfterLock.reason !== reason
+                      existingAfterLock.warehouseId !== decoded.warehouseId
+                      || existingAfterLock.itemId !== decoded.itemId
+                      || existingAfterLock.adjustment !== decoded.adjustment
+                      || existingAfterLock.unitOfMeasure !== unitOfMeasure
+                      || existingAfterLock.reason !== reason
                     ) return { _tag: "idempotency-conflict" as const }
                     return {
                       _tag: "existing" as const,
@@ -654,8 +654,8 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
                 }
                 if (adjustment < 0n) {
                   if (
-                    balance === undefined ||
-                    BigInt(balance.onHand) + adjustment < BigInt(balance.reserved)
+                    balance === undefined
+                    || BigInt(balance.onHand) + adjustment < BigInt(balance.reserved)
                   ) return { _tag: "unavailable" as const }
                   await tx.update(stockBalances).set({
                     onHand: sql`${stockBalances.onHand} + ${decoded.adjustment}`,
@@ -746,12 +746,12 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
             ).pipe(
               Effect.map((rows) => {
                 const existing = rows[0]
-                return existing !== undefined &&
-                    existing.warehouseId === decoded.warehouseId &&
-                    existing.itemId === decoded.itemId &&
-                    existing.adjustment === decoded.adjustment &&
-                    existing.unitOfMeasure === unitOfMeasure &&
-                    existing.reason === reason
+                return existing !== undefined
+                    && existing.warehouseId === decoded.warehouseId
+                    && existing.itemId === decoded.itemId
+                    && existing.adjustment === decoded.adjustment
+                    && existing.unitOfMeasure === unitOfMeasure
+                    && existing.reason === reason
                   ? { _tag: "existing" as const, correction: toStockCorrection(existing) }
                   : { _tag: "idempotency-conflict" as const }
               }),
@@ -791,7 +791,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
         return result.correction
       }),
     reserveStock: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(ReserveStockInput)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -834,9 +834,9 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
               const existing = existingRows[0]
               if (existing !== undefined) {
                 if (
-                  existing.warehouseId !== decoded.warehouseId ||
-                  existing.itemId !== decoded.itemId ||
-                  existing.quantity !== decoded.quantity
+                  existing.warehouseId !== decoded.warehouseId
+                  || existing.itemId !== decoded.itemId
+                  || existing.quantity !== decoded.quantity
                 ) {
                   return { _tag: "idempotency-conflict" as const }
                 }
@@ -890,8 +890,8 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
         ).pipe(
           Effect.catch((error) => {
             if (
-              !isDatabaseConstraint(error, "reservations_tenant_idempotency_key") ||
-              normalizedIdempotencyKey === undefined
+              !isDatabaseConstraint(error, "reservations_tenant_idempotency_key")
+              || normalizedIdempotencyKey === undefined
             ) return Effect.fail(error)
             return database.query(
               (db) =>
@@ -903,10 +903,10 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
             ).pipe(
               Effect.map((rows) => {
                 const existing = rows[0]
-                return existing !== undefined &&
-                    existing.warehouseId === decoded.warehouseId &&
-                    existing.itemId === decoded.itemId &&
-                    existing.quantity === decoded.quantity
+                return existing !== undefined
+                    && existing.warehouseId === decoded.warehouseId
+                    && existing.itemId === decoded.itemId
+                    && existing.quantity === decoded.quantity
                   ? { _tag: "existing" as const, reservation: existing }
                   : { _tag: "idempotency-conflict" as const }
               }),
@@ -943,7 +943,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
         )
       }),
     releaseReservation: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(ReleaseReservationInput)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -1039,7 +1039,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
         return result.reservation
       }),
     fulfillReservation: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(FulfillReservationInput)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -1137,7 +1137,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
         return result.reservation
       }),
     createTransfer: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(CreateStockTransferInput)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -1261,7 +1261,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
         return result.transfer
       }),
     confirmTransfer: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(ConfirmStockTransferInput)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -1312,8 +1312,8 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
             for (const line of lines) {
               const balance = balancesByItem.get(line.itemId)
               if (
-                balance === undefined ||
-                BigInt(balance.onHand) - BigInt(balance.reserved) < BigInt(line.quantity)
+                balance === undefined
+                || BigInt(balance.onHand) - BigInt(balance.reserved) < BigInt(line.quantity)
               ) {
                 return {
                   _tag: "unavailable" as const,
@@ -1387,7 +1387,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
         return result.transfer
       }),
     completeTransfer: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const decoded = yield* Schema.decodeUnknownEffect(CompleteStockTransferInput)(input)
         yield* authorization.authorize({
           principal: decoded.principal,

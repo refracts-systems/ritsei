@@ -1,15 +1,13 @@
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import * as FileSystem from "effect/FileSystem"
-import * as Layer from "effect/Layer"
-import * as HttpClientRequest from "effect/http/HttpClientRequest"
-import * as Path from "effect/Path"
 import { Etag, HttpPlatform, HttpRouter } from "effect/http"
 import * as HttpApiMiddleware from "effect/http-api/HttpApiMiddleware"
 import * as HttpApiTest from "effect/http-api/HttpApiTest"
+import * as HttpClientRequest from "effect/http/HttpClientRequest"
+import * as Layer from "effect/Layer"
+import * as Path from "effect/Path"
 
-import { BearerAuth, CurrentPrincipal, RitseiApi } from "./api.ts"
-import { ProcurementHandlers } from "./handlers.ts"
 import {
   CurrentConsistencyToken,
   PostgresReadYourWrites,
@@ -23,6 +21,8 @@ import {
   ProcurementService,
   type ProcurementService as ProcurementServiceContract,
 } from "../../modules/procurement/mod.ts"
+import { BearerAuth, CurrentPrincipal, RitseiApi } from "./api.ts"
+import { ProcurementHandlers } from "./handlers.ts"
 
 const tenantId = "018f0000-0000-7000-8000-000000000001"
 const supplierAccountId = "018f0000-0000-7000-8000-000000000002"
@@ -55,7 +55,7 @@ const makeProcurementStub = (
   listSupplierAccounts: () => Effect.succeed([]),
   createPurchaseOrder: () => Effect.succeed(order),
   getPurchaseOrder: () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       observedToken.value = yield* CurrentConsistencyToken
       return order
     }),
@@ -97,7 +97,7 @@ const TestHttpServices = Layer.mergeAll(
 
 it.layer(TestHttpServices)("procurement API consistency headers", (it) => {
   it.effect("captures on create and forwards the token on read", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const observedToken: { value?: string } = {}
       let capturedTenantId: string | undefined
       const readYourWrites: PostgresReadYourWritesService = {

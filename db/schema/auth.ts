@@ -1,8 +1,8 @@
 import { sql } from "drizzle-orm"
 import { check, foreignKey, pgSchema, text, timestamp, unique, uuid } from "drizzle-orm/pg-core"
 
-import { userAccounts } from "./identity.ts"
 import { createdAt, id, updatedAt } from "./common.ts"
+import { userAccounts } from "./identity.ts"
 
 export const authSchema = pgSchema("auth")
 

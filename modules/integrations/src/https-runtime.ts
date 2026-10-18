@@ -2,6 +2,7 @@ import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 
 import { validateExternalEventDefinition } from "./contract.ts"
+import { type ExternalDeliveryStore, makeMemoryExternalDeliveryStore } from "./delivery-store.ts"
 import {
   type ExternalActionNotAllowlisted,
   type ExternalAuthorizationDenied,
@@ -10,7 +11,6 @@ import {
   type ExternalProviderFailure,
   type ExternalUnknownOutcome,
 } from "./errors.ts"
-import { type ExternalDeliveryStore, makeMemoryExternalDeliveryStore } from "./delivery-store.ts"
 import {
   type ExternalActionInvoker,
   type ExternalConnectorRuntime,
@@ -40,9 +40,9 @@ const eventIdentifier = (event: { readonly id?: unknown } | null | undefined): s
 }
 
 const isBoundedNonEmptyString = (value: unknown, maxBytes: number): value is string =>
-  typeof value === "string" &&
-  Schema.is(NonEmptyString)(value) &&
-  byteLength(value) <= maxBytes
+  typeof value === "string"
+  && Schema.is(NonEmptyString)(value)
+  && byteLength(value) <= maxBytes
 
 const decodeWebhookBody = (body: string, identifier: string) =>
   Effect.try({
@@ -61,14 +61,14 @@ const decodeWebhookBody = (body: string, identifier: string) =>
 type WebhookEnvelope = Schema.Schema.Type<typeof WebhookIngestion>
 
 const sameWebhookEnvelope = (left: WebhookEnvelope, right: WebhookEnvelope): boolean =>
-  left.specversion === right.specversion &&
-  left.type === right.type &&
-  left.source === right.source &&
-  left.id === right.id &&
-  left.time === right.time &&
-  left.datacontenttype === right.datacontenttype &&
-  left.subject === right.subject &&
-  JSON.stringify(left.data) === JSON.stringify(right.data)
+  left.specversion === right.specversion
+  && left.type === right.type
+  && left.source === right.source
+  && left.id === right.id
+  && left.time === right.time
+  && left.datacontenttype === right.datacontenttype
+  && left.subject === right.subject
+  && JSON.stringify(left.data) === JSON.stringify(right.data)
 
 export type HttpsSignatureVerifier = (input: {
   readonly tenantId: string
@@ -124,7 +124,7 @@ export const makeHttpsConnectorRuntime = (options: {
   })
 
   const ingestWebhook = (input: HttpsWebhookInput) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const identifier = eventIdentifier(input.event)
       if (!isValidWebhookInput(input)) {
         return yield* Effect.fail(

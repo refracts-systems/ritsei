@@ -1,6 +1,6 @@
+import { DatabaseFailure } from "../../../foundation/mod.ts"
 import { AuthorizationDenied } from "../../authorization/mod.ts"
 import { defineActionCatalogEntry } from "../../catalog/mod.ts"
-import { DatabaseFailure } from "../../../foundation/mod.ts"
 import { EventIdempotencyConflict } from "../../messaging/mod.ts"
 import { PartyCapabilities } from "./capabilities.ts"
 import { CreatePartyInput, Party } from "./contract.ts"

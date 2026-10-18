@@ -1,5 +1,5 @@
-import { assert, it } from "@effect/vitest"
 import { PgClient } from "@effect/sql-pg/PgClient"
+import { assert, it } from "@effect/vitest"
 import { makeWithDefaults } from "drizzle-orm/effect-postgres"
 import * as Effect from "effect/Effect"
 import * as HttpApi from "effect/http-api/HttpApi"

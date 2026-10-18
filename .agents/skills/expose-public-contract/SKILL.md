@@ -54,10 +54,10 @@ Add or update public contract tests through `mod.ts`. If another package consume
 # Deterministic Tools
 
 ```sh
-deno task check:affected
-deno task boundary:test
-deno task boundary:lint
-deno task check
+pnpm run check:affected
+pnpm run boundary:test
+pnpm run boundary:lint
+pnpm run check
 ```
 
 Use repository grep and the package dependency checker to find consumers; do not rely on memory of the call graph.

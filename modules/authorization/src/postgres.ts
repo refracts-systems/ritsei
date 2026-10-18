@@ -4,6 +4,11 @@ import * as Schema from "effect/Schema"
 
 import { memberships, tenantMemberships } from "../../../db/schema/authorization.ts"
 import {
+  DatabaseFailure,
+  type DatabaseService,
+  isDatabaseConstraint,
+} from "../../../foundation/mod.ts"
+import {
   AddTenantMembershipInput,
   AuthorizationDecision,
   AuthorizationInput,
@@ -24,16 +29,11 @@ import {
   TenantMembershipUserAccountNotFound,
 } from "./errors.ts"
 import { toTenantMembership } from "./store.ts"
-import {
-  DatabaseFailure,
-  type DatabaseService,
-  isDatabaseConstraint,
-} from "../../../foundation/mod.ts"
 
 const escapeLikePattern = (value: string): string => value.replace(/[\\%_]/g, "\\$&")
 
 const readMember = (database: DatabaseService, input: unknown) =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const decoded = yield* Schema.decodeUnknownEffect(TenantMembershipInput)(input)
     const rows = yield* database.query(
       (db) =>
@@ -60,7 +60,7 @@ export const makePostgresAuthorizationService = (
   database: DatabaseService,
 ): AuthorizationService => ({
   authorize: Effect.fn("AuthorizationService.authorize")((input: unknown) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const decoded = yield* Schema.decodeUnknownEffect(AuthorizationInput)(input)
       const rows = yield* database.query(
         (db) =>
@@ -97,7 +97,7 @@ export const makePostgresAuthorizationService = (
     })
   ),
   addMember: Effect.fn("AuthorizationService.addMember")((input: unknown) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const decoded = yield* Schema.decodeUnknownEffect(AddTenantMembershipInput)(input)
       const rows = yield* database.query(
         (db) =>
@@ -125,7 +125,7 @@ export const makePostgresAuthorizationService = (
     readMember(database, input)
   ),
   listMembers: Effect.fn("AuthorizationService.listMembers")((input: unknown) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const decoded = yield* Schema.decodeUnknownEffect(ListTenantMembershipsInput)(input)
       const rows = yield* database.query(
         (db) =>
@@ -153,7 +153,7 @@ export const makePostgresAuthorizationService = (
     })
   ),
   listAccessibleTenants: Effect.fn("AuthorizationService.listAccessibleTenants")((input: unknown) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const decoded = yield* Schema.decodeUnknownEffect(ListAccessibleTenantsInput)(input)
       const rows = yield* database.query(
         (db) =>
@@ -174,7 +174,7 @@ export const makePostgresAuthorizationService = (
     })
   ),
   listDirectGrants: Effect.fn("AuthorizationService.listDirectGrants")((input: unknown) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const decoded = yield* Schema.decodeUnknownEffect(TenantMembershipInput)(input)
       yield* readMember(database, decoded)
       const rows = yield* database.query(
@@ -202,7 +202,7 @@ export const makePostgresAuthorizationService = (
     updateStatus(database, input, "active", "authorization.member.activate")
   ),
   removeMember: Effect.fn("AuthorizationService.removeMember")((input: unknown) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const decoded = yield* Schema.decodeUnknownEffect(TenantMembershipInput)(input)
       const rows = yield* database.query(
         (db) =>
@@ -220,7 +220,7 @@ export const makePostgresAuthorizationService = (
     })
   ),
   grant: Effect.fn("AuthorizationService.grant")((input: unknown) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const decoded = yield* Schema.decodeUnknownEffect(GrantCapabilityInput)(input)
       const member = yield* readMember(database, decoded)
       if (member.status !== "active") {
@@ -256,7 +256,7 @@ const updateStatus = (
   status: "active" | "suspended",
   operation: string,
 ) =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const decoded = yield* Schema.decodeUnknownEffect(TenantMembershipInput)(input)
     const rows = yield* database.query(
       (db) =>

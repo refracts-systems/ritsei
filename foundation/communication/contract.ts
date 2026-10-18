@@ -328,7 +328,8 @@ export class CommunicationRecipientResolutionFailure
   extends Schema.TaggedError<CommunicationRecipientResolutionFailure>()(
     "CommunicationRecipientResolutionFailure",
     { reason: NonEmptyString },
-  ) {}
+  )
+{}
 
 export class CommunicationContextFailure extends Schema.TaggedError<CommunicationContextFailure>()(
   "CommunicationContextFailure",
@@ -349,7 +350,8 @@ export class CommunicationTransportFailure
       reason: NonEmptyString,
       cause: Schema.Unknown,
     },
-  ) {}
+  )
+{}
 
 export interface CommunicationRecipientResolver {
   readonly resolve: (
@@ -394,7 +396,7 @@ export interface EmailTransport {
 export const EmailTransport = Context.Service<EmailTransport>("RITSEI/EmailTransport")
 
 export const makeCommunicationIntent = (input: unknown) =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const decoded = yield* Schema.decodeUnknownEffect(CommunicationIntentInput)(input)
     return {
       ...decoded,

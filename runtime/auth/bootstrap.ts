@@ -1,5 +1,5 @@
 import "../../tooling/load-env.ts"
-import * as DenoRuntime from "@effect/platform-deno/DenoRuntime"
+import * as NodeRuntime from "@effect/platform-node/NodeRuntime"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import postgres from "postgres"
@@ -13,9 +13,10 @@ import {
 } from "../../modules/authorization/mod.ts"
 import { UserAccountAlreadyExists, UserAccountService } from "../../modules/identity/mod.ts"
 import { validatePostgresVersion } from "../../platform/mod.ts"
+import { isMain } from "../../tooling/entrypoint.ts"
+import { bootstrapCapabilities, bootstrapTenant } from "../api/bootstrap.ts"
 import { readRuntimeConfiguration } from "../config.ts"
 import { serviceLayers } from "../layers.ts"
-import { bootstrapCapabilities, bootstrapTenant } from "../api/bootstrap.ts"
 
 const NonBlank = Schema.String.check(Schema.isPattern(/\S/))
 const BootstrapEnvironment = Schema.Struct({
@@ -37,7 +38,7 @@ const BootstrapEnvironment = Schema.Struct({
 
 type BootstrapEnvironment = Schema.Schema.Type<typeof BootstrapEnvironment>
 
-const env = (name: string, fallback?: string) => Deno.env.get(name) ?? fallback
+const env = (name: string, fallback?: string) => process.env[name] ?? fallback
 
 const readEnvironment = () =>
   Schema.decodeUnknownEffect(BootstrapEnvironment)({
@@ -61,7 +62,7 @@ const readEnvironment = () =>
   })
 
 const findOrCreateUser = (input: BootstrapEnvironment) =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const users = yield* UserAccountService
     const email = input.email.trim().toLowerCase()
     const existing = (yield* users.list()).find((user) => user.email === email)
@@ -82,11 +83,11 @@ const findOrCreateUser = (input: BootstrapEnvironment) =>
   })
 
 const bindExternalSubject = (input: BootstrapEnvironment, userAccountId: string) =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     if (input.externalSubject === undefined) return
     const configuration = yield* readRuntimeConfiguration()
-    const issuer = input.externalIssuer ??
-      (configuration.authentication?.profile === "oidc"
+    const issuer = input.externalIssuer
+      ?? (configuration.authentication?.profile === "oidc"
         ? configuration.authentication.issuerUrl
         : undefined)
     if (issuer === undefined) {
@@ -97,7 +98,7 @@ const bindExternalSubject = (input: BootstrapEnvironment, userAccountId: string)
   })
 
 const ensureMembershipAndCapabilities = (principal: Principal, tenantId: string) =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const authorization = yield* AuthorizationService
     const member = yield* authorization.getMember({
       userAccountId: principal.userAccountId,
@@ -134,7 +135,7 @@ const ensureMembershipAndCapabilities = (principal: Principal, tenantId: string)
   })
 
 const provision = (input: BootstrapEnvironment) =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const auth = yield* AuthService
     const user = yield* findOrCreateUser(input)
     yield* bindExternalSubject(input, user.id)
@@ -177,10 +178,10 @@ const provision = (input: BootstrapEnvironment) =>
   })
 
 const run = Effect.scoped(
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const input = yield* readEnvironment()
     const configuration = yield* readRuntimeConfiguration()
-    const url = Deno.env.get("DATABASE_URL")
+    const url = process.env["DATABASE_URL"]
     if (url === undefined || url.trim() === "") {
       return yield* Effect.fail(new Error("DATABASE_URL is required"))
     }
@@ -191,6 +192,6 @@ const run = Effect.scoped(
   }),
 )
 
-if (import.meta.main) {
-  run.pipe(DenoRuntime.runMain)
+if (isMain(import.meta.url)) {
+  run.pipe(NodeRuntime.runMain)
 }

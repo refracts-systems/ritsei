@@ -48,7 +48,7 @@ export {
   TenantMembershipUserAccountNotFound,
 } from "./src/errors.ts"
 
-export { makeAuthorizationService } from "./src/service.ts"
+export { AuthorizationLive, makeAuthorizationTestLayer, RelationshipLive } from "./src/layers.ts"
 export {
   makeMemoryRelationshipEngine,
   makePostgresRelationshipEngine,
@@ -63,6 +63,7 @@ export type {
   RelationshipInput as RelationshipInputType,
   RelationshipResult as RelationshipResultType,
 } from "./src/relationship.ts"
+export { makeAuthorizationService } from "./src/service.ts"
 export {
   evaluateSeparationOfDuties,
   SeparationOfDutiesDecision,
@@ -72,4 +73,3 @@ export type {
   SeparationOfDutiesDecision as SeparationOfDutiesDecisionType,
   SeparationOfDutiesInput as SeparationOfDutiesInputType,
 } from "./src/sod.ts"
-export { AuthorizationLive, makeAuthorizationTestLayer, RelationshipLive } from "./src/layers.ts"

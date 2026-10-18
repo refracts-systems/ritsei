@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/solid-query"
+import type { RequestFailure } from "../../shared/api.ts"
 import type {
   ListProcessCatalogInput,
   ListProcessOperatorControlsInput,
@@ -14,9 +15,8 @@ import type {
   ProcessWorkflowRun,
   ValidateProcessDefinitionInput,
 } from "../../shared/contracts/generated/process.ts"
-import type { RequestFailure } from "../../shared/api.ts"
-import { createServerQuery } from "../../shared/server-query.ts"
 import { type ApiScope, runRequest } from "../../shared/runtime.ts"
+import { createServerQuery } from "../../shared/server-query.ts"
 import {
   listCatalog,
   listOperatorControls,

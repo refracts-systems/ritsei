@@ -1,6 +1,6 @@
 import { Dialog as KobalteDialog } from "@kobalte/core/dialog"
-import { Dialog } from "../primitives/dialog.tsx"
 import { Button } from "../primitives/button.tsx"
+import { Dialog } from "../primitives/dialog.tsx"
 
 interface ConfirmDialogProps {
   readonly triggerLabel: string

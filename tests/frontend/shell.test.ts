@@ -5,7 +5,7 @@ import { builtApp, connectToTenant, mockLocalAuth } from "./browser.ts"
 it.effect(
   "builds the SPA, signs in, navigates, and changes theme",
   () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const { page, url, errors } = yield* builtApp
       yield* Effect.promise(async () => {
         await connectToTenant(
@@ -42,7 +42,7 @@ it.effect(
         assert.isTrue(await page.getByRole("link", { name: "Access", exact: true }).isVisible())
         assert.equal(await page.title(), "RITSEI · Operational workspace")
 
-        const navigationToggle = page.locator('button[aria-controls="global-navigation"]')
+        const navigationToggle = page.locator("button[aria-controls=\"global-navigation\"]")
         const sidebar = page.locator("#global-navigation")
         const expandedSidebar = await sidebar.boundingBox()
         assert.exists(expandedSidebar)
@@ -99,7 +99,7 @@ it.effect(
 it.effect(
   "switches tenants, logs out, and recovers from an expired session",
   () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const { page, url, errors } = yield* builtApp
       const firstTenant = "01900000-0000-7000-8000-000000000010"
       const secondTenant = "01900000-0000-7000-8000-000000000011"
@@ -135,8 +135,8 @@ it.effect(
         await page.getByRole("heading", { name: "My work", exact: true }).waitFor()
         const tenantSelect = page.getByRole("combobox", { name: "Active tenant", exact: true })
         const switched = page.waitForResponse((response) =>
-          new URL(response.url()).pathname === "/api/auth/session" &&
-          response.request().headers()["x-tenant-id"] === secondTenant
+          new URL(response.url()).pathname === "/api/auth/session"
+          && response.request().headers()["x-tenant-id"] === secondTenant
         )
         await tenantSelect.selectOption(secondTenant)
         await switched

@@ -20,7 +20,7 @@ import {
 
 describe("catalog compatibility", () => {
   it.effect("resolves registered PUBLIC actions and events", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const registry = yield* makeProcessCatalogRegistry([
         ...IdentityTypedActionCatalog,
         ...IdentityTypedEventCatalog,
@@ -54,7 +54,7 @@ describe("catalog compatibility", () => {
     }))
 
   it.effect("rejects unregistered actions and events", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const registry = yield* makeProcessCatalogRegistry([
         ProcessOrderConfirmationCompletedEvent,
       ])
@@ -83,7 +83,7 @@ describe("catalog compatibility", () => {
     }))
 
   it.effect("rejects duplicate catalog identities", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const failure = yield* Effect.flip(
         makeProcessCatalogRegistry([
           ProcessOrderConfirmationCompletedEvent,
@@ -97,7 +97,7 @@ describe("catalog compatibility", () => {
     }))
 
   it.effect("validates catalog lookup input", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const failure = yield* Effect.flip(
         Schema.decodeUnknownEffect(ResolveProcessCatalogInput)({
           kind: "DomainAction",

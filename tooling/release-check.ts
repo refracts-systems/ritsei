@@ -1,18 +1,22 @@
-const tag = Deno.args[0] ?? Deno.env.get("RELEASE_TAG") ?? Deno.env.get("GITHUB_REF_NAME")
+import { spawnSync } from "node:child_process"
+import { readFile } from "node:fs/promises"
+
+const tag = process.argv.slice(2)[0]
+  ?? process.env["RELEASE_TAG"]
+  ?? process.env["GITHUB_REF_NAME"]
 
 if (!tag || !/^v(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/.test(tag)) {
   throw new Error("release tag must match vX.Y.Z")
 }
 
 const runGit = async (...args: string[]) => {
-  const command = new Deno.Command("git", { args, stdout: "piped", stderr: "piped" })
-  const output = await command.output()
-  if (!output.success) {
+  const result = spawnSync("git", args, { encoding: "utf8" })
+  if (result.status !== 0) {
     throw new Error(
-      new TextDecoder().decode(output.stderr).trim() || `git ${args.join(" ")} failed`,
+      (result.stderr ?? "").trim() || `git ${args.join(" ")} failed`,
     )
   }
-  return new TextDecoder().decode(output.stdout).trim()
+  return result.stdout.trim()
 }
 
 const tagObjectType = await runGit("cat-file", "-t", `refs/tags/${tag}`)
@@ -25,12 +29,12 @@ if ((await runGit("cat-file", "-t", target)) !== "commit") {
   throw new Error(`${tag} must target a commit`)
 }
 
-const expectedTarget = Deno.env.get("RELEASE_EXPECTED_TARGET")
+const expectedTarget = process.env["RELEASE_EXPECTED_TARGET"]
 if (expectedTarget && target !== expectedTarget) {
   throw new Error(`${tag} targets ${target}, expected ${expectedTarget}`)
 }
 
-const releaseBaseRef = Deno.env.get("RELEASE_BASE_REF")
+const releaseBaseRef = process.env["RELEASE_BASE_REF"]
 if (releaseBaseRef !== undefined) {
   const base = await runGit("rev-parse", "--verify", releaseBaseRef)
   if (await runGit("merge-base", base, target) !== target) {
@@ -39,9 +43,9 @@ if (releaseBaseRef !== undefined) {
 }
 
 const releaseNotes = `.github/release-notes/${tag}.md`
-const notesRef = Deno.env.get("RELEASE_NOTES_REF")
+const notesRef = process.env["RELEASE_NOTES_REF"]
 const notes = notesRef === undefined
-  ? await Deno.readTextFile(releaseNotes)
+  ? await readFile(releaseNotes, "utf8")
   : await runGit("show", `${notesRef}:${releaseNotes}`)
 
 if (!notes.trim()) {

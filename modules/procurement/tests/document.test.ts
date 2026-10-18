@@ -31,7 +31,7 @@ const confirmedOrder: PurchaseOrder = {
 
 describe("purchase order document pilot", () => {
   it.effect("creates an owner-local snapshot, context, and AST", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const snapshot = yield* makePurchaseOrderDocumentSnapshot(confirmedOrder, {
         snapshotId,
         capturedAt: confirmedAt,
@@ -53,7 +53,7 @@ describe("purchase order document pilot", () => {
     }))
 
   it.effect("keeps snapshot checksums stable across capture timestamps", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const first = yield* makePurchaseOrderDocumentSnapshot(confirmedOrder, {
         snapshotId,
         capturedAt: confirmedAt,
@@ -66,7 +66,7 @@ describe("purchase order document pilot", () => {
     }))
 
   it.effect("does not render an unconfirmed purchase order", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const error = yield* Effect.flip(
         makePurchaseOrderDocumentSnapshot(
           { ...confirmedOrder, status: "draft", confirmedAt: null },

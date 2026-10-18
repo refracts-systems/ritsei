@@ -8,19 +8,19 @@ const environment = (
   defaultAuthenticationProfile: string | null = "transitional-local",
 ) => ({
   get: (name: string) =>
-    values[name] ??
-      (name === "RITSEI_AUTH_PROFILE" ? defaultAuthenticationProfile ?? undefined : undefined),
+    values[name]
+      ?? (name === "RITSEI_AUTH_PROFILE" ? defaultAuthenticationProfile ?? undefined : undefined),
 })
 
 describe("runtime configuration", () => {
   it.effect("requires an explicit authentication profile", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const failure = yield* parseRuntimeConfiguration(environment({}, null)).pipe(Effect.flip)
       assert.strictEqual(failure.reason, "missing_authentication_configuration")
     }))
 
   it.effect("defaults to entry plus PostgreSQL without TigerBeetle settings", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const configuration = yield* parseRuntimeConfiguration(environment({}))
       assert.strictEqual(configuration.deploymentProfile, "entry")
       assert.strictEqual(configuration.financialAuthority, "postgresql")
@@ -29,7 +29,7 @@ describe("runtime configuration", () => {
     }))
 
   it.effect("parses provider-neutral OIDC settings", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const configuration = yield* parseRuntimeConfiguration(environment({
         RITSEI_AUTH_PROFILE: "oidc",
         RITSEI_OIDC_ISSUER_URL: "https://id.example.com",
@@ -47,7 +47,7 @@ describe("runtime configuration", () => {
     }))
 
   it.effect("rejects incomplete OIDC settings", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const failure = yield* parseRuntimeConfiguration(environment({
         RITSEI_AUTH_PROFILE: "oidc",
         RITSEI_OIDC_ISSUER_URL: "https://id.example.com",
@@ -56,7 +56,7 @@ describe("runtime configuration", () => {
     }))
 
   it.effect("rejects non-HTTPS and credential-bearing OIDC URLs", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const failure = yield* parseRuntimeConfiguration(environment({
         RITSEI_AUTH_PROFILE: "oidc",
         RITSEI_OIDC_ISSUER_URL: "ftp://localhost/issuer",
@@ -71,7 +71,7 @@ describe("runtime configuration", () => {
     }))
 
   it.effect("does not read TigerBeetle settings for a PostgreSQL authority", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const configuration = yield* parseRuntimeConfiguration(environment({
         RITSEI_DEPLOYMENT_PROFILE: "standard",
         RITSEI_FINANCIAL_AUTHORITY: "postgresql",
@@ -83,7 +83,7 @@ describe("runtime configuration", () => {
     }))
 
   it.effect("requires complete PostgreSQL read-your-writes settings when enabled", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const failure = yield* parseRuntimeConfiguration(environment({
         RITSEI_POSTGRES_RYW_ENABLED: "true",
       })).pipe(Effect.flip)
@@ -92,7 +92,7 @@ describe("runtime configuration", () => {
     }))
 
   it.effect("decodes bounded PostgreSQL read-your-writes settings", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const configuration = yield* parseRuntimeConfiguration(environment({
         RITSEI_POSTGRES_RYW_ENABLED: "true",
         POSTGRES_REPLICA_URL: "postgresql://replica/ritsei",
@@ -111,7 +111,7 @@ describe("runtime configuration", () => {
     }))
 
   it.effect("rejects unsafe PostgreSQL read-your-writes bounds", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const failure = yield* parseRuntimeConfiguration(environment({
         RITSEI_POSTGRES_RYW_ENABLED: "true",
         POSTGRES_REPLICA_URL: "postgresql://replica/ritsei",
@@ -124,7 +124,7 @@ describe("runtime configuration", () => {
     }))
 
   it.effect("requires complete TigerBeetle settings only when selected", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const failure = yield* parseRuntimeConfiguration(environment({
         RITSEI_FINANCIAL_AUTHORITY: "tigerbeetle",
       })).pipe(Effect.flip)
@@ -133,7 +133,7 @@ describe("runtime configuration", () => {
     }))
 
   it.effect("decodes and normalizes a TigerBeetle configuration", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const configuration = yield* parseRuntimeConfiguration(environment({
         RITSEI_DEPLOYMENT_PROFILE: "scale",
         RITSEI_FINANCIAL_AUTHORITY: "tigerbeetle",

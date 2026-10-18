@@ -142,8 +142,8 @@ export const ExternalActionDefinitionSchema = Schema.Struct({
   allowlisted: Schema.Boolean,
 }).check(Schema.makeFilter(
   (entry) =>
-    entry.version >= entry.compatibilityRange.minimumVersion &&
-      entry.version <= entry.compatibilityRange.maximumVersion
+    entry.version >= entry.compatibilityRange.minimumVersion
+      && entry.version <= entry.compatibilityRange.maximumVersion
       ? undefined
       : {
         path: ["compatibilityRange"],
@@ -169,8 +169,8 @@ export const ExternalEventDefinitionSchema = Schema.Struct({
   occurredAtSemantics: Schema.Literals(["provider_time", "ingest_time"]),
 }).check(Schema.makeFilter(
   (entry) =>
-    entry.version >= entry.compatibilityRange.minimumVersion &&
-      entry.version <= entry.compatibilityRange.maximumVersion
+    entry.version >= entry.compatibilityRange.minimumVersion
+      && entry.version <= entry.compatibilityRange.maximumVersion
       ? undefined
       : {
         path: ["compatibilityRange"],

@@ -2,6 +2,10 @@ import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 
+import { Database, uuidv7 } from "../../../foundation/mod.ts"
+import { makePostgresDatabase, runMigrations } from "../../../platform/mod.ts"
+import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
+import { makeMessagingService } from "../../messaging/mod.ts"
 import {
   IdentityAccountAuthorizer,
   IdentityEventPublisher,
@@ -10,12 +14,8 @@ import {
   UserAccountCreatedEvent,
   UserAccountNotFound,
 } from "../mod.ts"
-import { Database, uuidv7 } from "../../../foundation/mod.ts"
-import { makePostgresDatabase, runMigrations } from "../../../platform/mod.ts"
-import { makeMessagingService } from "../../messaging/mod.ts"
-import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
 
-const databaseUrl = Deno.env.get("DATABASE_URL")
+const databaseUrl = process.env["DATABASE_URL"]
 const postgresFailure = (effect: () => Promise<unknown>) =>
   Effect.tryPromise({ try: effect, catch: (cause) => cause }).pipe(Effect.flip)
 
@@ -28,7 +28,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "persists, normalizes, lists, updates, and removes user accounts in PostgreSQL",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const service = yield* makeDatabaseService(client)
         const created = yield* service.create({ email: "  USER@Example.COM " })
@@ -84,7 +84,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "publishes a tenant-scoped user-account creation event",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
         const [tenant] = yield* Effect.promise(() =>
@@ -140,7 +140,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "maps the PostgreSQL unique constraint and validates input",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const service = yield* makeDatabaseService(client)
         yield* service.create({ email: "duplicate@example.com" })
@@ -171,7 +171,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "persists account disablement and session invalidation state in PostgreSQL",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const service = yield* makeDatabaseService(client)
         const created = yield* service.create({ email: "status@example.test" })
@@ -218,7 +218,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "returns UserAccountNotFound for missing PostgreSQL records",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const service = yield* makeDatabaseService(client)
         const missingId = "00000000-0000-0000-0000-000000000000"

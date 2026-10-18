@@ -4,10 +4,14 @@ import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
 import type { Sql } from "postgres"
 
+import { Database, DatabaseFailure, uuidv7 } from "../../../foundation/mod.ts"
+import { makePostgresDatabase, runMigrations, WebCryptoLive } from "../../../platform/mod.ts"
+import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
 import { makeAuthService } from "../../auth/mod.ts"
 import { AuthorizationService, makeAuthorizationTestLayer } from "../../authorization/mod.ts"
-import { makePartyService, PartyCapabilities, PartyService } from "../../party/mod.ts"
 import { makeUserAccountService, UserAccountService } from "../../identity/mod.ts"
+import { makeMessagingService, MessagingService } from "../../messaging/mod.ts"
+import { makePartyService, PartyCapabilities, PartyService } from "../../party/mod.ts"
 import {
   InventoryCapabilities,
   InventoryStockCorrectedEvent,
@@ -23,12 +27,8 @@ import {
   StockUnavailable,
   WarehouseBranchNotFound,
 } from "../mod.ts"
-import { Database, DatabaseFailure, uuidv7 } from "../../../foundation/mod.ts"
-import { makePostgresDatabase, runMigrations, WebCryptoLive } from "../../../platform/mod.ts"
-import { makeMessagingService, MessagingService } from "../../messaging/mod.ts"
-import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
 
-const databaseUrl = Deno.env.get("DATABASE_URL")
+const databaseUrl = process.env["DATABASE_URL"]
 const postgresFailure = (effect: () => Promise<unknown>) =>
   Effect.tryPromise({ try: effect, catch: (cause) => cause }).pipe(Effect.flip)
 const principal = { userAccountId: "inventory-transfer-integration", sessionId: "session" }
@@ -64,7 +64,7 @@ const readBalances = (client: Sql, tenantId: string) =>
   `
 
 const createLegalEntityScope = (tenantId: string, name: string) =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const party = yield* PartyService
     const organization = yield* party.create({
       principal,
@@ -91,7 +91,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "stock corrected atomic publication stays idempotent and rolls back messaging failures",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
         const userAccountService = yield* makeUserAccountService.pipe(
@@ -118,7 +118,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             }))
           ),
         )
-        yield* Effect.gen(function* () {
+        yield* Effect.gen(function*() {
           const authorization = yield* AuthorizationService
           const requirements = Layer.mergeAll(
             Layer.succeed(Database, database),
@@ -724,7 +724,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "moves transfer lines only at confirmation and completion",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
         const userAccountService = yield* makeUserAccountService.pipe(
@@ -748,7 +748,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             }))
           ),
         )
-        yield* Effect.gen(function* () {
+        yield* Effect.gen(function*() {
           const authorization = yield* AuthorizationService
           const requirements = Layer.mergeAll(
             Layer.succeed(Database, database),
@@ -1034,7 +1034,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "rolls back every source deduction when one transfer line is unavailable",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
         const userAccountService = yield* makeUserAccountService.pipe(
@@ -1053,7 +1053,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             capability,
           })),
         )
-        yield* Effect.gen(function* () {
+        yield* Effect.gen(function*() {
           const authorization = yield* AuthorizationService
           const requirements = Layer.mergeAll(
             Layer.succeed(Database, database),
@@ -1149,7 +1149,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "enforces warehouse legal entity and branch scope",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
         const userAccountService = yield* makeUserAccountService.pipe(
@@ -1168,7 +1168,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             capability,
           })),
         )
-        yield* Effect.gen(function* () {
+        yield* Effect.gen(function*() {
           const authorization = yield* AuthorizationService
           const requirements = Layer.mergeAll(
             Layer.succeed(Database, database),

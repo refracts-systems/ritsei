@@ -1,2 +1,2 @@
-export * from "./contract.ts"
 export * from "./consistency.ts"
+export * from "./contract.ts"

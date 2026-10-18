@@ -50,14 +50,14 @@ export const toReceipt = (row: ReceiptRow): ConsumerReceipt => ({
 })
 
 export const envelopeMatches = (input: AppendEventInput, event: EventEnvelope) =>
-  input.eventId === event.eventId && input.eventType === event.eventType &&
-  input.eventVersion === event.eventVersion && input.tenantId === event.tenantId &&
-  input.aggregateType === event.aggregateType && input.aggregateId === event.aggregateId &&
-  input.commandId === event.commandId && input.correlationId === event.correlationId &&
-  input.causationId === event.causationId && input.idempotencyKey === event.idempotencyKey &&
-  input.actorPrincipalId === event.actorPrincipalId &&
-  new Date(input.occurredAt).getTime() === new Date(event.occurredAt).getTime() &&
-  Equal.equals(input.payload, event.payload)
+  input.eventId === event.eventId && input.eventType === event.eventType
+  && input.eventVersion === event.eventVersion && input.tenantId === event.tenantId
+  && input.aggregateType === event.aggregateType && input.aggregateId === event.aggregateId
+  && input.commandId === event.commandId && input.correlationId === event.correlationId
+  && input.causationId === event.causationId && input.idempotencyKey === event.idempotencyKey
+  && input.actorPrincipalId === event.actorPrincipalId
+  && new Date(input.occurredAt).getTime() === new Date(event.occurredAt).getTime()
+  && Equal.equals(input.payload, event.payload)
 
 export const conflict = (input: AppendEventInput) =>
   new EventIdempotencyConflict({
@@ -72,8 +72,8 @@ export const receiptMatchesEvent = (
   receipt: ConsumerReceipt,
   event: Pick<EventEnvelope, "eventType" | "eventVersion" | "idempotencyKey">,
 ) =>
-  receipt.eventType === event.eventType && receipt.eventVersion === event.eventVersion &&
-  receipt.idempotencyKey === event.idempotencyKey
+  receipt.eventType === event.eventType && receipt.eventVersion === event.eventVersion
+  && receipt.idempotencyKey === event.idempotencyKey
 
 export const receiptKey = (input: ConsumeOnceInput) =>
   `${input.tenantId}:${input.consumerId}:${input.eventId}`

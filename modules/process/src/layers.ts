@@ -1,23 +1,23 @@
 import * as Layer from "effect/Layer"
 
 import { ProcessService } from "./contract.ts"
-import { makeProcessService } from "./postgres.ts"
-import { makeProcessStudioService, ProcessStudioService } from "./studio.ts"
-import {
-  makeMemoryProcessCheckpointStore,
-  makePostgresProcessCheckpointStore,
-  ProcessCheckpointStore,
-} from "./runtime-store.ts"
 import {
   makeMemoryProcessOperatorStore,
   makePostgresProcessOperatorStore,
   ProcessOperatorStore,
 } from "./operations-store.ts"
+import { makeProcessService } from "./postgres.ts"
 import {
   makeMemoryProcessReleaseStore,
   makePostgresProcessReleaseStore,
   ProcessReleaseStore,
 } from "./release-store.ts"
+import {
+  makeMemoryProcessCheckpointStore,
+  makePostgresProcessCheckpointStore,
+  ProcessCheckpointStore,
+} from "./runtime-store.ts"
+import { makeProcessStudioService, ProcessStudioService } from "./studio.ts"
 
 export const ProcessLive = Layer.effect(ProcessService, makeProcessService)
 export const ProcessPostgresLive = ProcessLive

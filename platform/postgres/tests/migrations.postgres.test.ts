@@ -5,7 +5,7 @@ import * as Effect from "effect/Effect"
 import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
 import { runMigrations } from "../mod.ts"
 
-const databaseUrl = Deno.env.get("DATABASE_URL")
+const databaseUrl = process.env["DATABASE_URL"]
 
 it.effect.skipIf(databaseUrl === undefined)(
   "applies the complete migration catalog to a clean database",
@@ -13,7 +13,7 @@ it.effect.skipIf(databaseUrl === undefined)(
     withTemporaryDatabase(
       databaseUrl!,
       (client) =>
-        Effect.gen(function* () {
+        Effect.gen(function*() {
           yield* runMigrations(client)
           yield* runMigrations(client)
 

@@ -1,19 +1,14 @@
 {
-  "deno.enable": true,
-  "deno.config": "./deno.json",
-  "deno.enablePaths": ["./"],
-  "deno.lint": true,
-  "deno.codeLens.test": true,
-  "deno.codeLens.implementations": true,
   "editor.formatOnSave": true,
-  "editor.defaultFormatter": "denoland.vscode-deno",
+  "editor.defaultFormatter": "dprint.dprint",
   "[typescript]": {
-    "editor.defaultFormatter": "denoland.vscode-deno"
+    "editor.defaultFormatter": "dprint.dprint"
   },
   "[typescriptreact]": {
-    "editor.defaultFormatter": "denoland.vscode-deno"
+    "editor.defaultFormatter": "dprint.dprint"
   },
   "[javascript]": {
-    "editor.defaultFormatter": "denoland.vscode-deno"
-  }
+    "editor.defaultFormatter": "dprint.dprint"
+  },
+  "typescript.tsdk": "node_modules/typescript/lib"
 }

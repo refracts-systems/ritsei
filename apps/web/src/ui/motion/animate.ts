@@ -1,6 +1,6 @@
 import { animate } from "motion"
-import { motionSpring } from "./tokens.ts"
 import { prefersReducedMotion } from "./preference.ts"
+import { motionSpring } from "./tokens.ts"
 
 export type SpatialTarget = Partial<{
   x: number

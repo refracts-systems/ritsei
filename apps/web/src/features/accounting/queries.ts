@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/solid-query"
+import type { RequestFailure } from "../../shared/api.ts"
 import type {
   Account,
   AccountingConfiguration,
@@ -17,9 +18,8 @@ import type {
   PostJournalInput,
   RevenuePostingProfile,
 } from "../../shared/contracts/generated/accounting.ts"
-import type { RequestFailure } from "../../shared/api.ts"
-import { createServerQuery } from "../../shared/server-query.ts"
 import { type ApiScope, runRequest } from "../../shared/runtime.ts"
+import { createServerQuery } from "../../shared/server-query.ts"
 import {
   closePeriod,
   configureLegalEntity,

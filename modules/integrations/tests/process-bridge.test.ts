@@ -64,7 +64,7 @@ it("projects only public catalog entries and omits transport metadata", () => {
 })
 
 it.effect("keeps a separate OAuth scope, typed mapping, and no provider side effect", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const mapping = makeExternalProcessActionMapping(createPayment, { amount: "10.00" })
     const result = yield* simulateProcessExternalAction({
       tenantId: "018f3f77-0c5a-7cc0-8b62-6a163d214123",

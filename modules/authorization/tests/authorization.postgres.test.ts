@@ -1,8 +1,12 @@
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 
+import { Database, uuidv7 } from "../../../foundation/mod.ts"
+import { makePostgresDatabase, runMigrations, WebCryptoLive } from "../../../platform/mod.ts"
+import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
 import { makeAuthService } from "../../auth/mod.ts"
 import { IdentityCapabilities } from "../../identity/mod.ts"
+import { makeUserAccountService, UserAccountService } from "../../identity/mod.ts"
 import {
   AuthorizationCapabilities,
   AuthorizationDenied,
@@ -11,18 +15,14 @@ import {
   TenantMembershipNotFound,
   TenantMembershipUserAccountNotFound,
 } from "../mod.ts"
-import { makeUserAccountService, UserAccountService } from "../../identity/mod.ts"
-import { Database, uuidv7 } from "../../../foundation/mod.ts"
-import { makePostgresDatabase, runMigrations, WebCryptoLive } from "../../../platform/mod.ts"
-import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
 
-const databaseUrl = Deno.env.get("DATABASE_URL")
+const databaseUrl = process.env["DATABASE_URL"]
 
 it.effect.skipIf(databaseUrl === undefined)(
   "enforces tenant membership lifecycle and capability scope in PostgreSQL",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
         const userAccounts = yield* makeUserAccountService.pipe(
@@ -190,7 +190,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "maps missing membership user accounts in PostgreSQL",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
         const userAccounts = yield* makeUserAccountService.pipe(

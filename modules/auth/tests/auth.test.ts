@@ -17,7 +17,7 @@ const withAuth = <A, E>(program: Effect.Effect<A, E, AuthService>) =>
 
 describe("auth contract", () => {
   it.effect("creates tenants and rejects duplicate slugs", () =>
-    withAuth(Effect.gen(function* () {
+    withAuth(Effect.gen(function*() {
       const auth = yield* AuthService
       const tenant = yield* auth.createTenant({ slug: " ACME ", timezone: " Asia/Jakarta " })
       yield* Schema.decodeUnknownEffect(Tenant)(tenant)
@@ -32,7 +32,7 @@ describe("auth contract", () => {
     })))
 
   it.effect("issues, authenticates, and revokes opaque user-account sessions", () =>
-    withAuth(Effect.gen(function* () {
+    withAuth(Effect.gen(function*() {
       const auth = yield* AuthService
       const issued = yield* auth.issueSession({ userAccountId: "user-account-1", ttlSeconds: 60 })
       const principal = yield* auth.authenticate(issued.token)
@@ -44,7 +44,7 @@ describe("auth contract", () => {
     })))
 
   it.effect("rejects sessions for unknown user accounts", () =>
-    withAuth(Effect.gen(function* () {
+    withAuth(Effect.gen(function*() {
       const auth = yield* AuthService
       assert.instanceOf(
         yield* Effect.flip(auth.issueSession({ userAccountId: "missing", ttlSeconds: 60 })),
@@ -54,7 +54,7 @@ describe("auth contract", () => {
 
   it.effect("rejects sessions for disabled user accounts", () =>
     Effect.provide(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const auth = yield* AuthService
         assert.instanceOf(
           yield* Effect.flip(auth.issueSession({ userAccountId: "disabled", ttlSeconds: 60 })),

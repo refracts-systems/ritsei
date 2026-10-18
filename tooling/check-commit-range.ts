@@ -1,27 +1,30 @@
+import { spawnSync } from "node:child_process"
+
 import { commitSubjectError } from "./check-commit-message.ts"
 
-const [base, head] = Deno.args
+const args = process.argv.slice(2)
+const [base, head] = args
 
-if (base === undefined || head === undefined || Deno.args.length !== 2) {
+if (base === undefined || head === undefined || args.length !== 2) {
   console.error("usage: check-commit-range.ts <base-sha> <head-sha>")
-  Deno.exit(2)
+  process.exit(2)
 }
 
 const zeroSha = /^0+$/u
 const range = zeroSha.test(base) ? head : `${base}..${head}`
-const result = await new Deno.Command("git", {
-  args: ["log", "--format=%H%x00%s", "--no-decorate", range],
-  stdout: "piped",
-  stderr: "piped",
-}).output()
+const result = spawnSync(
+  "git",
+  ["log", "--format=%H%x00%s", "--no-decorate", range],
+  { encoding: "utf8" },
+)
 
-if (!result.success) {
-  const stderr = new TextDecoder().decode(result.stderr).trim()
+if (result.status !== 0) {
+  const stderr = (result.stderr ?? "").trim()
   console.error(`Unable to inspect commit range: ${stderr}`)
-  Deno.exit(1)
+  process.exit(1)
 }
 
-const commits = new TextDecoder().decode(result.stdout).trimEnd().split(/\r?\n/u).filter(Boolean)
+const commits = result.stdout.trimEnd().split(/\r?\n/u).filter(Boolean)
 const failures = commits.flatMap((commit) => {
   const separator = commit.indexOf("\0")
   const sha = separator === -1 ? commit : commit.slice(0, separator)
@@ -32,7 +35,7 @@ const failures = commits.flatMap((commit) => {
 
 if (failures.length > 0) {
   console.error(failures.join("\n"))
-  Deno.exit(1)
+  process.exit(1)
 }
 
 console.log(`Validated ${commits.length} commit subject${commits.length === 1 ? "" : "s"}.`)

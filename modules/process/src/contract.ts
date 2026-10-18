@@ -2,8 +2,7 @@ import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 
-import { Principal } from "../../auth/mod.ts"
-import { AuthorizationDenied } from "../../authorization/mod.ts"
+import { DatabaseFailure, LeaseGeneration } from "../../../foundation/mod.ts"
 import {
   AccountingPeriodNotOpen,
   FinancialEngineActivated,
@@ -12,8 +11,8 @@ import {
   RevenueJournalNotFound,
   RevenuePostingProfileNotFound,
 } from "../../accounting/mod.ts"
-import { DatabaseFailure, LeaseGeneration } from "../../../foundation/mod.ts"
-import { EventEnvelope, EventIdempotencyConflict } from "../../messaging/mod.ts"
+import { Principal } from "../../auth/mod.ts"
+import { AuthorizationDenied } from "../../authorization/mod.ts"
 import {
   StockReservation,
   StockReservationIdempotencyConflict,
@@ -22,6 +21,7 @@ import {
   StockReservationNotFound,
   StockUnavailable,
 } from "../../inventory/mod.ts"
+import { EventEnvelope, EventIdempotencyConflict } from "../../messaging/mod.ts"
 import {
   SalesOrder,
   SalesOrderConfirmationIdempotencyConflict,

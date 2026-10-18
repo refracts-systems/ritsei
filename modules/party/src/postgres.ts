@@ -12,7 +12,6 @@ import {
   relatedPartyPaths,
 } from "../../../db/schema/party.ts"
 import { Database, isDatabaseConstraint } from "../../../foundation/mod.ts"
-import type { PartyStore } from "./store.ts"
 import type {
   PartyDetail,
   PartyKind,
@@ -35,6 +34,7 @@ import {
   PartyRepresentationUserAccountNotFound,
   PartyRoleAlreadyAssigned,
 } from "./errors.ts"
+import type { PartyStore } from "./store.ts"
 
 const partySelection = {
   id: parties.id,
@@ -92,10 +92,10 @@ const relatedPartyPathSelection = {
   depth: relatedPartyPaths.depth,
 }
 
-export const makePartyPostgresStore = Effect.gen(function* () {
+export const makePartyPostgresStore = Effect.gen(function*() {
   const database = yield* Database
   const list = Effect.fn("PartyStore.list")(
-    function* (tenantId: string, search: string | null, kind: PartyKind | null, limit: number) {
+    function*(tenantId: string, search: string | null, kind: PartyKind | null, limit: number) {
       const rows = yield* database.query(
         (db) =>
           db.select({ ...partySelection, legalEntityId: legalEntities.id }).from(parties).leftJoin(
@@ -115,7 +115,7 @@ export const makePartyPostgresStore = Effect.gen(function* () {
     },
   )
   const getDetail = Effect.fn("PartyStore.getDetail")(
-    function* (tenantId: string, partyId: string) {
+    function*(tenantId: string, partyId: string) {
       const rows = yield* database.query(
         (db) =>
           db.select({
@@ -211,7 +211,7 @@ export const makePartyPostgresStore = Effect.gen(function* () {
     },
   )
   const create = Effect.fn("PartyStore.create")(
-    function* (tenantId: string, kind: PartyKind, name: string) {
+    function*(tenantId: string, kind: PartyKind, name: string) {
       const rows = yield* database.query(
         (db) => db.insert(parties).values({ tenantId, kind, name }).returning(partySelection),
         "party.create",
@@ -220,7 +220,7 @@ export const makePartyPostgresStore = Effect.gen(function* () {
     },
   )
   const createLegalEntity = Effect.fn("PartyStore.createLegalEntity")(
-    function* (tenantId: string, organizationId: string) {
+    function*(tenantId: string, organizationId: string) {
       const rows = yield* database.query(
         (db) =>
           db.select({ id: parties.id, kind: parties.kind }).from(parties).where(
@@ -251,7 +251,7 @@ export const makePartyPostgresStore = Effect.gen(function* () {
     },
   )
   const createBranch = Effect.fn("PartyStore.createBranch")(
-    function* (
+    function*(
       tenantId: string,
       legalEntityId: string,
       name: string,
@@ -288,7 +288,7 @@ export const makePartyPostgresStore = Effect.gen(function* () {
     },
   )
   const createPartyRepresentation = Effect.fn("PartyStore.createPartyRepresentation")(
-    function* (
+    function*(
       tenantId: string,
       userAccountId: string,
       partyId: string,
@@ -329,7 +329,7 @@ export const makePartyPostgresStore = Effect.gen(function* () {
     },
   )
   const setPartyRepresentationActive = Effect.fn("PartyStore.setPartyRepresentationActive")(
-    function* (tenantId: string, representationId: string, active: boolean) {
+    function*(tenantId: string, representationId: string, active: boolean) {
       const rows = yield* database.query(
         (db) =>
           db.update(partyRepresentations).set({ active }).where(
@@ -348,7 +348,7 @@ export const makePartyPostgresStore = Effect.gen(function* () {
     },
   )
   const assignRole = Effect.fn("PartyStore.assignRole")(
-    function* (tenantId: string, partyId: string, role: PartyRole) {
+    function*(tenantId: string, partyId: string, role: PartyRole) {
       yield* database.query(
         (db) => db.insert(partyRoles).values({ tenantId, partyId, role }),
         "party.role.assign",
@@ -364,7 +364,7 @@ export const makePartyPostgresStore = Effect.gen(function* () {
     },
   )
   const createRelationship = Effect.fn("PartyStore.createRelationship")(
-    function* (
+    function*(
       tenantId: string,
       partyId: string,
       legalEntityId: string,
@@ -400,7 +400,7 @@ export const makePartyPostgresStore = Effect.gen(function* () {
     },
   )
   const getRelationship = Effect.fn("PartyStore.getRelationship")(
-    function* (tenantId: string, relationshipId: string) {
+    function*(tenantId: string, relationshipId: string) {
       const rows = yield* database.query(
         (db) =>
           db.select(relationshipSelection).from(partyRelationships).where(
@@ -419,7 +419,7 @@ export const makePartyPostgresStore = Effect.gen(function* () {
     },
   )
   const findRelatedPartyPaths = Effect.fn("PartyStore.findRelatedPartyPaths")(
-    function* (tenantId: string, sourcePartyId: string, limit: number) {
+    function*(tenantId: string, sourcePartyId: string, limit: number) {
       const rows = yield* database.query(
         (db) =>
           db.select(relatedPartyPathSelection).from(relatedPartyPaths).where(
@@ -439,7 +439,7 @@ export const makePartyPostgresStore = Effect.gen(function* () {
     },
   )
   const attachIdentifier = Effect.fn("PartyStore.attachIdentifier")(
-    function* (
+    function*(
       tenantId: string,
       partyId: string,
       provider: string,
@@ -463,14 +463,17 @@ export const makePartyPostgresStore = Effect.gen(function* () {
               return new PartyNotFound({ tenantId, partyId })
             }
             if (
-              legalEntityId !== null &&
-              isDatabaseConstraint(error, "party_identifiers_tenant_legal_entity_fkey", "23503")
+              legalEntityId !== null
+              && isDatabaseConstraint(error, "party_identifiers_tenant_legal_entity_fkey", "23503")
             ) {
               return new LegalEntityNotFound({ tenantId, legalEntityId })
             }
             if (
-              isDatabaseConstraint(error, "party_identifiers_tenant_provider_scope_value_uq") ||
-              isDatabaseConstraint(error, "party_identifiers_tenant_provider_entity_scope_value_uq")
+              isDatabaseConstraint(error, "party_identifiers_tenant_provider_scope_value_uq")
+              || isDatabaseConstraint(
+                error,
+                "party_identifiers_tenant_provider_entity_scope_value_uq",
+              )
             ) {
               return new ExternalIdentifierAlreadyAssigned({
                 tenantId,

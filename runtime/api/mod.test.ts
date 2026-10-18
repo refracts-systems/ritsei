@@ -1,10 +1,10 @@
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
-import * as Layer from "effect/Layer"
+import * as OpenApi from "effect/http-api/OpenApi"
 import * as HttpRouter from "effect/http/HttpRouter"
 import * as HttpServerRequest from "effect/http/HttpServerRequest"
 import * as HttpServerResponse from "effect/http/HttpServerResponse"
-import * as OpenApi from "effect/http-api/OpenApi"
+import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
 
 import { JournalLine } from "../../modules/accounting/mod.ts"
@@ -58,7 +58,7 @@ it.effect("rejects streamed request bodies over the transport limit", () =>
       )
     ),
     ({ handler }) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const response = yield* Effect.promise(() =>
           handler(
             new Request("http://localhost/echo", {
@@ -92,7 +92,7 @@ it.effect("rejects invalid body length declarations before route decoding", () =
       )
     ),
     ({ handler }) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const invalid = yield* Effect.promise(() =>
           handler(
             new Request("http://localhost/echo", {
@@ -143,7 +143,7 @@ it.effect("rejects malformed UTF-8 before route decoding", () =>
       )
     ),
     ({ handler }) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const response = yield* Effect.promise(() =>
           handler(
             new Request("http://localhost/echo", {

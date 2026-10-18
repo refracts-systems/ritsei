@@ -26,7 +26,7 @@ const baseInput = {
 }
 
 it.effect("checks compatibility and payload limit with redaction", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const decision = yield* assessExternalDelivery(baseInput)
     assert.strictEqual(decision.state, "retry")
     assert.strictEqual(decision.providerStatus, "unknown")
@@ -51,7 +51,7 @@ it.effect("checks compatibility and payload limit with redaction", () =>
   }))
 
 it.effect("moves a provider failure to a dead letter after bounded attempts", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const decision = yield* assessExternalDelivery({
       ...baseInput,
       attempts: 3,

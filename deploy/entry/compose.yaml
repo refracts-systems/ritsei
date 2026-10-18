@@ -18,7 +18,7 @@ services:
       - ritsei-entry-postgres:/var/lib/postgresql/data
 
   migrate:
-    image: denoland/deno:2.9.5
+    image: node:24-slim
     working_dir: /app
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ritsei
@@ -26,13 +26,13 @@ services:
       RITSEI_FINANCIAL_AUTHORITY: postgresql
     volumes:
       - ../..:/app
-    command: ["deno", "run", "-A", "runtime/migrator/mod.ts"]
+    command: ["pnpm", "run", "migrate"]
     depends_on:
       postgres:
         condition: service_healthy
 
   api:
-    image: denoland/deno:2.9.5
+    image: node:24-slim
     working_dir: /app
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ritsei
@@ -43,7 +43,7 @@ services:
       PORT: "8000"
     volumes:
       - ../..:/app
-    command: ["deno", "run", "-A", "runtime/api/mod.ts"]
+    command: ["pnpm", "start"]
     ports:
       - "8000:8000"
     depends_on:
@@ -51,7 +51,7 @@ services:
         condition: service_completed_successfully
 
   worker:
-    image: denoland/deno:2.9.5
+    image: node:24-slim
     working_dir: /app
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ritsei
@@ -63,7 +63,7 @@ services:
       WORKER_ID: entry-accounting-worker
     volumes:
       - ../..:/app
-    command: ["deno", "run", "-A", "runtime/worker/mod.ts"]
+    command: ["pnpm", "run", "worker"]
     depends_on:
       migrate:
         condition: service_completed_successfully

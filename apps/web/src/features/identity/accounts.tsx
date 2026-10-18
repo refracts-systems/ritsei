@@ -1,15 +1,15 @@
 import { createMemo, createSignal, onSettled, Show, untrack, useContext } from "solid-js"
-import type { UserAccount } from "../../shared/contracts/generated/identity.ts"
 import { failureMessage } from "../../shared/api.ts"
+import type { UserAccount } from "../../shared/contracts/generated/identity.ts"
 import { CommandFeedback, QueryBoundary } from "../../shared/request-feedback.tsx"
 import { ApiRuntime } from "../../shared/runtime.ts"
 import { layout } from "../../ui/foundations/layout.ts"
+import { DataTable } from "../../ui/patterns/data-table.tsx"
 import { Button } from "../../ui/primitives/button.tsx"
 import { createDialogOpenChange, Dialog } from "../../ui/primitives/dialog.tsx"
-import { Form } from "../../ui/primitives/form.tsx"
 import { FormField } from "../../ui/primitives/form-field.tsx"
+import { Form } from "../../ui/primitives/form.tsx"
 import { Input } from "../../ui/primitives/input.tsx"
-import { DataTable } from "../../ui/patterns/data-table.tsx"
 import { CartographyField } from "../../ui/renderers/cartography/cartography-field.tsx"
 import { projectAccountNetwork } from "./projections/account-network.ts"
 import {
@@ -371,9 +371,9 @@ function AccountCollection() {
   const filtered = createMemo(() => {
     const term = search().trim().toLocaleLowerCase()
     return (query.data ?? []).filter((account) =>
-      (status() === "all" || account.status === status()) &&
-      (account.email.toLocaleLowerCase().includes(term) ||
-        account.id.toLocaleLowerCase().includes(term))
+      (status() === "all" || account.status === status())
+      && (account.email.toLocaleLowerCase().includes(term)
+        || account.id.toLocaleLowerCase().includes(term))
     )
   })
   return (

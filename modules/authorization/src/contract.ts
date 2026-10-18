@@ -2,8 +2,8 @@ import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 
-import { Principal } from "../../auth/mod.ts"
 import { DatabaseFailure } from "../../../foundation/mod.ts"
+import { Principal } from "../../auth/mod.ts"
 import { Capability as CapabilitySchema } from "./capabilities.ts"
 
 export const Capability = CapabilitySchema

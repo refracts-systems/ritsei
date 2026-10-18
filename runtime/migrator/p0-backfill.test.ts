@@ -1,8 +1,8 @@
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 
-import { withTemporaryDatabase } from "../../tests/support/postgres-database.ts"
 import { runMigrations } from "../../platform/mod.ts"
+import { withTemporaryDatabase } from "../../tests/support/postgres-database.ts"
 import {
   applyP0Backfill,
   decodeP0BackfillInput,
@@ -10,10 +10,10 @@ import {
   P0BackfillFailure,
 } from "./p0-backfill.ts"
 
-const databaseUrl = Deno.env.get("DATABASE_URL")
+const databaseUrl = process.env["DATABASE_URL"]
 
 it.effect("rejects malformed JSON with file context", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const failure = yield* Effect.flip(decodeP0BackfillJson("{", "/tmp/p0-mapping.json"))
     assert.instanceOf(failure, P0BackfillFailure)
     assert.strictEqual(failure._tag, "P0BackfillFailure")
@@ -21,7 +21,7 @@ it.effect("rejects malformed JSON with file context", () =>
   }))
 
 it.effect("rejects invalid schema with file context before database access", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const failure = yield* Effect.flip(
       decodeP0BackfillInput({ warehouseScopes: "not-an-array" }, "/tmp/p0-mapping.json"),
     )
@@ -30,7 +30,7 @@ it.effect("rejects invalid schema with file context before database access", () 
   }))
 
 it.effect("bounds each mapping collection before database access", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const failure = yield* Effect.flip(
       decodeP0BackfillInput({
         warehouseScopes: Array.from({ length: 100_001 }, () => ({})),
@@ -46,7 +46,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "applies explicit P0 scope and identifier mappings transactionally",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const tenantId = "00000000-0000-4000-8000-000000000001"
         const firstLegalEntityId = "00000000-0000-4000-8000-000000000002"

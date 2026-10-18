@@ -1,12 +1,13 @@
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 
-import { makeAuthService } from "../../auth/mod.ts"
-import { makeUserAccountService, UserAccountService } from "../../identity/mod.ts"
-import { AuthorizationService, makeAuthorizationTestLayer } from "../../authorization/mod.ts"
 import { Database, uuidv7 } from "../../../foundation/mod.ts"
 import { makePostgresDatabase, runMigrations, WebCryptoLive } from "../../../platform/mod.ts"
 import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
+import { makeAuthService } from "../../auth/mod.ts"
+import { AuthorizationService, makeAuthorizationTestLayer } from "../../authorization/mod.ts"
+import { makeUserAccountService, UserAccountService } from "../../identity/mod.ts"
+import { makeMessagingService } from "../../messaging/mod.ts"
 import {
   BranchAlreadyExists,
   ExternalIdentifierAlreadyAssigned,
@@ -22,9 +23,8 @@ import {
   PartyRepresentationAlreadyExists,
   PartyRepresentationNotFound,
 } from "../mod.ts"
-import { makeMessagingService } from "../../messaging/mod.ts"
 
-const databaseUrl = Deno.env.get("DATABASE_URL")
+const databaseUrl = process.env["DATABASE_URL"]
 const postgresFailure = (effect: () => Promise<unknown>) =>
   Effect.tryPromise({ try: effect, catch: (cause) => cause }).pipe(Effect.flip)
 
@@ -32,7 +32,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "enforces scoped external identifier uniqueness in PostgreSQL",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
         const userAccountService = yield* makeUserAccountService.pipe(
@@ -45,7 +45,7 @@ it.effect.skipIf(databaseUrl === undefined)(
         )
         const principal = { userAccountId: "party-integration", sessionId: "session" }
         const tenant = yield* auth.createTenant({ slug: `party-${uuidv7()}` })
-        yield* Effect.gen(function* () {
+        yield* Effect.gen(function*() {
           const authorization = yield* AuthorizationService
           const messaging = yield* makeMessagingService.pipe(
             Effect.provideService(Database, database),
@@ -178,7 +178,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "enforces legal entity ownership and branch uniqueness in PostgreSQL",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
         const userAccountService = yield* makeUserAccountService.pipe(
@@ -251,7 +251,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           },
         ])
 
-        yield* Effect.gen(function* () {
+        yield* Effect.gen(function*() {
           const authorization = yield* AuthorizationService
           const party = yield* makePartyService.pipe(
             Effect.provideService(Database, database),
@@ -591,7 +591,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "enforces identity-party representation scope in PostgreSQL",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
         const userAccountService = yield* makeUserAccountService.pipe(
@@ -635,7 +635,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           },
         ])
 
-        yield* Effect.gen(function* () {
+        yield* Effect.gen(function*() {
           const authorization = yield* AuthorizationService
           const party = yield* makePartyService.pipe(
             Effect.provideService(Database, database),

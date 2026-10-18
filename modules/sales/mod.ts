@@ -27,6 +27,15 @@ export {
   SalesOrderStatus,
   SalesService,
 } from "./src/contract.ts"
+export type {
+  Customer as CustomerType,
+  Quotation as QuotationType,
+  QuotationStatus as QuotationStatusType,
+  SalesOrder as SalesOrderType,
+  SalesOrderLine as SalesOrderLineType,
+  SalesOrderStatus as SalesOrderStatusType,
+  SalesService as SalesServiceShape,
+} from "./src/contract.ts"
 export {
   CustomerAlreadyExists,
   CustomerNotFound,
@@ -37,12 +46,3 @@ export {
   SalesOrderNotFound,
 } from "./src/errors.ts"
 export { makeSalesService, makeSalesTestLayer, SalesLive } from "./src/layers.ts"
-export type {
-  Customer as CustomerType,
-  Quotation as QuotationType,
-  QuotationStatus as QuotationStatusType,
-  SalesOrder as SalesOrderType,
-  SalesOrderLine as SalesOrderLineType,
-  SalesOrderStatus as SalesOrderStatusType,
-  SalesService as SalesServiceShape,
-} from "./src/contract.ts"

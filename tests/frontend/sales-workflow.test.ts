@@ -47,7 +47,7 @@ const connectAndOpenSales = async (page: Page, url: string) => {
 it.effect(
   "connects Sales customer, quotation, and order workflows through the backend surface",
   () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const { page, url, errors } = yield* builtApp
       let customers = [] as typeof customer[]
       let quotations = [] as typeof quotation[]
@@ -77,8 +77,8 @@ it.effect(
               route,
               200,
               customers.filter((candidate) =>
-                search === undefined || candidate.name.toLowerCase().includes(search) ||
-                candidate.email.includes(search)
+                search === undefined || candidate.name.toLowerCase().includes(search)
+                || candidate.email.includes(search)
               ),
             )
           }

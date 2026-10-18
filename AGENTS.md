@@ -12,7 +12,7 @@ This file defines how coding agents must work in the RITSEI repository.
 > - Documentation workflow: [`./docs/development/documentation-workflow.md`](./docs/development/documentation-workflow.md)
 > - Documentation ownership: [`./docs/documentation-boundaries.md`](./docs/documentation-boundaries.md)
 > - Frontend architecture: [`./docs/architecture/frontend.md`](./docs/architecture/frontend.md)
-- Skeleton architecture: [`./docs/architecture/skeleton.md`](./docs/architecture/skeleton.md)
+> - Skeleton architecture: [`./docs/architecture/skeleton.md`](./docs/architecture/skeleton.md)
 > - Process Studio architecture: [`./docs/architecture/process-studio.md`](./docs/architecture/process-studio.md)
 > - External integration surface: [`./docs/architecture/integration-architecture.md`](./docs/architecture/integration-architecture.md)
 > - Stateful runtime: [`./docs/architecture/runtime-architecture.md`](./docs/architecture/runtime-architecture.md)
@@ -107,7 +107,7 @@ repository ownership, tooling, or validation rules.
 
 ## Dependency Ownership
 
-Dependency and Deno configuration ownership follows application boundaries:
+Dependency and package-manager configuration ownership follows application boundaries:
 
 ```text
              Dependency ownership
@@ -118,15 +118,14 @@ Dependency and Deno configuration ownership follows application boundaries:
                 │                              │
                 └──────────────┬───────────────┘
                                ▼
-                         deno install
+                          pnpm install
                                │
                     ┌──────────┴──────────┐
                     ▼                     ▼
-               node_modules           deno.lock
+               node_modules           pnpm-lock.yaml
 
-             deno.json owns workspace orchestration,
-             runtime, compiler, tasks, formatting,
-             linting, and permissions.
+             package.json scripts own workspace orchestration,
+             type checking, tasks, and tooling entrypoints.
 ```
 
 Rules:
@@ -139,9 +138,9 @@ Rules:
   source imports, task commands, CI configuration, or Dockerfiles.
 - Keep dependencies used by root tests, tooling, runtime, or more than one boundary in
   the root `package.json`, even when their names are frontend-oriented.
-- Commit the single `deno.lock` so dependency resolution remains reproducible.
-- Keep `nodeModulesDir: "auto"` and `preferPackageJson: true` in `deno.json`.
-- Use `deno install` after root or member manifest changes.
+- Commit the single `pnpm-lock.yaml` so dependency resolution remains reproducible.
+- Keep module resolution consistent with the root `tsconfig.json`.
+- Use `pnpm install` after root or member manifest changes.
 - Treat `vendor/` as reference material, not as the application dependency source.
 
 ## Effect v4 Reference
@@ -163,7 +162,7 @@ git subtree pull --prefix=vendor/effect effect main --squash
 ## Drizzle v1 Reference and Effect Integration
 
 The runtime `drizzle-orm` dependency is pinned to `1.0.0-rc.5-169397b` in the
-root `package.json` and `deno.lock`. Keep that runtime pin; do not downgrade it
+root `package.json` and `pnpm-lock.yaml`. Keep that runtime pin; do not downgrade it
 to match the vendored reference. The vendored Drizzle v1 source remains a
 `v1.0.0-rc.4` reference subtree until it is deliberately refreshed from the
 upstream source.
@@ -203,9 +202,9 @@ Integration rules:
   subtrees are reference-only and must not be used as runtime dependencies.
 - The root `package.json` owns repository-wide npm/JSR dependencies and tooling; `apps/web/package.json`
   owns dependencies exclusively consumed by the web application. Both manifests resolve into the single
-  `deno.lock` dependency graph.
-- `deno.json` owns Deno runtime and toolchain behavior such as compiler options, permissions, tasks,
-  formatting, linting, and workspace membership; it does not own web dependency versions.
+  `pnpm-lock.yaml` dependency graph.
+- The root `package.json` `scripts` own workspace orchestration such as type checking and tooling
+  entrypoints; they do not own web dependency versions.
 - Do not introduce raw GitHub, `raw.githubusercontent.com`, or other HTTPS source imports as package
   substitutes unless an accepted ADR explicitly requires the exception.
 - `drizzle-orm/effect-postgres` and its `effect` / `@effect/sql-pg` peer path are covered by the
@@ -226,10 +225,10 @@ document and summarize only what is necessary for navigation or context.
 - HTTP contracts, routing, request decoding, error encoding, and OpenAPI use
   Effect v4 `HttpApi`, `HttpApiGroup`, `HttpApiEndpoint`, `HttpApiBuilder`, and
   `HttpRouter`.
-- Use the canonical `@effect/platform-deno` source as the server adapter and
-  runtime entrypoint on Deno.
+- Use the canonical `@effect/platform-node` source as the server adapter and
+  runtime entrypoint on Node.
 - Application code must not import `node:http` or call `Deno.serve` directly;
-  native serving is owned by the Effect Deno adapter.
+  native serving is owned by the Effect Node adapter.
 - Never use Hono, Express, Fastify, or NestJS for application HTTP.
 - Use Effect HttpApi security middleware for bearer, cookie, or API-key
   authentication boundaries.
@@ -532,14 +531,14 @@ Fallow is the generic repository-wide graph and entropy check. It complements, r
 replaces, RITSEI-specific ownership, financial, authorization, Effect, migration, and workload
 checks.
 
-- Use `deno task fallow` for a full dead-code, duplication, and health scan.
-- Use `deno task fallow:dead-code`, `deno task fallow:dupes`, `deno task fallow:health`, and
-  `deno task fallow:boundaries` for focused analysis.
-- Use `deno task fallow:audit` as the baseline-backed changed-set gate before commit; it intentionally
+- Use `pnpm run fallow` for a full dead-code, duplication, and health scan.
+- Use `pnpm run fallow:dead-code`, `pnpm run fallow:dupes`, `pnpm run fallow:health`, and
+  `pnpm run fallow:boundaries` for focused analysis.
+- Use `pnpm run fallow:audit` as the baseline-backed changed-set gate before commit; it intentionally
   uses Fallow's `all` gate, and its committed baselines are a temporary migration ledger, not permission
   to add more debt.
 - Agents should request `--format json --quiet` when parsing Fallow output and run
-  `deno task fallow:fix:dry-run` before considering any automatic cleanup.
+  `pnpm run fallow:fix:dry-run` before considering any automatic cleanup.
 - Never apply Fallow fixes blindly to Accounting, the financial ledger, Process Runtime,
   authorization, migrations, or other invariant-sensitive code. Trace and review the finding first.
 - Keep exceptions narrow and reasoned. Do not weaken boundaries, thresholds, entry points, or
@@ -625,7 +624,7 @@ All TypeScript tests MUST use `@effect/vitest`:
   through finalizers. Never rely on test-process exit for cleanup.
 - Keep `@effect/vitest` on the exact same v4 release as `effect`, and declare
   both it and `vitest` in the root `package.json`.
-- Run worktree-local tests through `deno task check:affected`; reserve `deno task
+- Run worktree-local tests through `pnpm run check:affected`; reserve `pnpm run
   test` for the full suite and CI. Do not introduce a second test command path.
 - Test discovery MUST be allowlisted to `apps/**`, `foundation/**`, `modules/**`, `platform/**`, `runtime/**`, and `tests/**`.
   Exclude `vendor/**` and `**/node_modules/**` from tests, coverage, watch mode,
@@ -638,13 +637,12 @@ Add a boundary rule or repository scan when needed to prevent regression to
 ## Validation
 
 ```sh
-deno fmt --check apps packages tooling tests db deno.json sgconfig.yml vitest.config.ts
-deno lint apps packages tooling tests vitest.config.ts
-deno task check
-deno task check:affected
-deno task boundary:test
-deno task boundary:lint
-deno task fallow:audit
+pnpm run fmt:check
+pnpm run check
+pnpm run check:affected
+pnpm run boundary:test
+pnpm run boundary:lint
+pnpm run fallow:audit
 ```
 
 There is no build command yet because the application executables and frontend

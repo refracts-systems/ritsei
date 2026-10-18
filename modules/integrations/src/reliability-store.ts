@@ -150,7 +150,7 @@ const payloadBytes = (payload: unknown): number =>
   new TextEncoder().encode(JSON.stringify(payload)!).byteLength
 
 const prepare = (input: unknown) =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const decoded = yield* Schema.decodeUnknownEffect(ExternalReliabilityRecordInput)(input)
     const decision = yield* assessExternalDelivery(decoded.reliability)
     const sentAt = yield* dateFromMilliseconds(
@@ -359,7 +359,7 @@ export const makeMemoryExternalReliabilityStore = (): ExternalReliabilityStore =
 
   return {
     record: (input) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const candidate = yield* prepare(input)
         const recordKey = key(candidate.tenantId, candidate.replayKey)
         const existing = records.get(recordKey)
@@ -384,7 +384,7 @@ export const makeMemoryExternalReliabilityStore = (): ExternalReliabilityStore =
         Effect.map(() => records.get(key(tenantId, replayKey))),
       ),
     health: (tenantId, connectorId, sampleLimit = 100) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* validateLookup(tenantId, connectorId, "integration.reliability.health")
         const limit = yield* validateSampleLimit(sampleLimit, connectorId)
         const values = [...records.values()]
@@ -406,11 +406,11 @@ type PersistedRecordResult =
   | { readonly _tag: "conflict" }
   | { readonly _tag: "invalid" }
 
-export const makePostgresExternalReliabilityStore = Effect.gen(function* () {
+export const makePostgresExternalReliabilityStore = Effect.gen(function*() {
   const database = yield* Database
   return {
     record: (input: unknown) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const candidate = yield* prepare(input)
         const result = yield* database.transaction(
           async (transaction): Promise<PersistedRecordResult> => {
@@ -480,7 +480,7 @@ export const makePostgresExternalReliabilityStore = Effect.gen(function* () {
         return { record: result.record, duplicate: result.duplicate }
       }),
     get: (tenantId: string, replayKey: string) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* validateLookup(tenantId, replayKey, "integration.reliability.get")
         const rows = yield* database.query(
           (db) =>
@@ -503,7 +503,7 @@ export const makePostgresExternalReliabilityStore = Effect.gen(function* () {
           : record
       }),
     health: (tenantId: string, connectorId: string, sampleLimit = 100) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* validateLookup(tenantId, connectorId, "integration.reliability.health")
         const limit = yield* validateSampleLimit(sampleLimit, connectorId)
         const rows = yield* database.query(

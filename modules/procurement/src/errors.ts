@@ -19,7 +19,8 @@ export class SupplierAccountAlreadyExists
       tenantId: Uuid,
       supplierRelationshipId: Uuid,
     },
-  ) {}
+  )
+{}
 
 export class SupplierRelationshipNotEligible
   extends Schema.TaggedError<SupplierRelationshipNotEligible>()(
@@ -28,7 +29,8 @@ export class SupplierRelationshipNotEligible
       tenantId: Uuid,
       supplierRelationshipId: Uuid,
     },
-  ) {}
+  )
+{}
 
 export class SupplierAccountNotFound extends Schema.TaggedError<SupplierAccountNotFound>()(
   "SupplierAccountNotFound",
@@ -54,20 +56,23 @@ export class PurchaseOrderConfirmationIdempotencyConflict
       purchaseOrderId: Uuid,
       idempotencyKey: TrimmedNonEmptyString,
     },
-  ) {}
+  )
+{}
 
 export class PurchaseOrderInvalidState
   extends Schema.TaggedError<PurchaseOrderInvalidState>()("PurchaseOrderInvalidState", {
     tenantId: Uuid,
     purchaseOrderId: Uuid,
     status: Schema.Literals(["draft", "confirmed", "cancelled"]),
-  }) {}
+  })
+{}
 
 export class PurchaseOrderHasReceipts
   extends Schema.TaggedError<PurchaseOrderHasReceipts>()("PurchaseOrderHasReceipts", {
     tenantId: Uuid,
     purchaseOrderId: Uuid,
-  }) {}
+  })
+{}
 
 export class PurchaseReceiptIdempotencyConflict
   extends Schema.TaggedError<PurchaseReceiptIdempotencyConflict>()(
@@ -77,21 +82,24 @@ export class PurchaseReceiptIdempotencyConflict
       purchaseOrderId: Uuid,
       idempotencyKey: TrimmedNonEmptyString,
     },
-  ) {}
+  )
+{}
 
 export class PurchaseReceiptLineDuplicate
   extends Schema.TaggedError<PurchaseReceiptLineDuplicate>()("PurchaseReceiptLineDuplicate", {
     tenantId: Uuid,
     purchaseOrderId: Uuid,
     purchaseOrderLineId: Uuid,
-  }) {}
+  })
+{}
 
 export class PurchaseReceiptLineNotFound
   extends Schema.TaggedError<PurchaseReceiptLineNotFound>()("PurchaseReceiptLineNotFound", {
     tenantId: Uuid,
     purchaseOrderId: Uuid,
     purchaseOrderLineId: Uuid,
-  }) {}
+  })
+{}
 
 export class PurchaseReceiptQuantityExceeded
   extends Schema.TaggedError<PurchaseReceiptQuantityExceeded>()(
@@ -104,7 +112,8 @@ export class PurchaseReceiptQuantityExceeded
       received: Schema.String,
       requested: Quantity,
     },
-  ) {}
+  )
+{}
 
 export class PurchaseReceiptInventoryReferenceNotFound
   extends Schema.TaggedError<PurchaseReceiptInventoryReferenceNotFound>()(
@@ -114,7 +123,8 @@ export class PurchaseReceiptInventoryReferenceNotFound
       warehouseId: Uuid,
       itemId: Uuid,
     },
-  ) {}
+  )
+{}
 
 export class PurchaseReceiptWarehouseLegalEntityMismatch
   extends Schema.TaggedError<PurchaseReceiptWarehouseLegalEntityMismatch>()(
@@ -124,4 +134,5 @@ export class PurchaseReceiptWarehouseLegalEntityMismatch
       warehouseId: Uuid,
       legalEntityId: Uuid,
     },
-  ) {}
+  )
+{}

@@ -1,5 +1,5 @@
-import { deterministicSeed } from "./deterministic-variation.ts"
 import type { VisualArchetype } from "./archetypes.ts"
+import { deterministicSeed } from "./deterministic-variation.ts"
 import type { CartographicPrimitive } from "./primitives.ts"
 import type {
   VisualDensity,

@@ -4,11 +4,11 @@ import * as Layer from "effect/Layer"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 
+import { FencingContextService } from "../../foundation/mod.ts"
 import {
   FinancialOperationJobPayload,
   FinancialOperationService,
 } from "../../modules/accounting/mod.ts"
-import { FencingContextService } from "../../foundation/mod.ts"
 import { ProcessFinancialJobTypes, ProcessService } from "../../modules/process/mod.ts"
 
 const Uuid = Schema.String.check(Schema.isUUID())
@@ -80,7 +80,7 @@ const isPermanentFinancialOperationFailure = (error: FinancialOperationFailure):
 const retryAfter = (milliseconds: number) => new Date(Date.now() + milliseconds).toISOString()
 
 export const runFinancialOperationOnce = (input: unknown) =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const decoded = yield* Schema.decodeUnknownEffect(FinancialWorkerInput)(input)
     const process = yield* ProcessService
     const accounting = yield* FinancialOperationService
@@ -148,8 +148,8 @@ export const runFinancialOperationOnce = (input: unknown) =>
         }
       }
       if (
-        value.status === "reconciled" || value.status === "rejected" ||
-        value.status === "manual_recovery" || value.status === "unknown"
+        value.status === "reconciled" || value.status === "rejected"
+        || value.status === "manual_recovery" || value.status === "unknown"
       ) {
         yield* hit("before_job_completion")
         yield* process.completeJob({

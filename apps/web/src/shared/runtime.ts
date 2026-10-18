@@ -1,7 +1,7 @@
-import { createContext } from "solid-js"
 import * as Effect from "effect/Effect"
 import * as ManagedRuntime from "effect/ManagedRuntime"
 import * as Result from "effect/Result"
+import { createContext } from "solid-js"
 import type { BrowserConnection, RequestFailure } from "./api.ts"
 
 export type ApiScope = {

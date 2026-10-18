@@ -2,16 +2,17 @@ import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 
+import { Database, DatabaseFailure, uuidv7 } from "../../../foundation/mod.ts"
+import { makePostgresDatabase, runMigrations, WebCryptoLive } from "../../../platform/mod.ts"
+import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
 import { makeAuthService } from "../../auth/mod.ts"
 import { AuthorizationService, makeAuthorizationTestLayer } from "../../authorization/mod.ts"
+import { makeUserAccountService, UserAccountService } from "../../identity/mod.ts"
 import {
   InventoryCapabilities,
   InventoryService,
   makeInventoryService,
 } from "../../inventory/mod.ts"
-import { makeUserAccountService, UserAccountService } from "../../identity/mod.ts"
-import { Database, DatabaseFailure, uuidv7 } from "../../../foundation/mod.ts"
-import { makePostgresDatabase, runMigrations, WebCryptoLive } from "../../../platform/mod.ts"
 import { makeMessagingService, MessagingService } from "../../messaging/mod.ts"
 import { makePartyService, PartyCapabilities, PartyService } from "../../party/mod.ts"
 import {
@@ -28,9 +29,8 @@ import {
   SupplierAccountNotFound,
   SupplierRelationshipNotEligible,
 } from "../mod.ts"
-import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
 
-const databaseUrl = Deno.env.get("DATABASE_URL")
+const databaseUrl = process.env["DATABASE_URL"]
 const principal = { userAccountId: "procurement-postgres", sessionId: "session" }
 const postgresFailure = (effect: () => Promise<unknown>) =>
   Effect.tryPromise({ try: effect, catch: (cause) => cause }).pipe(Effect.flip)
@@ -55,7 +55,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "enforces Procurement supplier and purchase order invariants in PostgreSQL",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
         const userAccountService = yield* makeUserAccountService.pipe(
@@ -80,7 +80,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           ),
         )
 
-        yield* Effect.gen(function* () {
+        yield* Effect.gen(function*() {
           const authorization = yield* AuthorizationService
           const party = yield* makePartyService.pipe(
             Effect.provideService(Database, database),
@@ -100,7 +100,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           )
 
           const createSupplierRelationship = (scopeTenantId: string) =>
-            Effect.gen(function* () {
+            Effect.gen(function*() {
               const owner = yield* party.create({
                 principal,
                 tenantId: scopeTenantId,
@@ -781,7 +781,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "receives a confirmed purchase order atomically with Inventory",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
         const userAccountService = yield* makeUserAccountService.pipe(
@@ -816,7 +816,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           })),
         )
 
-        yield* Effect.gen(function* () {
+        yield* Effect.gen(function*() {
           const authorization = yield* AuthorizationService
           const requirements = Layer.merge(
             Layer.succeed(Database, database),

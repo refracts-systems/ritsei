@@ -120,8 +120,8 @@ const validateJournal = (
     const lineDebit = BigInt(line.debitMinor)
     const lineCredit = BigInt(line.creditMinor)
     if (
-      lineDebit > FINANCIAL_LEDGER_MAX_MINOR || lineCredit > FINANCIAL_LEDGER_MAX_MINOR ||
-      (lineDebit > 0n) === (lineCredit > 0n)
+      lineDebit > FINANCIAL_LEDGER_MAX_MINOR || lineCredit > FINANCIAL_LEDGER_MAX_MINOR
+      || (lineDebit > 0n) === (lineCredit > 0n)
     ) {
       return { _tag: "rejected", operationId: input.operationId, reason: "invalid_amount" }
     }
@@ -162,14 +162,14 @@ const unknownOutcome = (
 ) => ({ _tag: "unknown" as const, operationId, reason })
 
 const operationMatches = (operation: OperationRow, input: PostFinancialJournalInput) =>
-  operation.tenantId === input.tenantId &&
-  operation.legalEntityId === input.legalEntityId &&
-  operation.operationId === input.operationId &&
-  operation.journalId === input.journalId &&
-  operation.engine === "postgresql" &&
-  operation.engineVerified &&
-  operation.currency === input.currency &&
-  operation.mappingVersion === input.mappingVersion
+  operation.tenantId === input.tenantId
+  && operation.legalEntityId === input.legalEntityId
+  && operation.operationId === input.operationId
+  && operation.journalId === input.journalId
+  && operation.engine === "postgresql"
+  && operation.engineVerified
+  && operation.currency === input.currency
+  && operation.mappingVersion === input.mappingVersion
 
 const transferRowsMatch = (
   rows: readonly {
@@ -185,11 +185,11 @@ const transferRowsMatch = (
   return rows.length === pairs.length && rows.every((row, index) => {
     const pair = pairs[index]!
     const expectedId = transferId(input, index)
-    return row.position === index &&
-      row.debitAccountId === pair.debitAccountId &&
-      row.creditAccountId === pair.creditAccountId &&
-      String(row.amountMinor) === pair.amount.toString() &&
-      (row.engineTransferId === null || row.engineTransferId === expectedId)
+    return row.position === index
+      && row.debitAccountId === pair.debitAccountId
+      && row.creditAccountId === pair.creditAccountId
+      && String(row.amountMinor) === pair.amount.toString()
+      && (row.engineTransferId === null || row.engineTransferId === expectedId)
   })
 }
 
@@ -272,8 +272,8 @@ const journalLinesMatch = (
   )
   return actual.length === expected.length && actual.every((line, index) => {
     const expectedLine = expected[index]!
-    return line.accountId === expectedLine.accountId &&
-      line.debit === expectedLine.debit && line.credit === expectedLine.credit
+    return line.accountId === expectedLine.accountId
+      && line.debit === expectedLine.debit && line.credit === expectedLine.credit
   })
 }
 
@@ -337,17 +337,17 @@ const balancesFrom = (
 const toRejected = (reason: string | null): FinancialExecutionOutcome => ({
   _tag: "rejected",
   operationId: "unknown",
-  reason: reason === "invalid_account" || reason === "invalid_amount" ||
-      reason === "unbalanced" || reason === "constraint_violation"
+  reason: reason === "invalid_account" || reason === "invalid_amount"
+      || reason === "unbalanced" || reason === "constraint_violation"
     ? reason
     : "constraint_violation",
 })
 
-export const makePostgresqlFinancialLedger = Effect.gen(function* () {
+export const makePostgresqlFinancialLedger = Effect.gen(function*() {
   const database = yield* Database
 
   const createExecutionAccount = (input: unknown) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const decoded = yield* Schema.decodeUnknownEffect(CreateExecutionAccountInput)(input)
       const [account] = yield* database.query(
         (db) =>
@@ -366,8 +366,8 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
       }
       const expectedConstraint = constraintFor(account.type)
       if (
-        decoded.balanceConstraint !== undefined && decoded.balanceConstraint !== "none" &&
-        decoded.balanceConstraint !== expectedConstraint
+        decoded.balanceConstraint !== undefined && decoded.balanceConstraint !== "none"
+        && decoded.balanceConstraint !== expectedConstraint
       ) {
         return {
           _tag: "manual_recovery" as const,
@@ -394,13 +394,13 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
     )
 
   const expectedTransferIds = (input: unknown) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const decoded = yield* Schema.decodeUnknownEffect(PostFinancialJournalInput)(input)
       return pairLines(decoded.lines).map((_, index) => transferId(decoded, index))
     })
 
   const postJournal = (input: unknown) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const decoded = yield* Schema.decodeUnknownEffect(PostFinancialJournalInput)(input)
       const validation = validateJournal(decoded)
       if (validation !== undefined) return validation
@@ -415,7 +415,7 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
         }
       }
       return yield* database.withTransaction(
-        Effect.gen(function* () {
+        Effect.gen(function*() {
           const [operation] = yield* readOperation(database, decoded, true)
           if (operation === undefined || !operationMatches(operation, decoded)) {
             return {
@@ -448,8 +448,8 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
             return acceptedOutcome(decoded, operation)
           }
           if (
-            operation.status !== "intent" && operation.status !== "submitted" &&
-            operation.status !== "unknown"
+            operation.status !== "intent" && operation.status !== "submitted"
+            && operation.status !== "unknown"
           ) {
             return operation.status === "rejected"
               ? { ...toRejected(operation.rejectionReason), operationId: decoded.operationId }
@@ -600,7 +600,7 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
     )
 
   const reconcileJournal = (input: unknown) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const decoded = yield* Schema.decodeUnknownEffect(PostFinancialJournalInput)(input)
       const validation = validateJournal(decoded)
       if (validation !== undefined) return validation
@@ -688,7 +688,7 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
     )
 
   const getBalance = (input: unknown) =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const decoded = yield* Schema.decodeUnknownEffect(GetFinancialBalanceInput)(input)
       const [account] = yield* database.query(
         (db) =>

@@ -13,7 +13,7 @@ import {
 } from "../mod.ts"
 
 it.effect("provides cryptography through the Effect environment", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const crypto = yield* Crypto.Crypto
     const digest = yield* crypto.digest("SHA-256", new TextEncoder().encode("hello"))
     const hex = Array.from(digest, (byte) => byte.toString(16).padStart(2, "0")).join("")
@@ -26,7 +26,7 @@ it.effect("provides cryptography through the Effect environment", () =>
   }).pipe(Effect.provide(WebCryptoLive)))
 
 it.effect("signs and verifies a readiness payload with an explicit key id", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const generated = yield* generateEd25519FinancialVerificationSigner("test-key")
     const payload = new TextEncoder().encode("artifact-hash")
     const signature = yield* generated.signer.sign(payload)
@@ -38,12 +38,12 @@ it.effect("signs and verifies a readiness payload with an explicit key id", () =
   }))
 
 it.effect("verifies with multiple historical keys and fails closed for an unknown key", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const oldKey = yield* generateEd25519FinancialVerificationSigner("old-key")
     const currentKey = yield* generateEd25519FinancialVerificationSigner("current-key")
     const payload = new TextEncoder().encode("artifact-hash")
     const signature = yield* oldKey.signer.sign(payload)
-    yield* Effect.gen(function* () {
+    yield* Effect.gen(function*() {
       const keyring = yield* FinancialVerificationKeyring
       assert.isTrue(yield* keyring.verify("old-key", payload, signature))
       assert.isFalse(yield* keyring.verify("current-key", payload, signature))

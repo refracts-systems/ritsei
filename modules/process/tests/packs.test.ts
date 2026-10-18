@@ -33,7 +33,7 @@ const pack = {
 }
 
 it.effect("decodes semantic Process Packs and resolves exact required capabilities", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const decoded = yield* Schema.decodeUnknownEffect(ProcessPack)(pack)
     const resolution = resolveProcessPackCapabilities(decoded, [salesConfirm])
 
@@ -50,7 +50,7 @@ it("reports missing required versions without blocking optional capabilities", (
 })
 
 it.effect("requires at least one process template", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const failure = yield* Effect.flip(
       Schema.decodeUnknownEffect(ProcessPack)({ ...pack, processTemplateIds: [] }),
     )

@@ -21,8 +21,8 @@ const isObject = (value: unknown): value is JsonObject =>
 
 const decodeBase64Url = (value: string): Uint8Array => {
   if (!/^[A-Za-z0-9_-]+$/.test(value)) throw new InvalidTokenShape()
-  const padded = value.replaceAll("-", "+").replaceAll("_", "/") +
-    "=".repeat((4 - value.length % 4) % 4)
+  const padded = value.replaceAll("-", "+").replaceAll("_", "/")
+    + "=".repeat((4 - value.length % 4) % 4)
   const decoded = atob(padded)
   return Uint8Array.from(decoded, (character) => character.charCodeAt(0))
 }
@@ -47,8 +47,8 @@ const readTextJson = async (response: Response): Promise<unknown> => {
 const hasAudience = (audience: unknown, expected: string): boolean =>
   typeof audience === "string"
     ? audience === expected
-    : Array.isArray(audience) && audience.every((value) => typeof value === "string") &&
-      audience.includes(expected)
+    : Array.isArray(audience) && audience.every((value) => typeof value === "string")
+      && audience.includes(expected)
 
 export const makeOidcIdentityProvider = (
   configuration: OidcAuthenticationConfiguration,
@@ -86,18 +86,18 @@ export const makeOidcIdentityProvider = (
     const payload = decodeJsonPart(encodedPayload)
     if (header.alg !== "RS256" || typeof header.kid !== "string") throw new InvalidTokenShape()
     if (
-      payload.iss !== configuration.issuerUrl || typeof payload.sub !== "string" ||
-      payload.sub.trim().length === 0 || payload.sub.length > 1_024 ||
-      !hasAudience(payload.aud, configuration.audience) ||
-      typeof payload.exp !== "number" || !Number.isInteger(payload.exp) ||
-      typeof payload.iat !== "number" || !Number.isInteger(payload.iat)
+      payload.iss !== configuration.issuerUrl || typeof payload.sub !== "string"
+      || payload.sub.trim().length === 0 || payload.sub.length > 1_024
+      || !hasAudience(payload.aud, configuration.audience)
+      || typeof payload.exp !== "number" || !Number.isInteger(payload.exp)
+      || typeof payload.iat !== "number" || !Number.isInteger(payload.iat)
     ) throw new InvalidTokenShape()
     const now = Math.floor(Date.now() / 1_000)
     const nbf = payload.nbf
     if (
-      payload.exp <= now || payload.exp <= payload.iat ||
-      (nbf !== undefined &&
-        (typeof nbf !== "number" || !Number.isInteger(nbf) || nbf > now + 60))
+      payload.exp <= now || payload.exp <= payload.iat
+      || (nbf !== undefined
+        && (typeof nbf !== "number" || !Number.isInteger(nbf) || nbf > now + 60))
     ) {
       throw new InvalidTokenShape()
     }

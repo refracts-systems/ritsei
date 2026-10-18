@@ -2,6 +2,7 @@ import { assert, describe, it } from "@effect/vitest"
 import { type MigrationMeta, readMigrationFiles } from "drizzle-orm/migrator"
 import * as Effect from "effect/Effect"
 import { createHash } from "node:crypto"
+import { readdir, readFile, stat } from "node:fs/promises"
 
 import { validateMigrationCatalog } from "../migrations.ts"
 
@@ -19,15 +20,15 @@ type SnapshotMetadata = {
 
 const migrationDirectories = async () => {
   const directories: string[] = []
-  for await (const entry of Deno.readDir(migrationsDirectory)) {
-    if (entry.isDirectory) directories.push(entry.name)
+  for (const entry of await readdir(migrationsDirectory, { withFileTypes: true })) {
+    if (entry.isDirectory()) directories.push(entry.name)
   }
   return directories.sort()
 }
 
 const readSnapshot = async (name: string): Promise<SnapshotMetadata> =>
   JSON.parse(
-    await Deno.readTextFile(`${migrationsDirectory}/${name}/snapshot.json`),
+    await readFile(`${migrationsDirectory}/${name}/snapshot.json`, "utf8"),
   ) as SnapshotMetadata
 
 const duplicateVersion = (migration: MigrationMeta): MigrationMeta => ({
@@ -63,21 +64,21 @@ describe("migration discovery", () => {
     }))
 
   it.effect("requires migration SQL and parseable snapshot metadata", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const directories = yield* Effect.promise(migrationDirectories)
       assert.isAbove(directories.length, 0)
 
       for (const directory of directories) {
         const migration = yield* Effect.promise(() =>
-          Deno.stat(`${migrationsDirectory}/${directory}/migration.sql`)
+          stat(`${migrationsDirectory}/${directory}/migration.sql`)
         )
         const snapshot = yield* Effect.promise(() =>
-          Deno.stat(`${migrationsDirectory}/${directory}/snapshot.json`)
+          stat(`${migrationsDirectory}/${directory}/snapshot.json`)
         )
         const metadata = yield* Effect.promise(() => readSnapshot(directory))
 
-        assert.isTrue(migration.isFile)
-        assert.isTrue(snapshot.isFile)
+        assert.isTrue(migration.isFile())
+        assert.isTrue(snapshot.isFile())
         assert.match(metadata.id, /^[a-f0-9-]{36}$/)
         assert.isArray(metadata.prevIds)
       }
@@ -86,8 +87,8 @@ describe("migration discovery", () => {
 
 describe("migration integrity", () => {
   it.effect("fails closed before retiring the legacy process event outbox", () =>
-    Effect.gen(function* () {
-      const sql = yield* Effect.promise(() => Deno.readTextFile(retireProcessEventOutboxMigration))
+    Effect.gen(function*() {
+      const sql = yield* Effect.promise(() => readFile(retireProcessEventOutboxMigration, "utf8"))
 
       assert.match(
         sql,
@@ -102,12 +103,12 @@ describe("migration integrity", () => {
     }))
 
   it.effect("matches every loader checksum to migration.sql", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const migrations = readMigrationFiles({ migrationsFolder: migrationsDirectory })
 
       for (const migration of migrations) {
         const sql = yield* Effect.promise(() =>
-          Deno.readTextFile(`${migrationsDirectory}/${migration.name}/migration.sql`)
+          readFile(`${migrationsDirectory}/${migration.name}/migration.sql`, "utf8")
         )
         const expected = createHash("sha256").update(sql).digest("hex")
 
@@ -117,7 +118,7 @@ describe("migration integrity", () => {
     }))
 
   it.effect("forms one ordered snapshot ancestry chain", () =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const directories = yield* Effect.promise(migrationDirectories)
       let previousId = rootSnapshotId
       const snapshotIds = new Set<string>()

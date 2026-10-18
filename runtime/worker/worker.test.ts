@@ -4,8 +4,8 @@ import * as Fiber from "effect/Fiber"
 import * as Layer from "effect/Layer"
 import * as TestClock from "effect/testing/TestClock"
 
-import { FinancialOperationService } from "../../modules/accounting/mod.ts"
 import { FencingContextService } from "../../foundation/mod.ts"
+import { FinancialOperationService } from "../../modules/accounting/mod.ts"
 import {
   ProcessFinancialJobTypes,
   ProcessJobLeaseLost,
@@ -84,7 +84,7 @@ it.effect("claims a financial job and completes it through the Accounting contra
   } as unknown as ProcessService
   const accounting = {
     submitFinancialOperation: () =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const fence = yield* FencingContextService
         assert.deepStrictEqual(fence, {
           scope: `accounting.financial_operation:${tenantId}:${operationId}`,
@@ -268,7 +268,7 @@ it.effect("leaves a claimed lease untouched when the worker is terminated before
 })
 
 it.effect("renews a long-running financial lease with its generation", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     let renewals = 0
     const job = {
       jobId: "00000000-0000-4000-8000-000000000030",
@@ -362,7 +362,7 @@ it.effect("restarts after Accounting acceptance and fences stale duplicate compl
     Layer.succeed(FinancialOperationService, accounting),
   )
 
-  return Effect.gen(function* () {
+  return Effect.gen(function*() {
     const terminated = yield* Effect.flip(
       runFinancialOperationOnce({ tenantId, workerId: "worker-1" }).pipe(
         Effect.provide(Layer.mergeAll(

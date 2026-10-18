@@ -3,7 +3,6 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
 
-import { AuthorizationDenied, makeAuthorizationTestLayer } from "../../authorization/mod.ts"
 import {
   CurrentConsistencyToken,
   Database,
@@ -13,6 +12,7 @@ import {
   type PostgresReadYourWritesService,
   ReplicaConsistencyFailure,
 } from "../../../foundation/mod.ts"
+import { AuthorizationDenied, makeAuthorizationTestLayer } from "../../authorization/mod.ts"
 import {
   InventoryCapabilities,
   InventoryService,
@@ -81,7 +81,7 @@ const withProcurement = <A, E>(
   const party = makePartyTestLayer().pipe(Layer.provide(authorization))
   const messaging = Layer.effect(
     MessagingService,
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const base = yield* MessagingService
       if (onPublished === undefined) return base
       return {
@@ -101,7 +101,7 @@ const withProcurement = <A, E>(
 }
 
 const createRelationship = (kind: "supplier" | "customer") =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const party = yield* PartyService
     const owner = yield* party.create({
       principal,
@@ -135,7 +135,7 @@ const createRelationship = (kind: "supplier" | "customer") =>
     })
   })
 
-const createSupplierAccount = Effect.gen(function* () {
+const createSupplierAccount = Effect.gen(function*() {
   const procurement = yield* ProcurementService
   const relationship = yield* createRelationship("supplier")
   return yield* procurement.createSupplierAccount({
@@ -206,7 +206,7 @@ const readFixtureOrder: PurchaseOrder = {
   }],
 }
 
-const createPurchaseOrder = Effect.gen(function* () {
+const createPurchaseOrder = Effect.gen(function*() {
   const procurement = yield* ProcurementService
   const supplierAccount = yield* createSupplierAccount
   return yield* procurement.createPurchaseOrder({
@@ -225,7 +225,7 @@ describe("procurement contract", () => {
   it.effect("publishes one confirmation event across idempotent replay", () => {
     const published: EventEnvelopeShape[] = []
     return withProcurement(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const procurement = yield* ProcurementService
         const order = yield* createPurchaseOrder
         const input = {
@@ -253,7 +253,7 @@ describe("procurement contract", () => {
   })
 
   it.effect("creates one supplier account for an active supplier relationship", () =>
-    withProcurement(Effect.gen(function* () {
+    withProcurement(Effect.gen(function*() {
       const procurement = yield* ProcurementService
       const relationship = yield* createRelationship("supplier")
       const input = {
@@ -274,7 +274,7 @@ describe("procurement contract", () => {
     })))
 
   it.effect("rejects missing or non-supplier relationships", () =>
-    withProcurement(Effect.gen(function* () {
+    withProcurement(Effect.gen(function*() {
       const procurement = yield* ProcurementService
       const customerRelationship = yield* createRelationship("customer")
 
@@ -297,7 +297,7 @@ describe("procurement contract", () => {
     })))
 
   it.effect("creates a draft purchase order with an exact derived total", () =>
-    withProcurement(Effect.gen(function* () {
+    withProcurement(Effect.gen(function*() {
       const procurement = yield* ProcurementService
       const supplierAccount = yield* createSupplierAccount
       const lines = [
@@ -354,7 +354,7 @@ describe("procurement contract", () => {
           return replica
         }),
     }
-    const program = Effect.gen(function* () {
+    const program = Effect.gen(function*() {
       const procurement = yield* ProcurementService
       const order = yield* procurement.getPurchaseOrder({
         principal,
@@ -381,7 +381,7 @@ describe("procurement contract", () => {
       capture: () => Effect.succeed("opaque.token"),
       wait: () => Effect.fail(new ReplicaConsistencyFailure({ reason: "timeout" })),
     }
-    const program = Effect.gen(function* () {
+    const program = Effect.gen(function*() {
       const procurement = yield* ProcurementService
       const failure = yield* Effect.flip(
         procurement.getPurchaseOrder({
@@ -404,7 +404,7 @@ describe("procurement contract", () => {
   })
 
   it.effect("reads draft and confirmed purchase orders", () =>
-    withProcurement(Effect.gen(function* () {
+    withProcurement(Effect.gen(function*() {
       const procurement = yield* ProcurementService
       const draft = yield* createPurchaseOrder
       const readDraft = yield* procurement.getPurchaseOrder({
@@ -463,7 +463,7 @@ describe("procurement contract", () => {
     })))
 
   it.effect("replays the same confirmation key and rejects a different key", () =>
-    withProcurement(Effect.gen(function* () {
+    withProcurement(Effect.gen(function*() {
       const procurement = yield* ProcurementService
       const order = yield* createPurchaseOrder
       const input = {
@@ -504,7 +504,7 @@ describe("procurement contract", () => {
     })))
 
   it.effect("cancels a confirmed purchase order idempotently and preserves its snapshot", () =>
-    withProcurement(Effect.gen(function* () {
+    withProcurement(Effect.gen(function*() {
       const procurement = yield* ProcurementService
       const draft = yield* createPurchaseOrder
       assert.instanceOf(
@@ -567,7 +567,7 @@ describe("procurement contract", () => {
     })))
 
   it.effect("maps missing and cross-tenant purchase orders to not found", () =>
-    withProcurement(Effect.gen(function* () {
+    withProcurement(Effect.gen(function*() {
       const procurement = yield* ProcurementService
       const order = yield* createPurchaseOrder
       for (
@@ -597,7 +597,7 @@ describe("procurement contract", () => {
 
   it.effect("denies purchase order confirmation and reads without their capabilities", () =>
     withProcurement(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const procurement = yield* ProcurementService
         const order = yield* createPurchaseOrder
         assert.instanceOf(
@@ -616,7 +616,7 @@ describe("procurement contract", () => {
     ).pipe(
       Effect.andThen(
         withProcurement(
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const procurement = yield* ProcurementService
             const order = yield* createPurchaseOrder
             assert.instanceOf(
@@ -637,7 +637,7 @@ describe("procurement contract", () => {
 
   it.effect("denies purchase order cancellation without its capability", () =>
     withProcurement(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const procurement = yield* ProcurementService
         const order = yield* createPurchaseOrder
         yield* procurement.confirmPurchaseOrder({
@@ -661,7 +661,7 @@ describe("procurement contract", () => {
     ))
 
   it.effect("maps a missing supplier account", () =>
-    withProcurement(Effect.gen(function* () {
+    withProcurement(Effect.gen(function*() {
       const procurement = yield* ProcurementService
       assert.instanceOf(
         yield* Effect.flip(procurement.createPurchaseOrder({
@@ -679,7 +679,7 @@ describe("procurement contract", () => {
     })))
 
   it.effect("validates purchase order lines and derived totals", () =>
-    withProcurement(Effect.gen(function* () {
+    withProcurement(Effect.gen(function*() {
       const procurement = yield* ProcurementService
       const supplierAccount = yield* createSupplierAccount
       const create = (lines: ReadonlyArray<unknown>) =>
@@ -731,7 +731,7 @@ describe("procurement contract", () => {
 
   it.effect("denies purchase order creation by default", () =>
     withProcurement(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const procurement = yield* ProcurementService
         const supplierAccount = yield* createSupplierAccount
         assert.instanceOf(
@@ -755,7 +755,7 @@ describe("procurement contract", () => {
 
   it.effect("requires both procurement creation and Party relationship-read authority", () =>
     withProcurement(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const procurement = yield* ProcurementService
         const relationship = yield* createRelationship("supplier")
         assert.instanceOf(
@@ -773,7 +773,7 @@ describe("procurement contract", () => {
     ).pipe(
       Effect.andThen(
         withProcurement(
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const procurement = yield* ProcurementService
             const relationship = yield* createRelationship("supplier")
             assert.instanceOf(
@@ -793,7 +793,7 @@ describe("procurement contract", () => {
     ))
 
   it.effect("receives a confirmed purchase order idempotently and blocks over-receipt cancellation", () =>
-    withProcurement(Effect.gen(function* () {
+    withProcurement(Effect.gen(function*() {
       const procurement = yield* ProcurementService
       const inventory = yield* InventoryService
       const supplierAccount = yield* createSupplierAccount

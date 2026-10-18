@@ -1,12 +1,12 @@
-import { createSignal, Errored, For, Show } from "solid-js";
-import { Typeahead } from "./typeahead";
-import { Checkout } from "./checkout";
-import { AtomDemos } from "./atom";
-import { clearLog, logEntries } from "./log";
-import { createRuntime, RuntimeContext } from "./solid-effect";
-import { SearchConfigLive } from "./api";
+import { createSignal, Errored, For, Show } from "solid-js"
+import { SearchConfigLive } from "./api"
+import { AtomDemos } from "./atom"
+import { Checkout } from "./checkout"
+import { clearLog, logEntries } from "./log"
+import { createRuntime, RuntimeContext } from "./solid-effect"
+import { Typeahead } from "./typeahead"
 
-type Tab = "typeahead" | "checkout" | "atom";
+type Tab = "typeahead" | "checkout" | "atom"
 
 function LogPanel() {
   return (
@@ -32,21 +32,21 @@ function LogPanel() {
         </ul>
       </Show>
     </aside>
-  );
+  )
 }
 
 export function App() {
-  const [tab, setTab] = createSignal<Tab>("typeahead");
+  const [tab, setTab] = createSignal<Tab>("typeahead")
   return (
     <Errored
       fallback={(err, reset) => {
-        console.error("solid-effect-render-error", err());
+        console.error("solid-effect-render-error", err())
         return (
           <div class="error-box app-error">
             <p>Something went wrong: {String(err())}</p>
             <button onClick={reset}>Reset</button>
           </div>
-        );
+        )
       }}
     >
       {
@@ -63,9 +63,8 @@ export function App() {
             <p>
               Two demos, one tiny integration (<code>
                 src/solid-effect.ts
-              </code>): Effects as interruptible async sources on the read path,
-              Effect sagas as transaction steps on the action path, services
-              provided through Solid context.
+              </code>): Effects as interruptible async sources on the read path, Effect sagas as
+              transaction steps on the action path, services provided through Solid context.
             </p>
             <nav class="tabs">
               <button
@@ -107,5 +106,5 @@ export function App() {
         </div>
       </RuntimeContext>
     </Errored>
-  );
+  )
 }

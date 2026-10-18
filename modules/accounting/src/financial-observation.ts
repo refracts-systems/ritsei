@@ -85,18 +85,18 @@ const validateObservationRows = (
   balanceRows: readonly BalanceRow[],
 ): Effect.Effect<void, FinancialStoreObservationFailure> => {
   if (
-    operationRows.length > maxRecords || transferRows.length > maxRecords ||
-    balanceRows.length > maxRecords
+    operationRows.length > maxRecords || transferRows.length > maxRecords
+    || balanceRows.length > maxRecords
   ) {
     return Effect.fail(observationFailure(scope, "incomplete"))
   }
   if (
-    operationRows.some((row) => !/^[A-Z]{3}$/.test(row.currency) || row.mappingVersion < 1) ||
-    transferRows.some((row) =>
-      !/^[A-Z]{3}$/.test(row.operationCurrency) || row.mappingVersion < 1 ||
-      !positiveMinor(row.amountMinor) || row.debitAccountId === row.creditAccountId
-    ) ||
-    balanceRows.some((row) => !/^[A-Z]{3}$/.test(row.currency) || row.mappingVersion < 1)
+    operationRows.some((row) => !/^[A-Z]{3}$/.test(row.currency) || row.mappingVersion < 1)
+    || transferRows.some((row) =>
+      !/^[A-Z]{3}$/.test(row.operationCurrency) || row.mappingVersion < 1
+      || !positiveMinor(row.amountMinor) || row.debitAccountId === row.creditAccountId
+    )
+    || balanceRows.some((row) => !/^[A-Z]{3}$/.test(row.currency) || row.mappingVersion < 1)
   ) {
     return Effect.fail(observationFailure(scope, "invalid_fact"))
   }
@@ -107,7 +107,7 @@ const buildTransferObservations = (
   scope: string,
   rows: readonly TransferRow[],
 ): Effect.Effect<readonly FinancialStoreTransferObservation[], FinancialStoreObservationFailure> =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const transfers: FinancialStoreTransferObservation[] = []
     for (const row of rows) {
       if (row.transferId === null || row.observedTimestamp === null) {
@@ -131,7 +131,7 @@ const aggregateBalanceObservations = (
   scope: string,
   rows: readonly BalanceRow[],
 ): Effect.Effect<readonly FinancialStoreAccountObservation[], FinancialStoreObservationFailure> =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const balances = new Map<string, FinancialStoreAccountObservation>()
     for (const row of rows) {
       if (row.observedAt === null) {
@@ -176,10 +176,10 @@ const buildPostgresqlInventory = (
   transfers: readonly FinancialStoreTransferObservation[],
   now: () => Date,
 ) =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const hash = yield* hashFinancialStoreFacts({ accounts, transfers })
-    const latestOperation = operationRows.at(-1)?.updatedAt?.toISOString() ??
-      new Date(0).toISOString()
+    const latestOperation = operationRows.at(-1)?.updatedAt?.toISOString()
+      ?? new Date(0).toISOString()
     const watermark: FinancialStoreWatermark = {
       authority: "postgresql",
       scope,
@@ -202,7 +202,7 @@ const buildPostgresqlInventory = (
   })
 
 const makePostgresqlInventoryServices = (now: () => Date) =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const database = yield* Database
     const read = <A>(
       scope: string,
@@ -214,7 +214,7 @@ const makePostgresqlInventoryServices = (now: () => Date) =>
       )
 
     const scan = (scope: string, maxRecords: number) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const limit = maxRecords + 1
         const scopeIds = parseLegalEntityScope(scope)
         if (scopeIds === undefined) {
@@ -315,23 +315,23 @@ const makePostgresqlInventoryServices = (now: () => Date) =>
 
     const collector: FinancialStoreWatermarkCollectorService = {
       collect: (input) =>
-        Effect.gen(function* () {
+        Effect.gen(function*() {
           const decoded = yield* Schema.decodeUnknownEffect(FinancialStoreWatermarkInput)(input)
           return (yield* scan(decoded.scope, decoded.maxRecords)).watermark
         }),
     }
     const scanner: FinancialStoreInventoryScannerService = {
       scan: (input) =>
-        Effect.gen(function* () {
+        Effect.gen(function*() {
           const decoded = yield* Schema.decodeUnknownEffect(FinancialStoreInventoryRequest)(input)
           if (decoded.watermark.authority !== "postgresql") {
             return yield* Effect.fail(observationFailure(decoded.scope, "invalid_watermark"))
           }
           const observed = yield* scan(decoded.scope, decoded.maxRecords)
           if (
-            observed.watermark.value !== decoded.watermark.value ||
-            observed.watermark.snapshotRef !== decoded.watermark.snapshotRef ||
-            observed.watermark.consistency !== decoded.watermark.consistency
+            observed.watermark.value !== decoded.watermark.value
+            || observed.watermark.snapshotRef !== decoded.watermark.snapshotRef
+            || observed.watermark.consistency !== decoded.watermark.consistency
           ) {
             return yield* Effect.fail(observationFailure(decoded.scope, "invalid_watermark"))
           }

@@ -2,8 +2,8 @@ import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 
-import { Principal } from "../../auth/mod.ts"
 import { FinancialMajorAmount, requireExactMajorToMinor } from "../../../foundation/mod.ts"
+import { Principal } from "../../auth/mod.ts"
 import { EventEnvelope, EventIdempotencyConflict } from "../../messaging/mod.ts"
 import {
   CustomerAlreadyExists,
@@ -65,8 +65,8 @@ export const SalesOrder = Schema.Struct({
   lines: Schema.Array(SalesOrderLine).check(Schema.isMinLength(1)),
 }).check(Schema.makeFilter(
   (order) =>
-    (order.status === "draft" && order.confirmedAt === null) ||
-    (order.status !== "draft" && order.confirmedAt !== null),
+    (order.status === "draft" && order.confirmedAt === null)
+    || (order.status !== "draft" && order.confirmedAt !== null),
   { expected: "sales order confirmation metadata consistent with status" },
 )).check(Schema.makeFilter(
   (order) => {

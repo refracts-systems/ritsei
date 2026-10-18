@@ -2,6 +2,10 @@ import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import * as TestClock from "effect/testing/TestClock"
 
+import { Database } from "../../../foundation/mod.ts"
+import { makePostgresDatabase, runMigrations, WebCryptoLive } from "../../../platform/mod.ts"
+import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
+import { makeUserAccountService, UserAccountService } from "../../identity/mod.ts"
 import {
   IdentityProvider,
   InvalidExternalAssertion,
@@ -9,18 +13,14 @@ import {
   makeAuthService,
   SessionUserAccountDisabled,
 } from "../mod.ts"
-import { makeUserAccountService, UserAccountService } from "../../identity/mod.ts"
-import { Database } from "../../../foundation/mod.ts"
-import { makePostgresDatabase, runMigrations, WebCryptoLive } from "../../../platform/mod.ts"
-import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
 
-const databaseUrl = Deno.env.get("DATABASE_URL")
+const databaseUrl = process.env["DATABASE_URL"]
 
 it.effect.skipIf(databaseUrl === undefined)(
   "authenticates issuer-scoped external subjects and invalidates disabled accounts",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      TestClock.withLive(Effect.gen(function* () {
+      TestClock.withLive(Effect.gen(function*() {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
         const userAccounts = yield* makeUserAccountService.pipe(
@@ -66,7 +66,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   "invalidates existing sessions when a PostgreSQL user account is disabled",
   () =>
     withTemporaryDatabase(databaseUrl!, (client) =>
-      TestClock.withLive(Effect.gen(function* () {
+      TestClock.withLive(Effect.gen(function*() {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
         const userAccounts = yield* makeUserAccountService.pipe(

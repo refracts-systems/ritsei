@@ -42,8 +42,8 @@ export const makeSalesMemoryStore = (): SalesStore => {
         return Array.from(customers.values())
           .filter((customer) => customer.tenantId === input.tenantId)
           .filter((customer) =>
-            search === undefined || customer.name.toLowerCase().includes(search) ||
-            customer.email.includes(search)
+            search === undefined || customer.name.toLowerCase().includes(search)
+            || customer.email.includes(search)
           )
           .sort((left, right) =>
             left.name.localeCompare(right.name) || left.id.localeCompare(right.id)
@@ -99,7 +99,7 @@ export const makeSalesMemoryStore = (): SalesStore => {
       }),
   )
   const createCustomer = Effect.fn("SalesStore.memory.createCustomer")(
-    function* (input: CreateCustomerCommand) {
+    function*(input: CreateCustomerCommand) {
       const email = input.email.trim().toLowerCase()
       if ([...customers.values()].some((x) => x.tenantId === input.tenantId && x.email === email)) {
         return yield* Effect.fail(new CustomerAlreadyExists({ tenantId: input.tenantId, email }))
@@ -110,7 +110,7 @@ export const makeSalesMemoryStore = (): SalesStore => {
     },
   )
   const createQuotation = Effect.fn("SalesStore.memory.createQuotation")(
-    function* (input: CreateQuotationCommand) {
+    function*(input: CreateQuotationCommand) {
       if (customers.get(input.customerId)?.tenantId !== input.tenantId) {
         return yield* Effect.fail(
           new CustomerNotFound({ tenantId: input.tenantId, customerId: input.customerId }),
@@ -128,7 +128,7 @@ export const makeSalesMemoryStore = (): SalesStore => {
     },
   )
   const createOrder = Effect.fn("SalesStore.memory.createOrder")(
-    function* (input: CreateOrderCommand) {
+    function*(input: CreateOrderCommand) {
       if (customers.get(input.customerId)?.tenantId !== input.tenantId) {
         return yield* Effect.fail(
           new CustomerNotFound({ tenantId: input.tenantId, customerId: input.customerId }),
@@ -166,7 +166,7 @@ export const makeSalesMemoryStore = (): SalesStore => {
     },
   )
   const confirmOrder = Effect.fn("SalesStore.memory.confirmOrder")(
-    function* (
+    function*(
       input: ConfirmOrderCommand,
       append: (
         order: SalesOrder,
@@ -201,7 +201,7 @@ export const makeSalesMemoryStore = (): SalesStore => {
     },
   )
   const cancelConfirmedOrder = Effect.fn("SalesStore.memory.cancelConfirmedOrder")(
-    function* (input: CancelConfirmedOrderCommand) {
+    function*(input: CancelConfirmedOrderCommand) {
       const order = orders.get(input.orderId)
       if (order?.tenantId !== input.tenantId) {
         return yield* Effect.succeed({ _tag: "not-found" as const })
@@ -216,7 +216,7 @@ export const makeSalesMemoryStore = (): SalesStore => {
     },
   )
   const getConfirmedOrderTotal = Effect.fn("SalesStore.memory.getConfirmedOrderTotal")(
-    function* (input: GetConfirmedOrderTotalCommand) {
+    function*(input: GetConfirmedOrderTotalCommand) {
       const order = orders.get(input.orderId)
       if (order?.tenantId !== input.tenantId) {
         return yield* Effect.succeed({ _tag: "not-found" as const })

@@ -1,8 +1,8 @@
 import * as Context from "effect/Context"
 import * as Schema from "effect/Schema"
 
-import type { MessagingService } from "../../messaging/mod.ts"
 import { defineEventCatalogEntry } from "../../catalog/mod.ts"
+import type { MessagingService } from "../../messaging/mod.ts"
 
 const Uuid = Schema.String.check(Schema.isUUID())
 

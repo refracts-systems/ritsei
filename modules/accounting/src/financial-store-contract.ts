@@ -10,8 +10,8 @@ const TrimmedNonEmptyString = Schema.String.check(Schema.makeFilter(
 ))
 const InstantString = Schema.String.check(Schema.makeFilter(
   (value) =>
-    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value) &&
-    !Number.isNaN(Date.parse(value)),
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value)
+    && !Number.isNaN(Date.parse(value)),
   { expected: "an ISO-8601 UTC instant" },
 ))
 const PositiveInt = Schema.Int.check(
@@ -70,7 +70,8 @@ export class FinancialStoreObservationFailure
         "invalid_watermark",
       ]),
     },
-  ) {}
+  )
+{}
 
 export interface FinancialStoreWatermarkCollectorService {
   readonly collect: (
@@ -135,8 +136,8 @@ export const FinancialStoreInventory = Schema.Struct({
   transfers: Schema.Array(FinancialStoreTransferObservation),
 }).check(Schema.makeFilter(
   (inventory) =>
-    inventory.authority === inventory.watermark.authority &&
-    inventory.scope === inventory.watermark.scope,
+    inventory.authority === inventory.watermark.authority
+    && inventory.scope === inventory.watermark.scope,
   { expected: "inventory authority and scope must match its watermark" },
 ))
 export type FinancialStoreInventory = Schema.Schema.Type<typeof FinancialStoreInventory>
@@ -177,8 +178,8 @@ export const FinancialStoreObservationRegistry = Context.Service<
 )
 
 const observationScope = (input: unknown) =>
-  typeof input === "object" && input !== null && "scope" in input &&
-    typeof input.scope === "string"
+  typeof input === "object" && input !== null && "scope" in input
+    && typeof input.scope === "string"
     ? input.scope
     : "observation-registry"
 
@@ -368,9 +369,9 @@ const appendInventoryBoundaryMismatches = (
     })
   }
   if (
-    expected.watermark.value !== observed.watermark.value ||
-    expected.watermark.snapshotRef !== observed.watermark.snapshotRef ||
-    expected.watermark.consistency !== observed.watermark.consistency
+    expected.watermark.value !== observed.watermark.value
+    || expected.watermark.snapshotRef !== observed.watermark.snapshotRef
+    || expected.watermark.consistency !== observed.watermark.consistency
   ) {
     mismatches.push({
       kind: "watermark_mismatch",
@@ -493,8 +494,8 @@ export const FinancialBackupRestoreEvidence = Schema.Struct({
   completedAt: InstantString,
 }).check(Schema.makeFilter(
   (evidence) =>
-    evidence.authority === evidence.sourceWatermark.authority &&
-    evidence.authority === evidence.restoredWatermark.authority,
+    evidence.authority === evidence.sourceWatermark.authority
+    && evidence.authority === evidence.restoredWatermark.authority,
   { expected: "backup and restore watermarks must use the declared authority" },
 )).check(Schema.makeFilter(
   (evidence) => Date.parse(evidence.completedAt) >= Date.parse(evidence.startedAt),
@@ -530,7 +531,8 @@ export class FinancialStagingTelemetryFailure
       scope: NonEmptyString,
       reason: Schema.Literals(["unavailable", "incomplete", "invalid"]),
     },
-  ) {}
+  )
+{}
 
 export interface FinancialStagingTelemetryService {
   readonly collect: (
@@ -572,24 +574,24 @@ export const FinancialStagingEvidence = Schema.Struct({
   orphanCount: NonNegativeInt,
 }).check(Schema.makeFilter(
   (evidence) =>
-    evidence.tenantId === evidence.cohort.tenantId &&
-    evidence.legalEntityId === evidence.cohort.legalEntityId &&
-    evidence.deploymentRevision === evidence.cohort.deploymentRevision,
+    evidence.tenantId === evidence.cohort.tenantId
+    && evidence.legalEntityId === evidence.cohort.legalEntityId
+    && evidence.deploymentRevision === evidence.cohort.deploymentRevision,
   { expected: "staging evidence scope must match its cohort" },
 )).check(Schema.makeFilter(
   (evidence) => Date.parse(evidence.completedAt) >= Date.parse(evidence.startedAt),
   { expected: "completedAt at or after startedAt" },
 )).check(Schema.makeFilter(
   (evidence) =>
-    evidence.operationIds.length <= evidence.cohort.maxOperationCount &&
-    evidence.failureScenarioIds.every((scenario) =>
+    evidence.operationIds.length <= evidence.cohort.maxOperationCount
+    && evidence.failureScenarioIds.every((scenario) =>
       evidence.cohort.plannedScenarioIds.includes(scenario)
     ),
   { expected: "staging evidence must stay within its approved cohort bounds" },
 )).check(Schema.makeFilter(
   (evidence) =>
-    evidence.result !== "pass" ||
-    (evidence.mismatchCount === 0 && evidence.orphanCount === 0),
+    evidence.result !== "pass"
+    || (evidence.mismatchCount === 0 && evidence.orphanCount === 0),
   { expected: "passing staging evidence must have zero mismatches and orphans" },
 ))
 export type FinancialStagingEvidence = Schema.Schema.Type<typeof FinancialStagingEvidence>

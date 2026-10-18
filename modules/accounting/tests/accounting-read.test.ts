@@ -3,9 +3,9 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 
 import { AuthorizationDenied, makeAuthorizationTestLayer } from "../../authorization/mod.ts"
-import { AccountingCapabilities, AccountingService, makeAccountingTestLayer } from "../mod.ts"
 import { makeMessagingTestLayer } from "../../messaging/mod.ts"
 import { SalesService } from "../../sales/mod.ts"
+import { AccountingCapabilities, AccountingService, makeAccountingTestLayer } from "../mod.ts"
 
 const principal = { userAccountId: "accounting-reader", sessionId: "accounting-session" }
 const tenantId = "01900000-0000-7000-8000-000000000001"
@@ -52,7 +52,7 @@ const configure = (tenant: string, entity: string) => ({
 
 describe("Accounting read projections", () => {
   it.effect("lists tenant-scoped configurations, accounts, periods, profiles, and journals", () =>
-    withAccounting(Effect.gen(function* () {
+    withAccounting(Effect.gen(function*() {
       const accounting = yield* AccountingService
       const configuration = yield* accounting.configureLegalEntity(
         configure(tenantId, legalEntityId),
@@ -137,7 +137,7 @@ describe("Accounting read projections", () => {
 
   it.effect("denies Accounting reads without the owning capability", () =>
     withAccounting(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const accounting = yield* AccountingService
         const error = yield* Effect.flip(
           accounting.listAccounts({ principal, tenantId, limit: 200 }),
@@ -149,7 +149,7 @@ describe("Accounting read projections", () => {
 
   it.effect("does not treat an Accounting write grant as an implicit read grant", () =>
     withAccounting(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const accounting = yield* AccountingService
         const error = yield* Effect.flip(
           accounting.listAccounts({ principal, tenantId, limit: 200 }),

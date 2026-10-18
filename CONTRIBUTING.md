@@ -24,7 +24,7 @@
 
 Use the [commit-message standard](./docs/development/commit-message-guidelines.md)
 for every commit created in this repository. After installing dependencies, run
-`deno task lefthook:install` to enable the local formatter and commit-message checks.
+`pnpm run lefthook:install` to enable the local formatter and commit-message checks.
 
 ## Pull Request Checklist
 

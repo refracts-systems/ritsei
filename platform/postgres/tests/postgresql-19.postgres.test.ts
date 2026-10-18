@@ -5,7 +5,7 @@ import postgres from "postgres"
 import { uuidv7 } from "../../../foundation/ids/mod.ts"
 import { withTemporaryDatabase } from "../../../tests/support/postgres-database.ts"
 
-const databaseUrl = Deno.env.get("DATABASE_URL")
+const databaseUrl = process.env["DATABASE_URL"]
 
 it.effect.skipIf(databaseUrl === undefined)(
   "proves non-superuser PostgreSQL 19 control and WAIT FOR privileges",

@@ -30,7 +30,7 @@ const provider = makeOidcIdentityProvider(oidcConfiguration)
 const withProvider = (token: string) => provider.authenticate(token)
 
 it.effect("accepts a valid OIDC assertion and rejects invalid claims", () =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const keys = yield* Effect.promise(() =>
       crypto.subtle.generateKey(
         {

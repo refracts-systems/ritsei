@@ -2,9 +2,9 @@ import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 
+import type { DatabaseFailure } from "../../../foundation/mod.ts"
 import { Principal } from "../../auth/mod.ts"
 import type { AuthorizationDenied } from "../../authorization/mod.ts"
-import type { DatabaseFailure } from "../../../foundation/mod.ts"
 import { EventEnvelope } from "../../messaging/mod.ts"
 import type { EventIdempotencyConflict } from "../../messaging/mod.ts"
 import type {
@@ -48,8 +48,8 @@ const SignedQuantity = Schema.String.check(
     (value) => {
       if (!/^-?[1-9]\d*$/.test(value)) return false
       const quantity = BigInt(value)
-      return quantity >= -9_223_372_036_854_775_808n &&
-        quantity <= 9_223_372_036_854_775_807n
+      return quantity >= -9_223_372_036_854_775_808n
+        && quantity <= 9_223_372_036_854_775_807n
     },
     { expected: "a non-zero PostgreSQL bigint quantity" },
   ),
@@ -145,16 +145,16 @@ export const StockTransfer = Schema.Struct({
   lines: Schema.Array(StockTransferLine).check(Schema.isMinLength(1)),
 }).check(Schema.makeFilter(
   (transfer) =>
-    transfer.sourceWarehouseId !== transfer.destinationWarehouseId &&
-    ((transfer.status === "draft" &&
-      transfer.confirmedAt === null &&
-      transfer.completedAt === null) ||
-      (transfer.status === "confirmed" &&
-        transfer.confirmedAt !== null &&
-        transfer.completedAt === null) ||
-      (transfer.status === "completed" &&
-        transfer.confirmedAt !== null &&
-        transfer.completedAt !== null)),
+    transfer.sourceWarehouseId !== transfer.destinationWarehouseId
+    && ((transfer.status === "draft"
+      && transfer.confirmedAt === null
+      && transfer.completedAt === null)
+      || (transfer.status === "confirmed"
+        && transfer.confirmedAt !== null
+        && transfer.completedAt === null)
+      || (transfer.status === "completed"
+        && transfer.confirmedAt !== null
+        && transfer.completedAt !== null)),
   { expected: "stock transfer identity, status, and dates are consistent" },
 )).check(Schema.makeFilter(
   (transfer) => new Set(transfer.lines.map((line) => line.itemId)).size === transfer.lines.length,

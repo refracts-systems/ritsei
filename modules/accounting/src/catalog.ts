@@ -1,9 +1,13 @@
+import { DatabaseFailure } from "../../../foundation/mod.ts"
 import { AuthorizationDenied } from "../../authorization/mod.ts"
 import { defineActionCatalogEntry } from "../../catalog/mod.ts"
-import { DatabaseFailure } from "../../../foundation/mod.ts"
 import { EventIdempotencyConflict } from "../../messaging/mod.ts"
 import { SalesOrderInvalidState, SalesOrderNotFound } from "../../sales/mod.ts"
 import { AccountingCapabilities } from "./capabilities.ts"
+import {
+  AccountingFinancialOperationReconciledEvent,
+  AccountingRevenuePostedEvent,
+} from "./events.ts"
 import {
   CreateFinancialJournalIntentInput,
   FinancialOperation,
@@ -23,10 +27,6 @@ import {
   RevenuePostingProfileNotFound,
   UnbalancedJournal,
 } from "./service.ts"
-import {
-  AccountingFinancialOperationReconciledEvent,
-  AccountingRevenuePostedEvent,
-} from "./events.ts"
 
 export const AccountingFinancialOperationPostAction = defineActionCatalogEntry({
   kind: "DomainAction",

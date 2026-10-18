@@ -52,10 +52,10 @@ export default defineConfig({
         fonts: {
           body: {
             value:
-              '"Pretendard Variable", "Pretendard", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+              "\"Pretendard Variable\", \"Pretendard\", system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
           },
           mono: {
-            value: '"IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace',
+            value: "\"IBM Plex Mono\", ui-monospace, \"SFMono-Regular\", Consolas, monospace",
           },
         },
         fontSizes: {

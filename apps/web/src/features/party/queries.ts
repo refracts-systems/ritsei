@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/solid-query"
+import type { RequestFailure } from "../../shared/api.ts"
 import type {
   AssignPartyRoleInput,
   AttachPartyIdentifierInput,
@@ -19,9 +20,8 @@ import type {
   RelatedPartyPath,
   SetPartyRepresentationActiveInput,
 } from "../../shared/contracts/generated/party.ts"
-import type { RequestFailure } from "../../shared/api.ts"
-import { createServerQuery, serverQueryKey } from "../../shared/server-query.ts"
 import { type ApiScope, runRequest } from "../../shared/runtime.ts"
+import { createServerQuery, serverQueryKey } from "../../shared/server-query.ts"
 import {
   assignPartyRole,
   attachPartyIdentifier,

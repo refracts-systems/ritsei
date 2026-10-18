@@ -21,7 +21,8 @@ export class ProcessCheckpointRevisionConflict
       expectedRevision: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
       actualRevision: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
     },
-  ) {}
+  )
+{}
 
 // ProcessCheckpointStore is the durable checkpoint boundary for restart recovery.
 export interface ProcessCheckpointStore {
@@ -65,18 +66,18 @@ const decodeRow = (row: {
 }) =>
   recoverCheckpoint(row.state).pipe(
     Effect.flatMap((checkpoint) =>
-      checkpoint.instanceId === row.id &&
-        checkpoint.tenantId === row.tenantId &&
-        checkpoint.processDefinitionId === row.processDefinitionId &&
-        checkpoint.processDefinitionVersion === row.processDefinitionVersion &&
-        checkpoint.catalogVersion === row.catalogVersion &&
-        checkpoint.environment === row.environment &&
-        checkpoint.status === row.status &&
-        checkpoint.failureKind === row.failureKind &&
-        checkpoint.currentNodeId === row.currentNodeId &&
-        checkpoint.revision === row.revision &&
-        checkpoint.correlationId === row.correlationId &&
-        checkpoint.executionPrincipal === row.executionPrincipal
+      checkpoint.instanceId === row.id
+        && checkpoint.tenantId === row.tenantId
+        && checkpoint.processDefinitionId === row.processDefinitionId
+        && checkpoint.processDefinitionVersion === row.processDefinitionVersion
+        && checkpoint.catalogVersion === row.catalogVersion
+        && checkpoint.environment === row.environment
+        && checkpoint.status === row.status
+        && checkpoint.failureKind === row.failureKind
+        && checkpoint.currentNodeId === row.currentNodeId
+        && checkpoint.revision === row.revision
+        && checkpoint.correlationId === row.correlationId
+        && checkpoint.executionPrincipal === row.executionPrincipal
         ? Effect.succeed(checkpoint)
         : Effect.fail(invalid("checkpoint metadata disagrees with its persisted state"))
     ),
@@ -160,11 +161,11 @@ const saveRow = async (
   }
 }
 
-export const makePostgresProcessCheckpointStore = Effect.gen(function* () {
+export const makePostgresProcessCheckpointStore = Effect.gen(function*() {
   const database = yield* Database
   return {
     load: (tenantId: string, instanceId: string) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         if (!Schema.is(Uuid)(tenantId) || !Schema.is(Uuid)(instanceId)) {
           return yield* Effect.fail(invalid("checkpoint identity is not a UUID"))
         }
@@ -180,7 +181,7 @@ export const makePostgresProcessCheckpointStore = Effect.gen(function* () {
         return row === undefined ? undefined : yield* decodeRow(row)
       }),
     save: (checkpoint: ProcessCheckpointType) =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const result = yield* database.transaction(
           (transaction) => saveRow(transaction, checkpoint),
           "process.runtime.checkpoint.save",

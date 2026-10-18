@@ -1,5 +1,4 @@
 import * as Context from "effect/Context"
-import * as Schema from "effect/Schema"
 import * as HttpApi from "effect/http-api/HttpApi"
 import * as HttpApiEndpoint from "effect/http-api/HttpApiEndpoint"
 import * as HttpApiGroup from "effect/http-api/HttpApiGroup"
@@ -7,14 +6,29 @@ import * as HttpApiMiddleware from "effect/http-api/HttpApiMiddleware"
 import * as HttpApiSchema from "effect/http-api/HttpApiSchema"
 import * as HttpApiSecurity from "effect/http-api/HttpApiSecurity"
 import * as OpenApi from "effect/http-api/OpenApi"
+import * as Schema from "effect/Schema"
 
-import { Principal } from "../../modules/auth/mod.ts"
 import { ConsistencyToken, FinancialMajorAmount } from "../../foundation/mod.ts"
-import type { RitseiRuntimeConfiguration } from "../config.ts"
 import {
   FINANCIAL_STAGING_EVIDENCE_CANONICALIZATION_VERSION,
   FinancialStagingEvidence,
 } from "../../modules/accounting/mod.ts"
+import {
+  Account,
+  AccountingConfiguration,
+  AccountingPeriod,
+  FinancialCutoverControl,
+  FinancialOperation,
+  FinancialProjectionRebuildResult,
+  FinancialReconciliationCheckpoint,
+  FinancialStagingEvidenceRecord,
+  FinancialVerificationArtifact,
+  FinancialVerificationEvidence,
+  JournalEntry,
+  JournalLine,
+  RevenuePostingProfile,
+} from "../../modules/accounting/mod.ts"
+import { Principal } from "../../modules/auth/mod.ts"
 import {
   Capability,
   CapabilityCatalog,
@@ -23,6 +37,19 @@ import {
   TenantMembershipStatus,
 } from "../../modules/authorization/mod.ts"
 import { UserAccount } from "../../modules/identity/mod.ts"
+import {
+  Item,
+  StockBalance,
+  StockCorrection,
+  StockMovement,
+  StockMovementKind,
+  StockReservation,
+  StockReservationStatus,
+  StockTransfer,
+  StockTransferLine,
+  StockTransferStatus,
+  Warehouse,
+} from "../../modules/inventory/mod.ts"
 import {
   Branch,
   ExternalIdentifier,
@@ -38,14 +65,6 @@ import {
   PartyRole,
   RelatedPartyPath,
 } from "../../modules/party/mod.ts"
-import {
-  Customer,
-  Quotation,
-  QuotationStatus,
-  SalesOrder,
-  SalesOrderLine,
-  SalesOrderStatus,
-} from "../../modules/sales/mod.ts"
 import {
   OrderCancellationPayload,
   OrderCancellationResult,
@@ -65,19 +84,6 @@ import {
   WorkflowRun,
 } from "../../modules/process/mod.ts"
 import {
-  Item,
-  StockBalance,
-  StockCorrection,
-  StockMovement,
-  StockMovementKind,
-  StockReservation,
-  StockReservationStatus,
-  StockTransfer,
-  StockTransferLine,
-  StockTransferStatus,
-  Warehouse,
-} from "../../modules/inventory/mod.ts"
-import {
   GoodsReceipt,
   PurchaseOrder,
   PurchaseOrderLine,
@@ -86,20 +92,14 @@ import {
   SupplierAccount,
 } from "../../modules/procurement/mod.ts"
 import {
-  Account,
-  AccountingConfiguration,
-  AccountingPeriod,
-  FinancialCutoverControl,
-  FinancialOperation,
-  FinancialProjectionRebuildResult,
-  FinancialReconciliationCheckpoint,
-  FinancialStagingEvidenceRecord,
-  FinancialVerificationArtifact,
-  FinancialVerificationEvidence,
-  JournalEntry,
-  JournalLine,
-  RevenuePostingProfile,
-} from "../../modules/accounting/mod.ts"
+  Customer,
+  Quotation,
+  QuotationStatus,
+  SalesOrder,
+  SalesOrderLine,
+  SalesOrderStatus,
+} from "../../modules/sales/mod.ts"
+import type { RitseiRuntimeConfiguration } from "../config.ts"
 
 export class CurrentPrincipal extends Context.Service<CurrentPrincipal, Principal>()(
   "RITSEI/Http/CurrentPrincipal",
@@ -108,7 +108,8 @@ export class CurrentPrincipal extends Context.Service<CurrentPrincipal, Principa
 export class CurrentRuntimeConfiguration
   extends Context.Service<CurrentRuntimeConfiguration, RitseiRuntimeConfiguration>()(
     "RITSEI/Http/CurrentRuntimeConfiguration",
-  ) {}
+  )
+{}
 
 export class ApiUnauthorized extends Schema.TaggedError<ApiUnauthorized>()("ApiUnauthorized", {
   code: Schema.Literal("unauthorized"),
@@ -125,7 +126,8 @@ export class ApiConflict extends Schema.TaggedError<ApiConflict>()("ApiConflict"
 export class ApiServiceUnavailable
   extends Schema.TaggedError<ApiServiceUnavailable>()("ApiServiceUnavailable", {
     code: Schema.Literal("service_unavailable"),
-  }, { httpApiStatus: 503 }) {}
+  }, { httpApiStatus: 503 })
+{}
 
 export class BearerAuth extends HttpApiMiddleware.Service<BearerAuth, {
   provides: CurrentPrincipal
@@ -214,8 +216,8 @@ const FinancialStagingEvidenceLookupQuery = Schema.Struct({
   limit: Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: MaxApiCollectionItems })),
 }).check(Schema.makeFilter(
   (query) =>
-    query.gateId !== undefined || query.cohortId !== undefined ||
-    query.deploymentRevision !== undefined,
+    query.gateId !== undefined || query.cohortId !== undefined
+    || query.deploymentRevision !== undefined,
   { expected: "staging evidence lookup requires gate, cohort, or deployment scope" },
 ))
 const CreatedTenantMembership = TenantMembership.pipe(HttpApiSchema.status(201))

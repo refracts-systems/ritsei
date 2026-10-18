@@ -3,9 +3,9 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
 
+import { FinancialMajorAmount, uuidv7 } from "../../../foundation/mod.ts"
 import { AuthorizationService } from "../../authorization/mod.ts"
 import { InventoryService } from "../../inventory/mod.ts"
-import { FinancialMajorAmount, uuidv7 } from "../../../foundation/mod.ts"
 import { MessagingService } from "../../messaging/mod.ts"
 import { PartyService } from "../../party/mod.ts"
 import { ProcurementCapabilities } from "./capabilities.ts"
@@ -26,10 +26,6 @@ import {
   SupplierAccount,
 } from "./contract.ts"
 import {
-  ProcurementPurchaseOrderConfirmedEvent,
-  PurchaseOrderConfirmedEventPayload,
-} from "./events.ts"
-import {
   PurchaseOrderConfirmationIdempotencyConflict,
   PurchaseOrderHasReceipts,
   PurchaseOrderInvalidState,
@@ -44,6 +40,10 @@ import {
   SupplierAccountNotFound,
 } from "./errors.ts"
 import {
+  ProcurementPurchaseOrderConfirmedEvent,
+  PurchaseOrderConfirmedEventPayload,
+} from "./events.ts"
+import {
   canonicalReceiptLines,
   deriveTotal,
   loadSupplierRelationship,
@@ -54,7 +54,7 @@ import {
 export const makeProcurementTestLayer = () =>
   Layer.effect(
     ProcurementService,
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const authorization = yield* AuthorizationService
       const messaging = yield* MessagingService
       const party = yield* PartyService
@@ -69,7 +69,7 @@ export const makeProcurementTestLayer = () =>
 
       const service: ProcurementService = {
         createSupplierAccount: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(CreateSupplierAccountInput)(input)
             yield* authorization.authorize({
               principal: decoded.principal,
@@ -79,8 +79,8 @@ export const makeProcurementTestLayer = () =>
             const relationship = yield* loadSupplierRelationship(party, decoded)
             if (
               [...storedSupplierAccounts.values()].some((account) =>
-                account.tenantId === decoded.tenantId &&
-                account.supplierRelationshipId === decoded.supplierRelationshipId
+                account.tenantId === decoded.tenantId
+                && account.supplierRelationshipId === decoded.supplierRelationshipId
               )
             ) {
               return yield* Effect.fail(
@@ -103,7 +103,7 @@ export const makeProcurementTestLayer = () =>
         // Fallow: memory and PostgreSQL adapters intentionally mirror public read authorization.
         // fallow-ignore-next-line code-duplication
         listSupplierAccounts: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(ListSupplierAccountsInput)(input)
             yield* authorization.authorize({
               principal: decoded.principal,
@@ -118,7 +118,7 @@ export const makeProcurementTestLayer = () =>
         // Fallow: memory and PostgreSQL adapters intentionally mirror public command authorization.
         // fallow-ignore-next-line code-duplication
         createPurchaseOrder: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(CreatePurchaseOrderInput)(input)
             yield* authorization.authorize({
               principal: decoded.principal,
@@ -150,7 +150,7 @@ export const makeProcurementTestLayer = () =>
             return order
           }),
         getPurchaseOrder: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(GetPurchaseOrderInput)(input)
             yield* authorization.authorize({
               principal: decoded.principal,
@@ -169,7 +169,7 @@ export const makeProcurementTestLayer = () =>
             return order
           }),
         listPurchaseOrders: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(ListPurchaseOrdersInput)(input)
             yield* authorization.authorize({
               principal: decoded.principal,
@@ -178,10 +178,10 @@ export const makeProcurementTestLayer = () =>
             })
             return [...storedPurchaseOrders.values()]
               .filter((order) =>
-                order.tenantId === decoded.tenantId &&
-                (decoded.supplierAccountId === undefined ||
-                  order.supplierAccountId === decoded.supplierAccountId) &&
-                (decoded.status === undefined || order.status === decoded.status)
+                order.tenantId === decoded.tenantId
+                && (decoded.supplierAccountId === undefined
+                  || order.supplierAccountId === decoded.supplierAccountId)
+                && (decoded.status === undefined || order.status === decoded.status)
               )
               .sort((left, right) => left.id.localeCompare(right.id))
               .slice(0, decoded.limit ?? 200)
@@ -189,7 +189,7 @@ export const makeProcurementTestLayer = () =>
         // Fallow: memory and PostgreSQL adapters intentionally mirror public receipt-read authorization.
         // fallow-ignore-next-line code-duplication
         listPurchaseReceipts: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(ListPurchaseReceiptsInput)(input)
             yield* authorization.authorize({
               principal: decoded.principal,
@@ -198,14 +198,14 @@ export const makeProcurementTestLayer = () =>
             })
             return [...storedReceipts.values()]
               .filter((receipt) =>
-                receipt.tenantId === decoded.tenantId &&
-                receipt.purchaseOrderId === decoded.purchaseOrderId
+                receipt.tenantId === decoded.tenantId
+                && receipt.purchaseOrderId === decoded.purchaseOrderId
               )
               .sort((left, right) => left.id.localeCompare(right.id))
               .slice(0, decoded.limit ?? 200)
           }),
         confirmPurchaseOrder: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(ConfirmPurchaseOrderInput)(input)
             yield* authorization.authorize({
               principal: decoded.principal,
@@ -287,7 +287,7 @@ export const makeProcurementTestLayer = () =>
             return confirmed
           }),
         cancelPurchaseOrder: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const decoded = yield* Schema.decodeUnknownEffect(CancelPurchaseOrderInput)(input)
             yield* authorization.authorize({
               principal: decoded.principal,
@@ -330,7 +330,7 @@ export const makeProcurementTestLayer = () =>
             return cancelled
           }),
         receivePurchaseOrder: (input) =>
-          Effect.gen(function* () {
+          Effect.gen(function*() {
             const inventory = yield* InventoryService
             const decoded = yield* Schema.decodeUnknownEffect(ReceivePurchaseOrderInput)(input)
             yield* authorization.authorize({
@@ -356,9 +356,9 @@ export const makeProcurementTestLayer = () =>
             const existing = storedReceipts.get(receiptKey)
             if (existing !== undefined) {
               if (
-                existing.purchaseOrderId !== decoded.purchaseOrderId ||
-                existing.warehouseId !== decoded.warehouseId ||
-                !sameReceiptLines(lines, existing.lines)
+                existing.purchaseOrderId !== decoded.purchaseOrderId
+                || existing.warehouseId !== decoded.warehouseId
+                || !sameReceiptLines(lines, existing.lines)
               ) {
                 return yield* Effect.fail(
                   new PurchaseReceiptIdempotencyConflict({
