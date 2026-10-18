@@ -734,7 +734,7 @@ export const gates: readonly Gate[] = [
   },
   {
     id: "postgres19.property-graph-pilot",
-    title: "PostgreSQL 19 Party SQL/PGQ pilot",
+    title: "PostgreSQL 19 Party read-projection pilot",
     source: "docs/roadmap/postgresql-19.md",
     kind: "markers",
     dependencies: ["postgres19.minimum-version"],
@@ -748,10 +748,10 @@ export const gates: readonly Gate[] = [
     requirements: [
       marker(
         "db/migrations/20260831124952_add_party_property_graph/migration.sql",
-        "CREATE PROPERTY GRAPH",
-        "GRAPH_TABLE",
+        "CREATE VIEW",
+        "party_relationships",
         "legal_entity_organization_edges",
-        "WHERE graph_path.\"active\"",
+        "\"relationship\".\"active\"",
       ),
       marker(
         "modules/party/src/contract.ts",

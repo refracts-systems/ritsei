@@ -1,7 +1,10 @@
 -- owner: party
 -- reviewed: 2026-08-31
 -- generated-by: drizzle-kit 1.0.0-rc.4 --custom
--- rationale: expose a bounded SQL/PGQ read projection over authoritative Party relationships
+-- rationale: expose a bounded read projection of authoritative Party relationships
+-- amended: 2026-10-18 — rewritten as relational views because upstream reverted
+--   SQL/PGQ (property-graph DDL and graph pattern queries) from PostgreSQL 19
+--   after beta 3; the same two-edge path semantics are preserved with plain joins.
 
 CREATE VIEW "party"."legal_entity_organization_edges" AS
 SELECT
@@ -10,55 +13,17 @@ SELECT
   "organization_party_id"
 FROM "party"."legal_entities";
 
-CREATE PROPERTY GRAPH "party"."party_relationship_graph"
-  VERTEX TABLES (
-    "party"."parties" AS party
-      KEY ("tenant_id", "id")
-      LABEL party PROPERTIES ("tenant_id", "id", "name"),
-    "party"."legal_entities" AS legal_entity
-      KEY ("tenant_id", "id")
-      LABEL legal_entity PROPERTIES ("tenant_id", "id", "organization_party_id")
-  )
-  EDGE TABLES (
-    "party"."party_relationships"
-      KEY ("tenant_id", "id")
-      SOURCE KEY ("tenant_id", "party_id")
-        REFERENCES party ("tenant_id", "id")
-      DESTINATION KEY ("tenant_id", "legal_entity_id")
-        REFERENCES legal_entity ("tenant_id", "id")
-      LABEL relationship PROPERTIES ("id", "tenant_id", "kind", "active"),
-    "party"."legal_entity_organization_edges" AS ownership
-      KEY ("tenant_id", "legal_entity_id")
-      SOURCE KEY ("tenant_id", "legal_entity_id")
-        REFERENCES legal_entity ("tenant_id", "id")
-      DESTINATION KEY ("tenant_id", "organization_party_id")
-        REFERENCES party ("tenant_id", "id")
-      LABEL legal_entity_owner PROPERTIES (
-        "tenant_id", "legal_entity_id", "organization_party_id"
-      )
-  );
-
 CREATE VIEW "party"."related_party_paths" AS
 SELECT
-  graph_path."tenant_id",
-  graph_path."source_party_id",
-  graph_path."target_party_id",
-  graph_path."legal_entity_id",
-  graph_path."relationship_id",
-  graph_path."relationship_kind",
+  "relationship"."tenant_id",
+  "relationship"."party_id" AS "source_party_id",
+  "ownership"."organization_party_id" AS "target_party_id",
+  "ownership"."legal_entity_id",
+  "relationship"."id" AS "relationship_id",
+  "relationship"."kind" AS "relationship_kind",
   2::integer AS "depth"
-FROM GRAPH_TABLE (
-  "party"."party_relationship_graph"
-  MATCH (source IS party)-[relationship IS relationship]->(entity IS legal_entity)
-    -[ownership IS legal_entity_owner]->(target IS party)
-  COLUMNS (
-    source."tenant_id" AS "tenant_id",
-    source."id" AS "source_party_id",
-    relationship."id" AS "relationship_id",
-    relationship."kind" AS "relationship_kind",
-    relationship."active" AS "active",
-    entity."id" AS "legal_entity_id",
-    target."id" AS "target_party_id"
-  )
-) AS graph_path
-WHERE graph_path."active";
+FROM "party"."party_relationships" AS "relationship"
+JOIN "party"."legal_entity_organization_edges" AS "ownership"
+  ON "ownership"."tenant_id" = "relationship"."tenant_id"
+ AND "ownership"."legal_entity_id" = "relationship"."legal_entity_id"
+WHERE "relationship"."active";

@@ -9,11 +9,15 @@ describe("PostgreSQL 19 capability boundaries", () => {
   it("keeps the Party graph read projection tied to relational facts", () => {
     const migration = read("db/migrations/20260831124952_add_party_property_graph/migration.sql")
 
-    assert.isTrue(migration.includes("CREATE PROPERTY GRAPH"))
-    assert.isTrue(migration.includes("GRAPH_TABLE"))
+    // SQL/PGQ (CREATE PROPERTY GRAPH / GRAPH_TABLE) was reverted upstream from
+    // PostgreSQL 19 after beta 3, so the projection is expressed with plain
+    // relational joins while preserving the same bounded read path.
+    assert.isFalse(migration.includes("CREATE PROPERTY GRAPH"))
+    assert.isFalse(migration.includes("GRAPH_TABLE"))
+    assert.isTrue(migration.includes("CREATE VIEW"))
     assert.isTrue(migration.includes("party_relationships"))
     assert.isTrue(migration.includes("legal_entity_organization_edges"))
-    assert.isTrue(migration.includes("WHERE graph_path.\"active\""))
+    assert.isTrue(migration.includes("\"relationship\".\"active\""))
     assert.isFalse(migration.includes("INSERT INTO"))
     assert.isFalse(migration.includes("UPDATE "))
     assert.isFalse(migration.includes("DELETE FROM"))
