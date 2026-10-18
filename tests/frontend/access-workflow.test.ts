@@ -193,7 +193,7 @@ it.effect(
         await addTrigger.click()
         const addDialog = page.getByRole("dialog", { name: "Add tenant membership" })
         await addDialog.waitFor()
-        await page.keyboard.press("Escape")
+        await addDialog.press("Escape")
         await addDialog.waitFor({ state: "hidden" })
         assert.isTrue(await addTrigger.evaluate((node) => document.activeElement === node))
         await addTrigger.click()
