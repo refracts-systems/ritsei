@@ -1,37 +1,90 @@
 {
   "finding_counts": {
-    "runtime/api/mod.test.ts": {
-      "complexity_critical": {
-        "count": 1
-      },
-      "crap_critical": {
+    "apps/web/src/app/app.tsx": {
+      "crap_high": {
         "count": 1
       }
     },
-    "runtime/config.ts": {
+    "apps/web/src/app/auth-client.ts": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "apps/web/src/app/connection.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "apps/web/src/app/shell.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "apps/web/src/experiments/solid-effect/src/checkout.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "apps/web/src/features/identity/accounts.tsx": {
+      "crap_critical": {
+        "count": 1
+      },
       "crap_moderate": {
         "count": 2
       }
     },
     "apps/web/src/features/process-studio/designer-model.ts": {
-      "complexity_critical": {
-        "count": 1
-      },
-      "crap_critical": {
+      "crap_moderate": {
         "count": 1
       }
     },
     "apps/web/src/features/process-studio/designer.ts": {
       "crap_moderate": {
-        "count": 3
+        "count": 1
       }
     },
-    "runtime/worker/runner.ts": {
+    "apps/web/src/shared/api.ts": {
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "apps/web/src/ui/internal/field-shell.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "apps/web/src/ui/patterns/approval.tsx": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "apps/web/src/ui/patterns/data-table.tsx": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "apps/web/src/ui/primitives/button.tsx": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "apps/web/src/ui/primitives/form-field.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "apps/web/src/ui/renderers/cartography/cartography-field.tsx": {
       "crap_high": {
         "count": 1
       },
       "crap_moderate": {
-        "count": 1
+        "count": 2
       }
     },
     "modules/accounting/src/contract.ts": {
@@ -49,22 +102,19 @@
     },
     "modules/accounting/src/financial-operations.ts": {
       "complexity_critical": {
-        "count": 6
+        "count": 5
       },
       "crap_critical": {
-        "count": 6
+        "count": 5
       },
       "crap_high": {
         "count": 3
       },
       "crap_moderate": {
-        "count": 1
+        "count": 3
       }
     },
     "modules/accounting/src/financial-readiness.ts": {
-      "complexity_high": {
-        "count": 1
-      },
       "complexity_moderate": {
         "count": 1
       }
@@ -108,6 +158,9 @@
       }
     },
     "modules/accounting/tests/financial-operations.postgres.test.ts": {
+      "complexity_critical": {
+        "count": 1
+      },
       "crap_critical": {
         "count": 1
       }
@@ -132,24 +185,6 @@
       "crap_critical": {
         "count": 1
       },
-      "crap_moderate": {
-        "count": 1
-      }
-    },
-    "platform/postgres/migrations.ts": {
-      "complexity_high": {
-        "count": 1
-      }
-    },
-    "platform/tigerbeetle/tigerbeetle.ts": {
-      "crap_high": {
-        "count": 1
-      },
-      "crap_moderate": {
-        "count": 5
-      }
-    },
-    "platform/tigerbeetle/tests/tigerbeetle.test.ts": {
       "crap_moderate": {
         "count": 1
       }
@@ -192,17 +227,56 @@
         "count": 1
       }
     },
-    "tooling/domain-maturity/measure.ts": {
+    "platform/postgres/migrations.ts": {
+      "complexity_high": {
+        "count": 1
+      }
+    },
+    "platform/tigerbeetle/tests/tigerbeetle.test.ts": {
       "crap_moderate": {
         "count": 1
       }
     },
-    "tooling/roadmap-completion/measure.ts": {
-      "crap_critical": {
+    "platform/tigerbeetle/tigerbeetle.ts": {
+      "crap_high": {
         "count": 1
       },
       "crap_moderate": {
+        "count": 5
+      }
+    },
+    "runtime/api/mod.test.ts": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "runtime/auth/bootstrap.ts": {
+      "crap_moderate": {
         "count": 2
+      }
+    },
+    "runtime/authentication/oidc.ts": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "runtime/config.ts": {
+      "crap_moderate": {
+        "count": 4
+      }
+    },
+    "runtime/worker/runner.ts": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
       }
     },
     "tooling/architecture.ts": {
@@ -214,6 +288,32 @@
       },
       "crap_high": {
         "count": 1
+      }
+    },
+    "tooling/domain-maturity/measure.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "tooling/production/artifacts.ts": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "tooling/roadmap-completion/frontend-evidence.ts": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "tooling/roadmap-completion/measure.ts": {
+      "crap_moderate": {
+        "count": 4
       }
     },
     "tooling/schema-ownership.ts": {
@@ -232,13 +332,14 @@
   "target_keys": [
     "runtime/config.ts:dead code",
     "runtime/api/bootstrap.ts:dead code",
-    "runtime/api/handlers.ts:dead code",
-    "modules/accounting/src/financial-operations.ts:complexity",
-    "apps/web/src/features/process-studio/designer-model.ts:complexity",
-    "platform/postgres/migrations.ts:complexity",
-    "modules/accounting/src/financial-readiness.ts:complexity",
-    "tooling/source-files.ts:high impact",
     "tooling/architecture.ts:high impact",
-    "tooling/schema-ownership.ts:untested risk"
+    "tooling/source-files.ts:high impact",
+    "tooling/roadmap-completion/measure.ts:untested risk",
+    "tooling/schema-ownership.ts:untested risk",
+    "modules/accounting/src/financial-operations.ts:complexity",
+    "platform/postgres/migrations.ts:complexity",
+    "tests/frontend/sales-workflow.test.ts:complexity",
+    "tests/frontend/accounting-workflow.test.ts:complexity",
+    "tests/frontend/inventory-workflow.test.ts:complexity"
   ]
 }
