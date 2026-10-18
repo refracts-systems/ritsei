@@ -65,6 +65,9 @@ Use one of these types:
   impact.
 - Use a scope only when it adds useful package or subsystem context, such as
   `accounting`, `inventory`, `kernel`, or `docs`.
+- CI validates authored commits only and skips merge commits, because the
+  default GitHub merge subject (`Merge pull request #N ...`) cannot follow this
+  format. Prefer squash or rebase merges so history stays conventional.
 - Mark an incompatible change with `!` after the type or scope and explain it in
   a `BREAKING CHANGE:` footer.
 - Do not rewrite shared or already-published history without explicit approval.
