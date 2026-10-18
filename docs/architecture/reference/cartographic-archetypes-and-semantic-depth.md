@@ -1,6 +1,7 @@
 # Reference: Universal Cartographic Archetypes, Deterministic Variation, and Semantic Depth
 
-> **Status:** Reference analysis
+> **Status:** Historical reference analysis — the cartographic visual direction was superseded by
+> [ADR-0090](../../decisions/0090-adopt-operational-clarity-visual-language.md).
 >
 > **Owns:** The rationale, examples, and working hypotheses behind RITSEI's universal cartographic
 > archetypes, deterministic visual variation, and semantic depth vocabulary.

@@ -1,11 +1,11 @@
 # ADR-0071: Adopt Seven Universal Cartographic Visual Archetypes
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-09-02
 - Amends: ADR-0069 for the cartographic semantic vocabulary and domain-composition model
 - Compatible with: ADR-0056, ADR-0070
 - Supersedes: None
-- Superseded by: None
+- Superseded by: ADR-0090 (Operational Clarity visual language)
 
 > **Related documents**
 >
