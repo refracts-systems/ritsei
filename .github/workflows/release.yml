@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:19beta3
+        image: postgres:19rc1-bookworm
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
