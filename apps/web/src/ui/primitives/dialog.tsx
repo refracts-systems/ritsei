@@ -1,6 +1,7 @@
 import { Dialog as KobalteDialog, useDialogContext } from "@kobalte/core/dialog"
 import type { JSX } from "@solidjs/web"
 import { css } from "../generated/css/index.js"
+import { Icon } from "../icons/index.ts"
 import { Button } from "./button.tsx"
 
 export const createDialogOpenChange =
@@ -24,7 +25,7 @@ export const createDialogOpenChange =
 
 export interface DialogProps {
   readonly trigger?: JSX.Element
-  readonly triggerVariant?: "primary" | "secondary" | "danger"
+  readonly triggerVariant?: "primary" | "secondary" | "ghost" | "danger"
   readonly title: string
   readonly description?: string
   readonly children?: JSX.Element
@@ -34,28 +35,44 @@ export interface DialogProps {
 }
 
 const styles = {
-  overlay: css({ position: "fixed", inset: "0", zIndex: "modal", bg: "backdrop" }),
+  overlay: css({
+    position: "fixed",
+    inset: "0",
+    zIndex: "modal",
+    bg: "backdrop",
+  }),
   content: css({
     position: "fixed",
     top: "[50%]",
     left: "[50%]",
     zIndex: "modal",
     width: "dialog",
-    maxWidth: "[32rem]",
-    maxHeight: "[calc(100vh - 2rem)]",
+    maxWidth: "[34rem]",
+    maxHeight: "[calc(100dvh - 2rem)]",
     overflow: "auto",
     transform: "translate(-50%, -50%)",
     bg: "content",
     color: "text",
     borderWidth: "1px",
     borderColor: "boundary",
-    borderRadius: "md",
+    borderRadius: "overlay",
     p: "6",
-    boxShadow: "lg",
+    boxShadow: "overlay",
   }),
-  close: css({ position: "absolute", top: "3", right: "3" }),
-  body: css({ display: "flex", flexDirection: "column", gap: "3" }),
-  footer: css({ display: "flex", justifyContent: "flex-end", gap: "3", mt: "6" }),
+  close: css({ position: "absolute", top: "4", right: "4" }),
+  body: css({ display: "flex", flexDirection: "column", gap: "4" }),
+  title: css({ textStyle: "sectionTitle", fontSize: "lg", lineHeight: "lg", pr: "10" }),
+  description: css({ color: "muted", textStyle: "bodyCompact", mt: "-2" }),
+  footer: css({
+    display: "flex",
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
+    gap: "2",
+    mt: "6",
+    pt: "4",
+    borderTopWidth: "1px",
+    borderColor: "boundary",
+  }),
 }
 
 function DialogBody(props: DialogProps) {
@@ -75,15 +92,19 @@ function DialogBody(props: DialogProps) {
         as={Button}
         class={styles.close}
         iconOnly
+        variant="ghost"
+        size="sm"
         aria-label="Close"
         type="button"
       >
-        ×
+        <Icon name="action.close" size="sm" />
       </KobalteDialog.CloseButton>
       <div class={styles.body}>
-        <KobalteDialog.Title>{props.title}</KobalteDialog.Title>
+        <KobalteDialog.Title class={styles.title}>{props.title}</KobalteDialog.Title>
         {props.description && (
-          <KobalteDialog.Description>{props.description}</KobalteDialog.Description>
+          <KobalteDialog.Description class={styles.description}>
+            {props.description}
+          </KobalteDialog.Description>
         )}
         {props.children}
       </div>

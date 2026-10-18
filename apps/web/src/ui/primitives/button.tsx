@@ -4,7 +4,8 @@ import { css } from "../generated/css/index.js"
 import { control } from "../recipes/control.ts"
 
 type ButtonBaseProps = Omit<JSX.ButtonHTMLAttributes<HTMLButtonElement>, "class" | "aria-label"> & {
-  variant?: "primary" | "secondary" | "danger"
+  variant?: "primary" | "secondary" | "ghost" | "danger"
+  size?: "md" | "sm"
   loading?: boolean
   class?: JSX.ClassValue
 }
@@ -15,23 +16,27 @@ export type ButtonProps = ButtonBaseProps &
     | { iconOnly?: false | undefined; "aria-label"?: string }
   )
 
+const kinds = {
+  primary: "action",
+  secondary: "secondary",
+  ghost: "ghost",
+  danger: "danger",
+} as const
+
 const styles = {
-  danger: css({ bg: "danger", color: "onAction", cursor: "pointer" }),
   loading: css({ cursor: "wait" }),
-  iconOnly: css({ px: "2", minWidth: "11" }),
+  iconOnly: css({ px: "0", minWidth: "9", "&.control--size_sm": { minWidth: "8" } }),
 }
 
 export function Button(props: ButtonProps) {
-  const buttonProps = omit(props, "variant", "loading", "iconOnly", "class", "children")
-  const variant = () => props.variant ?? "secondary"
+  const buttonProps = omit(props, "variant", "size", "loading", "iconOnly", "class", "children")
   return (
     <button
       {...buttonProps}
       aria-busy={props.loading ? "true" : undefined}
       disabled={props.disabled || props.loading}
       class={[
-        control(variant() === "primary" ? { kind: "action" } : {}),
-        variant() === "danger" && styles.danger,
+        control({ kind: kinds[props.variant ?? "secondary"], size: props.size ?? "md" }),
         props.loading && styles.loading,
         props.iconOnly && styles.iconOnly,
         props.class,

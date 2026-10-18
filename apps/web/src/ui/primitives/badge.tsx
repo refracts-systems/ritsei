@@ -6,22 +6,50 @@ export interface BadgeProps extends JSX.HTMLAttributes<HTMLSpanElement> {
   readonly tone?: "neutral" | "success" | "warning" | "danger" | "info"
 }
 
+// Status is carried by the label text; tone adds a second channel (tint + dot), never the only one.
 const styles = {
   base: css({
     display: "inline-flex",
     alignItems: "center",
-    borderRadius: "full",
+    gap: "1.5",
+    minHeight: "5",
     px: "2",
-    py: "1",
-    textStyle: "status",
+    borderRadius: "full",
     borderWidth: "1px",
-    borderColor: "boundary",
+    textStyle: "status",
+    whiteSpace: "nowrap",
+    verticalAlign: "middle",
+    "&::before": {
+      content: '""',
+      width: "1.5",
+      height: "1.5",
+      flexShrink: "0",
+      borderRadius: "full",
+      bg: "[currentColor]",
+    },
+    "@media (forced-colors: active)": { borderColor: "[CanvasText]" },
   }),
-  neutral: css({ color: "muted" }),
-  success: css({ color: "icon.success" }),
-  warning: css({ color: "icon.warning" }),
-  danger: css({ color: "danger" }),
-  info: css({ color: "icon.info" }),
+  neutral: css({
+    color: "status.neutral.fg",
+    bg: "status.neutral.bg",
+    borderColor: "status.neutral.border",
+  }),
+  success: css({
+    color: "status.success.fg",
+    bg: "status.success.bg",
+    borderColor: "status.success.border",
+  }),
+  warning: css({
+    color: "status.warning.fg",
+    bg: "status.warning.bg",
+    borderColor: "status.warning.border",
+  }),
+  danger: css({
+    color: "status.danger.fg",
+    bg: "status.danger.bg",
+    borderColor: "status.danger.border",
+  }),
+  info: css({ color: "status.info.fg", bg: "status.info.bg", borderColor: "status.info.border" }),
 }
 
 export function Badge(props: BadgeProps) {

@@ -41,7 +41,13 @@ const cellClass = (align: DataColumn<unknown>["align"]) =>
  */
 export function DataTable<Row>(props: DataTableProps<Row>) {
   return (
-    <div class={[props.surface === false ? undefined : surface(), layout.scroll, props.class]}>
+    <div
+      class={[
+        props.surface === false ? layout.tableBleed : surface({ tone: "flush" }),
+        layout.scroll,
+        props.class,
+      ]}
+    >
       <table class={props.tableClass} aria-busy={props.loading ? "true" : undefined}>
         <caption class={props.captionClass}>{props.caption}</caption>
         <thead>

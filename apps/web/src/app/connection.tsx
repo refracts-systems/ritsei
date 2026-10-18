@@ -68,9 +68,9 @@ export function Connection() {
   }
 
   return (
-    <section class={layout.stack} aria-labelledby="connection-heading">
+    <section class={[layout.stack, layout.authPanel]} aria-labelledby="connection-heading">
       <h1 id="connection-heading">Sign in to RITSEI</h1>
-      <p>
+      <p class={layout.workspaceDescription}>
         Authentication is handled by the configured identity provider. Tenant access is resolved
         from your RITSEI memberships.
       </p>

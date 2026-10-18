@@ -4,7 +4,7 @@ import { Dialog } from "../primitives/dialog.tsx"
 
 interface ConfirmDialogProps {
   readonly triggerLabel: string
-  readonly triggerVariant?: "primary" | "secondary" | "danger"
+  readonly triggerVariant?: "primary" | "secondary" | "ghost" | "danger"
   readonly title: string
   readonly description: string
   readonly confirmLabel: string

@@ -64,7 +64,6 @@ function CreateSupplierAccountDialog(props: { reload: () => Promise<unknown> }) 
       open={open()}
       onOpenChange={createDialogOpenChange(mutation, setOpen, setInvalid)}
       trigger={<span>Create supplier account</span>}
-      triggerVariant="primary"
       title="Create supplier account"
       description="Create the Procurement-owned tenant identity for an active Party supplier relationship."
     >

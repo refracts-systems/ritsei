@@ -1,8 +1,9 @@
 import { createRouter, useNavigate } from "@solidjs/router"
-import { createSignal, lazy, onSettled, Show, useContext } from "solid-js"
+import { createSignal, For, lazy, onSettled, Show, useContext } from "solid-js"
 import type { AuthSession } from "../shared/contracts/generated/auth.ts"
 import type { Session } from "../shared/session.ts"
 import { layout } from "../ui/foundations/layout.ts"
+import { Icon, type IconName } from "../ui/icons/index.ts"
 import { OperationalWorkspace } from "../ui/patterns/operational-workspace.tsx"
 import { AuthCallback } from "./auth-callback.tsx"
 import { AuthClientFailure, getAuthSession } from "./auth-client.ts"
@@ -24,6 +25,62 @@ const SalesRoute = lazy(() => import("./sales-route.tsx"))
 const AccountingRoute = lazy(() => import("./accounting-route.tsx"))
 const ProcessRoute = lazy(() => import("./process-route.tsx"))
 
+const workspaceDirectory: readonly Readonly<{
+  href: string
+  label: string
+  description: string
+  icon: IconName
+}>[] = [
+  {
+    href: "/sales",
+    label: "Revenue",
+    description: "Customers, quotations, and sales orders.",
+    icon: "navigation.sales",
+  },
+  {
+    href: "/procurement",
+    label: "Supply",
+    description: "Suppliers and purchase orders.",
+    icon: "navigation.procurement",
+  },
+  {
+    href: "/inventory",
+    label: "Inventory",
+    description: "Items, warehouses, stock, and reservations.",
+    icon: "navigation.inventory",
+  },
+  {
+    href: "/accounting",
+    label: "Finance",
+    description: "Accounts, periods, and journal entries.",
+    icon: "navigation.accounting",
+  },
+  {
+    href: "/processes",
+    label: "Process Studio",
+    description: "Design and monitor business processes.",
+    icon: "navigation.process",
+  },
+  {
+    href: "/parties",
+    label: "Parties",
+    description: "Organizations, legal entities, and branches.",
+    icon: "navigation.parties",
+  },
+  {
+    href: "/user-accounts",
+    label: "User accounts",
+    description: "People who can sign in to this tenant.",
+    icon: "navigation.user-accounts",
+  },
+  {
+    href: "/access",
+    label: "Access",
+    description: "Memberships and capability grants.",
+    icon: "navigation.access",
+  },
+]
+
 function HomeRoute() {
   const session = useContext(SessionContext)
   return (
@@ -38,30 +95,19 @@ function HomeRoute() {
             Choose a workspace to work with records and processes linked to this tenant.
           </p>
           <ul class={layout.directoryList}>
-            <li>
-              <a href="/sales">Open Revenue</a>
-            </li>
-            <li>
-              <a href="/procurement">Open Supply</a>
-            </li>
-            <li>
-              <a href="/inventory">Open Inventory</a>
-            </li>
-            <li>
-              <a href="/accounting">Open Finance</a>
-            </li>
-            <li>
-              <a href="/processes">Open Process Studio</a>
-            </li>
-            <li>
-              <a href="/parties">Open Parties</a>
-            </li>
-            <li>
-              <a href="/user-accounts">Open user accounts</a>
-            </li>
-            <li>
-              <a href="/access">Open Access</a>
-            </li>
+            <For each={workspaceDirectory}>
+              {(entry) => (
+                <li>
+                  <a href={entry.href} class={layout.directoryCard}>
+                    <span class={layout.directoryIcon}>
+                      <Icon name={entry.icon} size="md" />
+                    </span>
+                    <span class={layout.directoryTitle}>{entry.label}</span>
+                    <span class={layout.directoryDescription}>{entry.description}</span>
+                  </a>
+                </li>
+              )}
+            </For>
           </ul>
         </section>
       </OperationalWorkspace>

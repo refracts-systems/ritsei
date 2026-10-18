@@ -29,6 +29,11 @@ export const iconRegistry = {
   "navigation.crm": "users-three",
   "navigation.process": "flow-arrow",
   "navigation.settings": "gear",
+  "navigation.parties": "users-three",
+  "navigation.user-accounts": "user-circle",
+  "navigation.access": "shield-check",
+  "navigation.sidebar": "sidebar-simple",
+  "navigation.menu": "list",
 
   "object.customer": "user",
   "object.vendor": "storefront",
@@ -74,6 +79,10 @@ export const iconRegistry = {
 
   "system.help": "question",
   "system.settings": "gear",
+  "system.theme-dark": "moon",
+  "system.theme-light": "sun",
+  "system.sign-out": "sign-out",
+  "system.tenant": "buildings",
 
   "editor.text": "text-t",
   "editor.list": "list-bullets",

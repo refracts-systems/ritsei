@@ -37,7 +37,8 @@
     "@effect/platform-node-shared",
     "@effect/sql-pg",
     "uuid",
-    "effect"
+    "effect",
+    "@phosphor-icons/web"
   ],
   "ignoreExports": [
     {
@@ -114,6 +115,7 @@
         "patterns": [
           "apps/web/src/ui/foundations/layout.ts",
           "apps/web/src/ui/foundations/typography.ts",
+          "apps/web/src/ui/foundations/format.ts",
           "apps/web/src/ui/primitives/badge.tsx",
           "apps/web/src/ui/primitives/button.tsx",
           "apps/web/src/ui/primitives/dialog.tsx",
