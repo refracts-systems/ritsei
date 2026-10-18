@@ -62,6 +62,7 @@
 - [`./architecture/reference/cartographic-archetypes-and-semantic-depth.md`](./architecture/reference/cartographic-archetypes-and-semantic-depth.md)
 - [`./architecture/reference/document-platform-vs-odoo.md`](./architecture/reference/document-platform-vs-odoo.md)
 - [`./architecture/reference/roadmap-track-considerations.md`](./architecture/reference/roadmap-track-considerations.md)
+- [`./architecture/reference/context.md`](./architecture/reference/context.md)
 
 ## Proposals
 
