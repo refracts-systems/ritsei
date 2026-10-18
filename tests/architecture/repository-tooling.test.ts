@@ -13,41 +13,24 @@ import {
   validateGateGraph,
 } from "../../tooling/roadmap-completion/registry.ts"
 
-const skillHeadings = [
-  "# Purpose",
-  "# Use This Skill When",
-  "# Do Not Use This Skill When",
-  "# Required Context",
-  "# Architecture Rules",
-  "# Workflow",
-  "# Deterministic Tools",
-  "# Required Checks",
-  "# Failure Conditions",
-  "# Completion Criteria",
-  "# Related Skills",
-  "# References",
-]
-
 const validSkill = `---
 name: example-workflow
 description: "Use when an RITSEI change needs a repository-native example workflow."
 ---
 
-${skillHeadings.join("\n\n")}
+# Purpose
 `
 
 describe("repository tooling", () => {
-  it("validates repository-native skill structure", () => {
+  it("validates repository-native skill frontmatter", () => {
     assert.deepStrictEqual(
-      validateSkillDocument(".agents/skills/example-workflow/SKILL.md", validSkill, false),
+      validateSkillDocument(".agents/skills/example-workflow/SKILL.md", validSkill),
       [],
     )
     assert.isTrue(
-      validateSkillDocument(
-        ".agents/skills/example-workflow/SKILL.md",
-        validSkill.replace("# Completion Criteria\n", ""),
-        false,
-      ).some((failure) => failure.includes("# Completion Criteria")),
+      validateSkillDocument(".agents/skills/other-workflow/SKILL.md", validSkill).some((failure) =>
+        failure.includes("must match directory"),
+      ),
     )
   })
 

@@ -3,21 +3,6 @@ import { dirname, relative, resolve } from "node:path"
 
 import { isMain } from "./entrypoint.ts"
 
-const requiredHeadings = [
-  "# Purpose",
-  "# Use This Skill When",
-  "# Do Not Use This Skill When",
-  "# Required Context",
-  "# Architecture Rules",
-  "# Workflow",
-  "# Deterministic Tools",
-  "# Required Checks",
-  "# Failure Conditions",
-  "# Completion Criteria",
-  "# Related Skills",
-  "# References",
-] as const
-
 const unquote = (value: string) => {
   const trimmed = value.trim()
   return trimmed.length >= 2 &&
@@ -27,13 +12,9 @@ const unquote = (value: string) => {
     : trimmed
 }
 
-export const validateSkillDocument = (
-  path: string,
-  content: string,
-  external: boolean,
-): readonly string[] => {
+export const validateSkillDocument = (path: string, content: string): readonly string[] => {
   const failures: string[] = []
-  // Normalize CRLF working-tree checkouts so exact heading matches are portable.
+  // Normalize CRLF working-tree checkouts so frontmatter parsing is portable.
   const lines = content.split("\r\n").join("\n").split("\n")
   const frontmatterEnd = lines.slice(1).findIndex((line) => line.trim() === "---") + 1
 
@@ -56,12 +37,6 @@ export const validateSkillDocument = (
   }
   if (/\/home\/|[A-Za-z]:\\/.test(content)) {
     failures.push(`${path}: use repository-relative references, not machine-specific paths`)
-  }
-
-  if (!external) {
-    for (const heading of requiredHeadings) {
-      if (!lines.includes(heading)) failures.push(`${path}: missing required heading ${heading}`)
-    }
   }
 
   return failures
@@ -110,21 +85,16 @@ const validateLinks = async (path: string, content: string): Promise<readonly st
 }
 
 export const checkAgentSkills = async (): Promise<readonly string[]> => {
-  const externalSkills = new Set(["constraint-validation-strategy", "solidjs-2"])
   const skillFiles = await collectSkillFiles(".agents/skills")
   const failures: string[] = []
-  let repositoryNativeCount = 0
 
   for (const path of skillFiles) {
     const content = await readFile(path, "utf8")
-    const name = normalizePath(dirname(path)).split("/").at(-1)!
-    const external = externalSkills.has(name)
-    if (!external) repositoryNativeCount++
-    failures.push(...validateSkillDocument(path, content, external))
+    failures.push(...validateSkillDocument(path, content))
     failures.push(...(await validateLinks(path, content)))
   }
 
-  if (repositoryNativeCount === 0) failures.push("no repository-native skills found")
+  if (skillFiles.length === 0) failures.push("no repository-native skills found")
   return failures.toSorted()
 }
 

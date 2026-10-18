@@ -1,7 +1,3 @@
----
-name: constraint-validation-strategy
-description: "Use whenever writing or reviewing create/update logic for data with relational dependencies — foreign keys, unique constraints, check constraints, or any referential rule — in ANY language, ORM, or database engine. Covers choosing between direct-write-and-map-error, pre-validation before write, or a hybrid; mapping database constraint violations into domain errors without leaking raw engine details; avoiding N+1 existence checks in bulk/batch imports (set-based or staging-table validation instead); and validating state atomically inside a transaction for concurrency-sensitive or financial mutations (balance, stock, quota, idempotency keys). Trigger on foreign key violation, referential integrity, constraint violation, 'should I check if X exists before inserting', TOCTOU / race condition on insert, bulk import validation, idempotency key handling, atomic balance/stock update, or database error mapping — regardless of which specific language, ORM, or database is named (or even if none is named)."
----
 
 # Constraint Validation Strategy
 
@@ -133,4 +129,4 @@ transaction             → atomicity
 
 ## Further reading
 
-`references/sources.md` has the technical background for each section above — official database docs, the ANSI SQL isolation levels paper (TOCTOU/concurrency), and writeups from recognized database and API-design practitioners (transactional outbox, idempotency keys, locking strategy, referenced-column indexing). Read it when a claim above needs a citation or when going deeper on one specific topic than this file covers.
+`constraint-validation-sources.md` has the technical background for each section above — official database docs, the ANSI SQL isolation levels paper (TOCTOU/concurrency), and writeups from recognized database and API-design practitioners (transactional outbox, idempotency keys, locking strategy, referenced-column indexing). Read it when a claim above needs a citation or when going deeper on one specific topic than this file covers.

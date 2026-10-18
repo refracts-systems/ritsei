@@ -60,7 +60,7 @@ modules/<domain>/src/...
 modules/<domain>/tests/...
 ```
 
-If persistence is required, compose with `change-owned-schema`. If another domain must consume it, compose with `expose-public-contract` and `introduce-cross-domain-integration`. Add API and authorization surfaces only when requested.
+If persistence is required, compose with `change-schema`. If another domain must consume it, compose with `add-capability` and `cross-domain-and-transactions`. Add API and authorization surfaces only when requested.
 
 ## 4. Validate
 
@@ -102,11 +102,9 @@ The package has one clear responsibility, an explicit public entry point, no lea
 
 # Related Skills
 
-- [`change-owned-schema`](../change-owned-schema/SKILL.md)
-- [`expose-public-contract`](../expose-public-contract/SKILL.md)
-- [`introduce-cross-domain-integration`](../introduce-cross-domain-integration/SKILL.md)
-- [`add-authorization-capability`](../add-authorization-capability/SKILL.md)
-- [`add-api-endpoint`](../add-api-endpoint/SKILL.md)
+- [`change-schema`](../change-schema/SKILL.md)
+- [`add-capability`](../add-capability/SKILL.md)
+- [`cross-domain-and-transactions`](../cross-domain-and-transactions/SKILL.md)
 
 # References
 

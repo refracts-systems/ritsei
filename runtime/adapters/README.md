@@ -10,7 +10,7 @@ connects public contracts across modules without moving business ownership into 
 > - Boundary enforcement:
 >   [`../../docs/architecture/architecture-enforcement.md`](../../docs/architecture/architecture-enforcement.md)
 > - Cross-domain integration:
->   [`../../.agents/skills/introduce-cross-domain-integration/SKILL.md`](../../.agents/skills/introduce-cross-domain-integration/SKILL.md)
+>   [`../../.agents/skills/cross-domain-and-transactions/SKILL.md`](../../.agents/skills/cross-domain-and-transactions/SKILL.md)
 
 ## Put code here when
 
