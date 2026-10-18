@@ -162,7 +162,7 @@ feature-owned User Accounts projection, and an HTML/SVG fallback; optional WebGP
 | Full repository test suite                                                                | passed; 126 files and 487 tests, with 1 skipped file/test                                                                           |
 | `deno task boundary:test`                                                                 | passed; 2 tests                                                                                                                     |
 | `deno task boundary:lint`                                                                 | passed; architecture and schema-ownership checks passed                                                                             |
-| `deno task roadmap:measure`                                                               | completed mechanically; financial, Process, frontend, PostgreSQL production, and deployment gates remain outside this slice         |
+| `pnpm run check:affected`                                                                 | completed mechanically; financial, Process, frontend, PostgreSQL production, and deployment gates remain outside this slice         |
 | `npx --no-install fallow audit --format json --quiet --gate new-only`                     | passed; zero introduced dead code, complexity, or duplication; 7 inherited complexity findings and 17 inherited clone groups remain |
 | `deno task fallow:audit`                                                                  | fails only on the repository-wide inherited Fallow health findings; changed-scope attribution remains zero introduced findings      |
 

@@ -6,12 +6,6 @@ import {
   evaluateFinancialManifest,
   requiredFinancialGateIds,
 } from "../../tooling/financial-gate.ts"
-import {
-  type Gate,
-  gates,
-  roadmapTracks,
-  validateGateGraph,
-} from "../../tooling/roadmap-completion/registry.ts"
 
 const validSkill = `---
 name: example-workflow
@@ -63,42 +57,6 @@ describe("repository tooling", () => {
       }),
     )
     assert.throws(() => evaluateFinancialManifest({ ...manifest, gates: [null] }))
-  })
-
-  it("rejects invalid roadmap gate dependencies", () => {
-    const gate = (id: string, dependencies: readonly string[] = []): Gate => ({
-      id,
-      title: id,
-      source: "test",
-      kind: "composite",
-      dependencies,
-    })
-
-    assert.deepStrictEqual(validateGateGraph([gate("first"), gate("second", ["first"])]), [])
-    assert.isTrue(
-      validateGateGraph([gate("first", ["missing"])]).some((failure) =>
-        failure.includes("unknown dependency"),
-      ),
-    )
-    assert.isTrue(
-      validateGateGraph([gate("first", ["second"]), gate("second")]).some((failure) =>
-        failure.includes("must be declared first"),
-      ),
-    )
-    assert.isTrue(
-      validateGateGraph([gate("first", ["second"]), gate("second", ["first"])]).some((failure) =>
-        failure.includes("dependency cycle"),
-      ),
-    )
-  })
-
-  it("keeps the global roadmap gate dependent on every registered track gate", () => {
-    const global = gates.find(({ id }) => id === "roadmap.global-exit")
-    assert.isDefined(global)
-    assert.deepStrictEqual(
-      [...new Set(global.dependencies)].sort(),
-      roadmapTracks.flatMap(({ gateIds }) => gateIds).sort(),
-    )
   })
 
   it("rejects cross-package imports outside public entry points", () => {

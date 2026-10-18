@@ -6,7 +6,7 @@
 >
 > **Owns:** sequencing and readiness gates for the connector and external action/event surface.
 >
-> **Measured by:** `integration.*` gates through `deno task roadmap:measure`.
+> **Measured by:** `integration.*` exit evidence (reviewed; the mechanical evaluator was retired by ADR-0089).
 >
 > **Detailed semantics belong to:**
 > [`../architecture/integration-architecture.md`](../architecture/integration-architecture.md).

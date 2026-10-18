@@ -5,7 +5,7 @@
 - Amends: None
 - Compatible with: ADR-0018, ADR-0019, ADR-0020
 - Supersedes: None
-- Superseded by: None
+- Superseded by: ADR-0089 (mechanical aggregator only)
 
 > **Related documents**
 >

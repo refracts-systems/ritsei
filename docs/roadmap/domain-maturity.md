@@ -6,7 +6,7 @@
 >
 > **Owns:** readiness sequencing for packages that may publish Process Studio commands and events.
 >
-> **Measured by:** `domain.*` gates through `deno task roadmap:measure`.
+> **Measured by:** `domain.*` exit evidence (reviewed; the mechanical evaluator was retired by ADR-0089).
 >
 > **Detailed rules belong to:** each package’s public contract, schema, tests, and subsystem
 > architecture.

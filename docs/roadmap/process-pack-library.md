@@ -7,7 +7,7 @@
 > **Owns:** sequencing, dependencies, readiness, measures, and exit criteria for the Business Pack
 > Library.
 >
-> **Measured by:** `packs.contract` through `deno task roadmap:measure`.
+> **Measured by:** `packs.contract` exit evidence (reviewed; the mechanical evaluator was retired by ADR-0089).
 >
 > **Detailed semantics belong to:**
 > [`../architecture/process-studio.md`](../architecture/process-studio.md).

@@ -80,9 +80,6 @@ jobs:
       - name: Drizzle migration graph
         run: pnpm run db:check
 
-      - name: Roadmap measurement
-        run: pnpm run roadmap:measure
-
       - name: Agent skills
         run: pnpm run skills:check
 

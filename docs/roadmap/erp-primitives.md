@@ -6,7 +6,7 @@
 >
 > **Owns:** readiness and decision sequencing for reusable ERP primitives.
 >
-> **Measured by:** `erp.p0`–`erp.p3` through `deno task roadmap:measure`.
+> **Measured by:** `erp.p0`–`erp.p3` exit evidence (reviewed; the mechanical evaluator was retired by ADR-0089).
 >
 > **Detailed rules belong to:** the owning domain architecture, schema, ADR, or public contract.
 >
@@ -184,7 +184,7 @@ Exit criteria:
 | primitive packages created only for new invariants  | `100%`                     |
 | selected public actions with executable owner proof | `100%`                     |
 
-Run `deno task roadmap:measure`; do not use a prose checkbox as proof.
+Run the focused tests that prove each primitive; do not use a prose checkbox as proof.
 
 ## Stop conditions
 

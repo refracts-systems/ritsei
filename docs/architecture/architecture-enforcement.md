@@ -369,7 +369,6 @@ tooling/
 ├── architecture.ts
 ├── schema-ownership.ts
 ├── financial-gate.ts
-├── roadmap-completion/
 └── focused operational scripts
 
 tests/

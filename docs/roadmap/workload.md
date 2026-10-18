@@ -9,7 +9,7 @@
 > **Scope committed:** workload classification and a protected command reserve for the next
 > supported profile.
 >
-> **Measured by:** `workload.*` gates through `deno task roadmap:measure`.
+> **Measured by:** `workload.*` exit evidence (reviewed; the mechanical evaluator was retired by ADR-0089).
 >
 > **Does not own:** authorization, business invariants, PostgreSQL data placement, or optional
 > WorkloadCells and shuffle sharding.
@@ -112,8 +112,7 @@ may remain valid without those stages.
 | query-to-command primary fallback           | `0`                                      |
 | adaptive limit above hard limit             | `0`                                      |
 
-The live track counters are emitted by `deno task roadmap:measure`; load and fault evidence remains
-profile-owned operational evidence.
+Load and fault evidence remains profile-owned operational evidence.
 
 ## Stop conditions
 
