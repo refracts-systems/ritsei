@@ -81,18 +81,21 @@ export const connectToTenant = async (
   await page.getByRole("heading", { name: heading, exact: true }).waitFor()
 }
 
+const viteBuild = "--dir apps/web exec varlock run --path ../.. -- vite build --outDir".split(" ")
+
 export const builtApp = Effect.gen(function* () {
   const outDir = yield* Effect.acquireRelease(
     Effect.promise(() => mkdtemp(join(tmpdir(), "ritsei-web-"))),
     (path) => Effect.promise(() => rm(path, { recursive: true })),
   )
   const isWindows = process.platform === "win32"
+  // Generation and type checking run once in tooling/frontend/global-setup.ts;
+  // concurrent per-test regeneration races with other workers' bundles.
   const output = yield* Effect.sync(() =>
-    spawnSync(
-      "pnpm",
-      ["--dir", "apps/web", "build", "--outDir", isWindows ? `"${outDir}"` : outDir],
-      { encoding: "utf8", shell: isWindows },
-    ),
+    spawnSync("pnpm", [...viteBuild, isWindows ? `"${outDir}"` : outDir], {
+      encoding: "utf8",
+      shell: isWindows,
+    }),
   )
   assert.isTrue(output.status === 0, output.stdout + output.stderr)
   const server = yield* Effect.acquireRelease(

@@ -10,6 +10,7 @@ export default defineConfig({
       "runtime/**/*.test.{ts,tsx}",
       "tests/**/*.test.{ts,tsx}",
     ],
+    globalSetup: ["./tooling/frontend/global-setup.ts"],
     setupFiles: ["./tooling/load-env.ts"],
     testTimeout: 30_000,
     hookTimeout: 30_000,
