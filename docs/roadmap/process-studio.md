@@ -6,7 +6,7 @@
 >
 > **Owns:** prerequisites, dependency gates, and release readiness for Process Studio.
 >
-> **Measured by:** `process.*` gates through `deno task roadmap:measure`.
+> **Measured by:** `process.*` exit evidence (reviewed; the mechanical evaluator was retired by ADR-0089).
 >
 > **Detailed semantics belong to:**
 > [`../architecture/process-studio.md`](../architecture/process-studio.md).

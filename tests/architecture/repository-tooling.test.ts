@@ -6,48 +6,25 @@ import {
   evaluateFinancialManifest,
   requiredFinancialGateIds,
 } from "../../tooling/financial-gate.ts"
-import {
-  type Gate,
-  gates,
-  roadmapTracks,
-  validateGateGraph,
-} from "../../tooling/roadmap-completion/registry.ts"
-
-const skillHeadings = [
-  "# Purpose",
-  "# Use This Skill When",
-  "# Do Not Use This Skill When",
-  "# Required Context",
-  "# Architecture Rules",
-  "# Workflow",
-  "# Deterministic Tools",
-  "# Required Checks",
-  "# Failure Conditions",
-  "# Completion Criteria",
-  "# Related Skills",
-  "# References",
-]
 
 const validSkill = `---
 name: example-workflow
 description: "Use when an RITSEI change needs a repository-native example workflow."
 ---
 
-${skillHeadings.join("\n\n")}
+# Purpose
 `
 
 describe("repository tooling", () => {
-  it("validates repository-native skill structure", () => {
+  it("validates repository-native skill frontmatter", () => {
     assert.deepStrictEqual(
-      validateSkillDocument(".agents/skills/example-workflow/SKILL.md", validSkill, false),
+      validateSkillDocument(".agents/skills/example-workflow/SKILL.md", validSkill),
       [],
     )
     assert.isTrue(
-      validateSkillDocument(
-        ".agents/skills/example-workflow/SKILL.md",
-        validSkill.replace("# Completion Criteria\n", ""),
-        false,
-      ).some((failure) => failure.includes("# Completion Criteria")),
+      validateSkillDocument(".agents/skills/other-workflow/SKILL.md", validSkill).some((failure) =>
+        failure.includes("must match directory"),
+      ),
     )
   })
 
@@ -80,42 +57,6 @@ describe("repository tooling", () => {
       }),
     )
     assert.throws(() => evaluateFinancialManifest({ ...manifest, gates: [null] }))
-  })
-
-  it("rejects invalid roadmap gate dependencies", () => {
-    const gate = (id: string, dependencies: readonly string[] = []): Gate => ({
-      id,
-      title: id,
-      source: "test",
-      kind: "composite",
-      dependencies,
-    })
-
-    assert.deepStrictEqual(validateGateGraph([gate("first"), gate("second", ["first"])]), [])
-    assert.isTrue(
-      validateGateGraph([gate("first", ["missing"])]).some((failure) =>
-        failure.includes("unknown dependency"),
-      ),
-    )
-    assert.isTrue(
-      validateGateGraph([gate("first", ["second"]), gate("second")]).some((failure) =>
-        failure.includes("must be declared first"),
-      ),
-    )
-    assert.isTrue(
-      validateGateGraph([gate("first", ["second"]), gate("second", ["first"])]).some((failure) =>
-        failure.includes("dependency cycle"),
-      ),
-    )
-  })
-
-  it("keeps the global roadmap gate dependent on every registered track gate", () => {
-    const global = gates.find(({ id }) => id === "roadmap.global-exit")
-    assert.isDefined(global)
-    assert.deepStrictEqual(
-      [...new Set(global.dependencies)].sort(),
-      roadmapTracks.flatMap(({ gateIds }) => gateIds).sort(),
-    )
   })
 
   it("rejects cross-package imports outside public entry points", () => {

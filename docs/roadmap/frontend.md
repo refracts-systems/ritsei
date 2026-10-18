@@ -9,7 +9,7 @@
 > **Scope committed:** a buildable Vite/SolidJS SPA, typed application boundaries, RITSEI-owned
 > Product Patterns, and one accessible representative user workflow.
 >
-> **Measured by:** `frontend.*` gates through `deno task roadmap:measure`.
+> **Measured by:** `frontend.*` exit evidence (reviewed; the mechanical evaluator was retired by ADR-0089).
 >
 > **Does not own:** backend authorization, business invariants, domain state, deployment topology,
 > or mandatory WebGPU/cartographic rendering.
@@ -197,8 +197,7 @@ mock/headless behavior, bounded frame and power use, and recovery on renderer fa
 | critical workflow semantic fallback failures | `0`                                  |
 | unbounded render loop for static content     | `0`                                  |
 
-The live track counters are emitted by `deno task roadmap:measure`; route performance and
-accessibility thresholds remain reviewed workflow evidence.
+Route performance and accessibility thresholds remain reviewed workflow evidence.
 
 ## Stop conditions
 

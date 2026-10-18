@@ -12,8 +12,6 @@ allowBuilds:
   lefthook: true
 
 permissions:
-  drizzle-kit:
-    skills: true
   fallow:
     skills: true
   solid-js:

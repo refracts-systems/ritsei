@@ -7,8 +7,7 @@
 > **Owns:** sequencing, dependencies, readiness gates, rehearsal, and cutover steps for the bounded
 > TigerBeetle financial execution profile.
 >
-> **Measured by:** `financial.*` gates and `deno task financial:gate`, surfaced by
-> `deno task roadmap:measure`.
+> **Measured by:** `financial.*` gates and `pnpm run financial:gate`.
 >
 > **Authority and runtime rules belong to:**
 > [`../architecture/financial-ledger.md`](../architecture/financial-ledger.md),
@@ -53,7 +52,7 @@ quantity remain separate decisions.
 | Adapter    | trusted provider-neutral kernel adapter and bounded local compatibility proof exist         | outage, quorum, restart, and exit rehearsal            |
 | Reporting  | operation-level projection/rebuild exists                                                   | complete balance and report rebuild correspondence     |
 | Cutover    | controlled prepare/approve/activate state machine exists                                    | signed bounded-cohort opening-balance/replay rehearsal |
-| Production | **NO-GO**; live gate count is emitted by `deno task roadmap:measure`                        | close all P0 activation evidence                       |
+| Production | **NO-GO**; live gate count is emitted by `pnpm run financial:gate`                        | close all P0 activation evidence                       |
 
 The implementation slice is transitional. It does not authorize TigerBeetle production activation, a
 live PostgreSQL mirror, or a per-request choice between authorities.
@@ -163,8 +162,8 @@ compensation and recovery. Do not change this by swapping a Layer.
 
 ## Activation gates
 
-One shared evaluator validates the sixteen production-evidence gates for both `financial:gate` and
-`roadmap:measure`. Activation is blocked while any required category is open:
+One shared evaluator validates the sixteen production-evidence gates through `financial:gate`.
+Activation is blocked while any required category is open:
 
 ```text
 [ ] controlled activation and bounded cohort

@@ -290,30 +290,12 @@
         "count": 1
       }
     },
-    "tooling/domain-maturity/measure.ts": {
-      "crap_moderate": {
-        "count": 1
-      }
-    },
     "tooling/production/artifacts.ts": {
       "crap_high": {
         "count": 1
       },
       "crap_moderate": {
         "count": 1
-      }
-    },
-    "tooling/roadmap-completion/frontend-evidence.ts": {
-      "complexity_critical": {
-        "count": 1
-      },
-      "crap_critical": {
-        "count": 1
-      }
-    },
-    "tooling/roadmap-completion/measure.ts": {
-      "crap_moderate": {
-        "count": 4
       }
     },
     "tooling/schema-ownership.ts": {
@@ -334,7 +316,6 @@
     "runtime/api/bootstrap.ts:dead code",
     "tooling/architecture.ts:high impact",
     "tooling/source-files.ts:high impact",
-    "tooling/roadmap-completion/measure.ts:untested risk",
     "tooling/schema-ownership.ts:untested risk",
     "modules/accounting/src/financial-operations.ts:complexity",
     "platform/postgres/migrations.ts:complexity",

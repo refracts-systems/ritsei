@@ -7,7 +7,7 @@
 > validation, definition governance, and compensation metadata.
 >
 > **Implementation status:** Owned by the
-> [Process Studio roadmap](../roadmap/process-studio.md) and `deno task roadmap:measure`. AI-assisted
+> [Process Studio roadmap](../roadmap/process-studio.md). AI-assisted
 > modeling and recommendations remain non-authoritative and are governed by
 > [ADR-0063](../decisions/0063-define-governed-ai-recommendation-and-agent-boundary.md).
 >

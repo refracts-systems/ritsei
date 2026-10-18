@@ -6,7 +6,7 @@
 >
 > **Owns:** sequencing and readiness gates for PostgreSQL 19-specific capabilities.
 >
-> **Measured by:** `postgres19.*` gates through `deno task roadmap:measure`.
+> **Measured by:** `postgres19.*` exit evidence (reviewed; the mechanical evaluator was retired by ADR-0089).
 >
 > **Detailed semantics belong to:**
 > [`../architecture/postgresql-19-architecture.md`](../architecture/postgresql-19-architecture.md),

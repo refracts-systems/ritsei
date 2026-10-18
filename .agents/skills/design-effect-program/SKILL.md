@@ -161,10 +161,8 @@ layers rather than rewriting the workflow.
 
 # Related Skills
 
-- [`develop-enterprise-feature`](../develop-enterprise-feature/SKILL.md)
-- [`expose-public-contract`](../expose-public-contract/SKILL.md)
-- [`add-api-endpoint`](../add-api-endpoint/SKILL.md)
-- [`implement-transactional-workflow`](../implement-transactional-workflow/SKILL.md)
+- [`add-capability`](../add-capability/SKILL.md)
+- [`cross-domain-and-transactions`](../cross-domain-and-transactions/SKILL.md)
 
 # References
 

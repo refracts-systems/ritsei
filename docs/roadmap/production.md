@@ -9,7 +9,7 @@
 > **Scope committed:** reproducible application artifacts, install/upgrade evidence, and one
 > explicitly reviewed `entry + PostgreSQL` profile.
 >
-> **Measured by:** `production.*` gates through `deno task roadmap:measure`.
+> **Measured by:** `production.*` exit evidence (reviewed; the mechanical evaluator was retired by ADR-0089).
 >
 > **Does not own:** PostgreSQL semantics, financial authority, workload isolation, frontend
 > architecture, Process durability, connector activation, or provider selection.
@@ -125,8 +125,7 @@ manifest. Do not infer profile support from `roadmap.global-exit` or from a sour
 | optional providers activated without approval | `0`                                      |
 | profile owner omissions                      | `0`                                      |
 
-The live track counters are emitted by `deno task roadmap:measure`; deployment and recovery
-thresholds remain reviewed operational evidence.
+Deployment and recovery thresholds remain reviewed operational evidence.
 
 ## Stop conditions
 

@@ -30,9 +30,9 @@
 - This index owns the dependency graph and global exit conditions.
 - Each subroadmap owns one delivery track and its phase gates.
 - Architecture documents own current semantics; ADRs own difficult-to-reverse decisions.
-- `tooling/roadmap-completion/registry.ts` and `pnpm run roadmap:measure` are the mechanical status
-  source. They distinguish implementation markers, executable checks, and validated operational
-  evidence; prose status must not contradict their output.
+- Status is evidenced by the repository's existing tests and CI checks plus reviewed operational
+  evidence, not by a dedicated aggregator ([ADR-0089](../decisions/0089-retire-roadmap-completion-evaluator.md)).
+  Prose status must not contradict a failing test or check.
 
 Every track uses the same small contract: scope, ordered phases, measurable exit evidence, measures,
 and stop conditions. Implementation inventories belong in code, tests, or operational evidence—not
@@ -41,8 +41,8 @@ in this folder.
 ## Gate semantics
 
 ADR-0061 requires executable evidence, not a new evaluator for each change. Reuse existing focused
-tests and validation commands. Registry maintenance is needed only when the registered gate contract
-actually changes; ordinary feature work and owner risk acceptance do not imply a roadmap redesign.
+tests and validation commands; ordinary feature work and owner risk acceptance do not imply a
+roadmap redesign.
 Keep manual approval distinct from automated results. Agent scope rules belong in
 [`AGENTS.md`](../../AGENTS.md#working-rules).
 
@@ -56,17 +56,17 @@ Roadmap status uses distinct evidence classes:
   [`../development/releasing.md`](../development/releasing.md); open roadmap gates do not prevent a
   source-only pre-release.
 
-`roadmap.global-exit` means every gate registered in the current ten tracks passes. It does not by
+`roadmap.global-exit` means every gate assigned to the current ten tracks has accepted evidence. It does not by
 itself publish a product release, activate an unregistered connector provider, or approve a
 particular deployment profile. Numeric labels such as `0.8` and `1.0` are historical roadmap
 milestones and gate IDs, not product SemVer.
 
-Only `METRIC` lines emitted by `pnpm run roadmap:measure` are live counters. Other subroadmap
-measures are required exit or activation evidence until a named evaluator emits them.
+There are no live roadmap counters. Subroadmap measures are required exit or activation evidence,
+reviewed by a person against the repository's checks.
 
 ## Current position
 
-This snapshot was updated on September 3, 2026. Run `pnpm run roadmap:measure` for the live state.
+This snapshot was updated on September 3, 2026. The numbers below are a reviewed snapshot, not live output.
 
 | Area                | Measured position                                                                 | Next decision                                                            |
 | ------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
@@ -175,43 +175,18 @@ reserve, frontend readiness gate, or production profile gate keeps the global re
 another track has passed its own mechanical gates. A passing global gate still does not activate a
 particular connector provider, approve a deployment profile, or publish a product release.
 
-## Measures
+## Exit evidence
 
-Run:
-
-```sh
-pnpm run roadmap:measure
-```
-
-The command reports the following stable measures:
-
-| Metric                                      | Desired condition                                                    |
-| ------------------------------------------- | -------------------------------------------------------------------- |
-| `roadmap_tracks`                            | equals the ten registered tracks                                    |
-| `unregistered_roadmap_tracks`               | `0`                                                                  |
-| `unassigned_roadmap_gates`                  | `0`                                                                  |
-| `roadmap_global_exit`                       | `PASS` before claiming all registered roadmap work is complete       |
-| `registered_gates_remaining`                | visible count, including non-global tracks                           |
-| `roadmap_exit_gates_completed`              | completed dependencies of the global composite gate                  |
-| `remaining_roadmap_exit_gates`              | `0` before claiming all registered roadmap work is complete          |
-| `level3_capabilities`                       | at least two before catalog/runtime work; more only by evidence      |
-| `open_unknown_decisions`                    | `0` for the selected scope                                           |
-| `financial_activation_gates_remaining`      | `0` before financial activation                                      |
-| `process_studio_mechanical_gates_remaining` | `0` before governed-release review                                   |
-| `integration_surface_gates_remaining`       | `0` means the governed surface proof passes, not provider activation |
-| `business_pack_contract_gates_remaining`    | `0` means the contract slice passes, not installation readiness      |
-| `postgres19_capability_gates_remaining`     | `0` after the final PostgreSQL 19 GA activation review               |
-| `workload_gates_remaining`                  | `0` before claiming protected command non-interference                |
-| `frontend_gates_remaining`                  | `0` before claiming frontend support                                  |
-| `production_gates_remaining`                | `0` before claiming a supported deployment profile                    |
-
-The command may report open gates without failing; open gates are the roadmap status. Missing files,
-unknown dependencies, invalid financial evidence, or unregistered roadmap tracks fail the command.
+The mechanical `roadmap:measure` aggregator was retired by
+[ADR-0089](../decisions/0089-retire-roadmap-completion-evaluator.md). Gate IDs in this folder are
+stable labels. A gate is complete when the checks it names (tests, `pnpm run check`, `boundary:lint`,
+`financial:gate`, PostgreSQL 19 rehearsal, and similar) pass and any required operational evidence is
+reviewed and accepted.
 
 ## Change control
 
 - Change ownership, trust, durability, transaction semantics, or public contracts through an ADR.
-- Add a track only with one owner, stable gate IDs, measured evidence, and measurable exit criteria.
+- Add a track only with one owner, stable gate IDs, named evidence, and measurable exit criteria.
 - If connector or deployment activation becomes roadmap-owned, add an explicit gate instead of
   broadening `roadmap.global-exit` prose.
 - Remove duplicated architecture detail; link to the canonical owner instead.
