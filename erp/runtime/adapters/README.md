@@ -45,12 +45,10 @@ The runtime wires it like this:
 
 ```ts
 const IdentityLive = Layer.effect(UserAccountService, makeUserAccountService).pipe(
-  Layer.provide(
-    Layer.mergeAll(
-      DatabaseLive,
-      IdentityAccountAuthorizerLive.pipe(Layer.provide(AuthorizationLive)),
-    ),
-  ),
+  Layer.provide(Layer.mergeAll(
+    DatabaseLive,
+    IdentityAccountAuthorizerLive.pipe(Layer.provide(AuthorizationLive)),
+  )),
 )
 ```
 
@@ -93,7 +91,10 @@ if (configuration.financialAuthority === "postgresql") {
   return makePostgresqlFinancialLedgerLayer.pipe(Layer.provide(database))
 }
 
-return Layer.effect(FinancialLedgerPort, makeTigerBeetleFinancialLedger(configuration.tigerBeetle))
+return Layer.effect(
+  FinancialLedgerPort,
+  makeTigerBeetleFinancialLedger(configuration.tigerBeetle),
+)
 ```
 
 This belongs at the application boundary because the runtime chooses the provider. The financial
