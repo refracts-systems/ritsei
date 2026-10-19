@@ -5,9 +5,10 @@
 > behavior.
 >
 > **Current implementation ([ADR-0091](../decisions/0091-adopt-framework-and-flagship-erp.md)):**
-> separate API and worker connection pools with statement timeouts. Workload planes, admission,
-> WorkloadCells, shuffle sharding, and the command reserve are not implemented; their earlier code
-> was removed in commit `c10594c` and may return as inactive, tested code. Making them a production
+> separate API and worker connection pools with statement timeouts. Workload classification and
+> command-reserve admission exist as inactive, tested code in `framework/foundation/workload/`
+> (rewritten from the `runtime/workload/` code removed in commit `c10594c`); no runtime composition
+> uses them. Workload planes, WorkloadCells, and shuffle sharding are not implemented. Making them a production
 > requirement needs an activation ADR with measurement, starting with a load test that shows posting
 > and order-confirmation latency stay within budget while heavy reports, imports, and integrations
 > run. Paths such as `runtime/` and `modules/` below refer to the pre-restructure tree.
