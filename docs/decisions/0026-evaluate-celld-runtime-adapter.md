@@ -4,6 +4,7 @@
 - Date: 2026-08-06
 - Supersedes: None
 - Superseded by: ADR-0091 (framework reset)
+- Target design retained by: ADR-0093 (inactive until an activation ADR)
 
 > **Related documents**
 >

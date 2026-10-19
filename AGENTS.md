@@ -179,7 +179,9 @@ extensions/    (later) modules from other developers and customers
 - Extract, don't speculate: add a framework capability only together with an ERP module that uses
   it. Keep engine-neutral ports with exactly one used implementation.
 - PostgreSQL does everything until a named user's measured need says otherwise; delete rather than
-  gate capabilities that are off the roadmap.
+  gate capabilities that are off the roadmap. ADR-0092 and ADR-0093 keep TigerBeetle, workload
+  isolation, the Stateful Entity Runtime, and the analytic plane as inactive target designs: no
+  production path may depend on them until an activation ADR.
 - The process engine is deferred until Order-to-Cash and Procure-to-Pay run end to end.
 
 ## Subsystem Rules

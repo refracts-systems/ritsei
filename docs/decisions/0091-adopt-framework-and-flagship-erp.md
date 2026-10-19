@@ -11,7 +11,9 @@
 - Supersedes: ADR-0007, ADR-0008, ADR-0020, ADR-0023, ADR-0025, ADR-0026, ADR-0034, ADR-0040,
   ADR-0043, ADR-0060, ADR-0064, ADR-0065, ADR-0070, ADR-0081, ADR-0083, ADR-0084
 - Superseded by: None
-- Amended by: ADR-0092 (TigerBeetle is retained as the designated future ledger engine)
+- Amended by: ADR-0092 (TigerBeetle is retained as the designated future ledger engine), ADR-0093
+  (workload isolation, the Stateful Entity Runtime, and the analytic plane are retained as target
+  designs)
 
 > **Related documents**
 >

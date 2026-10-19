@@ -17,6 +17,7 @@
 
 - [`./architecture/overview.md`](./architecture/overview.md)
 - [`./architecture/architecture-spec-v4.md`](./architecture/architecture-spec-v4.md)
+- [`./architecture/runtime-architecture.md`](./architecture/runtime-architecture.md) (target design)
 - [`./architecture/state-and-consistency.md`](./architecture/state-and-consistency.md)
 - [`./architecture/financial-ledger.md`](./architecture/financial-ledger.md)
 - [`./architecture/document-rendering.md`](./architecture/document-rendering.md)
@@ -26,6 +27,8 @@
 - [`./architecture/design-system.md`](./architecture/design-system.md)
 - [`./architecture/architecture-enforcement.md`](./architecture/architecture-enforcement.md)
 - [`./architecture/postgresql-19-architecture.md`](./architecture/postgresql-19-architecture.md)
+- [`./architecture/workload-isolation.md`](./architecture/workload-isolation.md) (target design)
+- [`./architecture/analytics-architecture.md`](./architecture/analytics-architecture.md) (target design)
 - [`./architecture/search-architecture.md`](./architecture/search-architecture.md)
 - [`./architecture/authorization.md`](./architecture/authorization.md)
 - [`./architecture/identity-and-principals.md`](./architecture/identity-and-principals.md)
@@ -53,6 +56,8 @@
 - [`./architecture/reference/ltree-notes.md`](./architecture/reference/ltree-notes.md)
 - [`./architecture/reference/erp-runtime-comparison.md`](./architecture/reference/erp-runtime-comparison.md)
 - [`./architecture/reference/process-pack-positioning.md`](./architecture/reference/process-pack-positioning.md)
+- [`./architecture/reference/hard-isolation-patterns.md`](./architecture/reference/hard-isolation-patterns.md)
+- [`./architecture/reference/analytical-isolation-and-semantic-projection-patterns.md`](./architecture/reference/analytical-isolation-and-semantic-projection-patterns.md)
 - [`./architecture/reference/document-platform-vs-odoo.md`](./architecture/reference/document-platform-vs-odoo.md)
 - [`./architecture/reference/roadmap-track-considerations.md`](./architecture/reference/roadmap-track-considerations.md)
 - [`./architecture/reference/context.md`](./architecture/reference/context.md)
@@ -71,6 +76,7 @@
 - [`./roadmap/process-studio.md`](./roadmap/process-studio.md)
 - [`./roadmap/process-pack-library.md`](./roadmap/process-pack-library.md)
 - [`./roadmap/postgresql-19.md`](./roadmap/postgresql-19.md)
+- [`./roadmap/workload.md`](./roadmap/workload.md) (dormant)
 - [`./roadmap/frontend.md`](./roadmap/frontend.md)
 - [`./roadmap/production.md`](./roadmap/production.md)
 
