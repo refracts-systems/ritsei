@@ -12,16 +12,13 @@ const unusedDatabase = Layer.succeed(Database, {
   withTransaction: () => Effect.die("database should not be queried while composing the ledger"),
 } as DatabaseService)
 
-it.effect("composes the PostgreSQL authority without TigerBeetle configuration", () =>
+it.effect("composes the PostgreSQL financial ledger", () =>
   Effect.gen(function* () {
     const ledger = yield* Effect.provide(
       Effect.gen(function* () {
         return yield* FinancialLedgerPort
       }),
-      makeFinancialLedgerLayer(unusedDatabase, {
-        deploymentProfile: "entry",
-        financialAuthority: "postgresql",
-      }),
+      makeFinancialLedgerLayer(unusedDatabase),
     )
     assert.strictEqual(ledger.authority, "postgresql")
   }),

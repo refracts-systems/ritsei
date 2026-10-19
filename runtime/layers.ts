@@ -48,8 +48,8 @@ export const serviceLayers = (
       : Layer.empty
   const PlatformCore = Layer.merge(DatabaseLive, readYourWrites)
   const PlatformLive = Layer.mergeAll(PlatformCore, WebCryptoLive)
-  const financialLedger = makeFinancialLedgerLayer(DatabaseLive, configuration)
-  const financialObservation = makeFinancialStoreObservationLayer(DatabaseLive, configuration)
+  const financialLedger = makeFinancialLedgerLayer(DatabaseLive)
+  const financialObservation = makeFinancialStoreObservationLayer(DatabaseLive)
 
   const AuthorizationLive = Layer.effect(AuthorizationService, makeAuthorizationService).pipe(
     Layer.provide(DatabaseLive),

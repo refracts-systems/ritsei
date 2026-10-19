@@ -2,70 +2,27 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 
 import {
-  FinancialLedgerPort,
+  FinancialStoreObservationRegistry,
+  makeFinancialStoreObservationRegistry,
   makePostgresqlFinancialLedgerLayer,
   makePostgresqlFinancialStoreObservation,
 } from "../../modules/accounting/mod.ts"
-import {
-  FinancialStoreObservationRegistry,
-  makeFinancialStoreObservationRegistry,
-} from "../../modules/accounting/mod.ts"
-import {
-  makeTigerBeetleFinancialLedger,
-  makeTigerBeetleFinancialStoreObservation,
-  PostgresDatabaseLive,
-} from "../../platform/mod.ts"
-import type { RitseiRuntimeConfiguration } from "../config.ts"
+import { PostgresDatabaseLive } from "../../platform/mod.ts"
 
-export const makeFinancialLedgerLayer = (
-  database: ReturnType<typeof PostgresDatabaseLive>,
-  configuration: RitseiRuntimeConfiguration,
-) => {
-  if (configuration.financialAuthority === "postgresql") {
-    return makePostgresqlFinancialLedgerLayer.pipe(Layer.provide(database))
-  }
-
-  return Layer.effect(
-    FinancialLedgerPort,
-    makeTigerBeetleFinancialLedger(configuration.tigerBeetle),
-  )
-}
+// PostgreSQL is the only financial authority (ADR-0091).
+export const makeFinancialLedgerLayer = (database: ReturnType<typeof PostgresDatabaseLive>) =>
+  makePostgresqlFinancialLedgerLayer.pipe(Layer.provide(database))
 
 export const makeFinancialStoreObservationLayer = (
   database: ReturnType<typeof PostgresDatabaseLive>,
-  configuration: RitseiRuntimeConfiguration,
-) => {
-  const postgresql = makePostgresqlFinancialStoreObservation()
-  const providers =
-    configuration.financialAuthority === "postgresql"
-      ? postgresql.pipe(
-          Effect.map(({ collector, scanner }) => [
-            {
-              authority: "postgresql" as const,
-              collector,
-              scanner,
-            },
-          ]),
-        )
-      : Effect.all([
-          postgresql,
-          makeTigerBeetleFinancialStoreObservation(configuration.tigerBeetle),
-        ]).pipe(
-          Effect.map(([postgresqlProvider, tigerbeetleProvider]) => [
-            {
-              authority: "postgresql" as const,
-              collector: postgresqlProvider.collector,
-              scanner: postgresqlProvider.scanner,
-            },
-            {
-              authority: "tigerbeetle" as const,
-              collector: tigerbeetleProvider.collector,
-              scanner: tigerbeetleProvider.scanner,
-            },
-          ]),
-        )
-  return Layer.effect(
+) =>
+  Layer.effect(
     FinancialStoreObservationRegistry,
-    providers.pipe(Effect.map(makeFinancialStoreObservationRegistry)),
+    makePostgresqlFinancialStoreObservation().pipe(
+      Effect.map(({ collector, scanner }) =>
+        makeFinancialStoreObservationRegistry([
+          { authority: "postgresql" as const, collector, scanner },
+        ]),
+      ),
+    ),
   ).pipe(Layer.provide(database))
-}
