@@ -785,6 +785,11 @@ The application shell composes stable global landmarks and operating context wit
 local capability and Product Pattern. This document owns how routes and frontend state select and
 preserve that composition; the visual and semantic shell contract is owned by
 [Design System — Navigation and workspace shell](./design-system.md#navigation-and-workspace-shell).
+ERP module landmarks are not hand-written in the shell: each module's
+`apps/web/src/app/modules/<module>.workspace.ts` sidecar declares its label, icon, order, global
+navigation group, and local-navigation `Area / Section`, and `pnpm run ritsei gen` emits them into
+`routes.gen.ts` for the home directory, sidebar, and topbar (ADR-0094). Framework pages such as user
+accounts and access stay hand-written in `shell.tsx`.
 
 - Route and search inputs MUST be decoded through Effect Schema before selecting a destination,
   local capability, object, or shareable view state.

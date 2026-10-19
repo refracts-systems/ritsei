@@ -5,4 +5,7 @@ export const workspace = {
   description: "Design and monitor business processes.",
   icon: "navigation.process",
   order: 50,
+  group: "Processes",
+  area: "Processes",
+  section: "Process Studio",
 } as const satisfies ModuleWorkspace
