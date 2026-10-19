@@ -1,6 +1,7 @@
 import { mkdir, stat, writeFile } from "node:fs/promises"
 
 import { generate } from "./codegen.ts"
+import { newEntityModule } from "./entity.ts"
 import { isMain } from "./entrypoint.ts"
 
 const moduleName = /^[a-z][a-z0-9_]*$/
@@ -118,7 +119,7 @@ export const newModule = async (name: string): Promise<readonly string[]> => {
 }
 
 const usage = [
-  "usage: pnpm run ritsei new module <name>",
+  "usage: pnpm run ritsei new module <name> [--entity <entity>]",
   "       pnpm run ritsei gen [--check]",
 ].join("\n")
 
@@ -134,8 +135,18 @@ const run = async (args: readonly string[]) => {
     return
   }
   if (command !== "new" || kind !== "module" || name === undefined) throw new Error(usage)
-  for (const path of await newModule(name)) console.log(`created ${path}`)
-  console.log("Next: declare dependencies, schemas, capabilities, and routes in manifest.ts.")
+  const entity = args[3] === "--entity" ? args[4] : undefined
+  if (args.length > 3 && entity === undefined) throw new Error(usage)
+  if (entity !== undefined && !isValidModuleName(entity)) {
+    throw new Error(`entity name must match ${moduleName}`)
+  }
+  const created = entity === undefined ? await newModule(name) : await newEntityModule(name, entity)
+  for (const path of created) console.log(`wrote ${path}`)
+  console.log(
+    entity === undefined
+      ? "Next: declare dependencies, schemas, capabilities, and routes in manifest.ts."
+      : "Next: review the generated migration SQL, then grant the new capabilities to try the page.",
+  )
 }
 
 if (isMain(import.meta.url)) {

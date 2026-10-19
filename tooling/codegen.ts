@@ -132,7 +132,7 @@ const oxfmt = (() => {
 })()
 
 /** Formats generated source exactly as `pnpm run fmt` would, so --check compares like for like. */
-const format = (path: string, source: string) =>
+export const format = (path: string, source: string) =>
   execFileSync(process.execPath, [oxfmt, `--stdin-filepath=${path}`], {
     input: source,
     encoding: "utf8",
