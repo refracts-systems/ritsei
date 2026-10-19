@@ -1,9 +1,9 @@
 # ADR-0040: Adopt TigerBeetle as the Financial Ledger Execution Engine
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-08-17
 - Supersedes: ADR-0011 and the broad financial-ledger authority rule in ADR-0003
-- Superseded by: None
+- Superseded by: ADR-0091 (product reset)
 
 > **Related documents**
 >

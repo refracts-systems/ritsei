@@ -1,11 +1,11 @@
 # ADR-0070: Select `vgpu` as the Optional Cartographic Renderer and Defer TypeGPU Compute
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-09-02
 - Amends: ADR-0069 for concrete renderer selection, implementation balance, and activation policy
 - Compatible with: ADR-0009, ADR-0010, ADR-0048, ADR-0056, ADR-0057, ADR-0068
 - Supersedes: None
-- Superseded by: None
+- Superseded by: ADR-0091 (product reset)
 
 > **Related documents**
 >

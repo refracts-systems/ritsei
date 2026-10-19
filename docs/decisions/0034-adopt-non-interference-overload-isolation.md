@@ -1,9 +1,9 @@
 # ADR-0034: Adopt Non-Interference as the Overload-Isolation Target
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-08-10
 - Supersedes: None
-- Superseded by: None
+- Superseded by: ADR-0091 (product reset)
 
 > **Related documents**
 >

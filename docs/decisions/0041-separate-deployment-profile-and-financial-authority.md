@@ -3,7 +3,7 @@
 - Status: Accepted
 - Date: 2026-08-18
 - Supersedes: None
-- Superseded by: None
+- Superseded by: ADR-0091 (PostgreSQL is the only financial authority)
 
 > **Related documents**
 >

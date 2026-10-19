@@ -1,9 +1,9 @@
 # ADR-0008: Gate Zig Behind Benchmarks
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-08-01
 - Supersedes: None
-- Superseded by: None
+- Superseded by: ADR-0091 (product reset)
 
 > **Related documents**
 >

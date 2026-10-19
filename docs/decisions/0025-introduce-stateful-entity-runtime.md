@@ -1,9 +1,9 @@
 # ADR-0025: Introduce a Stateful Entity Runtime
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-08-06
 - Supersedes: None
-- Superseded by: None
+- Superseded by: ADR-0091 (product reset)
 
 > **Related documents**
 >

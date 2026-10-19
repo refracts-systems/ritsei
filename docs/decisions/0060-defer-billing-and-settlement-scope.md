@@ -1,11 +1,11 @@
 # ADR-0060: Defer Billing and Settlement Scope Until Ownership Is Ready
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-08-27
 - Amends: None
 - Compatible with: ADR-0018, ADR-0019, ADR-0020, ADR-0036, ADR-0040, ADR-0041
 - Supersedes: None
-- Superseded by: None
+- Superseded by: ADR-0091 (product reset)
 
 > **Related documents**
 >

@@ -1,9 +1,9 @@
 # ADR-0026: Evaluate `celld` as the Distributed Stateful Entity Runtime Adapter
 
-- Status: Proposed
+- Status: Superseded
 - Date: 2026-08-06
 - Supersedes: None
-- Superseded by: None
+- Superseded by: ADR-0091 (product reset)
 
 > **Related documents**
 >

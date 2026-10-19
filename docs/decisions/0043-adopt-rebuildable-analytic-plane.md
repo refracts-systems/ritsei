@@ -1,9 +1,9 @@
 # ADR-0043: Adopt a Rebuildable Analytic Plane
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-08-22
 - Supersedes: None
-- Superseded by: None
+- Superseded by: ADR-0091 (product reset)
 
 > **Related documents**
 >

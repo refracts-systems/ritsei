@@ -1,11 +1,11 @@
 # ADR-0081: Adopt a Document AST Rendering Platform
 
-- Status: Proposed
+- Status: Superseded
 - Date: 2026-09-06
 - Amends: None
 - Compatible with: ADR-0015, ADR-0034, ADR-0036, ADR-0040, ADR-0046, ADR-0051
 - Supersedes: None
-- Superseded by: None
+- Superseded by: ADR-0091 (product reset)
 
 > **Related documents**
 >

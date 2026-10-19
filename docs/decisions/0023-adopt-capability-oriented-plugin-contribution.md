@@ -1,9 +1,9 @@
 # ADR-0023: Adopt capability-oriented plugin contribution
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-08-04
 - Supersedes: None
-- Superseded by: None
+- Superseded by: ADR-0091 (product reset)
 
 > **Related documents**
 >

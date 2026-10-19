@@ -1,11 +1,11 @@
 # ADR-0065: Propose Cloudflare as the Financial Edge and Evidence Plane
 
-- Status: Proposed
+- Status: Superseded
 - Date: 2026-08-31
 - Amends: None
 - Compatible with: ADR-0040, ADR-0041, ADR-0064
 - Supersedes: None
-- Superseded by: None
+- Superseded by: ADR-0091 (product reset)
 
 > **Related documents**
 >

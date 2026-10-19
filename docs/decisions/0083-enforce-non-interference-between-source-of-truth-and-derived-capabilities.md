@@ -1,11 +1,11 @@
 # ADR-0083: Enforce Non-Interference Between Source-of-Truth Domains and Derived Capabilities
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-09-06
 - Amends: ADR-0034 by extending non-interference from overload isolation to semantic, execution, failure, storage, and UX boundaries
 - Compatible with: ADR-0015, ADR-0037, ADR-0038, ADR-0043, ADR-0057, ADR-0068, ADR-0081, ADR-0082
 - Supersedes: None
-- Superseded by: None
+- Superseded by: ADR-0091 (product reset)
 
 > **Related documents**
 >

@@ -5,7 +5,7 @@
 - Amends: ADR-0006 only by defining the relationship/object evaluator boundary
 - Compatible with: ADR-0005, ADR-0020, ADR-0021, ADR-0031, ADR-0037, ADR-0034
 - Supersedes: None
-- Superseded by: None
+- Superseded by: ADR-0091 (SpiceDB option withdrawn)
 
 > **Related documents**
 >
