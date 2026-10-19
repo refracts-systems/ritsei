@@ -1,6 +1,10 @@
-import { Dialog as KobalteDialog, useDialogContext } from "@kobalte/core/dialog"
+import {
+  Dialog as KobalteDialog,
+  type DialogContextValue,
+  useDialogContext,
+} from "@kobalte/core/dialog"
 import type { JSX } from "@solidjs/web"
-import { createSignal, onSettled, Show } from "solid-js"
+import { createEffect, createSignal, onSettled, Show } from "solid-js"
 import { css } from "../generated/css/index.js"
 import { Icon } from "../icons/index.ts"
 import { type ActionMenuRegistry, useActionMenu } from "./action-menu-context.ts"
@@ -77,8 +81,24 @@ const styles = {
   }),
 }
 
+/**
+ * Kobalte's focus trap moves initial focus two animation frames after mount. Focus the dialog
+ * container as soon as it is committed so focus never stays outside an open modal dialog; the
+ * trap then moves it to the first tabbable element as before.
+ */
+export function useDialogInitialFocus(dialog: DialogContextValue) {
+  createEffect(
+    () => (dialog.isOpen() ? dialog.contentRef() : undefined),
+    (content) => {
+      if (content && !content.contains(document.activeElement))
+        content.focus({ preventScroll: true })
+    },
+  )
+}
+
 function DialogBody(props: DialogProps & { menu: ActionMenuRegistry | null }) {
   const dialog = useDialogContext()
+  useDialogInitialFocus(dialog)
   return (
     <KobalteDialog.Content
       class={styles.content}
