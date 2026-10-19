@@ -108,30 +108,37 @@ const containingPackage = (path: string) => normalizePath(path).match(packagePat
 
 const isPublicEntry = (path: string) => path === "mod.ts" || path === "mod.tsx"
 
+// A module's HTTP adapter (ADR-0094) is a second entry point reserved for the composition root.
+const entryFailure = (path: string, target: { readonly name: string; readonly path: string }) => {
+  if (target.path !== "http.ts") return `must use ${target.name}/mod.ts`
+  return /^(?:erp\/runtime|tests|tooling)\//.test(path)
+    ? undefined
+    : `only the composition root may import ${target.name}/http.ts`
+}
+
+const importFailure = (path: string, specifier: string, packages: ReadonlySet<string>) => {
+  const target = packageTarget(path, specifier)
+  if (target === undefined) return undefined
+  if (!packages.has(target.name)) return `${path}: import references unknown package ${target.name}`
+  if (containingPackage(path) === target.name || isPublicEntry(target.path)) return undefined
+  const failure = entryFailure(path, target)
+  return failure === undefined
+    ? undefined
+    : `${path}: cross-package import ${JSON.stringify(specifier)} ${failure}`
+}
+
 export const analyzePublicPackageImports = (
   files: readonly SourceFile[],
   packageNames: readonly string[],
 ): readonly string[] => {
   const packages = new Set(packageNames)
-  const failures: string[] = []
-
-  for (const file of files) {
+  const failures = files.flatMap((file) => {
     const path = normalizePath(file.path)
-    const sourcePackage = containingPackage(path)
-    for (const { specifier } of extractModuleImports(file)) {
-      const target = packageTarget(path, specifier)
-      if (target === undefined) continue
-      if (!packages.has(target.name)) {
-        failures.push(`${path}: import references unknown package ${target.name}`)
-        continue
-      }
-      if (sourcePackage === target.name || isPublicEntry(target.path)) continue
-      failures.push(
-        `${path}: cross-package import ${JSON.stringify(specifier)} must use ${target.name}/mod.ts`,
-      )
-    }
-  }
-
+    return extractModuleImports(file).flatMap(({ specifier }) => {
+      const failure = importFailure(path, specifier, packages)
+      return failure === undefined ? [] : [failure]
+    })
+  })
   return [...new Set(failures)].toSorted()
 }
 

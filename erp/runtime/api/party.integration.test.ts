@@ -11,7 +11,7 @@ import * as Path from "effect/Path"
 import { makeAuthorizationTestLayer } from "../../../framework/modules/authorization/mod.ts"
 import { makePartyTestLayer, PartyCapabilities } from "../../modules/party/mod.ts"
 import { BearerAuth, CurrentPrincipal, RitseiApi } from "./api.ts"
-import { PartyHandlers } from "./handlers.ts"
+import { PartyHttpHandlers as PartyHandlers } from "../../modules/party/http.ts"
 
 const tenantId = "018f0000-0000-7000-8000-000000000001"
 const otherTenantId = "018f0000-0000-7000-8000-000000000002"

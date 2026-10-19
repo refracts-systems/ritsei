@@ -46,6 +46,24 @@ describe("repository tooling", () => {
     )
   })
 
+  it("reserves a module's http.ts entry for the composition root", () => {
+    const httpImport = 'import { SalesHttpGroup } from "../../modules/sales/http.ts"'
+    const failures = analyzePublicPackageImports(
+      [
+        { path: "erp/runtime/api/api.ts", source: httpImport },
+        {
+          path: "erp/modules/accounting/src/service.ts",
+          source: `${httpImport.replace("../../modules/", "../../")}`,
+        },
+      ],
+      ["erp/modules/sales", "erp/modules/accounting"],
+    )
+
+    assert.deepStrictEqual(failures, [
+      'erp/modules/accounting/src/service.ts: cross-package import "../../sales/http.ts" only the composition root may import erp/modules/sales/http.ts',
+    ])
+  })
+
   it("keeps the framework independent of the ERP and extensions", () => {
     const failures = analyzeLayerImports([
       {

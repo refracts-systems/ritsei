@@ -12,5 +12,5 @@ export const ProcessModule = defineModule({
   events: ProcessTypedEventCatalog,
   consumes: [],
   http: ["Process"],
-  pages: ["/processes"],
+  pages: ["/processes", "/processes/:id"],
 })

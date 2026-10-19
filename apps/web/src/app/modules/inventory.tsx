@@ -1,9 +1,9 @@
 import { useLocation, useParams } from "@solidjs/router"
 import * as Schema from "effect/Schema"
 import { createMemo } from "solid-js"
-import { Inventory } from "../features/inventory/inventory.tsx"
-import { DecodedConnectedSessionRoute } from "./connected-route.tsx"
-import { decodeRouteInput } from "./route-input.ts"
+import { Inventory } from "../../features/inventory/inventory.tsx"
+import { DecodedConnectedSessionRoute } from "../connected-route.tsx"
+import { decodeRouteInput } from "../route-input.ts"
 
 const RouteInput = Schema.Struct({
   id: Schema.optionalKey(Schema.String.check(Schema.isUUID())),

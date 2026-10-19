@@ -8,8 +8,6 @@ import { parseOwnership } from "./schema-ownership.ts"
 import { collectSourceFiles, type SourceFile } from "./source-files.ts"
 
 const moduleRoot = "erp/modules"
-const apiFile = "erp/runtime/api/api.ts"
-const routesFile = "apps/web/src/app/app.tsx"
 
 const isTestPath = (path: string) => /\/tests\/|\.test\.tsx?$/.test(path)
 
@@ -72,40 +70,53 @@ const importFailures = (files: ReadonlyArray<SourceFile>, manifests: Manifests) 
       .map((target) => `${path}: imports ${target}, which ${source} does not declare in dependsOn`)
   })
 
-const surfaceFailures = (manifests: Manifests, api: string, routes: string) =>
-  [...manifests.values()].flatMap(({ name, http, pages }) => [
-    ...http
-      .filter((group) => !api.includes(`HttpApiGroup.make(${JSON.stringify(group)})`))
-      .map((group) => `${name} declares HTTP group ${group}, missing from ${apiFile}`),
-    ...pages
-      .filter((page) => !routes.includes(`path: ${JSON.stringify(page)}`))
-      .map((page) => `${name} declares page ${page}, missing from ${routesFile}`),
-  ])
+/** Declared HTTP groups are defined in the module's http.ts; codegen composes them (ADR-0094). */
+const surfaceFailures = (manifests: Manifests, adapters: ReadonlyMap<string, string>) =>
+  [...manifests.values()].flatMap(({ name, http }) =>
+    http
+      .filter(
+        (group) =>
+          !(adapters.get(name) ?? "").includes(`HttpApiGroup.make(${JSON.stringify(group)})`),
+      )
+      .map(
+        (group) =>
+          `${name} declares HTTP group ${group}, missing from ${moduleRoot}/${name}/http.ts`,
+      ),
+  )
+
+const httpAdapters = async (manifests: ReadonlyArray<ModuleManifest>) =>
+  new Map(
+    await Promise.all(
+      manifests.map(
+        async ({ name }) =>
+          [name, await readFile(`${moduleRoot}/${name}/http.ts`, "utf8").catch(() => "")] as const,
+      ),
+    ),
+  )
 
 /** Checks installed ERP module manifests against the repository (ADR-0094). */
 export const checkModules = async (
   manifests: ReadonlyArray<ModuleManifest>,
 ): Promise<readonly string[]> => {
   const byName: Manifests = new Map(manifests.map((manifest) => [manifest.name, manifest]))
-  const [directories, ownership, files, api, routes] = await Promise.all([
+  const [directories, ownership, files, adapters] = await Promise.all([
     moduleDirectories(),
     readFile("db/ownership.toml", "utf8").then(parseOwnership),
     collectSourceFiles(moduleRoot, [".ts", ".tsx"]),
-    readFile(apiFile, "utf8"),
-    readFile(routesFile, "utf8"),
+    httpAdapters(manifests),
   ])
   const failures = [
     ...validateModuleRegistry(manifests),
     ...registrationFailures(directories, byName),
     ...schemaFailures(byName, ownership),
     ...importFailures(files, byName),
-    ...surfaceFailures(byName, api, routes),
+    ...surfaceFailures(byName, adapters),
   ]
   return [...new Set(failures)].toSorted()
 }
 
 if (isMain(import.meta.url)) {
-  const { ErpModules } = await import("../erp/runtime/modules.ts")
+  const { ErpModules } = await import("../erp/runtime/modules.gen.ts")
   const failures = await checkModules(ErpModules)
   if (failures.length > 0) {
     console.error(failures.join("\n"))

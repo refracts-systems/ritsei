@@ -13,3 +13,5 @@ Related: [`integration-architecture.md`](../../../docs/architecture/integration-
   and map domain failures to stable transport errors (RFC 9457 Problem Details) without database
   details or stack traces.
 - Protected behavior is enforced by the backend; authentication and authorization are separate.
+- ERP module routes live in each module's `http.ts` (ADR-0094); this folder composes them with the
+  framework routes and keeps only framework groups, bootstrap, and middleware implementations.

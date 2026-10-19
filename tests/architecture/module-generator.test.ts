@@ -1,9 +1,6 @@
-import { readFile } from "node:fs/promises"
-
 import { assert, describe, it } from "@effect/vitest"
-import * as Effect from "effect/Effect"
 
-import { isValidModuleName, registerModule, renderModule } from "../../tooling/ritsei.ts"
+import { isValidModuleName, renderModule } from "../../tooling/ritsei.ts"
 
 describe("ritsei new module", () => {
   it("scaffolds structure without capabilities, tables, or routes", () => {
@@ -38,23 +35,4 @@ describe("ritsei new module", () => {
       assert.throws(() => renderModule(name))
     }
   })
-
-  it.effect("registers the manifest in import order and appends it to the installed list", () =>
-    Effect.gen(function* () {
-      const registry = yield* Effect.promise(() => readFile("erp/runtime/modules.ts", "utf8"))
-      const updated = registerModule(registry, "returns")
-      const lines = updated.split("\n")
-      const imported = lines.indexOf('import { ReturnsModule } from "../modules/returns/mod.ts"')
-      assert.isAbove(
-        imported,
-        lines.indexOf('import { ProcurementModule } from "../modules/procurement/mod.ts"'),
-      )
-      assert.isBelow(
-        imported,
-        lines.indexOf('import { SalesModule } from "../modules/sales/mod.ts"'),
-      )
-      assert.strictEqual(lines[lines.lastIndexOf("]") - 1], "  ReturnsModule,")
-      assert.throws(() => registerModule(updated, "returns"))
-    }),
-  )
 })

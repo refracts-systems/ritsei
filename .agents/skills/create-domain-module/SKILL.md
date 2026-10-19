@@ -53,10 +53,13 @@ If this changes a difficult-to-reverse boundary or source of truth, create an AD
 ## 3. Implement
 
 For an `erp/` module, start with `pnpm run ritsei new module <name>` (ADR-0094). It creates the
-manifest, an empty service contract, layers, and a contract test, and registers the module in
-`erp/runtime/modules.ts`. It decides nothing for you: declare dependencies, owned schemas,
-capabilities, released actions and events, consumed events, HTTP groups, and pages in `manifest.ts`
-as you add each one. Otherwise create only the files required now:
+manifest, an empty service contract, layers, and a contract test, then regenerates
+`erp/runtime/modules.gen.ts`. Add `--entity <entity>` for one tenant-scoped record with a unique name:
+it also writes the table and migration, stores, an authorized service, an HTTP list and create
+endpoint, a page, and tests, and registers the module's deny-by-default capabilities. Review the
+generated migration SQL before committing it. Declare further dependencies, schemas, capabilities,
+released actions and events, consumed events, HTTP groups, and pages in `manifest.ts` as you add each
+one, then run `pnpm run ritsei gen`. Otherwise create only the files required now:
 
 ```text
 <root>/<domain>/manifest.ts

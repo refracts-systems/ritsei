@@ -15,7 +15,7 @@ import {
   type FinancialOperationService as FinancialOperationServiceContract,
 } from "../../modules/accounting/mod.ts"
 import { BearerAuth, CurrentPrincipal, RitseiApi } from "./api.ts"
-import { AccountingHandlers } from "./handlers.ts"
+import { AccountingHttpHandlers as AccountingHandlers } from "../../modules/accounting/http.ts"
 
 const tenantId = "01920000-0000-7000-8000-000000000001"
 const legalEntityId = "01920000-0000-7000-8000-000000000002"

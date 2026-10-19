@@ -41,7 +41,9 @@
     "@effect/sql-pg",
     "uuid",
     "effect",
-    "@phosphor-icons/web"
+    "@phosphor-icons/web",
+    "jiti",
+    "magic-string"
   ],
   "ignoreExports": [
     {

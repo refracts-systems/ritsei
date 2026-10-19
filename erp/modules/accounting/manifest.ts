@@ -12,5 +12,5 @@ export const AccountingModule = defineModule({
   events: AccountingTypedEventCatalog,
   consumes: [],
   http: ["Accounting"],
-  pages: ["/accounting"],
+  pages: ["/accounting", "/accounting/:id"],
 })
