@@ -123,23 +123,31 @@ const usage = [
   "       pnpm run ritsei gen [--check]",
 ].join("\n")
 
-const run = async (args: readonly string[]) => {
-  const [command, kind, name] = args
-  if (command === "gen") {
-    const check = kind === "--check"
-    const stale = await generate({ check })
-    if (check && stale.length > 0) {
-      throw new Error(`stale generated files: ${stale.join(", ")}; run pnpm run ritsei gen`)
-    }
-    for (const path of stale) console.log(`generated ${path}`)
-    return
+const runGen = async (check: boolean) => {
+  const stale = await generate({ check })
+  if (check && stale.length > 0) {
+    throw new Error(`stale generated files: ${stale.join(", ")}; run pnpm run ritsei gen`)
   }
-  if (command !== "new" || kind !== "module" || name === undefined) throw new Error(usage)
-  const entity = args[3] === "--entity" ? args[4] : undefined
-  if (args.length > 3 && entity === undefined) throw new Error(usage)
+  for (const path of stale) console.log(`generated ${path}`)
+}
+
+/** Parses `new module <name> [--entity <entity>]`. */
+const parseNew = (args: readonly string[]) => {
+  const [, kind, name, flag, entity, ...rest] = args
+  const valid =
+    kind === "module" &&
+    name !== undefined &&
+    rest.length === 0 &&
+    (flag === undefined || (flag === "--entity" && entity !== undefined))
+  if (!valid) throw new Error(usage)
   if (entity !== undefined && !isValidModuleName(entity)) {
     throw new Error(`entity name must match ${moduleName}`)
   }
+  return { name, entity }
+}
+
+const runNew = async (args: readonly string[]) => {
+  const { name, entity } = parseNew(args)
   const created = entity === undefined ? await newModule(name) : await newEntityModule(name, entity)
   for (const path of created) console.log(`wrote ${path}`)
   console.log(
@@ -147,6 +155,12 @@ const run = async (args: readonly string[]) => {
       ? "Next: declare dependencies, schemas, capabilities, and routes in manifest.ts."
       : "Next: review the generated migration SQL, then grant the new capabilities to try the page.",
   )
+}
+
+const run = (args: readonly string[]) => {
+  if (args[0] === "gen") return runGen(args[1] === "--check")
+  if (args[0] === "new") return runNew(args)
+  throw new Error(usage)
 }
 
 if (isMain(import.meta.url)) {

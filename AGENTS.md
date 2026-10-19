@@ -107,7 +107,8 @@ contract.ts -> errors.ts -> service.ts -> store.ts -> postgres.ts/memory.ts -> l
   operations, layers, and the module manifest.
 - `manifest.ts`: the module's declared dependencies, schemas, capabilities, released actions and
   events, consumed events, HTTP groups, and pages (ADR-0094); keep it in step with the code.
-  Scaffold new ERP modules with `pnpm run ritsei new module <name>`.
+  Scaffold new ERP modules with `pnpm run ritsei new module <name> [--entity <entity>]`, and run
+  `pnpm run ritsei gen` after changing a manifest; never edit `*.gen.ts` files by hand.
 - Each ERP module owns its HTTP group, handlers, and error mapping in `http.ts`, built on
   `framework/modules/http`; only `erp/runtime` composes it into `RitseiApi`. Handlers stay thin.
 - Preserve tenant scope, authorization, tagged failures, transactions, idempotency, events, and

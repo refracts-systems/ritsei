@@ -293,7 +293,7 @@ import { make${n.Module}ServiceFromStore } from "./service.ts"
 export const make${n.Module}Service = make${n.Module}ServiceFromStore(make${n.Module}PostgresStore())
 export const ${n.Module}Live = Layer.effect(${n.Module}Service, make${n.Module}Service)
 export const make${n.Module}TestLayer = () =>
-  Layer.effect(${n.Module}Service, make${n.Module}ServiceFromStore(Effect.succeed(make${n.Module}MemoryStore())))
+  Layer.effect(${n.Module}Service, make${n.Module}ServiceFromStore(Effect.sync(make${n.Module}MemoryStore)))
 `,
     },
     {

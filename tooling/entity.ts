@@ -2,7 +2,6 @@
 // the hand-written composition files, regenerates the module composition, and generates its migration.
 import { execFileSync } from "node:child_process"
 import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises"
-import { createRequire } from "node:module"
 import { resolve } from "node:path"
 
 import { format, generate } from "./codegen.ts"
@@ -39,19 +38,15 @@ const edits = (n: EntityNames): readonly Edit[] => [
   { path: "db/ownership.toml", apply: (source) => addOwnership(source, n) },
 ]
 
-const drizzleKit = (() => {
-  const require = createRequire(import.meta.url)
-  const packagePath = require.resolve("drizzle-kit/package.json")
-  const { bin } = require(packagePath) as { bin: Record<string, string> }
-  return resolve(packagePath, "..", bin["drizzle-kit"]!)
-})()
+// drizzle-kit does not export its package.json, so resolve its declared bin from the workspace.
+const drizzleKit = () => resolve("node_modules/drizzle-kit/bin.cjs")
 
 /** Runs the pinned Drizzle Kit generator, then stamps the headers the ownership check requires. */
 const generateMigration = async (n: EntityNames) => {
   const before = new Set(await readdir(migrations))
   execFileSync(
     process.execPath,
-    [drizzleKit, "generate", "--config=drizzle.config.ts", `--name=create_${n.module}`],
+    [drizzleKit(), "generate", "--config=drizzle.config.ts", `--name=create_${n.module}`],
     {
       // Generation compares schema snapshots and never connects; the URL only satisfies the config.
       env: {
