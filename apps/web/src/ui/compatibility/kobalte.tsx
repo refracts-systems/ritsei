@@ -1,8 +1,10 @@
 // Compatibility probe only: never imported by the application.
 import { Dialog, useDialogContext } from "@kobalte/core/dialog"
+import { useDialogInitialFocus } from "../primitives/dialog.tsx"
 
 function KobalteDialogContent() {
   const dialog = useDialogContext()
+  useDialogInitialFocus(dialog)
   return (
     <Dialog.Content
       onEscapeKeyDown={() => dialog.close()}
