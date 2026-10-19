@@ -2,10 +2,6 @@ import { assert, describe, it } from "@effect/vitest"
 
 import { analyzeAiBoundary, analyzePublicPackageImports } from "../../tooling/architecture.ts"
 import { validateSkillDocument } from "../../tooling/check-agent-skills.ts"
-import {
-  evaluateFinancialManifest,
-  requiredFinancialGateIds,
-} from "../../tooling/financial-gate.ts"
 
 const validSkill = `---
 name: example-workflow
@@ -26,37 +22,6 @@ describe("repository tooling", () => {
         failure.includes("must match directory"),
       ),
     )
-  })
-
-  it("uses one fail-closed financial evidence evaluator", () => {
-    const gates = requiredFinancialGateIds.map((id) => ({
-      id,
-      title: id,
-      observed: "FAIL" as const,
-      evidenceClass: "missing" as const,
-      acceptedEvidenceClasses: ["production-real" as const],
-      evidence: [],
-      reason: "missing proof",
-      failureCategory: "evidence" as const,
-      requiredEvidence: "production proof",
-      remediation: "run the rehearsal",
-    }))
-    const manifest = {
-      schemaVersion: 1,
-      reviewedAt: "2026-08-31",
-      baselineCommit: "056828250526",
-      summary: { passed: 0, failed: gates.length, total: gates.length },
-      gates,
-    }
-
-    assert.strictEqual(evaluateFinancialManifest(manifest).failed, 16)
-    assert.throws(() =>
-      evaluateFinancialManifest({
-        ...manifest,
-        summary: { passed: 1, failed: 15, total: 16 },
-      }),
-    )
-    assert.throws(() => evaluateFinancialManifest({ ...manifest, gates: [null] }))
   })
 
   it("rejects cross-package imports outside public entry points", () => {

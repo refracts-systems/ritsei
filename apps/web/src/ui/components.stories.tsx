@@ -1,7 +1,6 @@
 import { createSignal } from "solid-js"
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import { layout } from "./foundations/layout.ts"
-import { projectVisualIntent } from "./grammar/projection.ts"
 import { FieldArray } from "./internal/field-array.tsx"
 import { ApprovalComposition } from "./patterns/approval-composition.tsx"
 import { Approval } from "./patterns/approval.tsx"
@@ -27,37 +26,14 @@ import { QuantityField } from "./primitives/quantity-field.tsx"
 import { Select } from "./primitives/select.tsx"
 import { Tabs } from "./primitives/tabs.tsx"
 import { surface } from "./recipes/surface.ts"
-import { CartographyField } from "./renderers/cartography/cartography-field.tsx"
 
 const rows = [
   { id: "PO-001", supplier: "Aster Supplies", status: "Draft" },
   { id: "PO-002", supplier: "Northwind Parts", status: "Approved" },
 ]
 
-const visualIntent = projectVisualIntent({
-  variationKey: "storybook.purchase-order-flow",
-  archetypes: ["flow", "capacity"],
-  primitives: ["field", "contour", "route", "marker", "boundary"],
-  dimension: "movement",
-  value: 0.72,
-  semantics: {
-    label: "Purchase order movement",
-    description: "A renderer-neutral visual summary; the table remains authoritative.",
-  },
-  fallback: {
-    summary: "Two purchase orders are moving through the receiving workflow.",
-    metrics: [
-      { label: "In transit", value: "2" },
-      { label: "Route activity", value: "72%" },
-    ],
-  },
-  motion: "active",
-  markers: [{ id: "receiving", label: "Receiving: 2 orders", x: 68, y: 58, tone: "info" }],
-})
-
 function ComponentsStory() {
   const [lines, setLines] = createSignal(["First field"])
-  const [selectedMarker, setSelectedMarker] = createSignal<string>()
   return (
     <main class={layout.main}>
       <div class={layout.stack}>
@@ -137,17 +113,6 @@ function ComponentsStory() {
               Save
             </Button>
           </Form>
-        </section>
-
-        <section class={[surface(), layout.stack]} aria-labelledby="grammar-heading">
-          <h2 id="grammar-heading">Visual grammar</h2>
-          <CartographyField
-            intent={visualIntent}
-            selectedMarkerId={selectedMarker()}
-            onInteraction={(interaction) => {
-              if (interaction.type === "select") setSelectedMarker(interaction.targetId)
-            }}
-          />
         </section>
 
         <DataTable

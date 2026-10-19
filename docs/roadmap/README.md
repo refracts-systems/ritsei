@@ -90,12 +90,12 @@ caveats are owned by [`../development/releasing.md`](../development/releasing.md
 | ------------- | --------------------- | --------------------------------------------------------------------------------- | ----------------- | ------------------------------------------------------------------ |
 | `erp`         | ERP primitives        | reusable scope, product, document, quantity, money, audit, and event decisions    | `erp.*`           | [`erp-primitives.md`](./erp-primitives.md)                         |
 | `domain`      | Domain maturity       | D0 identity/AuthZ foundations and Level 3 action/event evidence                   | `domain.*`        | [`domain-maturity.md`](./domain-maturity.md)                       |
-| `financial`   | Financial execution   | TigerBeetle transition, reconciliation, rehearsal, and activation                 | `financial.*`     | [`financial-ledger-execution.md`](./financial-ledger-execution.md) |
+| `financial`   | Financial execution   | TigerBeetle transition, reconciliation, rehearsal, and activation                 | `financial.*`     | financial-ledger-execution.md |
 | `process`     | Process Studio        | catalog, runtime, fencing, operations, designer, and governed release gates      | `process.*`       | [`process-studio.md`](./process-studio.md)                         |
 | `integration` | External integration  | connector contracts, delivery, reliability, Process Studio bridge, and governance | `integration.*`   | [`integration-surface.md`](./integration-surface.md)               |
 | `packs`       | Business Pack Library | pack resolution, draft materialization, onboarding, and governed upgrades         | `packs.contract`  | [`process-pack-library.md`](./process-pack-library.md)             |
 | `postgres19`  | PostgreSQL 19         | version floor, consistency, read-projection, and operational capability evidence  | `postgres19.*`    | [`postgresql-19.md`](./postgresql-19.md)                           |
-| `workload`    | Workload isolation    | workload classification and protected command-reserve evidence                    | `workload.*`      | [`workload.md`](./workload.md)                                     |
+| `workload`    | Workload isolation    | workload classification and protected command-reserve evidence                    | `workload.*`      | workload.md                                     |
 | `frontend`    | Frontend readiness    | SPA shell, application boundaries, design system, and user-workflow evidence      | `frontend.*`      | [`frontend.md`](./frontend.md)                                     |
 | `production`  | Production profile    | artifacts, install/upgrade rehearsal, and reviewed profile manifests              | `production.*`    | [`production.md`](./production.md)                                 |
 

@@ -1,18 +1,17 @@
 # ADR-0060: Defer Billing and Settlement Scope Until Ownership Is Ready
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-08-27
 - Amends: None
 - Compatible with: ADR-0018, ADR-0019, ADR-0020, ADR-0036, ADR-0040, ADR-0041
 - Supersedes: None
-- Superseded by: None
+- Superseded by: ADR-0091 (framework reset)
 
 > **Related documents**
 >
 > - Domain maturity roadmap: [`../roadmap/domain-maturity.md`](../roadmap/domain-maturity.md)
 > - Process Studio roadmap: [`../roadmap/process-studio.md`](../roadmap/process-studio.md)
 > - ERP primitive roadmap: [`../roadmap/erp-primitives.md`](../roadmap/erp-primitives.md)
-> - Financial ledger roadmap: [`../roadmap/financial-ledger-execution.md`](../roadmap/financial-ledger-execution.md)
 > - Financial ledger architecture: [`../architecture/financial-ledger.md`](../architecture/financial-ledger.md)
 
 ## Context

@@ -79,14 +79,6 @@
         "count": 1
       }
     },
-    "apps/web/src/ui/renderers/cartography/cartography-field.tsx": {
-      "crap_high": {
-        "count": 1
-      },
-      "crap_moderate": {
-        "count": 2
-      }
-    },
     "modules/accounting/src/contract.ts": {
       "crap_moderate": {
         "count": 1

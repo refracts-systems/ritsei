@@ -1,8 +1,7 @@
 # runtime/api rules
 
 HTTP-specific rules; repository-wide rules are in the root [`AGENTS.md`](../../AGENTS.md).
-Related: [`integration-architecture.md`](../../docs/architecture/integration-architecture.md),
-[`workload-isolation.md`](../../docs/architecture/workload-isolation.md).
+Related: [`integration-architecture.md`](../../docs/architecture/integration-architecture.md).
 
 - HTTP contracts, routing, request decoding, error encoding, and OpenAPI use Effect v4 `HttpApi`,
   `HttpApiGroup`, `HttpApiEndpoint`, `HttpApiBuilder`, and `HttpRouter`. Never use Hono, Express,
@@ -14,4 +13,3 @@ Related: [`integration-architecture.md`](../../docs/architecture/integration-arc
   and map domain failures to stable transport errors (RFC 9457 Problem Details) without database
   details or stack traces.
 - Protected behavior is enforced by the backend; authentication and authorization are separate.
-- Route workload class, criticality, and admission policy are metadata, not part of capability IDs.

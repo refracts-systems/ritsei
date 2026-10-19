@@ -12,7 +12,6 @@
 > - Repository taxonomy: [`../decisions/0068-establish-foundation-modules-platform-runtime-taxonomy.md`](../decisions/0068-establish-foundation-modules-platform-runtime-taxonomy.md)
 > - PostgreSQL ownership: [`./postgresql-19-architecture.md`](./postgresql-19-architecture.md)
 > - Financial ledger: [`./financial-ledger.md`](./financial-ledger.md)
-> - Workload isolation: [`./workload-isolation.md`](./workload-isolation.md)
 > - Testing strategy: [`../development/testing.md`](../development/testing.md)
 > - Database roles: [`../operations/database-roles.md`](../operations/database-roles.md)
 > - Logical database and physical placement:

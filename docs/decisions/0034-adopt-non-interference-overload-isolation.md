@@ -1,9 +1,9 @@
 # ADR-0034: Adopt Non-Interference as the Overload-Isolation Target
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-08-10
 - Supersedes: None
-- Superseded by: None
+- Superseded by: ADR-0091 (framework reset)
 
 > **Related documents**
 >
@@ -11,7 +11,7 @@
 > - Canonical architecture:
 >   [`../architecture/architecture-spec-v4.md`](../architecture/architecture-spec-v4.md)
 > - Workload isolation:
->   [`../architecture/workload-isolation.md`](../architecture/workload-isolation.md)
+>   ../architecture/workload-isolation.md
 > - State and consistency:
 >   [`../architecture/state-and-consistency.md`](../architecture/state-and-consistency.md)
 > - PostgreSQL architecture:
@@ -19,7 +19,7 @@
 > - Capability naming:
 >   [`./0031-capability-naming-and-business-verb-conventions.md`](./0031-capability-naming-and-business-verb-conventions.md)
 > - Comparative reference:
->   [`../architecture/reference/hard-isolation-patterns.md`](../architecture/reference/hard-isolation-patterns.md)
+>   ../architecture/reference/hard-isolation-patterns.md
 
 ## Context
 
@@ -177,7 +177,7 @@ A deployment may claim hard query-to-command non-interference only when it publi
 - overload-test acceptance criteria and results.
 
 Detailed current-state rules are owned by
-[`../architecture/workload-isolation.md`](../architecture/workload-isolation.md).
+../architecture/workload-isolation.md.
 
 ## Alternatives Considered
 
@@ -240,7 +240,7 @@ latency, and amplify retries. Heavy reports and exports should become durable as
 ## Validation
 
 Before production claims hard query-to-command non-interference, prove the validation contract in
-[`../architecture/workload-isolation.md`](../architecture/workload-isolation.md), including:
+../architecture/workload-isolation.md, including:
 
 - owner-reviewed workload, criticality, consistency, cost, deadline, and admission metadata;
 - authorized execution admission before guarded resource acquisition;
@@ -256,8 +256,6 @@ Before production claims hard query-to-command non-interference, prove the valid
 
 ## Related Documents
 
-- [`../architecture/workload-isolation.md`](../architecture/workload-isolation.md)
-- [`../architecture/reference/hard-isolation-patterns.md`](../architecture/reference/hard-isolation-patterns.md)
 - [`../architecture/search-architecture.md`](../architecture/search-architecture.md)
 - [`../architecture/state-and-consistency.md`](../architecture/state-and-consistency.md)
 - [`../deployment/README.md`](../deployment/README.md)

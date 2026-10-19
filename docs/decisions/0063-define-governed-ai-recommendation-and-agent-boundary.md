@@ -13,7 +13,6 @@
 > - Global architecture: [`../architecture/architecture-spec-v4.md`](../architecture/architecture-spec-v4.md)
 > - Process Studio: [`../architecture/process-studio.md`](../architecture/process-studio.md)
 > - Authorization: [`../architecture/authorization.md`](../architecture/authorization.md)
-> - Analytics: [`../architecture/analytics-architecture.md`](../architecture/analytics-architecture.md)
 > - External integration surface: [`../architecture/integration-architecture.md`](../architecture/integration-architecture.md)
 > - Architecture enforcement: [`../architecture/architecture-enforcement.md`](../architecture/architecture-enforcement.md)
 > - Process Studio roadmap: [`../roadmap/process-studio.md`](../roadmap/process-studio.md)
@@ -198,5 +197,4 @@ Before any AI-backed feature is activated, prove:
 - [`../architecture/architecture-spec-v4.md`](../architecture/architecture-spec-v4.md)
 - [`../architecture/process-studio.md`](../architecture/process-studio.md)
 - [`../architecture/authorization.md`](../architecture/authorization.md)
-- [`../architecture/analytics-architecture.md`](../architecture/analytics-architecture.md)
 - [`../architecture/architecture-enforcement.md`](../architecture/architecture-enforcement.md)

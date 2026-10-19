@@ -38,7 +38,6 @@
     "lint": "oxlint --disable-nested-config --deny-warnings --report-unused-disable-directives .",
     "release:check": "pnpm run fmt:check && pnpm run lint && pnpm run check && pnpm run db:check && pnpm run skills:check && pnpm run boundary:test && pnpm run boundary:lint && pnpm run test && pnpm run fallow:audit",
     "architecture:check": "varlock run -- tsx tooling/architecture.ts",
-    "financial:gate": "varlock run -- tsx tooling/financial-gate.ts",
     "boundary:lint": "varlock run -- ast-grep scan apps foundation modules platform runtime tooling tests && pnpm run fallow:boundaries && pnpm run architecture:check && varlock run -- tsx tooling/schema-ownership.ts",
     "postgres19:rehearse": "varlock run -- tsx tooling/postgresql-19/rehearse.ts",
     "production:artifacts": "varlock run -- tsx tooling/production/artifacts.ts",
@@ -53,7 +52,6 @@
     "effect": "4.0.0",
     "pdfnative": "1.7.0",
     "postgres": "3.4.7",
-    "tigerbeetle-node": "0.17.9",
     "uuid": "14.0.3",
     "varlock": "1.23.0"
   },

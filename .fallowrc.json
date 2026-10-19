@@ -145,13 +145,7 @@
           "apps/web/src/ui/icons/index.ts",
           "apps/web/src/ui/icons/icon.tsx",
           "apps/web/src/ui/motion/index.ts",
-          "apps/web/src/ui/grammar/archetypes.ts",
-          "apps/web/src/ui/grammar/deterministic-variation.ts",
-          "apps/web/src/ui/grammar/primitives.ts",
-          "apps/web/src/ui/grammar/projection.ts",
-          "apps/web/src/ui/grammar/visual-intent.ts",
-          "apps/web/src/ui/interaction/contract.ts",
-          "apps/web/src/ui/renderers/cartography/cartography-field.tsx"
+          "apps/web/src/ui/interaction/contract.ts"
         ]
       },
       {

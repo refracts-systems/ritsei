@@ -17,7 +17,6 @@
 > - Documentation boundaries:
 >   [`../../documentation-boundaries.md`](../../documentation-boundaries.md)
 > - Decision map: [`../../decisions/decision-map.md`](../../decisions/decision-map.md)
-> - Workload isolation: [`../workload-isolation.md`](../workload-isolation.md)
 > - Frontend architecture: [`../frontend.md`](../frontend.md)
 > - Design system: [`../design-system.md`](../design-system.md)
 > - Deployment posture: [`../../deployment/README.md`](../../deployment/README.md)
@@ -65,7 +64,6 @@ A new track is justified only when it has:
 
 Canonical evidence:
 
-- [`../workload-isolation.md`](../workload-isolation.md), **Adoption Gates** and **Completion
   Criteria**
 - [`../../decisions/0034-adopt-non-interference-overload-isolation.md`](../../decisions/0034-adopt-non-interference-overload-isolation.md)
 - [`../postgresql-19-architecture.md`](../postgresql-19-architecture.md), **Guarantee Boundary** and

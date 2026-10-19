@@ -1067,7 +1067,7 @@ Business failures do not become infinite technical retries. Retry policies are b
 
 For any future recommendation-originated action, the logical step and idempotency identity also bind
 the exact recommendation version, catalog action version, and canonical validated input under the
-[`analytics-architecture.md`](./analytics-architecture.md) self-observation boundary. Reuse with a
+analytics-architecture.md self-observation boundary. Reuse with a
 different bound intent is rejected rather than treated as a retry.
 
 ### Human Tasks

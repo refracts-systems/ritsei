@@ -1,11 +1,11 @@
 # ADR-0081: Adopt a Document AST Rendering Platform
 
-- Status: Proposed
+- Status: Superseded
 - Date: 2026-09-06
 - Amends: None
 - Compatible with: ADR-0015, ADR-0034, ADR-0036, ADR-0040, ADR-0046, ADR-0051
 - Supersedes: None
-- Superseded by: None
+- Superseded by: ADR-0091 (framework reset)
 
 > **Related documents**
 >
@@ -15,7 +15,6 @@
 > - One semantic owner per invariant: [`./0015-one-semantic-owner-per-invariant.md`](./0015-one-semantic-owner-per-invariant.md)
 > - Owner-local business surface: [`./0046-adopt-owner-local-business-surface-and-generated-ergonomics.md`](./0046-adopt-owner-local-business-surface-and-generated-ergonomics.md)
 > - Durable execution: [`../architecture/durable-execution.md`](../architecture/durable-execution.md)
-> - Workload isolation: [`../architecture/workload-isolation.md`](../architecture/workload-isolation.md)
 > - UUIDv7 persistent identities: [`./0051-adopt-uuidv7-for-persistent-identities.md`](./0051-adopt-uuidv7-for-persistent-identities.md)
 
 ## Context

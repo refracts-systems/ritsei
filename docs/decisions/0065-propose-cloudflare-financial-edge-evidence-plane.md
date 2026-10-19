@@ -1,11 +1,11 @@
 # ADR-0065: Propose Cloudflare as the Financial Edge and Evidence Plane
 
-- Status: Proposed
+- Status: Superseded
 - Date: 2026-08-31
 - Amends: None
 - Compatible with: ADR-0040, ADR-0041, ADR-0064
 - Supersedes: None
-- Superseded by: None
+- Superseded by: ADR-0091 (framework reset)
 
 > **Related documents**
 >
@@ -13,8 +13,7 @@
 > - Proposed GCP staging platform:
 >   [`./0064-propose-gcp-financial-staging-platform.md`](./0064-propose-gcp-financial-staging-platform.md)
 > - Financial staging infrastructure selection:
->   [`../financial/staging-infrastructure-selection.md`](../financial/staging-infrastructure-selection.md)
-> - Financial staging topology: [`../financial/staging-topology.md`](../financial/staging-topology.md)
+>   ../financial/staging-infrastructure-selection.md
 > - Financial ledger architecture: [`../architecture/financial-ledger.md`](../architecture/financial-ledger.md)
 
 ## Context

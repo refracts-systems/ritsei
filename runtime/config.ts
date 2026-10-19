@@ -1,14 +1,8 @@
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 
-import { FinancialLedgerAuthority } from "../modules/accounting/mod.ts"
-import type { TigerBeetleFinancialLedgerConfig } from "../platform/mod.ts"
-
 export const DeploymentProfile = Schema.Literals(["entry", "standard", "scale", "enterprise"])
 export type DeploymentProfile = Schema.Schema.Type<typeof DeploymentProfile>
-
-export const FinancialAuthority = FinancialLedgerAuthority
-export type FinancialAuthority = Schema.Schema.Type<typeof FinancialAuthority>
 
 const AuthenticationProfile = Schema.Literals(["transitional-local", "oidc"])
 type AuthenticationProfile = Schema.Schema.Type<typeof AuthenticationProfile>
@@ -43,30 +37,18 @@ export type PostgresReadYourWritesRuntimeConfiguration = {
   readonly tokenTtlMs: number
 }
 
-export type RitseiRuntimeConfiguration = Readonly<
-  {
-    readonly deploymentProfile: DeploymentProfile
-    readonly authentication?: AuthenticationConfiguration
-    readonly postgresReadYourWrites?: PostgresReadYourWritesRuntimeConfiguration
-  } & (
-    | {
-        readonly financialAuthority: "postgresql"
-        readonly tigerBeetle?: undefined
-      }
-    | {
-        readonly financialAuthority: "tigerbeetle"
-        readonly tigerBeetle: TigerBeetleFinancialLedgerConfig
-      }
-  )
->
+// PostgreSQL is the only financial authority (ADR-0091).
+export type RitseiRuntimeConfiguration = Readonly<{
+  readonly deploymentProfile: DeploymentProfile
+  readonly authentication?: AuthenticationConfiguration
+  readonly postgresReadYourWrites?: PostgresReadYourWritesRuntimeConfiguration
+}>
 
 export class RuntimeConfigurationFailure extends Schema.TaggedError<RuntimeConfigurationFailure>()(
   "RuntimeConfigurationFailure",
   {
     reason: Schema.Literals([
       "invalid_configuration",
-      "missing_tigerbeetle_configuration",
-      "invalid_tigerbeetle_configuration",
       "missing_postgres_read_your_writes_configuration",
       "invalid_postgres_read_your_writes_configuration",
       "missing_oidc_configuration",
@@ -84,7 +66,6 @@ const NonEmptyString = Schema.String.check(Schema.isPattern(/\S/))
 const BoundedOidcString = NonEmptyString.pipe(Schema.check(Schema.isMaxLength(4_096)))
 const RawRuntimeConfiguration = Schema.Struct({
   deploymentProfile: DeploymentProfile,
-  financialAuthority: FinancialAuthority,
   authenticationProfile: Schema.optionalKey(AuthenticationProfile),
   transitionalUserAccountId: Schema.optionalKey(NonEmptyString),
   transitionalUserAccountEmail: Schema.optionalKey(NonEmptyString),
@@ -103,15 +84,6 @@ const RawRuntimeConfiguration = Schema.Struct({
       secret: NonEmptyString,
       maxWaitMs: NonEmptyString,
       tokenTtlMs: NonEmptyString,
-    }),
-  ),
-  tigerBeetle: Schema.optionalKey(
-    Schema.Struct({
-      clusterId: NonEmptyString,
-      replicaAddresses: Schema.Array(NonEmptyString).check(Schema.isMinLength(1)),
-      ledger: NonEmptyString,
-      code: NonEmptyString,
-      currency: NonEmptyString,
     }),
   ),
 })
@@ -180,37 +152,6 @@ const parsePostgresReadYourWritesConfiguration = (
   })
 }
 
-const parseTigerBeetleConfiguration = (
-  raw: RawRuntimeConfiguration["tigerBeetle"],
-): Effect.Effect<TigerBeetleFinancialLedgerConfig, RuntimeConfigurationFailure> => {
-  if (raw === undefined) return Effect.fail(invalid("missing_tigerbeetle_configuration"))
-  if (!/^\d+$/.test(raw.clusterId)) return Effect.fail(invalid("invalid_tigerbeetle_configuration"))
-  const clusterId = BigInt(raw.clusterId)
-  const ledger = parseSafeInteger(raw.ledger)
-  const code = parseSafeInteger(raw.code)
-  const currency = raw.currency.toUpperCase()
-  if (
-    clusterId < 0n ||
-    clusterId > (1n << 128n) - 1n ||
-    ledger === undefined ||
-    ledger < 1 ||
-    ledger > 0xffff_ffff ||
-    code === undefined ||
-    code < 1 ||
-    code > 0xffff_ffff ||
-    !/^[A-Z]{3}$/.test(currency)
-  ) {
-    return Effect.fail(invalid("invalid_tigerbeetle_configuration"))
-  }
-  return Effect.succeed({
-    clusterId,
-    replicaAddresses: raw.replicaAddresses,
-    ledger,
-    code,
-    currency,
-  })
-}
-
 const readPostgresReadYourWritesValues = (
   environment: RuntimeEnvironment,
 ): Pick<RawRuntimeConfiguration, "postgresReadYourWrites"> => {
@@ -230,39 +171,10 @@ const readPostgresReadYourWritesValues = (
   }
 }
 
-const readTigerBeetleValues = (
-  environment: RuntimeEnvironment,
-  financialAuthority: string,
-): Pick<RawRuntimeConfiguration, "tigerBeetle"> => {
-  if (financialAuthority !== "tigerbeetle") return {}
-  const clusterId = environment.get("TIGERBEETLE_CLUSTER_ID")
-  const replicaAddresses = environment
-    .get("TIGERBEETLE_REPLICA_ADDRESSES")
-    ?.split(",")
-    .map((address) => address.trim())
-    .filter((address) => address.length > 0)
-  const ledger = environment.get("TIGERBEETLE_LEDGER")
-  const code = environment.get("TIGERBEETLE_CODE")
-  const currency = environment.get("TIGERBEETLE_CURRENCY")
-  if (
-    clusterId === undefined ||
-    replicaAddresses === undefined ||
-    ledger === undefined ||
-    code === undefined ||
-    currency === undefined
-  )
-    return {}
-  return {
-    tigerBeetle: { clusterId, replicaAddresses, ledger, code, currency },
-  }
-}
-
 export const parseRuntimeConfiguration = (environment: RuntimeEnvironment) =>
   Effect.gen(function* () {
-    const financialAuthority = environment.get("RITSEI_FINANCIAL_AUTHORITY") ?? "postgresql"
     const raw = {
       deploymentProfile: environment.get("RITSEI_DEPLOYMENT_PROFILE") ?? "entry",
-      financialAuthority,
       oidcScopes: environment.get("RITSEI_OIDC_SCOPES") ?? "openid profile email",
       ...withoutUndefined({
         authenticationProfile: environment.get("RITSEI_AUTH_PROFILE"),
@@ -277,7 +189,6 @@ export const parseRuntimeConfiguration = (environment: RuntimeEnvironment) =>
         oidcRedirectUri: environment.get("RITSEI_OIDC_REDIRECT_URI"),
       }),
       ...readPostgresReadYourWritesValues(environment),
-      ...readTigerBeetleValues(environment, financialAuthority),
     }
     const decoded = yield* Schema.decodeUnknownEffect(RawRuntimeConfiguration)(raw).pipe(
       Effect.mapError(() => invalid("invalid_configuration")),
@@ -341,21 +252,9 @@ export const parseRuntimeConfiguration = (environment: RuntimeEnvironment) =>
               scopes,
             }
           })
-    if (decoded.financialAuthority === "postgresql") {
-      return {
-        deploymentProfile: decoded.deploymentProfile,
-        authentication,
-        financialAuthority: "postgresql" as const,
-        tigerBeetle: undefined,
-        ...(postgresReadYourWrites === undefined ? {} : { postgresReadYourWrites }),
-      } satisfies RitseiRuntimeConfiguration
-    }
-    const tigerBeetle = yield* parseTigerBeetleConfiguration(decoded.tigerBeetle)
     return {
       deploymentProfile: decoded.deploymentProfile,
       authentication,
-      financialAuthority: "tigerbeetle" as const,
-      tigerBeetle,
       ...(postgresReadYourWrites === undefined ? {} : { postgresReadYourWrites }),
     } satisfies RitseiRuntimeConfiguration
   })

@@ -10,8 +10,6 @@ import { createDialogOpenChange, Dialog } from "../../ui/primitives/dialog.tsx"
 import { FormField } from "../../ui/primitives/form-field.tsx"
 import { Form } from "../../ui/primitives/form.tsx"
 import { Input } from "../../ui/primitives/input.tsx"
-import { CartographyField } from "../../ui/renderers/cartography/cartography-field.tsx"
-import { projectAccountNetwork } from "./projections/account-network.ts"
 import {
   createAccountEmailMutation,
   createAccountMutation,
@@ -456,22 +454,6 @@ function AccountCollection() {
           }
         >
           <AccountTable accounts={filtered()} />
-        </Show>
-        <Show when={query.data.length > 0}>
-          <details class={layout.documentSection}>
-            <summary>Account distribution</summary>
-            <CartographyField
-              intent={projectAccountNetwork(query.data)}
-              selectedMarkerId={status() === "all" ? undefined : status()}
-              onInteraction={(interaction) => {
-                if (interaction.type === "select") setStatus(interaction.targetId)
-              }}
-            >
-              <Show when={status() !== "all"}>
-                <p role="status">Showing {status()} accounts in the table above.</p>
-              </Show>
-            </CartographyField>
-          </details>
         </Show>
       </QueryBoundary>
     </section>

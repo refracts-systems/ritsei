@@ -1,15 +1,15 @@
 # ADR-0025: Introduce a Stateful Entity Runtime
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-08-06
 - Supersedes: None
-- Superseded by: None
+- Superseded by: ADR-0091 (framework reset)
 
 > **Related documents**
 >
 > - ADR index: [`./README.md`](./README.md)
 > - Runtime architecture:
->   [`../architecture/runtime-architecture.md`](../architecture/runtime-architecture.md)
+>   ../architecture/runtime-architecture.md
 > - State and consistency:
 >   [`../architecture/state-and-consistency.md`](../architecture/state-and-consistency.md)
 > - Canonical architecture:

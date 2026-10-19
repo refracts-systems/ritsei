@@ -16,11 +16,11 @@
 > - Search architecture:
 >   [`../architecture/search-architecture.md`](../architecture/search-architecture.md)
 > - Analytics architecture:
->   [`../architecture/analytics-architecture.md`](../architecture/analytics-architecture.md)
+>   ../architecture/analytics-architecture.md
 > - Workload isolation:
->   [`../architecture/workload-isolation.md`](../architecture/workload-isolation.md)
+>   ../architecture/workload-isolation.md
 > - Stateful runtime:
->   [`../architecture/runtime-architecture.md`](../architecture/runtime-architecture.md)
+>   ../architecture/runtime-architecture.md
 > - State and consistency:
 >   [`../architecture/state-and-consistency.md`](../architecture/state-and-consistency.md)
 > - Messaging: [`../architecture/pgque-messaging.md`](../architecture/pgque-messaging.md)
@@ -29,7 +29,7 @@
 > - External integrations:
 >   [`../architecture/integration-architecture.md`](../architecture/integration-architecture.md)
 > - Financial staging infrastructure selection:
->   [`../financial/staging-infrastructure-selection.md`](../financial/staging-infrastructure-selection.md)
+>   ../financial/staging-infrastructure-selection.md
 > - Frontend: [`../architecture/frontend.md`](../architecture/frontend.md)
 
 ## Topology Posture
@@ -67,7 +67,7 @@ dependencies, separate credentials and paths where applicable, and executable ov
 | Durable workflow           | Persisted checkpoints, retries, compensation, recovery, and audit correlation                                                        | Compatibility job layer or `pg_durable` after its production gates pass                  |
 | Cache                      | Disposable or rebuildable acceleration only; never the sole correctness, authorization, lock, balance, stock, or idempotency barrier | No cache, in-process cache, distributed cache, CDN cache, or browser query cache         |
 | Search index               | Exact and structured PostgreSQL first; ranked, vector, and external projections remain rebuildable and non-authoritative             | Primary, stale-tolerant replica, PostgreSQL extension, or external engine after gates    |
-| Analytics store            | Rebuildable projection governed by [`analytics-architecture.md`](../architecture/analytics-architecture.md); no write-back or authority | PostgreSQL reporting, isolated projection store, OLAP provider, or historical table format after gates |
+| Analytics store            | Rebuildable projection governed by analytics-architecture.md; no write-back or authority | PostgreSQL reporting, isolated projection store, OLAP provider, or historical table format after gates |
 | External connectors        | Typed, authenticated, idempotent boundary with timeout, retry, provider status, and recovery                                         | Colocated adapters or separately deployed connector workers                              |
 | Observability              | Correlation, metrics, logs, traces, and alerts without becoming business authority                                                   | Any approved telemetry backend or local tooling                                          |
 
@@ -109,7 +109,7 @@ budgets. They may fail or degrade without changing canonical facts or starving i
 transactions. Hard-isolated routes do not fall back to the primary. Detailed search rules are owned
 by [`../architecture/search-architecture.md`](../architecture/search-architecture.md); global
 non-interference rules are owned by
-[`../architecture/workload-isolation.md`](../architecture/workload-isolation.md).
+../architecture/workload-isolation.md.
 
 ## Analytics Deployment
 
@@ -122,7 +122,7 @@ A hard-isolated analytic query process receives no command credential or hidden 
 provider outage returns only the route's declared stale/degraded result or typed unavailability.
 Deployment profiles do not select a provider or grant a projection business authority. Detailed
 fact, metric, freshness, rebuild, and provider rules are owned by
-[`../architecture/analytics-architecture.md`](../architecture/analytics-architecture.md).
+../architecture/analytics-architecture.md.
 
 ## Database Scaling
 

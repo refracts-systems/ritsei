@@ -1,5 +1,10 @@
 # Financial Ledger Architecture
 
+> **Framework reset ([ADR-0091](../decisions/0091-adopt-framework-and-flagship-erp.md)):** PostgreSQL is the
+> only financial authority and the TigerBeetle adapter is removed. Sections that describe
+> TigerBeetle, activation gates, staging evidence, or cutover are historical until Phase 2
+> rewrites this document around the PostgreSQL ledger and document numbering.
+
 > **Status:** Canonical
 >
 > **Owns:** financial authority, the financial execution boundary, cross-store outcome semantics,
@@ -24,16 +29,16 @@
 >   [`../decisions/0036-define-p2-document-and-financial-baseline.md`](../decisions/0036-define-p2-document-and-financial-baseline.md)
 >
 > - Execution roadmap:
->   [`../roadmap/financial-ledger-execution.md`](../roadmap/financial-ledger-execution.md)
+>   ../roadmap/financial-ledger-execution.md
 >
 > - Recovery and cutover runbook:
->   [`../operations/tigerbeetle-recovery.md`](../operations/tigerbeetle-recovery.md)
+>   ../operations/tigerbeetle-recovery.md
 > - Financial staging readiness plan:
->   [`../financial/staging-readiness-plan.md`](../financial/staging-readiness-plan.md)
+>   ../financial/staging-readiness-plan.md
 > - Financial staging evidence matrix:
->   [`../financial/evidence-matrix.md`](../financial/evidence-matrix.md)
+>   ../financial/evidence-matrix.md
 > - Financial staging infrastructure selection:
->   [`../financial/staging-infrastructure-selection.md`](../financial/staging-infrastructure-selection.md)
+>   ../financial/staging-infrastructure-selection.md
 
 ## Position
 
@@ -434,4 +439,4 @@ The production profile requires:
 - command-resource budgets that do not allow financial retries to starve protected work.
 
 Detailed sequencing and gates are owned by
-[`../roadmap/financial-ledger-execution.md`](../roadmap/financial-ledger-execution.md).
+../roadmap/financial-ledger-execution.md.

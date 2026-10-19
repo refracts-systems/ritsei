@@ -10,10 +10,8 @@
 >
 > - Canonical architecture: [`./architecture-spec-v4.md`](./architecture-spec-v4.md)
 > - PostgreSQL architecture: [`./postgresql-19-architecture.md`](./postgresql-19-architecture.md)
-> - Workload isolation: [`./workload-isolation.md`](./workload-isolation.md)
 > - Source-of-truth and derived-capability non-interference:
 >   [`../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md`](../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md)
-> - Analytics architecture: [`./analytics-architecture.md`](./analytics-architecture.md)
 > - State and consistency: [`./state-and-consistency.md`](./state-and-consistency.md)
 > - Messaging: [`./pgque-messaging.md`](./pgque-messaging.md)
 > - Authorization: [`./authorization.md`](./authorization.md)
@@ -252,7 +250,7 @@ Before enabling a search extension in production, prove:
 ## Search Workload Safety
 
 Global workload classes, admission, reserved command capacity, WorkloadCells, and non-interference
-claims are owned by [`workload-isolation.md`](./workload-isolation.md).
+claims are owned by workload-isolation.md.
 
 Search shares PostgreSQL resources until measurements justify another topology. Its work maps to the
 canonical planes rather than defining competing top-level workload classes:
@@ -295,7 +293,7 @@ is not a hard-isolated projection query.
 
 Search contracts never contain shard, replica, node, region, index, or provider topology. Semantic
 search remains conceptual retrieval; semantic analytics and metric contracts are a sibling subsystem
-owned by [`analytics-architecture.md`](./analytics-architecture.md).
+owned by analytics-architecture.md.
 
 - Domain-local search routes through the same foundation, module-ownership, and platform-routing rules as other
   domain queries.

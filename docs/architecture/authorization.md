@@ -6,8 +6,6 @@
 >
 > - Active architecture: [`./architecture-spec-v4.md`](./architecture-spec-v4.md)
 > - Search architecture: [`./search-architecture.md`](./search-architecture.md)
-> - Analytics architecture: [`./analytics-architecture.md`](./analytics-architecture.md)
-> - Workload isolation: [`./workload-isolation.md`](./workload-isolation.md)
 > - Authorization ADR:
 >   [`../decisions/0006-use-capability-based-authorization.md`](../decisions/0006-use-capability-based-authorization.md)
 > - User-account lifecycle and tenant membership:
@@ -315,7 +313,7 @@ model output cannot grant a capability, widen scope, choose an approver, satisfy
 current actor. A proposed action reaches the owning public command, which remains authoritative for
 business validation, idempotency, transaction, audit, and typed failure behavior. Detailed evidence
 binding and unknown-outcome handling are owned by
-[`analytics-architecture.md`](./analytics-architecture.md) and
+analytics-architecture.md and
 [`process-studio.md`](./process-studio.md).
 
 ## Audit and Explainability
