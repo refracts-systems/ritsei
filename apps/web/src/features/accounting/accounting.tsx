@@ -13,11 +13,13 @@ import type {
 } from "../../shared/contracts/generated/accounting.ts"
 import { CommandFeedback, QueryBoundary } from "../../shared/request-feedback.tsx"
 import { ApiRuntime } from "../../shared/runtime.ts"
+import { formatDecimal } from "../../ui/foundations/format.ts"
 import { layout } from "../../ui/foundations/layout.ts"
 import { DataTable } from "../../ui/patterns/data-table.tsx"
 import { EntityWorkspace } from "../../ui/patterns/entity-workspace.tsx"
 import { ActionMenu } from "../../ui/primitives/action-menu.tsx"
 import { Badge } from "../../ui/primitives/badge.tsx"
+import { Reference } from "../../ui/primitives/reference.tsx"
 import { Button } from "../../ui/primitives/button.tsx"
 import { createDialogOpenChange, Dialog } from "../../ui/primitives/dialog.tsx"
 import { FormField } from "../../ui/primitives/form-field.tsx"
@@ -1162,7 +1164,15 @@ function JournalTable(props: { journals: readonly JournalEntry[]; selectedJourna
   )
 }
 
-function JournalDetail(props: { id: string; journals: readonly JournalEntry[] }) {
+function JournalDetail(props: {
+  id: string
+  journals: readonly JournalEntry[]
+  accounts: readonly Account[]
+}) {
+  const accountLabel = (id: string) => {
+    const account = props.accounts.find((candidate) => candidate.id === id)
+    return account === undefined ? undefined : `${account.code} · ${account.name}`
+  }
   const journal = () => props.journals.find((candidate) => candidate.id === props.id)
   return (
     <section class={layout.stack} aria-labelledby="journal-detail-heading">
@@ -1215,17 +1225,23 @@ function JournalDetail(props: { id: string; journals: readonly JournalEntry[] })
                   <thead>
                     <tr>
                       <th scope="col">Account</th>
-                      <th scope="col">Debit</th>
-                      <th scope="col">Credit</th>
+                      <th scope="col" class={layout.numeric}>
+                        Debit
+                      </th>
+                      <th scope="col" class={layout.numeric}>
+                        Credit
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     <For each={entry.lines}>
                       {(line) => (
                         <tr>
-                          <td class={layout.code}>{line.accountId}</td>
-                          <td class={layout.code}>{line.debit}</td>
-                          <td class={layout.code}>{line.credit}</td>
+                          <td>
+                            <Reference id={line.accountId} label={accountLabel(line.accountId)} />
+                          </td>
+                          <td class={layout.numeric}>{formatDecimal(line.debit)}</td>
+                          <td class={layout.numeric}>{formatDecimal(line.credit)}</td>
                         </tr>
                       )}
                     </For>
@@ -1318,7 +1334,11 @@ export function Accounting(props: {
       }
       aside={
         props.selectedJournalId ? (
-          <JournalDetail id={props.selectedJournalId} journals={journals.data ?? []} />
+          <JournalDetail
+            id={props.selectedJournalId}
+            journals={journals.data ?? []}
+            accounts={accounts.data ?? []}
+          />
         ) : undefined
       }
     >

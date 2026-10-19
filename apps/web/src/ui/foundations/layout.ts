@@ -357,6 +357,7 @@ export const layout = {
   detailValue: css({ m: "0", minWidth: "0", overflowWrap: "anywhere", textStyle: "bodyCompact" }),
   code: css({ fontFamily: "mono", fontSize: "xs", fontVariantNumeric: "tabular-nums" }),
   muted: css({ color: "muted" }),
+  numeric: css({ textAlign: "end", fontVariantNumeric: "tabular-nums" }),
   tableRowSelected: css({
     bg: "contentSelected",
     "& > :first-child": { boxShadow: "[inset 2px 0 0 token(colors.action)]" },

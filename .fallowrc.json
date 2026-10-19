@@ -153,7 +153,8 @@
           "apps/web/src/ui/grammar/visual-intent.ts",
           "apps/web/src/ui/interaction/contract.ts",
           "apps/web/src/ui/renderers/cartography/cartography-field.tsx",
-          "apps/web/src/ui/primitives/action-menu-context.ts"
+          "apps/web/src/ui/primitives/action-menu-context.ts",
+          "apps/web/src/ui/primitives/reference.tsx"
         ]
       },
       {
