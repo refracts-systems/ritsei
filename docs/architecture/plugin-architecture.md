@@ -2,6 +2,17 @@
 
 > **Status:** Canonical design concern
 >
+> **Framework reset ([ADR-0091](../decisions/0091-adopt-framework-and-flagship-erp.md)):** ADR-0007
+> and ADR-0023 are superseded. The active rule is ADR-0091 §3: modules, including `extensions/` and
+> localizations, extend each other only through public contracts, events, and released, versioned
+> extension points, delivered through the module manifest and registry in
+> [`../proposals/framework-reset.md`](../proposals/framework-reset.md#6-framework-capabilities-in-the-order-the-erp-pulls-them).
+> The contribution model below (extension by contribution, contributor contracts as released
+> extension points) carries over unchanged. Trust levels, sandboxed plugins, declarative tenant
+> extensions, and the plugin manifest fields are retained as target design, not current scope: an
+> extension point is added only when a flagship module needs it, and release governance comes after
+> there are extension developers.
+>
 > **Related documents**
 >
 > - Active architecture: [`./architecture-spec-v4.md`](./architecture-spec-v4.md)
@@ -11,9 +22,11 @@
 > - Frontend architecture: [`./frontend.md`](./frontend.md)
 > - Design system: [`./design-system.md`](./design-system.md)
 > - Primitive and domain roadmap: [`../roadmap/README.md`](../roadmap/README.md)
-> - Plugin ADR:
+> - Framework and flagship ERP (current extension rule):
+>   [`../decisions/0091-adopt-framework-and-flagship-erp.md`](../decisions/0091-adopt-framework-and-flagship-erp.md)
+> - Plugin ADR (superseded by ADR-0091):
 >   [`../decisions/0007-adopt-tiered-plugin-trust.md`](../decisions/0007-adopt-tiered-plugin-trust.md)
-> - Capability-oriented contribution ADR:
+> - Capability-oriented contribution ADR (superseded by ADR-0091):
 >   [`../decisions/0023-adopt-capability-oriented-plugin-contribution.md`](../decisions/0023-adopt-capability-oriented-plugin-contribution.md)
 > - Localization ADR:
 >   [`../decisions/0016-isolate-jurisdiction-localization.md`](../decisions/0016-isolate-jurisdiction-localization.md)
@@ -38,8 +51,9 @@ model, table, repository, or domain implementation.
 
 A plugin therefore participates in a domain through an explicit capability
 surface rather than becoming another implementation of the domain's model.
-Detailed rationale is owned by
-[`../decisions/0023-adopt-capability-oriented-plugin-contribution.md`](../decisions/0023-adopt-capability-oriented-plugin-contribution.md).
+The original rationale is in
+[`../decisions/0023-adopt-capability-oriented-plugin-contribution.md`](../decisions/0023-adopt-capability-oriented-plugin-contribution.md),
+superseded by ADR-0091, whose §3 keeps this model as the clean-core rule.
 
 Generated structural ergonomics is tooling, not a second ownership system. It may scaffold schemas,
 DTOs, ordinary queries, form metadata, CRUD helpers, API documentation inputs, and test skeletons
@@ -196,5 +210,5 @@ formats additionally use versioned integration adapters. Detailed rationale is o
 
 ## Native Code
 
-Only the core calculation-kernel boundary may use Zig. Plugins must not load arbitrary native
-libraries.
+ADR-0091 removed the Zig FFI boundary, so no module uses native code today; reintroducing it needs
+a named need, measurement, and a new ADR. Plugins must not load arbitrary native libraries.

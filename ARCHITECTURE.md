@@ -33,7 +33,9 @@ The authoritative architecture specification is:
 - Relationship AuthZ: native PostgreSQL `RelationshipEngine` by default; optional SpiceDB adapter
 - Reports: SQL and materialized views in PostgreSQL
 - Search: PostgreSQL only
-- Financial ledger: PostgreSQL double-entry ledger (the only financial authority)
+- Financial ledger: PostgreSQL double-entry ledger (the only active financial authority);
+  TigerBeetle is the designated future engine behind the ledger port
+  ([ADR-0092](./docs/decisions/0092-retain-tigerbeetle-as-designated-ledger-engine.md))
 - Process engine: deferred by ADR-0091 until the core ERP loops run end to end
 
 Commands, events, outbox, jobs, and consistency are defined in

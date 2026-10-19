@@ -115,5 +115,6 @@ current system; ADRs preserve decision history.
 | [`0089`](./0089-retire-roadmap-completion-evaluator.md) | Retire the roadmap completion evaluator | Accepted |
 | [`0090`](./0090-adopt-operational-clarity-visual-language.md) | Adopt the Operational Clarity visual language | Accepted |
 | [`0091`](./0091-adopt-framework-and-flagship-erp.md) | Adopt the framework and flagship ERP structure | Accepted |
+| [`0092`](./0092-retain-tigerbeetle-as-designated-ledger-engine.md) | Retain TigerBeetle as the designated future ledger engine | Accepted |
 
 Accepted ADRs must not be rewritten to alter history. Create a new ADR and use `Supersedes`.

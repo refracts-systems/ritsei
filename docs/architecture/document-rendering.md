@@ -1,10 +1,18 @@
 # RITSEI Document Rendering Architecture
 
-> **Status:** Proposed canonical subsystem architecture
+> **Status:** Target design for the framework documents capability
 >
-> **Activation:** [ADR-0081](../decisions/0081-adopt-document-ast-rendering-platform.md) is
-> proposed. This document is the design source of truth for the proposed platform; it does not
-> activate renderer dependencies or production document routes.
+> **Framework reset ([ADR-0091](../decisions/0091-adopt-framework-and-flagship-erp.md)):**
+> [ADR-0081](../decisions/0081-adopt-document-ast-rendering-platform.md) is superseded. The first
+> ERP documents (invoice, delivery note, purchase order, statement) use PDF templates, and the
+> existing code in `framework/foundation/document-rendering` and
+> `framework/platform/document-rendering` moves to `framework/documents`
+> ([`../proposals/framework-reset.md`](../proposals/framework-reset.md#4-target-structure)). This
+> document stays the design source of truth for where that capability grows: snapshots, the
+> renderer-independent AST, template versioning, and renderer capabilities are adopted step by step
+> as ERP documents need them, not as a separate platform. References to workload isolation and
+> command reserve (Section 8, gate 6) now mean the job table and separate worker pools that replaced
+> workload cells. Nothing here activates renderer dependencies or production document routes.
 >
 > **Owns:** Document snapshots, renderer-independent Document AST, template and asset versioning,
 > renderer capability selection, artifact reproducibility, rendering workload isolation, and
@@ -14,8 +22,10 @@
 >
 > - Runtime architecture: [`./architecture-spec-v4.md`](./architecture-spec-v4.md)
 > - Durable execution: [`./durable-execution.md`](./durable-execution.md)
-> - Source-of-truth and derived-capability non-interference:
+> - Source-of-truth and derived-capability non-interference (superseded by ADR-0091):
 >   [`../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md`](../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md)
+> - Framework and flagship ERP:
+>   [`../decisions/0091-adopt-framework-and-flagship-erp.md`](../decisions/0091-adopt-framework-and-flagship-erp.md)
 > - State and consistency: [`./state-and-consistency.md`](./state-and-consistency.md)
 > - External integration surface: [`./integration-architecture.md`](./integration-architecture.md)
 > - Financial ledger: [`./financial-ledger.md`](./financial-ledger.md)
@@ -28,7 +38,7 @@
 > - UUIDv7 persistent identities: [`../decisions/0051-adopt-uuidv7-for-persistent-identities.md`](../decisions/0051-adopt-uuidv7-for-persistent-identities.md)
 > - Document platform versus Odoo-style rendering reference:
 >   [`./reference/document-platform-vs-odoo.md`](./reference/document-platform-vs-odoo.md)
-> - Document rendering decision:
+> - Document rendering decision (superseded by ADR-0091):
 >   [`../decisions/0081-adopt-document-ast-rendering-platform.md`](../decisions/0081-adopt-document-ast-rendering-platform.md)
 
 ## 1. Position

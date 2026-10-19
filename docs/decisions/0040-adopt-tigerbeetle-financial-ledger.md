@@ -4,6 +4,8 @@
 - Date: 2026-08-17
 - Supersedes: ADR-0011 and the broad financial-ledger authority rule in ADR-0003
 - Superseded by: ADR-0091 (framework reset)
+- Target engine retained by: ADR-0092 (designated future engine, without this ADR's activation
+  program)
 
 > **Related documents**
 >

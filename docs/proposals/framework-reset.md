@@ -2,6 +2,9 @@
 
 > **Status:** Approved by the owner on 2026-10-19 and recorded in
 > [ADR-0091](../decisions/0091-adopt-framework-and-flagship-erp.md).
+> [ADR-0092](../decisions/0092-retain-tigerbeetle-as-designated-ledger-engine.md) amends the
+> TigerBeetle row of Section 5: TigerBeetle stays the designated future ledger engine behind the
+> port, while PostgreSQL remains the only active authority.
 >
 > **Owns:** The target shape of RITSEI as an ERP framework with a flagship ERP built on it, the
 > case for breaking from the current platform-first foundation, and the phased sequence.

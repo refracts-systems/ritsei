@@ -25,6 +25,31 @@
 - Reference analysis and deferred-stage review:
   [`../architecture/reference/roadmap-track-considerations.md`](../architecture/reference/roadmap-track-considerations.md)
 
+## Framework reset alignment
+
+[ADR-0091](../decisions/0091-adopt-framework-and-flagship-erp.md) sets the current delivery
+sequence: the phases in [`../proposals/framework-reset.md`](../proposals/framework-reset.md#8-phases)
+(module kernel, ledger and numbering, Order-to-Cash, Procure-to-Pay and valuation, developer preview,
+pilots). [ADR-0092](../decisions/0092-retain-tigerbeetle-as-designated-ledger-engine.md) keeps
+TigerBeetle as the designated future ledger engine. The tracks below keep their gate IDs and
+content; their status after those decisions is:
+
+| Track | Status after ADR-0091 and ADR-0092 |
+| --- | --- |
+| `erp`, `domain` | Active; the economic core (D1) is delivered through reset Phases 4–6 |
+| `financial` | Dormant; TigerBeetle stays the designated future engine and activation needs its own ADR. The track does not gate framework or ERP phases |
+| `process` | Deferred until Order-to-Cash and Procure-to-Pay run end to end (ADR-0091 §6); defect fixes only |
+| `integration` | Active; adapters are added only together with an ERP consumer (ADR-0091 §4) |
+| `packs` | Deferred with the process track, on which it depends |
+| `postgres19` | Active |
+| `workload` | Removed by ADR-0091 §5; the `frontend.shell` dependency on `workload.command-reserve` no longer applies |
+| `frontend`, `production` | Active |
+
+Until this index is rewritten around the reset phases, `roadmap.global-exit` excludes the removed
+track, and the dormant financial track does not block it. Deferred tracks keep their gates for when
+they resume. The proposed ERP content of the reset phases is in
+[`../proposals/erp-module-parity-plan.md`](../proposals/erp-module-parity-plan.md).
+
 ## How to read this folder
 
 - This index owns the dependency graph and global exit conditions.
@@ -67,6 +92,7 @@ reviewed by a person against the repository's checks.
 ## Current position
 
 This snapshot was updated on September 3, 2026. The numbers below are a reviewed snapshot, not live output.
+It predates ADR-0091; read it together with [Framework reset alignment](#framework-reset-alignment).
 
 | Area                | Measured position                                                                 | Next decision                                                            |
 | ------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
@@ -90,12 +116,12 @@ caveats are owned by [`../development/releasing.md`](../development/releasing.md
 | ------------- | --------------------- | --------------------------------------------------------------------------------- | ----------------- | ------------------------------------------------------------------ |
 | `erp`         | ERP primitives        | reusable scope, product, document, quantity, money, audit, and event decisions    | `erp.*`           | [`erp-primitives.md`](./erp-primitives.md)                         |
 | `domain`      | Domain maturity       | D0 identity/AuthZ foundations and Level 3 action/event evidence                   | `domain.*`        | [`domain-maturity.md`](./domain-maturity.md)                       |
-| `financial`   | Financial execution   | TigerBeetle transition, reconciliation, rehearsal, and activation                 | `financial.*`     | financial-ledger-execution.md |
+| `financial`   | Financial execution   | TigerBeetle transition, reconciliation, rehearsal, and activation                 | `financial.*`     | dormant; removed `financial-ledger-execution.md` (ADR-0092) |
 | `process`     | Process Studio        | catalog, runtime, fencing, operations, designer, and governed release gates      | `process.*`       | [`process-studio.md`](./process-studio.md)                         |
 | `integration` | External integration  | connector contracts, delivery, reliability, Process Studio bridge, and governance | `integration.*`   | [`integration-surface.md`](./integration-surface.md)               |
 | `packs`       | Business Pack Library | pack resolution, draft materialization, onboarding, and governed upgrades         | `packs.contract`  | [`process-pack-library.md`](./process-pack-library.md)             |
 | `postgres19`  | PostgreSQL 19         | version floor, consistency, read-projection, and operational capability evidence  | `postgres19.*`    | [`postgresql-19.md`](./postgresql-19.md)                           |
-| `workload`    | Workload isolation    | workload classification and protected command-reserve evidence                    | `workload.*`      | workload.md                                     |
+| `workload`    | Workload isolation    | workload classification and protected command-reserve evidence                    | `workload.*`      | removed `workload.md` (ADR-0091)                |
 | `frontend`    | Frontend readiness    | SPA shell, application boundaries, design system, and user-workflow evidence      | `frontend.*`      | [`frontend.md`](./frontend.md)                                     |
 | `production`  | Production profile    | artifacts, install/upgrade rehearsal, and reviewed profile manifests              | `production.*`    | [`production.md`](./production.md)                                 |
 

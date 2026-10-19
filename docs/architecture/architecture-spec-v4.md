@@ -89,7 +89,7 @@
 
 RITSEI remains a modular monolith. This specification defines the application runtime and
 cross-cutting boundaries; financial ledger authority is governed by the dedicated subsystem
-architecture and ADR-0040 without weakening domain ownership, audit, or transactional-integrity
+architecture and ADR-0092 without weakening domain ownership, audit, or transactional-integrity
 principles.
 
 | Area               | Decision                                                              |
@@ -103,7 +103,7 @@ principles.
 | HTTP               | Effect v4 `HttpApi` / `HttpRouter` with native `@effect/platform-node` |
 | Database           | PostgreSQL 19+ logical transactional platform for non-ledger state    |
 | Persistent IDs     | UUIDv7 for new entity, event, and index-visible identities            |
-| Financial execution | TigerBeetle through the FinancialLedgerPort, activation-gated        |
+| Financial execution | PostgreSQL ledger through the FinancialLedgerPort; TigerBeetle designated future engine (ADR-0092) |
 | Query layer        | Drizzle ORM with `postgres.js`                                        |
 | Migrations         | Pinned Drizzle Kit graph with reviewed SQL                            |
 | Stateful ownership | Optional vendor-neutral Stateful Entity Runtime                       |
@@ -346,10 +346,12 @@ revalidated before either dependency is upgraded or downgraded. Detailed rationa
 [ADR-0012](../decisions/0012-use-drizzle-schema-flow-and-effect-http.md).
 
 Financial ledger authority and execution are governed by
-[ADR-0040](../decisions/0040-adopt-tigerbeetle-financial-ledger.md) and the canonical
-[`financial-ledger.md`](./financial-ledger.md) subsystem architecture. TigerBeetle is the required
-financial execution engine for the activated profile; PostgreSQL remains authoritative for
-control-plane metadata, policy, workflow state, audit links, and projections.
+[ADR-0091](../decisions/0091-adopt-framework-and-flagship-erp.md),
+[ADR-0092](../decisions/0092-retain-tigerbeetle-as-designated-ledger-engine.md), and the canonical
+[`financial-ledger.md`](./financial-ledger.md) subsystem architecture. PostgreSQL is the only active
+financial authority. TigerBeetle is the designated future execution engine and becomes authoritative
+only for a profile activated by its own ADR; PostgreSQL remains authoritative for control-plane
+metadata, policy, workflow state, audit links, and projections in every profile.
 
 ## Identifier Contract
 
