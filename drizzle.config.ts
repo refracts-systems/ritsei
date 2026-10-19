@@ -31,6 +31,7 @@ export default defineConfig({
     "accounting",
     "process",
     "messaging",
+    "numbering",
   ],
   breakpoints: true,
   strict: true,

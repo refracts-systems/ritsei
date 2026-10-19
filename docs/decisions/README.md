@@ -118,5 +118,6 @@ current system; ADRs preserve decision history.
 | [`0092`](./0092-retain-tigerbeetle-as-designated-ledger-engine.md) | Retain TigerBeetle as the designated future ledger engine | Accepted |
 | [`0093`](./0093-retain-isolation-runtime-and-analytic-target-designs.md) | Retain workload isolation, the Stateful Entity Runtime, and the analytic plane as target designs | Accepted |
 | [`0094`](./0094-adopt-module-manifest-registry-and-generator.md) | Adopt the module manifest, registry, and generator | Accepted |
+| [`0095`](./0095-adopt-gapless-document-numbering.md) | Adopt gapless document numbering | Proposed |
 
 Accepted ADRs must not be rewritten to alter history. Create a new ADR and use `Supersedes`.

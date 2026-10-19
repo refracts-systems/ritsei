@@ -60,6 +60,7 @@ export {
   eventOutbox as messagingEventOutbox,
   messagingSchema,
 } from "./messaging.ts"
+export { issuedNumbers, numberingSchema, numberSeries } from "./numbering.ts"
 export {
   branches,
   legalEntities,
