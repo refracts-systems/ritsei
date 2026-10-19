@@ -1,7 +1,9 @@
 import { Dialog as KobalteDialog, useDialogContext } from "@kobalte/core/dialog"
 import type { JSX } from "@solidjs/web"
+import { createSignal, onSettled } from "solid-js"
 import { css } from "../generated/css/index.js"
 import { Icon } from "../icons/index.ts"
+import { type ActionMenuRegistry, useActionMenu } from "./action-menu-context.ts"
 import { Button } from "./button.tsx"
 
 export const createDialogOpenChange =
@@ -75,11 +77,17 @@ const styles = {
   }),
 }
 
-function DialogBody(props: DialogProps) {
+function DialogBody(props: DialogProps & { menu: ActionMenuRegistry | null }) {
   const dialog = useDialogContext()
   return (
     <KobalteDialog.Content
       class={styles.content}
+      onCloseAutoFocus={(event: Event) => {
+        // A menu-launched dialog has no trigger button; return focus to the menu control.
+        if (props.menu === null) return
+        event.preventDefault()
+        props.menu.restoreFocus()
+      }}
       onEscapeKeyDown={() => dialog.close()}
       onKeyDown={(event) => {
         if (event.key === "Escape") {
@@ -114,19 +122,31 @@ function DialogBody(props: DialogProps) {
 }
 
 export function Dialog(props: DialogProps) {
+  const menu = useActionMenu()
+  // Uncontrolled dialogs inside an ActionMenu still need state the menu item can open.
+  const [localOpen, setLocalOpen] = createSignal(false)
+  const open = () => props.open ?? localOpen()
+  const setOpen = (next: boolean) =>
+    props.open === undefined ? setLocalOpen(next) : props.onOpenChange?.(next)
+  onSettled(() => {
+    if (menu === null || props.trigger === undefined) return
+    return menu.register({ label: props.trigger, select: () => setOpen(true) })
+  })
   return (
     <KobalteDialog
       modal
-      {...(props.open === undefined ? {} : { open: props.open, onOpenChange: props.onOpenChange })}
+      {...(menu === null && props.open === undefined
+        ? {}
+        : { open: open(), onOpenChange: setOpen })}
     >
-      {props.trigger && (
+      {menu === null && props.trigger && (
         <KobalteDialog.Trigger as={Button} variant={props.triggerVariant} type="button">
           {props.trigger}
         </KobalteDialog.Trigger>
       )}
       <KobalteDialog.Portal>
         <KobalteDialog.Overlay class={styles.overlay} />
-        <DialogBody {...props} />
+        <DialogBody {...props} menu={menu} />
       </KobalteDialog.Portal>
     </KobalteDialog>
   )

@@ -16,6 +16,7 @@ import { ApiRuntime } from "../../shared/runtime.ts"
 import { layout } from "../../ui/foundations/layout.ts"
 import { DataTable } from "../../ui/patterns/data-table.tsx"
 import { EntityWorkspace } from "../../ui/patterns/entity-workspace.tsx"
+import { ActionMenu } from "../../ui/primitives/action-menu.tsx"
 import { Badge } from "../../ui/primitives/badge.tsx"
 import { Button } from "../../ui/primitives/button.tsx"
 import { createDialogOpenChange, Dialog } from "../../ui/primitives/dialog.tsx"
@@ -670,7 +671,7 @@ function PostJournalDialog(props: {
         setLineIndexes([0, 1]),
       )}
       trigger={<span>Post journal</span>}
-      triggerVariant="secondary"
+      triggerVariant="primary"
       title="Post journal"
       description="Submit a balanced, exact two-decimal journal. The backend rechecks account ownership, authorization, and financial policy before accepting it."
     >
@@ -1295,12 +1296,14 @@ export function Accounting(props: {
       }
       headerActions={
         <div class={layout.row}>
-          <ConfigureLegalEntityDialog reload={reload} />
-          <CreateAccountDialog reload={reload} />
-          <ConfigureRevenuePostingDialog accounts={() => accounts.data ?? []} reload={reload} />
-          <OpenPeriodDialog reload={reload} />
           <PostJournalDialog accounts={() => accounts.data ?? []} reload={reload} />
-          <Button type="button" onClick={() => void reload()}>
+          <ActionMenu>
+            <OpenPeriodDialog reload={reload} />
+            <CreateAccountDialog reload={reload} />
+            <ConfigureRevenuePostingDialog accounts={() => accounts.data ?? []} reload={reload} />
+            <ConfigureLegalEntityDialog reload={reload} />
+          </ActionMenu>
+          <Button type="button" variant="ghost" onClick={() => void reload()}>
             Reload Finance
           </Button>
         </div>

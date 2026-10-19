@@ -19,6 +19,7 @@ import { ApiRuntime } from "../../shared/runtime.ts"
 import { layout } from "../../ui/foundations/layout.ts"
 import { DataTable } from "../../ui/patterns/data-table.tsx"
 import { EntityWorkspace } from "../../ui/patterns/entity-workspace.tsx"
+import { ActionMenu } from "../../ui/primitives/action-menu.tsx"
 import { Badge } from "../../ui/primitives/badge.tsx"
 import { Button } from "../../ui/primitives/button.tsx"
 import { createDialogOpenChange, Dialog } from "../../ui/primitives/dialog.tsx"
@@ -1490,13 +1491,15 @@ export function Inventory(props: {
         }
         headerActions={
           <div class={layout.row}>
-            <CreateWarehouseDialog reload={reload} />
-            <CreateItemDialog reload={reload} />
             <ReceiveStockDialog warehouses={warehouseData()} items={itemData()} reload={reload} />
-            <AdjustStockDialog warehouses={warehouseData()} items={itemData()} reload={reload} />
-            <ReserveStockDialog warehouses={warehouseData()} items={itemData()} reload={reload} />
             <CreateTransferDialog warehouses={warehouseData()} items={itemData()} reload={reload} />
-            <Button type="button" onClick={() => void reload()}>
+            <ActionMenu>
+              <AdjustStockDialog warehouses={warehouseData()} items={itemData()} reload={reload} />
+              <ReserveStockDialog warehouses={warehouseData()} items={itemData()} reload={reload} />
+              <CreateItemDialog reload={reload} />
+              <CreateWarehouseDialog reload={reload} />
+            </ActionMenu>
+            <Button type="button" variant="ghost" onClick={() => void reload()}>
               Reload
             </Button>
           </div>

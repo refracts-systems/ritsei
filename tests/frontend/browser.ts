@@ -138,3 +138,9 @@ export const builtApp = Effect.gen(function* () {
     url: `http://127.0.0.1:${address.port}`,
   }
 })
+
+/** Opens the workspace's "More actions" menu and selects one of its commands. */
+export const chooseMoreAction = async (page: Page, name: string) => {
+  await page.getByRole("button", { name: "More actions", exact: true }).click()
+  await page.getByRole("menuitem", { name, exact: true }).click()
+}

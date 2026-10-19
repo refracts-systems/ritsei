@@ -116,6 +116,7 @@
           "apps/web/src/ui/foundations/layout.ts",
           "apps/web/src/ui/foundations/typography.ts",
           "apps/web/src/ui/foundations/format.ts",
+          "apps/web/src/ui/primitives/action-menu.tsx",
           "apps/web/src/ui/primitives/badge.tsx",
           "apps/web/src/ui/primitives/button.tsx",
           "apps/web/src/ui/primitives/dialog.tsx",
@@ -151,7 +152,8 @@
           "apps/web/src/ui/grammar/projection.ts",
           "apps/web/src/ui/grammar/visual-intent.ts",
           "apps/web/src/ui/interaction/contract.ts",
-          "apps/web/src/ui/renderers/cartography/cartography-field.tsx"
+          "apps/web/src/ui/renderers/cartography/cartography-field.tsx",
+          "apps/web/src/ui/primitives/action-menu-context.ts"
         ]
       },
       {
