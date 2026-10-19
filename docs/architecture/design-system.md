@@ -1008,6 +1008,14 @@ until it has:
 - a component or interaction test when behavior is non-trivial; and
 - visual regression coverage when a shared visual contract changes.
 
+Visual regression is enforced by `tests/frontend/visual-contract.test.ts`. It records the computed
+styles (colors, borders, radii, shadows, typography, and control heights) of the shell, primitives,
+and patterns in light and dark themes and compares them with
+`tests/frontend/visual-contract.baseline.json`. Computed styles are deterministic across operating
+systems, so the same baseline holds on Windows and Linux CI; pixel screenshots are not used because
+font rasterization differs between platforms. After an intentional design change, regenerate the
+baseline with `RITSEI_UPDATE_VISUAL_CONTRACT=1` and review the JSON diff with the change.
+
 Frontend activation gates include:
 
 - Vite and SolidJS 2 compatibility;
