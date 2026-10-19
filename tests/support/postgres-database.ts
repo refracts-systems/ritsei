@@ -1,7 +1,7 @@
 import * as Effect from "effect/Effect"
 import postgres, { type Sql } from "postgres"
 
-import { uuidv7 } from "../../foundation/mod.ts"
+import { uuidv7 } from "../../framework/foundation/mod.ts"
 
 export const withTemporaryDatabase = <A, E, R>(
   databaseUrl: string,

@@ -106,10 +106,8 @@ for (const path of files) {
     continue
   }
 
-  if (path.startsWith("modules/")) {
-    const match = path.match(/^modules\/([^/]+)\//)
-    if (match === null) continue
-
+  const match = path.match(/^((?:framework\/modules|erp\/modules|extensions)\/[^/]+)\//)
+  if (match !== null) {
     if (isTestFile(path)) tests.add(path)
     else if (isSourceFile(path) || path.includes("/tests/")) {
       packageNames.add(match[1]!)
@@ -119,12 +117,12 @@ for (const path of files) {
   }
 
   if (
-    path.startsWith("foundation/") ||
-    path.startsWith("platform/") ||
-    path.startsWith("runtime/")
+    path.startsWith("framework/foundation/") ||
+    path.startsWith("framework/platform/") ||
+    path.startsWith("erp/runtime/")
   ) {
     if (isTestFile(path)) tests.add(path)
-    else componentRoots.add(path.split("/")[0]!)
+    else componentRoots.add(path.split("/").slice(0, 2).join("/"))
     continue
   }
 
@@ -162,8 +160,8 @@ for (const path of files) {
 }
 
 for (const packageName of packageNames) {
-  if (!relatedSources.has(`modules/${packageName}/mod.ts`)) {
-    for (const path of await collectTests(`modules/${packageName}/tests`)) tests.add(path)
+  if (!relatedSources.has(`${packageName}/mod.ts`)) {
+    for (const path of await collectTests(`${packageName}/tests`)) tests.add(path)
   }
 }
 

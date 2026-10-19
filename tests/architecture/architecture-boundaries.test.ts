@@ -48,7 +48,8 @@ describe("architecture boundaries", () => {
       "../domains/identity.ts",
       "../shared/api/identity.ts",
       "../shared/contracts/generated/identity.ts",
-      "../../../../modules/identity/mod.ts",
+      "../../../../framework/modules/identity/mod.ts",
+      "../../../../erp/modules/sales/mod.ts",
     ]) {
       assert.isNotEmpty(
         frontend(`import type { Value } from "${specifier}"`, "apps/web/src/ui/button.tsx"),
@@ -73,9 +74,9 @@ describe("architecture boundaries", () => {
       'import "@ritsei/identity"',
       'const service = import("@ritsei/identity")',
       'const service = require("@ritsei/identity")',
-      'import { Database } from "../../../../../foundation/mod.ts"',
-      'import type { Private } from "../../../../../modules/identity/src/service.ts"',
-      'import type { Database } from "../../../../../platform/postgres/mod.ts"',
+      'import { Database } from "../../../../../framework/foundation/mod.ts"',
+      'import type { Private } from "../../../../../framework/modules/identity/src/service.ts"',
+      'import type { Database } from "../../../../../framework/platform/postgres/mod.ts"',
     ])
       assert.isNotEmpty(frontend(source), source)
   })
@@ -87,7 +88,7 @@ describe("architecture boundaries", () => {
       'export type { User } from "@ritsei/identity"',
       'export { type User } from "@ritsei/identity"',
       'type User = import("@ritsei/identity").User',
-      'import type { Value } from "../../../../../foundation/mod.ts"',
+      'import type { Value } from "../../../../../framework/foundation/mod.ts"',
       'import { User } from "../../shared/contracts/generated/identity.ts"',
       '// import { Identity } from "@ritsei/identity"',
     ])

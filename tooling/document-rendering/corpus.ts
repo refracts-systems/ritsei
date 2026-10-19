@@ -1,4 +1,4 @@
-import type { DocumentCapability, DocumentNode } from "../../foundation/mod.ts"
+import type { DocumentCapability, DocumentNode } from "../../framework/foundation/mod.ts"
 
 export type DocumentBenchmarkFixture = {
   readonly name: string

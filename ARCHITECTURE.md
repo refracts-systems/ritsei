@@ -55,10 +55,13 @@ Procurement ownership, the Purchase Order lifecycle, and receipt activation gate
 
 ## Repository taxonomy
 
-- `foundation/`: generic primitives and contracts;
-- `modules/`: business capabilities with public `mod.ts` entries;
-- `platform/`: concrete infrastructure adapters;
-- `runtime/`: application composition roots and transport workers;
+- `framework/foundation/`: generic primitives and contracts;
+- `framework/platform/`: concrete infrastructure adapters;
+- `framework/modules/`: framework capabilities (auth, identity, authorization, messaging,
+  integrations, catalog) with public `mod.ts` entries;
+- `erp/modules/`: flagship ERP business modules with public `mod.ts` entries;
+- `erp/runtime/`: ERP composition roots, API server, and workers;
+- `extensions/`: modules from other developers, empty until one exists;
 - `apps/web/`: the separate frontend application; and
 - `db/`: schema and migration authority.
 

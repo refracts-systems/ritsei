@@ -5,19 +5,17 @@ message: Persistent identities must use the foundation uuidv7() helper, not cryp
 files:
   - apps/**/*.ts
   - apps/**/*.tsx
-  - foundation/**/*.ts
-  - foundation/**/*.tsx
-  - modules/**/*.ts
-  - modules/**/*.tsx
-  - platform/**/*.ts
-  - platform/**/*.tsx
-  - runtime/**/*.ts
-  - runtime/**/*.tsx
+  - framework/**/*.ts
+  - framework/**/*.tsx
+  - erp/**/*.ts
+  - erp/**/*.tsx
+  - extensions/**/*.ts
+  - extensions/**/*.tsx
   - tests/**/*.ts
   - tests/**/*.tsx
   - tooling/**/*.ts
   - tooling/**/*.tsx
 ignores:
-  - modules/process/src/postgres.ts
+  - erp/modules/process/src/postgres.ts
 rule:
   pattern: crypto.randomUUID()

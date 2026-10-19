@@ -9,7 +9,7 @@ Create the smallest RITSEI domain package with explicit semantic ownership, a pu
 
 # Use This Skill When
 
-- adding a new directory under `modules/`;
+- adding a new directory under `framework/modules/`, `erp/modules/`, or `extensions/`;
 - introducing a new authoritative business capability or PostgreSQL schema owner;
 - a traditional feature must be split into an orthogonal capability;
 - the request says “add a domain/module for …”.
@@ -24,7 +24,7 @@ Create the smallest RITSEI domain package with explicit semantic ownership, a pu
 
 Inspect first:
 
-- the closest implemented module, usually [`modules/party`](../../../modules/party/mod.ts), [`modules/inventory`](../../../modules/inventory/mod.ts), or [`modules/accounting`](../../../modules/accounting/mod.ts);
+- the closest implemented module, usually [`erp/modules/party`](../../../erp/modules/party/mod.ts), [`erp/modules/inventory`](../../../erp/modules/inventory/mod.ts), or [`erp/modules/accounting`](../../../erp/modules/accounting/mod.ts);
 - [`db/ownership.toml`](../../../db/ownership.toml);
 - the semantic-owner and module-contract rules in the canonical architecture;
 - related ADRs and the affected composite process.

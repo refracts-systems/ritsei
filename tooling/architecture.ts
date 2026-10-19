@@ -4,15 +4,11 @@ import ts from "typescript"
 import { isMain } from "./entrypoint.ts"
 import { collectSourceFiles, type SourceFile } from "./source-files.ts"
 
-const sourceRoots = [
-  "apps",
-  "foundation",
-  "modules",
-  "platform",
-  "runtime",
-  "tests",
-  "tooling",
-] as const
+const sourceRoots = ["apps", "framework", "erp", "extensions", "tests", "tooling"] as const
+
+// Module packages live in these roots (ADR-0091): framework modules, the flagship ERP, extensions.
+const packageRoots = ["framework/modules", "erp/modules", "extensions"] as const
+const packagePath = /^((?:framework\/modules|erp\/modules|extensions)\/[^/]+)\/(.+)$/
 
 const normalizePath = (path: string) => path.replaceAll("\\", "/")
 
@@ -92,7 +88,7 @@ const resolveLocal = (file: string, specifier: string): string | undefined => {
     const [name, ...path] = specifier.slice("@ritsei/".length).split("/")
     return name === undefined || name === ""
       ? undefined
-      : `modules/${name}/${path.length > 0 ? path.join("/") : "mod.ts"}`
+      : `framework/modules/${name}/${path.length > 0 ? path.join("/") : "mod.ts"}`
   }
   if (specifier.startsWith("@/") || specifier.startsWith("~/")) {
     return `apps/web/src/${specifier.slice(2)}`
@@ -104,11 +100,11 @@ const resolveLocal = (file: string, specifier: string): string | undefined => {
 const packageTarget = (file: string, specifier: string) => {
   const resolved = resolveLocal(file, specifier)
   if (resolved === undefined) return undefined
-  const target = normalizePath(resolved).match(/^modules\/([^/]+)\/(.+)$/)
+  const target = normalizePath(resolved).match(packagePath)
   return target === null ? undefined : { name: target[1]!, path: target[2]! }
 }
 
-const containingPackage = (path: string) => normalizePath(path).match(/^modules\/([^/]+)\//)?.[1]
+const containingPackage = (path: string) => normalizePath(path).match(packagePath)?.[1]
 
 const isPublicEntry = (path: string) => path === "mod.ts" || path === "mod.tsx"
 
@@ -131,13 +127,41 @@ export const analyzePublicPackageImports = (
       }
       if (sourcePackage === target.name || isPublicEntry(target.path)) continue
       failures.push(
-        `${path}: cross-package import ${JSON.stringify(
-          specifier,
-        )} must use modules/${target.name}/mod.ts`,
+        `${path}: cross-package import ${JSON.stringify(specifier)} must use ${target.name}/mod.ts`,
       )
     }
   }
 
+  return [...new Set(failures)].toSorted()
+}
+
+const layerOf = (path: string) =>
+  path.startsWith("framework/")
+    ? "framework"
+    : path.startsWith("erp/")
+      ? "erp"
+      : path.startsWith("extensions/")
+        ? "extensions"
+        : undefined
+
+const forbiddenLayers: Readonly<Record<string, readonly string[]>> = {
+  framework: ["erp", "extensions"],
+  erp: ["extensions"],
+}
+
+export const analyzeLayerImports = (files: readonly SourceFile[]): readonly string[] => {
+  const failures: string[] = []
+  for (const file of files) {
+    const path = normalizePath(file.path)
+    const forbidden = forbiddenLayers[layerOf(path) ?? ""] ?? []
+    for (const { specifier } of extractModuleImports(file)) {
+      const target = resolveLocal(path, specifier)
+      const targetLayer = target === undefined ? undefined : layerOf(normalizePath(target))
+      if (targetLayer !== undefined && forbidden.includes(targetLayer)) {
+        failures.push(`${path}: ${layerOf(path)} must not import ${targetLayer}: ${specifier}`)
+      }
+    }
+  }
   return [...new Set(failures)].toSorted()
 }
 
@@ -179,17 +203,24 @@ const analyzeFrontendSource = (file: SourceFile): readonly string[] => {
       target &&
       (uiApplicationPath.test(target) ||
         uiSharedApplicationPath.test(target) ||
-        target.startsWith("modules/"))
+        /^(?:framework|erp|extensions)\//.test(target))
     ) {
       return [`${path}: shared UI cannot import application or domain-specific modules: ${target}`]
     }
-    if (target && /^modules\/[^/]+\/(?!mod\.tsx?$)/.test(target)) {
+    if (
+      target &&
+      /^(?:framework\/modules|erp\/modules|extensions)\/[^/]+\/(?!mod\.tsx?$)/.test(target)
+    ) {
       return [`${path}: frontend imports must use the public module entry point: ${target}`]
     }
-    if (target && /^(?:platform|runtime|db|tooling)\//.test(target)) {
+    if (target && /^(?:framework\/platform|erp\/runtime|db|tooling)\//.test(target)) {
       return [`${path}: frontend cannot import backend implementation: ${target}`]
     }
-    if (!typeOnly && target && /^(?:modules|foundation)\//.test(target)) {
+    if (
+      !typeOnly &&
+      target &&
+      /^(?:framework\/(?:modules|foundation)|erp\/modules|extensions)\//.test(target)
+    ) {
       return [`${path}: production frontend cannot runtime import backend ${target}`]
     }
     return []
@@ -232,10 +263,10 @@ const directMutationMethod = new Set([
 const isProviderImport = (specifier: string) =>
   providerSpecifiers.some((pattern) => pattern.test(specifier))
 const isPersistenceBoundary = (path: string) =>
-  path === "modules/integrations/src/reliability-store.ts" ||
-  path === "modules/integrations/src/governance-store.ts"
+  path === "framework/modules/integrations/src/reliability-store.ts" ||
+  path === "framework/modules/integrations/src/governance-store.ts"
 const isAiSurface = (path: string) =>
-  path.startsWith("modules/integrations/") ||
+  path.startsWith("framework/modules/integrations/") ||
   /(?:^|\/)(?:ai|agent|agents|recommendation|recommendations)(?:\/|[-_.]|$)/i.test(path)
 
 const isPrivateSpecifier = (specifier: string) =>
@@ -267,7 +298,7 @@ export const analyzeAiBoundary = (files: readonly SourceFile[]): readonly string
     const path = normalizePath(file.path)
     const specifiers = extractModuleSpecifiers(file)
     const providerImports = specifiers.filter(isProviderImport)
-    const approved = path.startsWith("modules/integrations/")
+    const approved = path.startsWith("framework/modules/integrations/")
 
     if (isPersistenceBoundary(path)) {
       failures.push(
@@ -286,7 +317,7 @@ export const analyzeAiBoundary = (files: readonly SourceFile[]): readonly string
           (specifier) =>
             `${path}: model/provider import ${JSON.stringify(
               specifier,
-            )} must stay under modules/integrations/`,
+            )} must stay under framework/modules/integrations/`,
         ),
       )
     }
@@ -312,17 +343,25 @@ export const checkArchitecture = async (): Promise<readonly string[]> => {
     await Promise.all(sourceRoots.map((root) => collectSourceFiles(root, [".ts", ".tsx"])))
   ).flat()
   const packageNames: string[] = []
-  for (const entry of await readdir("modules", { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue
-    try {
-      if ((await stat(`modules/${entry.name}/mod.ts`)).isFile()) packageNames.push(entry.name)
-    } catch (cause) {
-      if ((cause as NodeJS.ErrnoException).code !== "ENOENT") throw cause
+  for (const root of packageRoots) {
+    const entries = await readdir(root, { withFileTypes: true }).catch((cause: unknown) => {
+      if ((cause as NodeJS.ErrnoException).code === "ENOENT") return []
+      throw cause
+    })
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue
+      try {
+        if ((await stat(`${root}/${entry.name}/mod.ts`)).isFile())
+          packageNames.push(`${root}/${entry.name}`)
+      } catch (cause) {
+        if ((cause as NodeJS.ErrnoException).code !== "ENOENT") throw cause
+      }
     }
   }
 
   return [
     ...analyzePublicPackageImports(files, packageNames),
+    ...analyzeLayerImports(files),
     ...files.filter(({ path }) => isFrontendSource(path)).flatMap(analyzeFrontend),
     ...analyzeAiBoundary(files),
   ].toSorted()

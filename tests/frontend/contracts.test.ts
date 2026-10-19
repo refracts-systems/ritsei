@@ -54,13 +54,13 @@ import {
   CapabilityDefinitions,
   DirectCapabilityGrant,
   TenantMembership,
-} from "../../modules/authorization/mod.ts"
+} from "../../framework/modules/authorization/mod.ts"
 import {
   CreateUserAccountInput,
   UpdateUserAccountInput,
   UserAccount,
-} from "../../modules/identity/mod.ts"
-import { Party, PartyDetail, PartyDirectoryEntry } from "../../modules/party/mod.ts"
+} from "../../framework/modules/identity/mod.ts"
+import { Party, PartyDetail, PartyDirectoryEntry } from "../../erp/modules/party/mod.ts"
 import {
   ApiConflict,
   ApiForbidden,
@@ -68,7 +68,7 @@ import {
   ApiServiceUnavailable,
   ApiUnauthorized,
   RitseiApi,
-} from "../../runtime/api/api.ts"
+} from "../../erp/runtime/api/api.ts"
 import {
   accountingSource,
   authorizationSource,
@@ -126,7 +126,7 @@ it("generates deterministic browser-only contracts and canonical endpoint paths"
     ),
     authSource(),
   )
-  assert.notInclude(authSource(), "runtime/")
+  assert.notInclude(authSource(), "erp/runtime/")
   assert.equal(
     readFileSync(
       new URL("../../apps/web/src/shared/contracts/generated/identity.ts", import.meta.url),
@@ -135,7 +135,7 @@ it("generates deterministic browser-only contracts and canonical endpoint paths"
     source(),
   )
   assert.notInclude(source(), "modules/")
-  assert.notInclude(source(), "runtime/")
+  assert.notInclude(source(), "erp/runtime/")
   assert.equal(
     readFileSync(
       new URL("../../apps/web/src/shared/contracts/generated/authorization.ts", import.meta.url),
@@ -144,7 +144,7 @@ it("generates deterministic browser-only contracts and canonical endpoint paths"
     authorizationSource(),
   )
   assert.notInclude(authorizationSource(), "modules/")
-  assert.notInclude(authorizationSource(), "runtime/")
+  assert.notInclude(authorizationSource(), "erp/runtime/")
   assert.equal(
     readFileSync(
       new URL("../../apps/web/src/shared/contracts/generated/party.ts", import.meta.url),
@@ -153,7 +153,7 @@ it("generates deterministic browser-only contracts and canonical endpoint paths"
     partySource(),
   )
   assert.notInclude(partySource(), "modules/")
-  assert.notInclude(partySource(), "runtime/")
+  assert.notInclude(partySource(), "erp/runtime/")
   assert.equal(
     readFileSync(
       new URL("../../apps/web/src/shared/contracts/generated/inventory.ts", import.meta.url),
@@ -162,7 +162,7 @@ it("generates deterministic browser-only contracts and canonical endpoint paths"
     inventorySource(),
   )
   assert.notInclude(inventorySource(), "modules/")
-  assert.notInclude(inventorySource(), "runtime/")
+  assert.notInclude(inventorySource(), "erp/runtime/")
   assert.equal(
     readFileSync(
       new URL("../../apps/web/src/shared/contracts/generated/sales.ts", import.meta.url),
@@ -171,7 +171,7 @@ it("generates deterministic browser-only contracts and canonical endpoint paths"
     salesSource(),
   )
   assert.notInclude(salesSource(), "modules/")
-  assert.notInclude(salesSource(), "runtime/")
+  assert.notInclude(salesSource(), "erp/runtime/")
   assert.equal(
     readFileSync(
       new URL("../../apps/web/src/shared/contracts/generated/accounting.ts", import.meta.url),
@@ -180,7 +180,7 @@ it("generates deterministic browser-only contracts and canonical endpoint paths"
     accountingSource(),
   )
   assert.notInclude(accountingSource(), "modules/")
-  assert.notInclude(accountingSource(), "runtime/")
+  assert.notInclude(accountingSource(), "erp/runtime/")
   assert.equal(
     readFileSync(
       new URL("../../apps/web/src/shared/contracts/generated/process.ts", import.meta.url),

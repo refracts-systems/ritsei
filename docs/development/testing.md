@@ -35,16 +35,16 @@ Every behavioral change should select the smallest useful combination of:
 All TypeScript tests use `@effect/vitest` and run through pnpm scripts. Effect
 programs, including scoped resources, use `it.effect`; pure synchronous tests
 use regular `it`. Tests return Effects directly rather than invoking Effect
-runtime runners. Test discovery is limited to `apps/`, `foundation/`, `modules/`,
-`platform/`, `runtime/`, and `tests/`; vendored reference trees are excluded. The
+runtime runners. Test discovery is limited to `apps/`, `framework/`, `erp/`, `extensions/`,
+and `tests/`; vendored reference trees are excluded. The
 contract-test configuration discovers every module, foundation, platform, and runtime test plus
 architecture tests, so adding a business module does not require registering it in `package.json`.
 Structural `ast-grep` YAML rule tests remain on the `ast-grep` runner.
 
 ## Public Contract Tests
 
-The first public user-account contract implementation is `modules/identity/mod.ts`, with
-behavioral tests under `modules/identity/tests/`. Each exported module contract
+The first public user-account contract implementation is `framework/modules/identity/mod.ts`, with
+behavioral tests under `framework/modules/identity/tests/`. Each exported module contract
 must test:
 
 - successful behavior;
@@ -274,7 +274,7 @@ Test layers must not silently weaken:
 - concurrency behavior;
 - tagged failures.
 
-The durable `modules/process` service is an intentional exception to the usual in-memory test
+The durable `erp/modules/process` service is an intentional exception to the usual in-memory test
 layer pattern. Its job leases, fencing, replay, recovery, and workflow state are PostgreSQL-backed
 semantics; a fake memory layer would provide misleading coverage unless it proves those same
 invariants. Process tests therefore use the PostgreSQL-backed implementation until a deterministic

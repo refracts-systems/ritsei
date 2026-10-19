@@ -318,7 +318,7 @@ Level 3 until each receives its own action/event and recovery contract.
 
 ## Runtime Composition Status
 
-`ProcurementLive` is installed in the `runtime/layers.ts` `ApplicationLive` composition with Database,
+`ProcurementLive` is installed in the `erp/runtime/layers.ts` `ApplicationLive` composition with Database,
 Authorization, Party, and Inventory dependencies. The Effect HTTP API exposes the bounded
 SupplierAccount, PurchaseOrder, and GoodsReceipt operations; no worker or Process Studio route
 consumes Procurement. Keep API handlers on the public package contract rather than importing
@@ -328,20 +328,20 @@ persistence internals.
 
 | Concern | Owner path |
 | --- | --- |
-| Public schemas and service contract | `modules/procurement/src/contract.ts` |
-| Public tagged errors | `modules/procurement/src/errors.ts` |
-| Service compatibility surface | `modules/procurement/src/service.ts` |
-| Semantic persistence port | `modules/procurement/src/store.ts` |
-| PostgreSQL implementation | `modules/procurement/src/postgres.ts` |
-| Deterministic test implementation | `modules/procurement/src/memory.ts` |
-| Named production/test layers | `modules/procurement/src/layers.ts` |
-| Public package exports | `modules/procurement/mod.ts` |
-| Capability constants | `modules/procurement/src/capabilities.ts` |
-| Closed authorization catalog | `modules/authorization/src/capabilities.ts` |
+| Public schemas and service contract | `erp/modules/procurement/src/contract.ts` |
+| Public tagged errors | `erp/modules/procurement/src/errors.ts` |
+| Service compatibility surface | `erp/modules/procurement/src/service.ts` |
+| Semantic persistence port | `erp/modules/procurement/src/store.ts` |
+| PostgreSQL implementation | `erp/modules/procurement/src/postgres.ts` |
+| Deterministic test implementation | `erp/modules/procurement/src/memory.ts` |
+| Named production/test layers | `erp/modules/procurement/src/layers.ts` |
+| Public package exports | `erp/modules/procurement/mod.ts` |
+| Capability constants | `erp/modules/procurement/src/capabilities.ts` |
+| Closed authorization catalog | `framework/modules/authorization/src/capabilities.ts` |
 | Drizzle schema | `db/schema/procurement.ts` |
 | Migration history | `db/migrations/` |
-| Contract tests | `modules/procurement/tests/procurement.test.ts` |
-| PostgreSQL invariant tests | `modules/procurement/tests/procurement.postgres.test.ts` |
+| Contract tests | `erp/modules/procurement/tests/procurement.test.ts` |
+| PostgreSQL invariant tests | `erp/modules/procurement/tests/procurement.postgres.test.ts` |
 
 Persistence tables, repositories, Drizzle query types, confirmation keys, and migration helpers are
 private and must not be re-exported.

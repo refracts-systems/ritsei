@@ -116,7 +116,7 @@ with exact tenant/resource coverage. The backfill rejects missing, duplicate, an
 before changing any row, runs in one transaction, preserves row identity, and never infers Legal
 Entity ownership.
 
-**Exit:** `runtime/migrator/p0-backfill.ts` and its executable test prove exact coverage and typed
+**Exit:** `erp/runtime/migrator/p0-backfill.ts` and its executable test prove exact coverage and typed
 failure for each mapping error; the reviewed vocabulary and ownership decisions remain stable.
 
 ### P1 — Product, Quantity, and Location
