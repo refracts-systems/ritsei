@@ -56,3 +56,4 @@ export {
   PartyEventPublisherLive,
   PartyLive,
 } from "./src/layers.ts"
+export { PartyModule } from "./manifest.ts"

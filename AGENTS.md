@@ -104,7 +104,10 @@ contract.ts -> errors.ts -> service.ts -> store.ts -> postgres.ts/memory.ts -> l
 - `store.ts`: private semantic persistence ports; `postgres.ts` is the Drizzle implementation;
   `memory.ts` exists when a deterministic test implementation can preserve the same invariants.
 - `layers.ts`: named production/test composition; `mod.ts` exports only contract, errors,
-  operations, and layers.
+  operations, layers, and the module manifest.
+- `manifest.ts`: the module's declared dependencies, schemas, capabilities, released actions and
+  events, consumed events, HTTP groups, and pages (ADR-0094); keep it in step with the code.
+  Scaffold new ERP modules with `pnpm run ritsei new module <name>`.
 - `erp/runtime/api/api.ts` defines transport schemas and routes; `erp/runtime/api/handlers.ts` stays thin.
 - Preserve tenant scope, authorization, tagged failures, transactions, idempotency, events, and
   financial/workflow authority. Add database constraints and invariant tests for every new mutable

@@ -1,7 +1,7 @@
 import * as Context from "effect/Context"
 import * as Schema from "effect/Schema"
 
-import { defineEventCatalogEntry } from "../../catalog/mod.ts"
+import { defineEventCatalogEntry } from "../../module/mod.ts"
 import type { MessagingService } from "../../messaging/mod.ts"
 
 const NonEmptyString = Schema.String.check(Schema.isPattern(/\S/))

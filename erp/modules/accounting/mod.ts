@@ -204,3 +204,4 @@ export type {
   JournalLine as JournalLineType,
   RevenuePostingProfile as RevenuePostingProfileType,
 } from "./src/service.ts"
+export { AccountingModule } from "./manifest.ts"

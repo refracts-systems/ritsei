@@ -13,7 +13,7 @@ import {
   isDatabaseConstraint,
   uuidv7,
 } from "../../../foundation/mod.ts"
-import { CompatibilityRangeSchema } from "../../catalog/mod.ts"
+import { CompatibilityRangeSchema } from "../../module/mod.ts"
 import {
   ExternalConnectorNotReviewed,
   ExternalConnectorRetired,

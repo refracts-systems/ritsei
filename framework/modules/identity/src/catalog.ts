@@ -1,5 +1,5 @@
 import { DatabaseFailure } from "../../../foundation/mod.ts"
-import { defineActionCatalogEntry } from "../../catalog/mod.ts"
+import { defineActionCatalogEntry } from "../../module/mod.ts"
 import { EventIdempotencyConflict } from "../../messaging/mod.ts"
 import { IdentityCapabilities } from "./capabilities.ts"
 import { CreateUserAccountForTenantInput, UserAccount } from "./contract.ts"

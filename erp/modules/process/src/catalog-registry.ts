@@ -4,7 +4,7 @@ import * as Schema from "effect/Schema"
 import type {
   DomainActionCatalogEntry,
   DomainEventCatalogEntry,
-} from "../../../../framework/modules/catalog/mod.ts"
+} from "../../../../framework/modules/module/mod.ts"
 
 export type ProcessCatalogEntry = DomainActionCatalogEntry | DomainEventCatalogEntry
 

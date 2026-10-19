@@ -11,7 +11,7 @@ import {
   CatalogStabilitySchema,
   type CompatibilityRange,
   CompatibilityRangeSchema,
-} from "../../catalog/mod.ts"
+} from "../../module/mod.ts"
 
 export const ExternalIntegrationProfile = {
   actionTransport: "HTTPS + JSON",

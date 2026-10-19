@@ -27,7 +27,7 @@ import {
 import {
   type DomainActionCatalogEntry,
   type DomainEventCatalogEntry,
-} from "../../../../framework/modules/catalog/mod.ts"
+} from "../../../../framework/modules/module/mod.ts"
 import {
   IdentityTypedActionCatalog,
   IdentityTypedEventCatalog,

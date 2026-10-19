@@ -215,3 +215,4 @@ export type {
   ProcessService as ProcessServiceShape,
   WorkflowRun as WorkflowRunType,
 } from "./src/service.ts"
+export { ProcessModule } from "./manifest.ts"
