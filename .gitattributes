@@ -1,0 +1,5 @@
+# Check out text files with LF on every platform, overriding core.autocrlf.
+* text=auto eol=lf
+
+# Vendored references keep their upstream bytes.
+vendor/** -text
