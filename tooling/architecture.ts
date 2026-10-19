@@ -83,7 +83,7 @@ export const extractModuleSpecifiers = (file: SourceFile | string): readonly str
   return [...new Set(imports.map(({ specifier }) => specifier))]
 }
 
-const resolveLocal = (file: string, specifier: string): string | undefined => {
+export const resolveLocal = (file: string, specifier: string): string | undefined => {
   if (specifier.startsWith("@ritsei/")) {
     const [name, ...path] = specifier.slice("@ritsei/".length).split("/")
     return name === undefined || name === ""

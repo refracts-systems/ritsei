@@ -1,6 +1,6 @@
 import { DatabaseFailure } from "../../../../framework/foundation/mod.ts"
 import { AuthorizationDenied } from "../../../../framework/modules/authorization/mod.ts"
-import { defineActionCatalogEntry } from "../../../../framework/modules/catalog/mod.ts"
+import { defineActionCatalogEntry } from "../../../../framework/modules/module/mod.ts"
 import { EventIdempotencyConflict } from "../../../../framework/modules/messaging/mod.ts"
 import { ProcurementCapabilities } from "./capabilities.ts"
 import { ConfirmPurchaseOrderInput, PurchaseOrder } from "./contract.ts"

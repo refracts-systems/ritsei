@@ -75,3 +75,4 @@ export {
 } from "./src/errors.ts"
 export type { PurchaseOrderConfirmedEventPayload as PurchaseOrderConfirmedEventPayloadType } from "./src/events.ts"
 export { makeProcurementService, makeProcurementTestLayer, ProcurementLive } from "./src/layers.ts"
+export { ProcurementModule } from "./manifest.ts"

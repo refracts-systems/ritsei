@@ -19,3 +19,4 @@ export {
 } from "./src/errors.ts"
 export type { CommunicationTestLayerOptions } from "./src/layers.ts"
 export { makeCommunicationTestLayer } from "./src/layers.ts"
+export { CommunicationModule } from "./manifest.ts"

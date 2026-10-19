@@ -46,3 +46,4 @@ export {
   SalesOrderNotFound,
 } from "./src/errors.ts"
 export { makeSalesService, makeSalesTestLayer, SalesLive } from "./src/layers.ts"
+export { SalesModule } from "./manifest.ts"

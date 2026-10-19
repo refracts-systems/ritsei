@@ -337,7 +337,7 @@ Each item is a difficult-to-reverse ownership or protocol decision. None is deci
 | D5 | Tax ownership: neutral `tax` module plus `localization-id`; tax lines owned by the document owner, computed by the tax contract | Applies [ADR-0016](../decisions/0016-isolate-jurisdiction-localization.md) to a concrete owner | Phase 5 |
 | D6 | Multi-currency: currency registry and exponent, exchange-rate owner, transaction versus base amounts, revaluation | [ADR-0042](../decisions/0042-exact-financial-amount-boundary.md) fixes two-decimal base-currency money | Post-pilot |
 | D7 | Sales customers become references to a Party customer role (as Supplier Accounts already do), with a forward migration | Changes customer identity ownership described in [`sales.md`](../architecture/sales.md) | Phase 5 |
-| D8 | Module manifest and extension-point contract (custom fields, hooks, document actions, versioning, contract tests), absorbing the action/event catalog as the released-contract section (Section 10.3) | Replaces the superseded plugin model ([ADR-0007](../decisions/0007-adopt-tiered-plugin-trust.md), [ADR-0023](../decisions/0023-adopt-capability-oriented-plugin-contribution.md)) | Phase 3 |
+| D8 | Module manifest and extension-point contract (custom fields, hooks, document actions, versioning, contract tests), absorbing the action/event catalog as the released-contract section (Section 10.3) | Replaces the superseded plugin model ([ADR-0007](../decisions/0007-adopt-tiered-plugin-trust.md), [ADR-0023](../decisions/0023-adopt-capability-oriented-plugin-contribution.md)) | Phase 3; manifest, registry, and generator decided by [ADR-0094](../decisions/0094-adopt-module-manifest-registry-and-generator.md); extension points still open |
 | D9 | Document numbering: scopes, gapless versus gap-tolerant series, allocation at post time, concurrency, correction behavior | Legal numbering for invoices and tax documents is hard to change after go-live | Phase 4 |
 | D10 | Approvals service: rule shape, approver resolution, delegation, SoD enforcement, relation to future Process IR human tasks | Crosses authorization and every document owner | Phase 4 |
 | D11 | Intercompany transactions between legal entities of one tenant | Cross-entity posting and elimination rules | Post-pilot |
@@ -353,7 +353,7 @@ are proposed post-pilot waves; their order is a default that pilot evidence may 
 
 | Phase | ERP content | Depends on | Prerequisites (Section 6) | ERP exit criteria |
 | --- | --- | --- | --- | --- |
-| 3. Module kernel | Manifests for the seven existing modules; no new business scope | Phase 2 | Manifest, registry, generator (D8) | Every `erp/` module declares owned schema, capabilities, events, and routes; boundary checks reject undeclared cross-module imports |
+| 3. Module kernel | Manifests for the eight existing modules; no new business scope. Manifest, registry, drift test, and generator are in place (ADR-0094); routes and pages moving into modules remain | Phase 2 | Manifest, registry, generator (D8) | Every `erp/` module declares owned schema, capabilities, events, and routes; boundary checks reject undeclared cross-module imports |
 | 4. Ledger and numbering | PostgreSQL ledger rewrite in `accounting` through `FinancialLedgerPort`, keeping the TigerBeetle path (ADR-0092); account hierarchy and COA template mechanism; posting-rule contract; trial balance and GL detail; Party addresses, contacts, bank accounts | 3 | Numbering (D9), approvals (D10), report kit, multi-legal-entity scoping | Balanced journals only (database-enforced); period close rejects pending work; numbered journals per legal entity and fiscal year; trial balance equals the sum of posted lines in tests |
 | 5. Order-to-Cash | `product` module (D1); customer as Party role (D7); quotation lifecycle; sales price lists and discounts; neutral `tax` module (D5); delivery (D4); `billing` customer invoices and credit notes; `settlement` receipts, allocation, payment terms, AR aging, customer statement (D2); invoice PDF and email | 4 | Extension points (custom fields on Product and Sales documents), PDFs, jobs, search | A seeded tenant quotes, confirms, delivers partially, invoices with tax, collects, and issues a credit note; AR aging equals the receivables control account; stock movements equal delivered quantities |
 | 6. Procure-to-Pay and valuation | Supplier prices; PO approval; supplier bill with three-way match; purchase returns and receipt reversal; outgoing payments and AP aging; moving-average valuation and COGS posting (D3); stock count | 5 | Approvals, attachments | Bill cannot exceed received quantity without an approved variance; AP aging equals the payables control account; inventory valuation report equals the inventory GL account in tests |
@@ -472,6 +472,10 @@ Recommended:
    a module declares everything it releases in one place. Record that move and the final name in the
    D8 ADR, and update the reset proposal's target tree (`erp/catalog/` to `erp/product/`) in the D1
    ADR.
+
+Done for items 2 and 3 by [ADR-0094](../decisions/0094-adopt-module-manifest-registry-and-generator.md):
+the catalog now lives in `framework/modules/module`, and each manifest's `actions` and `events` are
+the module's released contracts. Item 1 waits for the D1 ADR.
 
 ## 11. Open questions for the owner
 

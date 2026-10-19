@@ -213,9 +213,13 @@ A module may publicly expose:
 - Effect service interfaces;
 - tagged domain errors;
 - Effect Schema DTOs;
-- production and test layers.
+- production and test layers;
+- its module manifest.
 
-Table definitions and repository implementations remain internal.
+Table definitions and repository implementations remain internal. The manifest declares the
+module's dependencies, owned schemas, capabilities, released actions and events, consumed events,
+HTTP groups, and pages; the composition root's registry and an architecture test keep it in step
+with the code ([ADR-0094](../decisions/0094-adopt-module-manifest-registry-and-generator.md)).
 
 Effect-backed packages use the smallest boundary shape justified by their persistence and test
 semantics:

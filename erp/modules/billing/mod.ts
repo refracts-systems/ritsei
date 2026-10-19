@@ -1,1 +1,1 @@
-export {}
+export { BillingModule } from "./manifest.ts"

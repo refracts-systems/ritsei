@@ -72,3 +72,4 @@ export {
   WarehouseLegalEntityNotFound,
 } from "./src/errors.ts"
 export { InventoryLive, makeInventoryService, makeInventoryTestLayer } from "./src/layers.ts"
+export { InventoryModule } from "./manifest.ts"

@@ -6,7 +6,7 @@ import { collectSourceFiles } from "./source-files.ts"
 
 const ownershipFile = "db/ownership.toml"
 
-const parseOwnership = (content: string) => {
+export const parseOwnership = (content: string) => {
   const schemas = new Map<string, string>()
   let inSchemas = false
 

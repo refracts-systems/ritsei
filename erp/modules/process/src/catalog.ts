@@ -1,6 +1,6 @@
 import * as Schema from "effect/Schema"
 
-import { defineEventCatalogEntry } from "../../../../framework/modules/catalog/mod.ts"
+import { defineEventCatalogEntry } from "../../../../framework/modules/module/mod.ts"
 
 const Uuid = Schema.String.check(Schema.isUUID())
 

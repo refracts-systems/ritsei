@@ -107,7 +107,7 @@ integration.*    -> integrations
 messaging.*      -> messaging
 ```
 
-`framework/modules/catalog` is contract-only and owns no PostgreSQL schema. Planned domains do not receive a
+`framework/modules/module` is contract-only and owns no PostgreSQL schema. Planned domains do not receive a
 schema until a concrete invariant requires one and the ownership registry is updated. A module must
 not perform arbitrary mutations against another module's schema; it must call the owner through a
 typed public contract.

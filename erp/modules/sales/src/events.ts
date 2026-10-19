@@ -1,7 +1,7 @@
 import * as Schema from "effect/Schema"
 
 import { FinancialMajorAmount } from "../../../../framework/foundation/mod.ts"
-import { defineEventCatalogEntry } from "../../../../framework/modules/catalog/mod.ts"
+import { defineEventCatalogEntry } from "../../../../framework/modules/module/mod.ts"
 
 const Uuid = Schema.String.check(Schema.isUUID())
 const Money = FinancialMajorAmount
