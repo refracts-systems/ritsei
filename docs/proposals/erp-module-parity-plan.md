@@ -429,6 +429,8 @@ content:
   rule; trust tiers kept as target design.
 - [`document-rendering.md`](../architecture/document-rendering.md): ADR-0081 marked superseded; the
   document kept as the growth path for `framework/documents`.
+- [`process-studio.md`](../architecture/process-studio.md): ADR-0091 §6 deferral banner; rules from
+  the superseded ADR-0020, ADR-0023, and ADR-0083 pointed to their current owners.
 
 ### 10.2 Still open
 
@@ -439,8 +441,6 @@ Reported, not fixed, per [`AGENTS.md`](../../AGENTS.md#source-of-truth-order):
   pre-restructure `modules/` tree.
 - [`overview.md`](../architecture/overview.md) still draws workload cells, the query plane, and the
   Stateful Entity Runtime.
-- [`process-studio.md`](../architecture/process-studio.md) cites the superseded ADR-0020 without a
-  banner.
 
 ### 10.3 Recommendation on "catalog"
 
