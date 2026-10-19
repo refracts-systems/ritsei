@@ -60,6 +60,7 @@
 ## Proposals
 
 - [`./proposals/boneyard-js-solid/README.md`](./proposals/boneyard-js-solid/README.md)
+- [`./proposals/erp-module-parity-plan.md`](./proposals/erp-module-parity-plan.md)
 
 ## Roadmaps
 
