@@ -696,6 +696,9 @@ export const workspace = {
   description: "${human(`${n.entity}s`)} for this tenant.",
   icon: "object.product",
   order: 100,
+  group: "Operations",
+  area: "${n.moduleLabel}",
+  section: "${human(`${n.entity}s`)}",
 } as const satisfies ModuleWorkspace
 `,
   },

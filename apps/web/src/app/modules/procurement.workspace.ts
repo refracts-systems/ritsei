@@ -5,4 +5,7 @@ export const workspace = {
   description: "Suppliers and purchase orders.",
   icon: "navigation.procurement",
   order: 20,
+  group: "Operations",
+  area: "Supply",
+  section: "Procurement",
 } as const satisfies ModuleWorkspace

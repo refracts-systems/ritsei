@@ -16,7 +16,9 @@ import { Icon, type IconName } from "../ui/icons/index.ts"
 import { ConfirmDialog } from "../ui/patterns/confirm-dialog.tsx"
 import { Button } from "../ui/primitives/button.tsx"
 import { logout as logoutSession } from "./auth-client.ts"
+import { moduleWorkspaces } from "./routes.gen.ts"
 import { SessionContext } from "./session.ts"
+import { type NavigationGroup, navigationGroups } from "./workspace.ts"
 
 type NavigationItem = Readonly<{
   label: string
@@ -29,32 +31,30 @@ type NavigationSection = Readonly<{
   items: readonly NavigationItem[]
 }>
 
+// Framework pages; ERP module entries come from the generated module workspaces.
+const frameworkNavigation: Readonly<Record<NavigationGroup, readonly NavigationItem[]>> = {
+  Operations: [],
+  Processes: [],
+  Administration: [
+    { label: "User accounts", icon: "navigation.user-accounts", href: "/user-accounts" },
+    { label: "Access", icon: "navigation.access", href: "/access" },
+  ],
+}
+
 const navigationSections: readonly NavigationSection[] = [
   {
     label: "Work",
     items: [{ label: "My work", icon: "navigation.home", href: "/" }],
   },
-  {
-    label: "Operations",
-    items: [
-      { label: "Revenue", icon: "navigation.sales", href: "/sales" },
-      { label: "Supply", icon: "navigation.procurement", href: "/procurement" },
-      { label: "Inventory", icon: "navigation.inventory", href: "/inventory" },
-      { label: "Finance", icon: "navigation.accounting", href: "/accounting" },
-    ],
-  },
-  {
-    label: "Processes",
-    items: [{ label: "Process Studio", icon: "navigation.process", href: "/processes" }],
-  },
-  {
-    label: "Administration",
-    items: [
-      { label: "Parties", icon: "navigation.parties", href: "/parties" },
-      { label: "User accounts", icon: "navigation.user-accounts", href: "/user-accounts" },
-      { label: "Access", icon: "navigation.access", href: "/access" },
-    ],
-  },
+  ...navigationGroups.flatMap((group): NavigationSection[] => {
+    const items = [
+      ...moduleWorkspaces
+        .filter((workspace) => workspace.group === group)
+        .map(({ label, icon, href }) => ({ label, icon, href })),
+      ...frameworkNavigation[group],
+    ]
+    return items.length > 0 ? [{ label: group, items }] : []
+  }),
 ]
 
 type LocalNavigation = Readonly<{
@@ -62,35 +62,26 @@ type LocalNavigation = Readonly<{
   items: readonly Readonly<{ label: string; href: string }>[]
 }>
 
-// Fallow: this explicit route table is the shell's local-navigation authority.
-// fallow-ignore-next-line complexity
-const localNavigationFor = (pathname: string): LocalNavigation => {
-  if (pathname.startsWith("/user-accounts")) {
-    return { area: "Identity", items: [{ label: "Accounts", href: "/user-accounts" }] }
+// The local-navigation route table: framework pages, then one entry per module workspace.
+const localNavigationTable: readonly (LocalNavigation & { href: string })[] = [
+  {
+    href: "/user-accounts",
+    area: "Identity",
+    items: [{ label: "Accounts", href: "/user-accounts" }],
+  },
+  { href: "/access", area: "Authorization", items: [{ label: "Access", href: "/access" }] },
+  ...moduleWorkspaces.map(({ href, area, section }) => ({
+    href,
+    area,
+    items: [{ label: section, href }],
+  })),
+]
+
+const localNavigationFor = (pathname: string): LocalNavigation =>
+  localNavigationTable.find(({ href }) => isCurrentDestination(pathname, href)) ?? {
+    area: "Work",
+    items: [{ label: "Overview", href: "/" }],
   }
-  if (pathname.startsWith("/parties")) {
-    return { area: "Party", items: [{ label: "Parties", href: "/parties" }] }
-  }
-  if (pathname.startsWith("/access")) {
-    return { area: "Authorization", items: [{ label: "Access", href: "/access" }] }
-  }
-  if (pathname.startsWith("/procurement")) {
-    return { area: "Supply", items: [{ label: "Procurement", href: "/procurement" }] }
-  }
-  if (pathname.startsWith("/inventory")) {
-    return { area: "Inventory", items: [{ label: "Overview", href: "/inventory" }] }
-  }
-  if (pathname.startsWith("/sales")) {
-    return { area: "Revenue", items: [{ label: "Sales", href: "/sales" }] }
-  }
-  if (pathname.startsWith("/accounting")) {
-    return { area: "Finance", items: [{ label: "Accounting", href: "/accounting" }] }
-  }
-  if (pathname.startsWith("/processes")) {
-    return { area: "Processes", items: [{ label: "Process Studio", href: "/processes" }] }
-  }
-  return { area: "Work", items: [{ label: "Overview", href: "/" }] }
-}
 
 const compactTenantId = (tenantId: string): string =>
   `${tenantId.slice(0, 8)}…${tenantId.slice(-4)}`
