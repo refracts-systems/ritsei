@@ -1,9 +1,15 @@
 # Financial Ledger Architecture
 
-> **Framework reset ([ADR-0091](../decisions/0091-adopt-framework-and-flagship-erp.md)):** PostgreSQL is the
-> only financial authority and the TigerBeetle adapter is removed. Sections that describe
-> TigerBeetle, activation gates, staging evidence, or cutover are historical until Phase 2
-> rewrites this document around the PostgreSQL ledger and document numbering.
+> **Current authority ([ADR-0091](../decisions/0091-adopt-framework-and-flagship-erp.md),
+> [ADR-0092](../decisions/0092-retain-tigerbeetle-as-designated-ledger-engine.md)):** PostgreSQL is
+> the only active financial authority; every Legal Entity posts through the PostgreSQL
+> implementation of `FinancialLedgerPort`. TigerBeetle remains the designated future execution
+> engine. Its adapter is not in the tree today and may return as an inactive, tested implementation
+> of the port; routing a Legal Entity to it needs its own activation ADR. Sections that describe
+> TigerBeetle, activation gates, staging evidence, or cutover are the retained target design for that
+> engine, not current behavior. The PostgreSQL ledger and document numbering redesign happens in
+> framework reset Phase 4 ([`../proposals/framework-reset.md`](../proposals/framework-reset.md#8-phases))
+> and keeps this target design reachable.
 
 > **Status:** Canonical
 >
@@ -12,9 +18,13 @@
 >
 > **Related documents**
 >
-> - Ledger decision:
+> - Current ledger decision (designated future engine):
+>   [`../decisions/0092-retain-tigerbeetle-as-designated-ledger-engine.md`](../decisions/0092-retain-tigerbeetle-as-designated-ledger-engine.md)
+> - Framework reset (PostgreSQL is the only active authority):
+>   [`../decisions/0091-adopt-framework-and-flagship-erp.md`](../decisions/0091-adopt-framework-and-flagship-erp.md)
+> - Earlier ledger decision (superseded by ADR-0091, target engine retained by ADR-0092):
 >   [`../decisions/0040-adopt-tigerbeetle-financial-ledger.md`](../decisions/0040-adopt-tigerbeetle-financial-ledger.md)
-> - Runtime authority separation:
+> - Runtime authority separation (amended by ADR-0091):
 >   [`../decisions/0041-separate-deployment-profile-and-financial-authority.md`](../decisions/0041-separate-deployment-profile-and-financial-authority.md)
 > - Exact amount boundary:
 >   [`../decisions/0042-exact-financial-amount-boundary.md`](../decisions/0042-exact-financial-amount-boundary.md)
@@ -28,36 +38,30 @@
 > - P2 financial baseline:
 >   [`../decisions/0036-define-p2-document-and-financial-baseline.md`](../decisions/0036-define-p2-document-and-financial-baseline.md)
 >
-> - Execution roadmap:
->   ../roadmap/financial-ledger-execution.md
->
-> - Recovery and cutover runbook:
->   ../operations/tigerbeetle-recovery.md
-> - Financial staging readiness plan:
->   ../financial/staging-readiness-plan.md
-> - Financial staging evidence matrix:
->   ../financial/evidence-matrix.md
-> - Financial staging infrastructure selection:
->   ../financial/staging-infrastructure-selection.md
+> - Removed by ADR-0091 in commit `c10594c` and recoverable from git history for a future activation
+>   ADR: the execution
+>   roadmap (`../roadmap/financial-ledger-execution.md`), the recovery and cutover runbook
+>   (`../operations/tigerbeetle-recovery.md`), and the financial staging readiness plan, evidence
+>   matrix, and infrastructure selection (`../financial/`)
 
 ## Position
 
-TigerBeetle is the required target execution engine for RITSEI financial movements. It is a
+TigerBeetle is the designated future execution engine for RITSEI financial movements
+([ADR-0092](../decisions/0092-retain-tigerbeetle-as-designated-ledger-engine.md)). It is a
 financial data plane, not an ERP database and not a reporting warehouse. PostgreSQL remains the
-control-plane and non-ledger transactional database.
+control-plane and non-ledger transactional database, and is today also the only active ledger.
 
 Runtime topology and financial authority are separate concerns. The executable `entry + postgresql`
-composition is a supported transitional/default path while TigerBeetle readiness remains fail-closed;
-it does not supersede ADR-0040 or make PostgreSQL and TigerBeetle simultaneous authorities. The
-selected `FinancialLedgerPort` authority must agree with the legal-entity configuration and its
-reconciliation state.
+composition is the only active path; TigerBeetle readiness remains fail-closed, and PostgreSQL and
+TigerBeetle are never simultaneous authorities. The selected `FinancialLedgerPort` authority must
+agree with the legal-entity configuration and its reconciliation state.
 
-The repository is in a transition period until the first TigerBeetle profile is activated.
-Existing PostgreSQL-backed Accounting commands remain the legacy implementation during migration.
-The provider-neutral `FinancialLedgerPort`, deterministic test adapter, PostgreSQL adapter, and
-scoped TigerBeetle adapter are available to the durable financial-operation path. The PostgreSQL
-adapter is the executable transitional authority for `entry + postgresql`; it is not a live mirror
-of TigerBeetle. No command may silently assume that both stores are authoritative.
+Until an activation ADR routes a Legal Entity to TigerBeetle, PostgreSQL-backed Accounting commands
+are the current implementation, not a legacy one. The provider-neutral `FinancialLedgerPort`,
+deterministic test adapter, and PostgreSQL adapter are available to the durable financial-operation
+path; the scoped TigerBeetle adapter was removed from the tree by ADR-0091 and may return as an
+inactive, tested implementation under ADR-0092. The PostgreSQL adapter is not a live mirror of
+TigerBeetle. No command may silently assume that both stores are authoritative.
 
 A Legal Entity selects its route explicitly with `financial_engine`, which defaults to PostgreSQL
 until the controlled cutover gates are approved and `financial_cutover_controls` reaches
@@ -147,7 +151,8 @@ are not a license to implement payment, settlement, credit, budget, or inventory
 than a lowest-common-denominator storage interface. TigerBeetle account, transfer, flag, timestamp,
 client, and transport types remain private to the trusted adapter.
 
-The adapter is implemented behind the `platform/tigerbeetle` boundary. Business modules depend on
+When it returns, the adapter is implemented behind the `framework/platform/tigerbeetle` boundary
+(removed from the tree by ADR-0091; see ADR-0092). Business modules depend on
 stable capability-level failures and the public port, never on TigerBeetle or PostgreSQL driver
 failures.
 
@@ -438,5 +443,5 @@ The production profile requires:
 - adapter exit and forward-only recovery procedures;
 - command-resource budgets that do not allow financial retries to starve protected work.
 
-Detailed sequencing and gates are owned by
-../roadmap/financial-ledger-execution.md.
+Detailed sequencing and gates were owned by `../roadmap/financial-ledger-execution.md`, removed by
+ADR-0091; a future activation ADR under ADR-0092 restores or replaces them.
