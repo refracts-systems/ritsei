@@ -52,12 +52,17 @@ If this changes a difficult-to-reverse boundary or source of truth, create an AD
 
 ## 3. Implement
 
-Create only the files required now:
+For an `erp/` module, start with `pnpm run ritsei new module <name>` (ADR-0094). It creates the
+manifest, an empty service contract, layers, and a contract test, and registers the module in
+`erp/runtime/modules.ts`. It decides nothing for you: declare dependencies, owned schemas,
+capabilities, released actions and events, consumed events, HTTP groups, and pages in `manifest.ts`
+as you add each one. Otherwise create only the files required now:
 
 ```text
-modules/<domain>/mod.ts
-modules/<domain>/src/...
-modules/<domain>/tests/...
+<root>/<domain>/manifest.ts
+<root>/<domain>/mod.ts
+<root>/<domain>/src/...
+<root>/<domain>/tests/...
 ```
 
 If persistence is required, compose with `change-schema`. If another domain must consume it, compose with `add-capability` and `cross-domain-and-transactions`. Add API and authorization surfaces only when requested.
@@ -76,7 +81,7 @@ pnpm run check:affected
 pnpm run check
 ```
 
-Use `pnpm run db:generate` and `pnpm run db:check` only when the domain owns persistence changes. No domain scaffolding generator exists; copying semantic boilerplate would hide decisions that must be made explicitly.
+Use `pnpm run db:generate` and `pnpm run db:check` only when the domain owns persistence changes. The generator scaffolds structure only; capabilities, tables, transitions, and cross-module consequences stay explicit decisions. `tests/architecture/modules.test.ts` fails when the manifest drifts from the code.
 
 # Required Checks
 
