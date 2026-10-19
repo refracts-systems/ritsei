@@ -12,6 +12,8 @@ import { ProcessHttpGroup, ProcessHttpHandlers } from "../modules/process/http.t
 import { ProcessModule } from "../modules/process/mod.ts"
 import { ProcurementHttpGroup, ProcurementHttpHandlers } from "../modules/procurement/http.ts"
 import { ProcurementModule } from "../modules/procurement/mod.ts"
+import { ProductHttpGroup, ProductHttpHandlers } from "../modules/product/http.ts"
+import { ProductModule } from "../modules/product/mod.ts"
 import { SalesHttpGroup, SalesHttpHandlers } from "../modules/sales/http.ts"
 import { SalesModule } from "../modules/sales/mod.ts"
 
@@ -24,6 +26,7 @@ export const ErpModules: ReadonlyArray<ModuleManifest> = [
   PartyModule,
   ProcessModule,
   ProcurementModule,
+  ProductModule,
   SalesModule,
 ]
 
@@ -34,6 +37,7 @@ export const ErpHttpGroups = [
   PartyHttpGroup,
   ProcessHttpGroup,
   ProcurementHttpGroup,
+  ProductHttpGroup,
   SalesHttpGroup,
 ] as const
 
@@ -44,5 +48,6 @@ export const ErpHttpHandlers = [
   PartyHttpHandlers,
   ProcessHttpHandlers,
   ProcurementHttpHandlers,
+  ProductHttpHandlers,
   SalesHttpHandlers,
 ] as const

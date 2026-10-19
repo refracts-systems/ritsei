@@ -32,6 +32,7 @@ export default defineConfig({
     "process",
     "messaging",
     "numbering",
+    "product",
   ],
   breakpoints: true,
   strict: true,

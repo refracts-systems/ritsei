@@ -84,6 +84,8 @@ export const CapabilityIds = [
   "party.party_address.add",
   "party.party_contact.add",
   "party.party_bank_account.add",
+  "product.product.read",
+  "product.product.create",
 ] as const
 
 export const Capability = Schema.Literals(CapabilityIds)
@@ -129,6 +131,7 @@ export const CapabilityOwner = Schema.Literals([
   "inventory",
   "accounting",
   "process",
+  "product",
 ])
 export type CapabilityOwner = Schema.Schema.Type<typeof CapabilityOwner>
 
@@ -299,6 +302,8 @@ export const CapabilityDefinitions: ReadonlyArray<CapabilityDefinition> = [
   definition("party.party_address.add", "party", "party_address", "add"),
   definition("party.party_contact.add", "party", "party_contact", "add"),
   definition("party.party_bank_account.add", "party", "party_bank_account", "add"),
+  definition("product.product.read", "product", "product", "read"),
+  definition("product.product.create", "product", "product", "create"),
 ]
 
 const capabilityIdSet = new Set<string>(CapabilityIds)

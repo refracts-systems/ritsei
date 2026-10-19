@@ -107,6 +107,7 @@ export {
   purchaseReceipts,
   supplierAccounts,
 } from "./procurement.ts"
+export { products, productSchema, productType } from "./product.ts"
 export {
   customers,
   orderLines,
