@@ -41,7 +41,6 @@
 - [`./architecture/integration-architecture.md`](./architecture/integration-architecture.md)
 - [`./architecture/plugin-architecture.md`](./architecture/plugin-architecture.md)
 - [`./architecture/hierarchy-and-graph-selection.md`](./architecture/hierarchy-and-graph-selection.md)
-- [`./architecture/native-zig-kernel.md`](./architecture/native-zig-kernel.md)
 
 ## Reference Material
 

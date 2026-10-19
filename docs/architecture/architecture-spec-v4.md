@@ -113,7 +113,6 @@ principles.
 | Overload isolation | Current: separate API and worker pools; target: workload planes, bounded admission, and reserved command capacity (ADR-0093) |
 | Source/derived isolation | Class A source-of-truth paths do not depend on Class B/C derived capabilities |
 | Analytic plane     | Current: SQL reports and materialized views; target: domain-owned facts, versioned metrics, and rebuildable projections (ADR-0093) |
-| Native compute     | Optional Zig through typed FFI bindings                              |
 | Frontend           | Vite-based SolidJS 2.0 SPA with a separate backend                    |
 | Contracts          | Effect Schema                                                         |
 
@@ -646,7 +645,3 @@ governing standard.
 The domain that owns the identified entity owns identifier attachment, lifecycle policy, and
 conflict translation. Detailed rationale is owned by
 [ADR-0014](../decisions/0014-separate-internal-and-external-identifiers.md).
-
-## Zig FFI Boundary
-
-Removed by [ADR-0091](../decisions/0091-adopt-framework-and-flagship-erp.md).

@@ -446,8 +446,9 @@ keeping their content:
 
 Reported, not fixed, per [`AGENTS.md`](../../AGENTS.md#source-of-truth-order):
 
-- [`architecture-spec-v4.md`](../architecture/architecture-spec-v4.md) still lists Zig in its
-  decision table and still shows the pre-restructure `modules/` tree.
+- [`architecture-spec-v4.md`](../architecture/architecture-spec-v4.md) still shows the
+  pre-restructure `modules/` tree. (Its Zig row and section, `native-zig-kernel.md`, and the Zig
+  notes in the overview and plugin architecture were deleted, following ADR-0091.)
 - The restored target-design documents still name pre-restructure paths (`runtime/`, `modules/`);
   each is revised when its subsystem is activated.
 

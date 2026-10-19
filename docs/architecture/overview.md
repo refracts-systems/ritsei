@@ -248,9 +248,3 @@ Preferred order:
 2. declarative tenant extension;
 3. trusted compiled plugin;
 4. sandboxed plugin after contracts stabilize.
-
-## Native Code
-
-Zig is limited to bounded calculation or reconciliation kernels backed by
-benchmarks. Native code never owns PostgreSQL transactions or authoritative
-state.

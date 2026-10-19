@@ -60,7 +60,6 @@ create a second independent definition.
 | Process Studio canvas-centric workspace behavior, catalogs, Process IR, definition governance, and static validation | [`./architecture/process-studio.md`](./architecture/process-studio.md) |
 | Plugin trust and extension model | [`./architecture/plugin-architecture.md`](./architecture/plugin-architecture.md) |
 | Hierarchy and graph selection | [`./architecture/hierarchy-and-graph-selection.md`](./architecture/hierarchy-and-graph-selection.md) |
-| Native Zig boundary | [`./architecture/native-zig-kernel.md`](./architecture/native-zig-kernel.md) |
 | Architecture enforcement | [`./architecture/architecture-enforcement.md`](./architecture/architecture-enforcement.md) |
 | Testing strategy | [`./development/testing.md`](./development/testing.md) |
 | Database roles and privileges | [`./operations/database-roles.md`](./operations/database-roles.md) |
