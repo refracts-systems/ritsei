@@ -24,12 +24,7 @@ import {
   UserAccountNotFound,
   UserAccountService,
 } from "../../../framework/modules/identity/mod.ts"
-import { AccountingHttpHandlers } from "../../modules/accounting/http.ts"
-import { InventoryHttpHandlers } from "../../modules/inventory/http.ts"
-import { PartyHttpHandlers } from "../../modules/party/http.ts"
-import { ProcessHttpHandlers } from "../../modules/process/http.ts"
-import { ProcurementHttpHandlers } from "../../modules/procurement/http.ts"
-import { SalesHttpHandlers } from "../../modules/sales/http.ts"
+import { ErpHttpHandlers } from "../modules.gen.ts"
 import {
   ApiConflict,
   ApiForbidden,
@@ -482,11 +477,6 @@ export const ApiHandlers = Layer.mergeAll(
   AuthenticationHandlers,
   HealthHandlers,
   UserAccountHandlers,
-  PartyHttpHandlers,
   AuthorizationHandlers,
-  SalesHttpHandlers,
-  InventoryHttpHandlers,
-  ProcurementHttpHandlers,
-  AccountingHttpHandlers,
-  ProcessHttpHandlers,
+  ...ErpHttpHandlers,
 )

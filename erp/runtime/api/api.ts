@@ -27,13 +27,8 @@ import {
   Uuid,
 } from "../../../framework/modules/http/mod.ts"
 import { UserAccount } from "../../../framework/modules/identity/mod.ts"
-import { AccountingHttpGroup } from "../../modules/accounting/http.ts"
-import { InventoryHttpGroup } from "../../modules/inventory/http.ts"
-import { PartyHttpGroup } from "../../modules/party/http.ts"
-import { ProcessHttpGroup } from "../../modules/process/http.ts"
-import { ProcurementHttpGroup } from "../../modules/procurement/http.ts"
-import { SalesHttpGroup } from "../../modules/sales/http.ts"
 import type { RitseiRuntimeConfiguration } from "../config.ts"
+import { ErpHttpGroups } from "../modules.gen.ts"
 
 export {
   ApiConflict,
@@ -203,18 +198,7 @@ const Authorization = HttpApiGroup.make("Authorization").add(
 )
 
 export const RitseiApi = HttpApi.make(RitseiApiId)
-  .add(
-    Authentication,
-    Health,
-    UserAccounts,
-    PartyHttpGroup,
-    Authorization,
-    SalesHttpGroup,
-    InventoryHttpGroup,
-    ProcurementHttpGroup,
-    AccountingHttpGroup,
-    ProcessHttpGroup,
-  )
+  .add(Authentication, Health, UserAccounts, Authorization, ...ErpHttpGroups)
   .annotate(OpenApi.Title, "RITSEI API")
   .annotate(OpenApi.Version, "0.1.0")
   .annotate(OpenApi.Description, "Typed modular-monolith ERP API")

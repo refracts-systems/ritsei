@@ -8,6 +8,7 @@ import { OperationalWorkspace } from "../ui/patterns/operational-workspace.tsx"
 import { AuthCallback } from "./auth-callback.tsx"
 import { AuthClientFailure, getAuthSession } from "./auth-client.ts"
 import { Connection } from "./connection.tsx"
+import { moduleRoutes, moduleWorkspaces } from "./routes.gen.ts"
 import {
   type AuthenticatedUser,
   type Capability,
@@ -18,12 +19,6 @@ import { ApplicationShell } from "./shell.tsx"
 
 const AccessRoute = lazy(() => import("./access-route.tsx"))
 const AccountsRoute = lazy(() => import("./accounts-route.tsx"))
-const PartiesRoute = lazy(() => import("./parties-route.tsx"))
-const ProcurementRoute = lazy(() => import("./procurement-route.tsx"))
-const InventoryRoute = lazy(() => import("./inventory-route.tsx"))
-const SalesRoute = lazy(() => import("./sales-route.tsx"))
-const AccountingRoute = lazy(() => import("./accounting-route.tsx"))
-const ProcessRoute = lazy(() => import("./process-route.tsx"))
 
 const workspaceDirectory: readonly Readonly<{
   href: string
@@ -31,42 +26,7 @@ const workspaceDirectory: readonly Readonly<{
   description: string
   icon: IconName
 }>[] = [
-  {
-    href: "/sales",
-    label: "Revenue",
-    description: "Customers, quotations, and sales orders.",
-    icon: "navigation.sales",
-  },
-  {
-    href: "/procurement",
-    label: "Supply",
-    description: "Suppliers and purchase orders.",
-    icon: "navigation.procurement",
-  },
-  {
-    href: "/inventory",
-    label: "Inventory",
-    description: "Items, warehouses, stock, and reservations.",
-    icon: "navigation.inventory",
-  },
-  {
-    href: "/accounting",
-    label: "Finance",
-    description: "Accounts, periods, and journal entries.",
-    icon: "navigation.accounting",
-  },
-  {
-    href: "/processes",
-    label: "Process Studio",
-    description: "Design and monitor business processes.",
-    icon: "navigation.process",
-  },
-  {
-    href: "/parties",
-    label: "Parties",
-    description: "Organizations, legal entities, and branches.",
-    icon: "navigation.parties",
-  },
+  ...moduleWorkspaces,
   {
     href: "/user-accounts",
     label: "User accounts",
@@ -147,22 +107,9 @@ const Router = createRouter({
     { path: "/auth/callback", component: AuthCallback },
     { path: "/user-accounts", component: AccountsRoute },
     { path: "/user-accounts/:id", component: AccountsRoute },
-    { path: "/parties", component: PartiesRoute },
-    { path: "/parties/:id", component: PartiesRoute },
     { path: "/access", component: AccessRoute },
     { path: "/access/:id", component: AccessRoute },
-    { path: "/procurement", component: ProcurementRoute },
-    { path: "/procurement/:id", component: ProcurementRoute },
-    { path: "/inventory", component: InventoryRoute },
-    { path: "/inventory/:id", component: InventoryRoute },
-    { path: "/sales", component: SalesRoute },
-    { path: "/sales/customers/:id", component: SalesRoute },
-    { path: "/sales/quotations/:id", component: SalesRoute },
-    { path: "/sales/orders/:id", component: SalesRoute },
-    { path: "/accounting", component: AccountingRoute },
-    { path: "/accounting/:id", component: AccountingRoute },
-    { path: "/processes", component: ProcessRoute },
-    { path: "/processes/:id", component: ProcessRoute },
+    ...moduleRoutes,
     { path: "*missing", component: NotFound },
   ],
 })

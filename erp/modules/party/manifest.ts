@@ -12,5 +12,5 @@ export const PartyModule = defineModule({
   events: PartyTypedEventCatalog,
   consumes: [],
   http: ["Parties"],
-  pages: ["/parties"],
+  pages: ["/parties", "/parties/:id"],
 })

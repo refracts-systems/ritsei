@@ -12,5 +12,5 @@ export const InventoryModule = defineModule({
   events: InventoryTypedEventCatalog,
   consumes: [],
   http: ["Inventory"],
-  pages: ["/inventory"],
+  pages: ["/inventory", "/inventory/:id"],
 })

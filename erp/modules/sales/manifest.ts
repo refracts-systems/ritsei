@@ -12,5 +12,5 @@ export const SalesModule = defineModule({
   events: SalesTypedEventCatalog,
   consumes: [],
   http: ["Sales"],
-  pages: ["/sales"],
+  pages: ["/sales", "/sales/customers/:id", "/sales/quotations/:id", "/sales/orders/:id"],
 })

@@ -1,8 +1,8 @@
-import { mkdir, readFile, stat, writeFile } from "node:fs/promises"
+import { mkdir, stat, writeFile } from "node:fs/promises"
 
+import { generate } from "./codegen.ts"
 import { isMain } from "./entrypoint.ts"
 
-const registryFile = "erp/runtime/modules.ts"
 const moduleName = /^[a-z][a-z0-9_]*$/
 
 export type GeneratedFile = { readonly path: string; readonly content: string }
@@ -96,23 +96,6 @@ describe("${name} module", () => {
   ]
 }
 
-/** Adds the module's manifest import and list entry to the installed-module registry. */
-export const registerModule = (registry: string, name: string): string => {
-  const type = pascalCase(name)
-  const importLine = `import { ${type}Module } from "../modules/${name}/mod.ts"`
-  if (registry.includes(importLine)) throw new Error(`${name} is already registered`)
-  const lines = registry.split("\n")
-  const moduleImports = lines.flatMap((line, index) =>
-    line.startsWith("import { ") && line.includes('from "../modules/') ? [index] : [],
-  )
-  const insertAt = moduleImports.find((index) => lines[index]! > importLine)
-  lines.splice(insertAt ?? (moduleImports.at(-1) ?? 0) + 1, 0, importLine)
-  const close = lines.lastIndexOf("]")
-  if (close === -1) throw new Error(`${registryFile} has no module list`)
-  lines.splice(close, 0, `  ${type}Module,`)
-  return lines.join("\n")
-}
-
 const exists = async (path: string) => {
   try {
     await stat(path)
@@ -126,27 +109,38 @@ const exists = async (path: string) => {
 export const newModule = async (name: string): Promise<readonly string[]> => {
   if (!isValidModuleName(name)) throw new Error(`module name must match ${moduleName}`)
   if (await exists(`erp/modules/${name}`)) throw new Error(`erp/modules/${name} already exists`)
-  const registry = registerModule(await readFile(registryFile, "utf8"), name)
   const files = renderModule(name)
   for (const file of files) {
     await mkdir(file.path.slice(0, file.path.lastIndexOf("/")), { recursive: true })
     await writeFile(file.path, file.content)
   }
-  await writeFile(registryFile, registry)
-  return [...files.map(({ path }) => path), registryFile]
+  return [...files.map(({ path }) => path), ...(await generate({ check: false }))]
 }
 
-const usage = "usage: pnpm run ritsei new module <name>"
+const usage = [
+  "usage: pnpm run ritsei new module <name>",
+  "       pnpm run ritsei gen [--check]",
+].join("\n")
+
+const run = async (args: readonly string[]) => {
+  const [command, kind, name] = args
+  if (command === "gen") {
+    const check = kind === "--check"
+    const stale = await generate({ check })
+    if (check && stale.length > 0) {
+      throw new Error(`stale generated files: ${stale.join(", ")}; run pnpm run ritsei gen`)
+    }
+    for (const path of stale) console.log(`generated ${path}`)
+    return
+  }
+  if (command !== "new" || kind !== "module" || name === undefined) throw new Error(usage)
+  for (const path of await newModule(name)) console.log(`created ${path}`)
+  console.log("Next: declare dependencies, schemas, capabilities, and routes in manifest.ts.")
+}
 
 if (isMain(import.meta.url)) {
-  const [command, kind, name] = process.argv.slice(2)
-  if (command !== "new" || kind !== "module" || name === undefined) {
-    console.error(usage)
-    process.exit(1)
-  }
   try {
-    for (const path of await newModule(name)) console.log(`created ${path}`)
-    console.log("Next: declare dependencies, schemas, capabilities, and routes in manifest.ts.")
+    await run(process.argv.slice(2))
   } catch (cause) {
     console.error(cause instanceof Error ? cause.message : String(cause))
     process.exit(1)

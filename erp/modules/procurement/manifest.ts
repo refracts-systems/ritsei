@@ -12,5 +12,5 @@ export const ProcurementModule = defineModule({
   events: ProcurementTypedEventCatalog,
   consumes: [],
   http: ["Procurement"],
-  pages: ["/procurement"],
+  pages: ["/procurement", "/procurement/:id"],
 })
