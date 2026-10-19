@@ -23,7 +23,6 @@
               "package.json pins ${name}, but nixpkgs provides ${version}; align them after updating flake.lock.";
         in
         assert pinned "playwright" pkgs.playwright-driver.version;
-        assert pinned "tigerbeetle-node" pkgs.tigerbeetle.version;
         {
           default = pkgs.mkShell {
             packages = with pkgs; [
@@ -32,10 +31,8 @@
               ast-grep
               git
               go
-              zig
               protobuf
               postgresql_19
-              tigerbeetle
             ];
 
             PLAYWRIGHT_BROWSERS_PATH = playwrightBrowsers;

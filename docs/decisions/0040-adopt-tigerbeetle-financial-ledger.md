@@ -1,9 +1,9 @@
 # ADR-0040: Adopt TigerBeetle as the Financial Ledger Execution Engine
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-08-17
 - Supersedes: ADR-0011 and the broad financial-ledger authority rule in ADR-0003
-- Superseded by: None
+- Superseded by: ADR-0091 (framework reset)
 
 > **Related documents**
 >
@@ -15,7 +15,6 @@
 > - State and consistency: [`../architecture/state-and-consistency.md`](../architecture/state-and-consistency.md)
 > - Durable execution: [`../architecture/durable-execution.md`](../architecture/durable-execution.md)
 > - P2 financial baseline: [`./0036-define-p2-document-and-financial-baseline.md`](./0036-define-p2-document-and-financial-baseline.md)
-> - Execution roadmap: [`../roadmap/financial-ledger-execution.md`](../roadmap/financial-ledger-execution.md)
 
 ## Context
 

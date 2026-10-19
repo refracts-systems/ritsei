@@ -17,10 +17,9 @@
     "*.config.ts",
     "apps/web/*.config.ts",
     "apps/web/src/features/process-studio/**/*",
-    "foundation/**/*.ts",
-    "modules/**/*.ts",
-    "platform/**/*.ts",
-    "runtime/**/*.ts",
+    "framework/**/*.ts",
+    "erp/**/*.ts",
+    "extensions/**/*.ts",
     "tooling/**/*.ts",
     "tests/**/*.ts",
     "db/**/*.ts"

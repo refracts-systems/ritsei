@@ -14,7 +14,6 @@
 >
 > - Runtime architecture: [`./architecture-spec-v4.md`](./architecture-spec-v4.md)
 > - Durable execution: [`./durable-execution.md`](./durable-execution.md)
-> - Workload isolation: [`./workload-isolation.md`](./workload-isolation.md)
 > - Source-of-truth and derived-capability non-interference:
 >   [`../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md`](../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md)
 > - State and consistency: [`./state-and-consistency.md`](./state-and-consistency.md)
@@ -69,11 +68,11 @@ catch-all generic document domain.
 | Issued-state transition and legal/business snapshot | Owning domain |
 | Document context and AST contracts | RITSEI document-rendering capability, after owner contracts exist |
 | Template selection and immutable template versions | A narrowly scoped configuration capability; ownership must be decided before persistence |
-| Render job admission, retry, fencing, and orchestration | Runtime plus `foundation/jobs` |
-| Concrete renderer adapters | `platform/` or approved runtime adapters |
+| Render job admission, retry, fencing, and orchestration | Runtime plus `framework/foundation/jobs` |
+| Concrete renderer adapters | `framework/platform/` or approved runtime adapters |
 | Artifact bytes and retention | Storage adapter and deployment profile |
 | Preview/designer UI | `apps/web`; never authoritative |
-| External email, archive, or delivery protocols | `modules/integrations` through public contracts |
+| External email, archive, or delivery protocols | `framework/modules/integrations` through public contracts |
 
 The rendering capability owns an output projection and its operational metadata. It must not mutate
 Sales, Procurement, Accounting, Inventory, Billing, or Tax facts directly. A future template registry

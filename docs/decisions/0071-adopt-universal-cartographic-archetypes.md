@@ -13,7 +13,6 @@
 > - Decision map: [`./decision-map.md`](./decision-map.md)
 > - Design system: [`../architecture/design-system.md`](../architecture/design-system.md)
 > - Frontend architecture: [`../architecture/frontend.md`](../architecture/frontend.md)
-> - Cartographic archetypes reference: [`../architecture/reference/cartographic-archetypes-and-semantic-depth.md`](../architecture/reference/cartographic-archetypes-and-semantic-depth.md)
 > - Cartographic renderer selection: [`./0070-select-vgpu-and-defer-typegpu.md`](./0070-select-vgpu-and-defer-typegpu.md)
 > - Cartographic visual grammar: [`./0069-adopt-cartographic-enterprise-visual-grammar.md`](./0069-adopt-cartographic-enterprise-visual-grammar.md)
 
@@ -251,4 +250,4 @@ A conforming archetype or material projection must prove:
 - any `vgpu` implementation follows ADR-0070's adapter, activation, testing, and power gates.
 
 The detailed rationale and examples are preserved in
-[`../architecture/reference/cartographic-archetypes-and-semantic-depth.md`](../architecture/reference/cartographic-archetypes-and-semantic-depth.md).
+../architecture/reference/cartographic-archetypes-and-semantic-depth.md.

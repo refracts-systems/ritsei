@@ -1,20 +1,18 @@
 # ADR-0064: Propose GCP as the First Financial Staging Platform
 
-- Status: Proposed
+- Status: Superseded
 - Date: 2026-08-31
 - Amends: None
 - Compatible with: ADR-0040, ADR-0041, ADR-0061
 - Supersedes: None
-- Superseded by: None
+- Superseded by: ADR-0091 (framework reset)
 
 > **Related documents**
 >
 > - ADR index: [`./README.md`](./README.md)
 > - Financial staging infrastructure selection:
->   [`../financial/staging-infrastructure-selection.md`](../financial/staging-infrastructure-selection.md)
-> - Financial staging topology: [`../financial/staging-topology.md`](../financial/staging-topology.md)
+>   ../financial/staging-infrastructure-selection.md
 > - Financial ledger architecture: [`../architecture/financial-ledger.md`](../architecture/financial-ledger.md)
-> - Financial evidence matrix: [`../financial/evidence-matrix.md`](../financial/evidence-matrix.md)
 > - Proposed Cloudflare edge/evidence boundary:
 >   [`./0065-propose-cloudflare-financial-edge-evidence-plane.md`](./0065-propose-cloudflare-financial-edge-evidence-plane.md)
 

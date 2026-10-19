@@ -1,28 +1,31 @@
 {
   "$schema": "./node_modules/fallow/schema.json",
   "entry": [
-    "runtime/api/mod.ts",
-    "runtime/auth/bootstrap.ts",
-    "runtime/migrator/mod.ts",
-    "runtime/migrator/p0-backfill.ts",
-    "runtime/worker/mod.ts",
+    "erp/runtime/api/mod.ts",
+    "erp/runtime/auth/bootstrap.ts",
+    "erp/runtime/migrator/mod.ts",
+    "erp/runtime/migrator/p0-backfill.ts",
+    "erp/runtime/worker/mod.ts",
     "apps/web/src/features/process-studio/index.ts",
     "apps/web/src/experiments/solid-effect/src/main.tsx",
     "apps/**/*.test.ts",
     "apps/**/*.test.tsx",
-    "foundation/mod.ts",
-    "foundation/*/mod.ts",
-    "foundation/**/*.test.ts",
-    "foundation/**/*.test.tsx",
-    "modules/*/mod.ts",
-    "modules/**/*.test.ts",
-    "modules/**/*.test.tsx",
-    "platform/mod.ts",
-    "platform/*/mod.ts",
-    "platform/**/*.test.ts",
-    "platform/**/*.test.tsx",
-    "runtime/**/*.test.ts",
-    "runtime/**/*.test.tsx",
+    "framework/foundation/mod.ts",
+    "framework/foundation/*/mod.ts",
+    "framework/foundation/**/*.test.ts",
+    "framework/foundation/**/*.test.tsx",
+    "framework/modules/*/mod.ts",
+    "erp/modules/*/mod.ts",
+    "framework/modules/**/*.test.ts",
+    "erp/modules/**/*.test.ts",
+    "framework/modules/**/*.test.tsx",
+    "erp/modules/**/*.test.tsx",
+    "framework/platform/mod.ts",
+    "framework/platform/*/mod.ts",
+    "framework/platform/**/*.test.ts",
+    "framework/platform/**/*.test.tsx",
+    "erp/runtime/**/*.test.ts",
+    "erp/runtime/**/*.test.tsx",
     "tests/**/*.test.ts",
     "tests/**/*.test.tsx",
     "tooling/**/*.ts",
@@ -42,15 +45,15 @@
   ],
   "ignoreExports": [
     {
-      "file": "modules/authorization/src/capabilities.ts",
+      "file": "framework/modules/authorization/src/capabilities.ts",
       "exports": ["Capability"]
     },
     {
-      "file": "modules/authorization/src/contract.ts",
+      "file": "framework/modules/authorization/src/contract.ts",
       "exports": ["Capability"]
     },
     {
-      "file": "modules/accounting/src/contract.ts",
+      "file": "erp/modules/accounting/src/contract.ts",
       "exports": [
         "ListAccountingConfigurationsInput",
         "ListAccountsInput",
@@ -60,19 +63,19 @@
       ]
     },
     {
-      "file": "modules/authorization/src/capabilities.ts",
+      "file": "framework/modules/authorization/src/capabilities.ts",
       "exports": ["CapabilityScope", "CapabilityStability"]
     },
     {
-      "file": "modules/auth/src/contract.ts",
+      "file": "framework/modules/auth/src/contract.ts",
       "exports": ["ExternalIdentityType", "IdentityProviderShape"]
     },
     {
-      "file": "modules/inventory/src/contract.ts",
+      "file": "erp/modules/inventory/src/contract.ts",
       "exports": ["StockMovementKind"]
     },
     {
-      "file": "modules/procurement/src/contract.ts",
+      "file": "erp/modules/procurement/src/contract.ts",
       "exports": ["PurchaseOrderStatus"]
     }
   ],
@@ -96,14 +99,12 @@
           "tests/**",
           "apps/**/*.test.ts",
           "apps/**/*.test.tsx",
-          "foundation/**/*.test.ts",
-          "foundation/**/*.test.tsx",
-          "modules/**/*.test.ts",
-          "modules/**/*.test.tsx",
-          "platform/**/*.test.ts",
-          "platform/**/*.test.tsx",
-          "runtime/**/*.test.ts",
-          "runtime/**/*.test.tsx"
+          "framework/**/*.test.ts",
+          "framework/**/*.test.tsx",
+          "erp/**/*.test.ts",
+          "erp/**/*.test.tsx",
+          "extensions/**/*.test.ts",
+          "extensions/**/*.test.tsx"
         ]
       },
       {
@@ -146,13 +147,7 @@
           "apps/web/src/ui/icons/index.ts",
           "apps/web/src/ui/icons/icon.tsx",
           "apps/web/src/ui/motion/index.ts",
-          "apps/web/src/ui/grammar/archetypes.ts",
-          "apps/web/src/ui/grammar/deterministic-variation.ts",
-          "apps/web/src/ui/grammar/primitives.ts",
-          "apps/web/src/ui/grammar/projection.ts",
-          "apps/web/src/ui/grammar/visual-intent.ts",
           "apps/web/src/ui/interaction/contract.ts",
-          "apps/web/src/ui/renderers/cartography/cartography-field.tsx",
           "apps/web/src/ui/primitives/action-menu-context.ts",
           "apps/web/src/ui/primitives/reference.tsx"
         ]
@@ -170,24 +165,32 @@
         "patterns": ["apps/web/**"]
       },
       {
-        "name": "runtime-adapters",
-        "patterns": ["runtime/adapters/**"]
+        "name": "framework-foundation",
+        "patterns": ["framework/foundation/**"]
       },
       {
-        "name": "runtime",
-        "patterns": ["runtime/**"]
+        "name": "framework-platform",
+        "patterns": ["framework/platform/**"]
       },
       {
-        "name": "foundation",
-        "patterns": ["foundation/**"]
+        "name": "framework-modules",
+        "patterns": ["framework/modules/**"]
       },
       {
-        "name": "modules",
-        "patterns": ["modules/**"]
+        "name": "erp-runtime-adapters",
+        "patterns": ["erp/runtime/adapters/**"]
       },
       {
-        "name": "platform",
-        "patterns": ["platform/**"]
+        "name": "erp-runtime",
+        "patterns": ["erp/runtime/**"]
+      },
+      {
+        "name": "erp-modules",
+        "patterns": ["erp/modules/**"]
+      },
+      {
+        "name": "extensions",
+        "patterns": ["extensions/**"]
       },
       {
         "name": "database",
@@ -203,11 +206,13 @@
         "from": "tests",
         "allow": [
           "apps-web",
-          "foundation",
-          "modules",
-          "platform",
-          "runtime",
-          "runtime-adapters",
+          "framework-foundation",
+          "framework-platform",
+          "framework-modules",
+          "erp-runtime",
+          "erp-runtime-adapters",
+          "erp-modules",
+          "extensions",
           "database",
           "tooling",
           "configs",
@@ -234,35 +239,57 @@
       },
       {
         "from": "apps-web",
-        "allow": ["modules", "foundation", "apps-web-ui-public", "apps-web-ui-bootstrap"]
-      },
-      {
-        "from": "runtime-adapters",
-        "allow": ["runtime", "modules", "platform", "foundation", "database"]
-      },
-      {
-        "from": "runtime",
         "allow": [
-          "runtime-adapters",
-          "runtime",
-          "modules",
-          "platform",
-          "foundation",
+          "framework-modules",
+          "erp-modules",
+          "framework-foundation",
+          "apps-web-ui-public",
+          "apps-web-ui-bootstrap"
+        ]
+      },
+      {
+        "from": "framework-foundation",
+        "allow": ["framework-foundation"]
+      },
+      {
+        "from": "framework-platform",
+        "allow": ["framework-platform", "framework-foundation", "framework-modules"]
+      },
+      {
+        "from": "framework-modules",
+        "allow": ["framework-modules", "framework-foundation", "database"]
+      },
+      {
+        "from": "erp-modules",
+        "allow": ["erp-modules", "framework-modules", "framework-foundation", "database"]
+      },
+      {
+        "from": "erp-runtime-adapters",
+        "allow": [
+          "erp-runtime",
+          "erp-modules",
+          "framework-foundation",
+          "framework-platform",
+          "framework-modules",
+          "database"
+        ]
+      },
+      {
+        "from": "erp-runtime",
+        "allow": [
+          "erp-runtime-adapters",
+          "erp-runtime",
+          "erp-modules",
+          "framework-foundation",
+          "framework-platform",
+          "framework-modules",
           "database",
           "tooling"
         ]
       },
       {
-        "from": "foundation",
-        "allow": ["foundation"]
-      },
-      {
-        "from": "modules",
-        "allow": ["modules", "foundation", "database"]
-      },
-      {
-        "from": "platform",
-        "allow": ["platform", "foundation", "modules"]
+        "from": "extensions",
+        "allow": ["framework-modules", "framework-foundation", "erp-modules", "database"]
       },
       {
         "from": "database",
@@ -270,7 +297,15 @@
       },
       {
         "from": "tooling",
-        "allow": ["tooling", "runtime", "foundation", "modules", "platform", "database"]
+        "allow": [
+          "tooling",
+          "erp-runtime",
+          "framework-foundation",
+          "framework-platform",
+          "framework-modules",
+          "erp-modules",
+          "database"
+        ]
       }
     ],
     "coverage": {

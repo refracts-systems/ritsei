@@ -1,11 +1,11 @@
 # ADR-0070: Select `vgpu` as the Optional Cartographic Renderer and Defer TypeGPU Compute
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-09-02
 - Amends: ADR-0069 for concrete renderer selection, implementation balance, and activation policy
 - Compatible with: ADR-0009, ADR-0010, ADR-0048, ADR-0056, ADR-0057, ADR-0068
 - Supersedes: None
-- Superseded by: None
+- Superseded by: ADR-0091 (framework reset)
 
 > **Related documents**
 >
@@ -13,7 +13,6 @@
 > - Decision map: [`./decision-map.md`](./decision-map.md)
 > - Design system: [`../architecture/design-system.md`](../architecture/design-system.md)
 > - Frontend architecture: [`../architecture/frontend.md`](../architecture/frontend.md)
-> - Cartographic visual grammar: [`../architecture/reference/cartographic-renderer-selection.md`](../architecture/reference/cartographic-renderer-selection.md)
 > - Cartographic visual grammar decision: [`./0069-adopt-cartographic-enterprise-visual-grammar.md`](./0069-adopt-cartographic-enterprise-visual-grammar.md)
 > - Universal cartographic archetypes: [`./0071-adopt-universal-cartographic-archetypes.md`](./0071-adopt-universal-cartographic-archetypes.md)
 > - Architecture enforcement: [`../architecture/architecture-enforcement.md`](../architecture/architecture-enforcement.md)
@@ -329,4 +328,4 @@ No implementation dependency is added until the canonical design-system activati
 - bundle, memory, interaction, and long-session power evidence is recorded.
 
 The detailed rationale, examples, comparison matrix, and source links are preserved in
-[`../architecture/reference/cartographic-renderer-selection.md`](../architecture/reference/cartographic-renderer-selection.md).
+../architecture/reference/cartographic-renderer-selection.md.

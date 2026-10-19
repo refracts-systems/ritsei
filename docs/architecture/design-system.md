@@ -884,7 +884,7 @@ compatible-consumer need justifies it.
 This applies the ownership decisions in ADR-0056 and ADR-0057 without changing their engines or
 activation gates. The backend taxonomy in
 [`ADR-0068`](../decisions/0068-establish-foundation-modules-platform-runtime-taxonomy.md) remains
-unchanged: business modules live in `modules/`, not in new `packages/accounting`,
+unchanged: business modules live in `erp/modules/`, not in new `packages/accounting`,
 `packages/procurement`, or `packages/inventory` directories.
 
 ```text

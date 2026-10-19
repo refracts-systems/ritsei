@@ -96,21 +96,13 @@ export const checkOwnership = async (): Promise<readonly string[]> => {
   await checkMigrations("db/migrations")
 
   const sourceOwner = (path: string): string | undefined => {
-    const moduleName = path.match(/^modules\/([^/]+)\/src\//)?.[1]
-    return moduleName === undefined ? undefined : `modules/${moduleName}`
+    return path.match(/^((?:framework\/modules|erp\/modules|extensions)\/[^/]+)\/src\//)?.[1]
   }
 
-  const isPlatformSchemaTest = (path: string) => path.startsWith("platform/postgres/tests/")
+  const isPlatformSchemaTest = (path: string) =>
+    path.startsWith("framework/platform/postgres/tests/")
 
-  for (const root of [
-    "apps",
-    "foundation",
-    "modules",
-    "platform",
-    "runtime",
-    "tests",
-    "tooling",
-  ] as const) {
+  for (const root of ["apps", "framework", "erp", "extensions", "tests", "tooling"] as const) {
     for (const { path, source } of await collectSourceFiles(root, [".ts"])) {
       for (const specifier of extractModuleSpecifiers({ path, source })) {
         const importedSchema = specifier.match(

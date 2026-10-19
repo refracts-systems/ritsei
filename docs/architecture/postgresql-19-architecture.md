@@ -5,9 +5,7 @@
 > **Related documents**
 >
 > - Active runtime: [`./architecture-spec-v4.md`](./architecture-spec-v4.md)
-> - Workload isolation: [`./workload-isolation.md`](./workload-isolation.md)
 > - Search architecture: [`./search-architecture.md`](./search-architecture.md)
-> - Analytics architecture: [`./analytics-architecture.md`](./analytics-architecture.md)
 > - Hierarchy and graph selection:
 >   [`./hierarchy-and-graph-selection.md`](./hierarchy-and-graph-selection.md)
 > - Financial ledger architecture: [`./financial-ledger.md`](./financial-ledger.md)
@@ -29,7 +27,7 @@
 
 PostgreSQL 19 is the development floor and the transactional core for the control plane and
 non-ledger domain state. The project may track beta and release-candidate builds during development
-but must move to PostgreSQL 19 GA before production deployment. The `platform/postgres` adapter
+but must move to PostgreSQL 19 GA before production deployment. The `framework/platform/postgres` adapter
 rejects connections whose `server_version_num` is below `190000` before running application work. The financial ledger profile
 uses TigerBeetle for accepted transfers and balances through the boundary in
 [`financial-ledger.md`](./financial-ledger.md).
@@ -109,7 +107,7 @@ integration.*    -> integrations
 messaging.*      -> messaging
 ```
 
-`modules/catalog` is contract-only and owns no PostgreSQL schema. Planned domains do not receive a
+`framework/modules/catalog` is contract-only and owns no PostgreSQL schema. Planned domains do not receive a
 schema until a concrete invariant requires one and the ownership registry is updated. A module must
 not perform arbitrary mutations against another module's schema; it must call the owner through a
 typed public contract.
@@ -185,7 +183,7 @@ be rebuildable from canonical RITSEI facts and must carry an explicit freshness 
 contract; stale or unknown relationship state fails closed for sensitive work. Analytical projections
 follow the domain-owned fact,
 versioned metric, freshness, correction, and provider gates in
-[`analytics-architecture.md`](./analytics-architecture.md). A hard-isolated projection route must not
+analytics-architecture.md. A hard-isolated projection route must not
 silently fall back to the primary when its projection path is stale, unavailable, or saturated.
 
 PostgreSQL 19 `WAIT FOR` is selected by ADR-0039 for route-scoped replica-backed read-your-writes.
@@ -218,7 +216,7 @@ physical workload non-interference
 ```
 
 The first two levels can be enforced partly by PostgreSQL. The third requires the workload-isolation
-fabric and deployment proof defined by [`workload-isolation.md`](./workload-isolation.md). A shared
+fabric and deployment proof defined by workload-isolation.md. A shared
 primary with separate roles and pools must not be described as physical CPU, memory, I/O, WAL,
 storage, or failover isolation. Detailed role grants and the PostgreSQL server reserve are owned by
 [`../operations/database-roles.md`](../operations/database-roles.md).

@@ -3,7 +3,7 @@
 - Status: Accepted
 - Date: 2026-08-03
 - Supersedes: None
-- Superseded by: None
+- Superseded by: ADR-0091 (process engine deferred)
 
 > **Related documents**
 >

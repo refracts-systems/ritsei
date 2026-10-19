@@ -5,7 +5,7 @@
 - Amends: ADR-0006 only by defining the relationship/object evaluator boundary
 - Compatible with: ADR-0005, ADR-0020, ADR-0021, ADR-0031, ADR-0037, ADR-0034
 - Supersedes: None
-- Superseded by: None
+- Superseded by: ADR-0091 (SpiceDB option withdrawn)
 
 > **Related documents**
 >
@@ -13,7 +13,6 @@
 > - Authorization architecture: [`../architecture/authorization.md`](../architecture/authorization.md)
 > - PostgreSQL architecture: [`../architecture/postgresql-19-architecture.md`](../architecture/postgresql-19-architecture.md)
 > - State and consistency: [`../architecture/state-and-consistency.md`](../architecture/state-and-consistency.md)
-> - Workload isolation: [`../architecture/workload-isolation.md`](../architecture/workload-isolation.md)
 > - Hierarchy and graph selection: [`../architecture/hierarchy-and-graph-selection.md`](../architecture/hierarchy-and-graph-selection.md)
 > - Audit boundary: [`./0037-define-p3-audit-event-and-delivery-boundary.md`](./0037-define-p3-audit-event-and-delivery-boundary.md)
 

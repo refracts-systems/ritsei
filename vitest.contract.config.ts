@@ -3,10 +3,11 @@ import { defineConfig } from "vitest/config"
 export default defineConfig({
   test: {
     include: [
-      "modules/**/tests/**/*.test.{ts,tsx}",
-      "foundation/**/tests/**/*.test.{ts,tsx}",
-      "platform/**/tests/**/*.test.{ts,tsx}",
-      "runtime/**/*.test.{ts,tsx}",
+      "framework/modules/**/tests/**/*.test.{ts,tsx}",
+      "erp/modules/**/tests/**/*.test.{ts,tsx}",
+      "framework/foundation/**/tests/**/*.test.{ts,tsx}",
+      "framework/platform/**/tests/**/*.test.{ts,tsx}",
+      "erp/runtime/**/*.test.{ts,tsx}",
       "tests/architecture/**/*.test.{ts,tsx}",
     ],
     setupFiles: ["./tooling/load-env.ts"],

@@ -4,6 +4,14 @@ RITSEI is an orthogonal modular monolith built around explicit
 domain ownership, PostgreSQL-enforced integrity, Effect-based application
 services, and independently deployable frontend infrastructure.
 
+## Framework and ERP
+
+RITSEI is an ERP framework (`framework/`) with a flagship ERP (`erp/`) built on it like any
+third-party module; `extensions/` will hold modules from other developers. See
+[ADR-0091](./docs/decisions/0091-adopt-framework-and-flagship-erp.md) and the
+[framework reset proposal](./docs/proposals/framework-reset.md). Removed subsystems are gone from the
+tree; their history is in git.
+
 ## Canonical Specification
 
 The authoritative architecture specification is:
@@ -23,30 +31,18 @@ The authoritative architecture specification is:
 - Identity / IAM: provider-neutral OIDC/OAuth2 `IdentityProvider`; ZITADEL is recommended
 - Application AuthZ: RITSEI Authorization Kernel with canonical PostgreSQL policy facts
 - Relationship AuthZ: native PostgreSQL `RelationshipEngine` by default; optional SpiceDB adapter
-- Stateful ownership: optional vendor-neutral Stateful Entity Runtime
-- Overload isolation: workload planes, reserved command capacity, and topology-private WorkloadCells
-- Source/derived non-interference: source-of-truth critical paths remain independent of derived capabilities
-- Analytics: domain-owned facts, versioned metrics, rebuildable projections, and no primary fallback
-- Search: PostgreSQL-first, rebuildable, and provider-replaceable
-- Native compute: optional Zig through typed FFI bindings
-- Process composition target: typed catalogs, deterministic Process IR, and a
-  governed Process Studio
+- Reports: SQL and materialized views in PostgreSQL
+- Search: PostgreSQL only
+- Financial ledger: PostgreSQL double-entry ledger (the only financial authority)
+- Process engine: deferred by ADR-0091 until the core ERP loops run end to end
 
-Stateful ownership, routing, recovery, and consistency are defined in
-[`docs/architecture/runtime-architecture.md`](./docs/architecture/runtime-architecture.md)
-and
+Commands, events, outbox, jobs, and consistency are defined in
 [`docs/architecture/state-and-consistency.md`](./docs/architecture/state-and-consistency.md).
-The canonical Process Studio target and staged 0.8–1.0 roadmap are defined in
+The deferred Process Studio specification is
 [`docs/architecture/process-studio.md`](./docs/architecture/process-studio.md).
 The external connector profile is defined in
 [`docs/architecture/integration-architecture.md`](./docs/architecture/integration-architecture.md).
-Source-of-truth versus derived-capability non-interference, workload planes, resource admission,
-WorkloadCells, shuffle sharding, and their proof obligations are defined in
-[`docs/architecture/workload-isolation.md`](./docs/architecture/workload-isolation.md) and
-[ADR-0083](./docs/decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md).
-Analytic facts, metrics, freshness, semantic queries, and provider gates are defined in
-[`docs/architecture/analytics-architecture.md`](./docs/architecture/analytics-architecture.md).
-Search authority, projections, provider gates, and search-specific workload safety are defined in
+Search authority and projections are defined in
 [`docs/architecture/search-architecture.md`](./docs/architecture/search-architecture.md).
 Identity, authentication, principal provenance, and revocation are defined in
 [`docs/architecture/identity-and-principals.md`](./docs/architecture/identity-and-principals.md).
@@ -59,10 +55,13 @@ Procurement ownership, the Purchase Order lifecycle, and receipt activation gate
 
 ## Repository taxonomy
 
-- `foundation/`: generic primitives and contracts;
-- `modules/`: business capabilities with public `mod.ts` entries;
-- `platform/`: concrete infrastructure adapters;
-- `runtime/`: application composition roots and transport workers;
+- `framework/foundation/`: generic primitives and contracts;
+- `framework/platform/`: concrete infrastructure adapters;
+- `framework/modules/`: framework capabilities (auth, identity, authorization, messaging,
+  integrations, catalog) with public `mod.ts` entries;
+- `erp/modules/`: flagship ERP business modules with public `mod.ts` entries;
+- `erp/runtime/`: ERP composition roots, API server, and workers;
+- `extensions/`: modules from other developers, empty until one exists;
 - `apps/web/`: the separate frontend application; and
 - `db/`: schema and migration authority.
 

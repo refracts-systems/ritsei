@@ -4,15 +4,6 @@ import { readFileSync } from "node:fs"
 const read = (path: string) => readFileSync(path, "utf8")
 
 describe("roadmap track contracts", () => {
-  it("keeps workload classification separate from authorization and business authority", () => {
-    const source = read("docs/architecture/workload-isolation.md")
-    assert.include(source, "workload class")
-    assert.include(source, "command_reserved > 0")
-    assert.include(source, "adaptive_limit <= hard_limit")
-    assert.include(source, "Criticality is not authorization priority")
-    assert.include(source, "fall back from query to command resources")
-  })
-
   it("keeps the frontend as a typed, separately deployed SPA", () => {
     const source = read("docs/architecture/frontend.md")
     assert.include(source, "Vite")

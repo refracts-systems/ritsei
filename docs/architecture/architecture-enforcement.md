@@ -12,7 +12,6 @@
 > - Repository taxonomy: [`../decisions/0068-establish-foundation-modules-platform-runtime-taxonomy.md`](../decisions/0068-establish-foundation-modules-platform-runtime-taxonomy.md)
 > - PostgreSQL ownership: [`./postgresql-19-architecture.md`](./postgresql-19-architecture.md)
 > - Financial ledger: [`./financial-ledger.md`](./financial-ledger.md)
-> - Workload isolation: [`./workload-isolation.md`](./workload-isolation.md)
 > - Testing strategy: [`../development/testing.md`](../development/testing.md)
 > - Database roles: [`../operations/database-roles.md`](../operations/database-roles.md)
 > - Logical database and physical placement:
@@ -39,13 +38,13 @@ A business module may import:
 
 - its own internal modules;
 - public contracts exported by another business module;
-- generic contracts from `foundation/`; and
+- generic contracts from `framework/foundation/`; and
 - its owned `db/schema` tables where the ownership registry permits it.
 
 A business module must not import:
 
-- concrete adapters from `platform/`;
-- application composition from `runtime/`;
+- concrete adapters from `framework/platform/`;
+- application composition from `erp/runtime/`;
 
 - another domain's table definitions;
 - another domain's repository implementations;
@@ -82,9 +81,16 @@ public path.
 ## Allowed Dependency Direction
 
 ```text
-foundation
-  <- modules <- runtime
-  <- platform <- runtime
+framework/foundation
+  <- framework/modules <- erp/modules <- erp/runtime
+  <- framework/platform <- erp/runtime
+  <- extensions (framework and erp public entry points only)
+
+framework/**
+  -X-> erp/** or extensions/**
+
+erp/**
+  -X-> extensions/**
 
 module A
   -> module B public contract
@@ -132,7 +138,7 @@ Each business module should expose an explicit public `mod.ts` entry point.
 Example:
 
 ```text
-modules/inventory/
+erp/modules/inventory/
 ├── mod.ts
 ├── src/
 │   ├── commands/
@@ -198,14 +204,14 @@ Maintain one machine-readable registry, for example:
 
 ```toml
 [schemas]
-identity = "modules/identity"
-auth = "modules/auth"
-sales = "modules/sales"
-inventory = "modules/inventory"
-accounting = "modules/accounting"
-process = "modules/process"
-billing = "modules/billing"
-integration = "modules/integrations"
+identity = "framework/modules/identity"
+auth = "framework/modules/auth"
+sales = "erp/modules/sales"
+inventory = "erp/modules/inventory"
+accounting = "erp/modules/accounting"
+process = "erp/modules/process"
+billing = "erp/modules/billing"
+integration = "framework/modules/integrations"
 ```
 
 The active registry is [`../../db/ownership.toml`](../../db/ownership.toml). It is
@@ -260,7 +266,7 @@ decision.
 
 When AI or model-provider code is introduced, static and deployment checks must preserve ADR-0063:
 
-- provider SDK imports are confined to approved adapters under `modules/integrations/`;
+- provider SDK imports are confined to approved adapters under `framework/modules/integrations/`;
 - AI/provider code cannot import `db/schema`, migrations, database clients, repositories, private
   domain modules, or private process services;
 - cross-domain access, when justified, resolves through a public package entry point and typed

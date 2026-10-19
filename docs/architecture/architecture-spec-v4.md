@@ -10,10 +10,7 @@
 > - PostgreSQL architecture: [`./postgresql-19-architecture.md`](./postgresql-19-architecture.md)
 > - Logical database and physical placement:
 >   [`../decisions/0067-separate-logical-database-and-physical-data-placement.md`](../decisions/0067-separate-logical-database-and-physical-data-placement.md)
-> - Workload isolation: [`./workload-isolation.md`](./workload-isolation.md)
-> - Analytics architecture: [`./analytics-architecture.md`](./analytics-architecture.md)
 > - Search architecture: [`./search-architecture.md`](./search-architecture.md)
-> - Stateful runtime: [`./runtime-architecture.md`](./runtime-architecture.md)
 > - State and consistency: [`./state-and-consistency.md`](./state-and-consistency.md)
 > - Financial ledger: [`./financial-ledger.md`](./financial-ledger.md)
 > - Authorization: [`./authorization.md`](./authorization.md)
@@ -168,7 +165,7 @@ modular-monolith boundaries, not workspace package boundaries by default.
 
 ```text
 ritsei/
-├── foundation/              # generic primitives and contracts
+├── framework/foundation/              # generic primitives and contracts
 │   ├── communication/
 │   ├── concurrency/
 │   ├── database/
@@ -181,11 +178,11 @@ ritsei/
 │   ├── sales/  ├── procurement/  ├── inventory/
 │   ├── accounting/  ├── process/  ├── billing/
 │   └── integrations/
-├── platform/                # concrete PostgreSQL, crypto, and ledger adapters
+├── framework/platform/                # concrete PostgreSQL, crypto, and ledger adapters
 │   ├── postgres/
 │   ├── crypto/
 │   └── tigerbeetle/
-├── runtime/                 # API, worker, migrator, configuration, composition
+├── erp/runtime/                 # API, worker, migrator, configuration, composition
 │   ├── api/
 │   ├── worker/
 │   ├── migrator/
@@ -240,7 +237,7 @@ exception documented in [`financial-ledger.md`](./financial-ledger.md); callers 
 workflow implementations may keep their specialized ports and adapters separate rather than forcing
 them into a generic repository shape.
 
-Production composition is named in `runtime/layers.ts` (`PlatformCore`, `PlatformLive`, domain `*Live`
+Production composition is named in `erp/runtime/layers.ts` (`PlatformCore`, `PlatformLive`, domain `*Live`
 layers, and `ApplicationLive`). HTTP handler groups resolve static services once during group
 construction; request-scoped `CurrentPrincipal` remains inside each request operation. Public
 Effect operations use stable `Effect.fn("Domain.operation")` names for readable execution traces.
@@ -258,7 +255,7 @@ or Class C projection capabilities. Owner commits publish facts through the tran
 derived consumers own their retry, failure, resource, persistence, and rebuild lifecycle. A synchronous
 cross-capability dependency is allowed only when an explicit business invariant documents it and names
 its semantic owner. Detailed workload and resource proof remains in
-[`workload-isolation.md`](./workload-isolation.md) and ADR-0083.
+workload-isolation.md and ADR-0083.
 
 Extension mechanisms, plugins, workflow runtimes, and nondeterministic agents are fallible. ERP
 invariants remain enforced by the owning domain, authorization boundary, transactional command path,
@@ -331,7 +328,7 @@ conceal PostgreSQL-specific behavior such as:
 
 Reviewed SQL is the escape hatch and remains a first-class artifact.
 
-The `platform/postgres` adapter owns the `postgres.js` client, Drizzle database lifecycle, typed
+The `framework/platform/postgres` adapter owns the `postgres.js` client, Drizzle database lifecycle, typed
 transaction callbacks, and stable infrastructure failure mapping behind the foundation database
 contracts. Domain implementations build type-safe queries only against their owned tables. Public
 domain contracts do not expose Drizzle or PostgreSQL types.
@@ -451,79 +448,18 @@ public typed service. Financial execution goes through `FinancialLedgerPort`, ne
 
 ## Workload Isolation Contract
 
-Public operations declare workload behavior separately from capability identity. Business verbs
-continue to describe owner-controlled effects; workload class, criticality, consistency, estimated
-cost, deadline, and admission remain metadata.
-
-The initial planes are command, query, and async. Query work may use a bounded authoritative path or
-a projection-safe path; only the projection-safe path qualifies for the no-primary-credential
-guarantee. Canonical commands retain a reviewed non-zero resource reserve. Projection-safe
-dashboard, search, and reporting routes in a hard-isolated deployment must not obtain command
-executor slots, command database connections, or a PostgreSQL-primary credential, and they must not
-silently fall back to the primary when their projection path is unavailable.
-
-A business command remains command-plane work when initiated by a job, event consumer, or workflow.
-Async orchestration must re-enter command admission, authorization, idempotency, owner-controlled
-services, and transaction boundaries.
-
-Scarce work acquires bounded admission before executor or database resources. Adaptive concurrency
-may lower a tested hard ceiling but never exceed it. Interactive queues and wait deadlines remain
-finite; overload rejects or degrades before backlog amplifies retries.
-
-`WorkloadCell` is the topology-private deployment containment term. It is distinct from a domain,
-Tenant, Stateful Entity Runtime entity, and `celld` runtime cell. WorkloadCell placement and optional
-recursive shuffle sharding must not appear in public DTOs, capability IDs, events, entity addresses,
-or Process IR.
-
-A colocated deployment preserves logical boundaries but cannot claim physical non-interference
-without executable proof of disjoint resources. Detailed routing, resource, projection, overload,
-and validation rules are owned by [`workload-isolation.md`](./workload-isolation.md).
+Removed by [ADR-0091](../decisions/0091-adopt-framework-and-flagship-erp.md). PostgreSQL, plain
+transactions, and separate API and worker connection pools cover the current scope.
 
 ## Analytic Plane Contract
 
-The Analytic Plane is a logical subsystem over the existing workload classes. Bounded semantic and
-projection reads execute as `query`; ingestion, rebuild, backfill, compaction, report materialization,
-and export execute as `async`. It is not a fourth top-level workload class.
-
-Source domains own versioned Business Fact Contracts, correction semantics, and compatibility. The
-Analytic Plane owns derived metric definitions, dimensional query semantics, projection lifecycle,
-lineage, freshness evaluation, and provider-independent planning. Neither a metric nor a projection
-becomes business, authorization, stock, balance, journal, or financial authority.
-
-Every analytic projection declares a complete rebuild source: retained committed facts/events or an
-owner-approved snapshot/export plus subsequent replay. Metric contracts declare grain, source fact
-versions, valid dimensions and joins, aggregation behavior, exact arithmetic, time and unit semantics,
-authorization, freshness, and a provider-independent output schema.
-
-Projection-safe analytic routes in a hard-isolated deployment have no PostgreSQL-primary credential,
-command service binding, or hidden primary fallback. If no projection satisfies the requested
-semantic version, completeness, authorization, consistency, and maximum staleness, the route serves
-only its declared stale/degraded response or typed unavailability.
-
-PostgreSQL reporting projections are the baseline. External OLAP providers, open table formats, and
-embedded analytical engines require measured need, cross-engine conformance, rebuild, security,
-non-interference, operations, and provider-exit evidence. Detailed rules are owned by
-[`analytics-architecture.md`](./analytics-architecture.md) and ADR-0043.
+Removed by [ADR-0091](../decisions/0091-adopt-framework-and-flagship-erp.md). PostgreSQL, plain
+transactions, and separate API and worker connection pools cover the current scope.
 
 ## Stateful Entity Runtime Contract
 
-RITSEI may route selected, approved aggregate categories through a
-vendor-neutral Stateful Entity Runtime for explicit active ownership,
-identity-local serialization, hot state, or object-local coordination.
-Stateless Effect services and direct PostgreSQL transactions remain the default.
-
-The runtime does not replace PostgreSQL, PgQue, the job table, the durable
-workflow engine, domain authorization, or public contracts. PostgreSQL remains
-canonical for control-plane and non-ledger business facts; the activated financial
-profile uses TigerBeetle for accepted transfers, balances, and transfer history.
-Runtime state is classified and reconciled under [`state-and-consistency.md`](./state-and-consistency.md)
-and [`financial-ledger.md`](./financial-ledger.md).
-
-Domain packages must not depend directly on `celld`, Cloudflare Durable Objects,
-or another adapter. Runtime selection and topology remain infrastructure and
-composition-root concerns. Detailed routing, lifecycle, recovery, observability,
-and aggregate-selection rules are owned by
-[`runtime-architecture.md`](./runtime-architecture.md).
+Removed by [ADR-0091](../decisions/0091-adopt-framework-and-flagship-erp.md). PostgreSQL, plain
+transactions, and separate API and worker connection pools cover the current scope.
 
 ## Composite Process Contract
 
@@ -539,6 +475,9 @@ Process-specific state is permitted only when it represents coordination state t
 domain owns, such as durable progress, retry, or compensation status.
 
 ## Process Studio Contract
+
+> **Deferred by [ADR-0091](../decisions/0091-adopt-framework-and-flagship-erp.md):** defect fixes only
+> until Order-to-Cash and Procure-to-Pay run end to end; it then returns on extension points and events.
 
 RITSEI's planned Process Studio composes versioned, typed domain actions and events through a
 small deterministic Process IR. It does not expose arbitrary SQL, scripts, private repositories, or
@@ -670,7 +609,7 @@ timeout/retry policy, provider status, and compensation or manual recovery.
 ## External Standards Contract
 
 External standards such as UBL, ISO 20022, EPCIS, XBRL, and jurisdiction-specific reporting formats
-must enter and leave through versioned adapters in `modules/integrations`.
+must enter and leave through versioned adapters in `framework/modules/integrations`.
 
 An adapter must identify its standard, version, and profile or message type. It maps external
 representations to public domain contracts and must not make external generated types part of a
@@ -696,15 +635,4 @@ conflict translation. Detailed rationale is owned by
 
 ## Zig FFI Boundary
 
-Zig is optional and limited to bounded compute. The adapter must define:
-
-- ABI version;
-- input and output schema;
-- memory ownership;
-- maximum input size;
-- error mapping;
-- timeout behavior;
-- benchmark threshold;
-- TypeScript fallback.
-
-Zig must not open database transactions or perform hidden I/O.
+Removed by [ADR-0091](../decisions/0091-adopt-framework-and-flagship-erp.md).

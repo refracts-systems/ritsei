@@ -15,7 +15,6 @@
 >
 > - Roadmap index: [`./README.md`](./README.md)
 > - ERP primitives: [`./erp-primitives.md`](./erp-primitives.md)
-> - Financial execution: [`./financial-ledger-execution.md`](./financial-ledger-execution.md)
 > - Architecture enforcement:
 >   [`../architecture/architecture-enforcement.md`](../architecture/architecture-enforcement.md)
 > - Authorization: [`../architecture/authorization.md`](../architecture/authorization.md)

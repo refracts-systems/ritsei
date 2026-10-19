@@ -18,17 +18,17 @@
   "artifacts": {
     "api": {
       "kind": "deno-bundle",
-      "entrypoint": "runtime/api/mod.ts",
+      "entrypoint": "erp/runtime/api/mod.ts",
       "sizeBytes": 62387493
     },
     "worker": {
       "kind": "deno-bundle",
-      "entrypoint": "runtime/worker/mod.ts",
+      "entrypoint": "erp/runtime/worker/mod.ts",
       "sizeBytes": 58381053
     },
     "migrator": {
       "kind": "deno-bundle",
-      "entrypoint": "runtime/migrator/mod.ts",
+      "entrypoint": "erp/runtime/migrator/mod.ts",
       "migrationFiles": 231,
       "sizeBytes": 58070038
     },

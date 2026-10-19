@@ -8,8 +8,6 @@
 >
 > **Related documents**
 >
-> - Stateful runtime: [`../runtime-architecture.md`](../runtime-architecture.md)
-> - Workload isolation: [`../workload-isolation.md`](../workload-isolation.md)
 > - State and consistency: [`../state-and-consistency.md`](../state-and-consistency.md)
 > - Stateful runtime ADR:
 >   [`../../decisions/0025-introduce-stateful-entity-runtime.md`](../../decisions/0025-introduce-stateful-entity-runtime.md)

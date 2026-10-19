@@ -16,10 +16,9 @@ export default defineConfig({
           name: "repository",
           include: [
             "apps/**/*.test.{ts,tsx}",
-            "foundation/**/*.test.{ts,tsx}",
-            "modules/**/*.test.{ts,tsx}",
-            "platform/**/*.test.{ts,tsx}",
-            "runtime/**/*.test.{ts,tsx}",
+            "framework/**/*.test.{ts,tsx}",
+            "erp/**/*.test.{ts,tsx}",
+            "extensions/**/*.test.{ts,tsx}",
             "tests/**/*.test.{ts,tsx}",
           ],
           exclude: frontendTests,

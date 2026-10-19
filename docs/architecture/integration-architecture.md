@@ -42,7 +42,7 @@ not wait on them, and their output remains a rebuildable search projection gover
 
 Provider/model adapters and persistence adapters are separate responsibilities. The current
 provider-neutral reliability proof is owned by the dedicated integration persistence adapter at
-`modules/integrations/src/reliability-store.ts`; it may use the foundation database capability and
+`framework/modules/integrations/src/reliability-store.ts`; it may use the foundation database capability and
 integration-owned tables, but it must not import provider SDKs or execute provider calls. The
 AI/provider boundary check allowlists only this explicit persistence seam; other provider/model
 files remain unable to access private persistence.

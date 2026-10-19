@@ -6,9 +6,7 @@
 >
 > - Durable execution: [`./durable-execution.md`](./durable-execution.md)
 > - Communication platform: [`./communication.md`](./communication.md)
-> - Stateful runtime: [`./runtime-architecture.md`](./runtime-architecture.md)
 > - Search architecture: [`./search-architecture.md`](./search-architecture.md)
-> - Analytics architecture: [`./analytics-architecture.md`](./analytics-architecture.md)
 > - State and consistency: [`./state-and-consistency.md`](./state-and-consistency.md)
 > - Source-of-truth and derived-capability non-interference:
 >   [`../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md`](../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md)
@@ -98,7 +96,7 @@ projections from these committed events. They must preserve source and event ver
 replay, and never use projection delivery as the authorization or invariant boundary. Events are not
 assumed to be a complete analytical rebuild source when retention or payload shape is insufficient.
 Detailed rules are owned by [`search-architecture.md`](./search-architecture.md) and
-[`analytics-architecture.md`](./analytics-architecture.md).
+analytics-architecture.md.
 
 Process triggers and waits discover versioned event schemas through the Typed Event Catalog defined
 by [`process-studio.md`](./process-studio.md). External CloudEvents are authenticated and normalized

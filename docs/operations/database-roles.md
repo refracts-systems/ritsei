@@ -10,7 +10,6 @@
 > - PostgreSQL architecture: [`../architecture/postgresql-19-architecture.md`](../architecture/postgresql-19-architecture.md)
 > - Logical database and physical placement:
 >   [`../decisions/0067-separate-logical-database-and-physical-data-placement.md`](../decisions/0067-separate-logical-database-and-physical-data-placement.md)
-> - Workload isolation: [`../architecture/workload-isolation.md`](../architecture/workload-isolation.md)
 > - Architecture enforcement: [`../architecture/architecture-enforcement.md`](../architecture/architecture-enforcement.md)
 > - Authorization architecture: [`../architecture/authorization.md`](../architecture/authorization.md)
 > - Identity and principals: [`../architecture/identity-and-principals.md`](../architecture/identity-and-principals.md)

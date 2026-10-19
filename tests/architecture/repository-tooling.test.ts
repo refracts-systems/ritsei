@@ -1,11 +1,11 @@
 import { assert, describe, it } from "@effect/vitest"
 
-import { analyzeAiBoundary, analyzePublicPackageImports } from "../../tooling/architecture.ts"
-import { validateSkillDocument } from "../../tooling/check-agent-skills.ts"
 import {
-  evaluateFinancialManifest,
-  requiredFinancialGateIds,
-} from "../../tooling/financial-gate.ts"
+  analyzeAiBoundary,
+  analyzeLayerImports,
+  analyzePublicPackageImports,
+} from "../../tooling/architecture.ts"
+import { validateSkillDocument } from "../../tooling/check-agent-skills.ts"
 
 const validSkill = `---
 name: example-workflow
@@ -28,51 +28,51 @@ describe("repository tooling", () => {
     )
   })
 
-  it("uses one fail-closed financial evidence evaluator", () => {
-    const gates = requiredFinancialGateIds.map((id) => ({
-      id,
-      title: id,
-      observed: "FAIL" as const,
-      evidenceClass: "missing" as const,
-      acceptedEvidenceClasses: ["production-real" as const],
-      evidence: [],
-      reason: "missing proof",
-      failureCategory: "evidence" as const,
-      requiredEvidence: "production proof",
-      remediation: "run the rehearsal",
-    }))
-    const manifest = {
-      schemaVersion: 1,
-      reviewedAt: "2026-08-31",
-      baselineCommit: "056828250526",
-      summary: { passed: 0, failed: gates.length, total: gates.length },
-      gates,
-    }
-
-    assert.strictEqual(evaluateFinancialManifest(manifest).failed, 16)
-    assert.throws(() =>
-      evaluateFinancialManifest({
-        ...manifest,
-        summary: { passed: 1, failed: 15, total: 16 },
-      }),
-    )
-    assert.throws(() => evaluateFinancialManifest({ ...manifest, gates: [null] }))
-  })
-
   it("rejects cross-package imports outside public entry points", () => {
     const failures = analyzePublicPackageImports(
       [
-        { path: "modules/a/mod.ts", source: 'export { A } from "./src/service.ts"' },
+        { path: "erp/modules/a/mod.ts", source: 'export { A } from "./src/service.ts"' },
         {
-          path: "modules/a/src/service.ts",
-          source: 'import { B } from "../../b/src/service.ts"',
+          path: "erp/modules/a/src/service.ts",
+          source: 'import { B } from "../../../../framework/modules/b/src/service.ts"',
         },
-        { path: "modules/b/mod.ts", source: 'export { B } from "./src/service.ts"' },
+        { path: "framework/modules/b/mod.ts", source: 'export { B } from "./src/service.ts"' },
       ],
-      ["a", "b"],
+      ["erp/modules/a", "framework/modules/b"],
     )
 
-    assert.isTrue(failures.some((failure) => failure.includes("must use modules/b/mod.ts")))
+    assert.isTrue(
+      failures.some((failure) => failure.includes("must use framework/modules/b/mod.ts")),
+    )
+  })
+
+  it("keeps the framework independent of the ERP and extensions", () => {
+    const failures = analyzeLayerImports([
+      {
+        path: "framework/modules/catalog/src/service.ts",
+        source: 'import { Sales } from "../../../../erp/modules/sales/mod.ts"',
+      },
+      {
+        path: "erp/modules/sales/src/service.ts",
+        source: 'import { Extra } from "../../../../extensions/extra/mod.ts"',
+      },
+    ])
+
+    assert.isTrue(failures.some((failure) => failure.includes("framework must not import erp")))
+    assert.isTrue(failures.some((failure) => failure.includes("erp must not import extensions")))
+    assert.deepStrictEqual(
+      analyzeLayerImports([
+        {
+          path: "erp/modules/sales/src/service.ts",
+          source: 'import { Database } from "../../../../framework/foundation/mod.ts"',
+        },
+        {
+          path: "extensions/extra/src/service.ts",
+          source: 'import { Sales } from "../../../erp/modules/sales/mod.ts"',
+        },
+      ]),
+      [],
+    )
   })
 
   it("keeps AI/provider code behind the integration and persistence boundaries", () => {
@@ -82,7 +82,7 @@ describe("repository tooling", () => {
     assert.deepStrictEqual(
       analyzeAiBoundary([
         {
-          path: "modules/integrations/src/model-adapter.ts",
+          path: "framework/modules/integrations/src/model-adapter.ts",
           source: providerImport("effect/ai", "{ LanguageModel }"),
         },
       ]),
@@ -91,19 +91,19 @@ describe("repository tooling", () => {
     assert.isTrue(
       analyzeAiBoundary([
         {
-          path: "modules/sales/src/service.ts",
+          path: "erp/modules/sales/src/service.ts",
           source: providerImport("effect/ai/LanguageModel", "* as LanguageModel"),
         },
-      ]).some((failure) => failure.includes("must stay under modules/integrations/")),
+      ]).some((failure) => failure.includes("must stay under framework/modules/integrations/")),
     )
     const integrationSchemaPath = ["../../../db/schema", "integration.ts"].join("/")
     assert.deepStrictEqual(
       analyzeAiBoundary([
         {
-          path: "modules/integrations/src/reliability-store.ts",
+          path: "framework/modules/integrations/src/reliability-store.ts",
           source: [
             `import { externalReliabilityRecords } from "${integrationSchemaPath}"`,
-            'import { Database } from "../../foundation/mod.ts"',
+            'import { Database } from "../../framework/foundation/mod.ts"',
             "database.transaction(() => undefined)",
           ].join("\n"),
         },
@@ -113,7 +113,7 @@ describe("repository tooling", () => {
     assert.isTrue(
       analyzeAiBoundary([
         {
-          path: "modules/integrations/src/reliability-store.ts",
+          path: "framework/modules/integrations/src/reliability-store.ts",
           source: providerImport("openai", "OpenAI"),
         },
       ]).some((failure) => failure.includes("persistence adapter cannot import provider SDK")),
@@ -121,10 +121,10 @@ describe("repository tooling", () => {
     assert.deepStrictEqual(
       analyzeAiBoundary([
         {
-          path: "modules/integrations/src/governance-store.ts",
+          path: "framework/modules/integrations/src/governance-store.ts",
           source: [
             `import { externalConnectorGovernance } from "${integrationSchemaPath}"`,
-            'import { Database } from "../../foundation/mod.ts"',
+            'import { Database } from "../../framework/foundation/mod.ts"',
             "database.transaction(() => undefined)",
           ].join("\n"),
         },
@@ -134,7 +134,7 @@ describe("repository tooling", () => {
     assert.isTrue(
       analyzeAiBoundary([
         {
-          path: "modules/integrations/src/governance-store.ts",
+          path: "framework/modules/integrations/src/governance-store.ts",
           source: providerImport("openai", "OpenAI"),
         },
       ]).some((failure) => failure.includes("persistence adapter cannot import provider SDK")),
@@ -142,7 +142,7 @@ describe("repository tooling", () => {
 
     const failures = analyzeAiBoundary([
       {
-        path: "modules/sales/src/recommendations/model.ts",
+        path: "erp/modules/sales/src/recommendations/model.ts",
         source: [
           providerImport("openai", "OpenAI"),
           ['import { orders } from "../../db/', "schema/sales.ts", '"'].join(""),
@@ -152,7 +152,9 @@ describe("repository tooling", () => {
     ])
 
     assert.isTrue(
-      failures.some((failure) => failure.includes("must stay under modules/integrations")),
+      failures.some((failure) =>
+        failure.includes("must stay under framework/modules/integrations"),
+      ),
     )
     assert.isTrue(failures.some((failure) => failure.includes("private persistence")))
     assert.isTrue(failures.some((failure) => failure.includes("direct business-fact mutations")))

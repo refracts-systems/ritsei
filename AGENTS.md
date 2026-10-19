@@ -56,11 +56,11 @@ Match developer intent to the descriptions; do not require the user to name a sk
 
 | Developer intent | Skill |
 |---|---|
-| Add a business capability end to end (contract, errors, service, store, API, authorization) | [`add-capability`](./.agents/skills/add-capability/SKILL.md) |
-| Add a new domain or schema owner | [`create-domain-module`](./.agents/skills/create-domain-module/SKILL.md) |
-| Change tables, constraints, triggers, RLS, or migrations | [`change-schema`](./.agents/skills/change-schema/SKILL.md) |
-| Cross-domain consumption, or stock/balance/journal/idempotent/multi-write invariants | [`cross-domain-and-transactions`](./.agents/skills/cross-domain-and-transactions/SKILL.md) |
-| Design or explain an Effect success/error/requirements flow | [`design-effect-program`](./.agents/skills/design-effect-program/SKILL.md) |
+| Add a business capability end to end (contract, errors, service, store, API, authorization) | [`add-capability`](.agents/skills/add-capability/SKILL.md) |
+| Add a new domain or schema owner | [`create-domain-module`](.agents/skills/create-domain-module/SKILL.md) |
+| Change tables, constraints, triggers, RLS, or migrations | [`change-schema`](.agents/skills/change-schema/SKILL.md) |
+| Cross-domain consumption, or stock/balance/journal/idempotent/multi-write invariants | [`cross-domain-and-transactions`](.agents/skills/cross-domain-and-transactions/SKILL.md) |
+| Design or explain an Effect success/error/requirements flow | [`design-effect-program`](.agents/skills/design-effect-program/SKILL.md) |
 
 Skills supplement, and never replace, repository ownership, tooling, and validation rules.
 
@@ -105,7 +105,7 @@ contract.ts -> errors.ts -> service.ts -> store.ts -> postgres.ts/memory.ts -> l
   `memory.ts` exists when a deterministic test implementation can preserve the same invariants.
 - `layers.ts`: named production/test composition; `mod.ts` exports only contract, errors,
   operations, and layers.
-- `runtime/api/api.ts` defines transport schemas and routes; `runtime/api/handlers.ts` stays thin.
+- `erp/runtime/api/api.ts` defines transport schemas and routes; `erp/runtime/api/handlers.ts` stays thin.
 - Preserve tenant scope, authorization, tagged failures, transactions, idempotency, events, and
   financial/workflow authority. Add database constraints and invariant tests for every new mutable
   fact. Apply the shape to the new capability; do not refactor existing packages first.
@@ -157,38 +157,54 @@ Add a contract or boundary regression test whenever a new error translation is i
 - Never commit secrets or log credentials or sensitive data.
 - Never accept arbitrary tenant SQL or arbitrary policy scripts.
 
+## Framework and ERP
+
+[ADR-0091](./docs/decisions/0091-adopt-framework-and-flagship-erp.md): RITSEI is an ERP framework
+with a flagship ERP built on it like any third-party module.
+
+```text
+framework/     kernel: modules, data, auth, API, events, UI kit, CLI generator
+erp/           RITSEI ERP: flagship business modules
+extensions/    (later) modules from other developers and customers
+```
+
+- `framework/` never imports `erp/` or `extensions/`; `erp/` and `extensions/` use only public
+  entry points. `tooling/architecture.ts` and Fallow zones enforce this. Framework:
+  `framework/foundation/`, `framework/platform/`, and `framework/modules/` (auth, identity,
+  authorization, messaging, integrations, catalog). ERP: `erp/modules/` (party, sales,
+  procurement, inventory, accounting, billing, process, communication) and `erp/runtime/` (server,
+  worker, and composition). `db/`, `apps/web/`, `tests/`, and `tooling/` stay at the root.
+- Modules extend each other only through public contracts, events, and released extension points,
+  never by patching another module's models, tables, or views.
+- Extract, don't speculate: add a framework capability only together with an ERP module that uses
+  it. Keep engine-neutral ports with exactly one used implementation.
+- PostgreSQL does everything until a named user's measured need says otherwise; delete rather than
+  gate capabilities that are off the roadmap.
+- The process engine is deferred until Order-to-Cash and Procure-to-Pay run end to end.
+
 ## Subsystem Rules
 
 The linked document owns each subsystem's rules. Read it before changing that subsystem; do not
 copy its rules into this file. Folder-specific rules live in `apps/web/AGENTS.md`, `db/AGENTS.md`,
-and `runtime/api/AGENTS.md`.
+and `erp/runtime/api/AGENTS.md`.
 
 | Before changing | Read |
 |---|---|
-| Analytical facts, metrics, projections, OLAP, exports | [`analytics-architecture.md`](./docs/architecture/analytics-architecture.md), ADR-0043 |
-| Exact, full-text, vector, hybrid, or global search | [`search-architecture.md`](./docs/architecture/search-architecture.md), ADR-0027 |
-| Workload classes, pools, overload control, cells | [`workload-isolation.md`](./docs/architecture/workload-isolation.md), ADR-0034 |
-| Stateful entities, jobs, events, durable workflows | [`runtime-architecture.md`](./docs/architecture/runtime-architecture.md), [`state-and-consistency.md`](./docs/architecture/state-and-consistency.md) |
+| Commands, events, outbox, jobs, consistency | [`state-and-consistency.md`](./docs/architecture/state-and-consistency.md) |
+| Search | [`search-architecture.md`](./docs/architecture/search-architecture.md) (PostgreSQL only) |
 | Connectors, OpenAPI imports, CloudEvents, OAuth, provider adapters | [`integration-architecture.md`](./docs/architecture/integration-architecture.md), ADR-0019 |
-| Process catalogs, Process IR, workflows, compensation, designer | [`process-studio.md`](./docs/architecture/process-studio.md), ADR-0018 |
 | Financial ledger, journals, balances | [`financial-ledger.md`](./docs/architecture/financial-ledger.md) |
 | Frontend screens, shell, design system | [`frontend.md`](./docs/architecture/frontend.md), [`design-system.md`](./docs/architecture/design-system.md) |
 
 Invariants that are easy to violate and expensive to find late:
 
-- PostgreSQL is the source of truth for control-plane and non-ledger business state; financial
-  transfer and balance authority follows the financial-ledger architecture. Use a direct
-  transaction for synchronous invariants, PgQue for committed facts and fan-out, and a job table for
-  leased single-consumer work. Do not dual-write to PostgreSQL and an external broker.
-- Do not activate `celld`, `pg_durable`, Zig, ClickHouse/Pinot/Iceberg/DuckDB, `pgvector`,
-  `pg_textsearch`, or an external search engine before the gates in the owning document and ADR pass.
-- Search results and analytics freshness are never authorization evidence or current business facts.
-- A `ResourceLease` is admission, not authorization or ownership. Keep a non-zero command reserve
-  that query and async work cannot acquire.
+- PostgreSQL is the source of truth for all business state, including the financial ledger. Use a
+  direct transaction for synchronous invariants, the transactional outbox for committed facts, and a
+  job table for leased single-consumer work. Do not dual-write to PostgreSQL and an external system.
+- Search results are candidates, never authorization evidence or current business facts.
 - External side effects need idempotency, timeout/retry policy, and explicit compensation or manual
-  recovery. Provider types, credentials, and topology never appear in public contracts.
-- Compensation is a new idempotent business command, never deletion of committed facts. A
-  `ProcessPrincipal` never bypasses domain authorization.
+  recovery. Provider types and credentials never appear in public contracts.
+- Compensation is a new idempotent business command, never deletion of committed facts.
 
 ## Documentation
 

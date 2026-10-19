@@ -1,9 +1,9 @@
 # ADR-0043: Adopt a Rebuildable Analytic Plane
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-08-22
 - Supersedes: None
-- Superseded by: None
+- Superseded by: ADR-0091 (framework reset)
 
 > **Related documents**
 >
@@ -11,13 +11,13 @@
 > - Canonical architecture:
 >   [`../architecture/architecture-spec-v4.md`](../architecture/architecture-spec-v4.md)
 > - Analytics architecture:
->   [`../architecture/analytics-architecture.md`](../architecture/analytics-architecture.md)
+>   ../architecture/analytics-architecture.md
 > - Workload isolation:
->   [`../architecture/workload-isolation.md`](../architecture/workload-isolation.md)
+>   ../architecture/workload-isolation.md
 > - State and consistency:
 >   [`../architecture/state-and-consistency.md`](../architecture/state-and-consistency.md)
 > - Comparative reference:
->   [`../architecture/reference/analytical-isolation-and-semantic-projection-patterns.md`](../architecture/reference/analytical-isolation-and-semantic-projection-patterns.md)
+>   ../architecture/reference/analytical-isolation-and-semantic-projection-patterns.md
 
 ## Context
 
@@ -217,4 +217,4 @@ Before an analytic route or provider is production-ready, prove:
 - financial reports preserve Accounting provenance and never establish independent authority.
 
 Detailed current rules are owned by
-[`../architecture/analytics-architecture.md`](../architecture/analytics-architecture.md).
+../architecture/analytics-architecture.md.

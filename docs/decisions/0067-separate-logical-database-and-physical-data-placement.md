@@ -13,7 +13,6 @@
 > - Canonical architecture: [`../architecture/architecture-spec-v4.md`](../architecture/architecture-spec-v4.md)
 > - PostgreSQL architecture: [`../architecture/postgresql-19-architecture.md`](../architecture/postgresql-19-architecture.md)
 > - State and consistency: [`../architecture/state-and-consistency.md`](../architecture/state-and-consistency.md)
-> - Workload isolation: [`../architecture/workload-isolation.md`](../architecture/workload-isolation.md)
 > - Database roles: [`../operations/database-roles.md`](../operations/database-roles.md)
 > - PostgreSQL 19 `WAIT FOR` decision: [`./0039-select-postgresql-wait-for-for-replica-read-your-writes.md`](./0039-select-postgresql-wait-for-for-replica-read-your-writes.md)
 
@@ -166,5 +165,4 @@ Before activating a multi-placement deployment, prove:
 - [`../architecture/postgresql-19-architecture.md`](../architecture/postgresql-19-architecture.md)
 - [`../architecture/architecture-spec-v4.md`](../architecture/architecture-spec-v4.md)
 - [`../architecture/state-and-consistency.md`](../architecture/state-and-consistency.md)
-- [`../architecture/workload-isolation.md`](../architecture/workload-isolation.md)
 - [`../operations/database-roles.md`](../operations/database-roles.md)
