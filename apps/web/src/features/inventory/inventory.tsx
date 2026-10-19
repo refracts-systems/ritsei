@@ -16,10 +16,13 @@ import type {
 } from "../../shared/contracts/generated/inventory.ts"
 import { CommandFeedback, QueryBoundary } from "../../shared/request-feedback.tsx"
 import { ApiRuntime } from "../../shared/runtime.ts"
+import { formatDecimal } from "../../ui/foundations/format.ts"
 import { layout } from "../../ui/foundations/layout.ts"
 import { DataTable } from "../../ui/patterns/data-table.tsx"
 import { EntityWorkspace } from "../../ui/patterns/entity-workspace.tsx"
+import { ActionMenu } from "../../ui/primitives/action-menu.tsx"
 import { Badge } from "../../ui/primitives/badge.tsx"
+import { Reference } from "../../ui/primitives/reference.tsx"
 import { Button } from "../../ui/primitives/button.tsx"
 import { createDialogOpenChange, Dialog } from "../../ui/primitives/dialog.tsx"
 import { FormField } from "../../ui/primitives/form-field.tsx"
@@ -982,7 +985,12 @@ function ItemTable(props: { items: readonly Item[] }) {
   )
 }
 
-function BalanceTable(props: { balances: readonly StockBalance[] }) {
+type InventoryNames = Readonly<{
+  warehouse: (id: string) => string | undefined
+  item: (id: string) => string | undefined
+}>
+
+function BalanceTable(props: { balances: readonly StockBalance[]; names: InventoryNames }) {
   return (
     <DataTable
       surface={false}
@@ -992,31 +1000,38 @@ function BalanceTable(props: { balances: readonly StockBalance[] }) {
         {
           id: "warehouseId",
           header: "Warehouse",
-          cell: (balance) => <span class={layout.code}>{balance.warehouseId}</span>,
+          cell: (balance) => (
+            <Reference
+              id={balance.warehouseId}
+              label={props.names.warehouse(balance.warehouseId)}
+            />
+          ),
         },
         {
           id: "itemId",
           header: "Item",
-          cell: (balance) => <span class={layout.code}>{balance.itemId}</span>,
+          cell: (balance) => (
+            <Reference id={balance.itemId} label={props.names.item(balance.itemId)} />
+          ),
         },
         {
           id: "onHand",
           header: "On hand",
-          cell: (balance) => <span class={layout.code}>{balance.onHand}</span>,
+          align: "end",
+          cell: (balance) => formatDecimal(balance.onHand),
         },
         {
           id: "reserved",
           header: "Reserved",
-          cell: (balance) => <span class={layout.code}>{balance.reserved}</span>,
+          align: "end",
+          cell: (balance) => formatDecimal(balance.reserved),
         },
         {
           id: "available",
           header: "Available",
-          cell: (balance) => (
-            <span class={layout.code}>
-              {String(BigInt(balance.onHand) - BigInt(balance.reserved))}
-            </span>
-          ),
+          align: "end",
+          cell: (balance) =>
+            formatDecimal(String(BigInt(balance.onHand) - BigInt(balance.reserved))),
         },
         {
           id: "unitOfMeasure",
@@ -1030,6 +1045,7 @@ function BalanceTable(props: { balances: readonly StockBalance[] }) {
 
 function ReservationTable(props: {
   reservations: readonly StockReservation[]
+  names: InventoryNames
   reload: () => Promise<unknown>
 }) {
   return (
@@ -1046,17 +1062,25 @@ function ReservationTable(props: {
         {
           id: "warehouseId",
           header: "Warehouse",
-          cell: (reservation) => <span class={layout.code}>{reservation.warehouseId}</span>,
+          cell: (reservation) => (
+            <Reference
+              id={reservation.warehouseId}
+              label={props.names.warehouse(reservation.warehouseId)}
+            />
+          ),
         },
         {
           id: "itemId",
           header: "Item",
-          cell: (reservation) => <span class={layout.code}>{reservation.itemId}</span>,
+          cell: (reservation) => (
+            <Reference id={reservation.itemId} label={props.names.item(reservation.itemId)} />
+          ),
         },
         {
           id: "quantity",
           header: "Quantity",
-          cell: (reservation) => <span class={layout.code}>{reservation.quantity}</span>,
+          align: "end",
+          cell: (reservation) => formatDecimal(reservation.quantity),
         },
         {
           id: "status",
@@ -1147,7 +1171,7 @@ function TransferTable(props: {
   )
 }
 
-function MovementTable(props: { movements: readonly StockMovement[] }) {
+function MovementTable(props: { movements: readonly StockMovement[]; names: InventoryNames }) {
   return (
     <DataTable
       surface={false}
@@ -1169,21 +1193,26 @@ function MovementTable(props: { movements: readonly StockMovement[] }) {
         {
           id: "warehouseId",
           header: "Warehouse",
-          cell: (movement) => <span class={layout.code}>{movement.warehouseId}</span>,
+          cell: (movement) => (
+            <Reference
+              id={movement.warehouseId}
+              label={props.names.warehouse(movement.warehouseId)}
+            />
+          ),
         },
         {
           id: "itemId",
           header: "Item",
-          cell: (movement) => <span class={layout.code}>{movement.itemId}</span>,
+          cell: (movement) => (
+            <Reference id={movement.itemId} label={props.names.item(movement.itemId)} />
+          ),
         },
         {
           id: "quantity",
           header: "Quantity",
-          cell: (movement) => (
-            <span class={layout.code}>
-              {movement.quantity} {movement.unitOfMeasure ?? ""}
-            </span>
-          ),
+          align: "end",
+          cell: (movement) =>
+            `${formatDecimal(movement.quantity)} ${movement.unitOfMeasure ?? ""}`.trimEnd(),
         },
         { id: "reason", header: "Reason", cell: (movement) => movement.reason ?? "—" },
       ]}
@@ -1471,6 +1500,13 @@ export function Inventory(props: {
     ])
   const warehouseData = createMemo(() => warehouses.data ?? [])
   const itemData = createMemo(() => items.data ?? [])
+  const names: InventoryNames = {
+    warehouse: (id) => warehouseData().find((warehouse) => warehouse.id === id)?.name,
+    item: (id) => {
+      const item = itemData().find((candidate) => candidate.id === id)
+      return item === undefined ? undefined : `${item.sku} · ${item.name}`
+    },
+  }
   const balanceData = createMemo(() => balances.data ?? [])
   const reservationData = createMemo(() => reservations.data ?? [])
   const transferData = createMemo(() => transfers.data ?? [])
@@ -1490,13 +1526,15 @@ export function Inventory(props: {
         }
         headerActions={
           <div class={layout.row}>
-            <CreateWarehouseDialog reload={reload} />
-            <CreateItemDialog reload={reload} />
             <ReceiveStockDialog warehouses={warehouseData()} items={itemData()} reload={reload} />
-            <AdjustStockDialog warehouses={warehouseData()} items={itemData()} reload={reload} />
-            <ReserveStockDialog warehouses={warehouseData()} items={itemData()} reload={reload} />
             <CreateTransferDialog warehouses={warehouseData()} items={itemData()} reload={reload} />
-            <Button type="button" onClick={() => void reload()}>
+            <ActionMenu>
+              <AdjustStockDialog warehouses={warehouseData()} items={itemData()} reload={reload} />
+              <ReserveStockDialog warehouses={warehouseData()} items={itemData()} reload={reload} />
+              <CreateItemDialog reload={reload} />
+              <CreateWarehouseDialog reload={reload} />
+            </ActionMenu>
+            <Button type="button" variant="ghost" onClick={() => void reload()}>
               Reload
             </Button>
           </div>
@@ -1553,7 +1591,7 @@ export function Inventory(props: {
             when={balanceData().length > 0}
             fallback={<p role="status">No stock positions match the current filters.</p>}
           >
-            <BalanceTable balances={balanceData()} />
+            <BalanceTable balances={balanceData()} names={names} />
           </Show>
         </section>
         <section class={[surface(), layout.stack]} aria-labelledby="inventory-reservations-heading">
@@ -1562,7 +1600,7 @@ export function Inventory(props: {
             when={reservationData().length > 0}
             fallback={<p role="status">No reservations match the current filters.</p>}
           >
-            <ReservationTable reservations={reservationData()} reload={reload} />
+            <ReservationTable reservations={reservationData()} names={names} reload={reload} />
           </Show>
         </section>
         <section class={[surface(), layout.stack]} aria-labelledby="inventory-transfers-heading">
@@ -1588,7 +1626,7 @@ export function Inventory(props: {
             when={movementData().length > 0}
             fallback={<p role="status">No movement history matches the current filters.</p>}
           >
-            <MovementTable movements={movementData()} />
+            <MovementTable movements={movementData()} names={names} />
           </Show>
         </section>
       </EntityWorkspace>

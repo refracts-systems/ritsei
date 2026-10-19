@@ -8,7 +8,7 @@ import type {
   StockReservation,
   StockTransfer,
 } from "../../apps/web/src/shared/contracts/generated/inventory.ts"
-import { builtApp, connectToTenant } from "./browser.ts"
+import { builtApp, connectToTenant, chooseMoreAction } from "./browser.ts"
 
 const tenantId = "01900000-0000-7000-8000-000000000010"
 const legalEntityId = "01900000-0000-7000-8000-000000000011"
@@ -297,7 +297,7 @@ it.effect(
         const initialA11y = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()
         assert.deepEqual(initialA11y.violations, [])
 
-        await page.getByRole("button", { name: "Create warehouse", exact: true }).click()
+        await chooseMoreAction(page, "Create warehouse")
         const warehouseDialog = page.getByRole("dialog", { name: "Create warehouse" })
         await warehouseDialog
           .getByRole("textbox", { name: "Legal entity ID", exact: true })
@@ -307,8 +307,12 @@ it.effect(
           .fill("New warehouse")
         await warehouseDialog.getByRole("button", { name: "Create warehouse", exact: true }).click()
         await warehouseDialog.waitFor({ state: "hidden" })
+        // A menu-launched dialog returns focus to the menu control when it closes.
+        await page.waitForFunction(
+          () => document.activeElement?.getAttribute("aria-haspopup") === "true",
+        )
 
-        await page.getByRole("button", { name: "Create item", exact: true }).click()
+        await chooseMoreAction(page, "Create item")
         const itemDialog = page.getByRole("dialog", { name: "Create item" })
         await itemDialog.getByRole("textbox", { name: "SKU", exact: true }).fill("widget-3")
         await itemDialog
@@ -329,7 +333,7 @@ it.effect(
         await receiveDialog.getByRole("button", { name: "Receive stock", exact: true }).click()
         await receiveDialog.waitFor({ state: "hidden" })
 
-        await page.getByRole("button", { name: "Adjust stock", exact: true }).click()
+        await chooseMoreAction(page, "Adjust stock")
         const adjustDialog = page.getByRole("dialog", { name: "Adjust stock" })
         await adjustDialog
           .getByRole("combobox", { name: "Warehouse", exact: true })
@@ -344,7 +348,7 @@ it.effect(
         await adjustDialog.getByRole("button", { name: "Post correction", exact: true }).click()
         await adjustDialog.waitFor({ state: "hidden" })
 
-        await page.getByRole("button", { name: "Reserve stock", exact: true }).click()
+        await chooseMoreAction(page, "Reserve stock")
         const reserveDialog = page.getByRole("dialog", { name: "Reserve stock" })
         await reserveDialog
           .getByRole("combobox", { name: "Warehouse", exact: true })

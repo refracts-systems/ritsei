@@ -8,6 +8,7 @@ import type {
 } from "../../shared/contracts/generated/procurement.ts"
 import { CommandFeedback, QueryBoundary } from "../../shared/request-feedback.tsx"
 import { ApiRuntime } from "../../shared/runtime.ts"
+import { formatDecimal } from "../../ui/foundations/format.ts"
 import { layout } from "../../ui/foundations/layout.ts"
 import { DataTable } from "../../ui/patterns/data-table.tsx"
 import { EntityWorkspace } from "../../ui/patterns/entity-workspace.tsx"
@@ -638,9 +639,10 @@ function PurchaseOrderTable(props: {
         {
           id: "total",
           header: "Total",
-          cell: (order) => <span class={layout.code}>{order.total}</span>,
+          align: "end",
+          cell: (order) => formatDecimal(order.total),
         },
-        { id: "lines", header: "Lines", cell: (order) => order.lines.length },
+        { id: "lines", header: "Lines", align: "end", cell: (order) => order.lines.length },
         {
           id: "action",
           header: "Action",
@@ -764,12 +766,14 @@ function PurchaseOrderFacts(props: { order: PurchaseOrder }) {
             {
               id: "quantity",
               header: "Quantity",
-              cell: (line) => <span class={layout.code}>{line.quantity}</span>,
+              align: "end",
+              cell: (line) => formatDecimal(line.quantity),
             },
             {
               id: "unitPrice",
               header: "Unit price",
-              cell: (line) => <span class={layout.code}>{line.unitPrice}</span>,
+              align: "end",
+              cell: (line) => formatDecimal(line.unitPrice),
             },
           ]}
         />

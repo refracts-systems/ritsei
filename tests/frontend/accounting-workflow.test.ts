@@ -9,7 +9,7 @@ import type {
   JournalEntry,
   RevenuePostingProfile,
 } from "../../apps/web/src/shared/contracts/generated/accounting.ts"
-import { builtApp, connectToTenant } from "./browser.ts"
+import { builtApp, connectToTenant, chooseMoreAction } from "./browser.ts"
 
 const tenantId = "01930000-0000-7000-8000-000000000001"
 const legalEntityId = "01930000-0000-7000-8000-000000000002"
@@ -157,7 +157,7 @@ it.effect(
           [],
         )
 
-        await page.getByRole("button", { name: "Configure legal entity", exact: true }).click()
+        await chooseMoreAction(page, "Configure legal entity")
         const configurationDialog = page.getByRole("dialog", { name: "Configure legal entity" })
         await configurationDialog
           .getByRole("textbox", { name: "Legal entity ID", exact: true })
@@ -168,7 +168,7 @@ it.effect(
         await configurationDialog.waitFor({ state: "hidden" })
         await page.getByText(legalEntityId, { exact: true }).first().waitFor()
 
-        await page.getByRole("button", { name: "Create account", exact: true }).click()
+        await chooseMoreAction(page, "Create account")
         const cashDialog = page.getByRole("dialog", { name: "Create account" })
         await cashDialog.getByRole("textbox", { name: "Account code", exact: true }).fill("1000")
         await cashDialog.getByRole("textbox", { name: "Account name", exact: true }).fill("Cash")
@@ -178,7 +178,7 @@ it.effect(
         await cashDialog.getByRole("button", { name: "Create account", exact: true }).click()
         await cashDialog.waitFor({ state: "hidden" })
 
-        await page.getByRole("button", { name: "Create account", exact: true }).click()
+        await chooseMoreAction(page, "Create account")
         const revenueDialog = page.getByRole("dialog", { name: "Create account" })
         await revenueDialog.getByRole("textbox", { name: "Account code", exact: true }).fill("4000")
         await revenueDialog
@@ -191,7 +191,7 @@ it.effect(
         await revenueDialog.waitFor({ state: "hidden" })
         await page.getByText("Revenue", { exact: true }).first().waitFor()
 
-        await page.getByRole("button", { name: "Configure revenue profile", exact: true }).click()
+        await chooseMoreAction(page, "Configure revenue profile")
         const profileDialog = page.getByRole("dialog", {
           name: "Configure revenue posting profile",
         })
@@ -209,7 +209,7 @@ it.effect(
           .click()
         await profileDialog.waitFor({ state: "hidden" })
 
-        await page.getByRole("button", { name: "Open period", exact: true }).click()
+        await chooseMoreAction(page, "Open period")
         const periodDialog = page.getByRole("dialog", { name: "Open accounting period" })
         await periodDialog
           .getByRole("textbox", { name: "Legal entity ID", exact: true })
@@ -463,7 +463,7 @@ it.effect(
           .waitFor()
 
         mode = "profile-conflict"
-        await page.getByRole("button", { name: "Configure revenue profile", exact: true }).click()
+        await chooseMoreAction(page, "Configure revenue profile")
         const profileDialog = page.getByRole("dialog", {
           name: "Configure revenue posting profile",
         })
@@ -488,7 +488,7 @@ it.effect(
         await profileDialog.getByRole("button", { name: "Close", exact: true }).click()
 
         mode = "period-unknown"
-        await page.getByRole("button", { name: "Open period", exact: true }).click()
+        await chooseMoreAction(page, "Open period")
         const periodDialog = page.getByRole("dialog", { name: "Open accounting period" })
         await periodDialog
           .getByRole("textbox", { name: "Legal entity ID", exact: true })

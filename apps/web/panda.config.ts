@@ -548,15 +548,16 @@ export default defineConfig({
   },
   staticCss: { recipes: { control: ["*"], surface: ["*"] } },
   globalCss: {
+    // Text styles live on body, not html, so 1rem stays 16px and the spacing/size tokens keep the
+    // documented 4px grid (36px controls).
     html: {
       bg: "canvas",
       color: "text",
-      textStyle: "body",
       WebkitFontSmoothing: "antialiased",
       MozOsxFontSmoothing: "grayscale",
       textRendering: "optimizeLegibility",
     },
-    body: { margin: "0" },
+    body: { margin: "0", textStyle: "body" },
     "[data-theme=dark]": { colorScheme: "dark" },
     "[data-theme=light]": { colorScheme: "light" },
     "::selection": { bg: "actionSubtle", color: "text" },

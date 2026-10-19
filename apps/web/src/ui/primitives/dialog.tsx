@@ -4,9 +4,10 @@ import {
   useDialogContext,
 } from "@kobalte/core/dialog"
 import type { JSX } from "@solidjs/web"
-import { createEffect } from "solid-js"
+import { createEffect, createSignal, onSettled, Show } from "solid-js"
 import { css } from "../generated/css/index.js"
 import { Icon } from "../icons/index.ts"
+import { type ActionMenuRegistry, useActionMenu } from "./action-menu-context.ts"
 import { Button } from "./button.tsx"
 
 export const createDialogOpenChange =
@@ -95,12 +96,18 @@ export function useDialogInitialFocus(dialog: DialogContextValue) {
   )
 }
 
-function DialogBody(props: DialogProps) {
+function DialogBody(props: DialogProps & { menu: ActionMenuRegistry | null }) {
   const dialog = useDialogContext()
   useDialogInitialFocus(dialog)
   return (
     <KobalteDialog.Content
       class={styles.content}
+      onCloseAutoFocus={(event: Event) => {
+        // A menu-launched dialog has no trigger button; return focus to the menu control.
+        if (props.menu === null) return
+        event.preventDefault()
+        props.menu.restoreFocus()
+      }}
       onEscapeKeyDown={() => dialog.close()}
       onKeyDown={(event) => {
         if (event.key === "Escape") {
@@ -134,20 +141,51 @@ function DialogBody(props: DialogProps) {
   )
 }
 
+// Uncontrolled dialogs inside an ActionMenu still need state the menu item can open.
+const createDialogState = (props: DialogProps) => {
+  const [localOpen, setLocalOpen] = createSignal(false)
+  return {
+    open: () => props.open ?? localOpen(),
+    setOpen: (next: boolean) =>
+      props.open === undefined ? setLocalOpen(next) : props.onOpenChange?.(next),
+  }
+}
+
+// The trigger is read lazily: outside a menu it must not be evaluated inside onSettled.
+const registerMenuTrigger = (
+  menu: ActionMenuRegistry | null,
+  trigger: () => JSX.Element | undefined,
+  open: () => void,
+) => {
+  if (menu === null) return undefined
+  const label = trigger()
+  return label === undefined ? undefined : menu.register({ label, select: open })
+}
+
 export function Dialog(props: DialogProps) {
+  const menu = useActionMenu()
+  const state = createDialogState(props)
+  const controlled = menu !== null || props.open !== undefined
+  onSettled(() =>
+    registerMenuTrigger(
+      menu,
+      () => props.trigger,
+      () => state.setOpen(true),
+    ),
+  )
   return (
     <KobalteDialog
       modal
-      {...(props.open === undefined ? {} : { open: props.open, onOpenChange: props.onOpenChange })}
+      {...(controlled ? { open: state.open(), onOpenChange: state.setOpen } : {})}
     >
-      {props.trigger && (
+      <Show when={menu === null && props.trigger}>
         <KobalteDialog.Trigger as={Button} variant={props.triggerVariant} type="button">
           {props.trigger}
         </KobalteDialog.Trigger>
-      )}
+      </Show>
       <KobalteDialog.Portal>
         <KobalteDialog.Overlay class={styles.overlay} />
-        <DialogBody {...props} />
+        <DialogBody {...props} menu={menu} />
       </KobalteDialog.Portal>
     </KobalteDialog>
   )

@@ -627,6 +627,25 @@ Group related fields with a fieldset; actions sit at the end of the form or dial
 Sizes are `md` (36px) and `sm` (32px). Labels name the action and match the resulting confirmation.
 Loading buttons keep their width semantics and expose `aria-busy`.
 
+### Action menu
+
+`ActionMenu` (`ui/primitives/action-menu.tsx`, Kobalte `DropdownMenu`) collects a region's
+secondary commands behind one "More actions" control.
+
+```text
+USE WHEN       a header or toolbar has more than two or three commands of similar weight
+DO NOT USE FOR navigation, the region's primary command, or destructive commands that need
+               to stay visible for safety review
+REQUIRES       commands expressed as Dialogs (or other launchers) rendered as children
+```
+
+A `Dialog` rendered inside an `ActionMenu` does not render its trigger button; it registers its
+trigger label as a menu item, opens after the menu has closed and released focus, and returns focus
+to the menu control when it closes. Keep the primary command and at most one frequent secondary
+command visible beside the menu. The menu panel renders in place rather than in a Portal: under the
+pinned Kobalte Solid 2 alpha, popper positioning only runs when the panel shares the trigger's
+subtree. Revisit when Kobalte is upgraded.
+
 ### Badges
 
 Pill-shaped, 20px tall, tinted background, colored text, and a leading dot. The label carries the
@@ -988,6 +1007,14 @@ until it has:
 - reduced-motion behavior;
 - a component or interaction test when behavior is non-trivial; and
 - visual regression coverage when a shared visual contract changes.
+
+Visual regression is enforced by `tests/frontend/visual-contract.test.ts`. It records the computed
+styles (colors, borders, radii, shadows, typography, and control heights) of the shell, primitives,
+and patterns in light and dark themes and compares them with
+`tests/frontend/visual-contract.baseline.json`. Computed styles are deterministic across operating
+systems, so the same baseline holds on Windows and Linux CI; pixel screenshots are not used because
+font rasterization differs between platforms. After an intentional design change, regenerate the
+baseline with `RITSEI_UPDATE_VISUAL_CONTRACT=1` and review the JSON diff with the change.
 
 Frontend activation gates include:
 
