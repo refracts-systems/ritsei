@@ -40,8 +40,7 @@
     "runtime/config.ts:DeploymentProfile",
     "runtime/config.ts:FinancialAuthority",
     "runtime/config.ts:RuntimeConfigurationFailure",
-    "runtime/layers.ts:makeApplicationLive",
-    "runtime/workload/admission.ts:WorkloadAdmissionInput"
+    "runtime/layers.ts:makeApplicationLive"
   ],
   "unused_types": [
     "apps/web/src/experiments/solid-effect/src/log.ts:LogEntry",
@@ -63,8 +62,7 @@
     "platform/postgres/migrations.ts:MigrationError",
     "runtime/api/bootstrap.ts:BootstrapTenantInput",
     "runtime/api/bootstrap.ts:BootstrapTenantResult",
-    "runtime/config.ts:FinancialAuthority",
-    "runtime/workload/admission.ts:WorkloadAdmissionInput"
+    "runtime/config.ts:FinancialAuthority"
   ],
   "private_type_leaks": [],
   "unused_dependencies": [],
