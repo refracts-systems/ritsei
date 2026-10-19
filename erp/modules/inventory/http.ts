@@ -19,9 +19,13 @@ import {
   makeApiErrorMapping,
   makeModuleApi,
 } from "../../../framework/modules/http/mod.ts"
+import { CalendarDate, FinancialMajorAmount } from "../../../framework/foundation/mod.ts"
 import {
   InventoryService,
   Item,
+  StockKeepingService,
+  StockValuation,
+  ValuedStockMovement,
   StockBalance,
   StockCorrection,
   StockMovement,
@@ -224,6 +228,35 @@ export const InventoryHttpGroup = HttpApiGroup.make("Inventory").add(
     success: StockTransfer,
     error: errors,
   }).middleware(BearerAuth),
+  HttpApiEndpoint.post("registerProductItem", "/inventory/product-items", {
+    headers: tenantHeaders,
+    payload: Schema.Struct({ productId: Uuid }),
+    success: Item,
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.post("countStock", "/inventory/warehouses/:id/counts", {
+    params: { id: Uuid },
+    headers: tenantHeaders,
+    payload: Schema.Struct({
+      countId: Uuid,
+      postingDate: CalendarDate,
+      lines: BoundedArray(
+        Schema.Struct({
+          itemId: Uuid,
+          countedQuantity: Schema.String.check(Schema.isPattern(/^(0|[1-9]d{0,17})$/)),
+          unitCost: Schema.optionalKey(FinancialMajorAmount),
+        }),
+      ),
+    }),
+    success: ValuedStockMovement,
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.get("stockValuation", "/inventory/legal-entities/:id/valuation", {
+    params: { id: Uuid },
+    headers: tenantHeaders,
+    success: StockValuation,
+    error: errors,
+  }).middleware(BearerAuth),
 )
 
 const InventoryHttpApi = makeModuleApi(InventoryHttpGroup)
@@ -234,6 +267,17 @@ export const InventoryHttpErrors = makeApiErrorMapping({
   InventoryUnitOfMeasureMismatch: "conflict",
   InventoryWarehouseLegalEntityMismatch: "conflict",
   ItemAlreadyExists: "conflict",
+  ProductNotFound: "not_found",
+  StockNotStockable: "conflict",
+  StockValuationUnavailable: "conflict",
+  AccountingLegalEntityNotFound: "conflict",
+  AccountingPeriodNotOpen: "conflict",
+  AccountNotFound: "conflict",
+  FinancialEngineActivated: "conflict",
+  InvalidJournalLine: "conflict",
+  JournalIdempotencyConflict: "conflict",
+  PostingRuleNotFound: "conflict",
+  UnbalancedJournal: "conflict",
   StockCorrectionIdempotencyConflict: "conflict",
   StockReservationIdempotencyConflict: "conflict",
   StockReservationInvalidState: "conflict",
@@ -259,7 +303,48 @@ export const InventoryHttpHandlers = HttpApiBuilder.group(
   (handlers) =>
     Effect.gen(function* () {
       const inventory = yield* InventoryService
+      const stockKeeping = yield* StockKeepingService
       return handlers
+        .handle(
+          "registerProductItem",
+          Effect.fn("Http.Inventory.registerProductItem")(function* ({ headers, payload }) {
+            const principal = yield* CurrentPrincipal
+            return yield* coreApiEffect(
+              stockKeeping.registerProductItem({
+                principal,
+                tenantId: headers["x-tenant-id"],
+                productId: payload.productId,
+              }),
+            )
+          }),
+        )
+        .handle(
+          "countStock",
+          Effect.fn("Http.Inventory.countStock")(function* ({ headers, params, payload }) {
+            const principal = yield* CurrentPrincipal
+            return yield* coreApiEffect(
+              stockKeeping.countStock({
+                principal,
+                tenantId: headers["x-tenant-id"],
+                warehouseId: params.id,
+                ...payload,
+              }),
+            )
+          }),
+        )
+        .handle(
+          "stockValuation",
+          Effect.fn("Http.Inventory.stockValuation")(function* ({ headers, params }) {
+            const principal = yield* CurrentPrincipal
+            return yield* coreApiEffect(
+              stockKeeping.valuation({
+                principal,
+                tenantId: headers["x-tenant-id"],
+                legalEntityId: params.id,
+              }),
+            )
+          }),
+        )
         .handle(
           "listWarehouses",
           Effect.fn("Http.Inventory.listWarehouses")(function* ({ headers, query }) {

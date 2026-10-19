@@ -19,7 +19,11 @@ import {
   makeUserAccountService,
   UserAccountService,
 } from "../../framework/modules/identity/mod.ts"
-import { InventoryService, makeInventoryService } from "../modules/inventory/mod.ts"
+import {
+  InventoryService,
+  makeInventoryService,
+  StockKeepingLive,
+} from "../modules/inventory/mod.ts"
 import { makeMessagingService, MessagingService } from "../../framework/modules/messaging/mod.ts"
 import { NumberingLive } from "../../framework/modules/numbering/mod.ts"
 import {
@@ -168,6 +172,10 @@ export const serviceLayers = (
 
   const ProductServiceLive = ProductLive.pipe(Layer.provide(BusinessRequirements))
 
+  const StockKeepingServiceLive = StockKeepingLive.pipe(
+    Layer.provide(Layer.mergeAll(BusinessRequirements, LedgerLive, ProductServiceLive)),
+  )
+
   const ApplicationLive = Layer.mergeAll(
     IdentityLive,
     AuthLive,
@@ -186,6 +194,7 @@ export const serviceLayers = (
     ProcessStudio,
     ProcurementLiveWithRequirements,
     ProductServiceLive,
+    StockKeepingServiceLive,
   )
 
   return ApplicationLive

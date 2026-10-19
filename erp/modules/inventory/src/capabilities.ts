@@ -12,4 +12,7 @@ export const InventoryCapabilities = {
   stockTransferCreate: "inventory.stock_transfer.create",
   stockTransferConfirm: "inventory.stock_transfer.confirm",
   stockTransferComplete: "inventory.stock_transfer.complete",
+  stockIssue: "inventory.stock.issue",
+  stockCount: "inventory.stock.count",
+  valuationRead: "inventory.valuation.read",
 } as const

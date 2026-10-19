@@ -5,7 +5,7 @@ import { InventoryTypedActionCatalog, InventoryTypedEventCatalog } from "./src/c
 export const InventoryModule = defineModule({
   name: "inventory",
   layer: "erp",
-  dependsOn: [],
+  dependsOn: ["accounting", "product"],
   schemas: ["inventory"],
   capabilities: InventoryCapabilities,
   actions: InventoryTypedActionCatalog,

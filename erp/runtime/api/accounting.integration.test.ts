@@ -18,6 +18,7 @@ import {
 } from "../../modules/accounting/mod.ts"
 import { BearerAuth, CurrentPrincipal, RitseiApi } from "./api.ts"
 import { AccountingHttpHandlers as AccountingHandlers } from "../../modules/accounting/http.ts"
+import { unusedService } from "../../../tests/support/unused-service.ts"
 
 const tenantId = "01920000-0000-7000-8000-000000000001"
 const legalEntityId = "01920000-0000-7000-8000-000000000002"
@@ -89,9 +90,7 @@ const accountingService: AccountingServiceContract = {
 
 const financialOperations = {} as FinancialOperationServiceContract
 // The ledger endpoints are covered by the general-ledger tests; these contracts never reach them.
-const ledger = new Proxy({} as GeneralLedgerServiceShape, {
-  get: (_, method) => () => Effect.die(new Error(`unexpected ledger call: ${String(method)}`)),
-})
+const ledger = unusedService<GeneralLedgerServiceShape>("ledger")
 const TestHttpServices = Layer.mergeAll(Path.layer, Etag.layerWeak, HttpPlatform.layer).pipe(
   Layer.provideMerge(FileSystem.layerNoop({})),
 )

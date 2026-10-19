@@ -46,6 +46,8 @@ export {
 } from "./integration.ts"
 export {
   inventorySchema,
+  itemValuations,
+  valuationEntries,
   items,
   movementKind,
   movements,
