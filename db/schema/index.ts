@@ -25,6 +25,8 @@ export {
   journalLines,
   journalStatus,
   legalEntityAccountingConfigurations,
+  postingRole,
+  postingRules,
   revenuePostingProfiles,
 } from "./accounting.ts"
 export { authSchema, sessions, tenants } from "./auth.ts"

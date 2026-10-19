@@ -13,6 +13,8 @@ import {
   type AccountingService as AccountingServiceContract,
   FinancialOperationService,
   type FinancialOperationService as FinancialOperationServiceContract,
+  GeneralLedgerService,
+  type GeneralLedgerServiceShape,
 } from "../../modules/accounting/mod.ts"
 import { BearerAuth, CurrentPrincipal, RitseiApi } from "./api.ts"
 import { AccountingHttpHandlers as AccountingHandlers } from "../../modules/accounting/http.ts"
@@ -86,6 +88,10 @@ const accountingService: AccountingServiceContract = {
 } as unknown as AccountingServiceContract
 
 const financialOperations = {} as FinancialOperationServiceContract
+// The ledger endpoints are covered by the general-ledger tests; these contracts never reach them.
+const ledger = new Proxy({} as GeneralLedgerServiceShape, {
+  get: (_, method) => () => Effect.die(new Error(`unexpected ledger call: ${String(method)}`)),
+})
 const TestHttpServices = Layer.mergeAll(Path.layer, Etag.layerWeak, HttpPlatform.layer).pipe(
   Layer.provideMerge(FileSystem.layerNoop({})),
 )
@@ -103,6 +109,7 @@ it.layer(TestHttpServices)("Accounting API contracts", (it) => {
         Layer.provide(bearer),
         Layer.provide(Layer.succeed(AccountingService, accountingService)),
         Layer.provide(Layer.succeed(FinancialOperationService, financialOperations)),
+        Layer.provide(Layer.succeed(GeneralLedgerService, ledger)),
       )
       const client = yield* HttpApiTest.groups(RitseiApi, ["Accounting"]).pipe(
         Effect.provide(Layer.mergeAll(handlers, bearerClient, bearer)),

@@ -179,3 +179,18 @@ export class RevenueJournalNotFound extends Schema.TaggedError<RevenueJournalNot
     orderId: Uuid,
   },
 ) {}
+export class PostingRuleNotFound extends Schema.TaggedError<PostingRuleNotFound>()(
+  "PostingRuleNotFound",
+  {
+    tenantId: Uuid,
+    legalEntityId: Uuid,
+    role: Schema.String,
+  },
+) {}
+export class InvalidParentAccount extends Schema.TaggedError<InvalidParentAccount>()(
+  "InvalidParentAccount",
+  {
+    tenantId: Uuid,
+    parentAccountId: Uuid,
+  },
+) {}

@@ -6,6 +6,9 @@ import {
   makeFinancialOperationService,
 } from "./financial-operations.ts"
 import { FinancialStagingEvidencePostgresLive } from "./financial-staging-evidence.ts"
+import { GeneralLedgerService } from "./general-ledger-contract.ts"
+import { makeGeneralLedgerPostgresStore } from "./general-ledger-postgres.ts"
+import { makeGeneralLedgerServiceFromStore } from "./general-ledger-service.ts"
 import { AccountingService, makeAccountingService, makeAccountingTestLayer } from "./service.ts"
 
 /** Named production composition for the Accounting control-plane service. */
@@ -26,3 +29,9 @@ export const makeFinancialOperationsTestLive = () =>
 
 export { makeAccountingService, makeAccountingTestLayer }
 export { FinancialOperationServiceLive }
+
+/** The general ledger over PostgreSQL; requires Database, Authorization, and Numbering. */
+export const makeGeneralLedgerService = makeGeneralLedgerServiceFromStore(
+  makeGeneralLedgerPostgresStore(),
+)
+export const GeneralLedgerLive = Layer.effect(GeneralLedgerService, makeGeneralLedgerService)

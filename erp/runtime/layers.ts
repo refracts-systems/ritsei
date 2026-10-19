@@ -5,6 +5,7 @@ import { DurableJobEnqueuer } from "../../framework/foundation/mod.ts"
 import {
   AccountingService,
   FinancialOperationServiceLive,
+  GeneralLedgerLive,
   makeAccountingService,
 } from "../modules/accounting/mod.ts"
 import type { FinancialVerificationSignerService } from "../modules/accounting/mod.ts"
@@ -20,6 +21,7 @@ import {
 } from "../../framework/modules/identity/mod.ts"
 import { InventoryService, makeInventoryService } from "../modules/inventory/mod.ts"
 import { makeMessagingService, MessagingService } from "../../framework/modules/messaging/mod.ts"
+import { NumberingLive } from "../../framework/modules/numbering/mod.ts"
 import { makePartyService, PartyEventPublisherLive, PartyService } from "../modules/party/mod.ts"
 import {
   makeProcessJobEnqueuer,
@@ -119,6 +121,12 @@ export const serviceLayers = (
     Layer.provide(AccountingRequirements),
   )
 
+  const NumberingServiceLive = NumberingLive.pipe(Layer.provide(DatabaseLive))
+
+  const LedgerLive = GeneralLedgerLive.pipe(
+    Layer.provide(Layer.merge(BusinessRequirements, NumberingServiceLive)),
+  )
+
   const ProcessJobEnqueuerLive = Layer.effect(DurableJobEnqueuer, makeProcessJobEnqueuer).pipe(
     Layer.provide(DatabaseLive),
   )
@@ -158,6 +166,8 @@ export const serviceLayers = (
     SalesLive,
     InventoryLive,
     AccountingLive,
+    LedgerLive,
+    NumberingServiceLive,
     FinancialOperationsLive,
     ProcessJobEnqueuerLive,
     MessagingLive,

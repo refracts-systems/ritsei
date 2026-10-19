@@ -204,4 +204,27 @@ export type {
   JournalLine as JournalLineType,
   RevenuePostingProfile as RevenuePostingProfileType,
 } from "./src/service.ts"
+export {
+  ChartTemplateId,
+  GeneralLedger,
+  GeneralLedgerService,
+  LedgerAccount,
+  LedgerEntry,
+  LedgerLineInput,
+  PostingRole,
+  PostingRule,
+  RoleBalance,
+  TrialBalance,
+} from "./src/general-ledger-contract.ts"
+export type {
+  GeneralLedger as GeneralLedgerType,
+  GeneralLedgerService as GeneralLedgerServiceShape,
+  LedgerAccount as LedgerAccountType,
+  LedgerEntry as LedgerEntryType,
+  PostEntryFailure,
+  PostingRole as PostingRoleType,
+  TrialBalance as TrialBalanceType,
+} from "./src/general-ledger-contract.ts"
+export { InvalidParentAccount, PostingRuleNotFound } from "./src/errors.ts"
+export { GeneralLedgerLive, makeGeneralLedgerService } from "./src/layers.ts"
 export { AccountingModule } from "./manifest.ts"

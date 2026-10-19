@@ -6,7 +6,7 @@ import * as HttpApiGroup from "effect/http-api/HttpApiGroup"
 import * as HttpApiSchema from "effect/http-api/HttpApiSchema"
 import * as Schema from "effect/Schema"
 
-import { FinancialMajorAmount } from "../../../framework/foundation/mod.ts"
+import { CalendarDate, FinancialMajorAmount } from "../../../framework/foundation/mod.ts"
 import {
   ApiErrors as errors,
   BaseApiErrorPolicy,
@@ -37,7 +37,15 @@ import {
   FinancialStagingEvidenceRecord,
   FinancialVerificationArtifact,
   FinancialVerificationEvidence,
+  GeneralLedger,
+  GeneralLedgerService,
   JournalEntry,
+  LedgerAccount,
+  LedgerEntry,
+  LedgerLineInput,
+  PostingRole,
+  PostingRule,
+  TrialBalance,
   JournalLine,
   RevenuePostingProfile,
 } from "./mod.ts"
@@ -304,6 +312,74 @@ export const AccountingHttpGroup = HttpApiGroup.make("Accounting").add(
       error: errors,
     },
   ).middleware(BearerAuth),
+  HttpApiEndpoint.get("listChart", "/accounting/chart", {
+    headers: tenantHeaders,
+    success: BoundedArray(LedgerAccount),
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.post("applyChartTemplate", "/accounting/chart/templates", {
+    headers: tenantHeaders,
+    payload: Schema.Struct({
+      template: Schema.Literal("neutral_trading"),
+      legalEntityId: Schema.optionalKey(Uuid),
+    }),
+    success: BoundedArray(LedgerAccount),
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.post("createLedgerAccount", "/accounting/chart", {
+    headers: tenantHeaders,
+    payload: Schema.Struct({
+      code: ShortString,
+      name: ShortString,
+      type: Account.fields.type,
+      parentAccountId: Schema.optionalKey(Uuid),
+    }),
+    success: LedgerAccount.pipe(HttpApiSchema.status(201)),
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.get("listPostingRules", "/accounting/legal-entities/:id/posting-rules", {
+    params: { id: Uuid },
+    headers: tenantHeaders,
+    success: BoundedArray(PostingRule),
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.put(
+    "configurePostingRule",
+    "/accounting/legal-entities/:id/posting-rules/:role",
+    {
+      params: { id: Uuid, role: PostingRole },
+      headers: tenantHeaders,
+      payload: Schema.Struct({ accountId: Uuid }),
+      success: PostingRule,
+      error: errors,
+    },
+  ).middleware(BearerAuth),
+  HttpApiEndpoint.post("postLedgerEntry", "/accounting/legal-entities/:id/ledger-entries", {
+    params: { id: Uuid },
+    headers: tenantHeaders,
+    payload: Schema.Struct({
+      postingDate: CalendarDate,
+      reference: ShortString,
+      description: Schema.optionalKey(ShortString),
+      lines: BoundedArray(LedgerLineInput),
+    }),
+    success: LedgerEntry.pipe(HttpApiSchema.status(201)),
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.get("trialBalance", "/accounting/legal-entities/:id/trial-balance", {
+    params: { id: Uuid },
+    headers: tenantHeaders,
+    query: { from: Schema.optionalKey(CalendarDate), to: CalendarDate },
+    success: TrialBalance,
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.get("generalLedger", "/accounting/legal-entities/:id/general-ledger/:accountId", {
+    params: { id: Uuid, accountId: Uuid },
+    headers: tenantHeaders,
+    query: { from: CalendarDate, to: CalendarDate },
+    success: GeneralLedger,
+    error: errors,
+  }).middleware(BearerAuth),
 )
 
 const AccountingHttpApi = makeModuleApi(AccountingHttpGroup)
@@ -349,6 +425,8 @@ export const AccountingHttpErrors = makeApiErrorMapping({
   FinancialVerificationSigningFailure: "conflict",
   FinancialVerificationVerificationFailure: "conflict",
   InvalidJournalLine: "conflict",
+  InvalidParentAccount: "conflict",
+  PostingRuleNotFound: "conflict",
   InvalidRevenuePostingProfile: "conflict",
   JournalIdempotencyConflict: "conflict",
   JournalReferenceAlreadyExists: "conflict",
@@ -367,7 +445,114 @@ export const AccountingHttpHandlers = HttpApiBuilder.group(
     Effect.gen(function* () {
       const accounting = yield* AccountingService
       const financialOperations = yield* FinancialOperationService
+      const ledger = yield* GeneralLedgerService
       return handlers
+        .handle(
+          "listChart",
+          Effect.fn("Http.Accounting.listChart")(function* ({ headers }) {
+            const principal = yield* CurrentPrincipal
+            return yield* coreApiEffect(
+              ledger.listChart({ principal, tenantId: headers["x-tenant-id"] }),
+            )
+          }),
+        )
+        .handle(
+          "applyChartTemplate",
+          Effect.fn("Http.Accounting.applyChartTemplate")(function* ({ headers, payload }) {
+            const principal = yield* CurrentPrincipal
+            return yield* coreApiEffect(
+              ledger.applyChartTemplate({
+                principal,
+                tenantId: headers["x-tenant-id"],
+                ...payload,
+              }),
+            )
+          }),
+        )
+        .handle(
+          "createLedgerAccount",
+          Effect.fn("Http.Accounting.createLedgerAccount")(function* ({ headers, payload }) {
+            const principal = yield* CurrentPrincipal
+            return yield* coreApiEffect(
+              ledger.createAccount({ principal, tenantId: headers["x-tenant-id"], ...payload }),
+            )
+          }),
+        )
+        .handle(
+          "listPostingRules",
+          Effect.fn("Http.Accounting.listPostingRules")(function* ({ headers, params }) {
+            const principal = yield* CurrentPrincipal
+            return yield* coreApiEffect(
+              ledger.listPostingRules({
+                principal,
+                tenantId: headers["x-tenant-id"],
+                legalEntityId: params.id,
+              }),
+            )
+          }),
+        )
+        .handle(
+          "configurePostingRule",
+          Effect.fn("Http.Accounting.configurePostingRule")(function* ({
+            headers,
+            params,
+            payload,
+          }) {
+            const principal = yield* CurrentPrincipal
+            return yield* coreApiEffect(
+              ledger.configurePostingRule({
+                principal,
+                tenantId: headers["x-tenant-id"],
+                legalEntityId: params.id,
+                role: params.role,
+                accountId: payload.accountId,
+              }),
+            )
+          }),
+        )
+        .handle(
+          "postLedgerEntry",
+          Effect.fn("Http.Accounting.postLedgerEntry")(function* ({ headers, params, payload }) {
+            const principal = yield* CurrentPrincipal
+            return yield* coreApiEffect(
+              ledger.postManualEntry({
+                principal,
+                tenantId: headers["x-tenant-id"],
+                legalEntityId: params.id,
+                ...payload,
+              }),
+            )
+          }),
+        )
+        .handle(
+          "trialBalance",
+          Effect.fn("Http.Accounting.trialBalance")(function* ({ headers, params, query }) {
+            const principal = yield* CurrentPrincipal
+            return yield* coreApiEffect(
+              ledger.trialBalance({
+                principal,
+                tenantId: headers["x-tenant-id"],
+                legalEntityId: params.id,
+                ...query,
+              }),
+            )
+          }),
+        )
+        .handle(
+          "generalLedger",
+          Effect.fn("Http.Accounting.generalLedger")(function* ({ headers, params, query }) {
+            const principal = yield* CurrentPrincipal
+            return yield* coreApiEffect(
+              ledger.generalLedger({
+                principal,
+                tenantId: headers["x-tenant-id"],
+                legalEntityId: params.id,
+                accountId: params.accountId,
+                ...query,
+              }),
+            )
+          }),
+        )
         .handle(
           "listConfigurations",
           Effect.fn("Http.Accounting.listConfigurations")(function* ({ headers, query }) {

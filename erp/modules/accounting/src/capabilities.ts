@@ -17,4 +17,9 @@ export const AccountingCapabilities = {
   periodClose: "accounting.period.close",
   revenuePost: "accounting.revenue.post",
   revenueReverse: "accounting.revenue.reverse",
+  chartApply: "accounting.chart.apply",
+  postingRuleConfigure: "accounting.posting_rule.configure",
+  postingRuleRead: "accounting.posting_rule.read",
+  documentJournalPost: "accounting.document_journal.post",
+  ledgerRead: "accounting.ledger.read",
 } as const

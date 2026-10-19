@@ -39,6 +39,20 @@ export const accountingPeriodStatus = accountingSchema.enum("accounting_period_s
   "open",
   "closed",
 ])
+/** Account roles that posting rules map to accounts per legal entity (ADR-0096). */
+export const postingRole = accountingSchema.enum("posting_role", [
+  "receivable",
+  "revenue",
+  "output_tax",
+  "input_tax",
+  "payable",
+  "inventory",
+  "cost_of_goods_sold",
+  "goods_received_not_invoiced",
+  "purchase_price_variance",
+  "inventory_adjustment",
+  "cash",
+])
 export const financialEngine = accountingSchema.enum("financial_engine", [
   "postgresql",
   "tigerbeetle",
@@ -422,12 +436,24 @@ export const accounts = accountingSchema.table(
     code: text("code").notNull(),
     name: text("name").notNull(),
     type: accountType("type").notNull(),
+    parentAccountId: uuid("parent_account_id"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (table) => [
     unique("accounts_tenant_id_id_key").on(table.tenantId, table.id),
     unique("accounts_tenant_code_key").on(table.tenantId, table.code),
+    unique("accounts_tenant_id_type_key").on(table.tenantId, table.id, table.type),
+    // A parent has the same account type, so subtotals never mix balance-sheet and P&L sides.
+    foreignKey({
+      columns: [table.tenantId, table.parentAccountId, table.type],
+      foreignColumns: [table.tenantId, table.id, table.type],
+      name: "accounts_parent_same_type_fkey",
+    }),
+    check(
+      "accounts_parent_not_self_check",
+      sql`${table.parentAccountId} is null or ${table.parentAccountId} <> ${table.id}`,
+    ),
     foreignKey({
       columns: [table.tenantId],
       foreignColumns: [tenants.id],
@@ -470,6 +496,31 @@ export const revenuePostingProfiles = accountingSchema.table(
   ],
 )
 
+export const postingRules = accountingSchema.table(
+  "posting_rules",
+  {
+    tenantId: uuid("tenant_id").notNull(),
+    legalEntityId: uuid("legal_entity_id").notNull(),
+    role: postingRole("role").notNull(),
+    accountId: uuid("account_id").notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.tenantId, table.legalEntityId, table.role] }),
+    foreignKey({
+      columns: [table.tenantId, table.legalEntityId],
+      foreignColumns: [legalEntities.tenantId, legalEntities.id],
+      name: "posting_rules_legal_entity_fkey",
+    }),
+    foreignKey({
+      columns: [table.tenantId, table.accountId],
+      foreignColumns: [accounts.tenantId, accounts.id],
+      name: "posting_rules_account_fkey",
+    }),
+  ],
+)
+
 export const journalEntries = accountingSchema.table(
   "journal_entries",
   {
@@ -479,12 +530,40 @@ export const journalEntries = accountingSchema.table(
     reversesEntryId: uuid("reverses_entry_id"),
     status: journalStatus("status").notNull().default("draft"),
     postedAt: timestamp("posted_at", { withTimezone: true }),
+    // General-ledger attributes (ADR-0096); null only on entries posted before the ledger existed.
+    legalEntityId: uuid("legal_entity_id"),
+    postingDate: date("posting_date", { mode: "string" }),
+    number: text("number"),
+    description: text("description"),
+    sourceType: text("source_type"),
+    sourceId: uuid("source_id"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (table) => [
     unique("journal_entries_tenant_id_id_key").on(table.tenantId, table.id),
     unique("journal_entries_reference_key").on(table.tenantId, table.reference),
+    unique("journal_entries_legal_entity_number_key").on(
+      table.tenantId,
+      table.legalEntityId,
+      table.number,
+    ),
+    index("journal_entries_ledger_idx").on(table.tenantId, table.legalEntityId, table.postingDate),
+    foreignKey({
+      columns: [table.tenantId, table.legalEntityId],
+      foreignColumns: [legalEntities.tenantId, legalEntities.id],
+      name: "journal_entries_legal_entity_fkey",
+    }),
+    check(
+      "journal_entries_ledger_attributes_check",
+      sql`(${table.legalEntityId} is null and ${table.postingDate} is null and ${table.number} is null) or
+      (${table.legalEntityId} is not null and ${table.postingDate} is not null and ${table.number} is not null)`,
+    ),
+    check(
+      "journal_entries_source_check",
+      sql`(${table.sourceType} is null and ${table.sourceId} is null) or
+      (${table.sourceType} ~ '^[a-z][a-z0-9_.]*$' and ${table.sourceId} is not null)`,
+    ),
     foreignKey({
       columns: [table.tenantId],
       foreignColumns: [tenants.id],
@@ -533,6 +612,7 @@ export const journalLines = accountingSchema.table(
       foreignColumns: [accounts.tenantId, accounts.id],
       name: "journal_lines_account_fkey",
     }),
+    index("journal_lines_tenant_account_idx").on(table.tenantId, table.accountId),
     check(
       "journal_lines_amount_check",
       sql`(${table.debit} > 0 and ${table.credit} = 0) or
