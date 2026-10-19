@@ -73,6 +73,10 @@ export {
   partyRepresentations,
   partyRole,
   partyRoles,
+  addressPurpose,
+  partyAddresses,
+  partyBankAccounts,
+  partyContacts,
   partySchema,
   relatedPartyPaths,
 } from "./party.ts"

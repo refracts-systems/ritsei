@@ -10,4 +10,7 @@ export const PartyCapabilities = {
   partyRepresentationCreate: "party.party_representation.create",
   partyRepresentationActivate: "party.party_representation.activate",
   partyRepresentationDeactivate: "party.party_representation.deactivate",
+  partyAddressAdd: "party.party_address.add",
+  partyContactAdd: "party.party_contact.add",
+  partyBankAccountAdd: "party.party_bank_account.add",
 } as const

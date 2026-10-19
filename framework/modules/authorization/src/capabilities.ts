@@ -81,6 +81,9 @@ export const CapabilityIds = [
   "accounting.posting_rule.read",
   "accounting.document_journal.post",
   "accounting.ledger.read",
+  "party.party_address.add",
+  "party.party_contact.add",
+  "party.party_bank_account.add",
 ] as const
 
 export const Capability = Schema.Literals(CapabilityIds)
@@ -293,6 +296,9 @@ export const CapabilityDefinitions: ReadonlyArray<CapabilityDefinition> = [
   definition("accounting.posting_rule.read", "accounting", "posting_rule", "read"),
   definition("accounting.document_journal.post", "accounting", "document_journal", "post"),
   definition("accounting.ledger.read", "accounting", "ledger", "read"),
+  definition("party.party_address.add", "party", "party_address", "add"),
+  definition("party.party_contact.add", "party", "party_contact", "add"),
+  definition("party.party_bank_account.add", "party", "party_bank_account", "add"),
 ]
 
 const capabilityIdSet = new Set<string>(CapabilityIds)

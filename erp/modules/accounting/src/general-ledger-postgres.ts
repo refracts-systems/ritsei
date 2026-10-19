@@ -17,7 +17,7 @@ import {
 } from "../../../../framework/foundation/mod.ts"
 import { NumberingService } from "../../../../framework/modules/numbering/mod.ts"
 import type { LedgerAccount, LedgerEntry, PostingRole } from "./general-ledger-contract.ts"
-import type { GeneralLedgerStore, PostEntryOutcome, ResolvedLine } from "./general-ledger-store.ts"
+import type { GeneralLedgerStore, PostEntryOutcome } from "./general-ledger-store.ts"
 import {
   AccountAlreadyExists,
   AccountingLegalEntityNotFound,

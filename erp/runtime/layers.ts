@@ -22,7 +22,12 @@ import {
 import { InventoryService, makeInventoryService } from "../modules/inventory/mod.ts"
 import { makeMessagingService, MessagingService } from "../../framework/modules/messaging/mod.ts"
 import { NumberingLive } from "../../framework/modules/numbering/mod.ts"
-import { makePartyService, PartyEventPublisherLive, PartyService } from "../modules/party/mod.ts"
+import {
+  makePartyService,
+  PartyContactsLive,
+  PartyEventPublisherLive,
+  PartyService,
+} from "../modules/party/mod.ts"
 import {
   makeProcessJobEnqueuer,
   makeProcessService,
@@ -91,6 +96,8 @@ export const serviceLayers = (
       Layer.merge(BusinessRequirements, PartyEventPublisherLive.pipe(Layer.provide(MessagingLive))),
     ),
   )
+
+  const PartyContactServiceLive = PartyContactsLive.pipe(Layer.provide(BusinessRequirements))
 
   const SalesLive = Layer.effect(SalesService, makeSalesService).pipe(
     Layer.provide(Layer.merge(BusinessRequirements, MessagingLive)),
@@ -163,6 +170,7 @@ export const serviceLayers = (
     AuthLive,
     AuthorizationLive,
     PartyLive,
+    PartyContactServiceLive,
     SalesLive,
     InventoryLive,
     AccountingLive,
