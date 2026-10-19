@@ -248,23 +248,23 @@ activating one.
 
 | Concern                                 | Owner path                                                                          |
 | --------------------------------------- | ----------------------------------------------------------------------------------- |
-| Public schemas and service contract     | `modules/sales/src/contract.ts`                                                     |
-| Public tagged errors                    | `modules/sales/src/errors.ts`                                                       |
-| Service authorization and orchestration | `modules/sales/src/service.ts`                                                      |
-| Semantic persistence port               | `modules/sales/src/store.ts`                                                        |
-| PostgreSQL implementation               | `modules/sales/src/postgres.ts`                                                     |
-| Deterministic memory implementation     | `modules/sales/src/memory.ts`                                                       |
-| Named production/test layers            | `modules/sales/src/layers.ts`                                                       |
-| Public package exports                  | `modules/sales/mod.ts`                                                              |
-| Capability constants                    | `modules/sales/src/capabilities.ts`                                                 |
+| Public schemas and service contract     | `erp/modules/sales/src/contract.ts`                                                     |
+| Public tagged errors                    | `erp/modules/sales/src/errors.ts`                                                       |
+| Service authorization and orchestration | `erp/modules/sales/src/service.ts`                                                      |
+| Semantic persistence port               | `erp/modules/sales/src/store.ts`                                                        |
+| PostgreSQL implementation               | `erp/modules/sales/src/postgres.ts`                                                     |
+| Deterministic memory implementation     | `erp/modules/sales/src/memory.ts`                                                       |
+| Named production/test layers            | `erp/modules/sales/src/layers.ts`                                                       |
+| Public package exports                  | `erp/modules/sales/mod.ts`                                                              |
+| Capability constants                    | `erp/modules/sales/src/capabilities.ts`                                                 |
 | Drizzle schema                          | `db/schema/sales.ts`                                                                |
-| HTTP API definition                     | `runtime/api/api.ts`                                                                |
-| HTTP handlers                           | `runtime/api/handlers.ts`                                                           |
+| HTTP API definition                     | `erp/runtime/api/api.ts`                                                                |
+| HTTP handlers                           | `erp/runtime/api/handlers.ts`                                                           |
 | Generated browser contracts             | `tooling/frontend/contracts.ts`, `apps/web/src/shared/contracts/generated/sales.ts` |
 | Browser service/query/workspace         | `apps/web/src/features/sales/`, `apps/web/src/app/sales-route.tsx`                  |
-| Domain contract tests                   | `modules/sales/tests/sales.test.ts`                                                 |
-| PostgreSQL invariant/publication tests  | `modules/sales/tests/sales.postgres.test.ts`                                        |
-| HTTP contract test                      | `runtime/api/sales.integration.test.ts`                                             |
+| Domain contract tests                   | `erp/modules/sales/tests/sales.test.ts`                                                 |
+| PostgreSQL invariant/publication tests  | `erp/modules/sales/tests/sales.postgres.test.ts`                                        |
+| HTTP contract test                      | `erp/runtime/api/sales.integration.test.ts`                                             |
 | Browser/Axe workflow test               | `tests/frontend/sales-workflow.test.ts`                                             |
 
 Persistence tables, confirmation keys, repository implementations, event delivery infrastructure,

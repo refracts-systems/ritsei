@@ -8,8 +8,8 @@ import {
   makeDocumentAst,
   makeDocumentRenderRequest,
   makeDocumentSnapshot,
-} from "../../foundation/mod.ts"
-import { makePdfNativeDocumentRenderer } from "../../platform/mod.ts"
+} from "../../framework/foundation/mod.ts"
+import { makePdfNativeDocumentRenderer } from "../../framework/platform/mod.ts"
 import { documentBenchmarkCorpus } from "./corpus.ts"
 
 const tenantId = "018f0000-0000-7000-8000-000000000001"

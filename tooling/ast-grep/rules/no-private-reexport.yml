@@ -3,7 +3,8 @@ language: TypeScript
 severity: error
 message: Private implementation details must not be re-exported from a public package entry point.
 files:
-  - modules/*/mod.ts
+  - framework/modules/*/mod.ts
+  - erp/modules/*/mod.ts
 ignores:
   - vendor/**
   - tooling/ast-grep/rule-tests/**

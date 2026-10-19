@@ -30,9 +30,9 @@ await rm(outputPath, { recursive: true })
 await mkdir(outputPath, { recursive: true })
 
 const bundles = [
-  ["api", "runtime/api/mod.ts"],
-  ["worker", "runtime/worker/mod.ts"],
-  ["migrator", "runtime/migrator/mod.ts"],
+  ["api", "erp/runtime/api/mod.ts"],
+  ["worker", "erp/runtime/worker/mod.ts"],
+  ["migrator", "erp/runtime/migrator/mod.ts"],
 ] as const
 for (const [name, entrypoint] of bundles) {
   await run("pnpm", [
@@ -90,9 +90,9 @@ const manifest = {
   },
   build: {
     commands: [
-      "pnpm exec esbuild --bundle --platform=node --format=esm runtime/api/mod.ts",
-      "pnpm exec esbuild --bundle --platform=node --format=esm runtime/worker/mod.ts",
-      "pnpm exec esbuild --bundle --platform=node --format=esm runtime/migrator/mod.ts",
+      "pnpm exec esbuild --bundle --platform=node --format=esm erp/runtime/api/mod.ts",
+      "pnpm exec esbuild --bundle --platform=node --format=esm erp/runtime/worker/mod.ts",
+      "pnpm exec esbuild --bundle --platform=node --format=esm erp/runtime/migrator/mod.ts",
       "pnpm --filter @ritsei/web run build",
     ],
     migrations: "db/migrations is copied beside the migrator bundle",

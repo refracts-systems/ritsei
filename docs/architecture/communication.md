@@ -105,18 +105,18 @@ The timeline is a rebuildable read projection. It is not the communication execu
 | Concern | Owner |
 | --- | --- |
 | Business state, lifecycle, authorization, corrections | Owning domain such as Sales, Procurement, Accounting, or Inventory |
-| Domain facts and transactional publication | Owning domain plus `modules/messaging` |
+| Domain facts and transactional publication | Owning domain plus `framework/modules/messaging` |
 | Communication-intent derivation and delivery lifecycle | Application communication policy plus the Communication capability, behind public contracts |
 | Recipient resolution and actual recipient snapshot | Communication capability and tenant-scoped resolver |
 | Template selection and context version | Communication capability; template ownership remains a separately approved configuration boundary |
 | HTML/plain-text message rendering | Channel renderer behind the communication port |
 | Document meaning and immutable PDF artifact | Owner-local Document Platform contract and owning domain |
 | Workflow approvals and assignments | Process Runtime / owning workflow capability |
-| Provider protocols, credentials, webhooks | `modules/integrations` or approved provider adapters |
+| Provider protocols, credentials, webhooks | `framework/modules/integrations` or approved provider adapters |
 | Activity Timeline | Rebuildable query projection; never authoritative |
 
-`foundation/communication` contains renderer- and provider-neutral contracts and Effect ports.
-The first policy/delivery vertical slice lives in `modules/communication` and is memory-only. Neither
+`framework/foundation/communication` contains renderer- and provider-neutral contracts and Effect ports.
+The first policy/delivery vertical slice lives in `erp/modules/communication` and is memory-only. Neither
 layer owns a database schema, business aggregate from another domain, provider credential, or generic
 mutable communication table. A future durable implementation must receive an explicit schema owner
 before adding persistence.
@@ -498,8 +498,8 @@ addresses, invoice numbers, and communication IDs are not metric labels.
 
 ## 17. Current implementation boundary
 
-This implementation slice adds renderer/provider-neutral contracts under `foundation/communication`
-plus a memory-only Procurement purchase-order confirmation policy under `modules/communication`. It
+This implementation slice adds renderer/provider-neutral contracts under `framework/foundation/communication`
+plus a memory-only Procurement purchase-order confirmation policy under `erp/modules/communication`. It
 does not add:
 
 - a communication database schema or migration;
@@ -512,5 +512,5 @@ does not add:
 - direct domain-to-provider calls.
 
 Future durable implementation must add the smallest owner-local persistence boundary, transactional
-outbox integration through `modules/messaging`, bounded jobs, idempotent delivery attempts, provider
+outbox integration through `framework/modules/messaging`, bounded jobs, idempotent delivery attempts, provider
 adapters, webhook normalization, retention, and operational evidence in separate decisions.

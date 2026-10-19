@@ -56,11 +56,11 @@ Match developer intent to the descriptions; do not require the user to name a sk
 
 | Developer intent | Skill |
 |---|---|
-| Add a business capability end to end (contract, errors, service, store, API, authorization) | [`add-capability`](./.agents/skills/add-capability/SKILL.md) |
-| Add a new domain or schema owner | [`create-domain-module`](./.agents/skills/create-domain-module/SKILL.md) |
-| Change tables, constraints, triggers, RLS, or migrations | [`change-schema`](./.agents/skills/change-schema/SKILL.md) |
-| Cross-domain consumption, or stock/balance/journal/idempotent/multi-write invariants | [`cross-domain-and-transactions`](./.agents/skills/cross-domain-and-transactions/SKILL.md) |
-| Design or explain an Effect success/error/requirements flow | [`design-effect-program`](./.agents/skills/design-effect-program/SKILL.md) |
+| Add a business capability end to end (contract, errors, service, store, API, authorization) | [`add-capability`](.agents/skills/add-capability/SKILL.md) |
+| Add a new domain or schema owner | [`create-domain-module`](.agents/skills/create-domain-module/SKILL.md) |
+| Change tables, constraints, triggers, RLS, or migrations | [`change-schema`](.agents/skills/change-schema/SKILL.md) |
+| Cross-domain consumption, or stock/balance/journal/idempotent/multi-write invariants | [`cross-domain-and-transactions`](.agents/skills/cross-domain-and-transactions/SKILL.md) |
+| Design or explain an Effect success/error/requirements flow | [`design-effect-program`](.agents/skills/design-effect-program/SKILL.md) |
 
 Skills supplement, and never replace, repository ownership, tooling, and validation rules.
 
@@ -105,7 +105,7 @@ contract.ts -> errors.ts -> service.ts -> store.ts -> postgres.ts/memory.ts -> l
   `memory.ts` exists when a deterministic test implementation can preserve the same invariants.
 - `layers.ts`: named production/test composition; `mod.ts` exports only contract, errors,
   operations, and layers.
-- `runtime/api/api.ts` defines transport schemas and routes; `runtime/api/handlers.ts` stays thin.
+- `erp/runtime/api/api.ts` defines transport schemas and routes; `erp/runtime/api/handlers.ts` stays thin.
 - Preserve tenant scope, authorization, tagged failures, transactions, idempotency, events, and
   financial/workflow authority. Add database constraints and invariant tests for every new mutable
   fact. Apply the shape to the new capability; do not refactor existing packages first.
@@ -169,10 +169,11 @@ extensions/    (later) modules from other developers and customers
 ```
 
 - `framework/` never imports `erp/` or `extensions/`; `erp/` and `extensions/` use only public
-  entry points. Until Phase 2 moves the tree, today's `foundation/`, `platform/`, runtime kernel,
-  and platform modules (auth, identity, authorization, messaging, integrations, process) are the
-  framework; business modules (party, catalog, sales, procurement, inventory, accounting, billing)
-  are the ERP.
+  entry points. `tooling/architecture.ts` and Fallow zones enforce this. Framework:
+  `framework/foundation/`, `framework/platform/`, and `framework/modules/` (auth, identity,
+  authorization, messaging, integrations, catalog). ERP: `erp/modules/` (party, sales,
+  procurement, inventory, accounting, billing, process, communication) and `erp/runtime/` (server,
+  worker, and composition). `db/`, `apps/web/`, `tests/`, and `tooling/` stay at the root.
 - Modules extend each other only through public contracts, events, and released extension points,
   never by patching another module's models, tables, or views.
 - Extract, don't speculate: add a framework capability only together with an ERP module that uses
@@ -185,7 +186,7 @@ extensions/    (later) modules from other developers and customers
 
 The linked document owns each subsystem's rules. Read it before changing that subsystem; do not
 copy its rules into this file. Folder-specific rules live in `apps/web/AGENTS.md`, `db/AGENTS.md`,
-and `runtime/api/AGENTS.md`.
+and `erp/runtime/api/AGENTS.md`.
 
 | Before changing | Read |
 |---|---|

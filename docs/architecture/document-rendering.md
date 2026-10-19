@@ -68,11 +68,11 @@ catch-all generic document domain.
 | Issued-state transition and legal/business snapshot | Owning domain |
 | Document context and AST contracts | RITSEI document-rendering capability, after owner contracts exist |
 | Template selection and immutable template versions | A narrowly scoped configuration capability; ownership must be decided before persistence |
-| Render job admission, retry, fencing, and orchestration | Runtime plus `foundation/jobs` |
-| Concrete renderer adapters | `platform/` or approved runtime adapters |
+| Render job admission, retry, fencing, and orchestration | Runtime plus `framework/foundation/jobs` |
+| Concrete renderer adapters | `framework/platform/` or approved runtime adapters |
 | Artifact bytes and retention | Storage adapter and deployment profile |
 | Preview/designer UI | `apps/web`; never authoritative |
-| External email, archive, or delivery protocols | `modules/integrations` through public contracts |
+| External email, archive, or delivery protocols | `framework/modules/integrations` through public contracts |
 
 The rendering capability owns an output projection and its operational metadata. It must not mutate
 Sales, Procurement, Accounting, Inventory, Billing, or Tax facts directly. A future template registry
