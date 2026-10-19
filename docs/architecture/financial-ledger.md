@@ -1,6 +1,6 @@
 # Financial Ledger Architecture
 
-> **Product reset ([ADR-0091](../decisions/0091-adopt-the-product-reset.md)):** PostgreSQL is the
+> **Framework reset ([ADR-0091](../decisions/0091-adopt-framework-and-flagship-erp.md)):** PostgreSQL is the
 > only financial authority and the TigerBeetle adapter is removed. Sections that describe
 > TigerBeetle, activation gates, staging evidence, or cutover are historical until Phase 2
 > rewrites this document around the PostgreSQL ledger and document numbering.

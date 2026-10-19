@@ -157,17 +157,29 @@ Add a contract or boundary regression test whenever a new error translation is i
 - Never commit secrets or log credentials or sensitive data.
 - Never accept arbitrary tenant SQL or arbitrary policy scripts.
 
-## Product Scope
+## Framework and ERP
 
-[ADR-0091](./docs/decisions/0091-adopt-the-product-reset.md) is the product reset: RITSEI serves
-Indonesian distribution and trading SMEs first (Order-to-Cash, Procure-to-Pay, inventory, ledger,
-statements). Build the next customer-visible capability, not infrastructure for hypothetical scale.
+[ADR-0091](./docs/decisions/0091-adopt-framework-and-flagship-erp.md): RITSEI is an ERP framework
+with a flagship ERP built on it like any third-party module.
 
-- PostgreSQL does everything until a named tenant's measured need says otherwise. Do not add a
-  datastore, broker, ledger engine, search engine, analytics provider, or runtime without a new ADR.
-- Delete, don't gate: do not add activation gates, evidence manifests, or provider abstractions for
-  capabilities that are not on the current roadmap.
-- Process Studio is frozen: fix defects only; approvals use document approval rules.
+```text
+framework/     kernel: modules, data, auth, API, events, UI kit, CLI generator
+erp/           RITSEI ERP: flagship business modules
+extensions/    (later) modules from other developers and customers
+```
+
+- `framework/` never imports `erp/` or `extensions/`; `erp/` and `extensions/` use only public
+  entry points. Until Phase 2 moves the tree, today's `foundation/`, `platform/`, runtime kernel,
+  and platform modules (auth, identity, authorization, messaging, integrations, process) are the
+  framework; business modules (party, catalog, sales, procurement, inventory, accounting, billing)
+  are the ERP.
+- Modules extend each other only through public contracts, events, and released extension points,
+  never by patching another module's models, tables, or views.
+- Extract, don't speculate: add a framework capability only together with an ERP module that uses
+  it. Keep engine-neutral ports with exactly one used implementation.
+- PostgreSQL does everything until a named user's measured need says otherwise; delete rather than
+  gate capabilities that are off the roadmap.
+- The process engine is deferred until Order-to-Cash and Procure-to-Pay run end to end.
 
 ## Subsystem Rules
 

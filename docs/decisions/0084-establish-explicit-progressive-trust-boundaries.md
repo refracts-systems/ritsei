@@ -5,7 +5,7 @@
 - Amends: None
 - Compatible with: ADR-0006, ADR-0007, ADR-0013, ADR-0014, ADR-0015, ADR-0018, ADR-0019, ADR-0020, ADR-0024, ADR-0034, ADR-0058, ADR-0059, ADR-0063, ADR-0083
 - Supersedes: None
-- Superseded by: ADR-0091 (product reset)
+- Superseded by: ADR-0091 (framework reset)
 
 > **Related documents**
 >

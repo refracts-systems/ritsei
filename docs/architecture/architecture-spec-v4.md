@@ -448,17 +448,17 @@ public typed service. Financial execution goes through `FinancialLedgerPort`, ne
 
 ## Workload Isolation Contract
 
-Removed by [ADR-0091](../decisions/0091-adopt-the-product-reset.md). PostgreSQL, plain
+Removed by [ADR-0091](../decisions/0091-adopt-framework-and-flagship-erp.md). PostgreSQL, plain
 transactions, and separate API and worker connection pools cover the current scope.
 
 ## Analytic Plane Contract
 
-Removed by [ADR-0091](../decisions/0091-adopt-the-product-reset.md). PostgreSQL, plain
+Removed by [ADR-0091](../decisions/0091-adopt-framework-and-flagship-erp.md). PostgreSQL, plain
 transactions, and separate API and worker connection pools cover the current scope.
 
 ## Stateful Entity Runtime Contract
 
-Removed by [ADR-0091](../decisions/0091-adopt-the-product-reset.md). PostgreSQL, plain
+Removed by [ADR-0091](../decisions/0091-adopt-framework-and-flagship-erp.md). PostgreSQL, plain
 transactions, and separate API and worker connection pools cover the current scope.
 
 ## Composite Process Contract
@@ -476,8 +476,8 @@ domain owns, such as durable progress, retry, or compensation status.
 
 ## Process Studio Contract
 
-> **Frozen by [ADR-0091](../decisions/0091-adopt-the-product-reset.md):** defect fixes only;
-> document approval rules cover approvals for the target customer.
+> **Deferred by [ADR-0091](../decisions/0091-adopt-framework-and-flagship-erp.md):** defect fixes only
+> until Order-to-Cash and Procure-to-Pay run end to end; it then returns on extension points and events.
 
 RITSEI's planned Process Studio composes versioned, typed domain actions and events through a
 small deterministic Process IR. It does not expose arbitrary SQL, scripts, private repositories, or
@@ -635,4 +635,4 @@ conflict translation. Detailed rationale is owned by
 
 ## Zig FFI Boundary
 
-Removed by [ADR-0091](../decisions/0091-adopt-the-product-reset.md).
+Removed by [ADR-0091](../decisions/0091-adopt-framework-and-flagship-erp.md).

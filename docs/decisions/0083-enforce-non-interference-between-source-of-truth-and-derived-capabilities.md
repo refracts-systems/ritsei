@@ -5,7 +5,7 @@
 - Amends: ADR-0034 by extending non-interference from overload isolation to semantic, execution, failure, storage, and UX boundaries
 - Compatible with: ADR-0015, ADR-0037, ADR-0038, ADR-0043, ADR-0057, ADR-0068, ADR-0081, ADR-0082
 - Supersedes: None
-- Superseded by: ADR-0091 (product reset)
+- Superseded by: ADR-0091 (framework reset)
 
 > **Related documents**
 >

@@ -3,7 +3,7 @@
 - Status: Superseded
 - Date: 2026-08-03
 - Supersedes: None
-- Superseded by: ADR-0091 (product reset)
+- Superseded by: ADR-0091 (framework reset)
 
 > **Related documents**
 >

@@ -114,6 +114,6 @@ current system; ADRs preserve decision history.
 | [`0088`](./0088-adopt-oxc-formatting-and-linting.md) | Adopt Oxc formatting and linting | Accepted |
 | [`0089`](./0089-retire-roadmap-completion-evaluator.md) | Retire the roadmap completion evaluator | Accepted |
 | [`0090`](./0090-adopt-operational-clarity-visual-language.md) | Adopt the Operational Clarity visual language | Accepted |
-| [`0091`](./0091-adopt-the-product-reset.md) | Adopt the product reset | Accepted |
+| [`0091`](./0091-adopt-framework-and-flagship-erp.md) | Adopt the framework and flagship ERP structure | Accepted |
 
 Accepted ADRs must not be rewritten to alter history. Create a new ADR and use `Supersedes`.

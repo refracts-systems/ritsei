@@ -4,11 +4,13 @@ RITSEI is an orthogonal modular monolith built around explicit
 domain ownership, PostgreSQL-enforced integrity, Effect-based application
 services, and independently deployable frontend infrastructure.
 
-## Product Scope
+## Framework and ERP
 
-The product reset ([ADR-0091](./docs/decisions/0091-adopt-the-product-reset.md)) focuses RITSEI on
-Indonesian distribution and trading SMEs first. Subsystems listed there as removed are gone from
-the tree; their history is in git.
+RITSEI is an ERP framework (`framework/`) with a flagship ERP (`erp/`) built on it like any
+third-party module; `extensions/` will hold modules from other developers. See
+[ADR-0091](./docs/decisions/0091-adopt-framework-and-flagship-erp.md) and the
+[framework reset proposal](./docs/proposals/framework-reset.md). Removed subsystems are gone from the
+tree; their history is in git.
 
 ## Canonical Specification
 
@@ -32,11 +34,11 @@ The authoritative architecture specification is:
 - Reports: SQL and materialized views in PostgreSQL
 - Search: PostgreSQL only
 - Financial ledger: PostgreSQL double-entry ledger (the only financial authority)
-- Process Studio: frozen by ADR-0091; document approval rules cover approvals
+- Process engine: deferred by ADR-0091 until the core ERP loops run end to end
 
 Commands, events, outbox, jobs, and consistency are defined in
 [`docs/architecture/state-and-consistency.md`](./docs/architecture/state-and-consistency.md).
-The frozen Process Studio specification is
+The deferred Process Studio specification is
 [`docs/architecture/process-studio.md`](./docs/architecture/process-studio.md).
 The external connector profile is defined in
 [`docs/architecture/integration-architecture.md`](./docs/architecture/integration-architecture.md).
