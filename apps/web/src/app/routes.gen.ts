@@ -9,6 +9,7 @@ import { workspace as processWorkspace } from "./modules/process.workspace.ts"
 import { workspace as procurementWorkspace } from "./modules/procurement.workspace.ts"
 import { workspace as productWorkspace } from "./modules/product.workspace.ts"
 import { workspace as salesWorkspace } from "./modules/sales.workspace.ts"
+import { workspace as taxWorkspace } from "./modules/tax.workspace.ts"
 
 const AccountingPage = lazy(() => import("./modules/accounting.tsx"))
 const InventoryPage = lazy(() => import("./modules/inventory.tsx"))
@@ -17,6 +18,7 @@ const ProcessPage = lazy(() => import("./modules/process.tsx"))
 const ProcurementPage = lazy(() => import("./modules/procurement.tsx"))
 const ProductPage = lazy(() => import("./modules/product.tsx"))
 const SalesPage = lazy(() => import("./modules/sales.tsx"))
+const TaxPage = lazy(() => import("./modules/tax.tsx"))
 
 /** Routes for every installed module page. */
 export const moduleRoutes = [
@@ -35,6 +37,7 @@ export const moduleRoutes = [
   { path: "/sales/customers/:id", component: SalesPage },
   { path: "/sales/quotations/:id", component: SalesPage },
   { path: "/sales/orders/:id", component: SalesPage },
+  { path: "/tax", component: TaxPage },
 ]
 
 /** Home-directory and shell-navigation entries, one per module workspace, in declared order. */
@@ -46,4 +49,5 @@ export const moduleWorkspaces: ReadonlyArray<ModuleWorkspace & { readonly href: 
   { href: "/procurement", ...procurementWorkspace },
   { href: "/product", ...productWorkspace },
   { href: "/sales", ...salesWorkspace },
+  { href: "/tax", ...taxWorkspace },
 ].toSorted((left, right) => left.order - right.order)

@@ -16,6 +16,8 @@ import { ProductHttpGroup, ProductHttpHandlers } from "../modules/product/http.t
 import { ProductModule } from "../modules/product/mod.ts"
 import { SalesHttpGroup, SalesHttpHandlers } from "../modules/sales/http.ts"
 import { SalesModule } from "../modules/sales/mod.ts"
+import { TaxHttpGroup, TaxHttpHandlers } from "../modules/tax/http.ts"
+import { TaxModule } from "../modules/tax/mod.ts"
 
 /** The installed ERP modules. */
 export const ErpModules: ReadonlyArray<ModuleManifest> = [
@@ -28,6 +30,7 @@ export const ErpModules: ReadonlyArray<ModuleManifest> = [
   ProcurementModule,
   ProductModule,
   SalesModule,
+  TaxModule,
 ]
 
 /** HttpApi groups the runtime composes into RitseiApi. */
@@ -39,6 +42,7 @@ export const ErpHttpGroups = [
   ProcurementHttpGroup,
   ProductHttpGroup,
   SalesHttpGroup,
+  TaxHttpGroup,
 ] as const
 
 /** Handler layers for ErpHttpGroups. */
@@ -50,4 +54,5 @@ export const ErpHttpHandlers = [
   ProcurementHttpHandlers,
   ProductHttpHandlers,
   SalesHttpHandlers,
+  TaxHttpHandlers,
 ] as const

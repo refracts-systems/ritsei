@@ -33,6 +33,7 @@ export default defineConfig({
     "messaging",
     "numbering",
     "product",
+    "tax",
   ],
   breakpoints: true,
   strict: true,

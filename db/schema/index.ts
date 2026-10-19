@@ -119,3 +119,4 @@ export {
   quotationStatus,
   salesSchema,
 } from "./sales.ts"
+export { productTaxDefaults, taxCodes, taxDirection, taxSchema } from "./tax.ts"

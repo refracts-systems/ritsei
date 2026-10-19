@@ -53,6 +53,7 @@ import { IdentityAccountAuthorizerLive } from "./adapters/identity-account-autho
 import { makeIdentityProviderLayer } from "./authentication/oidc.ts"
 import type { RitseiRuntimeConfiguration } from "./config.ts"
 import { ProductLive } from "../modules/product/mod.ts"
+import { TaxLive } from "../modules/tax/mod.ts"
 
 export const serviceLayers = (
   client: Sql,
@@ -176,6 +177,8 @@ export const serviceLayers = (
     Layer.provide(Layer.mergeAll(BusinessRequirements, LedgerLive, ProductServiceLive)),
   )
 
+  const TaxServiceLive = TaxLive.pipe(Layer.provide(BusinessRequirements))
+
   const ApplicationLive = Layer.mergeAll(
     IdentityLive,
     AuthLive,
@@ -195,6 +198,7 @@ export const serviceLayers = (
     ProcurementLiveWithRequirements,
     ProductServiceLive,
     StockKeepingServiceLive,
+    TaxServiceLive,
   )
 
   return ApplicationLive

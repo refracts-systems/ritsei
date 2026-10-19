@@ -89,6 +89,9 @@ export const CapabilityIds = [
   "inventory.stock.issue",
   "inventory.stock.count",
   "inventory.valuation.read",
+  "tax.tax_code.read",
+  "tax.tax_code.create",
+  "tax.product_tax.configure",
 ] as const
 
 export const Capability = Schema.Literals(CapabilityIds)
@@ -135,6 +138,7 @@ export const CapabilityOwner = Schema.Literals([
   "accounting",
   "process",
   "product",
+  "tax",
 ])
 export type CapabilityOwner = Schema.Schema.Type<typeof CapabilityOwner>
 
@@ -310,6 +314,9 @@ export const CapabilityDefinitions: ReadonlyArray<CapabilityDefinition> = [
   definition("inventory.stock.issue", "inventory", "stock", "issue"),
   definition("inventory.stock.count", "inventory", "stock", "count"),
   definition("inventory.valuation.read", "inventory", "valuation", "read"),
+  definition("tax.tax_code.read", "tax", "tax_code", "read"),
+  definition("tax.tax_code.create", "tax", "tax_code", "create"),
+  definition("tax.product_tax.configure", "tax", "product_tax", "configure"),
 ]
 
 const capabilityIdSet = new Set<string>(CapabilityIds)
