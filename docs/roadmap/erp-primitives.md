@@ -23,7 +23,6 @@
 >   [`../architecture/process-studio.md`](../architecture/process-studio.md)
 > - Plugin architecture:
 >   [`../architecture/plugin-architecture.md`](../architecture/plugin-architecture.md)
-> - Financial execution: [`./financial-ledger-execution.md`](./financial-ledger-execution.md)
 
 ## Scope
 
@@ -54,7 +53,7 @@ automatically require a package; package boundaries follow invariant ownership.
 | Document and lifecycle      | `READY` bounded P2 baseline     | owner-local orders, reservations, transfers, journals, reversals | new document families need owner-specific rules                                       |
 | Quantity and movement       | `READY` P1 baseline             | non-negative balances, reservations, transfers, corrections      | lot/serial, valuation, fractional quantity                                            |
 | Money and obligation        | `READY` bounded P2 baseline     | base-currency, fixed two-decimal revenue posting                 | tax, invoices, AP/AR, payments, FX, settlement                                        |
-| Financial execution         | `DECIDED` migration gated       | TigerBeetle target; PostgreSQL control plane                     | activation follows [`financial-ledger-execution.md`](./financial-ledger-execution.md) |
+| Financial execution         | `DECIDED` migration gated       | TigerBeetle target; PostgreSQL control plane                     | activation follows financial-ledger-execution.md |
 | Fiscal period and close     | `READY` bounded P2 baseline     | non-overlapping open/closed periods                              | reopen, adjusting periods, advanced close                                             |
 | Policy and authorization    | `READY` for current actions     | capability catalog, scope checks, deny-by-default                | object authorization, approval, override, SoD                                         |
 | Business surface ergonomics | `PLANNED`                       | owner-local documents and explicit actions                       | generated structural tooling                                                          |

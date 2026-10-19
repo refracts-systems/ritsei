@@ -11,11 +11,11 @@
 > - Stateful Entity Runtime decision:
 >   [`./0025-introduce-stateful-entity-runtime.md`](./0025-introduce-stateful-entity-runtime.md)
 > - Runtime architecture:
->   [`../architecture/runtime-architecture.md`](../architecture/runtime-architecture.md)
+>   ../architecture/runtime-architecture.md
 > - State and consistency:
 >   [`../architecture/state-and-consistency.md`](../architecture/state-and-consistency.md)
 > - Workload isolation:
->   [`../architecture/workload-isolation.md`](../architecture/workload-isolation.md)
+>   ../architecture/workload-isolation.md
 > - Runtime comparison:
 >   [`../architecture/reference/erp-runtime-comparison.md`](../architecture/reference/erp-runtime-comparison.md)
 

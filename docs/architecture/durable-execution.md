@@ -5,7 +5,6 @@
 > **Related documents**
 >
 > - Messaging: [`./pgque-messaging.md`](./pgque-messaging.md)
-> - Stateful runtime: [`./runtime-architecture.md`](./runtime-architecture.md)
 > - State and consistency: [`./state-and-consistency.md`](./state-and-consistency.md)
 > - Financial ledger: [`./financial-ledger.md`](./financial-ledger.md)
 > - Process Studio semantics: [`./process-studio.md`](./process-studio.md)

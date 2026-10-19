@@ -18,7 +18,7 @@
 > - PostgreSQL architecture:
 >   [`../architecture/postgresql-19-architecture.md`](../architecture/postgresql-19-architecture.md)
 > - Workload isolation:
->   [`../architecture/workload-isolation.md`](../architecture/workload-isolation.md)
+>   ../architecture/workload-isolation.md
 > - PostgreSQL 19 `WAIT FOR`:
 >   [PostgreSQL documentation](https://www.postgresql.org/docs/19/sql-wait-for.html)
 
@@ -228,5 +228,4 @@ Before the first route activates this decision, executable tests must prove:
 
 - [`../architecture/state-and-consistency.md`](../architecture/state-and-consistency.md)
 - [`../architecture/postgresql-19-architecture.md`](../architecture/postgresql-19-architecture.md)
-- [`../architecture/workload-isolation.md`](../architecture/workload-isolation.md)
 - [`../deployment/README.md`](../deployment/README.md)

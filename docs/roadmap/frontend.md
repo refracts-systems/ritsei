@@ -21,7 +21,6 @@
 >
 > - Roadmap index: [`./README.md`](./README.md)
 > - Process Studio: [`./process-studio.md`](./process-studio.md)
-> - Workload isolation: [`./workload.md`](./workload.md)
 > - Effect application architecture:
 >   [`../decisions/0048-define-effect-application-architecture-and-frontend-state-ownership.md`](../decisions/0048-define-effect-application-architecture-and-frontend-state-ownership.md)
 > - Native Solid 2 and Effect integration:

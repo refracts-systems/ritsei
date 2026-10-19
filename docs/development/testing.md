@@ -9,7 +9,6 @@
 >
 > - Architecture enforcement: [`../architecture/architecture-enforcement.md`](../architecture/architecture-enforcement.md)
 > - Active architecture: [`../architecture/architecture-spec-v4.md`](../architecture/architecture-spec-v4.md)
-> - Workload isolation: [`../architecture/workload-isolation.md`](../architecture/workload-isolation.md)
 > - Authorization architecture: [`../architecture/authorization.md`](../architecture/authorization.md)
 > - Identity and principals: [`../architecture/identity-and-principals.md`](../architecture/identity-and-principals.md)
 > - HTTP API boundary: [`../architecture/api.md`](../architecture/api.md)

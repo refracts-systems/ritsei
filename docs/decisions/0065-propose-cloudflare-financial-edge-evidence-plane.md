@@ -13,8 +13,7 @@
 > - Proposed GCP staging platform:
 >   [`./0064-propose-gcp-financial-staging-platform.md`](./0064-propose-gcp-financial-staging-platform.md)
 > - Financial staging infrastructure selection:
->   [`../financial/staging-infrastructure-selection.md`](../financial/staging-infrastructure-selection.md)
-> - Financial staging topology: [`../financial/staging-topology.md`](../financial/staging-topology.md)
+>   ../financial/staging-infrastructure-selection.md
 > - Financial ledger architecture: [`../architecture/financial-ledger.md`](../architecture/financial-ledger.md)
 
 ## Context

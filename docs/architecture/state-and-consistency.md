@@ -7,11 +7,8 @@
 >
 > **Related documents**
 >
-> - Stateful runtime: [`./runtime-architecture.md`](./runtime-architecture.md)
 > - PostgreSQL architecture: [`./postgresql-19-architecture.md`](./postgresql-19-architecture.md)
 > - Search architecture: [`./search-architecture.md`](./search-architecture.md)
-> - Analytics architecture: [`./analytics-architecture.md`](./analytics-architecture.md)
-> - Workload isolation: [`./workload-isolation.md`](./workload-isolation.md)
 > - Source-of-truth and derived-capability non-interference:
 >   [`../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md`](../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md)
 > - Authorization: [`./authorization.md`](./authorization.md)

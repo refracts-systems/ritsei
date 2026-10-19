@@ -157,6 +157,18 @@ Add a contract or boundary regression test whenever a new error translation is i
 - Never commit secrets or log credentials or sensitive data.
 - Never accept arbitrary tenant SQL or arbitrary policy scripts.
 
+## Product Scope
+
+[ADR-0091](./docs/decisions/0091-adopt-the-product-reset.md) is the product reset: RITSEI serves
+Indonesian distribution and trading SMEs first (Order-to-Cash, Procure-to-Pay, inventory, ledger,
+statements). Build the next customer-visible capability, not infrastructure for hypothetical scale.
+
+- PostgreSQL does everything until a named tenant's measured need says otherwise. Do not add a
+  datastore, broker, ledger engine, search engine, analytics provider, or runtime without a new ADR.
+- Delete, don't gate: do not add activation gates, evidence manifests, or provider abstractions for
+  capabilities that are not on the current roadmap.
+- Process Studio is frozen: fix defects only; approvals use document approval rules.
+
 ## Subsystem Rules
 
 The linked document owns each subsystem's rules. Read it before changing that subsystem; do not
@@ -165,30 +177,21 @@ and `runtime/api/AGENTS.md`.
 
 | Before changing | Read |
 |---|---|
-| Analytical facts, metrics, projections, OLAP, exports | [`analytics-architecture.md`](./docs/architecture/analytics-architecture.md), ADR-0043 |
-| Exact, full-text, vector, hybrid, or global search | [`search-architecture.md`](./docs/architecture/search-architecture.md), ADR-0027 |
-| Workload classes, pools, overload control, cells | [`workload-isolation.md`](./docs/architecture/workload-isolation.md), ADR-0034 |
-| Stateful entities, jobs, events, durable workflows | [`runtime-architecture.md`](./docs/architecture/runtime-architecture.md), [`state-and-consistency.md`](./docs/architecture/state-and-consistency.md) |
+| Commands, events, outbox, jobs, consistency | [`state-and-consistency.md`](./docs/architecture/state-and-consistency.md) |
+| Search | [`search-architecture.md`](./docs/architecture/search-architecture.md) (PostgreSQL only) |
 | Connectors, OpenAPI imports, CloudEvents, OAuth, provider adapters | [`integration-architecture.md`](./docs/architecture/integration-architecture.md), ADR-0019 |
-| Process catalogs, Process IR, workflows, compensation, designer | [`process-studio.md`](./docs/architecture/process-studio.md), ADR-0018 |
 | Financial ledger, journals, balances | [`financial-ledger.md`](./docs/architecture/financial-ledger.md) |
 | Frontend screens, shell, design system | [`frontend.md`](./docs/architecture/frontend.md), [`design-system.md`](./docs/architecture/design-system.md) |
 
 Invariants that are easy to violate and expensive to find late:
 
-- PostgreSQL is the source of truth for control-plane and non-ledger business state; financial
-  transfer and balance authority follows the financial-ledger architecture. Use a direct
-  transaction for synchronous invariants, PgQue for committed facts and fan-out, and a job table for
-  leased single-consumer work. Do not dual-write to PostgreSQL and an external broker.
-- Do not activate `celld`, `pg_durable`, Zig, ClickHouse/Pinot/Iceberg/DuckDB, `pgvector`,
-  `pg_textsearch`, or an external search engine before the gates in the owning document and ADR pass.
-- Search results and analytics freshness are never authorization evidence or current business facts.
-- A `ResourceLease` is admission, not authorization or ownership. Keep a non-zero command reserve
-  that query and async work cannot acquire.
+- PostgreSQL is the source of truth for all business state, including the financial ledger. Use a
+  direct transaction for synchronous invariants, the transactional outbox for committed facts, and a
+  job table for leased single-consumer work. Do not dual-write to PostgreSQL and an external system.
+- Search results are candidates, never authorization evidence or current business facts.
 - External side effects need idempotency, timeout/retry policy, and explicit compensation or manual
-  recovery. Provider types, credentials, and topology never appear in public contracts.
-- Compensation is a new idempotent business command, never deletion of committed facts. A
-  `ProcessPrincipal` never bypasses domain authorization.
+  recovery. Provider types and credentials never appear in public contracts.
+- Compensation is a new idempotent business command, never deletion of committed facts.
 
 ## Documentation
 

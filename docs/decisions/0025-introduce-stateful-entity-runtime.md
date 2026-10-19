@@ -9,7 +9,7 @@
 >
 > - ADR index: [`./README.md`](./README.md)
 > - Runtime architecture:
->   [`../architecture/runtime-architecture.md`](../architecture/runtime-architecture.md)
+>   ../architecture/runtime-architecture.md
 > - State and consistency:
 >   [`../architecture/state-and-consistency.md`](../architecture/state-and-consistency.md)
 > - Canonical architecture:

@@ -12,7 +12,6 @@
 > - Domain maturity roadmap: [`../roadmap/domain-maturity.md`](../roadmap/domain-maturity.md)
 > - Process Studio roadmap: [`../roadmap/process-studio.md`](../roadmap/process-studio.md)
 > - ERP primitive roadmap: [`../roadmap/erp-primitives.md`](../roadmap/erp-primitives.md)
-> - Financial ledger roadmap: [`../roadmap/financial-ledger-execution.md`](../roadmap/financial-ledger-execution.md)
 > - Financial ledger architecture: [`../architecture/financial-ledger.md`](../architecture/financial-ledger.md)
 
 ## Context

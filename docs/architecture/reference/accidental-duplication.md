@@ -16,7 +16,6 @@
 >   [`../../decisions/0033-extend-order-lifecycle-and-gate-pgque.md`](../../decisions/0033-extend-order-lifecycle-and-gate-pgque.md)
 > - Messaging ownership:
 >   [`../../decisions/0038-move-internal-event-delivery-to-messaging.md`](../../decisions/0038-move-internal-event-delivery-to-messaging.md)
-> - Stateful runtime: [`../runtime-architecture.md`](../runtime-architecture.md)
 > - Experimental `celld` adapter:
 >   [`../../decisions/0026-evaluate-celld-runtime-adapter.md`](../../decisions/0026-evaluate-celld-runtime-adapter.md)
 > - Engineering lineage: [`./engineering-lineage.md`](./engineering-lineage.md)
@@ -158,7 +157,7 @@ If an entity category declares runtime execution as required, every command cros
 serialized invariant must use the `StatefulEntityRuntime` contract. A local/direct adapter may
 replace `celld` only when it preserves the same ownership, fencing, serialization, recovery, and
 reconciliation semantics; direct database fallback must not silently bypass them. The canonical
-category rule is defined in [`../runtime-architecture.md`](../runtime-architecture.md).
+category rule is defined in ../runtime-architecture.md.
 
 The boundaries are therefore:
 

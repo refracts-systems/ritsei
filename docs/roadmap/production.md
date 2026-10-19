@@ -24,7 +24,6 @@
 > - Roadmap index: [`./README.md`](./README.md)
 > - Entry profile: [`../../deploy/entry/README.md`](../../deploy/entry/README.md)
 > - PostgreSQL 19: [`./postgresql-19.md`](./postgresql-19.md)
-> - Workload isolation: [`./workload.md`](./workload.md)
 > - Frontend readiness: [`./frontend.md`](./frontend.md)
 > - Release workflow: [`../development/releasing.md`](../development/releasing.md)
 > - Deployment notes: [`../deployment/README.md`](../deployment/README.md)

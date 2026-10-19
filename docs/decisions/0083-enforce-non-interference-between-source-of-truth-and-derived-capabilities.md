@@ -10,7 +10,6 @@
 > **Related documents**
 >
 > - ADR index: [`./README.md`](./README.md)
-> - Workload isolation: [`../architecture/workload-isolation.md`](../architecture/workload-isolation.md)
 > - Canonical architecture: [`../architecture/architecture-spec-v4.md`](../architecture/architecture-spec-v4.md)
 > - Architecture overview: [`../architecture/overview.md`](../architecture/overview.md)
 > - State and consistency: [`../architecture/state-and-consistency.md`](../architecture/state-and-consistency.md)
@@ -18,7 +17,6 @@
 > - Document rendering: [`../architecture/document-rendering.md`](../architecture/document-rendering.md)
 > - Process Studio and workflow: [`../architecture/process-studio.md`](../architecture/process-studio.md)
 > - Search architecture: [`../architecture/search-architecture.md`](../architecture/search-architecture.md)
-> - Analytics architecture: [`../architecture/analytics-architecture.md`](../architecture/analytics-architecture.md)
 > - External integration surface: [`../architecture/integration-architecture.md`](../architecture/integration-architecture.md)
 > - Communication platform: [`../architecture/communication.md`](../architecture/communication.md)
 > - One semantic owner per invariant: [`./0015-one-semantic-owner-per-invariant.md`](./0015-one-semantic-owner-per-invariant.md)

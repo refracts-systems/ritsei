@@ -15,7 +15,6 @@
 > - State and consistency: [`../architecture/state-and-consistency.md`](../architecture/state-and-consistency.md)
 > - Durable execution: [`../architecture/durable-execution.md`](../architecture/durable-execution.md)
 > - P2 financial baseline: [`./0036-define-p2-document-and-financial-baseline.md`](./0036-define-p2-document-and-financial-baseline.md)
-> - Execution roadmap: [`../roadmap/financial-ledger-execution.md`](../roadmap/financial-ledger-execution.md)
 
 ## Context
 

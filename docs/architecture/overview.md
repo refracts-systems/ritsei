@@ -8,10 +8,7 @@
 > - PostgreSQL design: [`./postgresql-19-architecture.md`](./postgresql-19-architecture.md)
 > - Logical database and physical placement:
 >   [`../decisions/0067-separate-logical-database-and-physical-data-placement.md`](../decisions/0067-separate-logical-database-and-physical-data-placement.md)
-> - Workload isolation: [`./workload-isolation.md`](./workload-isolation.md)
-> - Analytics architecture: [`./analytics-architecture.md`](./analytics-architecture.md)
 > - Search architecture: [`./search-architecture.md`](./search-architecture.md)
-> - Stateful runtime: [`./runtime-architecture.md`](./runtime-architecture.md)
 > - State and consistency: [`./state-and-consistency.md`](./state-and-consistency.md)
 > - Financial ledger: [`./financial-ledger.md`](./financial-ledger.md)
 > - Frontend architecture: [`./frontend.md`](./frontend.md)
@@ -176,7 +173,7 @@ reserved command resources.
 
 WorkloadCells and optional tenant-aware shuffle sharding narrow deployment blast radius without
 changing domain ownership, public identity, authorization, or PostgreSQL truth. See
-[`./workload-isolation.md`](./workload-isolation.md),
+./workload-isolation.md,
 [ADR-0034](../decisions/0034-adopt-non-interference-overload-isolation.md), and
 [ADR-0083](../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md).
 
@@ -192,7 +189,7 @@ and conformance evidence. A hard-isolated analytic route has no primary credenti
 serves declared stale data or typed unavailability when no eligible projection satisfies the
 contract.
 
-See [`./analytics-architecture.md`](./analytics-architecture.md).
+See ./analytics-architecture.md.
 
 ## Search
 

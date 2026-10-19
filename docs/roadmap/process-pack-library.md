@@ -25,7 +25,7 @@
 > - Domain maturity: [`./domain-maturity.md`](./domain-maturity.md)
 > - Authorization: [`../architecture/authorization.md`](../architecture/authorization.md)
 > - Analytics:
->   [`../architecture/analytics-architecture.md`](../architecture/analytics-architecture.md)
+>   ../architecture/analytics-architecture.md
 > - Capability governance:
 >   [`../decisions/0020-adopt-capability-release-and-runtime-governance.md`](../decisions/0020-adopt-capability-release-and-runtime-governance.md)
 > - AI boundary:

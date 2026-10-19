@@ -10,7 +10,6 @@
 >
 > - Documentation boundaries:
 >   [`../../documentation-boundaries.md`](../../documentation-boundaries.md)
-> - Runtime architecture: [`../runtime-architecture.md`](../runtime-architecture.md)
 > - Durable execution: [`../durable-execution.md`](../durable-execution.md)
 > - Messaging: [`../pgque-messaging.md`](../pgque-messaging.md)
 > - Accidental duplication: [`./accidental-duplication.md`](./accidental-duplication.md)
