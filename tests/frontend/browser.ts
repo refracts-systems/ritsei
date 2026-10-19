@@ -1,12 +1,9 @@
 import { assert } from "@effect/vitest"
 import * as Effect from "effect/Effect"
-import { spawnSync } from "node:child_process"
-import { mkdtemp, rm } from "node:fs/promises"
-import { tmpdir } from "node:os"
-import { join } from "node:path"
 import { chromium } from "playwright"
 import type { Page } from "playwright"
 import { preview } from "vite"
+import { inject } from "vitest"
 
 type MockLocalAuthOptions = Readonly<{
   memberships?: readonly {
@@ -82,19 +79,11 @@ export const connectToTenant = async (
 }
 
 export const builtApp = Effect.gen(function* () {
-  const outDir = yield* Effect.acquireRelease(
-    Effect.promise(() => mkdtemp(join(tmpdir(), "ritsei-web-"))),
-    (path) => Effect.promise(() => rm(path, { recursive: true })),
-  )
-  const isWindows = process.platform === "win32"
-  const output = yield* Effect.sync(() =>
-    spawnSync(
-      "pnpm",
-      ["--dir", "apps/web", "build", "--outDir", isWindows ? `"${outDir}"` : outDir],
-      { encoding: "utf8", shell: isWindows },
-    ),
-  )
-  assert.isTrue(output.status === 0, output.stdout + output.stderr)
+  // Built once per run by tests/frontend/global-setup.ts.
+  const outDir = inject("webOutDir")
+  if (outDir === undefined) {
+    return yield* Effect.die("No shared web build; add this test to the frontend Vitest project")
+  }
   const server = yield* Effect.acquireRelease(
     Effect.promise(() =>
       preview({
