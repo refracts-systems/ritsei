@@ -10,7 +10,11 @@ RITSEI is an ERP framework (`framework/`) with a flagship ERP (`erp/`) built on 
 third-party module; `extensions/` will hold modules from other developers. See
 [ADR-0091](./docs/decisions/0091-adopt-framework-and-flagship-erp.md) and the
 [framework reset proposal](./docs/proposals/framework-reset.md). Removed subsystems are gone from the
-tree; their history is in git.
+tree; their history is in git. TigerBeetle
+([ADR-0092](./docs/decisions/0092-retain-tigerbeetle-as-designated-ledger-engine.md)), workload
+isolation, the Stateful Entity Runtime, and the analytic plane
+([ADR-0093](./docs/decisions/0093-retain-isolation-runtime-and-analytic-target-designs.md)) remain as
+inactive target designs, each activated only by its own ADR.
 
 ## Canonical Specification
 
@@ -31,7 +35,7 @@ The authoritative architecture specification is:
 - Identity / IAM: provider-neutral OIDC/OAuth2 `IdentityProvider`; ZITADEL is recommended
 - Application AuthZ: RITSEI Authorization Kernel with canonical PostgreSQL policy facts
 - Relationship AuthZ: native PostgreSQL `RelationshipEngine` by default; optional SpiceDB adapter
-- Reports: SQL and materialized views in PostgreSQL
+- Reports: SQL and materialized views in PostgreSQL (target: analytic plane, ADR-0093)
 - Search: PostgreSQL only
 - Financial ledger: PostgreSQL double-entry ledger (the only active financial authority);
   TigerBeetle is the designated future engine behind the ledger port

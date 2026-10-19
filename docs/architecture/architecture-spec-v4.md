@@ -74,11 +74,14 @@
 >   [`../decisions/0033-extend-order-lifecycle-and-gate-pgque.md`](../decisions/0033-extend-order-lifecycle-and-gate-pgque.md)
 > - Internal event delivery ownership:
 >   [`../decisions/0038-move-internal-event-delivery-to-messaging.md`](../decisions/0038-move-internal-event-delivery-to-messaging.md)
-> - Non-interference overload isolation:
+> - Target designs for workload isolation, the Stateful Entity Runtime, and the analytic plane:
+>   [`../decisions/0093-retain-isolation-runtime-and-analytic-target-designs.md`](../decisions/0093-retain-isolation-runtime-and-analytic-target-designs.md)
+> - Non-interference overload isolation (superseded by ADR-0091, target retained by ADR-0093):
 >   [`../decisions/0034-adopt-non-interference-overload-isolation.md`](../decisions/0034-adopt-non-interference-overload-isolation.md)
-> - Source-of-truth and derived-capability non-interference:
+> - Source-of-truth and derived-capability non-interference (superseded by ADR-0091, target retained
+>   by ADR-0093):
 >   [`../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md`](../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md)
-> - Rebuildable Analytic Plane:
+> - Rebuildable Analytic Plane (superseded by ADR-0091, target retained by ADR-0093):
 >   [`../decisions/0043-adopt-rebuildable-analytic-plane.md`](../decisions/0043-adopt-rebuildable-analytic-plane.md)
 > - Governed AI recommendation and agent boundary:
 >   [`../decisions/0063-define-governed-ai-recommendation-and-agent-boundary.md`](../decisions/0063-define-governed-ai-recommendation-and-agent-boundary.md)
@@ -106,11 +109,10 @@ principles.
 | Financial execution | PostgreSQL ledger through the FinancialLedgerPort; TigerBeetle designated future engine (ADR-0092) |
 | Query layer        | Drizzle ORM with `postgres.js`                                        |
 | Migrations         | Pinned Drizzle Kit graph with reviewed SQL                            |
-| Stateful ownership | Optional vendor-neutral Stateful Entity Runtime                       |
-| Overload isolation | Workload planes, bounded admission, and reserved command capacity      |
+| Stateful ownership | Current: PostgreSQL transactions and the job table; target: optional Stateful Entity Runtime (ADR-0093) |
+| Overload isolation | Current: separate API and worker pools; target: workload planes, bounded admission, and reserved command capacity (ADR-0093) |
 | Source/derived isolation | Class A source-of-truth paths do not depend on Class B/C derived capabilities |
-| Analytic plane     | Domain-owned facts, versioned metrics, and rebuildable projections     |
-| Native compute     | Optional Zig through typed FFI bindings                              |
+| Analytic plane     | Current: SQL reports and materialized views; target: domain-owned facts, versioned metrics, and rebuildable projections (ADR-0093) |
 | Frontend           | Vite-based SolidJS 2.0 SPA with a separate backend                    |
 | Contracts          | Effect Schema                                                         |
 
@@ -254,8 +256,9 @@ Class A source-of-truth reads and writes must not synchronously depend on unrela
 or Class C projection capabilities. Owner commits publish facts through the transactional outbox;
 derived consumers own their retry, failure, resource, persistence, and rebuild lifecycle. A synchronous
 cross-capability dependency is allowed only when an explicit business invariant documents it and names
-its semantic owner. Detailed workload and resource proof remains in
-workload-isolation.md and ADR-0083.
+its semantic owner. Detailed workload and resource proof is the target design in
+[`workload-isolation.md`](./workload-isolation.md), retained by ADR-0093 (ADR-0083 is superseded by
+ADR-0091).
 
 Extension mechanisms, plugins, workflow runtimes, and nondeterministic agents are fallible. ERP
 invariants remain enforced by the owning domain, authorization boundary, transactional command path,
@@ -450,18 +453,26 @@ public typed service. Financial execution goes through `FinancialLedgerPort`, ne
 
 ## Workload Isolation Contract
 
-Removed by [ADR-0091](../decisions/0091-adopt-framework-and-flagship-erp.md). PostgreSQL, plain
-transactions, and separate API and worker connection pools cover the current scope.
+**Current ([ADR-0091](../decisions/0091-adopt-framework-and-flagship-erp.md)):** separate API and
+worker connection pools with statement timeouts. **Target
+([ADR-0093](../decisions/0093-retain-isolation-runtime-and-analytic-target-designs.md)):** workload
+planes, bounded admission, WorkloadCells, and a protected command reserve, so that reports, imports,
+integrations, and derived work never slow source-of-truth commands. The target is owned by
+[`workload-isolation.md`](./workload-isolation.md) and is not active until an activation ADR supplies
+measured evidence.
 
 ## Analytic Plane Contract
 
-Removed by [ADR-0091](../decisions/0091-adopt-framework-and-flagship-erp.md). PostgreSQL, plain
-transactions, and separate API and worker connection pools cover the current scope.
+**Current (ADR-0091):** module-owned SQL reports and PostgreSQL materialized views. **Target
+(ADR-0093):** domain-owned facts, versioned metrics, and rebuildable projections, owned by
+[`analytics-architecture.md`](./analytics-architecture.md) and inactive until an activation ADR.
 
 ## Stateful Entity Runtime Contract
 
-Removed by [ADR-0091](../decisions/0091-adopt-framework-and-flagship-erp.md). PostgreSQL, plain
-transactions, and separate API and worker connection pools cover the current scope.
+**Current (ADR-0091):** plain PostgreSQL transactions with row locks, and the job table for leased
+work. **Target (ADR-0093):** an optional vendor-neutral Stateful Entity Runtime for approved hot
+aggregates, owned by [`runtime-architecture.md`](./runtime-architecture.md) and inactive until an
+activation ADR.
 
 ## Composite Process Contract
 
@@ -634,7 +645,3 @@ governing standard.
 The domain that owns the identified entity owns identifier attachment, lifecycle policy, and
 conflict translation. Detailed rationale is owned by
 [ADR-0014](../decisions/0014-separate-internal-and-external-identifiers.md).
-
-## Zig FFI Boundary
-
-Removed by [ADR-0091](../decisions/0091-adopt-framework-and-flagship-erp.md).

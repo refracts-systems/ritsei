@@ -2,6 +2,23 @@
 
 > **Status:** Canonical summary
 >
+> **Target versus current ([ADR-0091](../decisions/0091-adopt-framework-and-flagship-erp.md),
+> [ADR-0092](../decisions/0092-retain-tigerbeetle-as-designated-ledger-engine.md),
+> [ADR-0093](../decisions/0093-retain-isolation-runtime-and-analytic-target-designs.md)):** the
+> system shape below is the target design. Today it runs as:
+>
+> ```text
+> Principal -> API pool --+-> PostgreSQL: domain state, authorization, audit, outbox, job table
+>                         `-> FinancialLedgerPort -> PostgreSQL ledger
+> Worker pool -> outbox delivery, job table, integrations
+> Reports     -> module-owned SQL views and materialized views
+> ```
+>
+> WorkloadCells and workload planes ([`workload-isolation.md`](./workload-isolation.md)), the
+> Stateful Entity Runtime ([`runtime-architecture.md`](./runtime-architecture.md)), the query plane
+> and OLAP providers ([`analytics-architecture.md`](./analytics-architecture.md)), and the TigerBeetle
+> adapter are inactive target designs, each activated only by its own ADR.
+>
 > **Related documents**
 >
 > - Full specification: [`./architecture-spec-v4.md`](./architecture-spec-v4.md)
@@ -231,9 +248,3 @@ Preferred order:
 2. declarative tenant extension;
 3. trusted compiled plugin;
 4. sandboxed plugin after contracts stabilize.
-
-## Native Code
-
-Zig is limited to bounded calculation or reconciliation kernels backed by
-benchmarks. Native code never owns PostgreSQL transactions or authoritative
-state.

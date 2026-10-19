@@ -31,10 +31,12 @@
 sequence: the phases in [`../proposals/framework-reset.md`](../proposals/framework-reset.md#8-phases)
 (module kernel, ledger and numbering, Order-to-Cash, Procure-to-Pay and valuation, developer preview,
 pilots). [ADR-0092](../decisions/0092-retain-tigerbeetle-as-designated-ledger-engine.md) keeps
-TigerBeetle as the designated future ledger engine. The tracks below keep their gate IDs and
-content; their status after those decisions is:
+TigerBeetle as the designated future ledger engine, and
+[ADR-0093](../decisions/0093-retain-isolation-runtime-and-analytic-target-designs.md) keeps workload
+isolation, the Stateful Entity Runtime, and the analytic plane as target designs. The tracks below
+keep their gate IDs and content; their status after those decisions is:
 
-| Track | Status after ADR-0091 and ADR-0092 |
+| Track | Status after ADR-0091, ADR-0092, and ADR-0093 |
 | --- | --- |
 | `erp`, `domain` | Active; the economic core (D1) is delivered through reset Phases 4–6 |
 | `financial` | Dormant; TigerBeetle stays the designated future engine and activation needs its own ADR. The track does not gate framework or ERP phases |
@@ -42,11 +44,11 @@ content; their status after those decisions is:
 | `integration` | Active; adapters are added only together with an ERP consumer (ADR-0091 §4) |
 | `packs` | Deferred with the process track, on which it depends |
 | `postgres19` | Active |
-| `workload` | Removed by ADR-0091 §5; the `frontend.shell` dependency on `workload.command-reserve` no longer applies |
+| `workload` | Dormant target design (ADR-0093); activation needs its own ADR with measurement. Until then the `frontend.shell` dependency on `workload.command-reserve` does not apply |
 | `frontend`, `production` | Active |
 
-Until this index is rewritten around the reset phases, `roadmap.global-exit` excludes the removed
-track, and the dormant financial track does not block it. Deferred tracks keep their gates for when
+Until this index is rewritten around the reset phases, the dormant financial and workload tracks do
+not block `roadmap.global-exit`. Deferred tracks keep their gates for when
 they resume. The proposed ERP content of the reset phases is in
 [`../proposals/erp-module-parity-plan.md`](../proposals/erp-module-parity-plan.md).
 
@@ -121,7 +123,7 @@ caveats are owned by [`../development/releasing.md`](../development/releasing.md
 | `integration` | External integration  | connector contracts, delivery, reliability, Process Studio bridge, and governance | `integration.*`   | [`integration-surface.md`](./integration-surface.md)               |
 | `packs`       | Business Pack Library | pack resolution, draft materialization, onboarding, and governed upgrades         | `packs.contract`  | [`process-pack-library.md`](./process-pack-library.md)             |
 | `postgres19`  | PostgreSQL 19         | version floor, consistency, read-projection, and operational capability evidence  | `postgres19.*`    | [`postgresql-19.md`](./postgresql-19.md)                           |
-| `workload`    | Workload isolation    | workload classification and protected command-reserve evidence                    | `workload.*`      | removed `workload.md` (ADR-0091)                |
+| `workload`    | Workload isolation    | workload classification and protected command-reserve evidence                    | `workload.*`      | [`workload.md`](./workload.md) (dormant, ADR-0093) |
 | `frontend`    | Frontend readiness    | SPA shell, application boundaries, design system, and user-workflow evidence      | `frontend.*`      | [`frontend.md`](./frontend.md)                                     |
 | `production`  | Production profile    | artifacts, install/upgrade rehearsal, and reviewed profile manifests              | `production.*`    | [`production.md`](./production.md)                                 |
 

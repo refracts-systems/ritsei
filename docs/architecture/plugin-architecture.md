@@ -210,5 +210,4 @@ formats additionally use versioned integration adapters. Detailed rationale is o
 
 ## Native Code
 
-ADR-0091 removed the Zig FFI boundary, so no module uses native code today; reintroducing it needs
-a named need, measurement, and a new ADR. Plugins must not load arbitrary native libraries.
+Plugins must not load arbitrary native libraries.

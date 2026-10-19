@@ -5,6 +5,9 @@
 > [ADR-0092](../decisions/0092-retain-tigerbeetle-as-designated-ledger-engine.md) amends the
 > TigerBeetle row of Section 5: TigerBeetle stays the designated future ledger engine behind the
 > port, while PostgreSQL remains the only active authority.
+> [ADR-0093](../decisions/0093-retain-isolation-runtime-and-analytic-target-designs.md) amends the
+> Stateful Entity Runtime, workload, and analytic-plane rows: they stay as inactive target designs,
+> with this proposal's replacements as the current implementation.
 >
 > **Owns:** The target shape of RITSEI as an ERP framework with a flagship ERP built on it, the
 > case for breaking from the current platform-first foundation, and the phased sequence.

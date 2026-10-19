@@ -2,6 +2,18 @@
 
 > **Status:** Canonical target architecture
 >
+> **Deferred by [ADR-0091](../decisions/0091-adopt-framework-and-flagship-erp.md) §6:** defect fixes
+> only until Order-to-Cash and Procure-to-Pay run end to end; the process engine then returns in
+> `framework/process`, built on released extension points and events. This document stays the target
+> design for that return. Rules it once took from superseded ADRs now have these owners: released,
+> versioned contracts and extension points from ADR-0091 §3; execution principals, delegation, and
+> Separation of Duties from [`authorization.md`](./authorization.md#process-execution-authority-and-separation-of-duties);
+> retry, unknown outcomes, and durability from [`durable-execution.md`](./durable-execution.md) and
+> [`state-and-consistency.md`](./state-and-consistency.md); source-of-truth isolation from the
+> Composite Process Contract in [`architecture-spec-v4.md`](./architecture-spec-v4.md#composite-process-contract).
+> TigerBeetle-backed actions remain target design under
+> [ADR-0092](../decisions/0092-retain-tigerbeetle-as-designated-ledger-engine.md).
+>
 > **Owns:** Process Studio's canvas-centric workspace behavior and direct-manipulation boundaries,
 > process design-time semantics, typed action and event catalogs, RITSEI Process IR, static process
 > validation, definition governance, and compensation metadata.
@@ -17,21 +29,23 @@
 > - Durable execution: [`./durable-execution.md`](./durable-execution.md)
 > - Financial ledger: [`./financial-ledger.md`](./financial-ledger.md)
 > - Messaging and event delivery: [`./pgque-messaging.md`](./pgque-messaging.md)
-> - Source-of-truth and derived-capability non-interference:
+> - Framework and flagship ERP (deferral and extension rule):
+>   [`../decisions/0091-adopt-framework-and-flagship-erp.md`](../decisions/0091-adopt-framework-and-flagship-erp.md)
+> - Source-of-truth and derived-capability non-interference (superseded by ADR-0091):
 >   [`../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md`](../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md)
 > - External integration surface: [`./integration-architecture.md`](./integration-architecture.md)
 > - Authorization: [`./authorization.md`](./authorization.md)
 > - Identity and principals: [`./identity-and-principals.md`](./identity-and-principals.md)
 > - HTTP API boundary: [`./api.md`](./api.md)
 > - Plugin trust: [`./plugin-architecture.md`](./plugin-architecture.md)
-> - Capability-oriented plugin contribution:
+> - Capability-oriented plugin contribution (superseded by ADR-0091):
 >   [`../decisions/0023-adopt-capability-oriented-plugin-contribution.md`](../decisions/0023-adopt-capability-oriented-plugin-contribution.md)
 > - Frontend architecture: [`./frontend.md`](./frontend.md)
 > - Design system and Interaction Grammar: [`./design-system.md`](./design-system.md)
 > - Testing strategy: [`../development/testing.md`](../development/testing.md)
-> - Process Studio decision:
+> - Process Studio decision (amended by ADR-0091):
 >   [`../decisions/0018-adopt-typed-process-studio.md`](../decisions/0018-adopt-typed-process-studio.md)
-> - Capability release and runtime governance:
+> - Capability release and runtime governance (superseded by ADR-0091):
 >   [`../decisions/0020-adopt-capability-release-and-runtime-governance.md`](../decisions/0020-adopt-capability-release-and-runtime-governance.md)
 > - Governed AI recommendation and agent boundary:
 >   [`../decisions/0063-define-governed-ai-recommendation-and-agent-boundary.md`](../decisions/0063-define-governed-ai-recommendation-and-agent-boundary.md)

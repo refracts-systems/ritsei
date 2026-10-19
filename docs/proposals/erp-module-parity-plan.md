@@ -39,7 +39,11 @@ module list would reintroduce the speculation ADR-0091 removed. The useful targe
    the same segment.
 2. **Architectural parity with SAP's clean core.** Every module is extended through public
    contracts, events, and released extension points, never by patching another module's tables or
-   logic.
+   logic. The long-term differentiator beyond both is non-interference: reports, imports,
+   integrations, and derived work never slow the commands that record business facts. It is kept as
+   a target design by
+   [ADR-0093](../decisions/0093-retain-isolation-runtime-and-analytic-target-designs.md) and becomes
+   a product claim only once measured.
 3. **Breadth only by evidence.** Manufacturing, projects, assets, quality, maintenance, CRM depth, and
    HR are added one module at a time, each when a named pilot needs it, and each in the smallest
    form that serves that need.
@@ -309,7 +313,7 @@ new decision record is needed before implementation (details in Section 7).
 | Multi-company (several legal entities per tenant) | Accounting scope (4) | `party`, `accounting` | [Scope contract](../architecture/architecture-spec-v4.md#scope-and-user-account-contract), [ADR-0021](../decisions/0021-define-p0-scope-and-identity-model.md) | No for scoping; yes for intercompany (D11) |
 | Multi-currency and exchange rates | Finance depth (post-pilot) | `accounting`, `framework/foundation/money` | [ADR-0042](../decisions/0042-exact-financial-amount-boundary.md), `financial-ledger.md` | Yes, D6 |
 | Tax semantics and localization | Billing (5) | `erp/modules/tax`, `erp/modules/localization-id` | [ADR-0016](../decisions/0016-isolate-jurisdiction-localization.md), [ADR-0013](../decisions/0013-version-external-standard-adapters.md) | Yes, D5 |
-| Reports: module-owned SQL views, a small report registry, CSV/XLSX export | Trial balance (4), aging (5) | each `erp/` module + `framework` report kit | Spec says reports are SQL and materialized views; [`state-and-consistency.md`](../architecture/state-and-consistency.md#read-consistency-classes) owns read classes | No, unless a separate analytic store is proposed |
+| Reports: module-owned SQL views, a small report registry, CSV/XLSX export | Trial balance (4), aging (5) | each `erp/` module + `framework` report kit | Spec says reports are SQL and materialized views; [`state-and-consistency.md`](../architecture/state-and-consistency.md#read-consistency-classes) owns read classes | No; the analytic plane ([`analytics-architecture.md`](../architecture/analytics-architecture.md)) is the target, activated only by its own ADR (ADR-0093) |
 | Jobs and scheduling (recurring invoices, dunning, period-end tasks) | Settlement (5) | `framework/data` | [`durable-execution.md`](../architecture/durable-execution.md), [`state-and-consistency.md`](../architecture/state-and-consistency.md) | No |
 | Events and outbox | Every phase | `framework/events` | [`pgque-messaging.md`](../architecture/pgque-messaging.md) | No |
 | PDF documents (invoice, delivery note, PO, statement) | Billing (5) | `framework/documents` | [`document-rendering.md`](../architecture/document-rendering.md) still describes the superseded Document AST platform | No ADR; rewrite the document |
@@ -408,39 +412,45 @@ are proposed post-pilot waves; their order is a default that pilot evidence may 
 | Website builder, eCommerce, POS, marketing suite | Odoo | Integrate with external shops and marketplaces through connectors instead |
 | Discuss, Knowledge, Documents, Sign, Helpdesk, Fleet, Rental, Field Service | Odoo | Not ERP core for the segment; candidates for `extensions/` |
 | Payroll in the flagship | Odoo, SAP | Heavily localized and regulated; a localization extension or partner integration |
-| BI and self-service analytics platform | SAP SAC, Odoo spreadsheets | Fixed SQL reports and CSV/XLSX export first; the analytic plane was removed by ADR-0091 |
+| BI and self-service analytics platform | SAP SAC, Odoo spreadsheets | Fixed SQL reports and CSV/XLSX export first; the analytic plane stays a target design (ADR-0093), not a BI suite |
 
 ## 10. Contradictions and stale documents
 
 ### 10.1 Aligned in the same change as this proposal
 
-The owner decided to keep TigerBeetle as the designated future ledger engine, recorded in
-[ADR-0092](../decisions/0092-retain-tigerbeetle-as-designated-ledger-engine.md). These documents
-were aligned with ADR-0091 and ADR-0092 through status banners and reference fixes, keeping their
-content:
+The owner decided to keep TigerBeetle as the designated future ledger engine
+([ADR-0092](../decisions/0092-retain-tigerbeetle-as-designated-ledger-engine.md)), and workload
+isolation, the Stateful Entity Runtime, and the analytic plane as target designs
+([ADR-0093](../decisions/0093-retain-isolation-runtime-and-analytic-target-designs.md)). Their
+architecture documents, the `workload` roadmap, and two reference documents were restored from git
+with target-design banners. These documents were aligned through status banners and reference fixes,
+keeping their content:
 
 - [`financial-ledger.md`](../architecture/financial-ledger.md): current authority stated at the top;
   TigerBeetle sections kept as the target design; the ledger rewrite placed in Phase 4.
-- [`architecture-spec-v4.md`](../architecture/architecture-spec-v4.md): the financial execution row
-  and ledger paragraph.
-- [`../roadmap/README.md`](../roadmap/README.md): a track status table (financial dormant, workload
-  removed, process and packs deferred).
+- [`architecture-spec-v4.md`](../architecture/architecture-spec-v4.md): the financial execution,
+  stateful ownership, overload isolation, and analytic plane rows, and their contracts, now state
+  current and target side by side.
+- [`overview.md`](../architecture/overview.md): a banner with the current runtime shape; the
+  diagram is labeled as the target design.
+- [`../roadmap/README.md`](../roadmap/README.md): a track status table (financial and workload
+  dormant, process and packs deferred).
 - [`plugin-architecture.md`](../architecture/plugin-architecture.md): ADR-0091 §3 named as the active
   rule; trust tiers kept as target design.
 - [`document-rendering.md`](../architecture/document-rendering.md): ADR-0081 marked superseded; the
   document kept as the growth path for `framework/documents`.
+- [`process-studio.md`](../architecture/process-studio.md): ADR-0091 §6 deferral banner; rules from
+  the superseded ADR-0020, ADR-0023, and ADR-0083 pointed to their current owners.
 
 ### 10.2 Still open
 
 Reported, not fixed, per [`AGENTS.md`](../../AGENTS.md#source-of-truth-order):
 
-- [`architecture-spec-v4.md`](../architecture/architecture-spec-v4.md) still lists workload planes,
-  the analytic plane, the Stateful Entity Runtime, and Zig in its decision table, and still shows the
-  pre-restructure `modules/` tree.
-- [`overview.md`](../architecture/overview.md) still draws workload cells, the query plane, and the
-  Stateful Entity Runtime.
-- [`process-studio.md`](../architecture/process-studio.md) cites the superseded ADR-0020 without a
-  banner.
+- [`architecture-spec-v4.md`](../architecture/architecture-spec-v4.md) still shows the
+  pre-restructure `modules/` tree. (Its Zig row and section, `native-zig-kernel.md`, and the Zig
+  notes in the overview and plugin architecture were deleted, following ADR-0091.)
+- The restored target-design documents still name pre-restructure paths (`runtime/`, `modules/`);
+  each is revised when its subsystem is activated.
 
 ### 10.3 Recommendation on "catalog"
 
