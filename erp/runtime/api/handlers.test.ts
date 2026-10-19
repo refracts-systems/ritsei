@@ -2,33 +2,43 @@ import { assert, it } from "@effect/vitest"
 
 import { ReplicaConsistencyFailure } from "../../../framework/foundation/mod.ts"
 import { ApiConflict, ApiForbidden, ApiNotFound, ApiServiceUnavailable } from "./api.ts"
+import { AccountingHttpErrors } from "../../modules/accounting/http.ts"
+import { InventoryHttpErrors } from "../../modules/inventory/http.ts"
+import { ProcurementHttpErrors } from "../../modules/procurement/http.ts"
+import { SalesHttpErrors } from "../../modules/sales/http.ts"
 import { toCoreApiError } from "./handlers.ts"
 
-it("maps closed-world core failures to stable HTTP errors", () => {
+it("maps framework and module failures to stable HTTP errors", () => {
   const forbidden = toCoreApiError({ _tag: "AuthorizationDenied" })
   assert.instanceOf(forbidden, ApiForbidden)
 
-  const notFound = toCoreApiError({ _tag: "SalesOrderNotFound" })
+  const notFound = SalesHttpErrors.toApiError({ _tag: "SalesOrderNotFound" })
   assert.instanceOf(notFound, ApiNotFound)
   assert.strictEqual(notFound.code, "SalesOrderNotFound")
 
-  const conflict = toCoreApiError({ _tag: "StockUnavailable" })
+  const conflict = InventoryHttpErrors.toApiError({ _tag: "StockUnavailable" })
   assert.instanceOf(conflict, ApiConflict)
   assert.strictEqual(conflict.code, "StockUnavailable")
 
-  const procurementNotFound = toCoreApiError({ _tag: "PurchaseOrderNotFound" })
+  const procurementNotFound = ProcurementHttpErrors.toApiError({ _tag: "PurchaseOrderNotFound" })
   assert.instanceOf(procurementNotFound, ApiNotFound)
   assert.strictEqual(procurementNotFound.code, "PurchaseOrderNotFound")
 
-  const procurementConflict = toCoreApiError({ _tag: "PurchaseReceiptQuantityExceeded" })
+  const procurementConflict = ProcurementHttpErrors.toApiError({
+    _tag: "PurchaseReceiptQuantityExceeded",
+  })
   assert.instanceOf(procurementConflict, ApiConflict)
   assert.strictEqual(procurementConflict.code, "PurchaseReceiptQuantityExceeded")
 
-  const stagingEvidenceConflict = toCoreApiError({ _tag: "FinancialStagingEvidenceConflict" })
+  const stagingEvidenceConflict = AccountingHttpErrors.toApiError({
+    _tag: "FinancialStagingEvidenceConflict",
+  })
   assert.instanceOf(stagingEvidenceConflict, ApiConflict)
   assert.strictEqual(stagingEvidenceConflict.code, "FinancialStagingEvidenceConflict")
 
-  const stagingEvidenceInvalid = toCoreApiError({ _tag: "FinancialStagingEvidenceInvalid" })
+  const stagingEvidenceInvalid = AccountingHttpErrors.toApiError({
+    _tag: "FinancialStagingEvidenceInvalid",
+  })
   assert.instanceOf(stagingEvidenceInvalid, ApiConflict)
   assert.strictEqual(stagingEvidenceInvalid.code, "FinancialStagingEvidenceInvalid")
 

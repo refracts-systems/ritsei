@@ -20,7 +20,7 @@ import {
   type ProcessWorkflowRunType,
 } from "../../modules/process/mod.ts"
 import { BearerAuth, CurrentPrincipal, RitseiApi } from "./api.ts"
-import { ProcessHandlers } from "./handlers.ts"
+import { ProcessHttpHandlers as ProcessHandlers } from "../../modules/process/http.ts"
 
 const tenantId = "01930000-0000-7000-8000-000000000001"
 const definitionId = "01930000-0000-7000-8000-000000000002"

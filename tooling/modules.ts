@@ -72,15 +72,39 @@ const importFailures = (files: ReadonlyArray<SourceFile>, manifests: Manifests) 
       .map((target) => `${path}: imports ${target}, which ${source} does not declare in dependsOn`)
   })
 
-const surfaceFailures = (manifests: Manifests, api: string, routes: string) =>
+const surfaceFailures = (
+  manifests: Manifests,
+  api: string,
+  routes: string,
+  adapters: ReadonlyMap<string, string>,
+) =>
   [...manifests.values()].flatMap(({ name, http, pages }) => [
     ...http
-      .filter((group) => !api.includes(`HttpApiGroup.make(${JSON.stringify(group)})`))
-      .map((group) => `${name} declares HTTP group ${group}, missing from ${apiFile}`),
+      .filter(
+        (group) =>
+          !(adapters.get(name) ?? "").includes(`HttpApiGroup.make(${JSON.stringify(group)})`),
+      )
+      .map(
+        (group) =>
+          `${name} declares HTTP group ${group}, missing from ${moduleRoot}/${name}/http.ts`,
+      ),
+    ...(http.length > 0 && !api.includes(`"../../modules/${name}/http.ts"`)
+      ? [`${name} declares HTTP groups that ${apiFile} does not compose`]
+      : []),
     ...pages
       .filter((page) => !routes.includes(`path: ${JSON.stringify(page)}`))
       .map((page) => `${name} declares page ${page}, missing from ${routesFile}`),
   ])
+
+const httpAdapters = async (manifests: ReadonlyArray<ModuleManifest>) =>
+  new Map(
+    await Promise.all(
+      manifests.map(
+        async ({ name }) =>
+          [name, await readFile(`${moduleRoot}/${name}/http.ts`, "utf8").catch(() => "")] as const,
+      ),
+    ),
+  )
 
 /** Checks installed ERP module manifests against the repository (ADR-0094). */
 export const checkModules = async (
@@ -99,7 +123,7 @@ export const checkModules = async (
     ...registrationFailures(directories, byName),
     ...schemaFailures(byName, ownership),
     ...importFailures(files, byName),
-    ...surfaceFailures(byName, api, routes),
+    ...surfaceFailures(byName, api, routes, await httpAdapters(manifests)),
   ]
   return [...new Set(failures)].toSorted()
 }

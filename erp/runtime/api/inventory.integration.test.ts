@@ -11,7 +11,7 @@ import * as Path from "effect/Path"
 import type { InventoryService as InventoryServiceContract } from "../../modules/inventory/mod.ts"
 import { InventoryService } from "../../modules/inventory/mod.ts"
 import { BearerAuth, CurrentPrincipal, RitseiApi } from "./api.ts"
-import { InventoryHandlers } from "./handlers.ts"
+import { InventoryHttpHandlers as InventoryHandlers } from "../../modules/inventory/http.ts"
 
 const tenantId = "018f1000-0000-7000-8000-000000000001"
 const warehouseId = "018f1000-0000-7000-8000-000000000002"

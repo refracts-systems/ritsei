@@ -56,10 +56,13 @@ versioned contracts.
    with the existing skills.
 6. **Versioning follows the product.** Modules carry no independent version while they ship with the
    product (ADR-0066). Released actions and events keep their own contract versions.
-7. **Routes and pages stay where they are for now.** HTTP groups remain in `erp/runtime/api` and pages
-   in `apps/web`; the manifest declares them. Moving each module's routes and pages into the module,
-   so the generator can add a migration, an endpoint, and a page, is the next Phase 3 step and the
-   remaining part of its exit criterion.
+7. **A module owns its HTTP adapter; pages stay in the web app.** Each module defines its HttpApi
+   group, handlers, and error mapping in `http.ts`, built on the shared `framework/modules/http`
+   kernel (principal, bearer middleware, transport errors, common schemas, error mapping). `http.ts`
+   is a second public entry that only `erp/runtime`, tests, and tooling may import; the runtime
+   composes the groups into `RitseiApi`. Pages stay in `apps/web/src/features/<module>` because
+   ADR-0049 keeps the Solid compiler at the web boundary and ADR-0075 keeps web dependencies in
+   `apps/web`; the manifest declares each page's route.
 
 ## Alternatives Considered
 

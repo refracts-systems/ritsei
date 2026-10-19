@@ -22,7 +22,7 @@ import {
   type ProcurementService as ProcurementServiceContract,
 } from "../../modules/procurement/mod.ts"
 import { BearerAuth, CurrentPrincipal, RitseiApi } from "./api.ts"
-import { ProcurementHandlers } from "./handlers.ts"
+import { ProcurementHttpHandlers as ProcurementHandlers } from "../../modules/procurement/http.ts"
 
 const tenantId = "018f0000-0000-7000-8000-000000000001"
 const supplierAccountId = "018f0000-0000-7000-8000-000000000002"

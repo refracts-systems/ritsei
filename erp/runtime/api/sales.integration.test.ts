@@ -10,7 +10,7 @@ import * as Path from "effect/Path"
 
 import { SalesService, type SalesService as SalesServiceContract } from "../../modules/sales/mod.ts"
 import { BearerAuth, CurrentPrincipal, RitseiApi } from "./api.ts"
-import { SalesHandlers } from "./handlers.ts"
+import { SalesHttpHandlers as SalesHandlers } from "../../modules/sales/http.ts"
 
 const tenantId = "018f2000-0000-7000-8000-000000000001"
 const customerId = "018f2000-0000-7000-8000-000000000002"
