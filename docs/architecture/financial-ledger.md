@@ -158,7 +158,7 @@ shape; it must not become a generic ledger domain or import TigerBeetle types.
 
 ### Transitional PostgreSQL adapter exposure
 
-During the PostgreSQL-to-TigerBeetle transition, `modules/accounting/mod.ts` re-exports the
+During the PostgreSQL-to-TigerBeetle transition, `erp/modules/accounting/mod.ts` re-exports the
 provider factory `makePostgresqlFinancialLedger` and its layer so the application composition root
 and PostgreSQL ledger integration tests can construct the transitional adapter. This is an
 infrastructure wiring exception, not a domain contract: callers must depend on `FinancialLedgerPort`,

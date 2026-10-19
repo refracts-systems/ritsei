@@ -21,7 +21,7 @@ database-level invariants. PostgreSQL constraints are the final correctness boun
 2. **Decide.** Choose the minimum structural change. Decide which guarantee belongs in Effect Schema,
    domain logic, a transaction, and PostgreSQL. Concurrency-sensitive state validates and mutates
    atomically. For the validation strategy trade-offs read
-   [`references/constraint-validation-strategy.md`](references/constraint-validation-strategy.md).
+   [`references/constraint-validation-strategy.md`](./references/constraint-validation-strategy.md).
 3. **Implement.**
    1. Edit only the owner's `db/schema/<schema>.ts`; export it from `db/schema/index.ts` if new.
    2. `pnpm run db:generate --name=<short_name>`; for unsupported DDL (RLS, triggers, partitioning,
@@ -53,4 +53,4 @@ domain's objects without declared co-owners, or no safe backfill/rollback is def
 [`cross-domain-and-transactions`](../cross-domain-and-transactions/SKILL.md),
 [`create-domain-module`](../create-domain-module/SKILL.md). References: ADR-0012,
 `docs/architecture/postgresql-19-architecture.md`, `docs/operations/database-roles.md`,
-`platform/postgres/tests/migrations.test.ts`.
+`framework/platform/postgres/tests/migrations.test.ts`.

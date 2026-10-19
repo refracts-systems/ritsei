@@ -67,13 +67,13 @@ What holds it back:
 
 ```text
 framework/
-  core/           ids, money, time, errors, concurrency            (from foundation/)
+  core/           ids, money, time, errors, concurrency            (from framework/foundation/)
   data/           database contract, PostgreSQL adapter, migrations runner, outbox, jobs
   auth/           identity, authentication, authorization kernel   (from modules/auth, identity, authorization)
-  http/           Effect HttpApi kernel, middleware, OpenAPI        (from runtime/api kernel parts)
+  http/           Effect HttpApi kernel, middleware, OpenAPI        (from erp/runtime/api kernel parts)
   events/         transactional outbox and messaging                (from modules/messaging)
   integrations/   connectors, webhooks                              (from modules/integrations)
-  documents/      document rendering                                (from foundation/platform document-rendering)
+  documents/      document rendering                                (from framework/platform/document-rendering)
   process/        process engine (deferred, see Section 6)          (from modules/process)
   module/         module manifest, registry, extension points       (new, extracted from erp needs)
   ui/             design system, primitives, patterns, shell        (from apps/web/src/ui, app shell)

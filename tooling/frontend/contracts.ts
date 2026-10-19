@@ -12,12 +12,12 @@ import {
   DirectCapabilityGrant,
   TenantMembership,
   TenantMembershipStatus,
-} from "../../modules/authorization/mod.ts"
+} from "../../framework/modules/authorization/mod.ts"
 import {
   CreateUserAccountInput,
   UpdateUserAccountInput,
   UserAccount,
-} from "../../modules/identity/mod.ts"
+} from "../../framework/modules/identity/mod.ts"
 import {
   Branch,
   ExternalIdentifier,
@@ -32,7 +32,7 @@ import {
   PartyRepresentationKind,
   PartyRole,
   RelatedPartyPath,
-} from "../../modules/party/mod.ts"
+} from "../../erp/modules/party/mod.ts"
 import {
   ProcessCatalogCapabilityKind,
   ProcessCatalogDescriptor,
@@ -48,8 +48,8 @@ import {
   ProcessWorkflowRun,
   ProcessWorkflowType,
   ResolveProcessCatalogInput,
-} from "../../modules/process/mod.ts"
-import { PurchaseOrderStatus, SupplierAccount } from "../../modules/procurement/mod.ts"
+} from "../../erp/modules/process/mod.ts"
+import { PurchaseOrderStatus, SupplierAccount } from "../../erp/modules/procurement/mod.ts"
 import {
   ApiConflict,
   ApiForbidden,
@@ -61,7 +61,7 @@ import {
   AuthProfile,
   AuthSession,
   RitseiApi,
-} from "../../runtime/api/api.ts"
+} from "../../erp/runtime/api/api.ts"
 
 const ApiError = Schema.Union([
   ApiUnauthorized,

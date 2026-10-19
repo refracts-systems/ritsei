@@ -59,7 +59,7 @@ must not be disguised as one direct PostgreSQL transaction.
 - demonstrates safe migration and upgrade behavior.
 
 Until then, a compatibility job layer remains available. The first bounded implementation uses the
-`modules/process` coordination owner and its PostgreSQL workflow-run and job tables, plus the
+`erp/modules/process` coordination owner and its PostgreSQL workflow-run and job tables, plus the
 Messaging-owned transactional event outbox and consumer receipts. It does not claim that a worker or
 `pg_durable` is authoritative. PgQue activation additionally requires the installer, ticker, grants,
 upgrade, and adapter gate defined by

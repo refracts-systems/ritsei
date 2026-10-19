@@ -72,5 +72,5 @@ infrastructure does not exist.
 
 [`add-capability`](../add-capability/SKILL.md), [`change-schema`](../change-schema/SKILL.md).
 References: ADR-0015, `docs/architecture/durable-execution.md`,
-`docs/architecture/pgque-messaging.md`, `modules/inventory/src/service.ts`,
-`modules/accounting/src/service.ts`.
+`docs/architecture/pgque-messaging.md`, `erp/modules/inventory/src/service.ts`,
+`erp/modules/accounting/src/service.ts`.

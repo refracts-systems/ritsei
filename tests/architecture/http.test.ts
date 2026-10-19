@@ -2,7 +2,7 @@ import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import { readFile } from "node:fs/promises"
 
-const apiFiles = ["runtime/api/api.ts", "runtime/api/handlers.ts", "runtime/api/mod.ts"]
+const apiFiles = ["erp/runtime/api/api.ts", "erp/runtime/api/handlers.ts", "erp/runtime/api/mod.ts"]
 
 it.effect("keeps HTTP routing Effect-native", () =>
   Effect.gen(function* () {

@@ -165,7 +165,7 @@ modular-monolith boundaries, not workspace package boundaries by default.
 
 ```text
 ritsei/
-├── foundation/              # generic primitives and contracts
+├── framework/foundation/              # generic primitives and contracts
 │   ├── communication/
 │   ├── concurrency/
 │   ├── database/
@@ -178,11 +178,11 @@ ritsei/
 │   ├── sales/  ├── procurement/  ├── inventory/
 │   ├── accounting/  ├── process/  ├── billing/
 │   └── integrations/
-├── platform/                # concrete PostgreSQL, crypto, and ledger adapters
+├── framework/platform/                # concrete PostgreSQL, crypto, and ledger adapters
 │   ├── postgres/
 │   ├── crypto/
 │   └── tigerbeetle/
-├── runtime/                 # API, worker, migrator, configuration, composition
+├── erp/runtime/                 # API, worker, migrator, configuration, composition
 │   ├── api/
 │   ├── worker/
 │   ├── migrator/
@@ -237,7 +237,7 @@ exception documented in [`financial-ledger.md`](./financial-ledger.md); callers 
 workflow implementations may keep their specialized ports and adapters separate rather than forcing
 them into a generic repository shape.
 
-Production composition is named in `runtime/layers.ts` (`PlatformCore`, `PlatformLive`, domain `*Live`
+Production composition is named in `erp/runtime/layers.ts` (`PlatformCore`, `PlatformLive`, domain `*Live`
 layers, and `ApplicationLive`). HTTP handler groups resolve static services once during group
 construction; request-scoped `CurrentPrincipal` remains inside each request operation. Public
 Effect operations use stable `Effect.fn("Domain.operation")` names for readable execution traces.
@@ -328,7 +328,7 @@ conceal PostgreSQL-specific behavior such as:
 
 Reviewed SQL is the escape hatch and remains a first-class artifact.
 
-The `platform/postgres` adapter owns the `postgres.js` client, Drizzle database lifecycle, typed
+The `framework/platform/postgres` adapter owns the `postgres.js` client, Drizzle database lifecycle, typed
 transaction callbacks, and stable infrastructure failure mapping behind the foundation database
 contracts. Domain implementations build type-safe queries only against their owned tables. Public
 domain contracts do not expose Drizzle or PostgreSQL types.
@@ -609,7 +609,7 @@ timeout/retry policy, provider status, and compensation or manual recovery.
 ## External Standards Contract
 
 External standards such as UBL, ISO 20022, EPCIS, XBRL, and jurisdiction-specific reporting formats
-must enter and leave through versioned adapters in `modules/integrations`.
+must enter and leave through versioned adapters in `framework/modules/integrations`.
 
 An adapter must identify its standard, version, and profile or message type. It maps external
 representations to public domain contracts and must not make external generated types part of a

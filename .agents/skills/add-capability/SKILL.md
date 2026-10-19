@@ -1,6 +1,6 @@
 ---
 name: add-capability
-description: "Use to add or change a RITSEI business capability end to end: a terse ERP request (add warehouse transfers, tambahkan fitur retur pembelian), a new command/query/tagged error in a module's public contract, a protected business action or authorization capability, or an HTTP endpoint in runtime/api."
+description: "Use to add or change a RITSEI business capability end to end: a terse ERP request (add warehouse transfers, tambahkan fitur retur pembelian), a new command/query/tagged error in a module's public contract, a protected business action or authorization capability, or an HTTP endpoint in erp/runtime/api."
 ---
 
 # Purpose
@@ -41,21 +41,21 @@ neighbor and implementing only the delta. Covers contract, errors, service, auth
 # 3. Authorization
 
 - Name capabilities `<domain>.<resource>.<action>` (business action, not CRUD); add the literal to
-  the closed registry in `modules/authorization`. Deny by default, tenant/scope aware.
+  the closed registry in `framework/modules/authorization`. Deny by default, tenant/scope aware.
 - Enforce in the owning backend service or handler before any read/mutation, on every entry path.
   Frontend visibility is UX only.
 - Test allow, default-deny, and scope-mismatch. Test layers must not bypass authorization.
 - Audit package and production RLS paths are not implemented: report that gap for high-risk actions
   rather than faking either.
 
-# 4. HTTP (`runtime/api`)
+# 4. HTTP (`erp/runtime/api`)
 
 - Add the endpoint to its `HttpApiGroup` in `api.ts`; keep the handler in `handlers.ts` thin: obtain
   context, call the public service. Wire a new service layer in `mod.ts` only if missing.
 - Decode with Effect Schema, protect with the bearer middleware, map domain errors to stable
   transport errors without persistence details.
 - Extend the OpenAPI/route test. Consult `vendor/effect` before changing HttpApi or Layer code.
-  Folder rules: [`runtime/api/AGENTS.md`](../../../runtime/api/AGENTS.md).
+  Folder rules: [`erp/runtime/api/AGENTS.md`](../../../erp/runtime/api/AGENTS.md).
 
 # 5. Prove invariants and validate
 

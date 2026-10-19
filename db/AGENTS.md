@@ -6,7 +6,7 @@ Related: [`state-and-consistency.md`](../docs/architecture/state-and-consistency
 
 ## Database
 
-- PostgreSQL 19+ is the minimum; `platform/postgres` rejects `server_version_num` below `190000`.
+- PostgreSQL 19+ is the minimum; `framework/platform/postgres` rejects `server_version_num` below `190000`.
 - Critical invariants need transactions and database constraints; application validation improves
   errors but does not replace constraints.
 - Generate every migration with pinned Drizzle Kit `1.0.0-rc.4`. Use `drizzle-kit generate --custom`
@@ -23,9 +23,9 @@ Related: [`state-and-consistency.md`](../docs/architecture/state-and-consistency
 - Use Drizzle query builders for application reads and writes. Raw SQL in a domain implementation is
   forbidden; unsupported DDL goes in a reviewed custom migration.
 - Run every invariant-sensitive mutation through the foundation database contract's typed
-  transaction service (implemented by `platform/postgres/`). Domains never construct a driver client.
+  transaction service (implemented by `framework/platform/postgres/`). Domains never construct a driver client.
 - Keep the driver, client lifecycle, transaction boundary, and infrastructure-error mapping inside
-  `foundation/` contracts and `platform/postgres/` adapters.
+  `framework/foundation/` contracts and `framework/platform/postgres/` adapters.
 - Map constraint failures to tagged domain errors in the owning domain; never expose raw PostgreSQL
   or Drizzle errors.
 - Adapt integration examples to this repository's `DatabaseLayer`; do not copy them verbatim.
