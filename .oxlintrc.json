@@ -72,7 +72,6 @@
         "apps/web/src/shared/**",
         "erp/modules/accounting/**",
         "erp/modules/inventory/**",
-        "erp/modules/party/**",
         "erp/modules/process/**",
         "erp/modules/procurement/**",
         "erp/runtime/**",

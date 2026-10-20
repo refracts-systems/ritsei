@@ -226,25 +226,25 @@ export const SetPartyRepresentationActiveInput = Schema.Struct({
 
 export interface PartyService {
   readonly list: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ListPartiesInput>,
   ) => Effect.Effect<
     ReadonlyArray<PartyDirectoryEntry>,
     AuthorizationDenied | DatabaseFailure | Schema.SchemaError
   >
   readonly getDetail: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof GetPartyDetailInput>,
   ) => Effect.Effect<
     PartyDetail,
     PartyNotFound | AuthorizationDenied | DatabaseFailure | Schema.SchemaError
   >
   readonly create: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreatePartyInput>,
   ) => Effect.Effect<
     Party,
     AuthorizationDenied | DatabaseFailure | EventIdempotencyConflict | Schema.SchemaError
   >
   readonly createLegalEntity: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreateLegalEntityInput>,
   ) => Effect.Effect<
     LegalEntity,
     | PartyNotFound
@@ -255,7 +255,7 @@ export interface PartyService {
     | Schema.SchemaError
   >
   readonly createBranch: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreateBranchInput>,
   ) => Effect.Effect<
     Branch,
     | LegalEntityNotFound
@@ -265,7 +265,7 @@ export interface PartyService {
     | Schema.SchemaError
   >
   readonly createPartyRepresentation: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreatePartyRepresentationInput>,
   ) => Effect.Effect<
     PartyRepresentation,
     | PartyRepresentationUserAccountNotFound
@@ -276,13 +276,13 @@ export interface PartyService {
     | Schema.SchemaError
   >
   readonly setPartyRepresentationActive: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof SetPartyRepresentationActiveInput>,
   ) => Effect.Effect<
     PartyRepresentation,
     PartyRepresentationNotFound | AuthorizationDenied | DatabaseFailure | Schema.SchemaError
   >
   readonly assignRole: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof AssignPartyRoleInput>,
   ) => Effect.Effect<
     void,
     | PartyNotFound
@@ -292,7 +292,7 @@ export interface PartyService {
     | Schema.SchemaError
   >
   readonly createRelationship: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreatePartyRelationshipInput>,
   ) => Effect.Effect<
     PartyRelationship,
     | LegalEntityNotFound
@@ -304,19 +304,19 @@ export interface PartyService {
     | Schema.SchemaError
   >
   readonly getRelationship: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof GetPartyRelationshipInput>,
   ) => Effect.Effect<
     PartyRelationship,
     PartyRelationshipNotFound | AuthorizationDenied | DatabaseFailure | Schema.SchemaError
   >
   readonly findRelatedPartyPaths: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof FindRelatedPartyPathsInput>,
   ) => Effect.Effect<
     ReadonlyArray<RelatedPartyPath>,
     AuthorizationDenied | DatabaseFailure | Schema.SchemaError
   >
   readonly attachIdentifier: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof AttachExternalIdentifierInput>,
   ) => Effect.Effect<
     ExternalIdentifier,
     | LegalEntityNotFound

@@ -119,18 +119,20 @@ type CommonFailure = AuthorizationDenied | DatabaseFailure | Schema.SchemaError
 /** Addresses, contact persons, and bank accounts of a party (parity plan Phase 4). */
 export interface PartyContactService {
   readonly addAddress: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof AddPartyAddressInput>,
   ) => Effect.Effect<PartyAddress, PartyNotFound | CommonFailure>
   readonly addContact: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof AddPartyContactInput>,
   ) => Effect.Effect<PartyContact, PartyNotFound | CommonFailure>
   readonly addBankAccount: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof AddPartyBankAccountInput>,
   ) => Effect.Effect<
     PartyBankAccount,
     PartyNotFound | PartyBankAccountAlreadyExists | CommonFailure
   >
-  readonly getContactBook: (input: unknown) => Effect.Effect<PartyContactBook, CommonFailure>
+  readonly getContactBook: (
+    input: Schema.Codec.Encoded<typeof GetPartyContactBookInput>,
+  ) => Effect.Effect<PartyContactBook, CommonFailure>
 }
 export const PartyContactService = Context.Service<PartyContactService>(
   "RITSEI/PartyContactService",
@@ -377,7 +379,7 @@ const makeContactServiceFromStore = <R>(storeEffect: Effect.Effect<ContactBookSt
       schema: Schema.Codec<A, unknown>,
       capability: string,
     ) =>
-      Effect.fn(function* (input: unknown) {
+      Effect.fn(function* (input: Schema.Codec.Encoded<typeof schema>) {
         const decoded = yield* Schema.decodeUnknownEffect(schema)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -392,16 +394,24 @@ const makeContactServiceFromStore = <R>(storeEffect: Effect.Effect<ContactBookSt
     const addBankAccount = command(AddPartyBankAccountInput, PartyCapabilities.partyBankAccountAdd)
     const read = command(GetPartyContactBookInput, PartyCapabilities.partyRead)
     return {
-      addAddress: Effect.fn("PartyContactService.addAddress")(function* (input: unknown) {
+      addAddress: Effect.fn("PartyContactService.addAddress")(function* (
+        input: Schema.Codec.Encoded<typeof AddPartyAddressInput>,
+      ) {
         return yield* store.addAddress(yield* addAddress(input))
       }),
-      addContact: Effect.fn("PartyContactService.addContact")(function* (input: unknown) {
+      addContact: Effect.fn("PartyContactService.addContact")(function* (
+        input: Schema.Codec.Encoded<typeof AddPartyContactInput>,
+      ) {
         return yield* store.addContact(yield* addContact(input))
       }),
-      addBankAccount: Effect.fn("PartyContactService.addBankAccount")(function* (input: unknown) {
+      addBankAccount: Effect.fn("PartyContactService.addBankAccount")(function* (
+        input: Schema.Codec.Encoded<typeof AddPartyBankAccountInput>,
+      ) {
         return yield* store.addBankAccount(yield* addBankAccount(input))
       }),
-      getContactBook: Effect.fn("PartyContactService.getContactBook")(function* (input: unknown) {
+      getContactBook: Effect.fn("PartyContactService.getContactBook")(function* (
+        input: Schema.Codec.Encoded<typeof GetPartyContactBookInput>,
+      ) {
         const decoded = yield* read(input)
         return yield* store.getContactBook(decoded.tenantId, decoded.partyId)
       }),

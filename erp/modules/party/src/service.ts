@@ -36,7 +36,9 @@ export const makePartyServiceFromStore = <R>(
     const databaseOption = yield* Effect.serviceOption(Database)
     const publisherOption = yield* Effect.serviceOption(PartyEventPublisher)
 
-    const list = Effect.fn("PartyService.list")(function* (input: unknown) {
+    const list = Effect.fn("PartyService.list")(function* (
+      input: Schema.Codec.Encoded<typeof ListPartiesInput>,
+    ) {
       const decoded = yield* Schema.decodeUnknownEffect(ListPartiesInput)(input)
       yield* authorization.authorize({
         principal: decoded.principal,
@@ -50,7 +52,9 @@ export const makePartyServiceFromStore = <R>(
         decoded.limit ?? 200,
       )
     })
-    const getDetail = Effect.fn("PartyService.getDetail")(function* (input: unknown) {
+    const getDetail = Effect.fn("PartyService.getDetail")(function* (
+      input: Schema.Codec.Encoded<typeof GetPartyDetailInput>,
+    ) {
       const decoded = yield* Schema.decodeUnknownEffect(GetPartyDetailInput)(input)
       yield* authorization.authorize({
         principal: decoded.principal,
@@ -59,7 +63,9 @@ export const makePartyServiceFromStore = <R>(
       })
       return yield* partyStore.getDetail(decoded.tenantId, decoded.partyId)
     })
-    const create = Effect.fn("PartyService.create")(function* (input: unknown) {
+    const create = Effect.fn("PartyService.create")(function* (
+      input: Schema.Codec.Encoded<typeof CreatePartyInput>,
+    ) {
       const decoded = yield* Schema.decodeUnknownEffect(CreatePartyInput)(input)
       yield* authorization.authorize({
         principal: decoded.principal,
@@ -95,7 +101,7 @@ export const makePartyServiceFromStore = <R>(
         : yield* createAndPublish
     })
     const createLegalEntity = Effect.fn("PartyService.createLegalEntity")(function* (
-      input: unknown,
+      input: Schema.Codec.Encoded<typeof CreateLegalEntityInput>,
     ) {
       const decoded = yield* Schema.decodeUnknownEffect(CreateLegalEntityInput)(input)
       yield* authorization.authorize({
@@ -105,7 +111,9 @@ export const makePartyServiceFromStore = <R>(
       })
       return yield* partyStore.createLegalEntity(decoded.tenantId, decoded.organizationId)
     })
-    const createBranch = Effect.fn("PartyService.createBranch")(function* (input: unknown) {
+    const createBranch = Effect.fn("PartyService.createBranch")(function* (
+      input: Schema.Codec.Encoded<typeof CreateBranchInput>,
+    ) {
       const decoded = yield* Schema.decodeUnknownEffect(CreateBranchInput)(input)
       yield* authorization.authorize({
         principal: decoded.principal,
@@ -122,7 +130,7 @@ export const makePartyServiceFromStore = <R>(
       )
     })
     const createPartyRepresentation = Effect.fn("PartyService.createPartyRepresentation")(
-      function* (input: unknown) {
+      function* (input: Schema.Codec.Encoded<typeof CreatePartyRepresentationInput>) {
         const decoded = yield* Schema.decodeUnknownEffect(CreatePartyRepresentationInput)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -138,7 +146,7 @@ export const makePartyServiceFromStore = <R>(
       },
     )
     const setPartyRepresentationActive = Effect.fn("PartyService.setPartyRepresentationActive")(
-      function* (input: unknown) {
+      function* (input: Schema.Codec.Encoded<typeof SetPartyRepresentationActiveInput>) {
         const decoded = yield* Schema.decodeUnknownEffect(SetPartyRepresentationActiveInput)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -154,7 +162,9 @@ export const makePartyServiceFromStore = <R>(
         )
       },
     )
-    const assignRole = Effect.fn("PartyService.assignRole")(function* (input: unknown) {
+    const assignRole = Effect.fn("PartyService.assignRole")(function* (
+      input: Schema.Codec.Encoded<typeof AssignPartyRoleInput>,
+    ) {
       const decoded = yield* Schema.decodeUnknownEffect(AssignPartyRoleInput)(input)
       yield* authorization.authorize({
         principal: decoded.principal,
@@ -164,7 +174,7 @@ export const makePartyServiceFromStore = <R>(
       return yield* partyStore.assignRole(decoded.tenantId, decoded.partyId, decoded.role)
     })
     const createRelationship = Effect.fn("PartyService.createRelationship")(function* (
-      input: unknown,
+      input: Schema.Codec.Encoded<typeof CreatePartyRelationshipInput>,
     ) {
       const decoded = yield* Schema.decodeUnknownEffect(CreatePartyRelationshipInput)(input)
       yield* authorization.authorize({
@@ -179,7 +189,9 @@ export const makePartyServiceFromStore = <R>(
         decoded.kind,
       )
     })
-    const getRelationship = Effect.fn("PartyService.getRelationship")(function* (input: unknown) {
+    const getRelationship = Effect.fn("PartyService.getRelationship")(function* (
+      input: Schema.Codec.Encoded<typeof GetPartyRelationshipInput>,
+    ) {
       const decoded = yield* Schema.decodeUnknownEffect(GetPartyRelationshipInput)(input)
       yield* authorization.authorize({
         principal: decoded.principal,
@@ -189,7 +201,7 @@ export const makePartyServiceFromStore = <R>(
       return yield* partyStore.getRelationship(decoded.tenantId, decoded.relationshipId)
     })
     const findRelatedPartyPaths = Effect.fn("PartyService.findRelatedPartyPaths")(function* (
-      input: unknown,
+      input: Schema.Codec.Encoded<typeof FindRelatedPartyPathsInput>,
     ) {
       const decoded = yield* Schema.decodeUnknownEffect(FindRelatedPartyPathsInput)(input)
       yield* authorization.authorize({
@@ -203,7 +215,9 @@ export const makePartyServiceFromStore = <R>(
         decoded.limit ?? 100,
       )
     })
-    const attachIdentifier = Effect.fn("PartyService.attachIdentifier")(function* (input: unknown) {
+    const attachIdentifier = Effect.fn("PartyService.attachIdentifier")(function* (
+      input: Schema.Codec.Encoded<typeof AttachExternalIdentifierInput>,
+    ) {
       const decoded = yield* Schema.decodeUnknownEffect(AttachExternalIdentifierInput)(input)
       yield* authorization.authorize({
         principal: decoded.principal,
