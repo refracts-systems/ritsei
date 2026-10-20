@@ -22,6 +22,7 @@ import {
   uuidv7,
 } from "../../../../framework/foundation/mod.ts"
 import { ApprovalService } from "../../../../framework/modules/approvals/mod.ts"
+import type { Principal as PrincipalSchema } from "../../../../framework/modules/auth/mod.ts"
 import { AuthorizationService } from "../../../../framework/modules/authorization/mod.ts"
 import { InventoryService } from "../../inventory/mod.ts"
 import { MessagingService } from "../../../../framework/modules/messaging/mod.ts"
@@ -81,6 +82,8 @@ import {
   withProcurementOperationNames,
 } from "./store.ts"
 
+type Principal = Schema.Schema.Type<typeof PrincipalSchema>
+
 export const makeProcurementService = Effect.gen(function* () {
   const database = yield* Database
   const readYourWrites = yield* Effect.serviceOption(PostgresReadYourWrites)
@@ -90,6 +93,45 @@ export const makeProcurementService = Effect.gen(function* () {
   const approvalsOption = yield* Effect.serviceOption(ApprovalService)
   const clock = yield* Clock.Clock
   const now = () => new Date(clock.currentTimeMillisUnsafe())
+
+  /**
+   * Where an approval policy covers this total, every confirmation path needs it: the status of
+   * the request still standing in the way, submitting one if none exists, or undefined when the
+   * order may be confirmed.
+   */
+  const pendingApproval = (
+    principal: Principal,
+    tenantId: string,
+    purchaseOrderId: string,
+    total: string,
+  ) =>
+    Effect.gen(function* () {
+      if (Option.isNone(approvalsOption)) return undefined
+      const approvals = approvalsOption.value
+      const scope = { principal, tenantId }
+      const subject = { subjectType: PurchaseApprovalSubject, subjectId: purchaseOrderId }
+      if (
+        !(yield* approvals.isRequired({
+          ...scope,
+          subjectType: subject.subjectType,
+          amount: total,
+        }))
+      ) {
+        return undefined
+      }
+      const granted = yield* approvals.getForSubject({ ...scope, ...subject })
+      if (granted?.status === "approved" && granted.amount === total) return undefined
+      // Leave a pending request so an approver can act on it.
+      const request =
+        granted ??
+        (yield* approvals.submit({
+          ...scope,
+          ...subject,
+          amount: total,
+          reason: "Purchase order total exceeds the approval threshold",
+        }))
+      return request.status
+    })
 
   const service: ProcurementService = {
     createSupplierAccount: (input) =>
@@ -421,35 +463,14 @@ export const makeProcurementService = Effect.gen(function* () {
               if (row.status !== "draft") {
                 return { _tag: "invalid-state" as const, status: row.status }
               }
-              // Where an approval policy covers this total, every confirmation path needs it.
-              if (Option.isSome(approvalsOption)) {
-                const approvals = approvalsOption.value
-                const scope = { principal: decoded.principal, tenantId: decoded.tenantId }
-                const required = yield* approvals.isRequired({
-                  ...scope,
-                  subjectType: PurchaseApprovalSubject,
-                  amount: current.total,
-                })
-                if (required) {
-                  const granted = yield* approvals.getForSubject({
-                    ...scope,
-                    subjectType: PurchaseApprovalSubject,
-                    subjectId: row.id,
-                  })
-                  if (granted?.status !== "approved" || granted.amount !== current.total) {
-                    // Leave a pending request so an approver can act on it.
-                    const request =
-                      granted ??
-                      (yield* approvals.submit({
-                        ...scope,
-                        subjectType: PurchaseApprovalSubject,
-                        subjectId: row.id,
-                        amount: current.total,
-                        reason: "Purchase order total exceeds the approval threshold",
-                      }))
-                    return { _tag: "approval-required" as const, status: request.status }
-                  }
-                }
+              const pending = yield* pendingApproval(
+                decoded.principal,
+                decoded.tenantId,
+                row.id,
+                current.total,
+              )
+              if (pending !== undefined) {
+                return { _tag: "approval-required" as const, status: pending }
               }
               const confirmedAt = now()
               const [confirmed] = yield* database.query(

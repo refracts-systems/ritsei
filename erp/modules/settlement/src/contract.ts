@@ -131,6 +131,8 @@ export const MakePaymentInput = Schema.Struct(PaymentFields)
 export const AllocatePaymentInput = Schema.Struct({
   ...ScopedInput,
   paymentId: Uuid,
+  /** The business date of the allocation, never before the payment date. */
+  allocatedOn: CalendarDate,
   allocations: Schema.Array(Allocation).check(Schema.isMinLength(1)),
 })
 export const AgingInput = Schema.Struct({
@@ -149,6 +151,7 @@ export const StatementInput = Schema.Struct({
 
 type CommonFailure = AuthorizationDenied | DatabaseFailure | Schema.SchemaError
 export type PaymentFailure =
+  | SettlementErrors.AllocationBeforePayment
   | SettlementErrors.AllocationExceedsPayment
   | SettlementErrors.AllocationMismatch
   | SettlementErrors.PaymentNotFound

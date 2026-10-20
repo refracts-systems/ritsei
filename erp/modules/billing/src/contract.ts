@@ -134,6 +134,8 @@ export const ApplySettlementInput = Schema.Struct({
   invoiceId: Uuid,
   amount: FinancialMajorAmount,
   source: Schema.Struct({ type: SourceType, id: Uuid }),
+  /** The business date the amount is applied, which open items as of a date respect. */
+  settledOn: CalendarDate,
 })
 export const GetBillingDocumentInput = Schema.Struct({ ...ScopedInput, invoiceId: Uuid })
 export const ListOpenItemsInput = Schema.Struct({

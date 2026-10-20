@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, inArray, lte } from "drizzle-orm"
+import { and, asc, eq, inArray, lte, sql } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
@@ -40,6 +40,7 @@ import {
   StatementInput,
 } from "./contract.ts"
 import {
+  AllocationBeforePayment,
   AllocationExceedsPayment,
   AllocationMismatch,
   PaymentNotFound,
@@ -157,8 +158,19 @@ export const makeSettlementService = Effect.gen(function* () {
     principal: Principal,
     payment: Payment,
     allocations: ReadonlyArray<{ readonly invoiceId: string; readonly amount: string }>,
+    allocatedOn: string,
   ) =>
     Effect.gen(function* () {
+      if (allocatedOn < payment.paymentDate) {
+        return yield* Effect.fail(
+          new AllocationBeforePayment({
+            tenantId: payment.tenantId,
+            paymentId: payment.id,
+            paymentDate: payment.paymentDate,
+            allocatedOn,
+          }),
+        )
+      }
       const requested = allocations.reduce((sum, allocation) => sum + minor(allocation.amount), 0n)
       if (requested > minor(payment.unallocatedAmount)) {
         return yield* Effect.fail(
@@ -195,6 +207,7 @@ export const makeSettlementService = Effect.gen(function* () {
           invoiceId: allocation.invoiceId,
           amount: allocation.amount,
           source: { type: "settlement.payment", id: payment.id },
+          settledOn: allocatedOn,
         })
       }
       const unallocatedAmount = major(minor(payment.unallocatedAmount) - requested)
@@ -206,6 +219,7 @@ export const makeSettlementService = Effect.gen(function* () {
             paymentId: payment.id,
             invoiceId: allocation.invoiceId,
             amount: allocation.amount,
+            allocatedOn,
           })),
         )
         await tx
@@ -283,7 +297,7 @@ export const makeSettlementService = Effect.gen(function* () {
           "settlement.payment.insert",
         )
         const payment = yield* loadPayment(input.tenantId, paymentId, true)
-        return yield* allocate(input.principal, payment, input.allocations)
+        return yield* allocate(input.principal, payment, input.allocations, input.paymentDate)
       }),
       `settlement.payment_${direction}.atomic`,
     )
@@ -315,7 +329,7 @@ export const makeSettlementService = Effect.gen(function* () {
     return yield* database.withTransaction(
       Effect.gen(function* () {
         const locked = yield* loadPayment(decoded.tenantId, decoded.paymentId, true)
-        return yield* allocate(decoded.principal, locked, decoded.allocations)
+        return yield* allocate(decoded.principal, locked, decoded.allocations, decoded.allocatedOn)
       }),
       "settlement.payment.allocate.atomic",
     )
@@ -404,23 +418,31 @@ export const makeSettlementService = Effect.gen(function* () {
     legalEntityId: string,
     direction: PaymentDirection,
     asOf: string,
-  ) =>
-    database.query(
+  ) => {
+    // What was still unallocated on the as-of date: the amount less allocations made by then.
+    const unallocatedAsOf = sql<string>`${payments.amount} - coalesce((
+      select sum(${paymentAllocations.amount}) from ${paymentAllocations}
+      where ${paymentAllocations.tenantId} = ${payments.tenantId}
+        and ${paymentAllocations.paymentId} = ${payments.id}
+        and ${paymentAllocations.allocatedOn} <= ${asOf}
+    ), 0)`
+    return database.query(
       (db) =>
         db
-          .select({ partyId: payments.partyId, unallocated: payments.unallocatedAmount })
+          .select({ partyId: payments.partyId, unallocated: unallocatedAsOf })
           .from(payments)
           .where(
             and(
               eq(payments.tenantId, tenantId),
               eq(payments.legalEntityId, legalEntityId),
               eq(payments.direction, direction),
-              gt(payments.unallocatedAmount, "0"),
+              sql`${unallocatedAsOf} > 0`,
               lte(payments.paymentDate, asOf),
             ),
           ),
       "settlement.payment.unallocated",
     )
+  }
 
   /** Net payment days per party for one side; parties without terms are due immediately. */
   const netDaysFor = (tenantId: string, side: "receivable" | "payable", partyIds: string[]) =>

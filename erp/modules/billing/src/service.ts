@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, lte, ne, sum } from "drizzle-orm"
+import { and, asc, eq, inArray, lte, sql, sum } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
@@ -476,12 +476,16 @@ export const makeBillingService = Effect.gen(function* () {
       )
     })
 
-  /** Applies `amount` of `source` to an open document; replaying the same source is a no-op. */
+  /**
+   * Applies `amount` of `source` to an open document on `settledOn`; replaying the same source is
+   * a no-op.
+   */
   const settle = (
     tenantId: string,
     invoiceId: string,
     amount: bigint,
     source: { readonly type: string; readonly id: string },
+    settledOn: string,
   ) =>
     Effect.gen(function* () {
       const document = yield* loadDocument(tenantId, invoiceId, true)
@@ -524,6 +528,7 @@ export const makeBillingService = Effect.gen(function* () {
           sourceType: source.type,
           sourceId: source.id,
           amount: major(amount),
+          settledOn,
         })
         await tx
           .update(invoices)
@@ -777,16 +782,22 @@ export const makeBillingService = Effect.gen(function* () {
       const guarded = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
         effect.pipe(Effect.catch(impossible))
       yield* guarded(
-        settle(invoice.tenantId, invoice.id, applied, {
-          type: `billing.${creditNote.kind}`,
-          id: creditNote.id,
-        }),
+        settle(
+          invoice.tenantId,
+          invoice.id,
+          applied,
+          { type: `billing.${creditNote.kind}`, id: creditNote.id },
+          creditNote.invoiceDate,
+        ),
       )
       return yield* guarded(
-        settle(invoice.tenantId, creditNote.id, applied, {
-          type: `billing.${invoice.kind}`,
-          id: invoice.id,
-        }),
+        settle(
+          invoice.tenantId,
+          creditNote.id,
+          applied,
+          { type: `billing.${invoice.kind}`, id: invoice.id },
+          creditNote.invoiceDate,
+        ),
       )
     })
 
@@ -860,7 +871,13 @@ export const makeBillingService = Effect.gen(function* () {
       BillingCapabilities.settlementApply,
     )(input)
     return yield* database.withTransaction(
-      settle(decoded.tenantId, decoded.invoiceId, minor(decoded.amount), decoded.source),
+      settle(
+        decoded.tenantId,
+        decoded.invoiceId,
+        minor(decoded.amount),
+        decoded.source,
+        decoded.settledOn,
+      ),
       "billing.settlement.atomic",
     )
   })
@@ -905,6 +922,13 @@ export const makeBillingService = Effect.gen(function* () {
 
   const listOpenItems = Effect.fn("BillingService.listOpenItems")(function* (input: unknown) {
     const decoded = yield* authorized(ListOpenItemsInput, BillingCapabilities.documentRead)(input)
+    // The open amount on the as-of date: the total less what was settled by then.
+    const openAsOf = sql<string>`${invoices.total} - coalesce((
+      select sum(${invoiceSettlements.amount}) from ${invoiceSettlements}
+      where ${invoiceSettlements.tenantId} = ${invoices.tenantId}
+        and ${invoiceSettlements.invoiceId} = ${invoices.id}
+        and ${invoiceSettlements.settledOn} <= ${decoded.asOf}
+    ), 0)`
     const rows = yield* database.query(
       (db) =>
         db
@@ -915,7 +939,7 @@ export const makeBillingService = Effect.gen(function* () {
             partyId: invoices.partyId,
             invoiceDate: invoices.invoiceDate,
             total: invoices.total,
-            openAmount: invoices.openAmount,
+            openAmount: openAsOf,
           })
           .from(invoices)
           .where(
@@ -923,7 +947,7 @@ export const makeBillingService = Effect.gen(function* () {
               eq(invoices.tenantId, decoded.tenantId),
               eq(invoices.legalEntityId, decoded.legalEntityId),
               inArray(invoices.kind, kindsOf(decoded.side)),
-              ne(invoices.openAmount, "0"),
+              sql`${openAsOf} <> 0`,
               lte(invoices.invoiceDate, decoded.asOf),
               decoded.partyId === undefined ? undefined : eq(invoices.partyId, decoded.partyId),
             ),

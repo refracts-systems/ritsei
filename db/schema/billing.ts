@@ -141,6 +141,8 @@ export const invoiceSettlements = billingSchema.table(
     sourceType: text("source_type").notNull(),
     sourceId: uuid("source_id").notNull(),
     amount: money("amount"),
+    /** The business date the amount was applied, so open items can be reported as of any date. */
+    settledOn: date("settled_on", { mode: "string" }).notNull(),
     createdAt: createdAt(),
   },
   (table) => [

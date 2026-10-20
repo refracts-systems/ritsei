@@ -20,7 +20,11 @@ import {
   SalesDocumentService,
   SalesService,
 } from "../../erp/modules/sales/mod.ts"
-import { SettlementCapabilities, SettlementService } from "../../erp/modules/settlement/mod.ts"
+import {
+  AllocationBeforePayment,
+  SettlementCapabilities,
+  SettlementService,
+} from "../../erp/modules/settlement/mod.ts"
 import { TaxCapabilities, TaxService } from "../../erp/modules/tax/mod.ts"
 import { seedErpFixture } from "../support/erp-fixture.ts"
 import { erpChainLayers } from "../support/erp-layers.ts"
@@ -306,6 +310,15 @@ it.effect.skipIf(databaseUrl === undefined)(
             allocations: [{ invoiceId: firstInvoice.id, amount: "15.44" }],
           })
           assert.strictEqual(onAccount.unallocatedAmount, "34.56")
+          const premature = yield* Effect.flip(
+            settlement.allocatePayment({
+              ...scope,
+              paymentId: onAccount.id,
+              allocatedOn: "2026-10-27",
+              allocations: [{ invoiceId: secondInvoice.id, amount: "10.00" }],
+            }),
+          )
+          assert.instanceOf(premature, AllocationBeforePayment)
 
           // Receivables aging equals the receivables control account.
           const aging = yield* settlement.aging({
@@ -334,6 +347,26 @@ it.effect.skipIf(databaseUrl === undefined)(
               total: "-4.59",
             },
           ])
+          // Aging as of an earlier date ignores later settlements and agrees with the ledger then.
+          for (const [asOf, total] of [
+            ["2026-10-24", "155.40"],
+            ["2026-10-27", "45.41"],
+          ] as const) {
+            const past = yield* settlement.aging({
+              ...scope,
+              legalEntityId,
+              side: "receivable",
+              asOf,
+            })
+            const ledgerThen = yield* ledger.roleBalance({
+              ...scope,
+              legalEntityId,
+              role: "receivable",
+              asOf,
+            })
+            assert.strictEqual(past.totals.total, total)
+            assert.strictEqual(past.totals.total, ledgerThen.balance)
+          }
           const statement = yield* settlement.customerStatement({
             ...scope,
             legalEntityId,

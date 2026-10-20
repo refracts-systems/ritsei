@@ -129,6 +129,8 @@ export const paymentAllocations = settlementSchema.table(
     paymentId: uuid("payment_id").notNull(),
     invoiceId: uuid("invoice_id").notNull(),
     amount: money("amount"),
+    /** The business date the payment was allocated, so unallocated payments can be aged as of any date. */
+    allocatedOn: date("allocated_on", { mode: "string" }).notNull(),
     createdAt: createdAt(),
   },
   (table) => [

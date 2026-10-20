@@ -336,6 +336,22 @@ it.effect.skipIf(databaseUrl === undefined)(
           assert.strictEqual(aging.totals.total, "99.70")
           assert.strictEqual(payable.balance, "-99.70")
 
+          // The day before the payment both bills were still fully open.
+          const agingBefore = yield* settlement.aging({
+            ...scope,
+            legalEntityId,
+            side: "payable",
+            asOf: "2026-10-19",
+          })
+          const payableBefore = yield* ledger.roleBalance({
+            ...scope,
+            legalEntityId,
+            role: "payable",
+            asOf: "2026-10-19",
+          })
+          assert.strictEqual(agingBefore.totals.total, "678.21")
+          assert.strictEqual(payableBefore.balance, "-678.21")
+
           // Stock valuation equals the inventory account; GRNI clears; variance is visible.
           const valuation = yield* stock.valuation({ ...scope, legalEntityId })
           assert.deepStrictEqual(valuation.rows, [

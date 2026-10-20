@@ -25,6 +25,7 @@ export type {
   SettlementService as SettlementServiceShape,
 } from "./src/contract.ts"
 export {
+  AllocationBeforePayment,
   AllocationExceedsPayment,
   AllocationMismatch,
   PaymentNotFound,
