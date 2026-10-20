@@ -35,6 +35,7 @@ import {
   createQuotationQuery,
   createQuotationsQuery,
 } from "./queries.ts"
+import { presentFields, definedFields } from "../../shared/api.ts"
 
 const quotationStatusOptions = [
   { value: "draft", label: "Draft" },
@@ -313,7 +314,7 @@ function CreateOrderDialog(props: {
               setInvalid(false)
               mutation.mutate({
                 customerId,
-                ...(quotationId === null ? {} : { quotationId }),
+                ...presentFields({ quotationId }),
                 lines: [{ itemId, quantity, unitPrice }],
               })
             }
@@ -933,17 +934,17 @@ export function Sales(props: {
 }) {
   const scope = useContext(ApiRuntime)
   const customers = createCustomersQuery(scope, {
-    ...(props.search === undefined ? {} : { search: props.search }),
+    ...definedFields({ search: props.search }),
     limit: 200,
   })
   const quotations = createQuotationsQuery(scope, {
-    ...(props.customerId === undefined ? {} : { customerId: props.customerId }),
-    ...(props.quotationStatus === undefined ? {} : { status: props.quotationStatus }),
+    ...definedFields({ customerId: props.customerId }),
+    ...definedFields({ status: props.quotationStatus }),
     limit: 200,
   })
   const orders = createOrdersQuery(scope, {
-    ...(props.customerId === undefined ? {} : { customerId: props.customerId }),
-    ...(props.orderStatus === undefined ? {} : { status: props.orderStatus }),
+    ...definedFields({ customerId: props.customerId }),
+    ...definedFields({ status: props.orderStatus }),
     limit: 200,
   })
   const customerData = () => customers.data ?? []

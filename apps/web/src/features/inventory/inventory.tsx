@@ -49,6 +49,7 @@ import {
   createWarehouseMutation,
   createWarehousesQuery,
 } from "./queries.ts"
+import { presentFields, definedFields } from "../../shared/api.ts"
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const quantityPattern = /^[1-9]\d*$/
@@ -204,7 +205,7 @@ function CreateWarehouseDialog(props: { reload: () => Promise<void> }) {
             setInvalid(false)
             const input: CreateWarehouseInput = {
               legalEntityId,
-              ...(primaryBranchId === null ? {} : { primaryBranchId }),
+              ...presentFields({ primaryBranchId }),
               name,
             }
             mutation.mutate(input)
@@ -1465,29 +1466,29 @@ export function Inventory(props: {
   const scope = useContext(ApiRuntime)
   const warehouses = createWarehousesQuery(scope, { limit: 200 })
   const items = createItemsQuery(scope, {
-    ...(props.search === undefined ? {} : { search: props.search }),
+    ...definedFields({ search: props.search }),
     limit: 200,
   })
   const balances = createStockBalancesQuery(scope, {
-    ...(props.warehouseId === undefined ? {} : { warehouseId: props.warehouseId }),
-    ...(props.itemId === undefined ? {} : { itemId: props.itemId }),
+    ...definedFields({ warehouseId: props.warehouseId }),
+    ...definedFields({ itemId: props.itemId }),
     limit: 200,
   })
   const reservations = createStockReservationsQuery(scope, {
-    ...(props.warehouseId === undefined ? {} : { warehouseId: props.warehouseId }),
-    ...(props.itemId === undefined ? {} : { itemId: props.itemId }),
-    ...(props.reservationStatus === undefined ? {} : { status: props.reservationStatus }),
+    ...definedFields({ warehouseId: props.warehouseId }),
+    ...definedFields({ itemId: props.itemId }),
+    ...definedFields({ status: props.reservationStatus }),
     limit: 200,
   })
   const transfers = createStockTransfersQuery(scope, {
-    ...(props.warehouseId === undefined ? {} : { warehouseId: props.warehouseId }),
-    ...(props.transferStatus === undefined ? {} : { status: props.transferStatus }),
+    ...definedFields({ warehouseId: props.warehouseId }),
+    ...definedFields({ status: props.transferStatus }),
     limit: 200,
   })
   const movements = createStockMovementsQuery(scope, {
-    ...(props.warehouseId === undefined ? {} : { warehouseId: props.warehouseId }),
-    ...(props.itemId === undefined ? {} : { itemId: props.itemId }),
-    ...(props.movementKind === undefined ? {} : { kind: props.movementKind }),
+    ...definedFields({ warehouseId: props.warehouseId }),
+    ...definedFields({ itemId: props.itemId }),
+    ...definedFields({ kind: props.movementKind }),
     limit: 200,
   })
   const reload = () =>

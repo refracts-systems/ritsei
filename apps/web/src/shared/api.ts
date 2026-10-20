@@ -128,6 +128,13 @@ export const definedFields = <Fields extends { readonly [Key in keyof Fields]: u
   fields: Fields,
 ) => Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== undefined))
 
+export const presentFields = <Fields extends { readonly [Key in keyof Fields]: unknown }>(
+  fields: Fields,
+) =>
+  Object.fromEntries(
+    Object.entries(fields).filter(([, value]) => value !== undefined && value !== null),
+  )
+
 export const responseMatches = <Owner>(value: Owner, expected: Readonly<Partial<Owner>>) =>
   Object.entries(expected).every(
     // SAFETY: Object.entries(expected) yields keys of Partial<Owner>.
@@ -153,7 +160,7 @@ export const requestJson = Effect.fn("Frontend.requestJson")(function* (
           "x-tenant-id": connection.tenantId,
           "Content-Type": "application/json",
         },
-        ...(payload === undefined ? {} : { body: JSON.stringify(payload) }),
+        ...definedFields({ body: payload === undefined ? undefined : JSON.stringify(payload) }),
         credentials: "omit",
         cache: "no-store",
         redirect: "error",

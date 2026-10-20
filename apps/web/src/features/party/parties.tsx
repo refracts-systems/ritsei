@@ -35,6 +35,7 @@ import {
   createRelatedPartyPathsQuery,
   setPartyRepresentationActiveMutation,
 } from "./queries.ts"
+import { definedFields } from "../../shared/api.ts"
 
 const kindOptions = [
   { value: "person", label: "Person" },
@@ -411,9 +412,12 @@ function AttachIdentifierCommand(props: {
               scheme,
               scope: scopeValue,
               value: identifierValue,
-              ...(requiredText(value.legalEntityId) === null
-                ? {}
-                : { legalEntityId: String(value.legalEntityId) }),
+              ...definedFields({
+                legalEntityId:
+                  requiredText(value.legalEntityId) === null
+                    ? undefined
+                    : String(value.legalEntityId),
+              }),
             })
           }
         }
@@ -562,15 +566,13 @@ function CreateBranchCommand(props: { detail: PartyDetailValue; reload: () => Pr
                 mutation.mutate({
                   legalEntityId: legalEntity.id,
                   name,
-                  ...(optionalText(value.timezone) === undefined
-                    ? {}
-                    : { timezone: optionalText(value.timezone) }),
-                  ...(optionalText(value.localTaxRegistration) === undefined
-                    ? {}
-                    : { localTaxRegistration: optionalText(value.localTaxRegistration) }),
-                  ...(optionalText(value.dedicatedJournalCode) === undefined
-                    ? {}
-                    : { dedicatedJournalCode: optionalText(value.dedicatedJournalCode) }),
+                  ...definedFields({ timezone: optionalText(value.timezone) }),
+                  ...definedFields({
+                    localTaxRegistration: optionalText(value.localTaxRegistration),
+                  }),
+                  ...definedFields({
+                    dedicatedJournalCode: optionalText(value.dedicatedJournalCode),
+                  }),
                 })
               }
             }
@@ -970,8 +972,8 @@ function PartyDetail(props: { id: string }) {
 export function Parties(props: { selectedPartyId?: string; search?: string; kind?: PartyKind }) {
   const scope = useContext(ApiRuntime)
   const input: ListPartiesInput = {
-    ...(props.search === undefined ? {} : { search: props.search }),
-    ...(props.kind === undefined ? {} : { kind: props.kind }),
+    ...definedFields({ search: props.search }),
+    ...definedFields({ kind: props.kind }),
     limit: 200,
   }
   const query = createPartiesQuery(scope, input)

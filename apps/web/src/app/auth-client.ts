@@ -69,7 +69,7 @@ export const getAuthSession = async (token: string, tenantId?: string) =>
     await request(authRoutes.session, {
       headers: {
         Authorization: `Bearer ${token}`,
-        ...(tenantId === undefined ? {} : { "x-tenant-id": tenantId }),
+        ...(tenantId === undefined ? undefined : { "x-tenant-id": tenantId }),
       },
     }),
   )

@@ -23,6 +23,8 @@ import {
   DatabaseFailure,
   isDatabaseConstraint,
   uuidv7,
+  omitNullish,
+  omitUndefined,
 } from "../../../../framework/foundation/mod.ts"
 import { AuthorizationService } from "../../../../framework/modules/authorization/mod.ts"
 import { MessagingService } from "../../../../framework/modules/messaging/mod.ts"
@@ -544,7 +546,7 @@ export const makeAccountingService = Effect.gen(function* () {
           // SAFETY: the list filter admits only posted and reversed entries.
           status: row.status as "posted" | "reversed",
           postedAt: row.postedAt!.toISOString(),
-          ...(row.reversesEntryId === null ? {} : { reversesEntryId: row.reversesEntryId }),
+          ...omitNullish({ reversesEntryId: row.reversesEntryId }),
           lines: linesByEntry.get(row.id) ?? [],
         }))
       }),
@@ -605,12 +607,10 @@ export const makeAccountingService = Effect.gen(function* () {
         })
         return yield* stagingEvidenceStore.list({
           tenantId: decoded.tenantId,
-          ...(decoded.legalEntityId === undefined ? {} : { legalEntityId: decoded.legalEntityId }),
-          ...(decoded.gateId === undefined ? {} : { gateId: decoded.gateId }),
-          ...(decoded.cohortId === undefined ? {} : { cohortId: decoded.cohortId }),
-          ...(decoded.deploymentRevision === undefined
-            ? {}
-            : { deploymentRevision: decoded.deploymentRevision }),
+          ...omitUndefined({ legalEntityId: decoded.legalEntityId }),
+          ...omitUndefined({ gateId: decoded.gateId }),
+          ...omitUndefined({ cohortId: decoded.cohortId }),
+          ...omitUndefined({ deploymentRevision: decoded.deploymentRevision }),
           limit: decoded.limit,
         })
       }),

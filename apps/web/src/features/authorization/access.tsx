@@ -1,7 +1,7 @@
 import * as Predicate from "effect/Predicate"
 import { useNavigate } from "@solidjs/router"
 import { createMemo, createSignal, Show, untrack, useContext } from "solid-js"
-import { failureMessage, type RequestFailure } from "../../shared/api.ts"
+import { failureMessage, type RequestFailure, definedFields } from "../../shared/api.ts"
 import type {
   Capability,
   CapabilityDefinition,
@@ -698,8 +698,8 @@ export function Access(props: {
   const search = untrack(() => props.search)
   const status = untrack(() => props.status)
   const query = createTenantMembershipsQuery(scope, {
-    ...(search === undefined ? {} : { search }),
-    ...(status === undefined ? {} : { status }),
+    ...definedFields({ search }),
+    ...definedFields({ status }),
     limit: 200,
   })
   return (

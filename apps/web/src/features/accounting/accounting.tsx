@@ -41,6 +41,7 @@ import {
   createPostJournalMutation,
   createRevenuePostingProfilesQuery,
 } from "./queries.ts"
+import { definedFields } from "../../shared/api.ts"
 
 const accountTypeOptions = [
   { value: "asset", label: "Asset" },
@@ -1269,24 +1270,24 @@ export function Accounting(props: {
 }) {
   const scope = useContext(ApiRuntime)
   const configurations = createAccountingConfigurationsQuery(scope, {
-    ...(props.legalEntityId === undefined ? {} : { legalEntityId: props.legalEntityId }),
+    ...definedFields({ legalEntityId: props.legalEntityId }),
     limit: 200,
   })
   const accounts = createAccountsQuery(scope, {
-    ...(props.accountType === undefined ? {} : { type: props.accountType }),
+    ...definedFields({ type: props.accountType }),
     limit: 200,
   })
   const periods = createAccountingPeriodsQuery(scope, {
-    ...(props.legalEntityId === undefined ? {} : { legalEntityId: props.legalEntityId }),
-    ...(props.periodStatus === undefined ? {} : { status: props.periodStatus }),
+    ...definedFields({ legalEntityId: props.legalEntityId }),
+    ...definedFields({ status: props.periodStatus }),
     limit: 200,
   })
   const profiles = createRevenuePostingProfilesQuery(scope, {
-    ...(props.legalEntityId === undefined ? {} : { legalEntityId: props.legalEntityId }),
+    ...definedFields({ legalEntityId: props.legalEntityId }),
     limit: 200,
   })
   const journals = createJournalsQuery(scope, {
-    ...(props.journalStatus === undefined ? {} : { status: props.journalStatus }),
+    ...definedFields({ status: props.journalStatus }),
     limit: 200,
   })
   const reload = () =>

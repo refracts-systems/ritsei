@@ -32,6 +32,7 @@ import {
   createSupplierAccountMutation,
   createSupplierAccountsQuery,
 } from "./queries.ts"
+import { definedFields } from "../../shared/api.ts"
 
 const statusOptions = [
   { value: "draft", label: "Draft" },
@@ -887,10 +888,8 @@ export function Procurement(props: {
   const scope = useContext(ApiRuntime)
   const supplierAccounts = createSupplierAccountsQuery(scope, { limit: 200 })
   const orders = createPurchaseOrdersQuery(scope, {
-    ...(props.supplierAccountId === undefined
-      ? {}
-      : { supplierAccountId: props.supplierAccountId }),
-    ...(props.status === undefined ? {} : { status: props.status }),
+    ...definedFields({ supplierAccountId: props.supplierAccountId }),
+    ...definedFields({ status: props.status }),
     limit: 200,
   })
   return (

@@ -50,7 +50,8 @@
     "anti-slop/no-unknown-returns": "error",
     "anti-slop/require-safety-comment-for-type-assertion": "error",
     "anti-slop-effect/no-service-constructor-imports": "error",
-    "anti-slop/no-shape-in-symbol-names": "error"
+    "anti-slop/no-shape-in-symbol-names": "error",
+    "anti-slop/no-conditional-empty-object-spread": "error"
   },
   "overrides": [
     {

@@ -1,5 +1,6 @@
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import { omitUndefined } from "../../framework/foundation/mod.ts"
 
 export const DeploymentProfile = Schema.Literals(["entry", "standard", "scale", "enterprise"])
 export type DeploymentProfile = Schema.Schema.Type<typeof DeploymentProfile>
@@ -205,12 +206,10 @@ export const parseRuntimeConfiguration = (environment: RuntimeEnvironment) =>
       decoded.authenticationProfile === "transitional-local"
         ? {
             profile: "transitional-local",
-            ...(decoded.transitionalUserAccountId === undefined
-              ? {}
-              : { userAccountId: decoded.transitionalUserAccountId }),
-            ...(decoded.transitionalUserAccountEmail === undefined
-              ? {}
-              : { userAccountEmail: decoded.transitionalUserAccountEmail.trim().toLowerCase() }),
+            ...omitUndefined({ userAccountId: decoded.transitionalUserAccountId }),
+            ...omitUndefined({
+              userAccountEmail: decoded.transitionalUserAccountEmail?.trim().toLowerCase(),
+            }),
           }
         : yield* Effect.gen(function* () {
             const values = [
@@ -256,7 +255,7 @@ export const parseRuntimeConfiguration = (environment: RuntimeEnvironment) =>
     return {
       deploymentProfile: decoded.deploymentProfile,
       authentication,
-      ...(postgresReadYourWrites === undefined ? {} : { postgresReadYourWrites }),
+      ...omitUndefined({ postgresReadYourWrites }),
     } satisfies RitseiRuntimeConfiguration
   })
 

@@ -5,7 +5,7 @@ import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 
-import { uuidv7 } from "../../../../framework/foundation/mod.ts"
+import { uuidv7, omitUndefined } from "../../../../framework/foundation/mod.ts"
 import { AuthorizationService } from "../../../../framework/modules/authorization/mod.ts"
 import { MessagingService } from "../../../../framework/modules/messaging/mod.ts"
 import { SalesService } from "../../sales/mod.ts"
@@ -289,14 +289,10 @@ export const makeAccountingTestLayer = () =>
             })
             return yield* stagingEvidenceStore.list({
               tenantId: decoded.tenantId,
-              ...(decoded.legalEntityId === undefined
-                ? {}
-                : { legalEntityId: decoded.legalEntityId }),
-              ...(decoded.gateId === undefined ? {} : { gateId: decoded.gateId }),
-              ...(decoded.cohortId === undefined ? {} : { cohortId: decoded.cohortId }),
-              ...(decoded.deploymentRevision === undefined
-                ? {}
-                : { deploymentRevision: decoded.deploymentRevision }),
+              ...omitUndefined({ legalEntityId: decoded.legalEntityId }),
+              ...omitUndefined({ gateId: decoded.gateId }),
+              ...omitUndefined({ cohortId: decoded.cohortId }),
+              ...omitUndefined({ deploymentRevision: decoded.deploymentRevision }),
               limit: decoded.limit,
             })
           }),

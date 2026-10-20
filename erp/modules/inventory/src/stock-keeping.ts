@@ -17,6 +17,7 @@ import {
   formatSignedMinor,
   requireExactMajorToMinor,
   requireSignedMajorToMinor,
+  omitUndefined,
 } from "../../../../framework/foundation/mod.ts"
 import type { Principal as PrincipalSchema } from "../../../../framework/modules/auth/mod.ts"
 import {
@@ -524,9 +525,12 @@ export const makeStockKeepingService = Effect.gen(function* () {
         decoded.lines.map((line) => ({
           itemId: line.itemId,
           quantity: -BigInt(line.quantity),
-          ...(line.unitCost === undefined
-            ? {}
-            : { issueValue: minor(line.unitCost) * BigInt(line.quantity) }),
+          ...omitUndefined({
+            issueValue:
+              line.unitCost === undefined
+                ? undefined
+                : minor(line.unitCost) * BigInt(line.quantity),
+          }),
         })),
     })
   })
@@ -547,7 +551,9 @@ export const makeStockKeepingService = Effect.gen(function* () {
         decoded.lines.map((line) => ({
           itemId: line.itemId,
           quantity: BigInt(line.countedQuantity) - (onHand.get(line.itemId) ?? 0n),
-          ...(line.unitCost === undefined ? {} : { fallbackUnitCost: minor(line.unitCost) }),
+          ...omitUndefined({
+            fallbackUnitCost: line.unitCost === undefined ? undefined : minor(line.unitCost),
+          }),
         })),
     })
   })
