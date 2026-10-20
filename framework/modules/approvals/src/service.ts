@@ -80,7 +80,9 @@ export const makeApprovalService = Effect.gen(function* () {
       )
       .pipe(Effect.map((rows) => (rows[0] === undefined ? null : toRequest(rows[0]))))
 
-  const configurePolicy = Effect.fn("ApprovalService.configurePolicy")(function* (input: unknown) {
+  const configurePolicy = Effect.fn("ApprovalService.configurePolicy")(function* (
+    input: Schema.Codec.Encoded<typeof ConfigurePolicyInput>,
+  ) {
     const decoded = yield* Schema.decodeUnknownEffect(ConfigurePolicyInput)(input)
     yield* authorization.authorize({
       principal: decoded.principal,
@@ -115,7 +117,9 @@ export const makeApprovalService = Effect.gen(function* () {
     }
   })
 
-  const isRequired = Effect.fn("ApprovalService.isRequired")(function* (input: unknown) {
+  const isRequired = Effect.fn("ApprovalService.isRequired")(function* (
+    input: Schema.Codec.Encoded<typeof RequirementInput>,
+  ) {
     const decoded = yield* Schema.decodeUnknownEffect(RequirementInput)(input)
     const policy = yield* loadPolicy(decoded.tenantId, decoded.subjectType)
     return (
@@ -124,7 +128,9 @@ export const makeApprovalService = Effect.gen(function* () {
     )
   })
 
-  const submit = Effect.fn("ApprovalService.submit")(function* (input: unknown) {
+  const submit = Effect.fn("ApprovalService.submit")(function* (
+    input: Schema.Codec.Encoded<typeof SubmitApprovalInput>,
+  ) {
     const decoded = yield* Schema.decodeUnknownEffect(SubmitApprovalInput)(input)
     yield* database.query(
       (db) =>
@@ -144,7 +150,9 @@ export const makeApprovalService = Effect.gen(function* () {
     return (yield* loadForSubject(decoded.tenantId, decoded.subjectType, decoded.subjectId))!
   })
 
-  const decide = Effect.fn("ApprovalService.decide")(function* (input: unknown) {
+  const decide = Effect.fn("ApprovalService.decide")(function* (
+    input: Schema.Codec.Encoded<typeof DecideApprovalInput>,
+  ) {
     const decoded = yield* Schema.decodeUnknownEffect(DecideApprovalInput)(input)
     return yield* database.withTransaction(
       Effect.gen(function* () {
@@ -217,7 +225,9 @@ export const makeApprovalService = Effect.gen(function* () {
     )
   })
 
-  const getForSubject = Effect.fn("ApprovalService.getForSubject")(function* (input: unknown) {
+  const getForSubject = Effect.fn("ApprovalService.getForSubject")(function* (
+    input: Schema.Codec.Encoded<typeof SubjectInput>,
+  ) {
     const decoded = yield* Schema.decodeUnknownEffect(SubjectInput)(input)
     return yield* loadForSubject(decoded.tenantId, decoded.subjectType, decoded.subjectId)
   })

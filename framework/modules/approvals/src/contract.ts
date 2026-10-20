@@ -83,13 +83,19 @@ type CommonFailure = AuthorizationDenied | DatabaseFailure | Schema.SchemaError
  * approval, submit a request for a subject, and check the decision before acting on it.
  */
 export interface ApprovalService {
-  readonly configurePolicy: (input: unknown) => Effect.Effect<ApprovalPolicy, CommonFailure>
+  readonly configurePolicy: (
+    input: Schema.Codec.Encoded<typeof ConfigurePolicyInput>,
+  ) => Effect.Effect<ApprovalPolicy, CommonFailure>
   /** True when a policy exists and the amount exceeds its threshold. */
-  readonly isRequired: (input: unknown) => Effect.Effect<boolean, CommonFailure>
+  readonly isRequired: (
+    input: Schema.Codec.Encoded<typeof RequirementInput>,
+  ) => Effect.Effect<boolean, CommonFailure>
   /** Submits a request, or returns the subject's existing request. */
-  readonly submit: (input: unknown) => Effect.Effect<ApprovalRequest, CommonFailure>
+  readonly submit: (
+    input: Schema.Codec.Encoded<typeof SubmitApprovalInput>,
+  ) => Effect.Effect<ApprovalRequest, CommonFailure>
   readonly decide: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof DecideApprovalInput>,
   ) => Effect.Effect<
     ApprovalRequest,
     | ApprovalRequestNotFound
@@ -98,7 +104,9 @@ export interface ApprovalService {
     | SelfApprovalForbidden
     | CommonFailure
   >
-  readonly getForSubject: (input: unknown) => Effect.Effect<ApprovalRequest | null, CommonFailure>
+  readonly getForSubject: (
+    input: Schema.Codec.Encoded<typeof SubjectInput>,
+  ) => Effect.Effect<ApprovalRequest | null, CommonFailure>
 }
 
 export const ApprovalService = Context.Service<ApprovalService>("RITSEI/ApprovalService")
