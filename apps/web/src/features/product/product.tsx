@@ -6,7 +6,7 @@ import { DataTable } from "../../ui/patterns/data-table.tsx"
 import { Button } from "../../ui/primitives/button.tsx"
 import { createDialogOpenChange, Dialog } from "../../ui/primitives/dialog.tsx"
 import { FormField } from "../../ui/primitives/form-field.tsx"
-import { Form } from "../../ui/primitives/form.tsx"
+import { Form, type FormValue } from "../../ui/primitives/form.tsx"
 import { Input } from "../../ui/primitives/input.tsx"
 import { Select } from "../../ui/primitives/select.tsx"
 import { createProductMutation, createProductsQuery } from "./queries.ts"
@@ -22,7 +22,7 @@ const typeOptions = Object.entries(typeLabels).map(([value, label]) => ({ value,
 const text = (value: unknown) => (typeof value === "string" ? value.trim() : "")
 
 /** The create payload, or undefined when the code or name is missing. */
-const productPayload = (value: Record<string, unknown>) => {
+const productPayload = (value: FormValue) => {
   const payload = {
     code: text(value.code).toUpperCase(),
     name: text(value.name),

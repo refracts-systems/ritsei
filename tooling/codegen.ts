@@ -44,7 +44,7 @@ export const discoverModules = async (): Promise<readonly DiscoveredModule[]> =>
   for (const entry of entries.toSorted((a, b) => a.name.localeCompare(b.name))) {
     const path = `${moduleRoot}/${entry.name}/manifest.ts`
     if (!entry.isDirectory() || !(await exists(path))) continue
-    const exports = await jiti.import<Record<string, unknown>>(resolve(path))
+    const exports = await jiti.import<object>(resolve(path))
     const found = Object.entries(exports).filter(
       ([key, value]) => key.endsWith("Module") && isManifest(value),
     )

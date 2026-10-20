@@ -3,12 +3,13 @@ import * as Effect from "effect/Effect"
 
 import { uuidv7 } from "../../../foundation/mod.ts"
 import { fiscalPeriodKey, makeNumberingTestLayer, NumberingService } from "../mod.ts"
+import type { UntypedRecord } from "../../../../tests/support/untyped-record.ts"
 
 const tenantId = "018f2000-0000-7000-8000-0000000000a1"
 const scopeId = "018f2000-0000-7000-8000-0000000000b1"
 const otherScopeId = "018f2000-0000-7000-8000-0000000000b2"
 
-const request = (overrides: Record<string, unknown> = {}) => ({
+const request = (overrides: UntypedRecord = {}) => ({
   tenantId,
   scopeId,
   documentType: "billing.customer_invoice",

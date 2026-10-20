@@ -6,7 +6,7 @@ import { DataTable } from "../../ui/patterns/data-table.tsx"
 import { Button } from "../../ui/primitives/button.tsx"
 import { createDialogOpenChange, Dialog } from "../../ui/primitives/dialog.tsx"
 import { FormField } from "../../ui/primitives/form-field.tsx"
-import { Form } from "../../ui/primitives/form.tsx"
+import { Form, type FormValue } from "../../ui/primitives/form.tsx"
 import { Input } from "../../ui/primitives/input.tsx"
 import { Select } from "../../ui/primitives/select.tsx"
 import { createTaxCodeMutation, createTaxCodesQuery } from "./queries.ts"
@@ -25,7 +25,7 @@ const isComplete = (payload: { code: string; name: string; rate: string }) =>
   payload.code !== "" && payload.name !== "" && /^\d{1,3}(\.\d{1,4})?$/.test(payload.rate)
 
 /** The create payload, or undefined when the code, name, or rate is missing or malformed. */
-const taxCodePayload = (value: Record<string, unknown>) => {
+const taxCodePayload = (value: FormValue) => {
   const payload = {
     code: text(value.code).toUpperCase(),
     name: text(value.name),

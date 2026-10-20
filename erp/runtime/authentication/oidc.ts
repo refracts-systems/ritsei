@@ -13,7 +13,7 @@ import {
 } from "../../../framework/modules/auth/mod.ts"
 import type { OidcAuthenticationConfiguration, RitseiRuntimeConfiguration } from "../config.ts"
 
-type JsonObject = Record<string, unknown>
+type JsonObject = Schema.JsonObject
 type Jwk = JsonObject & { readonly kid?: string; readonly kty?: string; readonly alg?: string }
 
 class InvalidTokenShape extends Error {}

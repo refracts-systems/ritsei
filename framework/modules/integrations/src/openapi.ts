@@ -69,7 +69,7 @@ export type OpenApiOperationSelection = Schema.Schema.Type<typeof OpenApiOperati
 const invalid = (boundary: string, identifier: string) =>
   new ExternalPayloadInvalid({ boundary, identifier })
 
-const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
+const isRecord = (value: unknown): value is Schema.JsonObject =>
   typeof value === "object" && value !== null && !Array.isArray(value)
 
 const documentContainsSelectedOperation = (

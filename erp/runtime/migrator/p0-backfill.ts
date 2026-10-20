@@ -42,7 +42,7 @@ export const P0BackfillInput = Schema.Struct({
 
 type P0Backfill = Schema.Schema.Type<typeof P0BackfillInput>
 
-type Row = Readonly<Record<string, unknown>>
+type Row = { readonly tenant_id: string; readonly id: string }
 
 export class P0BackfillFailure extends Error {
   readonly _tag = "P0BackfillFailure"

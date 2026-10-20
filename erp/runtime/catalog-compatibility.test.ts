@@ -107,9 +107,9 @@ const assertCompatibleVersion = (entry: DomainActionCatalogEntry | DomainEventCa
   assert.ok(entry.compatibilityRange.maximumVersion <= 2_147_483_647)
 }
 
-const assertPayloadFields = (
+const assertPayloadFields = <Fields extends { readonly [Key in keyof Fields]: unknown }>(
   event: DomainEventCatalogEntry,
-  payloadFields: Readonly<Record<string, unknown>>,
+  payloadFields: Fields,
 ) => {
   for (const field of event.filterableFields) {
     assert.ok(field in payloadFields)

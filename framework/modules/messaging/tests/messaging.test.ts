@@ -11,8 +11,9 @@ import {
   makeMessagingTestLayer,
   MessagingService,
 } from "../mod.ts"
+import type { UntypedRecord } from "../../../../tests/support/untyped-record.ts"
 
-const event = (overrides: Record<string, unknown> = {}) => ({
+const event = (overrides: UntypedRecord = {}) => ({
   eventId: "018f3f77-0c5a-7cc0-8b62-6a163d214123",
   eventType: "sales.order.confirmed",
   eventVersion: 1,

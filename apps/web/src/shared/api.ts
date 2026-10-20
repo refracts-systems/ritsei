@@ -124,21 +124,17 @@ export const querySuffix = (values: Readonly<Record<string, string | number | un
 export const routeWithId = (route: string, id: string) =>
   route.replace(":id", encodeURIComponent(id))
 
-export const definedFields = (fields: Readonly<Record<string, unknown>>) =>
-  Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== undefined))
+export const definedFields = <Fields extends { readonly [Key in keyof Fields]: unknown }>(
+  fields: Fields,
+) => Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== undefined))
 
-export const responseMatches = <Owner>(
-  value: Owner,
-  expected: Readonly<Partial<Record<keyof Owner, unknown>>>,
-) =>
+export const responseMatches = <Owner>(value: Owner, expected: Readonly<Partial<Owner>>) =>
   Object.entries(expected).every(
     ([key, expectedValue]) => value[key as keyof Owner] === expectedValue,
   )
 
-export const responseListMatches = <A>(
-  values: readonly A[],
-  expected: Readonly<Partial<Record<keyof A, unknown>>>,
-) => values.every((value) => responseMatches(value, expected))
+export const responseListMatches = <A>(values: readonly A[], expected: Readonly<Partial<A>>) =>
+  values.every((value) => responseMatches(value, expected))
 
 export const requestJson = Effect.fn("Frontend.requestJson")(function* (
   path: string,

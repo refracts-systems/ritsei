@@ -7,12 +7,13 @@ import { Database, DatabaseFailure, uuidv7 } from "../../../foundation/mod.ts"
 import { makePostgresDatabase, runMigrations } from "../../../platform/mod.ts"
 import { withTemporaryDatabase } from "../../../../tests/support/postgres-database.ts"
 import { EventIdempotencyConflict, makeMessagingService } from "../mod.ts"
+import type { UntypedRecord } from "../../../../tests/support/untyped-record.ts"
 
 const databaseUrl = process.env["DATABASE_URL"]
 const postgresFailure = (effect: () => Promise<unknown>) =>
   Effect.tryPromise({ try: effect, catch: (cause) => cause }).pipe(Effect.flip)
 
-const event = (tenantId: string, overrides: Record<string, unknown> = {}) => ({
+const event = (tenantId: string, overrides: UntypedRecord = {}) => ({
   eventId: uuidv7(),
   eventType: "sales.order.confirmed",
   eventVersion: 1,

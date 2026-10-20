@@ -93,8 +93,9 @@ type RawRuntimeConfiguration = Schema.Schema.Type<typeof RawRuntimeConfiguration
 const invalid = (reason: RuntimeConfigurationFailure["reason"]) =>
   new RuntimeConfigurationFailure({ reason })
 
-const withoutUndefined = (values: Readonly<Record<string, unknown>>) =>
-  Object.fromEntries(Object.entries(values).filter(([, value]) => value !== undefined))
+const withoutUndefined = <Fields extends { readonly [Key in keyof Fields]: unknown }>(
+  values: Fields,
+) => Object.fromEntries(Object.entries(values).filter(([, value]) => value !== undefined))
 
 const parseUrl = (value: string): string | undefined => {
   try {
