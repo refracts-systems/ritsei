@@ -198,7 +198,7 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
     })
 
   const setSupplierPrice = Effect.fn("PurchaseDocumentService.setSupplierPrice")(function* (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof SetSupplierPriceInput>,
   ) {
     const decoded = yield* authorized(
       SetSupplierPriceInput,
@@ -247,7 +247,7 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
   })
 
   const draftPurchaseOrder = Effect.fn("PurchaseDocumentService.draftPurchaseOrder")(function* (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof DraftPurchaseOrderInput>,
   ) {
     const decoded = yield* authorized(
       DraftPurchaseOrderInput,
@@ -362,7 +362,7 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
   })
 
   const releasePurchaseOrder = Effect.fn("PurchaseDocumentService.releasePurchaseOrder")(function* (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ReleasePurchaseOrderInput>,
   ) {
     const decoded = yield* authorized(
       ReleasePurchaseOrderInput,
@@ -410,7 +410,9 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
     return yield* loadMatching(decoded.principal, decoded.tenantId, decoded.purchaseOrderId)
   })
 
-  const getMatching = Effect.fn("PurchaseDocumentService.getMatching")(function* (input: unknown) {
+  const getMatching = Effect.fn("PurchaseDocumentService.getMatching")(function* (
+    input: Schema.Codec.Encoded<typeof PurchaseOrderQueryInput>,
+  ) {
     const decoded = yield* authorized(
       PurchaseOrderQueryInput,
       ProcurementCapabilities.purchaseOrderRead,
@@ -485,7 +487,7 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
     })
 
   const receiveValued = Effect.fn("PurchaseDocumentService.receiveValued")(function* (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ReceiveValuedInput>,
   ) {
     const decoded = yield* authorized(
       ReceiveValuedInput,
@@ -552,7 +554,7 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
   })
 
   const returnToSupplier = Effect.fn("PurchaseDocumentService.returnToSupplier")(function* (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ReturnToSupplierInput>,
   ) {
     const decoded = yield* authorized(
       ReturnToSupplierInput,

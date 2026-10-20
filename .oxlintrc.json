@@ -73,7 +73,6 @@
         "erp/modules/accounting/**",
         "erp/modules/inventory/**",
         "erp/modules/process/**",
-        "erp/modules/procurement/**",
         "erp/runtime/**",
         "framework/foundation/database/**",
         "framework/foundation/document-rendering/**",

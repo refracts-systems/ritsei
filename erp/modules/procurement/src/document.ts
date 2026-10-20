@@ -45,7 +45,10 @@ export const PurchaseOrderDocumentSnapshot = Schema.Struct({
 })
 export type PurchaseOrderDocumentSnapshot = Schema.Schema.Type<typeof PurchaseOrderDocumentSnapshot>
 
-export const makePurchaseOrderDocumentSnapshot = (order: unknown, input: unknown) =>
+export const makePurchaseOrderDocumentSnapshot = (
+  order: Schema.Codec.Encoded<typeof PurchaseOrder>,
+  input: Schema.Codec.Encoded<typeof PurchaseOrderDocumentSnapshotInput>,
+) =>
   Effect.gen(function* () {
     const decodedOrder = yield* Schema.decodeUnknownEffect(PurchaseOrder)(order)
     const decodedInput = yield* Schema.decodeUnknownEffect(PurchaseOrderDocumentSnapshotInput)(
@@ -82,13 +85,17 @@ export const makePurchaseOrderDocumentSnapshot = (order: unknown, input: unknown
     })
   })
 
-export const makePurchaseOrderDocumentContext = (snapshot: unknown) =>
+export const makePurchaseOrderDocumentContext = (
+  snapshot: Schema.Codec.Encoded<typeof DocumentSnapshot>,
+) =>
   Effect.gen(function* () {
     const decoded = yield* Schema.decodeUnknownEffect(PurchaseOrderDocumentSnapshot)(snapshot)
     return documentContextFromSnapshot(decoded)
   })
 
-export const makePurchaseOrderDocumentAst = (snapshot: unknown) =>
+export const makePurchaseOrderDocumentAst = (
+  snapshot: Schema.Codec.Encoded<typeof DocumentSnapshot>,
+) =>
   Effect.gen(function* () {
     const decodedSnapshot = yield* Schema.decodeUnknownEffect(PurchaseOrderDocumentSnapshot)(
       snapshot,

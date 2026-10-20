@@ -234,34 +234,34 @@ export type CommonFailure =
 
 export interface ProcurementService {
   readonly createSupplierAccount: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreateSupplierAccountInput>,
   ) => Effect.Effect<
     SupplierAccount,
     SupplierAccountAlreadyExists | SupplierRelationshipNotEligible | CommonFailure
   >
   readonly listSupplierAccounts: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ListSupplierAccountsInput>,
   ) => Effect.Effect<
     ReadonlyArray<SupplierAccount>,
     SupplierRelationshipNotEligible | CommonFailure
   >
   readonly createPurchaseOrder: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreatePurchaseOrderInput>,
   ) => Effect.Effect<PurchaseOrder, SupplierAccountNotFound | CommonFailure>
   readonly getPurchaseOrder: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof GetPurchaseOrderInput>,
   ) => Effect.Effect<
     PurchaseOrder,
     PurchaseOrderNotFound | ReplicaConsistencyFailure | CommonFailure
   >
   readonly listPurchaseOrders: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ListPurchaseOrdersInput>,
   ) => Effect.Effect<ReadonlyArray<PurchaseOrder>, CommonFailure>
   readonly listPurchaseReceipts: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ListPurchaseReceiptsInput>,
   ) => Effect.Effect<ReadonlyArray<GoodsReceipt>, CommonFailure>
   readonly confirmPurchaseOrder: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ConfirmPurchaseOrderInput>,
   ) => Effect.Effect<
     PurchaseOrder,
     | PurchaseOrderApprovalRequired
@@ -271,13 +271,13 @@ export interface ProcurementService {
     | CommonFailure
   >
   readonly cancelPurchaseOrder: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CancelPurchaseOrderInput>,
   ) => Effect.Effect<
     PurchaseOrder,
     PurchaseOrderHasReceipts | PurchaseOrderInvalidState | PurchaseOrderNotFound | CommonFailure
   >
   readonly receivePurchaseOrder: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ReceivePurchaseOrderInput>,
   ) => Effect.Effect<
     GoodsReceipt,
     | PurchaseOrderInvalidState

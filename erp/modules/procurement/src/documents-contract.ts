@@ -146,13 +146,13 @@ type StockFailure =
  */
 export interface PurchaseDocumentService {
   readonly setSupplierPrice: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof SetSupplierPriceInput>,
   ) => Effect.Effect<
     Schema.Schema.Type<typeof SupplierPrice>,
     ProcurementErrors.SupplierAccountNotFound | ProductNotFound | CommonFailure
   >
   readonly draftPurchaseOrder: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof DraftPurchaseOrderInput>,
   ) => Effect.Effect<
     PricedPurchaseOrder,
     | ProcurementErrors.SupplierAccountNotFound
@@ -164,7 +164,7 @@ export interface PurchaseDocumentService {
   >
   /** Confirms a purchase order once any required approval is granted. */
   readonly releasePurchaseOrder: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ReleasePurchaseOrderInput>,
   ) => Effect.Effect<
     PurchaseMatching,
     | ProcurementErrors.PurchaseOrderApprovalRequired
@@ -176,13 +176,13 @@ export interface PurchaseDocumentService {
     | CommonFailure
   >
   readonly getMatching: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof PurchaseOrderQueryInput>,
   ) => Effect.Effect<
     PurchaseMatching,
     ProcurementErrors.PurchaseOrderNotFound | PartyRelationshipNotFound | CommonFailure
   >
   readonly receiveValued: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ReceiveValuedInput>,
   ) => Effect.Effect<
     PurchaseStockDocument,
     | ProcurementErrors.PurchaseOrderNotFound
@@ -193,7 +193,7 @@ export interface PurchaseDocumentService {
     | CommonFailure
   >
   readonly returnToSupplier: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ReturnToSupplierInput>,
   ) => Effect.Effect<
     PurchaseStockDocument,
     | ProcurementErrors.PurchaseOrderNotFound

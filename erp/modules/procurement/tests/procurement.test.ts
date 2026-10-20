@@ -3,6 +3,8 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
 
+import { partial } from "../../../../tests/support/partial.ts"
+
 import {
   CurrentConsistencyToken,
   Database,
@@ -148,9 +150,9 @@ const createSupplierAccount = Effect.gen(function* () {
   })
 })
 
-const makeDatabaseStub = (
+const makeDatabaseStub = <Result>(
   name: string,
-  transactionResult?: unknown,
+  transactionResult?: Result,
   calls: string[] = [],
 ): DatabaseService => {
   const failure = new DatabaseFailure({ operation: `${name}.transaction`, cause: "test" })
@@ -746,13 +748,15 @@ describe("procurement contract", () => {
       Effect.gen(function* () {
         const procurement = yield* ProcurementService
         const supplierAccount = yield* createSupplierAccount
-        const create = (lines: ReadonlyArray<unknown>) =>
-          procurement.createPurchaseOrder({
-            principal,
-            tenantId,
-            supplierAccountId: supplierAccount.id,
-            lines,
-          })
+        const create = (lines: ReadonlyArray<Schema.Json>) =>
+          procurement.createPurchaseOrder(
+            partial<Parameters<typeof procurement.createPurchaseOrder>[0]>({
+              principal,
+              tenantId,
+              supplierAccountId: supplierAccount.id,
+              lines,
+            }),
+          )
 
         for (const lines of [
           [],
