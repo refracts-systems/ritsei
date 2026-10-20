@@ -260,3 +260,113 @@ export const partyIdentifiers = partySchema.table(
     ),
   ],
 )
+
+export const addressPurpose = partySchema.enum("address_purpose", [
+  "billing",
+  "shipping",
+  "registered",
+])
+
+/** Postal addresses of a party; at most one primary address per purpose. */
+export const partyAddresses = partySchema.table(
+  "party_addresses",
+  {
+    id: id(),
+    tenantId: uuid("tenant_id").notNull(),
+    partyId: uuid("party_id").notNull(),
+    purpose: addressPurpose("purpose").notNull(),
+    line1: text("line1").notNull(),
+    line2: text("line2"),
+    city: text("city").notNull(),
+    region: text("region"),
+    postalCode: text("postal_code"),
+    countryCode: text("country_code").notNull(),
+    primary: boolean("is_primary").notNull().default(false),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    unique("party_addresses_tenant_id_id_key").on(table.tenantId, table.id),
+    uniqueIndex("party_addresses_primary_purpose_key")
+      .on(table.tenantId, table.partyId, table.purpose)
+      .where(sql`${table.primary}`),
+    foreignKey({
+      columns: [table.tenantId, table.partyId],
+      foreignColumns: [parties.tenantId, parties.id],
+      name: "party_addresses_party_fkey",
+    }).onDelete("cascade"),
+    check("party_addresses_country_code_check", sql`${table.countryCode} ~ '^[A-Z]{2}$'`),
+    check(
+      "party_addresses_text_check",
+      sql`${table.line1} = btrim(${table.line1}) and ${table.line1} ~ '[^[:space:]]' and
+      ${table.city} = btrim(${table.city}) and ${table.city} ~ '[^[:space:]]'`,
+    ),
+  ],
+)
+
+/** Contact persons of a party. */
+export const partyContacts = partySchema.table(
+  "party_contacts",
+  {
+    id: id(),
+    tenantId: uuid("tenant_id").notNull(),
+    partyId: uuid("party_id").notNull(),
+    name: text("name").notNull(),
+    jobTitle: text("job_title"),
+    email: text("email"),
+    phone: text("phone"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    unique("party_contacts_tenant_id_id_key").on(table.tenantId, table.id),
+    foreignKey({
+      columns: [table.tenantId, table.partyId],
+      foreignColumns: [parties.tenantId, parties.id],
+      name: "party_contacts_party_fkey",
+    }).onDelete("cascade"),
+    check(
+      "party_contacts_name_check",
+      sql`${table.name} = btrim(${table.name}) and ${table.name} ~ '[^[:space:]]'`,
+    ),
+    check(
+      "party_contacts_email_check",
+      sql`${table.email} is null or ${table.email} = lower(btrim(${table.email}))`,
+    ),
+  ],
+)
+
+/** Bank accounts a party pays from or is paid into. */
+export const partyBankAccounts = partySchema.table(
+  "party_bank_accounts",
+  {
+    id: id(),
+    tenantId: uuid("tenant_id").notNull(),
+    partyId: uuid("party_id").notNull(),
+    bankName: text("bank_name").notNull(),
+    accountNumber: text("account_number").notNull(),
+    accountHolder: text("account_holder").notNull(),
+    currency: text("currency").notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    unique("party_bank_accounts_tenant_id_id_key").on(table.tenantId, table.id),
+    unique("party_bank_accounts_party_bank_number_key").on(
+      table.tenantId,
+      table.partyId,
+      table.bankName,
+      table.accountNumber,
+    ),
+    foreignKey({
+      columns: [table.tenantId, table.partyId],
+      foreignColumns: [parties.tenantId, parties.id],
+      name: "party_bank_accounts_party_fkey",
+    }).onDelete("cascade"),
+    check("party_bank_accounts_currency_check", sql`${table.currency} ~ '^[A-Z]{3}$'`),
+    check(
+      "party_bank_accounts_number_check",
+      sql`${table.accountNumber} ~ '^[A-Za-z0-9 -]+$' and ${table.accountNumber} = btrim(${table.accountNumber})`,
+    ),
+  ],
+)

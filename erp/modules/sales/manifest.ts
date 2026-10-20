@@ -5,7 +5,7 @@ import { SalesTypedActionCatalog, SalesTypedEventCatalog } from "./src/catalog.t
 export const SalesModule = defineModule({
   name: "sales",
   layer: "erp",
-  dependsOn: [],
+  dependsOn: ["party", "tax"],
   schemas: ["sales"],
   capabilities: SalesCapabilities,
   actions: SalesTypedActionCatalog,

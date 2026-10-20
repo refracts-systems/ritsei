@@ -176,9 +176,9 @@ extensions/    (later) modules from other developers and customers
 - `framework/` never imports `erp/` or `extensions/`; `erp/` and `extensions/` use only public
   entry points. `tooling/architecture.ts` and Fallow zones enforce this. Framework:
   `framework/foundation/`, `framework/platform/`, and `framework/modules/` (auth, identity,
-  authorization, messaging, integrations, catalog). ERP: `erp/modules/` (party, sales,
-  procurement, inventory, accounting, billing, process, communication) and `erp/runtime/` (server,
-  worker, and composition). `db/`, `apps/web/`, `tests/`, and `tooling/` stay at the root.
+  authorization, messaging, integrations, module, http, numbering, approvals). ERP:
+  `erp/modules/` (party, product, tax, sales, procurement, inventory, accounting, billing,
+  settlement, process, communication) and `erp/runtime/` (server, worker, and composition). `db/`, `apps/web/`, `tests/`, and `tooling/` stay at the root.
 - Modules extend each other only through public contracts, events, and released extension points,
   never by patching another module's models, tables, or views.
 - Extract, don't speculate: add a framework capability only together with an ERP module that uses

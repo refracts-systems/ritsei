@@ -394,8 +394,10 @@ const toCatalogDescriptor = (
       }
 
 const catalogDescriptors = allCatalogEntries
+  .values()
   .filter((entry) => entry.stability === "PUBLIC")
   .map(toCatalogDescriptor)
+  .toArray()
   .sort((left, right) =>
     `${left.owningDomain}:${left.kind}:${left.id}:${left.version}`.localeCompare(
       `${right.owningDomain}:${right.kind}:${right.id}:${right.version}`,

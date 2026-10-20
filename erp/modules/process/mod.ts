@@ -215,4 +215,15 @@ export type {
   ProcessService as ProcessServiceShape,
   WorkflowRun as WorkflowRunType,
 } from "./src/service.ts"
+export {
+  DeliverOrderInput,
+  OrderDelivery,
+  OrderToCashLive,
+  OrderToCashService,
+} from "./src/order-to-cash.ts"
+export type {
+  DeliverOrderFailure,
+  OrderDelivery as OrderDeliveryType,
+  OrderToCashService as OrderToCashServiceShape,
+} from "./src/order-to-cash.ts"
 export { ProcessModule } from "./manifest.ts"

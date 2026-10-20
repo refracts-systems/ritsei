@@ -7,14 +7,18 @@ import { workspace as inventoryWorkspace } from "./modules/inventory.workspace.t
 import { workspace as partyWorkspace } from "./modules/party.workspace.ts"
 import { workspace as processWorkspace } from "./modules/process.workspace.ts"
 import { workspace as procurementWorkspace } from "./modules/procurement.workspace.ts"
+import { workspace as productWorkspace } from "./modules/product.workspace.ts"
 import { workspace as salesWorkspace } from "./modules/sales.workspace.ts"
+import { workspace as taxWorkspace } from "./modules/tax.workspace.ts"
 
 const AccountingPage = lazy(() => import("./modules/accounting.tsx"))
 const InventoryPage = lazy(() => import("./modules/inventory.tsx"))
 const PartyPage = lazy(() => import("./modules/party.tsx"))
 const ProcessPage = lazy(() => import("./modules/process.tsx"))
 const ProcurementPage = lazy(() => import("./modules/procurement.tsx"))
+const ProductPage = lazy(() => import("./modules/product.tsx"))
 const SalesPage = lazy(() => import("./modules/sales.tsx"))
+const TaxPage = lazy(() => import("./modules/tax.tsx"))
 
 /** Routes for every installed module page. */
 export const moduleRoutes = [
@@ -28,10 +32,12 @@ export const moduleRoutes = [
   { path: "/processes/:id", component: ProcessPage },
   { path: "/procurement", component: ProcurementPage },
   { path: "/procurement/:id", component: ProcurementPage },
+  { path: "/product", component: ProductPage },
   { path: "/sales", component: SalesPage },
   { path: "/sales/customers/:id", component: SalesPage },
   { path: "/sales/quotations/:id", component: SalesPage },
   { path: "/sales/orders/:id", component: SalesPage },
+  { path: "/tax", component: TaxPage },
 ]
 
 /** Home-directory and shell-navigation entries, one per module workspace, in declared order. */
@@ -41,5 +47,7 @@ export const moduleWorkspaces: ReadonlyArray<ModuleWorkspace & { readonly href: 
   { href: "/parties", ...partyWorkspace },
   { href: "/processes", ...processWorkspace },
   { href: "/procurement", ...procurementWorkspace },
+  { href: "/product", ...productWorkspace },
   { href: "/sales", ...salesWorkspace },
+  { href: "/tax", ...taxWorkspace },
 ].toSorted((left, right) => left.order - right.order)

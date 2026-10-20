@@ -13,9 +13,12 @@ import {
   type AccountingService as AccountingServiceContract,
   FinancialOperationService,
   type FinancialOperationService as FinancialOperationServiceContract,
+  GeneralLedgerService,
+  type GeneralLedgerServiceShape,
 } from "../../modules/accounting/mod.ts"
 import { BearerAuth, CurrentPrincipal, RitseiApi } from "./api.ts"
 import { AccountingHttpHandlers as AccountingHandlers } from "../../modules/accounting/http.ts"
+import { unusedService } from "../../../tests/support/unused-service.ts"
 
 const tenantId = "01920000-0000-7000-8000-000000000001"
 const legalEntityId = "01920000-0000-7000-8000-000000000002"
@@ -66,11 +69,11 @@ const journal = {
   ],
 }
 
-const observedInput: { value?: unknown } = {}
+const observedInputs: unknown[] = []
 const accountingService: AccountingServiceContract = {
   listAccountingConfigurations: (input: unknown) =>
     Effect.sync(() => {
-      observedInput.value = input
+      observedInputs.push(input)
       return [configuration]
     }),
   listAccounts: () => Effect.succeed([account]),
@@ -86,6 +89,8 @@ const accountingService: AccountingServiceContract = {
 } as unknown as AccountingServiceContract
 
 const financialOperations = {} as FinancialOperationServiceContract
+// The ledger endpoints are covered by the general-ledger tests; these contracts never reach them.
+const ledger = unusedService<GeneralLedgerServiceShape>("ledger")
 const TestHttpServices = Layer.mergeAll(Path.layer, Etag.layerWeak, HttpPlatform.layer).pipe(
   Layer.provideMerge(FileSystem.layerNoop({})),
 )
@@ -103,6 +108,7 @@ it.layer(TestHttpServices)("Accounting API contracts", (it) => {
         Layer.provide(bearer),
         Layer.provide(Layer.succeed(AccountingService, accountingService)),
         Layer.provide(Layer.succeed(FinancialOperationService, financialOperations)),
+        Layer.provide(Layer.succeed(GeneralLedgerService, ledger)),
       )
       const client = yield* HttpApiTest.groups(RitseiApi, ["Accounting"]).pipe(
         Effect.provide(Layer.mergeAll(handlers, bearerClient, bearer)),
@@ -188,7 +194,7 @@ it.layer(TestHttpServices)("Accounting API contracts", (it) => {
         }),
         journal,
       )
-      const captured = observedInput.value as { tenantId: string; principal: typeof principal }
+      const captured = observedInputs.at(-1) as { tenantId: string; principal: typeof principal }
       assert.strictEqual(captured.tenantId, tenantId)
       assert.deepStrictEqual(captured.principal, principal)
     }),

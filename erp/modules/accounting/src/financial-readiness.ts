@@ -461,9 +461,11 @@ const sortFacts = <A>(facts: readonly A[], key: (fact: A) => string) =>
 const duplicateFactKeys = <A>(facts: readonly A[], key: (fact: A) => string) => {
   const counts = new Map<string, number>()
   for (const fact of facts) counts.set(key(fact), (counts.get(key(fact)) ?? 0) + 1)
-  return [...counts]
+  return counts
+    .entries()
     .filter(([, count]) => count > 1)
     .map(([factKey]) => factKey)
+    .toArray()
     .sort()
 }
 
@@ -586,10 +588,15 @@ const appendProjectionMismatches = (
   }
 }
 
+type FinancialFactComparison = Readonly<{
+  ok: boolean
+  mismatches: readonly FinancialFactMismatch[]
+}>
+
 export const compareFinancialFactSnapshots = (
   source: FinancialFactSnapshot,
   target: FinancialFactSnapshot,
-): Readonly<{ ok: boolean; mismatches: readonly FinancialFactMismatch[] }> => {
+): FinancialFactComparison => {
   const mismatches: FinancialFactMismatch[] = []
   appendOperationMismatches(mismatches, source.operations, target.operations)
   appendTransferMismatches(mismatches, source.transfers, target.transfers)

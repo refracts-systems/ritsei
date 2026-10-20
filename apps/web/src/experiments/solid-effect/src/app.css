@@ -23,8 +23,7 @@
 
 body {
   margin: 0;
-  background: radial-gradient(1200px 600px at 70% -10%, #16203a 0%, var(--bg)
-    55%);
+  background: radial-gradient(1200px 600px at 70% -10%, #16203a 0%, var(--bg) 55%);
   color: var(--text);
   font:
     15px/1.5 -apple-system,
@@ -95,8 +94,7 @@ code {
 
 .tabs button.selected {
   border-color: var(--accent);
-  background: linear-gradient(180deg, rgba(79, 136, 255, 0.16), rgba(79, 136,
-    255, 0.05));
+  background: linear-gradient(180deg, rgba(79, 136, 255, 0.16), rgba(79, 136, 255, 0.05));
 }
 
 main {

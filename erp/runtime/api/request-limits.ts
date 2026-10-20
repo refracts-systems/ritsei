@@ -51,6 +51,7 @@ const bufferedRequest = (
           return (options: Parameters<typeof request.modify>[0]) =>
             bufferedRequest(target.modify(options), bytes, text)
         default:
+          // oxlint-disable-next-line anti-slop/no-reflect-get -- the proxy forwards every other property with the original receiver
           return Reflect.get(target, property, receiver)
       }
     },

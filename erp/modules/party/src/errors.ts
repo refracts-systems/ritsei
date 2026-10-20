@@ -102,3 +102,7 @@ export type PartyFailure =
   | PartyRepresentationNotFound
 
 export type { PartyRelationshipKind, PartyRepresentationKind, PartyRole }
+export class PartyBankAccountAlreadyExists extends Schema.TaggedError<PartyBankAccountAlreadyExists>()(
+  "PartyBankAccountAlreadyExists",
+  { tenantId: Uuid, partyId: Uuid, bankName: Schema.String, accountNumber: Schema.String },
+) {}

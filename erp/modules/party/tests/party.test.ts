@@ -719,12 +719,14 @@ describe("party contract", () => {
   it.effect("denies relationship reads without their capability", () => {
     const authorization = makeAuthorizationTestLayer(
       capabilities
+        .values()
         .filter((capability) => capability !== PartyCapabilities.partyRelationshipRead)
         .map((capability) => ({
           userAccountId: principal.userAccountId,
           tenantId,
           capability,
-        })),
+        }))
+        .toArray(),
     )
     return Effect.provide(
       Effect.gen(function* () {

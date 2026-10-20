@@ -76,3 +76,17 @@ export const minorToMajor = (value: string, exponent: number): FinancialAmountRe
     value: `${digits.slice(0, point)}.${digits.slice(point)}`,
   }
 }
+
+/** Format a signed minor amount at the given scale, for example `-1250` at 2 as `-12.50`. */
+export const formatSignedMinor = (value: bigint, exponent: number): string => {
+  const magnitude = value < 0n ? -value : value
+  const result = minorToMajor(magnitude.toString(), exponent)
+  if (!result.ok) throw new RangeError(`financial amount formatting failed: ${result.reason}`)
+  return value < 0n ? `-${result.value}` : result.value
+}
+
+/** Parse a signed decimal amount, such as a PostgreSQL NUMERIC sum, into exact minor units. */
+export const requireSignedMajorToMinor = (value: string, exponent: number): bigint =>
+  value.startsWith("-")
+    ? -requireExactMajorToMinor(value.slice(1), exponent)
+    : requireExactMajorToMinor(value, exponent)

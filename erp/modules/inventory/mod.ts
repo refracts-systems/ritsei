@@ -73,3 +73,21 @@ export {
 } from "./src/errors.ts"
 export { InventoryLive, makeInventoryService, makeInventoryTestLayer } from "./src/layers.ts"
 export { InventoryModule } from "./manifest.ts"
+export {
+  CountStockInput,
+  IssueValuedStockInput,
+  ReceiveValuedStockInput,
+  RegisterProductItemInput,
+  StockKeepingService,
+  StockSource,
+  StockValuation,
+  ValuationReportInput,
+  ValuedStockMovement,
+} from "./src/stock-keeping-contract.ts"
+export type {
+  StockKeepingService as StockKeepingServiceShape,
+  StockValuation as StockValuationType,
+  ValuedStockMovement as ValuedStockMovementType,
+} from "./src/stock-keeping-contract.ts"
+export { StockNotStockable, StockValuationUnavailable } from "./src/errors.ts"
+export { StockKeepingLive } from "./src/stock-keeping.ts"

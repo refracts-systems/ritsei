@@ -9,7 +9,11 @@ import * as Layer from "effect/Layer"
 import * as Path from "effect/Path"
 
 import { makeAuthorizationTestLayer } from "../../../framework/modules/authorization/mod.ts"
-import { makePartyTestLayer, PartyCapabilities } from "../../modules/party/mod.ts"
+import {
+  makePartyContactsTestLayer,
+  makePartyTestLayer,
+  PartyCapabilities,
+} from "../../modules/party/mod.ts"
 import { BearerAuth, CurrentPrincipal, RitseiApi } from "./api.ts"
 import { PartyHttpHandlers as PartyHandlers } from "../../modules/party/http.ts"
 
@@ -53,7 +57,12 @@ it.layer(TestHttpServices)("Party API", (it) => {
       const bearerClient = HttpApiMiddleware.layerClient(BearerAuth, ({ request, next }) =>
         next(HttpClientRequest.bearerToken(request, "test-token")),
       )
-      const handlers = PartyHandlers.pipe(Layer.provide(bearer), Layer.provide(party))
+      const contacts = makePartyContactsTestLayer().pipe(Layer.provide(authorization))
+      const handlers = PartyHandlers.pipe(
+        Layer.provide(bearer),
+        Layer.provide(party),
+        Layer.provide(contacts),
+      )
       const client = yield* HttpApiTest.groups(RitseiApi, ["Parties"]).pipe(
         Effect.provide(Layer.mergeAll(handlers, bearerClient, bearer)),
       )

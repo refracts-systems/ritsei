@@ -37,18 +37,22 @@ const moduleOf = (path: string | undefined) => path?.match(/^erp\/modules\/([^/]
 /** Every module directory is registered under its own name, and every manifest has a directory. */
 const registrationFailures = (directories: readonly string[], manifests: Manifests) => [
   ...directories
+    .values()
     .filter((name) => !manifests.has(name))
     .map((name) => `${moduleRoot}/${name} has no registered manifest`),
-  ...[...manifests.keys()]
+  ...manifests
+    .keys()
     .filter((name) => !directories.includes(name))
     .map((name) => `manifest ${name} has no ${moduleRoot}/${name}`),
 ]
 
 const schemaFailures = (manifests: Manifests, ownership: ReadonlyMap<string, string>) =>
   [...manifests.values()].flatMap(({ name, schemas }) => {
-    const owned = [...ownership]
+    const owned = ownership
+      .entries()
       .filter(([, owner]) => owner === `${moduleRoot}/${name}`)
       .map(([schema]) => schema)
+      .toArray()
     return sameSet(owned, schemas)
       ? []
       : [

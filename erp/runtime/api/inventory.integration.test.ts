@@ -9,7 +9,12 @@ import * as Layer from "effect/Layer"
 import * as Path from "effect/Path"
 
 import type { InventoryService as InventoryServiceContract } from "../../modules/inventory/mod.ts"
-import { InventoryService } from "../../modules/inventory/mod.ts"
+import {
+  InventoryService,
+  StockKeepingService,
+  type StockKeepingServiceShape,
+} from "../../modules/inventory/mod.ts"
+import { unusedService } from "../../../tests/support/unused-service.ts"
 import { BearerAuth, CurrentPrincipal, RitseiApi } from "./api.ts"
 import { InventoryHttpHandlers as InventoryHandlers } from "../../modules/inventory/http.ts"
 
@@ -109,6 +114,12 @@ it.layer(TestHttpServices)("inventory API read projections", (it) => {
       const handlers = InventoryHandlers.pipe(
         Layer.provide(bearer),
         Layer.provide(Layer.succeed(InventoryService, inventoryService)),
+        Layer.provide(
+          Layer.succeed(
+            StockKeepingService,
+            unusedService<StockKeepingServiceShape>("stock keeping"),
+          ),
+        ),
       )
       const client = yield* HttpApiTest.groups(RitseiApi, ["Inventory"]).pipe(
         Effect.provide(Layer.mergeAll(handlers, bearerClient, bearer)),

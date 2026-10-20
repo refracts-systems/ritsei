@@ -358,7 +358,8 @@ export const makeFinancialLedgerTestLayer = (options: TestAdapterOptions = {}) =
                 account.mappingVersion === decoded.mappingVersion,
             )
             const accountIds = new Set(
-              [...accounts.values()]
+              accounts
+                .values()
                 .filter(
                   (account) =>
                     account.tenantId === decoded.tenantId &&

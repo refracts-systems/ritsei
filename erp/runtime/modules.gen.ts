@@ -12,8 +12,13 @@ import { ProcessHttpGroup, ProcessHttpHandlers } from "../modules/process/http.t
 import { ProcessModule } from "../modules/process/mod.ts"
 import { ProcurementHttpGroup, ProcurementHttpHandlers } from "../modules/procurement/http.ts"
 import { ProcurementModule } from "../modules/procurement/mod.ts"
+import { ProductHttpGroup, ProductHttpHandlers } from "../modules/product/http.ts"
+import { ProductModule } from "../modules/product/mod.ts"
 import { SalesHttpGroup, SalesHttpHandlers } from "../modules/sales/http.ts"
 import { SalesModule } from "../modules/sales/mod.ts"
+import { SettlementModule } from "../modules/settlement/mod.ts"
+import { TaxHttpGroup, TaxHttpHandlers } from "../modules/tax/http.ts"
+import { TaxModule } from "../modules/tax/mod.ts"
 
 /** The installed ERP modules. */
 export const ErpModules: ReadonlyArray<ModuleManifest> = [
@@ -24,7 +29,10 @@ export const ErpModules: ReadonlyArray<ModuleManifest> = [
   PartyModule,
   ProcessModule,
   ProcurementModule,
+  ProductModule,
   SalesModule,
+  SettlementModule,
+  TaxModule,
 ]
 
 /** HttpApi groups the runtime composes into RitseiApi. */
@@ -34,7 +42,9 @@ export const ErpHttpGroups = [
   PartyHttpGroup,
   ProcessHttpGroup,
   ProcurementHttpGroup,
+  ProductHttpGroup,
   SalesHttpGroup,
+  TaxHttpGroup,
 ] as const
 
 /** Handler layers for ErpHttpGroups. */
@@ -44,5 +54,7 @@ export const ErpHttpHandlers = [
   PartyHttpHandlers,
   ProcessHttpHandlers,
   ProcurementHttpHandlers,
+  ProductHttpHandlers,
   SalesHttpHandlers,
+  TaxHttpHandlers,
 ] as const

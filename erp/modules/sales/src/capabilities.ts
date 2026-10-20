@@ -7,4 +7,9 @@ export const SalesCapabilities = {
   orderConfirm: "sales.order.confirm",
   orderRead: "sales.order.read",
   orderCancel: "sales.order.cancel",
+  priceListConfigure: "sales.price_list.configure",
+  priceListRead: "sales.price_list.read",
+  quotationSend: "sales.quotation.send",
+  quotationDecide: "sales.quotation.decide",
+  deliveryRecord: "sales.delivery.record",
 } as const

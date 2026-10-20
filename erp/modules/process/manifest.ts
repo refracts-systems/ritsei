@@ -5,7 +5,7 @@ import { ProcessTypedEventCatalog } from "./src/catalog.ts"
 export const ProcessModule = defineModule({
   name: "process",
   layer: "erp",
-  dependsOn: ["accounting", "inventory", "party", "procurement", "sales"],
+  dependsOn: ["accounting", "inventory", "party", "procurement", "product", "sales"],
   schemas: ["process"],
   capabilities: ProcessCapabilities,
   actions: [],

@@ -156,3 +156,12 @@ export class StockTransferItemNotFound extends Schema.TaggedError<StockTransferI
     itemId: Uuid,
   },
 ) {}
+export class StockNotStockable extends Schema.TaggedError<StockNotStockable>()(
+  "StockNotStockable",
+  { tenantId: Uuid, productId: Uuid },
+) {}
+/** The item has less valued stock in the legal entity than the movement needs. */
+export class StockValuationUnavailable extends Schema.TaggedError<StockValuationUnavailable>()(
+  "StockValuationUnavailable",
+  { tenantId: Uuid, legalEntityId: Uuid, itemId: Uuid, requested: Schema.String },
+) {}

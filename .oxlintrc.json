@@ -11,6 +11,37 @@
     "apps/web/src/ui/generated/**",
     "apps/web/src/shared/contracts/generated/**",
     "apps/web/dist/**",
-    "db/migrations/**/snapshot.json"
-  ]
+    "db/migrations/**/snapshot.json",
+    ".agent/**",
+    ".agents/**",
+    ".claude/**",
+    ".codex/**",
+    ".continue/**",
+    ".cursor/**",
+    ".gemini/**",
+    ".opencode/**",
+    ".pi/**",
+    ".roo/**",
+    ".windsurf/**",
+    "tooling/oxlint/anti-slop/**"
+  ],
+  // Vendored anti-slop rules (tooling/oxlint/anti-slop/UPSTREAM.md). Rules left out below conflict
+  // with documented repository conventions; each deviation and its reason is recorded there.
+  "jsPlugins": [
+    { "name": "anti-slop", "specifier": "./tooling/oxlint/anti-slop/index.ts" },
+    { "name": "anti-slop-effect", "specifier": "./tooling/oxlint/anti-slop/effect/index.ts" }
+  ],
+  "rules": {
+    "oxc/no-accumulating-spread": "error",
+    "anti-slop/no-array-filter-map": "error",
+    "anti-slop/no-reduce-accumulator-copy": "error",
+    "anti-slop/no-known-value-widening": "error",
+    "anti-slop/no-module-mocking": "error",
+    "anti-slop/no-object-parameters": "error",
+    "anti-slop/no-reflect-apply": "error",
+    "anti-slop/no-reflect-get": "error",
+    "anti-slop/no-unknown-type-aliases": "error",
+    "anti-slop/no-widen-then-assert": "error",
+    "anti-slop-effect/no-manual-effect-error-tag": "error"
+  }
 }

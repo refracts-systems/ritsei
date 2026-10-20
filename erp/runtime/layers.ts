@@ -5,6 +5,8 @@ import { DurableJobEnqueuer } from "../../framework/foundation/mod.ts"
 import {
   AccountingService,
   FinancialOperationServiceLive,
+  AccountingFiscalCalendarLive,
+  GeneralLedgerLive,
   makeAccountingService,
 } from "../modules/accounting/mod.ts"
 import type { FinancialVerificationSignerService } from "../modules/accounting/mod.ts"
@@ -18,17 +20,29 @@ import {
   makeUserAccountService,
   UserAccountService,
 } from "../../framework/modules/identity/mod.ts"
-import { InventoryService, makeInventoryService } from "../modules/inventory/mod.ts"
+import {
+  InventoryService,
+  makeInventoryService,
+  StockKeepingLive,
+} from "../modules/inventory/mod.ts"
 import { makeMessagingService, MessagingService } from "../../framework/modules/messaging/mod.ts"
-import { makePartyService, PartyEventPublisherLive, PartyService } from "../modules/party/mod.ts"
+import { NumberingLive } from "../../framework/modules/numbering/mod.ts"
+import { ApprovalsLive } from "../../framework/modules/approvals/mod.ts"
+import {
+  makePartyService,
+  PartyContactsLive,
+  PartyEventPublisherLive,
+  PartyService,
+} from "../modules/party/mod.ts"
 import {
   makeProcessJobEnqueuer,
   makeProcessService,
+  OrderToCashLive,
   ProcessService,
   ProcessStudioLive,
 } from "../modules/process/mod.ts"
-import { ProcurementLive } from "../modules/procurement/mod.ts"
-import { makeSalesService, SalesService } from "../modules/sales/mod.ts"
+import { ProcurementLive, PurchaseDocumentsLive } from "../modules/procurement/mod.ts"
+import { makeSalesService, SalesDocumentsLive, SalesService } from "../modules/sales/mod.ts"
 import {
   PostgresDatabaseLive,
   PostgresReadYourWritesLive,
@@ -41,6 +55,10 @@ import {
 import { IdentityAccountAuthorizerLive } from "./adapters/identity-account-authorizer.ts"
 import { makeIdentityProviderLayer } from "./authentication/oidc.ts"
 import type { RitseiRuntimeConfiguration } from "./config.ts"
+import { ProductLive } from "../modules/product/mod.ts"
+import { TaxLive } from "../modules/tax/mod.ts"
+import { BillingLive } from "../modules/billing/mod.ts"
+import { SettlementLive } from "../modules/settlement/mod.ts"
 
 export const serviceLayers = (
   client: Sql,
@@ -90,6 +108,8 @@ export const serviceLayers = (
     ),
   )
 
+  const PartyContactServiceLive = PartyContactsLive.pipe(Layer.provide(BusinessRequirements))
+
   const SalesLive = Layer.effect(SalesService, makeSalesService).pipe(
     Layer.provide(Layer.merge(BusinessRequirements, MessagingLive)),
   )
@@ -119,6 +139,16 @@ export const serviceLayers = (
     Layer.provide(AccountingRequirements),
   )
 
+  const NumberingServiceLive = NumberingLive.pipe(
+    Layer.provide(
+      Layer.merge(DatabaseLive, AccountingFiscalCalendarLive.pipe(Layer.provide(DatabaseLive))),
+    ),
+  )
+
+  const LedgerLive = GeneralLedgerLive.pipe(
+    Layer.provide(Layer.merge(BusinessRequirements, NumberingServiceLive)),
+  )
+
   const ProcessJobEnqueuerLive = Layer.effect(DurableJobEnqueuer, makeProcessJobEnqueuer).pipe(
     Layer.provide(DatabaseLive),
   )
@@ -146,8 +176,79 @@ export const serviceLayers = (
     Layer.provide(Layer.merge(DatabaseLive, AuthorizationLive)),
   )
 
+  const ApprovalServiceLive = ApprovalsLive.pipe(Layer.provide(BusinessRequirements))
+
   const ProcurementLiveWithRequirements = ProcurementLive.pipe(
-    Layer.provide(Layer.mergeAll(BusinessRequirements, PartyLive, InventoryLive, MessagingLive)),
+    Layer.provide(
+      Layer.mergeAll(
+        BusinessRequirements,
+        PartyLive,
+        InventoryLive,
+        MessagingLive,
+        ApprovalServiceLive,
+      ),
+    ),
+  )
+
+  const ProductServiceLive = ProductLive.pipe(Layer.provide(BusinessRequirements))
+
+  const StockKeepingServiceLive = StockKeepingLive.pipe(
+    Layer.provide(Layer.mergeAll(BusinessRequirements, LedgerLive, ProductServiceLive)),
+  )
+
+  const TaxServiceLive = TaxLive.pipe(Layer.provide(BusinessRequirements))
+
+  const SalesDocumentServiceLive = SalesDocumentsLive.pipe(
+    Layer.provide(
+      Layer.mergeAll(BusinessRequirements, PartyLive, TaxServiceLive, NumberingServiceLive),
+    ),
+  )
+
+  const PurchaseDocumentServiceLive = PurchaseDocumentsLive.pipe(
+    Layer.provide(
+      Layer.mergeAll(
+        BusinessRequirements,
+        ApprovalServiceLive,
+        NumberingServiceLive,
+        PartyLive,
+        ProductServiceLive,
+        TaxServiceLive,
+        StockKeepingServiceLive,
+        ProcurementLiveWithRequirements,
+      ),
+    ),
+  )
+
+  const BillingServiceLive = BillingLive.pipe(
+    Layer.provide(
+      Layer.mergeAll(
+        BusinessRequirements,
+        ApprovalServiceLive,
+        PurchaseDocumentServiceLive,
+        LedgerLive,
+        NumberingServiceLive,
+        TaxServiceLive,
+        SalesDocumentServiceLive,
+        ProductServiceLive,
+      ),
+    ),
+  )
+
+  const SettlementServiceLive = SettlementLive.pipe(
+    Layer.provide(
+      Layer.mergeAll(BusinessRequirements, LedgerLive, BillingServiceLive, NumberingServiceLive),
+    ),
+  )
+
+  const OrderToCashServiceLive = OrderToCashLive.pipe(
+    Layer.provide(
+      Layer.mergeAll(
+        BusinessRequirements,
+        SalesDocumentServiceLive,
+        StockKeepingServiceLive,
+        ProductServiceLive,
+      ),
+    ),
   )
 
   const ApplicationLive = Layer.mergeAll(
@@ -155,15 +256,27 @@ export const serviceLayers = (
     AuthLive,
     AuthorizationLive,
     PartyLive,
+    PartyContactServiceLive,
     SalesLive,
     InventoryLive,
     AccountingLive,
+    LedgerLive,
+    NumberingServiceLive,
     FinancialOperationsLive,
     ProcessJobEnqueuerLive,
     MessagingLive,
     ProcessLive,
     ProcessStudio,
     ProcurementLiveWithRequirements,
+    ProductServiceLive,
+    StockKeepingServiceLive,
+    TaxServiceLive,
+    SalesDocumentServiceLive,
+    BillingServiceLive,
+    SettlementServiceLive,
+    ApprovalServiceLive,
+    PurchaseDocumentServiceLive,
+    OrderToCashServiceLive,
   )
 
   return ApplicationLive

@@ -239,7 +239,12 @@ export type FinancialStoreInventoryComparison = Readonly<{
 const duplicateKeys = <A>(values: readonly A[], key: (value: A) => string) => {
   const counts = new Map<string, number>()
   for (const value of values) counts.set(key(value), (counts.get(key(value)) ?? 0) + 1)
-  return new Set([...counts].filter(([, count]) => count > 1).map(([value]) => value))
+  return new Set(
+    counts
+      .entries()
+      .filter(([, count]) => count > 1)
+      .map(([value]) => value),
+  )
 }
 
 const accountValue = (account: FinancialStoreAccountObservation) =>

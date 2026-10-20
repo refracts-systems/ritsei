@@ -47,3 +47,42 @@ export {
 } from "./src/errors.ts"
 export { makeSalesService, makeSalesTestLayer, SalesLive } from "./src/layers.ts"
 export { SalesModule } from "./manifest.ts"
+export {
+  AssignCustomerPriceListInput,
+  CreatePartyCustomerInput,
+  CreatePriceListInput,
+  Delivery,
+  DiscountPercent,
+  DraftQuotationInput,
+  ExpireQuotationsInput,
+  FulfillmentLine,
+  OrderFulfillment,
+  OrderQueryInput,
+  PartyCustomer,
+  PricedLine,
+  PriceList,
+  PriceListItem,
+  QuotationCommandInput,
+  RecordDeliveryInput,
+  SalesDocumentService,
+  SalesQuotation,
+  SetPriceInput,
+} from "./src/documents-contract.ts"
+export type {
+  Delivery as DeliveryType,
+  OrderFulfillment as OrderFulfillmentType,
+  PartyCustomer as PartyCustomerType,
+  SalesDocumentService as SalesDocumentServiceShape,
+  SalesQuotation as SalesQuotationType,
+} from "./src/documents-contract.ts"
+export {
+  CustomerLegalEntityRequired,
+  CustomerPartyRoleInvalid,
+  DeliveryExceedsOrder,
+  OrderLineNotFound,
+  PriceListAlreadyExists,
+  PriceListNotFound,
+  ProductPriceNotFound,
+  QuotationInvalidState,
+} from "./src/errors.ts"
+export { discountedPrice, SalesDocumentsLive } from "./src/documents.ts"

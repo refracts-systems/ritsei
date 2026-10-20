@@ -37,8 +37,9 @@ it.effect("bounds public JSON payload resources", () =>
     const oversizedArray = yield* Effect.flip(
       Schema.decodeUnknownEffect(EventEnvelope)({ ...event(), payload: Array(1_001).fill(null) }),
     )
-    let deeplyNested: unknown = null
-    for (let index = 0; index < 17; index++) deeplyNested = [deeplyNested]
+    const nest = (depth: number): readonly unknown[] | null =>
+      depth === 0 ? null : [nest(depth - 1)]
+    const deeplyNested = nest(17)
     const oversizedDepth = yield* Effect.flip(
       Schema.decodeUnknownEffect(EventEnvelope)({ ...event(), payload: deeplyNested }),
     )

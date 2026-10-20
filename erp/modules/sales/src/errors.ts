@@ -58,3 +58,43 @@ export class SalesOrderConfirmationIdempotencyConflict extends Schema.TaggedErro
   "SalesOrderConfirmationIdempotencyConflict",
   { tenantId: Uuid, orderId: Uuid, idempotencyKey: TrimmedNonEmptyString },
 ) {}
+/** The party relationship is missing, inactive, or not a customer relationship. */
+export class CustomerPartyRoleInvalid extends Schema.TaggedError<CustomerPartyRoleInvalid>()(
+  "CustomerPartyRoleInvalid",
+  { tenantId: Uuid, partyRelationshipId: Uuid },
+) {}
+/** Documents that post or deliver need a customer bound to a party in a legal entity. */
+export class CustomerLegalEntityRequired extends Schema.TaggedError<CustomerLegalEntityRequired>()(
+  "CustomerLegalEntityRequired",
+  { tenantId: Uuid, customerId: Uuid },
+) {}
+export class PriceListNotFound extends Schema.TaggedError<PriceListNotFound>()(
+  "PriceListNotFound",
+  { tenantId: Uuid, priceListId: Uuid },
+) {}
+export class PriceListAlreadyExists extends Schema.TaggedError<PriceListAlreadyExists>()(
+  "PriceListAlreadyExists",
+  { tenantId: Uuid, name: Schema.String },
+) {}
+/** No explicit price and no price on the customer's price list. */
+export class ProductPriceNotFound extends Schema.TaggedError<ProductPriceNotFound>()(
+  "ProductPriceNotFound",
+  { tenantId: Uuid, productId: Uuid },
+) {}
+export class QuotationInvalidState extends Schema.TaggedError<QuotationInvalidState>()(
+  "QuotationInvalidState",
+  {
+    tenantId: Uuid,
+    quotationId: Uuid,
+    status: Schema.Literals(["draft", "sent", "accepted", "rejected", "expired"]),
+  },
+) {}
+export class OrderLineNotFound extends Schema.TaggedError<OrderLineNotFound>()(
+  "OrderLineNotFound",
+  { tenantId: Uuid, orderId: Uuid, orderLineId: Uuid },
+) {}
+/** The delivery would bring a line's delivered quantity above its ordered quantity. */
+export class DeliveryExceedsOrder extends Schema.TaggedError<DeliveryExceedsOrder>()(
+  "DeliveryExceedsOrder",
+  { tenantId: Uuid, orderLineId: Uuid, ordered: Schema.String, requested: Schema.String },
+) {}

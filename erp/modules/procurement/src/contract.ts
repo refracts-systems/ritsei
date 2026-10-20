@@ -14,6 +14,7 @@ import { AuthorizationDenied } from "../../../../framework/modules/authorization
 import { InventoryService, UnitOfMeasure } from "../../inventory/mod.ts"
 import { EventIdempotencyConflict } from "../../../../framework/modules/messaging/mod.ts"
 import {
+  PurchaseOrderApprovalRequired,
   PurchaseOrderConfirmationIdempotencyConflict,
   PurchaseOrderHasReceipts,
   PurchaseOrderInvalidState,
@@ -263,6 +264,7 @@ export interface ProcurementService {
     input: unknown,
   ) => Effect.Effect<
     PurchaseOrder,
+    | PurchaseOrderApprovalRequired
     | PurchaseOrderConfirmationIdempotencyConflict
     | PurchaseOrderInvalidState
     | PurchaseOrderNotFound

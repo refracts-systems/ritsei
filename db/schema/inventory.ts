@@ -12,7 +12,7 @@ import {
 } from "drizzle-orm/pg-core"
 
 import { tenants } from "./auth.ts"
-import { createdAt, id, updatedAt } from "./common.ts"
+import { createdAt, id, money, updatedAt } from "./common.ts"
 import { branches, legalEntities } from "./party.ts"
 
 export const inventorySchema = pgSchema("inventory")
@@ -251,6 +251,7 @@ export const movements = inventorySchema.table(
       name: "movements_item_fkey",
     }),
     unique("movements_tenant_idempotency_key").on(table.tenantId, table.idempotencyKey),
+    unique("movements_tenant_id_id_key").on(table.tenantId, table.id),
     check("movements_quantity_check", sql`${table.quantity} <> 0`),
     check(
       "movements_kind_quantity_sign_check",
@@ -264,5 +265,82 @@ export const movements = inventorySchema.table(
         ${table.unitOfMeasure} ~ '^[A-Z][A-Z0-9_-]*$' and ${table.reason} is not null and
         ${table.reason} <> '' and ${table.kind} in ('receipt', 'issue'))`,
     ),
+  ],
+)
+
+/** Moving-average valuation per legal entity and item (ADR-0100). */
+export const itemValuations = inventorySchema.table(
+  "item_valuations",
+  {
+    tenantId: uuid("tenant_id").notNull(),
+    legalEntityId: uuid("legal_entity_id").notNull(),
+    itemId: uuid("item_id").notNull(),
+    quantity: bigint("quantity", { mode: "string" }).notNull().default("0"),
+    value: money("value").default("0"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.tenantId, table.legalEntityId, table.itemId] }),
+    foreignKey({
+      columns: [table.tenantId, table.legalEntityId],
+      foreignColumns: [legalEntities.tenantId, legalEntities.id],
+      name: "item_valuations_legal_entity_fkey",
+    }),
+    foreignKey({
+      columns: [table.tenantId, table.itemId],
+      foreignColumns: [items.tenantId, items.id],
+      name: "item_valuations_item_fkey",
+    }),
+    check(
+      "item_valuations_amounts_check",
+      sql`${table.quantity} >= 0 and ${table.value} >= 0 and (${table.quantity} > 0 or ${table.value} = 0)`,
+    ),
+  ],
+)
+
+/** The value each valued stock movement added or removed, with the journal that posted it. */
+export const valuationEntries = inventorySchema.table(
+  "valuation_entries",
+  {
+    id: id(),
+    tenantId: uuid("tenant_id").notNull(),
+    legalEntityId: uuid("legal_entity_id").notNull(),
+    itemId: uuid("item_id").notNull(),
+    movementId: uuid("movement_id").notNull(),
+    quantity: bigint("quantity", { mode: "string" }).notNull(),
+    value: money("value"),
+    sourceType: text("source_type").notNull(),
+    sourceId: uuid("source_id").notNull(),
+    journalEntryId: uuid("journal_entry_id"),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    unique("valuation_entries_movement_key").on(table.tenantId, table.movementId),
+    unique("valuation_entries_source_item_key").on(
+      table.tenantId,
+      table.sourceType,
+      table.sourceId,
+      table.itemId,
+    ),
+    foreignKey({
+      columns: [table.tenantId, table.movementId],
+      foreignColumns: [movements.tenantId, movements.id],
+      name: "valuation_entries_movement_fkey",
+    }),
+    foreignKey({
+      columns: [table.tenantId, table.legalEntityId, table.itemId],
+      foreignColumns: [
+        itemValuations.tenantId,
+        itemValuations.legalEntityId,
+        itemValuations.itemId,
+      ],
+      name: "valuation_entries_valuation_fkey",
+    }),
+    check(
+      "valuation_entries_sign_check",
+      sql`(${table.quantity} > 0 and ${table.value} >= 0) or (${table.quantity} < 0 and ${table.value} <= 0)`,
+    ),
+    check("valuation_entries_source_check", sql`${table.sourceType} ~ '^[a-z][a-z0-9_.]*$'`),
   ],
 )

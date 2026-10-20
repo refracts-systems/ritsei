@@ -56,4 +56,25 @@ export {
   PartyEventPublisherLive,
   PartyLive,
 } from "./src/layers.ts"
+export {
+  AddPartyAddressInput,
+  AddPartyBankAccountInput,
+  AddPartyContactInput,
+  AddressPurpose,
+  GetPartyContactBookInput,
+  makePartyContactsTestLayer,
+  PartyAddress,
+  PartyBankAccount,
+  PartyContact,
+  PartyContactBook,
+  PartyContactService,
+  PartyContactsLive,
+} from "./src/contact-book.ts"
+export type {
+  PartyAddress as PartyAddressType,
+  PartyBankAccount as PartyBankAccountType,
+  PartyContactBook as PartyContactBookType,
+  PartyContactService as PartyContactServiceShape,
+} from "./src/contact-book.ts"
+export { PartyBankAccountAlreadyExists } from "./src/errors.ts"
 export { PartyModule } from "./manifest.ts"

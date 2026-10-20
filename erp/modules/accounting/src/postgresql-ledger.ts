@@ -83,11 +83,15 @@ const transferId = (input: PostFinancialJournalInput, position: number) =>
 
 const pairLines = (lines: readonly FinancialJournalLine[]) => {
   const debits = lines
+    .values()
     .filter((line) => BigInt(line.debitMinor) > 0n)
     .map((line) => ({ accountId: line.accountId, remaining: BigInt(line.debitMinor) }))
+    .toArray()
   const credits = lines
+    .values()
     .filter((line) => BigInt(line.creditMinor) > 0n)
     .map((line) => ({ accountId: line.accountId, remaining: BigInt(line.creditMinor) }))
+    .toArray()
   const pairs: Array<{
     readonly debitAccountId: string
     readonly creditAccountId: string

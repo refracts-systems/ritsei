@@ -33,6 +33,12 @@ import {
   PartyRole,
   PartyService,
   RelatedPartyPath,
+  AddressPurpose,
+  PartyAddress,
+  PartyBankAccount,
+  PartyContact,
+  PartyContactBook,
+  PartyContactService,
 } from "./mod.ts"
 
 const CreatedParty = Party.pipe(HttpApiSchema.status(201))
@@ -148,6 +154,52 @@ export const PartyHttpGroup = HttpApiGroup.make("Parties").add(
     success: Schema.Array(RelatedPartyPath),
     error: errors,
   }).middleware(BearerAuth),
+  HttpApiEndpoint.get("getContactBook", "/parties/:id/contact-book", {
+    params: { id: Uuid },
+    headers: tenantHeaders,
+    success: PartyContactBook,
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.post("addAddress", "/parties/:id/addresses", {
+    params: { id: Uuid },
+    headers: tenantHeaders,
+    payload: Schema.Struct({
+      purpose: AddressPurpose,
+      line1: ShortString,
+      line2: Schema.optionalKey(ShortString),
+      city: ShortString,
+      region: Schema.optionalKey(ShortString),
+      postalCode: Schema.optionalKey(ShortString),
+      countryCode: PartyAddress.fields.countryCode,
+      primary: Schema.optionalKey(Schema.Boolean),
+    }),
+    success: PartyAddress.pipe(HttpApiSchema.status(201)),
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.post("addContact", "/parties/:id/contacts", {
+    params: { id: Uuid },
+    headers: tenantHeaders,
+    payload: Schema.Struct({
+      name: ShortString,
+      jobTitle: Schema.optionalKey(ShortString),
+      email: Schema.optionalKey(ShortString),
+      phone: Schema.optionalKey(ShortString),
+    }),
+    success: PartyContact.pipe(HttpApiSchema.status(201)),
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.post("addBankAccount", "/parties/:id/bank-accounts", {
+    params: { id: Uuid },
+    headers: tenantHeaders,
+    payload: Schema.Struct({
+      bankName: ShortString,
+      accountNumber: ShortString,
+      accountHolder: ShortString,
+      currency: PartyBankAccount.fields.currency,
+    }),
+    success: PartyBankAccount.pipe(HttpApiSchema.status(201)),
+    error: errors,
+  }).middleware(BearerAuth),
 )
 
 const PartyHttpApi = makeModuleApi(PartyHttpGroup)
@@ -159,6 +211,7 @@ export const PartyHttpErrors = makeApiErrorMapping({
   LegalEntityAlreadyExists: "conflict",
   LegalEntityNotFound: "not_found",
   OrganizationRequired: "conflict",
+  PartyBankAccountAlreadyExists: "conflict",
   PartyNotFound: "not_found",
   PartyRelationshipAlreadyExists: "conflict",
   PartyRelationshipRoleNotAssigned: "conflict",
@@ -172,7 +225,40 @@ const coreApiEffect = PartyHttpErrors.apiEffect
 export const PartyHttpHandlers = HttpApiBuilder.group(PartyHttpApi, "Parties", (handlers) =>
   Effect.gen(function* () {
     const party = yield* PartyService
+    const contacts = yield* PartyContactService
+    const partyScope = (headers: { "x-tenant-id": string }, params: { id: string }) =>
+      Effect.gen(function* () {
+        const principal = yield* CurrentPrincipal
+        return { principal, tenantId: headers["x-tenant-id"], partyId: params.id }
+      })
     return handlers
+      .handle(
+        "getContactBook",
+        Effect.fn("Http.Parties.getContactBook")(function* ({ headers, params }) {
+          return yield* coreApiEffect(contacts.getContactBook(yield* partyScope(headers, params)))
+        }),
+      )
+      .handle(
+        "addAddress",
+        Effect.fn("Http.Parties.addAddress")(function* ({ headers, params, payload }) {
+          const scope = yield* partyScope(headers, params)
+          return yield* coreApiEffect(contacts.addAddress({ ...scope, ...payload }))
+        }),
+      )
+      .handle(
+        "addContact",
+        Effect.fn("Http.Parties.addContact")(function* ({ headers, params, payload }) {
+          const scope = yield* partyScope(headers, params)
+          return yield* coreApiEffect(contacts.addContact({ ...scope, ...payload }))
+        }),
+      )
+      .handle(
+        "addBankAccount",
+        Effect.fn("Http.Parties.addBankAccount")(function* ({ headers, params, payload }) {
+          const scope = yield* partyScope(headers, params)
+          return yield* coreApiEffect(contacts.addBankAccount({ ...scope, ...payload }))
+        }),
+      )
       .handle(
         "list",
         Effect.fn("Http.Parties.list")(function* ({ headers, query }) {
