@@ -1,19 +1,23 @@
 import { assert, it } from "@effect/vitest"
 import { sql } from "drizzle-orm"
 import * as Effect from "effect/Effect"
+import type * as Schema from "effect/Schema"
 import * as Result from "effect/Result"
 
 import { Database, DatabaseFailure, uuidv7 } from "../../../foundation/mod.ts"
 import { makePostgresDatabase, runMigrations } from "../../../platform/mod.ts"
 import { withTemporaryDatabase } from "../../../../tests/support/postgres-database.ts"
 import { EventIdempotencyConflict, makeMessagingService } from "../mod.ts"
-import type { UntypedRecord } from "../../../../tests/support/untyped-record.ts"
+import type { Overrides } from "../../../../tests/support/overrides.ts"
 
 const databaseUrl = process.env["DATABASE_URL"]
 const postgresFailure = <A>(effect: () => Promise<A>) =>
   Effect.tryPromise({ try: effect, catch: (cause) => cause }).pipe(Effect.flip)
 
-const event = (tenantId: string, overrides: UntypedRecord = {}) => ({
+const noCause = (): string | null => null
+const confirmedPayload: Schema.JsonObject = { state: "confirmed" }
+
+const eventFields = (tenantId: string) => ({
   eventId: uuidv7(),
   eventType: "sales.order.confirmed",
   eventVersion: 1,
@@ -22,11 +26,15 @@ const event = (tenantId: string, overrides: UntypedRecord = {}) => ({
   aggregateId: uuidv7(),
   commandId: uuidv7(),
   correlationId: uuidv7(),
-  causationId: null,
+  causationId: noCause(),
   idempotencyKey: uuidv7(),
   actorPrincipalId: "user-1",
   occurredAt: "2026-08-12T12:00:00.000Z",
-  payload: { state: "confirmed" },
+  payload: confirmedPayload,
+})
+
+const event = (tenantId: string, overrides: Overrides<ReturnType<typeof eventFields>> = {}) => ({
+  ...eventFields(tenantId),
   ...overrides,
 })
 

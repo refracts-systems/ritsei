@@ -1,7 +1,7 @@
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 
-import { FINANCIAL_LEDGER_MAX_MINOR } from "../../../../framework/foundation/mod.ts"
+import { FINANCIAL_LEDGER_MAX_MINOR, typedKeys } from "../../../../framework/foundation/mod.ts"
 import { EventEnvelope } from "../../../../framework/modules/messaging/mod.ts"
 
 export const FinancialFailurePoint = Schema.Literals([
@@ -721,8 +721,7 @@ export const verifyOpeningBalances = (
       mismatches.push({ key, kind: "missing_target", source: sourceEntry })
       continue
     }
-    // SAFETY: OpeningBalance entries are built with exactly their declared fields.
-    const fields = (Object.keys(sourceEntry) as (keyof OpeningBalance)[]).filter((field) => {
+    const fields = typedKeys(sourceEntry).filter((field) => {
       if (field === "currency") {
         return sourceEntry[field].toUpperCase() !== targetEntry[field].toUpperCase()
       }

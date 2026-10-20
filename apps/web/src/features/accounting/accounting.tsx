@@ -267,12 +267,14 @@ function CreateAccountDialog(props: { reload: () => Promise<void> }) {
             if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
             const code = requiredText(value.code)
             const name = requiredText(value.name)
-            const type = requiredText(value.type)
+            const type = accountTypeOptions.find(
+              (option) => option.value === requiredText(value.type),
+            )?.value
             if (
               code === null ||
               !accountCodePattern.test(code) ||
               name === null ||
-              !accountTypeOptions.some((option) => option.value === type)
+              type === undefined
             ) {
               setInvalid(true)
               codeInput?.focus()
@@ -282,8 +284,7 @@ function CreateAccountDialog(props: { reload: () => Promise<void> }) {
             mutation.mutate({
               code,
               name,
-              // SAFETY: type was matched against accountTypeOptions above.
-              type: type as AccountType,
+              type,
             })
           }
         }

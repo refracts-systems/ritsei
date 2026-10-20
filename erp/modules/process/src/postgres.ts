@@ -3,7 +3,6 @@ import * as Clock from "effect/Clock"
 import * as Effect from "effect/Effect"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
-import * as Predicate from "effect/Predicate"
 
 import { jobFenceScopes, processJobs, workflowRuns } from "../../../../db/schema/process.ts"
 import {
@@ -15,6 +14,7 @@ import {
   isDatabaseConstraint,
   requireExactMajorToMinor,
   uuidv7,
+  canonicalize,
 } from "../../../../framework/foundation/mod.ts"
 import {
   AccountingCapabilities,
@@ -375,19 +375,6 @@ const businessPayload = (input: Schema.Schema.Type<typeof ConfirmOrderConfirmati
   causationId: input.causationId,
   idempotencyKey: input.idempotencyKey,
 })
-
-// oxlint-disable-next-line anti-slop/no-unknown-returns -- canonicalizes arbitrary stored payloads for comparison, never parsing them
-const canonicalize = (value: unknown): unknown => {
-  if (Array.isArray(value)) return value.map(canonicalize)
-  if (Predicate.isObjectOrArray(value)) {
-    return Object.fromEntries(
-      Object.entries(value)
-        .toSorted(([a], [b]) => a.localeCompare(b))
-        .map(([key, entry]) => [key, canonicalize(entry)]),
-    )
-  }
-  return value
-}
 
 const payloadMatches = (stored: unknown, current: unknown) =>
   JSON.stringify(canonicalize(stored)) === JSON.stringify(canonicalize(current))

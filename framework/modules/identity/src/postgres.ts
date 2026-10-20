@@ -28,22 +28,20 @@ const selectAuthenticationState = {
 const toUserAccount = (row: {
   readonly id: string
   readonly email: string
-  readonly status: string
+  readonly status: UserAccountStatus
 }): UserAccount => ({
   id: row.id,
   email: row.email,
-  // SAFETY: user_accounts_status_check limits the column to the status union.
-  status: row.status as UserAccountStatus,
+  status: row.status,
 })
 
 const toAuthenticationState = (row: {
   readonly id: string
-  readonly status: string
+  readonly status: UserAccountStatus
   readonly sessionInvalidatedAt: Date | null
 }): UserAccountAuthenticationState => ({
   id: row.id,
-  // SAFETY: user_accounts_status_check limits the column to the status union.
-  status: row.status as UserAccountStatus,
+  status: row.status,
   sessionInvalidatedAt:
     row.sessionInvalidatedAt === null ? null : row.sessionInvalidatedAt.toISOString(),
 })

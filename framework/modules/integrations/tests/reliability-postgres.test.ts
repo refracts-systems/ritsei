@@ -10,12 +10,12 @@ import {
   ExternalPayloadLimitExceeded,
   makePostgresExternalReliabilityStore,
 } from "../mod.ts"
-import type { UntypedRecord } from "../../../../tests/support/untyped-record.ts"
+import type { Overrides } from "../../../../tests/support/overrides.ts"
 
 const databaseUrl = process.env["DATABASE_URL"]
 const sentAtMs = Date.parse("2026-08-30T00:00:00.000Z")
 
-const makeInput = (tenantId: string, overrides: UntypedRecord = {}) => ({
+const makeInputFields = (tenantId: string) => ({
   tenantId,
   replayKey: "event:payments:settled:provider-event-1",
   kind: "event" as const,
@@ -37,6 +37,13 @@ const makeInput = (tenantId: string, overrides: UntypedRecord = {}) => ({
     observedAtMs: sentAtMs + 45,
     compatibilityRange: { minimumVersion: 1, maximumVersion: 1 },
   },
+})
+
+const makeInput = (
+  tenantId: string,
+  overrides: Overrides<ReturnType<typeof makeInputFields>> = {},
+) => ({
+  ...makeInputFields(tenantId),
   ...overrides,
 })
 

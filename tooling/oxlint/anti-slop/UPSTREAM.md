@@ -40,24 +40,24 @@ through an `overrides` block in `.oxlintrc.json`), `anti-slop-effect/no-service-
   `tests/support/partial.ts`, the one place a double is asserted into its full type. The runtime
   `postgres.js` client reaches the version check through `asPostgresClient` (now in
   `framework/platform/postgres`, no longer private to migrations), which also dropped its own two
-  casts. The experiment facade `solid-effect.ts` keeps a file-level disable with its reason.
+  casts. The `solid-effect` experiment (kept as a reference) re-exports the production bridge
+  directly instead of narrowing it with casts.
 - `no-unsafe-dictionary-type` (26 sites): JSON boundaries use `Schema.JsonObject` (OIDC token and
   key parsing, OpenAPI path items); form payload builders take the existing `FormValue`; helpers
   that only copy fields are generic over the caller's type; the P0 backfill rows are typed by their
-  selected columns. Tests share one `UntypedRecord` alias in `tests/support/untyped-record.ts`
-  (driver rows and fixture overrides), the single justified disable.
+  selected columns. Test SQL rows use the named row types in `tests/support/sql-row.ts`, and
+  fixture overrides are `Overrides<Fixture>` (`tests/support/overrides.ts`).
 - `no-runtime-typeof` (60 sites; checks inside named type guards stay allowed by `allowInTypeGuards`): checks
   became `effect/Predicate` guards (`isString`, `isNumber`, `isFunction`, `isObjectOrArray`);
   values already typed as `Schema.Json` branch on `Array.isArray` and scalar guards so the union
   stays narrowed; tests use `assert.isFunction`. The boneyard probe reports
-  `snapshotIsFunction` instead of a `typeof` string. The standalone `verify-r.mjs` script keeps one
-  justified disable because it cannot import project code.
+  `snapshotIsFunction` instead of a `typeof` string, and the standalone `verify-r.mjs` script
+  probes with `instanceof Function`.
 - `no-unknown-returns` (73 sites): web reload and retry callbacks return `Promise<void>`, and
   producers wrap their refetches in `reloaded()` (`request-feedback.tsx`); the OIDC JSON reader
   decodes with `Schema.Json`; event payload callbacks return `Schema.Json`; postgres test helpers
-  are generic over their result. Four functions that canonicalize, redact, or unwrap arbitrary
-  values (`canonicalize`, `canonicalValue`, `redactExternalPayload`, `unwrapCause`) keep `unknown`
-  with a justified disable, as decided.
+  are generic over their result. `canonicalize` is one generic helper in `framework/foundation`,
+  `redactExternalPayload` takes and returns `Schema.Json`, and `unwrapCause` became a loop.
 - `require-safety-comment-for-type-assertion` (about 100 production assertions): where the type
   could be proven, the assertion went away (annotated empty arrays, `Predicate.hasProperty` for
   errno codes through `tooling/errno.ts`, `find` instead of a membership check plus cast, type
@@ -81,8 +81,8 @@ through an `overrides` block in `.oxlintrc.json`), `anti-slop-effect/no-service-
   `omitUndefined`/`omitNullish` (`framework/foundation/optional`) in server code and
   `definedFields`/`presentFields` (`apps/web/src/shared/api.ts`) in the web app, so the
   `...(x === undefined ? {} : { x })` pattern is gone.
-- `no-reflect-get` (1 site): the `Proxy` default branch in `request-limits.ts` keeps
-  `Reflect.get` with a justified `oxlint-disable-next-line`.
+- `no-reflect-get` (1 site): the `Proxy` default branch in `request-limits.ts` reads the wrapped
+  request directly, with a `SAFETY:` comment.
 
 ## Rules left off, and why
 

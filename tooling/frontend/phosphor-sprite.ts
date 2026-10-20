@@ -1,6 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 
+import { typedKeys } from "../../framework/foundation/mod.ts"
 import { isMain } from "../entrypoint.ts"
 
 // Builds the static Phosphor SVG sprite served at /icons/phosphor.svg. Only glyphs referenced by
@@ -42,8 +43,7 @@ const loadSelection = async (variant: keyof typeof variants) => {
 export const buildSprite = async (): Promise<string> => {
   const glyphs = await readRegistryGlyphs()
   const symbols: string[] = []
-  // SAFETY: Object.keys of the variants record yields exactly its declared keys.
-  for (const variant of Object.keys(variants) as (keyof typeof variants)[]) {
+  for (const variant of typedKeys(variants)) {
     const selection = await loadSelection(variant)
     for (const glyph of glyphs) {
       const icon = selection.get(`${glyph}${variants[variant]}`)

@@ -29,15 +29,12 @@ export class DatabaseFailure extends Schema.TaggedError<DatabaseFailure>()("Data
   cause: Schema.Unknown,
 }) {}
 
-// oxlint-disable-next-line anti-slop/no-unknown-returns -- a driver error cause is arbitrary until a constraint field is read from it
-const unwrapCause = (cause: unknown): unknown =>
-  Predicate.isObjectOrArray(cause) && "cause" in cause && cause.cause !== undefined
-    ? unwrapCause(cause.cause)
-    : cause
-
 export const isDatabaseConstraint = (error: unknown, constraint: string, code = "23505") => {
   if (!(error instanceof DatabaseFailure)) return false
-  const cause = unwrapCause(error.cause)
+  let cause: unknown = error.cause
+  while (Predicate.isObjectOrArray(cause) && "cause" in cause && cause.cause !== undefined) {
+    cause = cause.cause
+  }
   return (
     Predicate.isObjectOrArray(cause) &&
     "code" in cause &&

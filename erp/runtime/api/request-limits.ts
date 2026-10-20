@@ -39,7 +39,7 @@ const bufferedRequest = (
   text: string,
 ): HttpServerRequest.HttpServerRequest => {
   return new Proxy(request, {
-    get(target, property, receiver) {
+    get(target, property) {
       switch (property) {
         case "stream":
           return Stream.succeed(bytes)
@@ -51,8 +51,8 @@ const bufferedRequest = (
           return (options: Parameters<typeof request.modify>[0]) =>
             bufferedRequest(target.modify(options), bytes, text)
         default:
-          // oxlint-disable-next-line anti-slop/no-reflect-get -- the proxy forwards every other property with the original receiver
-          return Reflect.get(target, property, receiver)
+          // SAFETY: every other property is read from the wrapped request, whose keys are strings or symbols.
+          return target[property as keyof typeof target]
       }
     },
   })

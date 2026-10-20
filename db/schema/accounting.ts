@@ -166,7 +166,7 @@ export const financialVerificationArtifacts = accountingSchema.table(
     sourceSnapshotRef: text("source_snapshot_ref").notNull(),
     targetSnapshotRef: text("target_snapshot_ref").notNull(),
     artifactHash: text("artifact_hash").notNull(),
-    signatureAlgorithm: text("signature_algorithm").notNull(),
+    signatureAlgorithm: text("signature_algorithm", { enum: ["Ed25519"] }).notNull(),
     signingKeyId: text("signing_key_id").notNull(),
     signature: text("signature").notNull(),
     operationSetHash: text("operation_set_hash").notNull(),
@@ -333,8 +333,14 @@ export const financialCutoverControls = accountingSchema.table(
     tenantId: uuid("tenant_id").notNull(),
     legalEntityId: uuid("legal_entity_id").notNull(),
     status: financialCutoverStatus("status").notNull().default("postgresql"),
-    sourceEngine: financialEngine("source_engine").notNull().default("postgresql"),
-    targetEngine: financialEngine("target_engine").notNull().default("tigerbeetle"),
+    sourceEngine: financialEngine("source_engine")
+      .$type<"postgresql">()
+      .notNull()
+      .default("postgresql"),
+    targetEngine: financialEngine("target_engine")
+      .$type<"tigerbeetle">()
+      .notNull()
+      .default("tigerbeetle"),
     cutoverWatermark: text("cutover_watermark"),
     verificationHash: text("verification_hash"),
     openingBalanceVerified: boolean("opening_balance_verified").notNull().default(false),

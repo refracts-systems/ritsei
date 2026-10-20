@@ -1,3 +1,5 @@
+export { canonicalize } from "./canonical.ts"
+
 /** The fields of `Fields` with `undefined` values removed, so optional keys are left absent. */
 export type WithoutUndefined<Fields> = { [Key in keyof Fields]?: Exclude<Fields[Key], undefined> }
 
@@ -26,3 +28,15 @@ export const omitNullish = <Fields extends { readonly [Key in keyof Fields]: unk
   Object.fromEntries(
     Object.entries(fields).filter(([, value]) => value !== undefined && value !== null),
   ) as WithoutNullish<Fields>
+
+/** The declared keys of a record, typed as such (`Object.keys` only returns strings). */
+export const typedKeys = <Owner extends { readonly [Name in keyof Owner]: unknown }>(
+  owner: Owner,
+) =>
+  // SAFETY: the owner's type declares exactly these keys.
+  Object.keys(owner) as Array<keyof Owner & string>
+
+/** The entries of a record with their declared key type. */
+export const typedEntries = <Key extends string, Value>(record: Readonly<Record<Key, Value>>) =>
+  // SAFETY: the record's type declares exactly these keys.
+  Object.entries(record) as Array<[Key, Value]>

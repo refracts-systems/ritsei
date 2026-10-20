@@ -45,7 +45,11 @@ import {
   WorkflowResultCorrupt,
   WorkflowRun,
 } from "../mod.ts"
-import type { UntypedRecord } from "../../../../tests/support/untyped-record.ts"
+import type {
+  OutboxEventRow,
+  ProcessJobRow,
+  WorkflowRunRow,
+} from "../../../../tests/support/sql-row.ts"
 
 const databaseUrl = process.env["DATABASE_URL"]
 const postgresFailure = <A>(effect: () => Promise<A>) =>
@@ -580,7 +584,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           })
           const [storedWorkflow] = yield* Effect.promise(
             () =>
-              client<UntypedRecord[]>`
+              client<WorkflowRunRow[]>`
               select
                 id, tenant_id as "tenantId", workflow_type as "workflowType",
                 idempotency_key as "idempotencyKey", aggregate_id as "aggregateId", status,
@@ -644,7 +648,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           )(event?.payload)
           const [storedEvent] = yield* Effect.promise(
             () =>
-              client<UntypedRecord[]>`
+              client<OutboxEventRow[]>`
               select
                 id as "eventId", event_type as "eventType", event_version as "eventVersion",
                 tenant_id as "tenantId", aggregate_type as "aggregateType",
@@ -733,7 +737,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           yield* Schema.decodeUnknownEffect(ProcessPostCommitJobPayload)(job?.payload)
           const [storedJob] = yield* Effect.promise(
             () =>
-              client<UntypedRecord[]>`
+              client<ProcessJobRow[]>`
               select
                 id as "jobId", tenant_id as "tenantId", fence_scope as "fenceScope",
                 lease_generation as "leaseGeneration", job_type as "jobType",

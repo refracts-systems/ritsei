@@ -23,7 +23,7 @@ class ProviderUnavailable extends Error {}
 const isObject = (value: unknown): value is JsonObject =>
   Predicate.isObjectOrArray(value) && !Array.isArray(value)
 
-const decodeBase64Url = (value: string): Uint8Array => {
+const decodeBase64Url = (value: string): Uint8Array<ArrayBuffer> => {
   if (!/^[A-Za-z0-9_-]+$/.test(value)) throw new InvalidTokenFormat()
   const padded =
     value.replaceAll("-", "+").replaceAll("_", "/") + "=".repeat((4 - (value.length % 4)) % 4)
@@ -84,11 +84,10 @@ export const makeOidcIdentityProvider = (
   const verify = async (assertion: string): Promise<ExternalIdentityType> => {
     if (assertion.length > 16_384) throw new InvalidTokenFormat()
     const parts = assertion.split(".")
-    if (parts.length !== 3 || parts.some((part) => part.length === 0)) {
+    const [encodedHeader, encodedPayload, encodedSignature, ...rest] = parts
+    if (!encodedHeader || !encodedPayload || !encodedSignature || rest.length > 0) {
       throw new InvalidTokenFormat()
     }
-    // SAFETY: parts.length === 3 was checked above.
-    const [encodedHeader, encodedPayload, encodedSignature] = parts as [string, string, string]
     const header = decodeJsonPart(encodedHeader)
     const payload = decodeJsonPart(encodedPayload)
     if (header.alg !== "RS256" || !Predicate.isString(header.kid)) throw new InvalidTokenFormat()
@@ -131,8 +130,7 @@ export const makeOidcIdentityProvider = (
       .verify(
         { name: "RSASSA-PKCS1-v1_5" },
         key,
-        // SAFETY: a Uint8Array built from a fresh array owns a plain ArrayBuffer, never a shared one.
-        new Uint8Array(decodeBase64Url(encodedSignature)).buffer as ArrayBuffer,
+        decodeBase64Url(encodedSignature),
         new TextEncoder().encode(`${encodedHeader}.${encodedPayload}`),
       )
       .catch(() => false)

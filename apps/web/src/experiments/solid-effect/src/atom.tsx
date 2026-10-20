@@ -49,8 +49,10 @@ function useRegistry() {
 function useAtomValue<A>(atom: () => Atom.Atom<A>): () => A {
   const registry = useRegistry()
   const current = createMemo(atom)
-  // SAFETY: the registry holds a value of A for this atom before any subscription fires.
-  const [value, setValue] = createSignal<A>(untrack(() => registry.get(current())) as any)
+  // SAFETY: atoms in these examples hold values, never functions, so the initial value is not a compute function.
+  const [value, setValue] = createSignal<A>(
+    untrack(() => registry.get(current())) as Exclude<A, Function>,
+  )
 
   createEffect(
     () => current(),
@@ -60,8 +62,7 @@ function useAtomValue<A>(atom: () => Atom.Atom<A>): () => A {
       }),
   )
 
-  // SAFETY: the signal getter returns the A set above.
-  return value as () => A
+  return value
 }
 
 function useAtom<R, W>(atom: () => Atom.Writable<R, W>) {
@@ -99,8 +100,7 @@ function AtomTypeahead() {
     const result = searchResult()
     return AsyncResult.isFailure(result) ? Cause.squash(result.cause) : undefined
   }
-  // SAFETY: an empty array is a valid Package list.
-  const results = () => AsyncResult.getOrElse(searchResult(), () => [] as Package[])
+  const results = () => AsyncResult.getOrElse(searchResult(), () => new Array<Package>())
 
   return (
     <section class="panel">
@@ -284,8 +284,7 @@ function AtomCheckout() {
 
   const total = () => cart().reduce((sum, item) => sum + item.price * item.quantity, 0)
   const inFlight = () => phase() !== "idle"
-  // SAFETY: an empty array is a valid Order list.
-  const orders = () => AsyncResult.getOrElse(ordersResult(), () => [] as Order[])
+  const orders = () => AsyncResult.getOrElse(ordersResult(), () => new Array<Order>())
   const ordersLoading = () => {
     const result = ordersResult()
     return result.waiting || AsyncResult.isInitial(result)

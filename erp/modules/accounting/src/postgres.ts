@@ -190,8 +190,8 @@ export const makeAccountingService = Effect.gen(function* () {
     readonly tenantId: string
     readonly legalEntityId: string
     readonly status: FinancialCutoverControl["status"]
-    readonly sourceEngine: "postgresql" | "tigerbeetle"
-    readonly targetEngine: "postgresql" | "tigerbeetle"
+    readonly sourceEngine: "postgresql"
+    readonly targetEngine: "tigerbeetle"
     readonly cutoverWatermark: string | null
     readonly verificationHash: string | null
     readonly openingBalanceVerified: boolean
@@ -209,10 +209,8 @@ export const makeAccountingService = Effect.gen(function* () {
     tenantId: row.tenantId,
     legalEntityId: row.legalEntityId,
     status: row.status,
-    // SAFETY: financial_cutover_controls_source_engine_check limits the column to postgresql.
-    sourceEngine: row.sourceEngine as "postgresql",
-    // SAFETY: financial_cutover_controls_target_engine_check limits the column to tigerbeetle.
-    targetEngine: row.targetEngine as "tigerbeetle",
+    sourceEngine: row.sourceEngine,
+    targetEngine: row.targetEngine,
     cutoverWatermark: row.cutoverWatermark,
     verificationHash: row.verificationHash,
     openingBalanceVerified: row.openingBalanceVerified,
@@ -252,7 +250,7 @@ export const makeAccountingService = Effect.gen(function* () {
     readonly tenantId: string
     readonly legalEntityId: string
     readonly artifactHash: string
-    readonly signatureAlgorithm: string
+    readonly signatureAlgorithm: "Ed25519"
     readonly signingKeyId: string
     readonly signature: string
     readonly status: "verified" | "rejected"
@@ -287,8 +285,7 @@ export const makeAccountingService = Effect.gen(function* () {
     tenantId: row.tenantId,
     legalEntityId: row.legalEntityId,
     artifactHash: row.artifactHash,
-    // SAFETY: financial_verification_artifacts_hash_check limits the column to Ed25519.
-    signatureAlgorithm: row.signatureAlgorithm as "Ed25519",
+    signatureAlgorithm: row.signatureAlgorithm,
     signingKeyId: row.signingKeyId,
     signature: row.signature,
     status: row.status,

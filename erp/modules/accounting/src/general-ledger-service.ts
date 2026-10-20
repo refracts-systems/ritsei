@@ -5,6 +5,7 @@ import {
   addDays,
   formatSignedMinor,
   requireExactMajorToMinor,
+  typedEntries,
 } from "../../../../framework/foundation/mod.ts"
 import type { Principal } from "../../../../framework/modules/auth/mod.ts"
 import {
@@ -132,15 +133,14 @@ export const makeGeneralLedgerServiceFromStore = <R>(
       if (decoded.legalEntityId !== undefined) {
         yield* authorize(decoded, AccountingCapabilities.postingRuleConfigure)
         const byCode = new Map(created.map((account) => [account.code, account.id]))
-        for (const [role, code] of Object.entries(template.postingRules)) {
+        for (const [role, code] of typedEntries(template.postingRules)) {
           // Existing rules win: applying a template never remaps a configured role.
           yield* store
             .setPostingRule(
               {
                 tenantId: decoded.tenantId,
                 legalEntityId: decoded.legalEntityId,
-                // SAFETY: Object.entries yields only the declared keys of template.postingRules.
-                role: role as keyof typeof template.postingRules,
+                role,
                 accountId: byCode.get(code)!,
               },
               { replace: false },

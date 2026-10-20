@@ -11,9 +11,12 @@ import {
   makeMessagingTestLayer,
   MessagingService,
 } from "../mod.ts"
-import type { UntypedRecord } from "../../../../tests/support/untyped-record.ts"
+import type { Overrides } from "../../../../tests/support/overrides.ts"
 
-const event = (overrides: UntypedRecord = {}) => ({
+const noCause = (): string | null => null
+const orderPayload: Schema.JsonObject = { orderId: "018f3f77-0c5a-7cc0-8b62-6a163d214125" }
+
+const eventFields = () => ({
   eventId: "018f3f77-0c5a-7cc0-8b62-6a163d214123",
   eventType: "sales.order.confirmed",
   eventVersion: 1,
@@ -22,11 +25,15 @@ const event = (overrides: UntypedRecord = {}) => ({
   aggregateId: "018f3f77-0c5a-7cc0-8b62-6a163d214125",
   commandId: "confirm-order-command",
   correlationId: "order-confirmation",
-  causationId: null,
+  causationId: noCause(),
   idempotencyKey: "confirm-order-1",
   actorPrincipalId: "user-1",
   occurredAt: "2026-08-12T12:00:00.000Z",
-  payload: { orderId: "018f3f77-0c5a-7cc0-8b62-6a163d214125" },
+  payload: orderPayload,
+})
+
+const event = (overrides: Overrides<ReturnType<typeof eventFields>> = {}) => ({
+  ...eventFields(),
   ...overrides,
 })
 

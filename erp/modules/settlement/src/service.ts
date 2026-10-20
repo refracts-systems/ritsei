@@ -17,6 +17,7 @@ import {
   isDatabaseConstraint,
   requireExactMajorToMinor,
   uuidv7,
+  typedKeys,
 } from "../../../../framework/foundation/mod.ts"
 import type { Principal as PrincipalSchema } from "../../../../framework/modules/auth/mod.ts"
 import {
@@ -94,8 +95,7 @@ const formatBuckets = (values: Buckets) => ({
 const sumBuckets = (rows: Iterable<Buckets>) => {
   const totals = emptyBuckets()
   for (const values of rows) {
-    // SAFETY: emptyBuckets creates exactly the BucketName keys.
-    for (const key of Object.keys(totals) as BucketName[]) totals[key] += values[key]
+    for (const key of typedKeys(totals)) totals[key] += values[key]
   }
   return totals
 }

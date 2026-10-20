@@ -4,6 +4,8 @@ import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
 import * as Predicate from "effect/Predicate"
 
+import { canonicalize } from "../../../../framework/foundation/mod.ts"
+
 const NonEmptyString = Schema.String.check(Schema.isPattern(/\S/))
 const TrimmedNonEmptyString = Schema.String.check(
   Schema.makeFilter((value) => /\S/.test(value) && value === value.trim(), {
@@ -276,22 +278,11 @@ const accountKey = (account: FinancialStoreAccountObservation) =>
 
 const transferKey = (transfer: FinancialStoreTransferObservation) => transfer.transferRef
 
-// oxlint-disable-next-line anti-slop/no-unknown-returns -- canonicalizes arbitrary provider facts for hashing, never parsing them
-const canonicalValue = (value: unknown): unknown => {
-  if (Array.isArray(value)) return value.map(canonicalValue)
-  if (!Predicate.isObjectOrArray(value)) return value
-  return Object.fromEntries(
-    Object.entries(value)
-      .toSorted(([left], [right]) => left.localeCompare(right))
-      .map(([key, child]) => [key, canonicalValue(child)]),
-  )
-}
-
-const canonicalJson = (value: unknown) => JSON.stringify(canonicalValue(value)) ?? ""
+const canonicalJson = (value: unknown) => JSON.stringify(canonicalize(value)) ?? ""
 
 const canonicalArray = (values: readonly unknown[]) =>
   [...values]
-    .map(canonicalValue)
+    .map(canonicalize)
     .sort((left, right) => canonicalJson(left).localeCompare(canonicalJson(right)))
 
 /** Canonical provider facts for hashes and exact same-boundary comparisons. */
@@ -655,7 +646,7 @@ export const canonicalizeFinancialStagingEvidence = (evidence: FinancialStagingE
       // SAFETY: the keys in unorderedEvidenceKeys name array-valued evidence fields.
       unorderedEvidenceKeys.has(key)
         ? canonicalArray(evidence[key] as readonly unknown[])
-        : canonicalValue(evidence[key]),
+        : canonicalize(evidence[key]),
     ]),
   )
 

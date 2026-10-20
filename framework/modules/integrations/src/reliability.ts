@@ -22,7 +22,7 @@ export type ExternalReliabilityInput = {
   readonly attempts: number
   readonly maxAttempts: number
   readonly maxPayloadBytes: number
-  readonly payload: unknown
+  readonly payload: Schema.Json
   readonly sentAtMs: number
   readonly observedAtMs: number
   readonly compatibilityRange: {
@@ -38,7 +38,7 @@ export type ExternalReliabilityDecision = {
   readonly providerStatus: Schema.Schema.Type<typeof ExternalProviderStatus>
   readonly attempts: number
   readonly lagMs: number
-  readonly payload: unknown
+  readonly payload: Schema.Json
 }
 
 const sensitiveField = (key: string): boolean =>
@@ -47,10 +47,16 @@ const sensitiveField = (key: string): boolean =>
   )
 
 // redaction removes credentials before a delivery record is exposed or retained.
-// oxlint-disable-next-line anti-slop/no-unknown-returns -- redacts arbitrary provider payloads without parsing them
-export const redactExternalPayload = (value: unknown): unknown => {
+export const redactExternalPayload = (value: Schema.Json): Schema.Json => {
   if (Array.isArray(value)) return value.map(redactExternalPayload)
-  if (!Predicate.isObjectOrArray(value)) return value
+  if (
+    value === null ||
+    Predicate.isString(value) ||
+    Predicate.isNumber(value) ||
+    Predicate.isBoolean(value)
+  ) {
+    return value
+  }
   return Object.fromEntries(
     Object.entries(value).map(([key, child]) => [
       key,
