@@ -5,7 +5,7 @@ import * as Schema from "effect/Schema"
 
 import { approvalPolicies, approvalRequests } from "../../../../db/schema/approvals.ts"
 import { Database, formatSignedMinor, requireExactMajorToMinor } from "../../../foundation/mod.ts"
-import { AuthorizationService } from "../../authorization/mod.ts"
+import { AuthorizationService, Capability } from "../../authorization/mod.ts"
 import {
   type ApprovalRequest,
   ApprovalService,
@@ -190,7 +190,7 @@ export const makeApprovalService = Effect.gen(function* () {
         yield* authorization.authorize({
           principal: decoded.principal,
           tenantId: decoded.tenantId,
-          capability: policy.approverCapability,
+          capability: yield* Schema.decodeUnknownEffect(Capability)(policy.approverCapability),
         })
         if (row.status !== "pending") {
           return yield* Effect.fail(

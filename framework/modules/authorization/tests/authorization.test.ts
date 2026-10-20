@@ -11,6 +11,7 @@ import {
   TenantMembershipAlreadyExists,
   TenantMembershipNotFound,
 } from "../mod.ts"
+import { partial } from "../../../../tests/support/partial.ts"
 
 const principal = { userAccountId: "admin", sessionId: "session" }
 const initialGrant = {
@@ -169,10 +170,12 @@ describe("authorization contract", () => {
         yield* service.addMember({ userAccountId: "other-user", tenantId: "tenant-a" })
 
         assert.deepStrictEqual(
-          yield* service.listAccessibleTenants({
-            userAccountId: principal.userAccountId,
-            tenantId: "tenant-not-selected",
-          }),
+          yield* service.listAccessibleTenants(
+            partial<Parameters<typeof service.listAccessibleTenants>[0]>({
+              userAccountId: principal.userAccountId,
+              tenantId: "tenant-not-selected",
+            }),
+          ),
           [
             { userAccountId: principal.userAccountId, tenantId: "tenant-b", status: "active" },
             { userAccountId: principal.userAccountId, tenantId: "tenant-c", status: "active" },

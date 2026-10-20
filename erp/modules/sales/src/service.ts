@@ -1,3 +1,4 @@
+import type { CapabilityType } from "../../../../framework/modules/authorization/mod.ts"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 
@@ -38,7 +39,7 @@ export const makeSalesServiceFromStore = <R>(storeEffect: Effect.Effect<SalesSto
     const messaging = yield* MessagingService
     const authorize = (
       input: { principal: Schema.Schema.Type<typeof Principal>; tenantId: string },
-      capability: string,
+      capability: CapabilityType,
     ) =>
       authorization.authorize({ principal: input.principal, tenantId: input.tenantId, capability })
     const listCustomers = Effect.fn("SalesService.listCustomers")(function* (

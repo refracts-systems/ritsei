@@ -1,3 +1,4 @@
+import type { CapabilityType } from "../../../../framework/modules/authorization/mod.ts"
 import { and, asc, eq } from "drizzle-orm"
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
@@ -377,7 +378,7 @@ const makeContactServiceFromStore = <R>(storeEffect: Effect.Effect<ContactBookSt
       A extends { principal: Schema.Schema.Type<typeof Principal>; tenantId: string },
     >(
       schema: Schema.Codec<A, unknown>,
-      capability: string,
+      capability: CapabilityType,
     ) =>
       Effect.fn(function* (input: Schema.Codec.Encoded<typeof schema>) {
         const decoded = yield* Schema.decodeUnknownEffect(schema)(input)

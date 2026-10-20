@@ -1,3 +1,4 @@
+import type { CapabilityType } from "../../../framework/modules/authorization/mod.ts"
 import * as Effect from "effect/Effect"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
 import * as Layer from "effect/Layer"
@@ -294,7 +295,7 @@ export const AuthorizationHandlers = HttpApiBuilder.group(RitseiApi, "Authorizat
     const authorize = (
       principal: typeof CurrentPrincipal.Service,
       tenantId: string,
-      capability: string,
+      capability: CapabilityType,
     ) => authorization.authorize({ principal, tenantId, capability })
     return handlers
       .handle(

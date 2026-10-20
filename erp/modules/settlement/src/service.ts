@@ -1,3 +1,4 @@
+import type { CapabilityType } from "../../../../framework/modules/authorization/mod.ts"
 import { and, asc, eq, inArray, lte, sql } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
@@ -108,8 +109,10 @@ export const makeSettlementService = Effect.gen(function* () {
   const billing = yield* BillingService
   const numbering = yield* NumberingService
 
-  const authorize = (input: { principal: Principal; tenantId: string }, capability: string) =>
-    authorization.authorize({ principal: input.principal, tenantId: input.tenantId, capability })
+  const authorize = (
+    input: { principal: Principal; tenantId: string },
+    capability: CapabilityType,
+  ) => authorization.authorize({ principal: input.principal, tenantId: input.tenantId, capability })
 
   const loadPayment = (tenantId: string, paymentId: string, lock = false) =>
     Effect.gen(function* () {

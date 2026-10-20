@@ -1,3 +1,4 @@
+import type { CapabilityType } from "../../../../framework/modules/authorization/mod.ts"
 import * as Clock from "effect/Clock"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
@@ -81,7 +82,7 @@ export const makeInventoryMemoryLayer = () =>
       const authorize = (
         principal: Schema.Codec.Encoded<typeof Principal>,
         tenantId: string,
-        capability: string,
+        capability: CapabilityType,
       ) => authorization.authorize({ principal, tenantId, capability })
       const service: InventoryService = {
         listWarehouses: (input) =>

@@ -23,6 +23,7 @@ import {
 } from "../../../../framework/foundation/mod.ts"
 import {
   AuthorizationService,
+  type CapabilityType,
   scopedCommand,
 } from "../../../../framework/modules/authorization/mod.ts"
 import { NumberingService } from "../../../../framework/modules/numbering/mod.ts"
@@ -187,7 +188,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
 
   const transition = (
     input: Schema.Codec.Encoded<typeof QuotationCommandInput>,
-    capability: string,
+    capability: CapabilityType,
     from: SalesQuotation["status"],
     to: "sent" | "accepted" | "rejected",
   ) =>

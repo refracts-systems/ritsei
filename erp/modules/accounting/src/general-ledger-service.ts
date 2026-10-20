@@ -1,3 +1,4 @@
+import type { CapabilityType } from "../../../../framework/modules/authorization/mod.ts"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 
@@ -68,7 +69,7 @@ export const makeGeneralLedgerServiceFromStore = <R>(
     const authorized = scopedCommand(authorization)
     const authorize = (
       input: { principal: Schema.Schema.Type<typeof Principal>; tenantId: string },
-      capability: string,
+      capability: CapabilityType,
     ) =>
       authorization.authorize({ principal: input.principal, tenantId: input.tenantId, capability })
 

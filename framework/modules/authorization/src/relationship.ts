@@ -39,7 +39,7 @@ export type RelationshipDecision = Schema.Schema.Type<typeof RelationshipDecisio
 
 export interface RelationshipEngine {
   readonly evaluate: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof RelationshipInput>,
   ) => Effect.Effect<
     RelationshipDecision,
     Schema.SchemaError | import("../../../foundation/mod.ts").DatabaseFailure
@@ -81,7 +81,9 @@ export const makeMemoryRelationshipEngine = (
 ): RelationshipEngine => {
   const allowed = new Set(allowedRelationships.map((input) => relationshipKey(input)))
   return {
-    evaluate: Effect.fn("RelationshipEngine.evaluate")(function* (input: unknown) {
+    evaluate: Effect.fn("RelationshipEngine.evaluate")(function* (
+      input: Schema.Codec.Encoded<typeof RelationshipInput>,
+    ) {
       const decoded = yield* Schema.decodeUnknownEffect(RelationshipInput)(input)
       if (defaultResult === "stale" || defaultResult === "unavailable") {
         return unavailable(decoded, defaultResult)
@@ -103,7 +105,9 @@ export const makeMemoryRelationshipEngine = (
 }
 
 export const makePostgresRelationshipEngine = (database: DatabaseService): RelationshipEngine => ({
-  evaluate: Effect.fn("RelationshipEngine.evaluate")(function* (input: unknown) {
+  evaluate: Effect.fn("RelationshipEngine.evaluate")(function* (
+    input: Schema.Codec.Encoded<typeof RelationshipInput>,
+  ) {
     const decoded = yield* Schema.decodeUnknownEffect(RelationshipInput)(input)
     if (decoded.resourceType !== "tenant" || decoded.relationship !== "member") {
       return unknown(decoded)

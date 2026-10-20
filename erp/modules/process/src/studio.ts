@@ -1,3 +1,4 @@
+import type { CapabilityType } from "../../../../framework/modules/authorization/mod.ts"
 import { and, asc, desc, eq, inArray } from "drizzle-orm"
 import * as Clock from "effect/Clock"
 import * as Context from "effect/Context"
@@ -671,7 +672,7 @@ export const makeProcessStudioService = Effect.gen(function* () {
   const authorize = (
     principal: Schema.Schema.Type<typeof Principal>,
     tenantId: string,
-    capability: string,
+    capability: CapabilityType,
   ) => authorization.authorize({ principal, tenantId, capability })
 
   const listCatalog = (input: Schema.Codec.Encoded<typeof ListProcessCatalogInput>) =>
