@@ -198,7 +198,7 @@ export const makeCommunicationService = Effect.gen(function* () {
 
   const processPurchaseOrderConfirmed = Effect.fn(
     "CommunicationService.processPurchaseOrderConfirmed",
-  )(function* (input: unknown) {
+  )(function* (input: Schema.Codec.Encoded<typeof ProcessPurchaseOrderConfirmedInput>) {
     const decoded = yield* Schema.decodeUnknownEffect(ProcessPurchaseOrderConfirmedInput)(input)
     const event = decoded.event
     const consumed = yield* messaging.consumeOnce(
@@ -258,12 +258,16 @@ export const makeCommunicationService = Effect.gen(function* () {
       return result
     })
 
-  const deliver = Effect.fn("CommunicationService.deliver")(function* (input: unknown) {
+  const deliver = Effect.fn("CommunicationService.deliver")(function* (
+    input: Schema.Codec.Encoded<typeof RetryCommunicationInput>,
+  ) {
     const decoded = yield* Schema.decodeUnknownEffect(RetryCommunicationInput)(input)
     return yield* send(decoded.communicationId, false)
   })
 
-  const retry = Effect.fn("CommunicationService.retry")(function* (input: unknown) {
+  const retry = Effect.fn("CommunicationService.retry")(function* (
+    input: Schema.Codec.Encoded<typeof RetryCommunicationInput>,
+  ) {
     const decoded = yield* Schema.decodeUnknownEffect(RetryCommunicationInput)(input)
     return yield* send(decoded.communicationId, true)
   })

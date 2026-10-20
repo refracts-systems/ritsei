@@ -6,6 +6,7 @@ import {
   CommunicationArtifact,
   CommunicationContext,
   CommunicationContextBuilder,
+  CommunicationContextInput,
   CommunicationIntent,
   CommunicationRecipientResolver,
   CommunicationRenderFailure,
@@ -126,7 +127,7 @@ export const makeCommunicationTestLayer = (options: CommunicationTestLayerOption
   const policy: CommunicationPolicy = {
     derivePurchaseOrderConfirmed: Effect.fn(
       "CommunicationPolicy.test.derivePurchaseOrderConfirmed",
-    )(function* (input: unknown) {
+    )(function* (input: Schema.Codec.Encoded<typeof EventEnvelope>) {
       const event = yield* Schema.decodeUnknownEffect(EventEnvelope)(input)
       if (
         event.eventType !== ProcurementPurchaseOrderConfirmedEvent.id ||
@@ -174,7 +175,9 @@ export const makeCommunicationTestLayer = (options: CommunicationTestLayerOption
   }
 
   const recipientResolver: CommunicationRecipientResolver = {
-    resolve: Effect.fn("CommunicationRecipientResolver.test.resolve")(function* (input: unknown) {
+    resolve: Effect.fn("CommunicationRecipientResolver.test.resolve")(function* (
+      input: Schema.Codec.Encoded<typeof CommunicationIntent>,
+    ) {
       const intent = yield* Schema.decodeUnknownEffect(CommunicationIntent)(input)
       const snapshot: RecipientSnapshot = {
         audience: intent.audience,
@@ -190,13 +193,10 @@ export const makeCommunicationTestLayer = (options: CommunicationTestLayerOption
   }
 
   const contextBuilder: CommunicationContextBuilder = {
-    build: Effect.fn("CommunicationContextBuilder.test.build")(function* (input: unknown) {
-      const decoded = yield* Schema.decodeUnknownEffect(
-        Schema.Struct({
-          intent: CommunicationIntent,
-          data: Schema.Json,
-        }),
-      )(input)
+    build: Effect.fn("CommunicationContextBuilder.test.build")(function* (
+      input: Schema.Codec.Encoded<typeof CommunicationContextInput>,
+    ) {
+      const decoded = yield* Schema.decodeUnknownEffect(CommunicationContextInput)(input)
       const context: CommunicationContext = {
         contextType: "purchase-order-confirmed-context",
         contextVersion: 1,
@@ -211,7 +211,9 @@ export const makeCommunicationTestLayer = (options: CommunicationTestLayerOption
   }
 
   const renderer: EmailRenderer = {
-    render: Effect.fn("EmailRenderer.test.render")(function* (input: unknown) {
+    render: Effect.fn("EmailRenderer.test.render")(function* (
+      input: Schema.Codec.Encoded<typeof EmailRenderInput>,
+    ) {
       const decoded = yield* Schema.decodeUnknownEffect(EmailRenderInput)(input)
       const html = decoded.message.nodes.map(renderHtmlNode).join("")
       const text = decoded.message.nodes.map(renderTextNode).filter(Boolean).join("\n\n")
@@ -235,7 +237,9 @@ export const makeCommunicationTestLayer = (options: CommunicationTestLayerOption
   }
 
   const transport: EmailTransport = {
-    send: Effect.fn("EmailTransport.test.send")(function* (input: unknown) {
+    send: Effect.fn("EmailTransport.test.send")(function* (
+      input: Schema.Codec.Encoded<typeof PreparedEmail>,
+    ) {
       const prepared = yield* Schema.decodeUnknownEffect(PreparedEmail)(input)
       sent.push(prepared)
       const status = statuses[Math.min(deliveryIndex, statuses.length - 1)] ?? "accepted"

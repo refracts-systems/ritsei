@@ -48,13 +48,12 @@ const intent = {
   timezone: "Asia/Jakarta",
   idempotencyKey: "purchase-order-approved:1",
   correlationId: "po-approval-1",
-}
+} as const
 
 it.effect("creates a versioned intent without coupling it to a provider", () =>
   Effect.gen(function* () {
-    const created = yield* createCommunicationIntent(
-      Object.fromEntries(Object.entries(intent).filter(([key]) => key !== "communicationId")),
-    )
+    const { communicationId: _communicationId, ...withoutId } = intent
+    const created = yield* createCommunicationIntent(withoutId)
     const decoded = yield* Schema.decodeUnknownEffect(CommunicationIntent)(created)
 
     assert.isString(decoded.communicationId)

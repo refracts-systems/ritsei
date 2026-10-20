@@ -342,7 +342,7 @@ export class CommunicationTransportFailure extends Schema.TaggedError<Communicat
 
 export interface CommunicationRecipientResolver {
   readonly resolve: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CommunicationIntent>,
   ) => Effect.Effect<
     RecipientSnapshot,
     CommunicationRecipientResolutionFailure | Schema.SchemaError
@@ -353,9 +353,15 @@ export const CommunicationRecipientResolver = Context.Service<CommunicationRecip
   "RITSEI/CommunicationRecipientResolver",
 )
 
+/** What a context builder receives: the intent and the owner data it is built from. */
+export const CommunicationContextInput = Schema.Struct({
+  intent: CommunicationIntent,
+  data: Schema.Json,
+})
+
 export interface CommunicationContextBuilder {
   readonly build: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CommunicationContextInput>,
   ) => Effect.Effect<CommunicationContext, CommunicationContextFailure | Schema.SchemaError>
 }
 
@@ -365,7 +371,7 @@ export const CommunicationContextBuilder = Context.Service<CommunicationContextB
 
 export interface EmailRenderer {
   readonly render: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof EmailRenderInput>,
   ) => Effect.Effect<CommunicationArtifact, CommunicationRenderFailure | Schema.SchemaError>
 }
 
@@ -373,13 +379,15 @@ export const EmailRenderer = Context.Service<EmailRenderer>("RITSEI/EmailRendere
 
 export interface EmailTransport {
   readonly send: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof PreparedEmail>,
   ) => Effect.Effect<DeliveryReceipt, CommunicationTransportFailure | Schema.SchemaError>
 }
 
 export const EmailTransport = Context.Service<EmailTransport>("RITSEI/EmailTransport")
 
-export const createCommunicationIntent = (input: unknown) =>
+export const createCommunicationIntent = (
+  input: Schema.Codec.Encoded<typeof CommunicationIntentInput>,
+) =>
   Effect.gen(function* () {
     const decoded = yield* Schema.decodeUnknownEffect(CommunicationIntentInput)(input)
     return {
