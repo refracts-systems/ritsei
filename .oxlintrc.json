@@ -91,7 +91,6 @@
         "framework/modules/identity/**",
         "framework/modules/integrations/**",
         "framework/modules/messaging/**",
-        "framework/modules/numbering/**",
         "framework/platform/postgres/**",
         "tests/**",
         "tooling/**"

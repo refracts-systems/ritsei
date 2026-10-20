@@ -50,7 +50,7 @@ export type AllocatedNumber = Schema.Schema.Type<typeof AllocatedNumber>
 
 export interface NumberingService {
   readonly allocate: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof AllocateNumberInput>,
   ) => Effect.Effect<AllocatedNumber, DatabaseFailure | Schema.SchemaError>
 }
 

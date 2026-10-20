@@ -19,7 +19,9 @@ export const makePostgresNumberingService = Effect.fn("Numbering.makePostgresSer
     const database = yield* Database
     const calendar = yield* Effect.serviceOption(FiscalCalendar)
 
-    const allocate = Effect.fn("NumberingService.allocate")(function* (input: unknown) {
+    const allocate = Effect.fn("NumberingService.allocate")(function* (
+      input: Schema.Codec.Encoded<typeof AllocateNumberInput>,
+    ) {
       const decoded = yield* Schema.decodeUnknownEffect(AllocateNumberInput)(input)
       const startMonth =
         decoded.fiscalYearStartMonth ??
