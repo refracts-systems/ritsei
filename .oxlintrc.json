@@ -78,7 +78,6 @@
         "erp/modules/process/**",
         "erp/modules/procurement/**",
         "erp/modules/sales/**",
-        "erp/modules/settlement/**",
         "erp/runtime/**",
         "framework/foundation/communication/**",
         "framework/foundation/database/**",

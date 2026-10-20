@@ -303,7 +303,9 @@ export const makeSettlementService = Effect.gen(function* () {
       `settlement.payment_${direction}.atomic`,
     )
 
-  const receivePayment = Effect.fn("SettlementService.receivePayment")(function* (input: unknown) {
+  const receivePayment = Effect.fn("SettlementService.receivePayment")(function* (
+    input: Schema.Codec.Encoded<typeof ReceivePaymentInput>,
+  ) {
     const decoded = yield* authorized(
       ReceivePaymentInput,
       SettlementCapabilities.paymentReceive,
@@ -311,13 +313,15 @@ export const makeSettlementService = Effect.gen(function* () {
     return yield* record("incoming", decoded)
   })
 
-  const makePayment = Effect.fn("SettlementService.makePayment")(function* (input: unknown) {
+  const makePayment = Effect.fn("SettlementService.makePayment")(function* (
+    input: Schema.Codec.Encoded<typeof MakePaymentInput>,
+  ) {
     const decoded = yield* authorized(MakePaymentInput, SettlementCapabilities.paymentMake)(input)
     return yield* record("outgoing", decoded)
   })
 
   const allocatePayment = Effect.fn("SettlementService.allocatePayment")(function* (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof AllocatePaymentInput>,
   ) {
     const decoded = yield* Schema.decodeUnknownEffect(AllocatePaymentInput)(input)
     const payment = yield* loadPayment(decoded.tenantId, decoded.paymentId)
@@ -337,7 +341,7 @@ export const makeSettlementService = Effect.gen(function* () {
   })
 
   const createPaymentTerm = Effect.fn("SettlementService.createPaymentTerm")(function* (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreatePaymentTermInput>,
   ) {
     const decoded = yield* authorized(
       CreatePaymentTermInput,
@@ -375,7 +379,7 @@ export const makeSettlementService = Effect.gen(function* () {
   })
 
   const assignPartyTerm = Effect.fn("SettlementService.assignPartyTerm")(function* (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof AssignPartyTermInput>,
   ) {
     const decoded = yield* authorized(
       AssignPartyTermInput,
@@ -473,7 +477,9 @@ export const makeSettlementService = Effect.gen(function* () {
           )
           .pipe(Effect.map((terms) => new Map(terms.map((term) => [term.partyId, term.netDays]))))
 
-  const aging = Effect.fn("SettlementService.aging")(function* (input: unknown) {
+  const aging = Effect.fn("SettlementService.aging")(function* (
+    input: Schema.Codec.Encoded<typeof AgingInput>,
+  ) {
     const decoded = yield* authorized(AgingInput, SettlementCapabilities.reportRead)(input)
     const items = yield* billing.listOpenItems(decoded)
     const netDays = yield* netDaysFor(decoded.tenantId, decoded.side, [
@@ -513,7 +519,7 @@ export const makeSettlementService = Effect.gen(function* () {
   })
 
   const customerStatement = Effect.fn("SettlementService.customerStatement")(function* (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof StatementInput>,
   ) {
     const decoded = yield* authorized(StatementInput, SettlementCapabilities.reportRead)(input)
     const documents = yield* billing.listDocuments({

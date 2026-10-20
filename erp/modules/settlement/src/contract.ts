@@ -164,19 +164,29 @@ export type PaymentFailure =
 /** Payments, allocations to billing documents, payment terms, aging, and statements (ADR-0102). */
 export interface SettlementService {
   readonly createPaymentTerm: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreatePaymentTermInput>,
   ) => Effect.Effect<PaymentTerm, SettlementErrors.PaymentTermAlreadyExists | CommonFailure>
   readonly assignPartyTerm: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof AssignPartyTermInput>,
   ) => Effect.Effect<void, SettlementErrors.PaymentTermNotFound | CommonFailure>
   /** Records a customer receipt: cash against receivables, allocated to customer documents. */
-  readonly receivePayment: (input: unknown) => Effect.Effect<Payment, PaymentFailure>
+  readonly receivePayment: (
+    input: Schema.Codec.Encoded<typeof ReceivePaymentInput>,
+  ) => Effect.Effect<Payment, PaymentFailure>
   /** Records a supplier payment: payables against cash, allocated to supplier documents. */
-  readonly makePayment: (input: unknown) => Effect.Effect<Payment, PaymentFailure>
+  readonly makePayment: (
+    input: Schema.Codec.Encoded<typeof MakePaymentInput>,
+  ) => Effect.Effect<Payment, PaymentFailure>
   /** Allocates the unallocated part of a recorded payment. */
-  readonly allocatePayment: (input: unknown) => Effect.Effect<Payment, PaymentFailure>
-  readonly aging: (input: unknown) => Effect.Effect<AgingReport, CommonFailure>
-  readonly customerStatement: (input: unknown) => Effect.Effect<CustomerStatement, CommonFailure>
+  readonly allocatePayment: (
+    input: Schema.Codec.Encoded<typeof AllocatePaymentInput>,
+  ) => Effect.Effect<Payment, PaymentFailure>
+  readonly aging: (
+    input: Schema.Codec.Encoded<typeof AgingInput>,
+  ) => Effect.Effect<AgingReport, CommonFailure>
+  readonly customerStatement: (
+    input: Schema.Codec.Encoded<typeof StatementInput>,
+  ) => Effect.Effect<CustomerStatement, CommonFailure>
 }
 
 export const SettlementService = Context.Service<SettlementService>("RITSEI/SettlementService")
