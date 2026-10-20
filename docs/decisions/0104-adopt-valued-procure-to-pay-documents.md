@@ -45,9 +45,10 @@ with the ledger.
 - With every receipt, return, and bill on these paths, goods received not invoiced is zero when all
   received goods are billed, stock value equals the inventory account, and payables aging equals the
   payables account (`tests/chains/procure-to-pay.postgres.test.ts`).
-- A supplier credit note credits goods received not invoiced at the billed price; when a credited
-  price differs from the purchase price, the difference stays in goods received not invoiced until a
-  variance-aware credit is added.
+- A supplier bill line records the received value it cleared from goods received not invoiced
+  (`matched_value`). A supplier credit note returns that value pro rata, the last units taking the
+  remainder, and reverses the price variance the bill booked, so crediting a whole bill restores
+  goods received not invoiced and purchase price variance to their balances before the bill.
 - The existing unvalued receipt command remains for current flows; tenants that value stock use the
   valued command.
 

@@ -44,10 +44,12 @@ payment ownership.
 
 - Settlement depends on Billing and Accounting; Billing depends on Accounting, Sales, Tax, and
   Product; neither depends on the other's tables.
-- Aging uses current open amounts for documents dated up to the as-of date; historical aging needs
-  settlement dates and is deferred. Bank statements, dunning, and payment runs stay out.
-- Billing numbers use the calendar year until fiscal-year configuration is readable outside
-  Accounting.
+- Every settlement and payment allocation records its business date (`settled_on`, `allocated_on`),
+  so aging as of an earlier date counts only what was settled by then and equals the control account
+  on that date. An allocation cannot predate its payment. Bank statements, dunning, and payment
+  runs stay out.
+- Billing, Settlement, Sales, and Procurement number documents by the legal entity's fiscal year
+  through the numbering `FiscalCalendar` port (ADR-0095).
 
 ## Alternatives Considered
 

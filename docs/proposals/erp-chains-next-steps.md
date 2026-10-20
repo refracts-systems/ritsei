@@ -17,46 +17,44 @@
 
 ## 1. Where the branch stands
 
-`exp/erp-chains` is 11 commits on `master` `143944c`: numbering, ledger, party contacts, product,
-valued inventory, tax, Order-to-Cash, Procure-to-Pay, a cleanup, and the anti-slop lint. Two chain
-tests prove the exit criteria against PostgreSQL. The diff is 239 files; about 260,000 of the added
+`exp/erp-chains` is 19 commits on `master` `143944c`: numbering, ledger, party contacts, product,
+valued inventory, tax, Order-to-Cash, Procure-to-Pay, a cleanup, the anti-slop lint, and four fixes. Three chain
+tests prove the exit criteria against PostgreSQL. The diff is 292 files; about 300,000 of the added
 lines are Drizzle `snapshot.json` files, so the reviewable source is far smaller.
 
 ## 2. Should the branch merge first?
 
-**Not as it stands.** Three reasons:
+**Not before the ADRs are accepted.** The reasons:
 
 1. **The ADRs are Proposed.** ADR-0095 to ADR-0104 record decisions the owner has not accepted.
    Merging code ahead of its decisions inverts the repository's rule (code follows an accepted ADR).
    Accepted ADRs are not rewritten afterwards, so edits to the decisions must happen before
    acceptance, not after merge.
-2. **Four known gaps are correctness gaps, not features** (section 3). Fixing them after merge puts a
-   migration or behavior change on top of shipped numbering and billing.
+2. **Four known gaps were correctness gaps, not features** (section 3); they are fixed here so no
+   migration or behavior change lands on top of shipped numbering and billing.
 3. **One reviewable unit is too large.** The commits are already one per module and phase.
 
-**Recommended order**
+**Order followed**
 
-1. Fix the four correctness gaps on this branch (section 3), one commit each.
-2. Review the ten ADRs; change wording on the branch, then flip `Proposed` to `Accepted` in the
-   commit that lands them.
-3. Open **one PR** for the branch (you asked to avoid PR churn). The repository squash-merges, which
-   flattens 11 commits into one; if per-phase history matters, ask for a merge commit or split into
-   three PRs: Phase 4 (numbering, ledger, party), Phase 5 (product through settlement), Phase 6
-   (approvals through P2P), with lint and cleanup riding on the last. The commits depend on each
-   other linearly, so the PRs would stack.
+1. Fixed the four correctness gaps on this branch (section 3), one commit each.
+2. Reviewed the ten ADRs and updated their wording to match the code. They stay **Proposed**:
+   accepting them is the owner's decision, made in the PR before merge, because accepted ADRs are
+   not rewritten afterwards.
+3. Open **one PR** for the branch. The repository squash-merges, which flattens the commits into
+   one; if per-phase history matters, ask for a merge commit or split into three PRs: Phase 4
+   (numbering, ledger, party), Phase 5 (product through settlement), Phase 6 (approvals through
+   P2P), with lint and cleanup riding on the last. The commits depend on each other linearly, so the
+   PRs would stack.
 4. After merge, start every item in section 4 from `master` on its own branch.
 
-## 3. Correctness gaps to close before merge
+## 3. Correctness gaps closed on this branch
 
-| # | Gap | Change | Exit criteria |
+| # | Gap | Resolution | Proven by |
 | --- | --- | --- | --- |
-| C1 | `POST /procurement/purchase-orders/:id/confirm` still confirms any purchase order without consulting approvals | Make the legacy confirm check the approval policy (reuse `ApprovalService.isRequired` and `getForSubject`) or retire it in favor of `releasePurchaseOrder` | A purchase order above the threshold cannot be confirmed through any command without an approved request; the existing procurement tests still pass |
-| C2 | Billing, delivery, receipt, return, and payment numbers use the calendar year (`fiscalYearStartMonth: 1` in five services) | Read the legal entity's fiscal-year start month through an Accounting contract (a `GeneralLedgerService` query) and pass it to numbering | A legal entity with `fiscal_year_start_month = 4` numbers a 2026-03-31 invoice in series 2025 and a 2026-04-01 invoice in series 2026 |
-| C3 | A supplier credit note at a price different from the purchase price leaves the difference in goods received not invoiced | Credit lines post at the original billed price, with the purchase-price difference to purchase price variance, mirroring the bill | After bill, receipt, and a credit note at a different price, goods received not invoiced is zero |
-| C4 | Aging uses today's open amounts for documents dated up to the as-of date, so an as-of report changes when later payments arrive | Compute open amount as of a date from `invoice_settlements.created_at` and payment dates, or store the settlement date explicitly | Aging as of a past date equals the receivables or payables account balance as of that date, before and after a later payment |
-
-C4 may need a settlement date column (`settled_on`) in `billing.invoice_settlements`, which is a
-migration; decide it before merge so the table ships once.
+| C1 | The legacy purchase order confirmation bypassed approval policies | `confirmPurchaseOrder` consults `ApprovalService` when provided and fails with `PurchaseOrderApprovalRequired`, leaving a pending request | `tests/chains/procure-to-pay.postgres.test.ts` |
+| C2 | Documents were numbered by calendar year, not the legal entity's fiscal year | A `FiscalCalendar` port in numbering, implemented by Accounting from the accounting configuration; services no longer pass a month | `tests/chains/fiscal-calendar.postgres.test.ts` (April fiscal year) |
+| C3 | A supplier credit note left the price difference in goods received not invoiced | Bill lines store `matched_value`; a credit note returns it pro rata and reverses the variance. After a bill and a full credit, goods received not invoiced and variance return to their balances before the bill | `tests/chains/procure-to-pay.postgres.test.ts` |
+| C4 | Aging changed when later payments arrived | `invoice_settlements.settled_on` and `payment_allocations.allocated_on` record the business date; open items and unallocated payments are computed as of the report date | `tests/chains/order-to-cash.postgres.test.ts` and `procure-to-pay.postgres.test.ts` (aging equals the control account on past dates) |
 
 ## 4. Follow-up work after merge
 

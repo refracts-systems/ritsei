@@ -26,8 +26,11 @@ entity and fiscal year, and auditors read gaps as deleted documents. No numberin
    schema and exposes `NumberingService.allocate`. ERP modules call it from their own commands; the
    number is an attribute of the owner's document, never a separate business fact.
 2. **A series is per tenant, scope, document type, and fiscal year.** The scope is normally the
-   issuing legal entity. The caller passes the document date and the scope's fiscal-year start month;
-   the series key uses the calendar year in which that fiscal year starts. A new fiscal year starts a
+   issuing legal entity. The caller passes the document date; the fiscal-year start month comes from
+   the `FiscalCalendar` port, which Accounting implements from the legal entity's accounting
+   configuration (calendar year when none exists), so every document owner numbers a legal entity's
+   documents by the same fiscal year. A caller may pass the month explicitly. The series key uses the
+   calendar year in which that fiscal year starts. A new fiscal year starts a
    new series at 1. The format is `<prefix><fiscal year>/<zero-padded value>`, for example
    `INV/2026/00001`; the caller supplies the prefix for a new series.
 3. **Every series is gapless.** Allocation runs inside the transaction that commits the numbered

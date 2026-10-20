@@ -39,8 +39,9 @@ approval workflow, and the process engine is deferred (ADR-0091 §6).
 
 - Multi-step and amount-banded chains, delegation, and escalation stay out until a pilot needs them;
   they belong to the process engine when it returns.
-- The existing purchase order confirmation command does not consult approvals; the release command
-  does. Tenants that configure approval policies use the release command.
+- Every purchase order confirmation path consults approvals when the service is provided: the legacy
+  confirmation command fails with `PurchaseOrderApprovalRequired` and leaves a pending request when
+  the total needs approval and none covers it, so approval policies cannot be bypassed.
 
 ## Alternatives Considered
 

@@ -372,7 +372,7 @@ for review before merge:
 | 6 | D3 ([ADR-0100](../decisions/0100-adopt-moving-average-inventory-valuation.md)), D10 ([ADR-0103](../decisions/0103-adopt-threshold-approvals-with-separation-of-duties.md)), [ADR-0104](../decisions/0104-adopt-valued-procure-to-pay-documents.md) | Moving-average valuation, stock count, approvals, supplier prices, PO release, valued receipts, returns, three-way-matched bills, outgoing payments, payables aging | `tests/chains/procure-to-pay.postgres.test.ts` |
 
 Not yet done from these phases: invoice PDF and email, extension points (custom fields), screens
-beyond the product and tax masters, credit-limit checks, and a variance-aware supplier credit note.
+beyond the product and tax masters, and credit-limit checks.
 
 ### 8.2 Post-pilot waves (default order)
 
