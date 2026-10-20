@@ -86,7 +86,6 @@
         "framework/foundation/jobs/**",
         "framework/foundation/workload/**",
         "framework/modules/authorization/**",
-        "framework/modules/identity/**",
         "framework/modules/integrations/**",
         "framework/platform/postgres/**",
         "tests/**",

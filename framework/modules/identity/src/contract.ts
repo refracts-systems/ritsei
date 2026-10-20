@@ -65,7 +65,7 @@ export type UserAccountAuthenticationState = Schema.Schema.Type<
 
 export interface UserAccountService {
   readonly create: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreateUserAccountInput>,
   ) => Effect.Effect<
     UserAccount,
     | import("effect/Schema").SchemaError
@@ -73,7 +73,7 @@ export interface UserAccountService {
     | import("../../../foundation/mod.ts").DatabaseFailure
   >
   readonly createForTenant: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreateUserAccountForTenantInput>,
   ) => Effect.Effect<
     UserAccount,
     | IdentityAuthorizationDenied
@@ -83,7 +83,7 @@ export interface UserAccountService {
     | import("../../messaging/mod.ts").EventIdempotencyConflict
   >
   readonly resolveExternalSubject: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ExternalSubject>,
   ) => Effect.Effect<
     UserAccount,
     | import("./errors.ts").ExternalSubjectNotFound
@@ -91,7 +91,7 @@ export interface UserAccountService {
     | import("../../../foundation/mod.ts").DatabaseFailure
   >
   readonly bindExternalSubject: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof BindExternalSubjectInput>,
   ) => Effect.Effect<
     UserAccount,
     | import("./errors.ts").ExternalSubjectAlreadyBound
@@ -126,7 +126,7 @@ export interface UserAccountService {
     import("../../../foundation/mod.ts").DatabaseFailure
   >
   readonly update: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof UpdateUserAccountInput>,
   ) => Effect.Effect<
     UserAccount,
     | import("./errors.ts").UserAccountAlreadyExists

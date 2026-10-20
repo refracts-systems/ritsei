@@ -30,6 +30,7 @@ import {
 } from "../mod.ts"
 import { makeUserAccountMemoryStore } from "../src/memory.ts"
 import { makeUserAccountServiceFromStore } from "../src/service.ts"
+import { partial } from "../../../../tests/support/partial.ts"
 
 const identityTenantId = "00000000-0000-4000-8000-000000000001"
 const identityDeniedTenantId = "00000000-0000-4000-8000-000000000002"
@@ -309,7 +310,9 @@ describe("user account contract", () => {
     withUserAccount(
       Effect.gen(function* () {
         const error = yield* Effect.flip(
-          UserAccountService.use((service) => service.create({ email: 42 })),
+          UserAccountService.use((service) =>
+            service.create(partial<Parameters<typeof service.create>[0]>({ email: 42 })),
+          ),
         )
 
         assert.instanceOf(error, Error)

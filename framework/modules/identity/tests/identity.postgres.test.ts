@@ -15,6 +15,7 @@ import {
   UserAccountNotFound,
 } from "../mod.ts"
 import { postgresCode, postgresConstraint } from "../../../../tests/support/postgres-error.ts"
+import { partial } from "../../../../tests/support/partial.ts"
 
 const databaseUrl = process.env["DATABASE_URL"]
 const postgresFailure = <A>(effect: () => Promise<A>) =>
@@ -164,7 +165,9 @@ it.effect.skipIf(databaseUrl === undefined)(
         assert.instanceOf(updateDuplicate, UserAccountAlreadyExists)
         assert.strictEqual(updateDuplicate.email, "duplicate@example.com")
 
-        const invalid = yield* Effect.flip(service.create({ email: 42 }))
+        const invalid = yield* Effect.flip(
+          service.create(partial<Parameters<typeof service.create>[0]>({ email: 42 })),
+        )
         assert.instanceOf(invalid, Error)
         assert.match(invalid.message, /email/)
         const blank = yield* Effect.flip(service.create({ email: "   " }))

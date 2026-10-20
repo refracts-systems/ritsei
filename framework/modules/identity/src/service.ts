@@ -29,7 +29,9 @@ export const makeUserAccountServiceFromStore = <R>(
     const databaseOption = yield* Effect.serviceOption(Database)
     const authorizerOption = yield* Effect.serviceOption(IdentityAccountAuthorizer)
     const publisherOption = yield* Effect.serviceOption(IdentityEventPublisher)
-    const create = Effect.fn("UserAccountService.create")(function* (input: unknown) {
+    const create = Effect.fn("UserAccountService.create")(function* (
+      input: Schema.Codec.Encoded<typeof CreateUserAccountInput>,
+    ) {
       const decoded = yield* Schema.decodeUnknownEffect(CreateUserAccountInput)(input)
       return yield* accountStore.create(normalizeEmail(decoded.email))
     })
@@ -37,7 +39,7 @@ export const makeUserAccountServiceFromStore = <R>(
     const decodeUserAccountIds = (ids: readonly string[]) =>
       Effect.forEach(ids, decodeUserAccountId)
     const createForTenant = Effect.fn("UserAccountService.createForTenant")(function* (
-      input: unknown,
+      input: Schema.Codec.Encoded<typeof CreateUserAccountForTenantInput>,
     ) {
       const decoded = yield* Schema.decodeUnknownEffect(CreateUserAccountForTenantInput)(input)
       if (Option.isNone(authorizerOption) || Option.isNone(publisherOption)) {
@@ -83,13 +85,13 @@ export const makeUserAccountServiceFromStore = <R>(
         : yield* createAndPublish
     })
     const resolveExternalSubject = Effect.fn("UserAccountService.resolveExternalSubject")(
-      function* (input: unknown) {
+      function* (input: Schema.Codec.Encoded<typeof ExternalSubject>) {
         const decoded = yield* Schema.decodeUnknownEffect(ExternalSubject)(input)
         return yield* accountStore.resolveExternalSubject(decoded.issuer, decoded.subject)
       },
     )
     const bindExternalSubject = Effect.fn("UserAccountService.bindExternalSubject")(function* (
-      input: unknown,
+      input: Schema.Codec.Encoded<typeof BindExternalSubjectInput>,
     ) {
       const decoded = yield* Schema.decodeUnknownEffect(BindExternalSubjectInput)(input)
       return yield* accountStore.bindExternalSubject(
@@ -110,7 +112,9 @@ export const makeUserAccountServiceFromStore = <R>(
       },
     )
     const list = Effect.fn("UserAccountService.list")(() => accountStore.list())
-    const update = Effect.fn("UserAccountService.update")(function* (input: unknown) {
+    const update = Effect.fn("UserAccountService.update")(function* (
+      input: Schema.Codec.Encoded<typeof UpdateUserAccountInput>,
+    ) {
       const decoded = yield* Schema.decodeUnknownEffect(UpdateUserAccountInput)(input)
       return yield* accountStore.update(decoded.id, normalizeEmail(decoded.email))
     })

@@ -46,10 +46,11 @@ const toAuthenticationState = (row: {
     row.sessionInvalidatedAt === null ? null : row.sessionInvalidatedAt.toISOString(),
 })
 
-const isDuplicateEmail = (error: unknown) => isDatabaseConstraint(error, "user_accounts_email_key")
-const isDuplicateExternalSubject = (error: unknown) =>
+const isDuplicateEmail = (error: DatabaseFailure) =>
+  isDatabaseConstraint(error, "user_accounts_email_key")
+const isDuplicateExternalSubject = (error: DatabaseFailure) =>
   isDatabaseConstraint(error, "external_subject_mappings_issuer_subject_key")
-const isMissingExternalSubjectUser = (error: unknown) =>
+const isMissingExternalSubjectUser = (error: DatabaseFailure) =>
   isDatabaseConstraint(error, "external_subject_mappings_user_account_id_fkey", "23503")
 
 export const makeUserAccountPostgresStore = Effect.gen(function* () {
