@@ -1188,7 +1188,7 @@ it.effect.skipIf(databaseUrl === undefined)(
         // SAFETY: the double keeps the real messaging members and replaces only append.
         const failingMessaging = {
           ...messaging,
-          append: (event: unknown) =>
+          append: (event: Parameters<typeof messaging.append>[0]) =>
             failReceipt
               ? Effect.fail(
                   new DatabaseFailure({
@@ -1962,7 +1962,7 @@ it.effect.skipIf(databaseUrl === undefined)(
         // SAFETY: the double keeps the real messaging members and replaces only append.
         const eventConflictMessaging = {
           ...messaging,
-          append: (event: unknown) => {
+          append: (event: Parameters<typeof messaging.append>[0]) => {
             // SAFETY: the test calls this double only with inputs of the shape it reads.
             const candidate = event as {
               readonly aggregateId: string

@@ -113,7 +113,7 @@ const makeRecordingMessagingLayer = (events: EventEnvelope[]) =>
     MessagingService,
     Effect.map(MessagingService, (messaging) => ({
       ...messaging,
-      append: (input: unknown) =>
+      append: (input: Parameters<typeof messaging.append>[0]) =>
         messaging.append(input).pipe(Effect.tap((event) => Effect.sync(() => events.push(event)))),
     })),
   ).pipe(Layer.provide(makeMessagingTestLayer()))
@@ -124,7 +124,7 @@ const makeFailOnceMessagingLayer = () => {
     MessagingService,
     Effect.map(MessagingService, (messaging) => ({
       ...messaging,
-      append: (input: unknown) => {
+      append: (input: Parameters<typeof messaging.append>[0]) => {
         if (fail) {
           fail = false
           return Effect.fail(

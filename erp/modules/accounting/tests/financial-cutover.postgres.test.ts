@@ -591,7 +591,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
       // SAFETY: the double keeps the real messaging members and replaces only append.
       const failingMessaging = {
         ...messaging,
-        append: (event: unknown) =>
+        append: (event: Parameters<typeof messaging.append>[0]) =>
           failReceipt
             ? Effect.fail(
                 new DatabaseFailure({

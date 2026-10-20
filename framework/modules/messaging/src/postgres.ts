@@ -74,7 +74,9 @@ export const makePostgresMessagingService = Effect.fn("Messaging.makePostgresSer
         cause: new Error("consumer receipt event identity does not match source"),
       })
 
-    const append = Effect.fn("MessagingService.append")(function* (input: unknown) {
+    const append = Effect.fn("MessagingService.append")(function* (
+      input: Schema.Codec.Encoded<typeof AppendEventInput>,
+    ) {
       const decoded = yield* Schema.decodeUnknownEffect(AppendEventInput)(input)
       const occurredAt = new Date(decoded.occurredAt)
       return yield* database.withTransaction(
@@ -137,7 +139,9 @@ export const makePostgresMessagingService = Effect.fn("Messaging.makePostgresSer
       )
     })
 
-    const getEvent = Effect.fn("MessagingService.getEvent")(function* (input: unknown) {
+    const getEvent = Effect.fn("MessagingService.getEvent")(function* (
+      input: Schema.Codec.Encoded<typeof GetEventInput>,
+    ) {
       const decoded = yield* Schema.decodeUnknownEffect(GetEventInput)(input)
       const rows = yield* database.query(
         (db) =>
@@ -154,7 +158,10 @@ export const makePostgresMessagingService = Effect.fn("Messaging.makePostgresSer
         : yield* decodePersistedEvent(rows[0], "messaging.event.get.decode")
     })
 
-    const consumeOnce = <A, E, R>(input: unknown, effect: Effect.Effect<A, E, R>) =>
+    const consumeOnce = <A, E, R>(
+      input: Schema.Codec.Encoded<typeof ConsumeOnceInput>,
+      effect: Effect.Effect<A, E, R>,
+    ) =>
       Effect.fn("MessagingService.consumeOnce")(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(ConsumeOnceInput)(input)
         const result = yield* database

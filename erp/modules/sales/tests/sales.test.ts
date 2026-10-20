@@ -70,7 +70,7 @@ const withSales = <A, E>(
       if (onPublished === undefined) return base
       return {
         ...base,
-        append: (input: unknown) =>
+        append: (input: Parameters<typeof base.append>[0]) =>
           base.append(input).pipe(Effect.tap((event) => Effect.sync(() => onPublished(event)))),
       }
     }),

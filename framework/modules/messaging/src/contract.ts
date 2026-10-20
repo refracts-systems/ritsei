@@ -95,7 +95,7 @@ export type ConsumeOnceResult<A> =
 
 export interface MessagingService {
   readonly append: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof AppendEventInput>,
   ) => Effect.Effect<
     EventEnvelope,
     | import("./errors.ts").EventIdempotencyConflict
@@ -103,14 +103,14 @@ export interface MessagingService {
     | Schema.SchemaError
   >
   readonly getEvent: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof GetEventInput>,
   ) => Effect.Effect<
     EventEnvelope | undefined,
     import("../../../foundation/mod.ts").DatabaseFailure | Schema.SchemaError
   >
   /** The effect must be PostgreSQL-local so it and the completed receipt share one transaction. */
   readonly consumeOnce: <A, E, R>(
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ConsumeOnceInput>,
     effect: Effect.Effect<A, E, R>,
   ) => Effect.Effect<
     ConsumeOnceResult<A>,

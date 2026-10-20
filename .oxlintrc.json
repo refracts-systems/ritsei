@@ -88,7 +88,6 @@
         "framework/modules/authorization/**",
         "framework/modules/identity/**",
         "framework/modules/integrations/**",
-        "framework/modules/messaging/**",
         "framework/platform/postgres/**",
         "tests/**",
         "tooling/**"
