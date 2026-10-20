@@ -12,6 +12,7 @@
     "apps/web/src/ui/generated/**",
     "apps/web/src/shared/contracts/generated/**",
     "apps/web/dist/**",
-    "db/migrations/**/snapshot.json"
+    "db/migrations/**/snapshot.json",
+    "tooling/oxlint/anti-slop/**"
   ]
 }
