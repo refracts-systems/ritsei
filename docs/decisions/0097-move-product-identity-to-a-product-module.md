@@ -1,6 +1,6 @@
 # ADR-0097: Move Product Identity to a Product Module
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-20
 - Amends: ADR-0035 (item identity moves out of Inventory)
 - Compatible with: ADR-0015, ADR-0091, ADR-0094

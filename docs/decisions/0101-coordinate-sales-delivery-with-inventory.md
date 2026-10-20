@@ -1,6 +1,6 @@
 # ADR-0101: Coordinate Sales Delivery with Inventory
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-20
 - Amends: None
 - Compatible with: ADR-0015, ADR-0047, ADR-0091, ADR-0100

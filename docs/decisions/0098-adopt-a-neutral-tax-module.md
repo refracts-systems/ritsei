@@ -1,6 +1,6 @@
 # ADR-0098: Adopt a Neutral Tax Module
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-20
 - Amends: None
 - Compatible with: ADR-0013, ADR-0016, ADR-0042, ADR-0096

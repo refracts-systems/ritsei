@@ -1,6 +1,6 @@
 # ADR-0100: Adopt Moving-Average Inventory Valuation
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-20
 - Amends: ADR-0035, ADR-0036 (which excluded valuation)
 - Compatible with: ADR-0047, ADR-0096, ADR-0097

@@ -118,15 +118,15 @@ current system; ADRs preserve decision history.
 | [`0092`](./0092-retain-tigerbeetle-as-designated-ledger-engine.md)                            | Retain TigerBeetle as the designated future ledger engine                                        | Accepted   |
 | [`0093`](./0093-retain-isolation-runtime-and-analytic-target-designs.md)                      | Retain workload isolation, the Stateful Entity Runtime, and the analytic plane as target designs | Accepted   |
 | [`0094`](./0094-adopt-module-manifest-registry-and-generator.md)                              | Adopt the module manifest, registry, and generator                                               | Accepted   |
-| [`0095`](./0095-adopt-gapless-document-numbering.md)                                          | Adopt gapless document numbering                                                                 | Proposed   |
-| [`0096`](./0096-adopt-posting-rules-and-legal-entity-ledger.md)                               | Adopt posting rules and the legal-entity general ledger                                          | Proposed   |
-| [`0097`](./0097-move-product-identity-to-a-product-module.md)                                 | Move product identity to a product module                                                        | Proposed   |
-| [`0098`](./0098-adopt-a-neutral-tax-module.md)                                                | Adopt a neutral tax module                                                                       | Proposed   |
-| [`0099`](./0099-make-sales-customers-party-roles.md)                                          | Make sales customers party roles                                                                 | Proposed   |
-| [`0100`](./0100-adopt-moving-average-inventory-valuation.md)                                  | Adopt moving-average inventory valuation                                                         | Proposed   |
-| [`0101`](./0101-coordinate-sales-delivery-with-inventory.md)                                  | Coordinate sales delivery with inventory                                                         | Proposed   |
-| [`0102`](./0102-split-billing-and-settlement.md)                                              | Split billing and settlement                                                                     | Proposed   |
-| [`0103`](./0103-adopt-threshold-approvals-with-separation-of-duties.md)                       | Adopt threshold approvals with separation of duties                                              | Proposed   |
-| [`0104`](./0104-adopt-valued-procure-to-pay-documents.md)                                     | Adopt valued procure-to-pay documents                                                            | Proposed   |
+| [`0095`](./0095-adopt-gapless-document-numbering.md)                                          | Adopt gapless document numbering                                                                 | Accepted   |
+| [`0096`](./0096-adopt-posting-rules-and-legal-entity-ledger.md)                               | Adopt posting rules and the legal-entity general ledger                                          | Accepted   |
+| [`0097`](./0097-move-product-identity-to-a-product-module.md)                                 | Move product identity to a product module                                                        | Accepted   |
+| [`0098`](./0098-adopt-a-neutral-tax-module.md)                                                | Adopt a neutral tax module                                                                       | Accepted   |
+| [`0099`](./0099-make-sales-customers-party-roles.md)                                          | Make sales customers party roles                                                                 | Accepted   |
+| [`0100`](./0100-adopt-moving-average-inventory-valuation.md)                                  | Adopt moving-average inventory valuation                                                         | Accepted   |
+| [`0101`](./0101-coordinate-sales-delivery-with-inventory.md)                                  | Coordinate sales delivery with inventory                                                         | Accepted   |
+| [`0102`](./0102-split-billing-and-settlement.md)                                              | Split billing and settlement                                                                     | Accepted   |
+| [`0103`](./0103-adopt-threshold-approvals-with-separation-of-duties.md)                       | Adopt threshold approvals with separation of duties                                              | Accepted   |
+| [`0104`](./0104-adopt-valued-procure-to-pay-documents.md)                                     | Adopt valued procure-to-pay documents                                                            | Accepted   |
 
 Accepted ADRs must not be rewritten to alter history. Create a new ADR and use `Supersedes`.

@@ -1,6 +1,6 @@
 # ADR-0102: Split Billing and Settlement
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-20
 - Amends: None
 - Compatible with: ADR-0042, ADR-0091, ADR-0095, ADR-0096, ADR-0098

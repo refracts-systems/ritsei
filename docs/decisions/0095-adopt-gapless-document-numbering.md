@@ -1,6 +1,6 @@
 # ADR-0095: Adopt Gapless Document Numbering
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-20
 - Amends: None
 - Compatible with: ADR-0091, ADR-0094

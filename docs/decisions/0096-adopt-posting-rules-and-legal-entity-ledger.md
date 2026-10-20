@@ -1,6 +1,6 @@
 # ADR-0096: Adopt Posting Rules and the Legal-Entity General Ledger
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-20
 - Amends: None
 - Compatible with: ADR-0042, ADR-0091, ADR-0092, ADR-0095

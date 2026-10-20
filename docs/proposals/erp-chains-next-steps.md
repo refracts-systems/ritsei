@@ -7,7 +7,7 @@
 >
 > **Does not own:** The phase definitions and decisions D1–D10, which belong to the
 > [ERP parity plan](./erp-module-parity-plan.md), and each decision's rationale, which belongs to
-> ADR-0095 through ADR-0104 (all Proposed).
+> ADR-0095 through ADR-0104 (all Accepted).
 >
 > **Related documents**
 >
@@ -24,12 +24,11 @@ lines are Drizzle `snapshot.json` files, so the reviewable source is far smaller
 
 ## 2. Should the branch merge first?
 
-**Not before the ADRs are accepted.** The reasons:
+**Yes, once reviewed.** The reasons:
 
-1. **The ADRs are Proposed.** ADR-0095 to ADR-0104 record decisions the owner has not accepted.
-   Merging code ahead of its decisions inverts the repository's rule (code follows an accepted ADR).
-   Accepted ADRs are not rewritten afterwards, so edits to the decisions must happen before
-   acceptance, not after merge.
+1. **The ADRs are Accepted in this branch.** ADR-0095 to ADR-0104 were reworded to match the code
+   and accepted in the same PR as the code, so code and decisions land together. Accepted ADRs are
+   not rewritten afterwards.
 2. **Four known gaps were correctness gaps, not features** (section 3); they are fixed here so no
    migration or behavior change lands on top of shipped numbering and billing.
 3. **One reviewable unit is too large.** The commits are already one per module and phase.
@@ -37,9 +36,7 @@ lines are Drizzle `snapshot.json` files, so the reviewable source is far smaller
 **Order followed**
 
 1. Fixed the four correctness gaps on this branch (section 3), one commit each.
-2. Reviewed the ten ADRs and updated their wording to match the code. They stay **Proposed**:
-   accepting them is the owner's decision, made in the PR before merge, because accepted ADRs are
-   not rewritten afterwards.
+2. Reviewed the ten ADRs, updated their wording to match the code, and accepted them in the PR.
 3. Open **one PR** for the branch. The repository squash-merges, which flattens the commits into
    one; if per-phase history matters, ask for a merge commit or split into three PRs: Phase 4
    (numbering, ledger, party), Phase 5 (product through settlement), Phase 6 (approvals through

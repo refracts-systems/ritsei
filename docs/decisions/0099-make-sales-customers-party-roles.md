@@ -1,6 +1,6 @@
 # ADR-0099: Make Sales Customers Party Roles
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-20
 - Amends: None
 - Compatible with: ADR-0014, ADR-0015, ADR-0021, ADR-0091

@@ -1,6 +1,6 @@
 # ADR-0104: Adopt Valued Procure-to-Pay Documents
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-20
 - Amends: None
 - Compatible with: ADR-0047, ADR-0096, ADR-0100, ADR-0102, ADR-0103

@@ -1,6 +1,6 @@
 # ADR-0103: Adopt Threshold Approvals with Separation of Duties
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-20
 - Amends: None
 - Compatible with: ADR-0006, ADR-0031, ADR-0091

@@ -362,8 +362,7 @@ are proposed post-pilot waves; their order is a default that pilot evidence may 
 
 #### Implementation status (branch `exp/erp-chains`, 2026-10-20)
 
-Phases 4–6 are implemented on the experiment branch, with every decision recorded as a Proposed ADR
-for review before merge:
+Phases 4–6 are implemented on the experiment branch, with every decision recorded as an Accepted ADR:
 
 | Phase | Decisions | Implemented | Proven by |
 | --- | --- | --- | --- |
