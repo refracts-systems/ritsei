@@ -127,14 +127,17 @@ export const routeWithId = (route: string, id: string) =>
 export const definedFields = (fields: Readonly<Record<string, unknown>>) =>
   Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== undefined))
 
-export const responseMatches = (value: object, expected: Readonly<Record<string, unknown>>) =>
+export const responseMatches = <Owner>(
+  value: Owner,
+  expected: Readonly<Partial<Record<keyof Owner, unknown>>>,
+) =>
   Object.entries(expected).every(
-    ([key, expectedValue]) => (value as Record<string, unknown>)[key] === expectedValue,
+    ([key, expectedValue]) => value[key as keyof Owner] === expectedValue,
   )
 
-export const responseListMatches = <A extends object>(
+export const responseListMatches = <A>(
   values: readonly A[],
-  expected: Readonly<Record<string, unknown>>,
+  expected: Readonly<Partial<Record<keyof A, unknown>>>,
 ) => values.every((value) => responseMatches(value, expected))
 
 export const requestJson = Effect.fn("Frontend.requestJson")(function* (

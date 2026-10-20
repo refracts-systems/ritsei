@@ -151,16 +151,16 @@ const layerOf = (path: string) =>
         ? "extensions"
         : undefined
 
-const forbiddenLayers: Readonly<Record<string, readonly string[]>> = {
-  framework: ["erp", "extensions"],
-  erp: ["extensions"],
-}
+const forbiddenLayers: ReadonlyMap<string, readonly string[]> = new Map([
+  ["framework", ["erp", "extensions"]],
+  ["erp", ["extensions"]],
+])
 
 export const analyzeLayerImports = (files: readonly SourceFile[]): readonly string[] => {
   const failures: string[] = []
   for (const file of files) {
     const path = normalizePath(file.path)
-    const forbidden = forbiddenLayers[layerOf(path) ?? ""] ?? []
+    const forbidden = forbiddenLayers.get(layerOf(path) ?? "") ?? []
     for (const { specifier } of extractModuleImports(file)) {
       const target = resolveLocal(path, specifier)
       const targetLayer = target === undefined ? undefined : layerOf(normalizePath(target))

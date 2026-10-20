@@ -69,11 +69,11 @@ const journal = {
   ],
 }
 
-const observedInput: { value?: unknown } = {}
+const observedInputs: unknown[] = []
 const accountingService: AccountingServiceContract = {
   listAccountingConfigurations: (input: unknown) =>
     Effect.sync(() => {
-      observedInput.value = input
+      observedInputs.push(input)
       return [configuration]
     }),
   listAccounts: () => Effect.succeed([account]),
@@ -194,7 +194,7 @@ it.layer(TestHttpServices)("Accounting API contracts", (it) => {
         }),
         journal,
       )
-      const captured = observedInput.value as { tenantId: string; principal: typeof principal }
+      const captured = observedInputs.at(-1) as { tenantId: string; principal: typeof principal }
       assert.strictEqual(captured.tenantId, tenantId)
       assert.deepStrictEqual(captured.principal, principal)
     }),

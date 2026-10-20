@@ -263,10 +263,12 @@ it.effect(
         )
         assert.deepEqual(
           requests
+            .values()
             .filter(
               (request) => request.path === "/accounting/accounts" && request.method === "POST",
             )
-            .map((request) => request.body),
+            .map((request) => request.body)
+            .toArray(),
           [
             { code: "1000", name: "Cash", type: "asset" },
             { code: "4000", name: "Revenue", type: "revenue" },

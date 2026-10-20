@@ -50,13 +50,15 @@ const order = {
 
 const unused = () => Effect.die(new Error("unused procurement endpoint in API integration test"))
 
-const makeProcurementStub = (observedToken: { value?: string }): ProcurementServiceContract => ({
+const makeProcurementStub = (
+  observedTokens: Array<string | undefined>,
+): ProcurementServiceContract => ({
   createSupplierAccount: unused,
   listSupplierAccounts: () => Effect.succeed([]),
   createPurchaseOrder: () => Effect.succeed(order),
   getPurchaseOrder: () =>
     Effect.gen(function* () {
-      observedToken.value = yield* CurrentConsistencyToken
+      observedTokens.push(yield* CurrentConsistencyToken)
       return order
     }),
   listPurchaseOrders: () => Effect.succeed([order]),
@@ -96,7 +98,7 @@ const TestHttpServices = Layer.mergeAll(Path.layer, Etag.layerWeak, HttpPlatform
 it.layer(TestHttpServices)("procurement API consistency headers", (it) => {
   it.effect("captures on create and forwards the token on read", () =>
     Effect.gen(function* () {
-      const observedToken: { value?: string } = {}
+      const observedTokens: Array<string | undefined> = []
       let capturedTenantId: string | undefined
       const readYourWrites: PostgresReadYourWritesService = {
         capture: (captured) => {
@@ -115,7 +117,7 @@ it.layer(TestHttpServices)("procurement API consistency headers", (it) => {
         Layer.provide(bearer),
         Layer.provide(provideInventory.layer),
         Layer.provide(Layer.succeed(PostgresReadYourWrites, readYourWrites)),
-        Layer.provide(Layer.succeed(ProcurementService, makeProcurementStub(observedToken))),
+        Layer.provide(Layer.succeed(ProcurementService, makeProcurementStub(observedTokens))),
       )
       const client = yield* HttpApiTest.groups(RitseiApi, ["Procurement"]).pipe(
         Effect.provide(Layer.mergeAll(handlers, bearerClient, bearer)),
@@ -165,7 +167,7 @@ it.layer(TestHttpServices)("procurement API consistency headers", (it) => {
         },
       })
       assert.deepStrictEqual(read, order)
-      assert.strictEqual(observedToken.value, consistencyToken)
+      assert.strictEqual(observedTokens.at(-1), consistencyToken)
     }),
   )
 })

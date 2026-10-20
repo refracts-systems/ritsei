@@ -79,9 +79,11 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
     const rolePrefix = `${tenantId}:${partyId}:`
     return {
       party,
-      roles: [...roles]
+      roles: roles
+        .values()
         .filter((key) => key.startsWith(rolePrefix))
         .map((key) => key.slice(rolePrefix.length) as PartyRole)
+        .toArray()
         .sort(),
       identifiers: [...identifiers.values()]
         .filter((identifier) => identifier.tenantId === tenantId && identifier.partyId === partyId)
@@ -285,7 +287,8 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
   const findRelatedPartyPaths = Effect.fn("PartyStore.memory.findRelatedPartyPaths")(
     (tenantId: string, sourcePartyId: string, limit: number) =>
       Effect.sync(() =>
-        [...relationships.values()]
+        relationships
+          .values()
           .filter(
             (relationship) =>
               relationship.tenantId === tenantId &&
@@ -302,6 +305,7 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
             depth: 2 as const,
           }))
           .filter((path) => path.targetPartyId !== sourcePartyId)
+          .toArray()
           .sort(
             (left, right) =>
               left.legalEntityId.localeCompare(right.legalEntityId) ||

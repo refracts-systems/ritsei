@@ -49,10 +49,10 @@ const confirmedOrder = {
 }
 const cancelledOrder = { ...confirmedOrder, status: "cancelled" as const }
 
-const salesService = (observedInput: { value?: unknown }): SalesServiceContract => ({
+const salesService = (observedInputs: unknown[]): SalesServiceContract => ({
   listCustomers: (input) =>
     Effect.sync(() => {
-      observedInput.value = input
+      observedInputs.push(input)
       return [customer]
     }),
   getCustomer: () => Effect.succeed(customer),
@@ -75,7 +75,7 @@ const TestHttpServices = Layer.mergeAll(Path.layer, Etag.layerWeak, HttpPlatform
 it.layer(TestHttpServices)("sales API contracts", (it) => {
   it.effect("forwards tenant and bearer context across Sales reads and commands", () =>
     Effect.gen(function* () {
-      const observedInput: { value?: unknown } = {}
+      const observedInputs: unknown[] = []
       const bearer = Layer.succeed(BearerAuth, {
         bearer: (effect) => Effect.provideService(effect, CurrentPrincipal, principal),
       })
@@ -84,7 +84,7 @@ it.layer(TestHttpServices)("sales API contracts", (it) => {
       )
       const handlers = SalesHandlers.pipe(
         Layer.provide(bearer),
-        Layer.provide(Layer.succeed(SalesService, salesService(observedInput))),
+        Layer.provide(Layer.succeed(SalesService, salesService(observedInputs))),
       )
       const client = yield* HttpApiTest.groups(RitseiApi, ["Sales"]).pipe(
         Effect.provide(Layer.mergeAll(handlers, bearerClient, bearer)),
@@ -95,7 +95,7 @@ it.layer(TestHttpServices)("sales API contracts", (it) => {
         yield* client.Sales.listCustomers({ headers, query: { search: "sales", limit: 10 } }),
         [customer],
       )
-      const captured = observedInput.value as { tenantId: string; principal: typeof principal }
+      const captured = observedInputs.at(-1) as { tenantId: string; principal: typeof principal }
       assert.strictEqual(captured.tenantId, tenantId)
       assert.deepStrictEqual(captured.principal, principal)
       assert.deepStrictEqual(

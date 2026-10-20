@@ -114,13 +114,15 @@ export const makeMemoryAuthorizationService = (
         const decoded = yield* Schema.decodeUnknownEffect(TenantMembershipInput)(input)
         yield* member(decoded)
         const prefix = `${membershipKey(decoded.userAccountId, decoded.tenantId)}:`
-        return [...grants]
+        return grants
+          .values()
           .filter((grant) => grant.startsWith(prefix))
           .map((grant): DirectCapabilityGrant => ({
             ...decoded,
             capability: grant.slice(prefix.length) as DirectCapabilityGrant["capability"],
             scope: "tenant",
           }))
+          .toArray()
           .sort((left, right) => left.capability.localeCompare(right.capability))
       }),
     ),

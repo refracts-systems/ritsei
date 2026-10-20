@@ -58,7 +58,7 @@ const styleOf = (locator: Locator) =>
   )
 
 const capture = async (page: Page) => {
-  const targets: Record<string, Locator> = {
+  const targets = {
     canvas: page.locator("[data-theme]").first(),
     sidebar: page.locator("#global-navigation"),
     topbar: page
@@ -76,7 +76,7 @@ const capture = async (page: Page) => {
     badgeSuccess: page.getByText("accepted", { exact: true }),
     badgeNeutral: page.getByText("draft", { exact: true }),
     input: page.getByRole("textbox").first(),
-  }
+  } satisfies Record<string, Locator>
   const result: Record<string, Record<string, string>> = {}
   for (const [name, locator] of Object.entries(targets)) result[name] = await styleOf(locator)
 

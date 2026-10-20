@@ -549,11 +549,13 @@ export const makeSettlementService = Effect.gen(function* () {
       .reduce((sum, entry) => sum + entry.amount, 0n)
     let balance = opening
     const period = entries
+      .values()
       .filter((entry) => entry.date >= decoded.from)
       .map((entry) => {
         balance += entry.amount
         return { ...entry, amount: major(entry.amount), balance: major(balance) }
       })
+      .toArray()
     return {
       legalEntityId: decoded.legalEntityId,
       partyId: decoded.partyId,

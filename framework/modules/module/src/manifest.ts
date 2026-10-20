@@ -77,10 +77,12 @@ const namespaceFailures = ({ name, capabilities, actions, events }: ModuleManife
   const prefix = modulePrefix(name)
   const declared = new Set(Object.values(capabilities))
   return [
-    ...[...declared]
+    ...declared
+      .values()
       .filter((capability) => !capability.startsWith(prefix))
       .map((capability) => `${name} capability ${capability} must start with ${prefix}`),
     ...[...actions, ...events]
+      .values()
       .filter((entry) => entry.owningDomain !== name || !entry.id.startsWith(prefix))
       .map((entry) => `${name} releases ${entry.id} owned by ${entry.owningDomain}`),
     ...actions
