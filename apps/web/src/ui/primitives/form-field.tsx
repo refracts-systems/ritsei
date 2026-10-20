@@ -1,3 +1,4 @@
+import * as Predicate from "effect/Predicate"
 import type { JSX } from "@solidjs/web"
 import { createUniqueId, untrack } from "solid-js"
 import { css } from "../generated/css/index.js"
@@ -39,7 +40,7 @@ export function FormField(props: FormFieldProps) {
         {props.label}
         {props.required && <span aria-hidden="true">*</span>}
       </label>
-      {typeof children === "function" ? children(controlProps()) : children}
+      {Predicate.isFunction(children) ? children(controlProps()) : children}
       {props.helperText && (
         <div class={styles.help} id={descriptionId}>
           {props.helperText}

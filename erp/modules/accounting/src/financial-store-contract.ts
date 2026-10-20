@@ -2,6 +2,7 @@ import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
+import * as Predicate from "effect/Predicate"
 
 const NonEmptyString = Schema.String.check(Schema.isPattern(/\S/))
 const TrimmedNonEmptyString = Schema.String.check(
@@ -175,7 +176,7 @@ export const FinancialStoreObservationRegistry =
   )
 
 const observationScope = (input: unknown) =>
-  typeof input === "object" && input !== null && "scope" in input && typeof input.scope === "string"
+  Predicate.isObjectOrArray(input) && "scope" in input && Predicate.isString(input.scope)
     ? input.scope
     : "observation-registry"
 
@@ -278,7 +279,7 @@ const transferKey = (transfer: FinancialStoreTransferObservation) => transfer.tr
 
 const canonicalValue = (value: unknown): unknown => {
   if (Array.isArray(value)) return value.map(canonicalValue)
-  if (typeof value !== "object" || value === null) return value
+  if (!Predicate.isObjectOrArray(value)) return value
   return Object.fromEntries(
     Object.entries(value)
       .toSorted(([left], [right]) => left.localeCompare(right))

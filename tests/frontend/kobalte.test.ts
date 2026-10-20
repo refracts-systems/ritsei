@@ -1,6 +1,7 @@
 import { AxeBuilder } from "@axe-core/playwright"
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
+import * as Predicate from "effect/Predicate"
 import { mkdtemp, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -65,7 +66,7 @@ it.effect(
       const address = server.httpServer.address()
       assert.isNotNull(address)
       assert.isNotString(address)
-      if (!address || typeof address === "string") return yield* Effect.die("No preview address")
+      if (!address || Predicate.isString(address)) return yield* Effect.die("No preview address")
       const browser = yield* Effect.acquireRelease(
         Effect.promise(() => chromium.launch({ headless: true })),
         (browser) => Effect.promise(() => browser.close()),

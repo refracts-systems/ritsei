@@ -3,6 +3,7 @@ import * as Clock from "effect/Clock"
 import * as Effect from "effect/Effect"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
+import * as Predicate from "effect/Predicate"
 
 import { jobFenceScopes, processJobs, workflowRuns } from "../../../../db/schema/process.ts"
 import {
@@ -376,7 +377,7 @@ const businessPayload = (input: Schema.Schema.Type<typeof ConfirmOrderConfirmati
 
 const canonicalize = (value: unknown): unknown => {
   if (Array.isArray(value)) return value.map(canonicalize)
-  if (typeof value === "object" && value !== null) {
+  if (Predicate.isObjectOrArray(value)) {
     return Object.fromEntries(
       Object.entries(value)
         .toSorted(([a], [b]) => a.localeCompare(b))

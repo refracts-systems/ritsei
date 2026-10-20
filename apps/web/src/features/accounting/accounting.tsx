@@ -1,3 +1,4 @@
+import * as Predicate from "effect/Predicate"
 import { useNavigate } from "@solidjs/router"
 import type { JSX } from "@solidjs/web"
 import { createSignal, For, Show, useContext } from "solid-js"
@@ -67,7 +68,7 @@ const moneyPattern = /^\d{1,18}\.\d{2}$/
 const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/
 
 const requiredText = (value: FormDataEntryValue | null | undefined): string | null =>
-  typeof value === "string" && /\S/.test(value) ? value.trim() : null
+  Predicate.isString(value) && /\S/.test(value) ? value.trim() : null
 
 const isIsoDate = (value: string): boolean => {
   if (!isoDatePattern.test(value)) return false

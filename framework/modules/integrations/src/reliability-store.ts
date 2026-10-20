@@ -2,6 +2,7 @@ import { and, desc, eq } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
+import * as Predicate from "effect/Predicate"
 
 import { externalReliabilityRecords } from "../../../../db/schema/integration.ts"
 import { Database, DatabaseFailure, uuidv7 } from "../../../foundation/mod.ts"
@@ -187,7 +188,7 @@ const prepare = (input: unknown) =>
 
 const canonicalJson = (value: unknown): string =>
   JSON.stringify(value, (_key, child) =>
-    typeof child === "object" && child !== null && !Array.isArray(child)
+    Predicate.isObjectOrArray(child) && !Array.isArray(child)
       ? Object.fromEntries(
           Object.entries(child).toSorted(([left], [right]) => left.localeCompare(right)),
         )

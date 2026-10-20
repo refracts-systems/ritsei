@@ -1,6 +1,7 @@
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import * as Predicate from "effect/Predicate"
 
 import { FencingContext, LeaseGeneration } from "../concurrency/mod.ts"
 import { uuidv7 } from "../ids/mod.ts"
@@ -355,11 +356,16 @@ export const DocumentRenderPolicy = Schema.Struct({
 export type DocumentRenderPolicy = Schema.Schema.Type<typeof DocumentRenderPolicy>
 
 export const canonicalizeJson = (value: Schema.Schema.Type<typeof Schema.Json>): string => {
-  if (value === null || typeof value !== "object") {
+  if (Array.isArray(value)) return `[${value.map(canonicalizeJson).join(",")}]`
+  if (
+    value === null ||
+    Predicate.isString(value) ||
+    Predicate.isNumber(value) ||
+    Predicate.isBoolean(value)
+  ) {
     const encoded = JSON.stringify(value)
     return encoded === undefined ? "null" : encoded
   }
-  if (Array.isArray(value)) return `[${value.map(canonicalizeJson).join(",")}]`
   const entries = Object.entries(value).sort(([left], [right]) => left.localeCompare(right))
   return `{${entries
     .map(([key, entry]) => `${JSON.stringify(key)}:${canonicalizeJson(entry)}`)
@@ -369,7 +375,7 @@ export const canonicalizeJson = (value: Schema.Schema.Type<typeof Schema.Json>):
 export const sha256Hex = (input: string | Uint8Array) =>
   Effect.tryPromise({
     try: async () => {
-      const bytes = typeof input === "string" ? new TextEncoder().encode(input) : input
+      const bytes = Predicate.isString(input) ? new TextEncoder().encode(input) : input
       const buffer = new ArrayBuffer(bytes.byteLength)
       new Uint8Array(buffer).set(bytes)
       const digest = await crypto.subtle.digest("SHA-256", buffer)

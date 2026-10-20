@@ -1,6 +1,7 @@
 import "../../../tooling/load-env.ts"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import * as Predicate from "effect/Predicate"
 import { createReadStream } from "node:fs"
 import postgres, { type Sql } from "postgres"
 
@@ -213,7 +214,7 @@ const readBoundedTextFile = (path: string): Promise<string> =>
       ),
     )
     stream.on("data", (data: Buffer | string) => {
-      if (typeof data === "string") {
+      if (Predicate.isString(data)) {
         stream.destroy()
         reject(new P0BackfillFailure(`${path}: mapping file is not valid UTF-8`))
         return

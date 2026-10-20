@@ -1,3 +1,4 @@
+import * as Predicate from "effect/Predicate"
 import { useNavigate } from "@solidjs/router"
 import { createSignal, For, Show, untrack, useContext } from "solid-js"
 import type {
@@ -53,7 +54,7 @@ const quantityPattern = /^[1-9]\d*$/
 const emailPattern = /^[^\s@]+@[^\s@]+$/
 
 const requiredText = (value: FormDataEntryValue | null | undefined): string | null =>
-  typeof value === "string" && /\S/.test(value) ? value.trim() : null
+  Predicate.isString(value) && /\S/.test(value) ? value.trim() : null
 
 const quotationTone = (status: QuotationStatus): "neutral" | "success" | "warning" =>
   status === "accepted"

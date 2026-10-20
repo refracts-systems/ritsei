@@ -1,6 +1,7 @@
 import { AxeBuilder } from "@axe-core/playwright"
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
+import * as Predicate from "effect/Predicate"
 import { spawnSync } from "node:child_process"
 import { chromium } from "playwright"
 import { preview } from "vite"
@@ -36,7 +37,7 @@ const builtSolidEffect = Effect.gen(function* () {
   const address = server.httpServer.address()
   assert.isNotNull(address)
   assert.isNotString(address)
-  if (!address || typeof address === "string") {
+  if (!address || Predicate.isString(address)) {
     return yield* Effect.die("No preview TCP address")
   }
 

@@ -1,3 +1,4 @@
+import * as Predicate from "effect/Predicate"
 import { useNavigate } from "@solidjs/router"
 import { createMemo, createSignal, Show, untrack, useContext } from "solid-js"
 import { failureMessage, type RequestFailure } from "../../shared/api.ts"
@@ -40,7 +41,7 @@ const statusOptions = [
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 const requiredText = (value: FormValue[string]): string | null =>
-  typeof value === "string" && /\S/.test(value) ? value.trim() : null
+  Predicate.isString(value) && /\S/.test(value) ? value.trim() : null
 
 const capabilityLabel = (definition: CapabilityDefinition): string =>
   `${definition.owner} · ${definition.resource.replaceAll("_", " ")} · ${definition.verb.replaceAll(

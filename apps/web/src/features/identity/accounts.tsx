@@ -1,3 +1,4 @@
+import * as Predicate from "effect/Predicate"
 import { createMemo, createSignal, onSettled, Show, untrack, useContext } from "solid-js"
 import { failureMessage } from "../../shared/api.ts"
 import type { UserAccount } from "../../shared/contracts/generated/identity.ts"
@@ -111,7 +112,7 @@ function CreateAccountDialog(props: { reload: () => Promise<unknown> }) {
         onSubmit={(value) => {
           if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
           const email = value.email
-          if (typeof email !== "string" || !/\S/.test(email)) {
+          if (!Predicate.isString(email) || !/\S/.test(email)) {
             setInvalid(true)
             emailInput?.focus()
             return
@@ -186,7 +187,7 @@ function EmailEditor(props: {
         onSubmit={(value) => {
           if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
           const email = value.email
-          if (typeof email !== "string" || !/\S/.test(email)) {
+          if (!Predicate.isString(email) || !/\S/.test(email)) {
             setInvalid(true)
             emailInput?.focus()
             return

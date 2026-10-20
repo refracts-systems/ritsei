@@ -45,6 +45,7 @@ function run(withProvider) {
         createRenderEffect(
           () => {
             let o = out
+            // oxlint-disable-next-line anti-slop/no-runtime-typeof -- standalone verification script that probes for a thunk and cannot import project code
             while (typeof o === "function") o = o()
             return o
           },

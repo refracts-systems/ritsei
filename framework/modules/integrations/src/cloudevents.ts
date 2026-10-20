@@ -1,5 +1,6 @@
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import * as Predicate from "effect/Predicate"
 
 import { InstantString } from "../../../foundation/time/mod.ts"
 import type { ExternalSchema } from "./contract.ts"
@@ -51,7 +52,7 @@ export const normalizeCloudEvent = (
 ): Effect.Effect<NormalizedExternalEvent, ExternalPayloadInvalid> =>
   Effect.gen(function* () {
     const identifier =
-      typeof input.expectedType === "string" && input.expectedType.trim() !== ""
+      Predicate.isString(input.expectedType) && input.expectedType.trim() !== ""
         ? input.expectedType.slice(0, MaxFieldLength)
         : "external-event"
     if (

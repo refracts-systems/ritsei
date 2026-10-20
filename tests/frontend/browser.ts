@@ -1,5 +1,6 @@
 import { assert } from "@effect/vitest"
 import * as Effect from "effect/Effect"
+import * as Predicate from "effect/Predicate"
 import { chromium } from "playwright"
 import type { Page } from "playwright"
 import { preview } from "vite"
@@ -104,7 +105,7 @@ export const builtApp = Effect.gen(function* () {
   const address = server.httpServer.address()
   assert.isNotNull(address)
   assert.isNotString(address)
-  if (!address || typeof address === "string") {
+  if (!address || Predicate.isString(address)) {
     return yield* Effect.die("No preview TCP address")
   }
   const browser = yield* Effect.acquireRelease(

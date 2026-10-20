@@ -1,6 +1,7 @@
 import * as Effect from "effect/Effect"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
+import * as Predicate from "effect/Predicate"
 
 import { CloudEventsEnvelope } from "./cloudevents.ts"
 import {
@@ -91,7 +92,7 @@ const catalogIdentifier = (
   value: { readonly id?: unknown } | null | undefined,
   fallback: string,
 ): string => {
-  const id = typeof value?.id === "string" && value.id.trim() !== "" ? value.id : undefined
+  const id = Predicate.isString(value?.id) && value.id.trim() !== "" ? value.id : undefined
   return id === undefined ? fallback : id.slice(0, ExternalCatalogLimits.maxIdentifierLength)
 }
 

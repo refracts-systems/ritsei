@@ -1,3 +1,4 @@
+import * as Predicate from "effect/Predicate"
 import { useNavigate } from "@solidjs/router"
 import { createSignal, For, Show, untrack, useContext } from "solid-js"
 import type {
@@ -42,7 +43,7 @@ const quantityPattern = /^[1-9]\d*$/
 const moneyPattern = /^\d+\.\d{2}$/
 
 const requiredText = (value: FormDataEntryValue | null | undefined): string | null =>
-  typeof value === "string" && /\S/.test(value) ? value.trim() : null
+  Predicate.isString(value) && /\S/.test(value) ? value.trim() : null
 
 // Fallow: procurement statuses intentionally use the same small UI mapping as Inventory.
 // fallow-ignore-next-line code-duplication

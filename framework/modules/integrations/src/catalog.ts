@@ -1,5 +1,6 @@
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import * as Predicate from "effect/Predicate"
 
 import {
   type ExternalActionCatalogEntry,
@@ -33,7 +34,7 @@ export const simulateWithoutSideEffect = (
 ): Effect.Effect<ExternalSimulationResult, ExternalActionNotAllowlisted | ExternalPayloadInvalid> =>
   Effect.gen(function* () {
     const identifier =
-      typeof input.action?.id === "string" && input.action.id.trim() !== ""
+      Predicate.isString(input.action?.id) && input.action.id.trim() !== ""
         ? input.action.id.slice(0, 256)
         : "external-action"
     if (!Schema.is(Uuid)(input.tenantId)) {

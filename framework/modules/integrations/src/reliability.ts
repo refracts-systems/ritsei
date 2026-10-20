@@ -1,5 +1,6 @@
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import * as Predicate from "effect/Predicate"
 
 import { ExternalCompatibilityMismatch, ExternalPayloadLimitExceeded } from "./errors.ts"
 
@@ -48,7 +49,7 @@ const sensitiveField = (key: string): boolean =>
 // redaction removes credentials before a delivery record is exposed or retained.
 export const redactExternalPayload = (value: unknown): unknown => {
   if (Array.isArray(value)) return value.map(redactExternalPayload)
-  if (typeof value !== "object" || value === null) return value
+  if (!Predicate.isObjectOrArray(value)) return value
   return Object.fromEntries(
     Object.entries(value).map(([key, child]) => [
       key,

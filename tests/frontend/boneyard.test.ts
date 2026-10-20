@@ -10,7 +10,7 @@ it("validates the framework-neutral Boneyard core API", () => {
   assert.equal(result.boneCount, 1)
   assert.isTrue(result.rendered)
   assert.equal(result.normalizedWidth, 10)
-  assert.equal(result.snapshotType, "function")
+  assert.isTrue(result.snapshotIsFunction)
 })
 
 it.effect(

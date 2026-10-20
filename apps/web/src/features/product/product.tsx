@@ -1,3 +1,4 @@
+import * as Predicate from "effect/Predicate"
 import { createSignal, Show, useContext } from "solid-js"
 import { CommandFeedback, QueryBoundary } from "../../shared/request-feedback.tsx"
 import { ApiRuntime } from "../../shared/runtime.ts"
@@ -19,7 +20,7 @@ const typeLabels = {
 } as const
 const typeOptions = Object.entries(typeLabels).map(([value, label]) => ({ value, label }))
 
-const text = (value: unknown) => (typeof value === "string" ? value.trim() : "")
+const text = (value: unknown) => (Predicate.isString(value) ? value.trim() : "")
 
 /** The create payload, or undefined when the code or name is missing. */
 const productPayload = (value: FormValue) => {

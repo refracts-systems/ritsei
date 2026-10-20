@@ -18,8 +18,9 @@ formatting, and Fallow because it keeps upstream's tab-indented style.
 `anti-slop/no-module-mocking`, `anti-slop/no-object-parameters`, `anti-slop/no-reflect-apply`,
 `anti-slop/no-reflect-get`, `anti-slop/no-unknown-type-aliases`,
 `anti-slop/no-widen-then-assert`, `anti-slop-effect/no-manual-effect-error-tag`,
-`anti-slop-effect/prefer-effect-match`, `anti-slop/no-chained-type-assertions`, and
-`anti-slop/no-unsafe-dictionary-type`.
+`anti-slop-effect/prefer-effect-match`, `anti-slop/no-chained-type-assertions`,
+`anti-slop/no-unsafe-dictionary-type`, and `anti-slop/no-runtime-typeof` (with
+`allowInTypeGuards`).
 
 `pnpm run lint` passes with this set. Fixes made when enabling it:
 
@@ -44,6 +45,12 @@ formatting, and Fallow because it keeps upstream's tab-indented style.
   that only copy fields are generic over the caller's type; the P0 backfill rows are typed by their
   selected columns. Tests share one `UntypedRecord` alias in `tests/support/untyped-record.ts`
   (driver rows and fixture overrides), the single justified disable.
+- `no-runtime-typeof` (60 sites, 5 left inside named type guards by `allowInTypeGuards`): checks
+  became `effect/Predicate` guards (`isString`, `isNumber`, `isFunction`, `isObjectOrArray`);
+  values already typed as `Schema.Json` branch on `Array.isArray` and scalar guards so the union
+  stays narrowed; tests use `assert.isFunction`. The boneyard probe reports
+  `snapshotIsFunction` instead of a `typeof` string. The standalone `verify-r.mjs` script keeps one
+  justified disable because it cannot import project code.
 - `no-reflect-get` (1 site): the `Proxy` default branch in `request-limits.ts` keeps
   `Reflect.get` with a justified `oxlint-disable-next-line`.
 
@@ -56,7 +63,6 @@ cleanup it needs.
 | --- | --- | --- |
 | `no-unknown-parameters` | 668 | Module services take `input: unknown` and decode it with Effect Schema at the boundary (`AGENTS.md`, default Effect feature shape); the rule targets the opposite pattern. |
 | `no-unknown-returns` | 73 | Boundary canonicalizers and JSON readers return `unknown` before parsing. |
-| `no-runtime-typeof` | 60 | Frontend and platform adapters narrow untrusted values without a schema. |
 | `no-conditional-empty-object-spread` | 51 | `...(x === undefined ? {} : { x })` is how optional keys are omitted for `Schema.optionalKey`; assigning `undefined` is not equivalent. |
 | `no-shape-in-symbol-names` | 110 | Effect service interfaces are named `...ServiceShape` by repository convention. |
 | `require-safety-comment-for-type-assertion` | 429 | Needs a repository-wide assertion cleanup. |

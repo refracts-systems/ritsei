@@ -1,6 +1,7 @@
 import { and, desc, eq } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import * as Predicate from "effect/Predicate"
 
 import {
   externalConnectorGovernance,
@@ -391,7 +392,7 @@ const applyTransition = async (
   existing: GovernanceRow,
 ): Promise<TransitionResult> => {
   const next = transitionStatus(existing, input)
-  if (typeof next === "string") return { _tag: next }
+  if (Predicate.isString(next)) return { _tag: next }
   const [row] = await transaction
     .update(externalConnectorGovernance)
     .set({

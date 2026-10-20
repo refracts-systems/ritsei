@@ -1,6 +1,7 @@
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
+import * as Predicate from "effect/Predicate"
 
 import {
   ExternalIdentity,
@@ -20,7 +21,7 @@ class InvalidTokenShape extends Error {}
 class ProviderUnavailable extends Error {}
 
 const isObject = (value: unknown): value is JsonObject =>
-  typeof value === "object" && value !== null && !Array.isArray(value)
+  Predicate.isObjectOrArray(value) && !Array.isArray(value)
 
 const decodeBase64Url = (value: string): Uint8Array => {
   if (!/^[A-Za-z0-9_-]+$/.test(value)) throw new InvalidTokenShape()
@@ -48,10 +49,10 @@ const readTextJson = async (response: Response): Promise<unknown> => {
 }
 
 const hasAudience = (audience: unknown, expected: string): boolean =>
-  typeof audience === "string"
+  Predicate.isString(audience)
     ? audience === expected
     : Array.isArray(audience) &&
-      audience.every((value) => typeof value === "string") &&
+      audience.every((value) => Predicate.isString(value)) &&
       audience.includes(expected)
 
 export const makeOidcIdentityProvider = (
@@ -88,16 +89,16 @@ export const makeOidcIdentityProvider = (
     const [encodedHeader, encodedPayload, encodedSignature] = parts as [string, string, string]
     const header = decodeJsonPart(encodedHeader)
     const payload = decodeJsonPart(encodedPayload)
-    if (header.alg !== "RS256" || typeof header.kid !== "string") throw new InvalidTokenShape()
+    if (header.alg !== "RS256" || !Predicate.isString(header.kid)) throw new InvalidTokenShape()
     if (
       payload.iss !== configuration.issuerUrl ||
-      typeof payload.sub !== "string" ||
+      !Predicate.isString(payload.sub) ||
       payload.sub.trim().length === 0 ||
       payload.sub.length > 1_024 ||
       !hasAudience(payload.aud, configuration.audience) ||
-      typeof payload.exp !== "number" ||
+      !Predicate.isNumber(payload.exp) ||
       !Number.isInteger(payload.exp) ||
-      typeof payload.iat !== "number" ||
+      !Predicate.isNumber(payload.iat) ||
       !Number.isInteger(payload.iat)
     )
       throw new InvalidTokenShape()
@@ -106,7 +107,7 @@ export const makeOidcIdentityProvider = (
     if (
       payload.exp <= now ||
       payload.exp <= payload.iat ||
-      (nbf !== undefined && (typeof nbf !== "number" || !Number.isInteger(nbf) || nbf > now + 60))
+      (nbf !== undefined && (!Predicate.isNumber(nbf) || !Number.isInteger(nbf) || nbf > now + 60))
     ) {
       throw new InvalidTokenShape()
     }

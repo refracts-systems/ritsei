@@ -1,3 +1,4 @@
+import * as Predicate from "effect/Predicate"
 import type { JSX } from "@solidjs/web"
 import { createEffect, createSignal, For, onSettled, Show, useContext } from "solid-js"
 import { failureMessage } from "../../shared/api.ts"
@@ -345,9 +346,10 @@ function RuntimeActionDialog(props: {
           // fallow-ignore-next-line complexity
           (value) => {
             if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
-            const idempotencyKey =
-              typeof value.idempotencyKey === "string" ? value.idempotencyKey.trim() : ""
-            const reason = typeof value.reason === "string" ? value.reason.trim() : ""
+            const idempotencyKey = Predicate.isString(value.idempotencyKey)
+              ? value.idempotencyKey.trim()
+              : ""
+            const reason = Predicate.isString(value.reason) ? value.reason.trim() : ""
             if (!/\S/.test(idempotencyKey) || !/\S/.test(reason)) {
               setInvalid(true)
               return

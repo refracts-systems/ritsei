@@ -1,3 +1,4 @@
+import * as Predicate from "effect/Predicate"
 import { createSignal, Show, useContext } from "solid-js"
 import { CommandFeedback, QueryBoundary } from "../../shared/request-feedback.tsx"
 import { ApiRuntime } from "../../shared/runtime.ts"
@@ -17,7 +18,7 @@ const directionOptions = [
   { value: "purchase", label: "Purchases" },
 ]
 
-const text = (value: unknown) => (typeof value === "string" ? value.trim() : "")
+const text = (value: unknown) => (Predicate.isString(value) ? value.trim() : "")
 
 const directionOf = (value: unknown) => (value === "purchase" ? "purchase" : "sales")
 

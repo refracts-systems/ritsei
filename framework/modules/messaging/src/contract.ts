@@ -1,6 +1,7 @@
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import * as Predicate from "effect/Predicate"
 
 import { InstantString } from "../../../foundation/mod.ts"
 
@@ -23,18 +24,16 @@ const MaxPayloadBytes = 256 * 1024
 const isBoundedJson = (value: Schema.Schema.Type<typeof Schema.Json>): boolean => {
   const visit = (current: Schema.Schema.Type<typeof Schema.Json>, depth: number): boolean => {
     if (depth > MaxPayloadDepth) return false
-    if (typeof current === "string") return current.length <= MaxPayloadStringLength
+    if (Predicate.isString(current)) return current.length <= MaxPayloadStringLength
     if (Array.isArray(current)) {
       return (
         current.length <= MaxPayloadArrayLength && current.every((item) => visit(item, depth + 1))
       )
     }
-    if (typeof current === "object" && current !== null) {
-      return Object.entries(current).every(
-        ([key, item]) => key.length <= MaxPayloadStringLength && visit(item, depth + 1),
-      )
-    }
-    return true
+    if (current === null || Predicate.isNumber(current) || Predicate.isBoolean(current)) return true
+    return Object.entries(current).every(
+      ([key, item]) => key.length <= MaxPayloadStringLength && visit(item, depth + 1),
+    )
   }
 
   return (

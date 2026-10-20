@@ -2,6 +2,7 @@ import { assert, describe, it } from "@effect/vitest"
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
+import * as Predicate from "effect/Predicate"
 import {
   createComponent,
   createMemo,
@@ -38,7 +39,7 @@ function mountRuntime<R>(layer: Layer.Layer<R>, children: () => Element) {
     createRenderEffect(
       () => {
         let output: unknown = provider
-        while (typeof output === "function") {
+        while (Predicate.isFunction(output)) {
           output = (output as () => unknown)()
         }
         return output

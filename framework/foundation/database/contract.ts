@@ -3,6 +3,7 @@ import type { AnyRelations, EmptyRelations } from "drizzle-orm/relations"
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import * as Predicate from "effect/Predicate"
 
 export interface PostgresTransaction {
   readonly unsafe: <Row extends Record<string, unknown>>(
@@ -29,7 +30,7 @@ export class DatabaseFailure extends Schema.TaggedError<DatabaseFailure>()("Data
 }) {}
 
 const unwrapCause = (cause: unknown): unknown =>
-  typeof cause === "object" && cause !== null && "cause" in cause && cause.cause !== undefined
+  Predicate.isObjectOrArray(cause) && "cause" in cause && cause.cause !== undefined
     ? unwrapCause(cause.cause)
     : cause
 
@@ -37,8 +38,7 @@ export const isDatabaseConstraint = (error: unknown, constraint: string, code = 
   if (!(error instanceof DatabaseFailure)) return false
   const cause = unwrapCause(error.cause)
   return (
-    typeof cause === "object" &&
-    cause !== null &&
+    Predicate.isObjectOrArray(cause) &&
     "code" in cause &&
     cause.code === code &&
     (("constraint" in cause && cause.constraint === constraint) ||

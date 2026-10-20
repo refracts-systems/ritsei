@@ -1,3 +1,4 @@
+import * as Predicate from "effect/Predicate"
 import { useNavigate } from "@solidjs/router"
 import { createMemo, createSignal, For, Show, useContext } from "solid-js"
 import type {
@@ -55,7 +56,7 @@ const signedQuantityPattern = /^-?[1-9]\d*$/
 const unitPattern = /^[A-Z][A-Z0-9_-]*$/
 
 const requiredText = (value: FormDataEntryValue | null | undefined): string | null =>
-  typeof value === "string" && /\S/.test(value) ? value.trim() : null
+  Predicate.isString(value) && /\S/.test(value) ? value.trim() : null
 
 // Fallow: reservation and transfer statuses intentionally share one presentation mapping.
 // fallow-ignore-next-line code-duplication

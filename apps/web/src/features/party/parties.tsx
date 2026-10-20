@@ -1,3 +1,4 @@
+import * as Predicate from "effect/Predicate"
 import { useNavigate } from "@solidjs/router"
 import { createSignal, For, Show, untrack, useContext } from "solid-js"
 import type { RequestFailure } from "../../shared/api.ts"
@@ -47,7 +48,7 @@ const roleOptions = [
 ] as const
 
 const requiredText = (value: FormValue[string]): string | null =>
-  typeof value === "string" && /\S/.test(value) ? value.trim() : null
+  Predicate.isString(value) && /\S/.test(value) ? value.trim() : null
 
 const optionalText = (value: FormValue[string]): string | undefined => {
   const text = requiredText(value)

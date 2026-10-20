@@ -1,5 +1,6 @@
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import * as Predicate from "effect/Predicate"
 
 import { validateExternalEventDefinition } from "./contract.ts"
 import { type ExternalDeliveryStore, makeMemoryExternalDeliveryStore } from "./delivery-store.ts"
@@ -35,12 +36,12 @@ export const HttpsWebhookLimits = {
 } as const
 
 const eventIdentifier = (event: { readonly id?: unknown } | null | undefined): string => {
-  const id = typeof event?.id === "string" && event.id.trim() !== "" ? event.id : undefined
+  const id = Predicate.isString(event?.id) && event.id.trim() !== "" ? event.id : undefined
   return id === undefined ? "external-event" : id.slice(0, 256)
 }
 
 const isBoundedNonEmptyString = (value: unknown, maxBytes: number): value is string =>
-  typeof value === "string" && Schema.is(NonEmptyString)(value) && byteLength(value) <= maxBytes
+  Predicate.isString(value) && Schema.is(NonEmptyString)(value) && byteLength(value) <= maxBytes
 
 const decodeWebhookBody = (body: string, identifier: string) =>
   Effect.try({

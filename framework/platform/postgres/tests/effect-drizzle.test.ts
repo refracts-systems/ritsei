@@ -5,8 +5,8 @@ import * as Effect from "effect/Effect"
 import * as HttpApi from "effect/http-api/HttpApi"
 
 it("resolves Effect and Drizzle through the npm package topology", () => {
-  assert.strictEqual(typeof PgClient, "function")
-  assert.strictEqual(typeof makeWithDefaults, "function")
+  assert.isFunction(PgClient)
+  assert.isFunction(makeWithDefaults)
   assert.strictEqual(Effect.isEffect(makeWithDefaults()), true)
-  assert.strictEqual(typeof HttpApi.make, "function")
+  assert.isFunction(HttpApi.make)
 })

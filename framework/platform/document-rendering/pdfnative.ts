@@ -1,5 +1,6 @@
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import * as Predicate from "effect/Predicate"
 import {
   buildDocumentPDFBytes,
   detectFallbackLangs,
@@ -36,14 +37,8 @@ const fontLoader =
   (load: () => Promise<unknown>): FontLoader =>
   async () => {
     const module = await load()
-    const font =
-      typeof module === "object" && module !== null && "default" in module ? module.default : module
-    if (
-      typeof font !== "object" ||
-      font === null ||
-      !("fontName" in font) ||
-      !("ttfBase64" in font)
-    ) {
+    const font = Predicate.isObjectOrArray(module) && "default" in module ? module.default : module
+    if (!Predicate.isObjectKeyword(font) || !("fontName" in font) || !("ttfBase64" in font)) {
       throw new TypeError("pdfnative font module did not expose FontData")
     }
     // pdfnative's generated font declarations describe module fields loosely; the runtime object is

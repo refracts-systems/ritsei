@@ -1,6 +1,7 @@
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
+import * as Predicate from "effect/Predicate"
 
 import { FencingContext } from "../concurrency/mod.ts"
 import {
@@ -19,16 +20,13 @@ const artifactKey = (tenantId: string, renderFingerprint: string) =>
   `${tenantId}:${renderFingerprint}`
 
 const artifactIdOf = (input: unknown) =>
-  typeof input === "object" &&
-  input !== null &&
-  "artifactId" in input &&
-  typeof input.artifactId === "string"
+  Predicate.isObjectOrArray(input) && "artifactId" in input && Predicate.isString(input.artifactId)
     ? input.artifactId
     : "unknown"
 
 const decodeArtifactWrite = (input: unknown) =>
   Effect.gen(function* () {
-    if (typeof input !== "object" || input === null) {
+    if (!Predicate.isObjectOrArray(input)) {
       return yield* Effect.fail(
         new DocumentArtifactInvalidContent({
           artifactId: "unknown",

@@ -1,3 +1,4 @@
+import * as Predicate from "effect/Predicate"
 import { readdir, stat } from "node:fs/promises"
 import ts from "typescript"
 
@@ -76,10 +77,9 @@ export const extractModuleImports = (file: SourceFile): readonly ModuleImport[] 
 }
 
 export const extractModuleSpecifiers = (file: SourceFile | string): readonly string[] => {
-  const imports =
-    typeof file === "string"
-      ? extractModuleImports({ path: "module.ts", source: file })
-      : extractModuleImports(file)
+  const imports = Predicate.isString(file)
+    ? extractModuleImports({ path: "module.ts", source: file })
+    : extractModuleImports(file)
   return [...new Set(imports.map(({ specifier }) => specifier))]
 }
 
