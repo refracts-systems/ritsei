@@ -20,6 +20,7 @@ import {
 } from "./contract.ts"
 import { TaxCodeNotFound } from "./errors.ts"
 import type { TaxStore } from "./store.ts"
+import type * as Schema from "effect/Schema"
 
 const minor = (value: string) => requireExactMajorToMinor(value, 2)
 const major = (value: bigint) => formatSignedMinor(value, 2)
@@ -30,19 +31,23 @@ export const makeTaxServiceFromStore = <R>(storeEffect: Effect.Effect<TaxStore, 
     const authorization = yield* AuthorizationService
     const authorized = scopedCommand(authorization)
 
-    const listTaxCodes = Effect.fn("TaxService.listTaxCodes")(function* (input: unknown) {
+    const listTaxCodes = Effect.fn("TaxService.listTaxCodes")(function* (
+      input: Schema.Codec.Encoded<typeof ListTaxCodesInput>,
+    ) {
       const decoded = yield* authorized(ListTaxCodesInput, TaxCapabilities.taxCodeRead)(input)
       return yield* store.listTaxCodes(decoded.tenantId, decoded.direction, decoded.limit ?? 200)
     })
 
-    const createTaxCode = Effect.fn("TaxService.createTaxCode")(function* (input: unknown) {
+    const createTaxCode = Effect.fn("TaxService.createTaxCode")(function* (
+      input: Schema.Codec.Encoded<typeof CreateTaxCodeInput>,
+    ) {
       const decoded = yield* authorized(CreateTaxCodeInput, TaxCapabilities.taxCodeCreate)(input)
       const { principal: _principal, ...command } = decoded
       return yield* store.createTaxCode({ ...command, code: command.code.toUpperCase() })
     })
 
     const setProductTaxDefault = Effect.fn("TaxService.setProductTaxDefault")(function* (
-      input: unknown,
+      input: Schema.Codec.Encoded<typeof SetProductTaxDefaultInput>,
     ) {
       const decoded = yield* authorized(
         SetProductTaxDefaultInput,
@@ -52,7 +57,9 @@ export const makeTaxServiceFromStore = <R>(storeEffect: Effect.Effect<TaxStore, 
       return yield* store.setProductTaxDefault(value)
     })
 
-    const determineTaxCodes = Effect.fn("TaxService.determineTaxCodes")(function* (input: unknown) {
+    const determineTaxCodes = Effect.fn("TaxService.determineTaxCodes")(function* (
+      input: Schema.Codec.Encoded<typeof DetermineTaxCodesInput>,
+    ) {
       const decoded = yield* authorized(DetermineTaxCodesInput, TaxCapabilities.taxCodeRead)(input)
       const defaults = yield* store.productTaxDefaults(
         decoded.tenantId,
@@ -67,7 +74,9 @@ export const makeTaxServiceFromStore = <R>(storeEffect: Effect.Effect<TaxStore, 
       )
     })
 
-    const computeTax = Effect.fn("TaxService.computeTax")(function* (input: unknown) {
+    const computeTax = Effect.fn("TaxService.computeTax")(function* (
+      input: Schema.Codec.Encoded<typeof ComputeTaxInput>,
+    ) {
       const decoded = yield* authorized(ComputeTaxInput, TaxCapabilities.taxCodeRead)(input)
       const ids = [
         ...new Set(

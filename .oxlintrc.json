@@ -80,7 +80,6 @@
         "erp/modules/product/**",
         "erp/modules/sales/**",
         "erp/modules/settlement/**",
-        "erp/modules/tax/**",
         "erp/runtime/**",
         "framework/foundation/communication/**",
         "framework/foundation/database/**",

@@ -105,19 +105,21 @@ export type CreateTaxCodeCommand = Omit<Schema.Schema.Type<typeof CreateTaxCodeI
 type CommonFailure = AuthorizationDenied | DatabaseFailure | Schema.SchemaError
 
 export interface TaxService {
-  readonly listTaxCodes: (input: unknown) => Effect.Effect<ReadonlyArray<TaxCode>, CommonFailure>
+  readonly listTaxCodes: (
+    input: Schema.Codec.Encoded<typeof ListTaxCodesInput>,
+  ) => Effect.Effect<ReadonlyArray<TaxCode>, CommonFailure>
   readonly createTaxCode: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreateTaxCodeInput>,
   ) => Effect.Effect<TaxCode, TaxCodeAlreadyExists | CommonFailure>
   readonly setProductTaxDefault: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof SetProductTaxDefaultInput>,
   ) => Effect.Effect<ProductTaxDefault, TaxCodeNotFound | TaxProductNotFound | CommonFailure>
   /** The default tax code id per product, or null when the product has none. */
   readonly determineTaxCodes: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof DetermineTaxCodesInput>,
   ) => Effect.Effect<ReadonlyMap<string, string | null>, CommonFailure>
   readonly computeTax: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ComputeTaxInput>,
   ) => Effect.Effect<TaxComputation, TaxCodeNotFound | CommonFailure>
 }
 
