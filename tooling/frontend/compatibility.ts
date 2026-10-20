@@ -1,3 +1,4 @@
+import * as Predicate from "effect/Predicate"
 import { build } from "vite"
 
 import { isMain } from "../entrypoint.ts"
@@ -29,7 +30,7 @@ export const probeDndCompatibility = () =>
 const extractBundleCode = (result: unknown): string => {
   const outputs = (Array.isArray(result) ? result : [result]).filter(
     (value): value is { output: readonly { type: string; code?: string }[] } =>
-      typeof value === "object" && value !== null && "output" in value,
+      Predicate.hasProperty(value, "output"),
   )
 
   return outputs

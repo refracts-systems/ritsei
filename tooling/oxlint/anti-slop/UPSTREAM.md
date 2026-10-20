@@ -20,8 +20,7 @@ formatting, and Fallow because it keeps upstream's tab-indented style.
 `anti-slop/no-reflect-get`, `anti-slop/no-unknown-type-aliases`,
 `anti-slop/no-widen-then-assert`, `anti-slop-effect/no-manual-effect-error-tag`,
 `anti-slop-effect/prefer-effect-match`, `anti-slop/no-chained-type-assertions`,
-`anti-slop/no-unsafe-dictionary-type`, `anti-slop/no-runtime-typeof` (with
-`allowInTypeGuards`), `anti-slop/no-unknown-returns`, and
+`anti-slop/no-unsafe-dictionary-type`, `anti-slop/no-runtime-typeof`, `anti-slop/no-unknown-returns`, and
 `anti-slop/require-safety-comment-for-type-assertion` (production source only; tests are exempt
 through an `overrides` block in `.oxlintrc.json`), `anti-slop-effect/no-service-constructor-imports`, `anti-slop/no-shape-in-symbol-names`, `anti-slop/no-conditional-empty-object-spread`.
 
@@ -47,7 +46,7 @@ through an `overrides` block in `.oxlintrc.json`), `anti-slop-effect/no-service-
   that only copy fields are generic over the caller's type; the P0 backfill rows are typed by their
   selected columns. Test SQL rows use the named row types in `tests/support/sql-row.ts`, and
   fixture overrides are `Overrides<Fixture>` (`tests/support/overrides.ts`).
-- `no-runtime-typeof` (60 sites; checks inside named type guards stay allowed by `allowInTypeGuards`): checks
+- `no-runtime-typeof` (60 sites, no `allowInTypeGuards` exemption): checks
   became `effect/Predicate` guards (`isString`, `isNumber`, `isFunction`, `isObjectOrArray`);
   values already typed as `Schema.Json` branch on `Array.isArray` and scalar guards so the union
   stays narrowed; tests use `assert.isFunction`. The boneyard probe reports

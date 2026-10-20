@@ -1,4 +1,5 @@
 import * as Effect from "effect/Effect"
+import * as Predicate from "effect/Predicate"
 import * as Schema from "effect/Schema"
 
 import { ExternalActionNotAllowlisted, ExternalPayloadInvalid } from "./errors.ts"
@@ -69,8 +70,7 @@ export type OpenApiOperationSelection = Schema.Schema.Type<typeof OpenApiOperati
 const invalid = (boundary: string, identifier: string) =>
   new ExternalPayloadInvalid({ boundary, identifier })
 
-const isRecord = (value: unknown): value is Schema.JsonObject =>
-  typeof value === "object" && value !== null && !Array.isArray(value)
+const isRecord = (value: unknown): value is Schema.JsonObject => Predicate.isObject(value)
 
 const documentContainsSelectedOperation = (
   paths: JsonObjectValue,
