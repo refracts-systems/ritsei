@@ -22,7 +22,7 @@ import {
   makeInventoryTestLayer,
 } from "../../inventory/mod.ts"
 import {
-  EventEnvelopeShape,
+  EventEnvelopeContract,
   makeMessagingTestLayer,
   MessagingService,
 } from "../../../../framework/modules/messaging/mod.ts"
@@ -70,7 +70,7 @@ const capabilities = [
 const withProcurement = <A, E>(
   program: Effect.Effect<A, E, PartyService | ProcurementService | InventoryService>,
   granted: ReadonlyArray<(typeof capabilities)[number]> = capabilities,
-  onPublished?: (event: EventEnvelopeShape) => void,
+  onPublished?: (event: EventEnvelopeContract) => void,
 ) => {
   const authorization = makeAuthorizationTestLayer(
     [tenantId, otherTenantId].flatMap((tenantId) =>
@@ -232,7 +232,7 @@ const createPurchaseOrder = Effect.gen(function* () {
 
 describe("procurement contract", () => {
   it.effect("publishes one confirmation event across idempotent replay", () => {
-    const published: EventEnvelopeShape[] = []
+    const published: EventEnvelopeContract[] = []
     return withProcurement(
       Effect.gen(function* () {
         const procurement = yield* ProcurementService

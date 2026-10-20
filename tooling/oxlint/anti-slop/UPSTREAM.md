@@ -23,7 +23,7 @@ formatting, and Fallow because it keeps upstream's tab-indented style.
 `anti-slop/no-unsafe-dictionary-type`, `anti-slop/no-runtime-typeof` (with
 `allowInTypeGuards`), `anti-slop/no-unknown-returns`, and
 `anti-slop/require-safety-comment-for-type-assertion` (production source only; tests are exempt
-through an `overrides` block in `.oxlintrc.json`), `anti-slop-effect/no-service-constructor-imports`.
+through an `overrides` block in `.oxlintrc.json`), `anti-slop-effect/no-service-constructor-imports`, `anti-slop/no-shape-in-symbol-names`.
 
 `pnpm run lint` passes with this set. Fixes made when enabling it:
 
@@ -75,6 +75,10 @@ through an `overrides` block in `.oxlintrc.json`), `anti-slop-effect/no-service-
   `erp/runtime/layers.ts` imports each module's `...Live` layer instead of rebuilding it from
   `make<Service>`; Accounting gained `AccountingServiceLive` and Process `ProcessJobEnqueuerLive`
   for that.
+- `no-shape-in-symbol-names` (111 sites, 38 symbols): service interfaces exported as
+  `...ServiceShape` are now `...ServiceContract`, store and input types follow the same suffix,
+  `InvalidTokenShape` is `InvalidTokenFormat`, and `capabilityIdShape` is `capabilityIdPattern`.
+  The module generator templates were updated with them.
 - `no-reflect-get` (1 site): the `Proxy` default branch in `request-limits.ts` keeps
   `Reflect.get` with a justified `oxlint-disable-next-line`.
 
@@ -87,7 +91,6 @@ cleanup it needs.
 | --- | --- | --- |
 | `no-unknown-parameters` | 668 | Module services take `input: unknown` and decode it with Effect Schema at the boundary (`AGENTS.md`, default Effect feature shape); the rule targets the opposite pattern. |
 | `no-conditional-empty-object-spread` | 51 | `...(x === undefined ? {} : { x })` is how optional keys are omitted for `Schema.optionalKey`; assigning `undefined` is not equivalent. |
-| `no-shape-in-symbol-names` | 110 | Effect service interfaces are named `...ServiceShape` by repository convention. |
 | `require-readable-spacing` | 8468 | Formatting belongs to oxfmt; the autofix would rewrite most files and fight the formatter. |
 | `anti-slop-effect/no-manual-tag-comparison` | 146 | Outcome unions (`{ _tag: "posted" }`) are matched by hand throughout. |
 | `anti-slop-effect/no-manual-tagged-construction` | 182 | The same outcome unions are built as literals. |

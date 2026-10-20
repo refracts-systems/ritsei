@@ -9,7 +9,7 @@ export {
   CapabilityScope,
   CapabilityStability,
   getCapabilityDefinition,
-  isCapabilityIdShape,
+  isCapabilityIdFormat,
   isKnownCapability,
   LegacyCapabilityIds,
 } from "./src/capabilities.ts"
@@ -30,7 +30,7 @@ export {
   TenantMembershipStatus,
 } from "./src/contract.ts"
 export type {
-  AuthorizationService as AuthorizationServiceShape,
+  AuthorizationService as AuthorizationServiceContract,
   Capability as CapabilityType,
   DirectCapabilityGrant as DirectCapabilityGrantType,
   ListAccessibleTenantsInput as ListAccessibleTenantsInputType,
@@ -59,7 +59,7 @@ export {
 } from "./src/relationship.ts"
 export type {
   RelationshipDecision as RelationshipDecisionType,
-  RelationshipEngine as RelationshipEngineShape,
+  RelationshipEngine as RelationshipEngineContract,
   RelationshipInput as RelationshipInputType,
   RelationshipResult as RelationshipResultType,
 } from "./src/relationship.ts"

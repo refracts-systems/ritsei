@@ -7,7 +7,7 @@ import {
   AuthorizationDenied,
   makeAuthorizationTestLayer,
 } from "../../../../framework/modules/authorization/mod.ts"
-import type { EventEnvelopeShape } from "../../../../framework/modules/messaging/mod.ts"
+import type { EventEnvelopeContract } from "../../../../framework/modules/messaging/mod.ts"
 import {
   AssignPartyRoleInput,
   AttachExternalIdentifierInput,
@@ -75,15 +75,15 @@ const withParty = <A, E>(program: Effect.Effect<A, E, PartyService>) =>
 describe("party contract", () => {
   it.effect("authorizes party creation and publishes its owner event", () =>
     Effect.gen(function* () {
-      const published: EventEnvelopeShape[] = []
+      const published: EventEnvelopeContract[] = []
       const service = yield* Effect.provide(
         makePartyServiceFromStore(Effect.succeed(makePartyMemoryStore())),
         Layer.mergeAll(
           authorizationLayer,
           Layer.succeed(PartyEventPublisher, {
             append: (input) => {
-              published.push(input as EventEnvelopeShape)
-              return Effect.succeed(input as EventEnvelopeShape)
+              published.push(input as EventEnvelopeContract)
+              return Effect.succeed(input as EventEnvelopeContract)
             },
           }),
         ),

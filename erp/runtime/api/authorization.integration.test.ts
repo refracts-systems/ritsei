@@ -12,7 +12,7 @@ import {
   AuthorizationCapabilities,
   AuthorizationDenied,
   AuthorizationService,
-  type AuthorizationServiceShape,
+  type AuthorizationServiceContract,
   CapabilityDefinitions,
   type CapabilityType,
 } from "../../../framework/modules/authorization/mod.ts"
@@ -46,7 +46,7 @@ it.layer(TestHttpServices)("Authorization API", (it) => {
         capability: IdentityCapabilities.userAccountRead,
         scope: "tenant" as const,
       }
-      const authorization: AuthorizationServiceShape = {
+      const authorization: AuthorizationServiceContract = {
         authorize: (input) => {
           const request = input as {
             readonly tenantId: string

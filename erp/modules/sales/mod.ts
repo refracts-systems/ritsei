@@ -34,7 +34,7 @@ export type {
   SalesOrder as SalesOrderType,
   SalesOrderLine as SalesOrderLineType,
   SalesOrderStatus as SalesOrderStatusType,
-  SalesService as SalesServiceShape,
+  SalesService as SalesServiceContract,
 } from "./src/contract.ts"
 export {
   CustomerAlreadyExists,
@@ -72,7 +72,7 @@ export type {
   Delivery as DeliveryType,
   OrderFulfillment as OrderFulfillmentType,
   PartyCustomer as PartyCustomerType,
-  SalesDocumentService as SalesDocumentServiceShape,
+  SalesDocumentService as SalesDocumentServiceContract,
   SalesQuotation as SalesQuotationType,
 } from "./src/documents-contract.ts"
 export {

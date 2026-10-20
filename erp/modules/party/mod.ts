@@ -34,7 +34,7 @@ export {
   RelatedPartyPath,
   SetPartyRepresentationActiveInput,
 } from "./src/contract.ts"
-export type { PartyService as PartyServiceShape } from "./src/contract.ts"
+export type { PartyService as PartyServiceContract } from "./src/contract.ts"
 export {
   BranchAlreadyExists,
   ExternalIdentifierAlreadyAssigned,
@@ -74,7 +74,7 @@ export type {
   PartyAddress as PartyAddressType,
   PartyBankAccount as PartyBankAccountType,
   PartyContactBook as PartyContactBookType,
-  PartyContactService as PartyContactServiceShape,
+  PartyContactService as PartyContactServiceContract,
 } from "./src/contact-book.ts"
 export { PartyBankAccountAlreadyExists } from "./src/errors.ts"
 export { PartyModule } from "./manifest.ts"

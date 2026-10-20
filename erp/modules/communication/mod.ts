@@ -8,9 +8,9 @@ export {
   RetryCommunicationInput,
 } from "./src/contract.ts"
 export type {
-  CommunicationConfiguration as CommunicationConfigurationShape,
-  CommunicationProcessingResult as CommunicationProcessingResultShape,
-  CommunicationService as CommunicationServiceShape,
+  CommunicationConfiguration as CommunicationConfigurationContract,
+  CommunicationProcessingResult as CommunicationProcessingResultContract,
+  CommunicationService as CommunicationServiceContract,
 } from "./src/contract.ts"
 export {
   CommunicationNotFound,

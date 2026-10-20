@@ -22,7 +22,7 @@ export type {
   CustomerStatement as CustomerStatementType,
   Payment as PaymentType,
   PaymentFailure,
-  SettlementService as SettlementServiceShape,
+  SettlementService as SettlementServiceContract,
 } from "./src/contract.ts"
 export {
   AllocationBeforePayment,

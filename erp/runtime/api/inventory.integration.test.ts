@@ -12,7 +12,7 @@ import type { InventoryService as InventoryServiceContract } from "../../modules
 import {
   InventoryService,
   StockKeepingService,
-  type StockKeepingServiceShape,
+  type StockKeepingServiceContract,
 } from "../../modules/inventory/mod.ts"
 import { unusedService } from "../../../tests/support/unused-service.ts"
 import { BearerAuth, CurrentPrincipal, RitseiApi } from "./api.ts"
@@ -117,7 +117,7 @@ it.layer(TestHttpServices)("inventory API read projections", (it) => {
         Layer.provide(
           Layer.succeed(
             StockKeepingService,
-            unusedService<StockKeepingServiceShape>("stock keeping"),
+            unusedService<StockKeepingServiceContract>("stock keeping"),
           ),
         ),
       )

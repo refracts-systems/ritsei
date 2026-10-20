@@ -10,7 +10,7 @@ import {
   type DrizzleDatabase,
   type DrizzleTransaction,
 } from "../../../foundation/mod.ts"
-import type { EventEnvelopeShape } from "../../messaging/mod.ts"
+import type { EventEnvelopeContract } from "../../messaging/mod.ts"
 import {
   CreateUserAccountForTenantInput,
   ExternalSubjectAlreadyBound,
@@ -41,7 +41,7 @@ const withUserAccount = <A, E>(program: Effect.Effect<A, E, UserAccountService>)
 describe("user account contract", () => {
   it.effect("authorizes tenant account creation and publishes its owner event", () =>
     Effect.gen(function* () {
-      const published: EventEnvelopeShape[] = []
+      const published: EventEnvelopeContract[] = []
       const service = yield* Effect.provide(
         makeUserAccountServiceFromStore(Effect.succeed(makeUserAccountMemoryStore())),
         Layer.mergeAll(
@@ -58,8 +58,8 @@ describe("user account contract", () => {
           }),
           Layer.succeed(IdentityEventPublisher, {
             append: (input) => {
-              published.push(input as EventEnvelopeShape)
-              return Effect.succeed(input as EventEnvelopeShape)
+              published.push(input as EventEnvelopeContract)
+              return Effect.succeed(input as EventEnvelopeContract)
             },
           }),
         ),

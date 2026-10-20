@@ -11,13 +11,13 @@ import * as Path from "effect/Path"
 import {
   AuthorizationDenied,
   AuthorizationService,
-  type AuthorizationServiceShape,
+  type AuthorizationServiceContract,
   type CapabilityType,
 } from "../../../framework/modules/authorization/mod.ts"
 import {
   IdentityCapabilities,
   UserAccountService,
-  type UserAccountServiceShape,
+  type UserAccountServiceContract,
 } from "../../../framework/modules/identity/mod.ts"
 import { BearerAuth, CurrentPrincipal, RitseiApi } from "./api.ts"
 import { UserAccountHandlers } from "./handlers.ts"
@@ -32,7 +32,7 @@ const updatedEmail = "operator.renamed@example.com"
 const unused = () => Effect.die(new Error("unused identity endpoint in API integration test"))
 const account = (email = originalEmail) => ({ id: accountId, email, status: "active" as const })
 
-const userAccounts: UserAccountServiceShape = {
+const userAccounts: UserAccountServiceContract = {
   create: unused,
   createForTenant: unused,
   getById: () => Effect.succeed(account()),
@@ -56,7 +56,7 @@ it.layer(TestHttpServices)("identity tenant API authorization", (it) => {
     Effect.gen(function* () {
       let allowedCapability: CapabilityType | null = IdentityCapabilities.userAccountRead
       const observed: CapabilityType[] = []
-      const authorization: AuthorizationServiceShape = {
+      const authorization: AuthorizationServiceContract = {
         authorize: (input) => {
           const request = input as {
             readonly tenantId: string

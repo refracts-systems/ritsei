@@ -104,9 +104,9 @@ export type {
   FinancialOperation as FinancialOperationType,
   FinancialOperationCommandInput as FinancialOperationCommandInputType,
   FinancialOperationFailpointName as FinancialOperationFailpointNameType,
-  FinancialOperationFailpointService as FinancialOperationFailpointServiceShape,
+  FinancialOperationFailpointService as FinancialOperationFailpointServiceContract,
   FinancialOperationJobPayload as FinancialOperationJobPayloadType,
-  FinancialOperationService as FinancialOperationServiceShape,
+  FinancialOperationService as FinancialOperationServiceContract,
   FinancialReconciliationCheckpoint as FinancialReconciliationCheckpointType,
   ReconcileFinancialCheckpointInput as ReconcileFinancialCheckpointInputType,
 } from "./src/financial-operations.ts"
@@ -198,7 +198,7 @@ export type {
   Account as AccountType,
   AccountingConfiguration as AccountingConfigurationType,
   AccountingPeriod as AccountingPeriodType,
-  AccountingService as AccountingServiceShape,
+  AccountingService as AccountingServiceContract,
   FinancialStagingEvidenceRecord as FinancialStagingEvidenceRecordType,
   FinancialVerificationArtifact as FinancialVerificationArtifactType,
   JournalEntry as JournalEntryType,
@@ -219,7 +219,7 @@ export {
 } from "./src/general-ledger-contract.ts"
 export type {
   GeneralLedger as GeneralLedgerType,
-  GeneralLedgerService as GeneralLedgerServiceShape,
+  GeneralLedgerService as GeneralLedgerServiceContract,
   LedgerAccount as LedgerAccountType,
   LedgerEntry as LedgerEntryType,
   PostEntryFailure,

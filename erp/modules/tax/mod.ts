@@ -16,7 +16,7 @@ export {
 export type {
   TaxCode as TaxCodeRecord,
   TaxComputation as TaxComputationType,
-  TaxService as TaxServiceShape,
+  TaxService as TaxServiceContract,
 } from "./src/contract.ts"
 export { TaxCodeAlreadyExists, TaxCodeNotFound, TaxProductNotFound } from "./src/errors.ts"
 export { makeTaxService, makeTaxTestLayer, TaxLive } from "./src/layers.ts"

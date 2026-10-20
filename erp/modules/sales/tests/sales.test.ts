@@ -8,7 +8,7 @@ import {
   makeAuthorizationTestLayer,
 } from "../../../../framework/modules/authorization/mod.ts"
 import {
-  EventEnvelopeShape,
+  EventEnvelopeContract,
   makeMessagingTestLayer,
   MessagingService,
 } from "../../../../framework/modules/messaging/mod.ts"
@@ -61,7 +61,7 @@ const authorizationLayer = makeAuthorizationTestLayer(
 
 const withSales = <A, E>(
   program: Effect.Effect<A, E, SalesService>,
-  onPublished?: (event: EventEnvelopeShape) => void,
+  onPublished?: (event: EventEnvelopeContract) => void,
 ) => {
   const messaging = Layer.effect(
     MessagingService,
@@ -212,7 +212,7 @@ describe("sales contract", () => {
   )
 
   it.effect("publishes one confirmation event across idempotent replay", () => {
-    const published: EventEnvelopeShape[] = []
+    const published: EventEnvelopeContract[] = []
     return withSales(
       Effect.gen(function* () {
         const sales = yield* SalesService

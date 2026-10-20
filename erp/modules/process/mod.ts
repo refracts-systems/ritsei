@@ -37,7 +37,7 @@ export {
 export { ProcessOperatorControl } from "./src/operations-store.ts"
 export type {
   ProcessOperatorControl as ProcessOperatorControlType,
-  ProcessOperatorStore as ProcessOperatorStoreShape,
+  ProcessOperatorStore as ProcessOperatorStoreContract,
 } from "./src/operations-store.ts"
 export {
   makeProcessOperatorService,
@@ -84,7 +84,7 @@ export type {
   ProcessDeploymentInput as ProcessDeploymentInputType,
   ProcessReleaseArtifact as ProcessReleaseArtifactType,
   ProcessReleaseInput as ProcessReleaseInputType,
-  ProcessReleaseStore as ProcessReleaseStoreShape,
+  ProcessReleaseStore as ProcessReleaseStoreContract,
 } from "./src/release-store.ts"
 export {
   makeMemoryProcessCheckpointStore,
@@ -92,7 +92,7 @@ export {
   ProcessCheckpointRevisionConflict,
   ProcessCheckpointStore,
 } from "./src/runtime-store.ts"
-export type { ProcessCheckpointStore as ProcessCheckpointStoreShape } from "./src/runtime-store.ts"
+export type { ProcessCheckpointStore as ProcessCheckpointStoreContract } from "./src/runtime-store.ts"
 export {
   makeProcessRuntime,
   ProcessCheckpoint,
@@ -146,7 +146,7 @@ export type {
   ProcessOperatorInbox as ProcessOperatorInboxType,
   ProcessRuntimeDetail as ProcessRuntimeDetailType,
   ProcessRuntimeInstance as ProcessRuntimeInstanceType,
-  ProcessStudioService as ProcessStudioServiceShape,
+  ProcessStudioService as ProcessStudioServiceContract,
   ProcessWorkflowRun as ProcessWorkflowRunType,
 } from "./src/studio.ts"
 
@@ -213,7 +213,7 @@ export type {
   OrderCancellationResult as OrderCancellationResultType,
   OrderConfirmationResult as OrderConfirmationResultType,
   OrderFulfillmentResult as OrderFulfillmentResultType,
-  ProcessService as ProcessServiceShape,
+  ProcessService as ProcessServiceContract,
   WorkflowRun as WorkflowRunType,
 } from "./src/service.ts"
 export {
@@ -225,6 +225,6 @@ export {
 export type {
   DeliverOrderFailure,
   OrderDelivery as OrderDeliveryType,
-  OrderToCashService as OrderToCashServiceShape,
+  OrderToCashService as OrderToCashServiceContract,
 } from "./src/order-to-cash.ts"
 export { ProcessModule } from "./manifest.ts"

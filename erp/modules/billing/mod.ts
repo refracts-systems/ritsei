@@ -17,7 +17,7 @@ export {
 } from "./src/contract.ts"
 export type {
   BillingDocument as BillingDocumentType,
-  BillingService as BillingServiceShape,
+  BillingService as BillingServiceContract,
   InvoiceFailure,
   OpenItem as OpenItemType,
 } from "./src/contract.ts"

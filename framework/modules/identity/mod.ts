@@ -23,7 +23,7 @@ export {
   UserAccountService,
   UserAccountStatus,
 } from "./src/contract.ts"
-export type { UserAccountService as UserAccountServiceShape } from "./src/contract.ts"
+export type { UserAccountService as UserAccountServiceContract } from "./src/contract.ts"
 export {
   ExternalSubjectAlreadyBound,
   ExternalSubjectNotFound,

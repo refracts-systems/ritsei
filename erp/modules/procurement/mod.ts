@@ -35,7 +35,7 @@ export type {
   ListPurchaseOrders as ListPurchaseOrdersType,
   ListPurchaseReceipts as ListPurchaseReceiptsType,
   ListSupplierAccounts as ListSupplierAccountsType,
-  ProcurementService as ProcurementServiceShape,
+  ProcurementService as ProcurementServiceContract,
   PurchaseOrder as PurchaseOrderType,
   PurchaseOrderLine as PurchaseOrderLineType,
   PurchaseOrderLineSnapshot as PurchaseOrderLineSnapshotType,
@@ -91,7 +91,7 @@ export {
 } from "./src/documents-contract.ts"
 export type {
   PricedPurchaseOrder,
-  PurchaseDocumentService as PurchaseDocumentServiceShape,
+  PurchaseDocumentService as PurchaseDocumentServiceContract,
   PurchaseMatching as PurchaseMatchingType,
   PurchaseStockDocument,
 } from "./src/documents-contract.ts"

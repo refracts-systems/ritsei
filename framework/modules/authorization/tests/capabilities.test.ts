@@ -8,7 +8,7 @@ import {
   CapabilityDefinitions,
   CapabilityId,
   CapabilityIds,
-  isCapabilityIdShape,
+  isCapabilityIdFormat,
   LegacyCapabilityIds,
 } from "../mod.ts"
 
@@ -52,11 +52,11 @@ describe("capability naming contract", () => {
   })
 
   it("accepts canonical shapes and rejects broad or nested names", () => {
-    assert.isTrue(isCapabilityIdShape("party.create"))
-    assert.isTrue(isCapabilityIdShape("inventory.stock_transfer.confirm"))
-    assert.isFalse(isCapabilityIdShape("user_account.write"))
-    assert.isFalse(isCapabilityIdShape("inventory.stock.transfer.confirm"))
-    assert.isFalse(isCapabilityIdShape("Party.Create"))
+    assert.isTrue(isCapabilityIdFormat("party.create"))
+    assert.isTrue(isCapabilityIdFormat("inventory.stock_transfer.confirm"))
+    assert.isFalse(isCapabilityIdFormat("user_account.write"))
+    assert.isFalse(isCapabilityIdFormat("inventory.stock.transfer.confirm"))
+    assert.isFalse(isCapabilityIdFormat("Party.Create"))
   })
 
   it.effect("keeps legacy identifiers outside the assignable capability schema", () =>

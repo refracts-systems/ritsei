@@ -14,9 +14,9 @@ import {
   type ProcessOperatorControlType,
   type ProcessRuntimeInstanceType,
   ProcessService,
-  type ProcessServiceShape,
+  type ProcessServiceContract,
   ProcessStudioService,
-  type ProcessStudioServiceShape,
+  type ProcessStudioServiceContract,
   type ProcessWorkflowRunType,
 } from "../../modules/process/mod.ts"
 import { BearerAuth, CurrentPrincipal, RitseiApi } from "./api.ts"
@@ -114,7 +114,7 @@ const control: ProcessOperatorControlType = {
   createdAt: "2026-09-13T12:01:00.000Z",
 }
 
-const processService: ProcessServiceShape = {
+const processService: ProcessServiceContract = {
   confirmOrder: unused,
   cancelOrder: unused,
   fulfillOrder: unused,
@@ -134,7 +134,7 @@ it.layer(TestHttpServices)("Process API", (it) => {
   it.effect("forwards tenant-scoped typed requests through the Process Studio contract", () =>
     Effect.gen(function* () {
       const observed: unknown[] = []
-      const studio: ProcessStudioServiceShape = {
+      const studio: ProcessStudioServiceContract = {
         listCatalog: (input) => {
           observed.push(input)
           return Effect.succeed([catalog])

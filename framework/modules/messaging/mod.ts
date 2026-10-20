@@ -6,12 +6,12 @@ export {
   GetEventInput,
 } from "./src/contract.ts"
 export type {
-  AppendEventInput as AppendEventInputShape,
-  ConsumeOnceInput as ConsumeOnceInputShape,
+  AppendEventInput as AppendEventInputContract,
+  ConsumeOnceInput as ConsumeOnceInputContract,
   ConsumeOnceResult,
-  ConsumerReceipt as ConsumerReceiptShape,
-  EventEnvelope as EventEnvelopeShape,
-  GetEventInput as GetEventInputShape,
+  ConsumerReceipt as ConsumerReceiptContract,
+  EventEnvelope as EventEnvelopeContract,
+  GetEventInput as GetEventInputContract,
 } from "./src/contract.ts"
 export { EventIdempotencyConflict } from "./src/errors.ts"
 export {
@@ -20,4 +20,4 @@ export {
   MessagingLive,
   MessagingService,
 } from "./src/service.ts"
-export type { MessagingService as MessagingServiceShape } from "./src/service.ts"
+export type { MessagingService as MessagingServiceContract } from "./src/service.ts"

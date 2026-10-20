@@ -23,7 +23,7 @@ import {
   AccountingCapabilities,
   FinancialEngineCutoverBlocked,
   FinancialLedgerPort,
-  type FinancialOperationServiceShape,
+  type FinancialOperationServiceContract,
   FinancialReconciliationCheckpointEvidenceInvalid,
   FinancialVerificationArtifactInvalid,
   makeAccountingService,
@@ -391,7 +391,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
         },
       })
       const reconcileCheckpoint = (
-        operationService: FinancialOperationServiceShape,
+        operationService: FinancialOperationServiceContract,
         input: ReconcileFinancialCheckpointInputType,
         consistency: FinancialStoreWatermarkType["consistency"] = "bounded",
       ) =>

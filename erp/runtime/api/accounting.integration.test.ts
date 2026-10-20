@@ -14,7 +14,7 @@ import {
   FinancialOperationService,
   type FinancialOperationService as FinancialOperationServiceContract,
   GeneralLedgerService,
-  type GeneralLedgerServiceShape,
+  type GeneralLedgerServiceContract,
 } from "../../modules/accounting/mod.ts"
 import { BearerAuth, CurrentPrincipal, RitseiApi } from "./api.ts"
 import { AccountingHttpHandlers as AccountingHandlers } from "../../modules/accounting/http.ts"
@@ -91,7 +91,7 @@ const accountingService = partial<AccountingServiceContract>({
 
 const financialOperations = {} as FinancialOperationServiceContract
 // The ledger endpoints are covered by the general-ledger tests; these contracts never reach them.
-const ledger = unusedService<GeneralLedgerServiceShape>("ledger")
+const ledger = unusedService<GeneralLedgerServiceContract>("ledger")
 const TestHttpServices = Layer.mergeAll(Path.layer, Etag.layerWeak, HttpPlatform.layer).pipe(
   Layer.provideMerge(FileSystem.layerNoop({})),
 )

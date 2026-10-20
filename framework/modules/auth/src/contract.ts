@@ -5,7 +5,7 @@ import * as Schema from "effect/Schema"
 export { ExternalIdentity, IdentityProvider } from "./provider.ts"
 export type {
   ExternalIdentity as ExternalIdentityType,
-  IdentityProvider as IdentityProviderShape,
+  IdentityProvider as IdentityProviderContract,
 } from "./provider.ts"
 
 const PositiveSeconds = Schema.Int.check(Schema.isGreaterThan(0))

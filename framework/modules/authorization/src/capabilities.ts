@@ -130,16 +130,16 @@ export const LegacyCapabilityIds = [
 ] as const
 
 const forbiddenVerbs = new Set(["manage", "write", "admin", "full_access", "execute"])
-const capabilityIdShape = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*){1,2}$/
+const capabilityIdPattern = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*){1,2}$/
 
-export const isCapabilityIdShape = (value: string): boolean => {
-  if (!capabilityIdShape.test(value)) return false
+export const isCapabilityIdFormat = (value: string): boolean => {
+  if (!capabilityIdPattern.test(value)) return false
   const verb = value.slice(value.lastIndexOf(".") + 1)
   return !forbiddenVerbs.has(verb)
 }
 
 export const CapabilityId = Schema.String.check(
-  Schema.makeFilter((value) => isCapabilityIdShape(value), {
+  Schema.makeFilter((value) => isCapabilityIdFormat(value), {
     expected: "a canonical capability identifier",
   }),
 )

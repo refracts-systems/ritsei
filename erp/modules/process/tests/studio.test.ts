@@ -6,7 +6,7 @@ import { Database, type DatabaseService } from "../../../../framework/foundation
 import {
   AuthorizationDenied,
   AuthorizationService,
-  type AuthorizationService as AuthorizationServiceShape,
+  type AuthorizationService as AuthorizationServiceContract,
   type CapabilityType,
 } from "../../../../framework/modules/authorization/mod.ts"
 import { makeProcessStudioService, ProcessCapabilities } from "../mod.ts"
@@ -32,7 +32,7 @@ const database: DatabaseService = {
 
 const unused = () => Effect.die(new Error("unused authorization operation in Process Studio test"))
 
-const makeAuthorization = (allow: boolean): AuthorizationServiceShape => ({
+const makeAuthorization = (allow: boolean): AuthorizationServiceContract => ({
   authorize: (input) => {
     const request = input as { readonly tenantId: string; readonly capability: string }
     return allow

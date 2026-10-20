@@ -3,7 +3,7 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 
 import {
-  EventEnvelopeShape,
+  EventEnvelopeContract,
   makeMessagingTestLayer,
   MessagingService,
 } from "../../../../framework/modules/messaging/mod.ts"
@@ -22,7 +22,7 @@ const supplierAccountId = "01990000-0000-7000-8000-000000000003"
 const eventId = "01990000-0000-7000-8000-000000000004"
 const timestamp = "2026-09-06T00:00:00.000Z"
 
-const event: EventEnvelopeShape = {
+const event: EventEnvelopeContract = {
   eventId,
   eventType: ProcurementPurchaseOrderConfirmedEvent.id,
   eventVersion: ProcurementPurchaseOrderConfirmedEvent.version,

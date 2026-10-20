@@ -39,7 +39,7 @@ export {
   Warehouse,
 } from "./src/contract.ts"
 export type {
-  InventoryService as InventoryServiceShape,
+  InventoryService as InventoryServiceContract,
   Item as ItemType,
   StockBalance as StockBalanceType,
   StockCorrection as StockCorrectionType,
@@ -85,7 +85,7 @@ export {
   ValuedStockMovement,
 } from "./src/stock-keeping-contract.ts"
 export type {
-  StockKeepingService as StockKeepingServiceShape,
+  StockKeepingService as StockKeepingServiceContract,
   StockValuation as StockValuationType,
   ValuedStockMovement as ValuedStockMovementType,
 } from "./src/stock-keeping-contract.ts"

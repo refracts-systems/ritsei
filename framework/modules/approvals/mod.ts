@@ -13,7 +13,7 @@ export {
 export type {
   ApprovalPolicy as ApprovalPolicyType,
   ApprovalRequest as ApprovalRequestType,
-  ApprovalService as ApprovalServiceShape,
+  ApprovalService as ApprovalServiceContract,
 } from "./src/contract.ts"
 export {
   ApprovalAlreadyDecided,
