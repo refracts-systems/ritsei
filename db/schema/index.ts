@@ -107,6 +107,10 @@ export {
   purchaseOrderStatus,
   purchaseReceiptLines,
   purchaseReceipts,
+  purchaseOrderLineTerms,
+  purchaseReturnLines,
+  purchaseReturns,
+  supplierPrices,
   supplierAccounts,
 } from "./procurement.ts"
 export { products, productSchema, productType } from "./product.ts"
@@ -143,3 +147,4 @@ export {
   settlementSchema,
   settlementSide,
 } from "./settlement.ts"
+export { approvalPolicies, approvalRequests, approvalsSchema, approvalStatus } from "./approvals.ts"

@@ -127,3 +127,23 @@ export class PurchaseReceiptWarehouseLegalEntityMismatch extends Schema.TaggedEr
     legalEntityId: Uuid,
   },
 ) {}
+/** No explicit price and no supplier price for the product. */
+export class SupplierPriceNotFound extends Schema.TaggedError<SupplierPriceNotFound>()(
+  "SupplierPriceNotFound",
+  { tenantId: Uuid, supplierAccountId: Uuid, productId: Uuid },
+) {}
+/** Valued purchasing covers stockable products; other purchases are not valued yet. */
+export class PurchaseLineNotStockable extends Schema.TaggedError<PurchaseLineNotStockable>()(
+  "PurchaseLineNotStockable",
+  { tenantId: Uuid, productId: Uuid },
+) {}
+/** The purchase order total exceeds the approval threshold and is not approved. */
+export class PurchaseOrderApprovalRequired extends Schema.TaggedError<PurchaseOrderApprovalRequired>()(
+  "PurchaseOrderApprovalRequired",
+  { tenantId: Uuid, purchaseOrderId: Uuid, status: Schema.String },
+) {}
+/** Returning more than was received, net of earlier returns. */
+export class PurchaseReturnExceedsReceipt extends Schema.TaggedError<PurchaseReturnExceedsReceipt>()(
+  "PurchaseReturnExceedsReceipt",
+  { tenantId: Uuid, purchaseOrderLineId: Uuid, available: Schema.String },
+) {}

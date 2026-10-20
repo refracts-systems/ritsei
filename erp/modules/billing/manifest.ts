@@ -4,7 +4,7 @@ import { BillingCapabilities } from "./src/capabilities.ts"
 export const BillingModule = defineModule({
   name: "billing",
   layer: "erp",
-  dependsOn: ["accounting", "product", "sales", "tax"],
+  dependsOn: ["accounting", "party", "procurement", "product", "sales", "tax"],
   schemas: ["billing"],
   capabilities: BillingCapabilities,
   actions: [],

@@ -2,9 +2,11 @@ import { sql } from "drizzle-orm"
 import {
   bigint,
   check,
+  date,
   foreignKey,
   index,
   pgSchema,
+  primaryKey,
   text,
   timestamp,
   unique,
@@ -15,6 +17,8 @@ import { tenants } from "./auth.ts"
 import { createdAt, id, money, updatedAt } from "./common.ts"
 import { warehouses } from "./inventory.ts"
 import { partyRelationships } from "./party.ts"
+import { products } from "./product.ts"
+import { taxCodes } from "./tax.ts"
 
 export const procurementSchema = pgSchema("procurement")
 export const purchaseOrderStatus = procurementSchema.enum("purchase_order_status", [
@@ -223,5 +227,127 @@ export const purchaseReceiptLines = procurementSchema.table(
       ${table.unitOfMeasure} = upper(trim(${table.unitOfMeasure})) and
       ${table.unitOfMeasure} ~ '^[A-Z][A-Z0-9_-]*$'`,
     ),
+  ],
+)
+
+/** The price a supplier quotes for a product, used to price new purchase orders. */
+export const supplierPrices = procurementSchema.table(
+  "supplier_prices",
+  {
+    tenantId: uuid("tenant_id").notNull(),
+    supplierAccountId: uuid("supplier_account_id").notNull(),
+    productId: uuid("product_id").notNull(),
+    unitPrice: money("unit_price"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.tenantId, table.supplierAccountId, table.productId] }),
+    foreignKey({
+      columns: [table.tenantId, table.supplierAccountId],
+      foreignColumns: [supplierAccounts.tenantId, supplierAccounts.id],
+      name: "supplier_prices_supplier_account_fkey",
+    }),
+    foreignKey({
+      columns: [table.tenantId, table.productId],
+      foreignColumns: [products.tenantId, products.id],
+      name: "supplier_prices_product_fkey",
+    }),
+    check("supplier_prices_unit_price_check", sql`${table.unitPrice} >= 0`),
+  ],
+)
+
+/** Tax terms of a purchase order line, fixed when the line is created. */
+export const purchaseOrderLineTerms = procurementSchema.table(
+  "purchase_order_line_terms",
+  {
+    tenantId: uuid("tenant_id").notNull(),
+    purchaseOrderId: uuid("purchase_order_id").notNull(),
+    purchaseOrderLineId: uuid("purchase_order_line_id").notNull(),
+    taxCodeId: uuid("tax_code_id"),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.tenantId, table.purchaseOrderLineId] }),
+    foreignKey({
+      columns: [table.tenantId, table.purchaseOrderId, table.purchaseOrderLineId],
+      foreignColumns: [
+        purchaseOrderLines.tenantId,
+        purchaseOrderLines.purchaseOrderId,
+        purchaseOrderLines.id,
+      ],
+      name: "purchase_order_line_terms_line_fkey",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.tenantId, table.taxCodeId],
+      foreignColumns: [taxCodes.tenantId, taxCodes.id],
+      name: "purchase_order_line_terms_tax_code_fkey",
+    }),
+  ],
+)
+
+/** Goods returned to the supplier: a correction of received quantity (ADR-0104). */
+export const purchaseReturns = procurementSchema.table(
+  "purchase_returns",
+  {
+    id: id(),
+    tenantId: uuid("tenant_id").notNull(),
+    purchaseOrderId: uuid("purchase_order_id").notNull(),
+    warehouseId: uuid("warehouse_id").notNull(),
+    number: text("number").notNull(),
+    returnDate: date("return_date", { mode: "string" }).notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    unique("purchase_returns_tenant_id_id_key").on(table.tenantId, table.id),
+    unique("purchase_returns_tenant_order_id_key").on(
+      table.tenantId,
+      table.purchaseOrderId,
+      table.id,
+    ),
+    foreignKey({
+      columns: [table.tenantId, table.purchaseOrderId],
+      foreignColumns: [purchaseOrders.tenantId, purchaseOrders.id],
+      name: "purchase_returns_purchase_order_fkey",
+    }),
+  ],
+)
+
+export const purchaseReturnLines = procurementSchema.table(
+  "purchase_return_lines",
+  {
+    id: id(),
+    tenantId: uuid("tenant_id").notNull(),
+    returnId: uuid("return_id").notNull(),
+    purchaseOrderId: uuid("purchase_order_id").notNull(),
+    purchaseOrderLineId: uuid("purchase_order_line_id").notNull(),
+    quantity: bigint("quantity", { mode: "string" }).notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    unique("purchase_return_lines_return_line_key").on(
+      table.tenantId,
+      table.returnId,
+      table.purchaseOrderLineId,
+    ),
+    foreignKey({
+      columns: [table.tenantId, table.purchaseOrderId, table.returnId],
+      foreignColumns: [
+        purchaseReturns.tenantId,
+        purchaseReturns.purchaseOrderId,
+        purchaseReturns.id,
+      ],
+      name: "purchase_return_lines_return_fkey",
+    }),
+    foreignKey({
+      columns: [table.tenantId, table.purchaseOrderId, table.purchaseOrderLineId],
+      foreignColumns: [
+        purchaseOrderLines.tenantId,
+        purchaseOrderLines.purchaseOrderId,
+        purchaseOrderLines.id,
+      ],
+      name: "purchase_return_lines_order_line_fkey",
+    }),
+    check("purchase_return_lines_quantity_check", sql`${table.quantity} > 0`),
   ],
 )

@@ -4,6 +4,7 @@ import type { Sql } from "postgres"
 import { Database } from "../../framework/foundation/mod.ts"
 import { makeAuthorizationTestLayer } from "../../framework/modules/authorization/mod.ts"
 import { NumberingLive } from "../../framework/modules/numbering/mod.ts"
+import { ApprovalsLive } from "../../framework/modules/approvals/mod.ts"
 import { makePostgresDatabase } from "../../framework/platform/mod.ts"
 import { GeneralLedgerLive } from "../../erp/modules/accounting/mod.ts"
 import { StockKeepingLive } from "../../erp/modules/inventory/mod.ts"
@@ -12,6 +13,8 @@ import { PartyLive } from "../../erp/modules/party/mod.ts"
 import { OrderToCashLive } from "../../erp/modules/process/mod.ts"
 import { SettlementLive } from "../../erp/modules/settlement/mod.ts"
 import { ProductLive } from "../../erp/modules/product/mod.ts"
+import { ProcurementLive, PurchaseDocumentsLive } from "../../erp/modules/procurement/mod.ts"
+import { InventoryLive } from "../../erp/modules/inventory/mod.ts"
 import { SalesDocumentsLive, SalesLive } from "../../erp/modules/sales/mod.ts"
 import { TaxLive } from "../../erp/modules/tax/mod.ts"
 import { makeMessagingService, MessagingService } from "../../framework/modules/messaging/mod.ts"
@@ -45,8 +48,20 @@ export const erpChainLayers = (client: Sql, grants: ReadonlyArray<Grant>) => {
     Layer.provide(Layer.mergeAll(platform, party, tax, numbering)),
   )
   const legacySales = SalesLive.pipe(Layer.provide(Layer.merge(platform, messaging)))
+  const approvals = ApprovalsLive.pipe(Layer.provide(platform))
+  const inventory = InventoryLive.pipe(Layer.provide(Layer.merge(platform, messaging)))
+  const procurement = ProcurementLive.pipe(
+    Layer.provide(Layer.mergeAll(platform, party, inventory, messaging)),
+  )
+  const purchasing = PurchaseDocumentsLive.pipe(
+    Layer.provide(
+      Layer.mergeAll(platform, approvals, numbering, party, product, tax, stock, procurement),
+    ),
+  )
   const billing = BillingLive.pipe(
-    Layer.provide(Layer.mergeAll(platform, ledger, numbering, tax, sales, product)),
+    Layer.provide(
+      Layer.mergeAll(platform, ledger, numbering, tax, sales, product, purchasing, approvals),
+    ),
   )
   const settlement = SettlementLive.pipe(
     Layer.provide(Layer.mergeAll(platform, ledger, billing, numbering)),
@@ -67,6 +82,10 @@ export const erpChainLayers = (client: Sql, grants: ReadonlyArray<Grant>) => {
     legacySales,
     billing,
     settlement,
+    approvals,
+    inventory,
+    procurement,
+    purchasing,
     orderToCash,
   )
 }

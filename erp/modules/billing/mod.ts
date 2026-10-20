@@ -3,6 +3,8 @@ export {
   ApplySettlementInput,
   BillingDocument,
   BillingDocumentLine,
+  BillPurchaseOrderInput,
+  BillVarianceSubject,
   BillingService,
   BillingSide,
   CreditInvoiceInput,
@@ -20,6 +22,7 @@ export type {
   OpenItem as OpenItemType,
 } from "./src/contract.ts"
 export {
+  BillExceedsReceipt,
   BillingDocumentNotFound,
   CreditExceedsInvoice,
   NothingToInvoice,

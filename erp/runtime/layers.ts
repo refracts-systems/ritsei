@@ -26,6 +26,7 @@ import {
 } from "../modules/inventory/mod.ts"
 import { makeMessagingService, MessagingService } from "../../framework/modules/messaging/mod.ts"
 import { NumberingLive } from "../../framework/modules/numbering/mod.ts"
+import { ApprovalsLive } from "../../framework/modules/approvals/mod.ts"
 import {
   makePartyService,
   PartyContactsLive,
@@ -39,7 +40,7 @@ import {
   ProcessService,
   ProcessStudioLive,
 } from "../modules/process/mod.ts"
-import { ProcurementLive } from "../modules/procurement/mod.ts"
+import { ProcurementLive, PurchaseDocumentsLive } from "../modules/procurement/mod.ts"
 import { makeSalesService, SalesDocumentsLive, SalesService } from "../modules/sales/mod.ts"
 import {
   PostgresDatabaseLive,
@@ -188,10 +189,29 @@ export const serviceLayers = (
     ),
   )
 
+  const ApprovalServiceLive = ApprovalsLive.pipe(Layer.provide(BusinessRequirements))
+
+  const PurchaseDocumentServiceLive = PurchaseDocumentsLive.pipe(
+    Layer.provide(
+      Layer.mergeAll(
+        BusinessRequirements,
+        ApprovalServiceLive,
+        NumberingServiceLive,
+        PartyLive,
+        ProductServiceLive,
+        TaxServiceLive,
+        StockKeepingServiceLive,
+        ProcurementLiveWithRequirements,
+      ),
+    ),
+  )
+
   const BillingServiceLive = BillingLive.pipe(
     Layer.provide(
       Layer.mergeAll(
         BusinessRequirements,
+        ApprovalServiceLive,
+        PurchaseDocumentServiceLive,
         LedgerLive,
         NumberingServiceLive,
         TaxServiceLive,
@@ -241,6 +261,8 @@ export const serviceLayers = (
     SalesDocumentServiceLive,
     BillingServiceLive,
     SettlementServiceLive,
+    ApprovalServiceLive,
+    PurchaseDocumentServiceLive,
     OrderToCashServiceLive,
   )
 

@@ -53,6 +53,8 @@ type PlannedLine = {
   readonly quantity: bigint
   /** Receipts carry their value; issues and losses take the moving-average cost. */
   readonly receiptValue?: bigint
+  /** An issue at a stated cost instead of the moving average. */
+  readonly issueValue?: bigint
   /** Gains without a receipt value use the average cost, or this cost when nothing is valued. */
   readonly fallbackUnitCost?: bigint
 }
@@ -246,11 +248,22 @@ export const makeStockKeepingService = Effect.gen(function* () {
                 }),
               )
             }
-            // The last units take the remaining value, so rounding never strands value in stock.
+            // The last units take the remaining value, so rounding or a stated cost never strands
+            // value in stock.
             const cost =
               quantity === valuation.quantity
                 ? valuation.value
-                : divideHalfUp(valuation.value * quantity, valuation.quantity)
+                : (line.issueValue ?? divideHalfUp(valuation.value * quantity, valuation.quantity))
+            if (cost > valuation.value) {
+              return yield* Effect.fail(
+                new StockValuationUnavailable({
+                  tenantId: plan.tenantId,
+                  legalEntityId,
+                  itemId: line.itemId,
+                  requested: quantity.toString(),
+                }),
+              )
+            }
             valued.push({ itemId: line.itemId, quantity: line.quantity, value: -cost })
             continue
           }
@@ -477,7 +490,13 @@ export const makeStockKeepingService = Effect.gen(function* () {
       lossRole: decoded.counterRole,
       itemIds: decoded.lines.map((line) => line.itemId),
       resolve: () =>
-        decoded.lines.map((line) => ({ itemId: line.itemId, quantity: -BigInt(line.quantity) })),
+        decoded.lines.map((line) => ({
+          itemId: line.itemId,
+          quantity: -BigInt(line.quantity),
+          ...(line.unitCost === undefined
+            ? {}
+            : { issueValue: minor(line.unitCost) * BigInt(line.quantity) }),
+        })),
     })
   })
 

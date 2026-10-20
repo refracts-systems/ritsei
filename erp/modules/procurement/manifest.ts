@@ -5,7 +5,7 @@ import { ProcurementTypedActionCatalog, ProcurementTypedEventCatalog } from "./s
 export const ProcurementModule = defineModule({
   name: "procurement",
   layer: "erp",
-  dependsOn: ["inventory", "party"],
+  dependsOn: ["accounting", "inventory", "party", "product", "tax"],
   schemas: ["procurement"],
   capabilities: ProcurementCapabilities,
   actions: ProcurementTypedActionCatalog,

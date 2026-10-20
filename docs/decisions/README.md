@@ -126,5 +126,7 @@ current system; ADRs preserve decision history.
 | [`0100`](./0100-adopt-moving-average-inventory-valuation.md)                                  | Adopt moving-average inventory valuation                                                         | Proposed   |
 | [`0101`](./0101-coordinate-sales-delivery-with-inventory.md)                                  | Coordinate sales delivery with inventory                                                         | Proposed   |
 | [`0102`](./0102-split-billing-and-settlement.md)                                              | Split billing and settlement                                                                     | Proposed   |
+| [`0103`](./0103-adopt-threshold-approvals-with-separation-of-duties.md)                       | Adopt threshold approvals with separation of duties                                              | Proposed   |
+| [`0104`](./0104-adopt-valued-procure-to-pay-documents.md)                                     | Adopt valued procure-to-pay documents                                                            | Proposed   |
 
 Accepted ADRs must not be rewritten to alter history. Create a new ADR and use `Supersedes`.

@@ -29,3 +29,14 @@ export class SettlementConflict extends Schema.TaggedError<SettlementConflict>()
   "SettlementConflict",
   { tenantId: Uuid, invoiceId: Uuid, sourceId: Uuid },
 ) {}
+
+/** Billing more than was received (net of returns and earlier bills) without an approved variance. */
+export class BillExceedsReceipt extends Schema.TaggedError<BillExceedsReceipt>()(
+  "BillExceedsReceipt",
+  {
+    tenantId: Uuid,
+    purchaseOrderLineId: Uuid,
+    billable: Schema.String,
+    requested: Schema.String,
+  },
+) {}

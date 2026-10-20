@@ -70,8 +70,19 @@ export const IssueValuedStockInput = Schema.Struct({
   postingDate: CalendarDate,
   source: StockSource,
   /** The account role debited for the issued cost. */
-  counterRole: Schema.Literals(["cost_of_goods_sold", "inventory_adjustment"]),
-  lines: DocumentLines(Schema.Struct({ itemId: Uuid, quantity: Quantity })),
+  counterRole: Schema.Literals([
+    "cost_of_goods_sold",
+    "inventory_adjustment",
+    "goods_received_not_invoiced",
+  ]),
+  lines: DocumentLines(
+    Schema.Struct({
+      itemId: Uuid,
+      quantity: Quantity,
+      /** Removes value at this cost instead of the moving average, as returns to suppliers do. */
+      unitCost: Schema.optionalKey(FinancialMajorAmount),
+    }),
+  ),
 })
 
 export const CountStockInput = Schema.Struct({

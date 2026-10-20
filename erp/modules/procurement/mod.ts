@@ -76,3 +76,29 @@ export {
 export type { PurchaseOrderConfirmedEventPayload as PurchaseOrderConfirmedEventPayloadType } from "./src/events.ts"
 export { makeProcurementService, makeProcurementTestLayer, ProcurementLive } from "./src/layers.ts"
 export { ProcurementModule } from "./manifest.ts"
+export {
+  DraftPurchaseOrderInput,
+  MatchingLine,
+  PurchaseApprovalSubject,
+  PurchaseDocumentService,
+  PurchaseMatching,
+  PurchaseOrderQueryInput,
+  ReceiveValuedInput,
+  ReleasePurchaseOrderInput,
+  ReturnToSupplierInput,
+  SetSupplierPriceInput,
+  SupplierPrice,
+} from "./src/documents-contract.ts"
+export type {
+  PricedPurchaseOrder,
+  PurchaseDocumentService as PurchaseDocumentServiceShape,
+  PurchaseMatching as PurchaseMatchingType,
+  PurchaseStockDocument,
+} from "./src/documents-contract.ts"
+export {
+  PurchaseLineNotStockable,
+  PurchaseOrderApprovalRequired,
+  PurchaseReturnExceedsReceipt,
+  SupplierPriceNotFound,
+} from "./src/errors.ts"
+export { PurchaseDocumentsLive } from "./src/documents.ts"

@@ -106,6 +106,10 @@ export const CapabilityIds = [
   "settlement.payment.receive",
   "settlement.payment.make",
   "settlement.report.read",
+  "approvals.policy.configure",
+  "procurement.supplier_price.configure",
+  "procurement.purchase_return.create",
+  "procurement.purchase_order.approve",
 ] as const
 
 export const Capability = Schema.Literals(CapabilityIds)
@@ -155,6 +159,7 @@ export const CapabilityOwner = Schema.Literals([
   "tax",
   "billing",
   "settlement",
+  "approvals",
 ])
 export type CapabilityOwner = Schema.Schema.Type<typeof CapabilityOwner>
 
@@ -347,6 +352,10 @@ export const CapabilityDefinitions: ReadonlyArray<CapabilityDefinition> = [
   definition("settlement.payment.receive", "settlement", "payment", "receive"),
   definition("settlement.payment.make", "settlement", "payment", "make"),
   definition("settlement.report.read", "settlement", "report", "read"),
+  definition("approvals.policy.configure", "approvals", "policy", "configure"),
+  definition("procurement.supplier_price.configure", "procurement", "supplier_price", "configure"),
+  definition("procurement.purchase_return.create", "procurement", "purchase_return", "create"),
+  definition("procurement.purchase_order.approve", "procurement", "purchase_order", "approve"),
 ]
 
 const capabilityIdSet = new Set<string>(CapabilityIds)

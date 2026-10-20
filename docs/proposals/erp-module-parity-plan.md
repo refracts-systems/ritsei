@@ -360,6 +360,20 @@ are proposed post-pilot waves; their order is a default that pilot evidence may 
 | 7. Developer preview | `localization-id` skeleton built as an outside developer would build it (Indonesian COA template, NPWP/NIK schemes) using only public APIs | 6 | Generator, released extension points | The localization module installs, extends Product and Billing only through released extension points, and passes its contract tests |
 | 8. Pilots | `localization-id`: PPN, PPh withholding, Coretax e-Faktur export; bank statement import and manual reconciliation; profit and loss and balance sheet; spreadsheet import of masters and opening balances | 7 | Integration adapters, import | 2–3 companies close one real month: invoices, tax output, payments, stock, and statements reconcile without off-system spreadsheets |
 
+#### Implementation status (branch `exp/erp-chains`, 2026-10-20)
+
+Phases 4–6 are implemented on the experiment branch, with every decision recorded as a Proposed ADR
+for review before merge:
+
+| Phase | Decisions | Implemented | Proven by |
+| --- | --- | --- | --- |
+| 4 | D9 ([ADR-0095](../decisions/0095-adopt-gapless-document-numbering.md)), [ADR-0096](../decisions/0096-adopt-posting-rules-and-legal-entity-ledger.md) | Gapless numbering; legal-entity journals with posting dates and numbers; account hierarchy and the `neutral_trading` chart template; posting rules by role; trial balance, general ledger, role balance; Party addresses, contacts, bank accounts | `erp/modules/accounting/tests/general-ledger.postgres.test.ts` |
+| 5 | D1 ([ADR-0097](../decisions/0097-move-product-identity-to-a-product-module.md)), D5 ([ADR-0098](../decisions/0098-adopt-a-neutral-tax-module.md)), D7 ([ADR-0099](../decisions/0099-make-sales-customers-party-roles.md)), D4 ([ADR-0101](../decisions/0101-coordinate-sales-delivery-with-inventory.md)), D2 ([ADR-0102](../decisions/0102-split-billing-and-settlement.md)) | Product, tax, customers as Party roles, price lists, quotation lifecycle, deliveries, invoices, credit notes, receipts, aging, statements | `tests/chains/order-to-cash.postgres.test.ts` |
+| 6 | D3 ([ADR-0100](../decisions/0100-adopt-moving-average-inventory-valuation.md)), D10 ([ADR-0103](../decisions/0103-adopt-threshold-approvals-with-separation-of-duties.md)), [ADR-0104](../decisions/0104-adopt-valued-procure-to-pay-documents.md) | Moving-average valuation, stock count, approvals, supplier prices, PO release, valued receipts, returns, three-way-matched bills, outgoing payments, payables aging | `tests/chains/procure-to-pay.postgres.test.ts` |
+
+Not yet done from these phases: invoice PDF and email, extension points (custom fields), screens
+beyond the product and tax masters, credit-limit checks, and a variance-aware supplier credit note.
+
 ### 8.2 Post-pilot waves (default order)
 
 | Wave | Content | Stance | Depends on | Exit criteria |

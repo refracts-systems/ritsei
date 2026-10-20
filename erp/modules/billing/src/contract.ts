@@ -16,6 +16,8 @@ import type {
   SalesOrderInvalidState,
   SalesOrderNotFound,
 } from "../../sales/mod.ts"
+import type { PartyRelationshipNotFound } from "../../party/mod.ts"
+import type { PurchaseOrderInvalidState, PurchaseOrderNotFound } from "../../procurement/mod.ts"
 import type { TaxCodeNotFound } from "../../tax/mod.ts"
 import type * as BillingErrors from "./errors.ts"
 
@@ -99,6 +101,26 @@ export const InvoiceSalesOrderInput = Schema.Struct({
   /** Client-chosen id that makes a retried command return the posted invoice. */
   invoiceId: Schema.optionalKey(Uuid),
 })
+/** A supplier bill matched against a purchase order and its receipts (three-way match). */
+export const BillPurchaseOrderInput = Schema.Struct({
+  ...ScopedInput,
+  /** Client-chosen id; an approved variance request is keyed by it. */
+  billId: Schema.optionalKey(Uuid),
+  purchaseOrderId: Uuid,
+  billDate: CalendarDate,
+  supplierReference: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(128)),
+  lines: Schema.Array(
+    Schema.Struct({
+      purchaseOrderLineId: Uuid,
+      quantity: Quantity,
+      unitPrice: FinancialMajorAmount,
+    }),
+  ).check(Schema.isMinLength(1)),
+})
+
+/** Approval subject for billing more than was received. */
+export const BillVarianceSubject = "billing.supplier_bill_variance"
+
 export const CreditInvoiceInput = Schema.Struct({
   ...ScopedInput,
   invoiceId: Uuid,
@@ -146,6 +168,21 @@ export type InvoiceFailure =
 export interface BillingService {
   /** Invoices the delivered, not yet invoiced quantities of a confirmed sales order. */
   readonly invoiceSalesOrder: (input: unknown) => Effect.Effect<BillingDocument, InvoiceFailure>
+  /** Bills received purchase order quantities; the price difference posts as variance. */
+  readonly billPurchaseOrder: (
+    input: unknown,
+  ) => Effect.Effect<
+    BillingDocument,
+    | BillingErrors.BillExceedsReceipt
+    | BillingErrors.NothingToInvoice
+    | PurchaseOrderNotFound
+    | PurchaseOrderInvalidState
+    | PartyRelationshipNotFound
+    | ProductNotFound
+    | TaxCodeNotFound
+    | PostEntryFailure
+    | CommonFailure
+  >
   /** Credits invoice lines and applies the credit to the invoice's open amount. */
   readonly creditInvoice: (
     input: unknown,
