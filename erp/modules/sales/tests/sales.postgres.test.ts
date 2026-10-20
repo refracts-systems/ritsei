@@ -24,6 +24,7 @@ import {
   SalesOrderConfirmedEvent,
   SalesOrderNotFound,
 } from "../mod.ts"
+import { postgresCode, postgresConstraint } from "../../../../tests/support/postgres-error.ts"
 
 const databaseUrl = process.env["DATABASE_URL"]
 const principal = { userAccountId: "sales-postgres", sessionId: "session" }
@@ -129,9 +130,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               `
             }),
           )
-          assert.strictEqual((invalidDraftTotal as { code?: string }).code, "23514")
+          assert.strictEqual(postgresCode(invalidDraftTotal), "23514")
           assert.strictEqual(
-            (invalidDraftTotal as { constraint_name?: string }).constraint_name,
+            postgresConstraint(invalidDraftTotal),
             "sales_draft_order_total_consistent",
           )
           const aggregateOverflow = yield* Effect.flip(
@@ -427,11 +428,8 @@ it.effect.skipIf(databaseUrl === undefined)(
           `,
         )
         for (const failure of [draftKey, confirmedKey]) {
-          assert.strictEqual((failure as { code?: string }).code, "23514")
-          assert.strictEqual(
-            (failure as { constraint_name?: string }).constraint_name,
-            "orders_confirmation_metadata_check",
-          )
+          assert.strictEqual(postgresCode(failure), "23514")
+          assert.strictEqual(postgresConstraint(failure), "orders_confirmation_metadata_check")
         }
       }),
     ),
@@ -457,11 +455,8 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${tenant!.id}, 'Invalid Email Customer', ${email})
             `,
           )
-          assert.strictEqual((failure as { code?: string }).code, "23514")
-          assert.strictEqual(
-            (failure as { constraint_name?: string }).constraint_name,
-            "customers_email_normalization_check",
-          )
+          assert.strictEqual(postgresCode(failure), "23514")
+          assert.strictEqual(postgresConstraint(failure), "customers_email_normalization_check")
         }
       }),
     ),
@@ -556,11 +551,8 @@ it.effect.skipIf(databaseUrl === undefined)(
               (${tenant!.id}, ${customer!.id}, 'confirmed', 'invalid-initial-state', now(), 0)
           `,
         )
-        assert.strictEqual((nonDraftInsert as { code?: string }).code, "23514")
-        assert.strictEqual(
-          (nonDraftInsert as { constraint_name?: string }).constraint_name,
-          "sales_order_state_transition_check",
-        )
+        assert.strictEqual(postgresCode(nonDraftInsert), "23514")
+        assert.strictEqual(postgresConstraint(nonDraftInsert), "sales_order_state_transition_check")
         const [order] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -582,9 +574,9 @@ it.effect.skipIf(databaseUrl === undefined)(
             update sales.orders set status = 'cancelled' where id = ${order!.id}
           `,
         )
-        assert.strictEqual((invalidTransition as { code?: string }).code, "23514")
+        assert.strictEqual(postgresCode(invalidTransition), "23514")
         assert.strictEqual(
-          (invalidTransition as { constraint_name?: string }).constraint_name,
+          postgresConstraint(invalidTransition),
           "sales_order_state_transition_check",
         )
         yield* Effect.promise(
@@ -608,7 +600,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           () => client`update sales.orders set total = 11.00 where id = ${order!.id}`,
         ]) {
           const failure = yield* postgresFailure(mutation)
-          assert.strictEqual((failure as { code?: string }).code, "23514")
+          assert.strictEqual(postgresCode(failure), "23514")
         }
 
         const [badOrder] = yield* Effect.promise(
@@ -642,9 +634,9 @@ it.effect.skipIf(databaseUrl === undefined)(
             await transaction`set constraints all immediate`
           }),
         )
-        assert.strictEqual((inconsistent as { code?: string }).code, "23514")
+        assert.strictEqual(postgresCode(inconsistent), "23514")
         assert.strictEqual(
-          (inconsistent as { constraint_name?: string }).constraint_name,
+          postgresConstraint(inconsistent),
           "sales_terminal_order_total_consistent",
         )
       }),

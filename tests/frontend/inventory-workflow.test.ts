@@ -402,8 +402,11 @@ it.effect(
         await fulfillDialog.waitFor({ state: "hidden" })
 
         assert.deepEqual(receiveBody, { warehouseId, itemId, quantity: "1" })
+        // SAFETY: the workflow posts these bodies with string fields.
         assert.equal((adjustmentBody as Record<string, string>).adjustment, "-1")
+        // SAFETY: the workflow posts these bodies with string fields.
         assert.equal((adjustmentBody as Record<string, string>).reason, "Cycle count correction")
+        // SAFETY: the workflow posts these bodies with string fields.
         assert.equal((reserveBody as Record<string, string>).quantity, "1")
         assert.deepEqual(transferBody, {
           sourceWarehouseId: warehouseId,

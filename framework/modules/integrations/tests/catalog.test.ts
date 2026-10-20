@@ -57,6 +57,7 @@ it.effect("rejects malformed catalog metadata and forged schemas before simulati
       }),
     )
 
+    // SAFETY: the test forges an empty schema to prove validation rejects it.
     const forged = { ...createPayment, inputSchema: {} as ExternalSchema }
     const failure = yield* Effect.flip(
       simulateWithoutSideEffect({

@@ -58,7 +58,9 @@ describe("user account contract", () => {
           }),
           Layer.succeed(IdentityEventPublisher, {
             append: (input) => {
+              // SAFETY: the published event is an envelope, as the publisher contract requires.
               published.push(input as EventEnvelopeContract)
+              // SAFETY: the published event is an envelope, as the publisher contract requires.
               return Effect.succeed(input as EventEnvelopeContract)
             },
           }),

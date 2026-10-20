@@ -175,6 +175,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             update party.party_addresses set is_primary = true
             where tenant_id = ${fixture.tenantId} and purpose = 'billing'
           `,
+          // SAFETY: driver errors carry the violated constraint name.
           catch: (cause) => cause as { constraint_name?: string },
         }).pipe(Effect.flip)
         assert.strictEqual(secondPrimary.constraint_name, "party_addresses_primary_purpose_key")

@@ -14,6 +14,7 @@ import {
   UserAccountCreatedEvent,
   UserAccountNotFound,
 } from "../mod.ts"
+import { postgresCode, postgresConstraint } from "../../../../tests/support/postgres-error.ts"
 
 const databaseUrl = process.env["DATABASE_URL"]
 const postgresFailure = <A>(effect: () => Promise<A>) =>
@@ -58,9 +59,9 @@ it.effect.skipIf(databaseUrl === undefined)(
             where id = ${created.id}
           `,
         )
-        assert.strictEqual((invalidEmail as { code?: string }).code, "23514")
+        assert.strictEqual(postgresCode(invalidEmail), "23514")
         assert.strictEqual(
-          (invalidEmail as { constraint_name?: string }).constraint_name,
+          postgresConstraint(invalidEmail),
           "user_accounts_email_normalization_check",
         )
         const blankEmail = yield* postgresFailure(
@@ -69,9 +70,9 @@ it.effect.skipIf(databaseUrl === undefined)(
             insert into identity.user_accounts (email) values ('   ')
           `,
         )
-        assert.strictEqual((blankEmail as { code?: string }).code, "23514")
+        assert.strictEqual(postgresCode(blankEmail), "23514")
         assert.strictEqual(
-          (blankEmail as { constraint_name?: string }).constraint_name,
+          postgresConstraint(blankEmail),
           "user_accounts_email_normalization_check",
         )
 
@@ -188,9 +189,9 @@ it.effect.skipIf(databaseUrl === undefined)(
             where id = ${created.id}
           `,
         )
-        assert.strictEqual((activeWithDisabledAt as { code?: string }).code, "23514")
+        assert.strictEqual(postgresCode(activeWithDisabledAt), "23514")
         assert.strictEqual(
-          (activeWithDisabledAt as { constraint_name?: string }).constraint_name,
+          postgresConstraint(activeWithDisabledAt),
           "user_accounts_status_disabled_at_check",
         )
         assert.strictEqual(
@@ -209,9 +210,9 @@ it.effect.skipIf(databaseUrl === undefined)(
             where id = ${created.id}
           `,
         )
-        assert.strictEqual((disabledWithoutTimestamp as { code?: string }).code, "23514")
+        assert.strictEqual(postgresCode(disabledWithoutTimestamp), "23514")
         assert.strictEqual(
-          (disabledWithoutTimestamp as { constraint_name?: string }).constraint_name,
+          postgresConstraint(disabledWithoutTimestamp),
           "user_accounts_status_disabled_at_check",
         )
         assert.strictEqual((yield* service.enable(created.id)).status, "active")

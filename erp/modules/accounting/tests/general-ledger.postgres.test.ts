@@ -26,6 +26,7 @@ import {
   PostingRuleNotFound,
   UnbalancedJournal,
 } from "../mod.ts"
+import { postgresConstraint } from "../../../../tests/support/postgres-error.ts"
 
 const databaseUrl = process.env["DATABASE_URL"]
 const principal = { userAccountId: "ledger-user", sessionId: "ledger-session" }
@@ -260,7 +261,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           catch: (cause) => cause,
         }).pipe(Effect.flip)
         assert.include(
-          String((unbalancedInsert as { constraint_name?: string }).constraint_name),
+          String(postgresConstraint(unbalancedInsert)),
           "journal_entries_balanced_check",
         )
 

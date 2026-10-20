@@ -34,17 +34,20 @@ const unused = () => Effect.die(new Error("unused authorization operation in Pro
 
 const makeAuthorization = (allow: boolean): AuthorizationServiceContract => ({
   authorize: (input) => {
+    // SAFETY: the test calls this double only with inputs of the shape it reads.
     const request = input as { readonly tenantId: string; readonly capability: string }
     return allow
       ? Effect.succeed({
           allowed: true as const,
           tenantId: request.tenantId,
+          // SAFETY: the capabilities in this test come from its own list.
           capability: request.capability as CapabilityType,
           grant: "membership" as const,
         })
       : Effect.fail(
           new AuthorizationDenied({
             tenantId: request.tenantId,
+            // SAFETY: the capabilities in this test come from its own list.
             capability: request.capability as CapabilityType,
           }),
         )

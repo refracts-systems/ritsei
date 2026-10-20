@@ -121,7 +121,7 @@ it.effect.skipIf(databaseUrl === undefined)(
         )
         const corrupt = yield* Effect.flip(store.get(tenant!.id, corruptRecordId))
         assert.instanceOf(corrupt, FinancialStagingEvidenceInvalid)
-        assert.strictEqual((corrupt as FinancialStagingEvidenceInvalid).reason, "hash_mismatch")
+        assert.strictEqual(corrupt.reason, "hash_mismatch")
       }),
     ),
 )

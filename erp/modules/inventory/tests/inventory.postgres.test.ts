@@ -40,6 +40,7 @@ import {
   StockUnavailable,
   WarehouseBranchNotFound,
 } from "../mod.ts"
+import { postgresCode, postgresConstraint } from "../../../../tests/support/postgres-error.ts"
 
 const databaseUrl = process.env["DATABASE_URL"]
 const postgresFailure = <A>(effect: () => Promise<A>) =>
@@ -199,9 +200,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant.id} and id = ${item.id}
             `,
           )
-          assert.strictEqual((invalidItemUnitOfMeasure as { code?: string }).code, "23514")
+          assert.strictEqual(postgresCode(invalidItemUnitOfMeasure), "23514")
           assert.strictEqual(
-            (invalidItemUnitOfMeasure as { constraint_name?: string }).constraint_name,
+            postgresConstraint(invalidItemUnitOfMeasure),
             "items_unit_of_measure_check",
           )
           yield* inventory.receiveStock({
@@ -257,9 +258,9 @@ it.effect.skipIf(databaseUrl === undefined)(
                 (${tenant.id}, ${warehouse.id}, ${item.id}, 1, 'invalid-initial-reservation', 'fulfilled')
             `,
           )
-          assert.strictEqual((invalidReservationInsert as { code?: string }).code, "23514")
+          assert.strictEqual(postgresCode(invalidReservationInsert), "23514")
           assert.strictEqual(
-            (invalidReservationInsert as { constraint_name?: string }).constraint_name,
+            postgresConstraint(invalidReservationInsert),
             "inventory_reservation_state_transition_check",
           )
           const invalidReservationTransition = yield* postgresFailure(() =>
@@ -274,9 +275,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               `
             }),
           )
-          assert.strictEqual((invalidReservationTransition as { code?: string }).code, "23514")
+          assert.strictEqual(postgresCode(invalidReservationTransition), "23514")
           assert.strictEqual(
-            (invalidReservationTransition as { constraint_name?: string }).constraint_name,
+            postgresConstraint(invalidReservationTransition),
             "inventory_reservation_state_transition_check",
           )
           const invalidReservationStatus = yield* postgresFailure(() =>
@@ -288,9 +289,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               `
             }),
           )
-          assert.strictEqual((invalidReservationStatus as { code?: string }).code, "23514")
+          assert.strictEqual(postgresCode(invalidReservationStatus), "23514")
           assert.strictEqual(
-            (invalidReservationStatus as { constraint_name?: string }).constraint_name,
+            postgresConstraint(invalidReservationStatus),
             "inventory_reservation_balance_consistency_check",
           )
           const invalidReservedBalance = yield* postgresFailure(() =>
@@ -304,9 +305,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               `
             }),
           )
-          assert.strictEqual((invalidReservedBalance as { code?: string }).code, "23514")
+          assert.strictEqual(postgresCode(invalidReservedBalance), "23514")
           assert.strictEqual(
-            (invalidReservedBalance as { constraint_name?: string }).constraint_name,
+            postgresConstraint(invalidReservedBalance),
             "inventory_reservation_balance_consistency_check",
           )
           const changedReservationQuantity = yield* postgresFailure(
@@ -317,9 +318,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant.id} and id = ${duplicateReservations[0].id}
             `,
           )
-          assert.strictEqual((changedReservationQuantity as { code?: string }).code, "23514")
+          assert.strictEqual(postgresCode(changedReservationQuantity), "23514")
           assert.strictEqual(
-            (changedReservationQuantity as { constraint_name?: string }).constraint_name,
+            postgresConstraint(changedReservationQuantity),
             "inventory_reservation_identity_immutable",
           )
           const deletedReservation = yield* postgresFailure(
@@ -329,9 +330,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant.id} and id = ${duplicateReservations[0].id}
             `,
           )
-          assert.strictEqual((deletedReservation as { code?: string }).code, "23514")
+          assert.strictEqual(postgresCode(deletedReservation), "23514")
           assert.strictEqual(
-            (deletedReservation as { constraint_name?: string }).constraint_name,
+            postgresConstraint(deletedReservation),
             "inventory_reservation_identity_immutable",
           )
           const orphanReservationMovement = yield* postgresFailure(
@@ -343,9 +344,9 @@ it.effect.skipIf(databaseUrl === undefined)(
                 (${tenant.id}, ${warehouse.id}, ${item.id}, 1, 'reservation', ${uuidv7()})
             `,
           )
-          assert.strictEqual((orphanReservationMovement as { code?: string }).code, "23514")
+          assert.strictEqual(postgresCode(orphanReservationMovement), "23514")
           assert.strictEqual(
-            (orphanReservationMovement as { constraint_name?: string }).constraint_name,
+            postgresConstraint(orphanReservationMovement),
             "inventory_movement_reservation_reference_check",
           )
           const mismatchedReservationMovement = yield* postgresFailure(
@@ -358,9 +359,9 @@ it.effect.skipIf(databaseUrl === undefined)(
                  ${duplicateReservations[0].id})
             `,
           )
-          assert.strictEqual((mismatchedReservationMovement as { code?: string }).code, "23514")
+          assert.strictEqual(postgresCode(mismatchedReservationMovement), "23514")
           assert.strictEqual(
-            (mismatchedReservationMovement as { constraint_name?: string }).constraint_name,
+            postgresConstraint(mismatchedReservationMovement),
             "inventory_movement_reservation_reference_check",
           )
           const issueForActiveReservation = yield* postgresFailure(
@@ -373,9 +374,9 @@ it.effect.skipIf(databaseUrl === undefined)(
                  ${duplicateReservations[0].id})
             `,
           )
-          assert.strictEqual((issueForActiveReservation as { code?: string }).code, "23514")
+          assert.strictEqual(postgresCode(issueForActiveReservation), "23514")
           assert.strictEqual(
-            (issueForActiveReservation as { constraint_name?: string }).constraint_name,
+            postgresConstraint(issueForActiveReservation),
             "inventory_movement_reservation_reference_check",
           )
           const invalidTransferInsert = yield* postgresFailure(
@@ -389,9 +390,9 @@ it.effect.skipIf(databaseUrl === undefined)(
                  ${transferDestination.id}, 'confirmed', now())
             `,
           )
-          assert.strictEqual((invalidTransferInsert as { code?: string }).code, "23514")
+          assert.strictEqual(postgresCode(invalidTransferInsert), "23514")
           assert.strictEqual(
-            (invalidTransferInsert as { constraint_name?: string }).constraint_name,
+            postgresConstraint(invalidTransferInsert),
             "inventory_stock_transfer_state_transition_check",
           )
           const invalidTransferTransition = yield* postgresFailure(() =>
@@ -411,9 +412,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               `
             }),
           )
-          assert.strictEqual((invalidTransferTransition as { code?: string }).code, "23514")
+          assert.strictEqual(postgresCode(invalidTransferTransition), "23514")
           assert.strictEqual(
-            (invalidTransferTransition as { constraint_name?: string }).constraint_name,
+            postgresConstraint(invalidTransferTransition),
             "inventory_stock_transfer_state_transition_check",
           )
           const otherReservation = yield* inventory.reserveStock({
@@ -504,11 +505,8 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant.id} and id = ${duplicates[0].id}
             `,
           )
-          assert.strictEqual((changedMovement as { code?: string }).code, "23514")
-          assert.strictEqual(
-            (changedMovement as { constraint_name?: string }).constraint_name,
-            "inventory_movements_immutable",
-          )
+          assert.strictEqual(postgresCode(changedMovement), "23514")
+          assert.strictEqual(postgresConstraint(changedMovement), "inventory_movements_immutable")
           const deletedMovement = yield* postgresFailure(
             () =>
               client`
@@ -516,11 +514,8 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant.id} and id = ${duplicates[0].id}
             `,
           )
-          assert.strictEqual((deletedMovement as { code?: string }).code, "23514")
-          assert.strictEqual(
-            (deletedMovement as { constraint_name?: string }).constraint_name,
-            "inventory_movements_immutable",
-          )
+          assert.strictEqual(postgresCode(deletedMovement), "23514")
+          assert.strictEqual(postgresConstraint(deletedMovement), "inventory_movements_immutable")
           const invalidUnitOfMeasure = yield* postgresFailure(
             () =>
               client`
@@ -532,9 +527,9 @@ it.effect.skipIf(databaseUrl === undefined)(
                  'box', 'manual correction', ${`invalid-uom-${uuidv7()}`})
             `,
           )
-          assert.strictEqual((invalidUnitOfMeasure as { code?: string }).code, "23514")
+          assert.strictEqual(postgresCode(invalidUnitOfMeasure), "23514")
           assert.strictEqual(
-            (invalidUnitOfMeasure as { constraint_name?: string }).constraint_name,
+            postgresConstraint(invalidUnitOfMeasure),
             "movements_correction_metadata_check",
           )
           for (const [kind, quantity] of [
@@ -549,9 +544,9 @@ it.effect.skipIf(databaseUrl === undefined)(
                 values (${tenant.id}, ${warehouse.id}, ${item.id}, ${quantity}, ${kind})
               `,
             )
-            assert.strictEqual((invalidSign as { code?: string }).code, "23514")
+            assert.strictEqual(postgresCode(invalidSign), "23514")
             assert.strictEqual(
-              (invalidSign as { constraint_name?: string }).constraint_name,
+              postgresConstraint(invalidSign),
               "movements_kind_quantity_sign_check",
             )
           }
@@ -564,9 +559,9 @@ it.effect.skipIf(databaseUrl === undefined)(
                 (${tenant.id}, ${warehouse.id}, ${item.id}, 1, 'release')
             `,
           )
-          assert.strictEqual((invalidReleaseReference as { code?: string }).code, "23514")
+          assert.strictEqual(postgresCode(invalidReleaseReference), "23514")
           assert.strictEqual(
-            (invalidReleaseReference as { constraint_name?: string }).constraint_name,
+            postgresConstraint(invalidReleaseReference),
             "inventory_movement_reservation_reference_check",
           )
           const otherCorrection = yield* inventory.adjustStock({
@@ -756,9 +751,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               `
             }),
           )
-          assert.strictEqual((invalidGuardedBalance as { code?: string }).code, "23514")
+          assert.strictEqual(postgresCode(invalidGuardedBalance), "23514")
           assert.strictEqual(
-            (invalidGuardedBalance as { constraint_name?: string }).constraint_name,
+            postgresConstraint(invalidGuardedBalance),
             "inventory_on_hand_movement_consistency_check",
           )
           const [guardedReservationRow] = yield* Effect.promise(
@@ -969,9 +964,9 @@ it.effect.skipIf(databaseUrl === undefined)(
                 and item_id = ${widget.id}
             `,
           )
-          assert.strictEqual((changedConfirmedLine as { code?: string }).code, "23514")
+          assert.strictEqual(postgresCode(changedConfirmedLine), "23514")
           assert.strictEqual(
-            (changedConfirmedLine as { constraint_name?: string }).constraint_name,
+            postgresConstraint(changedConfirmedLine),
             "inventory_stock_transfer_lines_immutable",
           )
           const deletedConfirmedLine = yield* postgresFailure(
@@ -982,9 +977,9 @@ it.effect.skipIf(databaseUrl === undefined)(
                 and item_id = ${cable.id}
             `,
           )
-          assert.strictEqual((deletedConfirmedLine as { code?: string }).code, "23514")
+          assert.strictEqual(postgresCode(deletedConfirmedLine), "23514")
           assert.strictEqual(
-            (deletedConfirmedLine as { constraint_name?: string }).constraint_name,
+            postgresConstraint(deletedConfirmedLine),
             "inventory_stock_transfer_lines_immutable",
           )
           assert.instanceOf(
@@ -1006,9 +1001,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               `
             }),
           )
-          assert.strictEqual((incompleteTransfer as { code?: string }).code, "23514")
+          assert.strictEqual(postgresCode(incompleteTransfer), "23514")
           assert.strictEqual(
-            (incompleteTransfer as { constraint_name?: string }).constraint_name,
+            postgresConstraint(incompleteTransfer),
             "inventory_completed_transfer_receipts_check",
           )
 

@@ -52,6 +52,7 @@ it.effect("accepts a valid OIDC assertion and rejects invalid claims", () =>
     const publicJwk = yield* Effect.promise(() => crypto.subtle.exportKey("jwk", keys.publicKey))
     const jwk = { ...publicJwk, kid: "test-key", alg: "RS256", use: "sig" }
     const originalFetch = globalThis.fetch
+    // SAFETY: the fake answers like fetch for the one request this test makes.
     globalThis.fetch = (() =>
       Promise.resolve(
         new Response(JSON.stringify({ keys: [jwk] }), {

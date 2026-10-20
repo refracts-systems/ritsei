@@ -81,6 +81,7 @@ const withInventory = <A, E>(
             grantedCapabilities.map((capability) => ({
               userAccountId: principal.userAccountId,
               tenantId,
+              // SAFETY: the capabilities in this test come from its own list.
               capability: capability as (typeof capabilities)[number],
             })),
           ),

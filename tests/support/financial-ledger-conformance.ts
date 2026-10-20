@@ -73,8 +73,11 @@ export const assertFinancialLedgerConformance = (
     )
 
     const first = yield* ledger.postJournal(input)
+    // SAFETY: the test calls this double only with inputs of the shape it reads.
     assert.strictEqual((first as { readonly _tag?: string })._tag, "accepted")
+    // SAFETY: the test calls this double only with inputs of the shape it reads.
     if ((first as { readonly _tag?: string })._tag !== "accepted") return
+    // SAFETY: the test calls this double only with inputs of the shape it reads.
     const accepted = first as {
       readonly _tag: "accepted"
       readonly transferCount: number

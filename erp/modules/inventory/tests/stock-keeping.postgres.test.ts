@@ -184,6 +184,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                 where tenant_id = ${tenantId}
               `,
             ),
+          // SAFETY: driver errors carry the violated constraint name.
           catch: (cause) => cause as { constraint_name?: string },
         }).pipe(Effect.flip)
         assert.strictEqual(tampered.constraint_name, "inventory_valuation_entry_consistency_check")

@@ -49,6 +49,7 @@ import {
   hashFinancialStoreWatermarks,
 } from "../mod.ts"
 import { partial } from "../../../../tests/support/partial.ts"
+import { postgresConstraint } from "../../../../tests/support/postgres-error.ts"
 
 const databaseUrl = process.env["DATABASE_URL"]
 const postgresFailure = <A>(effect: () => Promise<A>) =>
@@ -61,6 +62,7 @@ const failDatabaseOnceAt = (database: DatabaseService, operationName: string): D
     failed = true
     return Effect.fail(new DatabaseFailure({ operation: name ?? operationName, cause: "injected" }))
   }
+  // SAFETY: the double implements the database members this test calls.
   return {
     query: (operation, name) =>
       shouldFail(name) ? failure(name) : database.query(operation, name),
@@ -155,7 +157,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           }),
         )
         assert.strictEqual(
-          (blankApproval as { constraint_name?: string }).constraint_name,
+          postgresConstraint(blankApproval),
           "financial_cutover_controls_approval_check",
         )
         yield* Effect.promise(
@@ -198,7 +200,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           }),
         )
         assert.strictEqual(
-          (blankActivation as { constraint_name?: string }).constraint_name,
+          postgresConstraint(blankActivation),
           "financial_cutover_controls_activation_check",
         )
         yield* Effect.promise(
@@ -311,6 +313,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             collect: (authority) =>
               Effect.succeed(authority === "postgresql" ? sourceWatermark : targetWatermark),
             scan: (authority, input) => {
+              // SAFETY: the test calls this double only with inputs of the shape it reads.
               const request = input as {
                 readonly scope: string
                 readonly watermark: FinancialStoreWatermarkType
@@ -537,6 +540,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and id = ${reconciledEventId}
             `,
         )
+        // SAFETY: the double keeps the real messaging members and replaces only append.
         const failingRebuildMessaging = {
           ...messaging,
           append: (_event: unknown) =>
@@ -983,7 +987,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             `,
         )
         assert.strictEqual(
-          (immutableOperation as { constraint_name?: string }).constraint_name,
+          postgresConstraint(immutableOperation),
           "financial_operations_immutable_fields_check",
         )
         const immutableReconciledEventId = yield* postgresFailure(
@@ -995,7 +999,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             `,
         )
         assert.strictEqual(
-          (immutableReconciledEventId as { constraint_name?: string }).constraint_name,
+          postgresConstraint(immutableReconciledEventId),
           "financial_operations_immutable_fields_check",
         )
         const [postedEventIdentity] = yield* Effect.promise(
@@ -1037,7 +1041,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             `,
         )
         assert.strictEqual(
-          (blankOperationId as { constraint_name?: string }).constraint_name,
+          postgresConstraint(blankOperationId),
           "financial_operations_operation_id_check",
         )
         const insertBlankMetadataOperation = (input: {
@@ -1116,10 +1120,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           },
         ] as const) {
           const failure = yield* insertBlankMetadataOperation(invalid)
-          assert.strictEqual(
-            (failure as { constraint_name?: string }).constraint_name,
-            invalid.constraint,
-          )
+          assert.strictEqual(postgresConstraint(failure), invalid.constraint)
         }
         const duplicateReconciledEvent = yield* postgresFailure(
           () =>
@@ -1144,7 +1145,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             `,
         )
         assert.strictEqual(
-          (duplicateReconciledEvent as { constraint_name?: string }).constraint_name,
+          postgresConstraint(duplicateReconciledEvent),
           "financial_operations_tenant_reconciled_event_key",
         )
         const immutableTransfer = yield* postgresFailure(
@@ -1156,7 +1157,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             `,
         )
         assert.strictEqual(
-          (immutableTransfer as { constraint_name?: string }).constraint_name,
+          postgresConstraint(immutableTransfer),
           "financial_operation_transfers_immutable_fields_check",
         )
 
@@ -1184,6 +1185,7 @@ it.effect.skipIf(databaseUrl === undefined)(
         assert.strictEqual(corruptResult.status, "manual_recovery")
 
         let failReceipt = true
+        // SAFETY: the double keeps the real messaging members and replaces only append.
         const failingMessaging = {
           ...messaging,
           append: (event: unknown) =>
@@ -1453,6 +1455,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             ledger.reconcileJournal(journalInput).pipe(
               Effect.map((outcome) => {
                 if (outcome._tag !== "accepted") return outcome
+                // SAFETY: the test calls this double only with inputs of the shape it reads.
                 const operationId = (journalInput as { readonly operationId?: string }).operationId
                 return operationId === input.operationId
                   ? {
@@ -1532,7 +1535,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             `,
         )
         assert.strictEqual(
-          (checkpointMutation as { constraint_name?: string }).constraint_name,
+          postgresConstraint(checkpointMutation),
           "financial_reconciliation_checkpoints_immutable",
         )
         const invalidVerifiedCounts = yield* postgresFailure(
@@ -1554,13 +1557,14 @@ it.effect.skipIf(databaseUrl === undefined)(
             `,
         )
         assert.strictEqual(
-          (invalidVerifiedCounts as { constraint_name?: string }).constraint_name,
+          postgresConstraint(invalidVerifiedCounts),
           "financial_reconciliation_checkpoints_verified_counts_check",
         )
 
         const makeMatrixService = (
           databaseLayer: Layer.Layer<DatabaseService> = Layer.succeed(Database, database),
           ledgerLayer = makeFinancialLedgerTestLayer(),
+          // SAFETY: the failpoint starts unset and is assigned by the test.
           failpoint = undefined as FinancialOperationFailpointNameType | undefined,
         ) =>
           Effect.provide(
@@ -1874,6 +1878,7 @@ it.effect.skipIf(databaseUrl === undefined)(
         }>
         const makeRebuildLedger = (behavior: RebuildLedgerBehavior = {}) => {
           const acceptedOutcome = (journalInput: unknown) => {
+            // SAFETY: the test calls this double only with inputs of the shape it reads.
             const request = journalInput as {
               readonly operationId: string
               readonly mappingVersion: number
@@ -1895,6 +1900,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             postJournal: ledger.postJournal,
             expectedTransferIds: ledger.expectedTransferIds,
             getBalance: (balanceInput: unknown) => {
+              // SAFETY: the test calls this double only with inputs of the shape it reads.
               const target = balanceInput as {
                 readonly accountId: string
                 readonly mappingVersion: number
@@ -1910,6 +1916,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               })
             },
             reconcileJournal: (journalInput: unknown) => {
+              // SAFETY: the test calls this double only with inputs of the shape it reads.
               const operationId = (journalInput as { readonly operationId: string }).operationId
               if (operationId === behavior.identityOperationId) {
                 return acceptedOutcome(journalInput).pipe(
@@ -1952,9 +1959,11 @@ it.effect.skipIf(databaseUrl === undefined)(
           rejectedOperationId,
           manualRecoveryOperationId,
         })
+        // SAFETY: the double keeps the real messaging members and replaces only append.
         const eventConflictMessaging = {
           ...messaging,
           append: (event: unknown) => {
+            // SAFETY: the test calls this double only with inputs of the shape it reads.
             const candidate = event as {
               readonly aggregateId: string
               readonly eventId: string

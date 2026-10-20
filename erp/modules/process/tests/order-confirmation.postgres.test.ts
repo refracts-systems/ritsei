@@ -50,6 +50,7 @@ import type {
   ProcessJobRow,
   WorkflowRunRow,
 } from "../../../../tests/support/sql-row.ts"
+import { postgresCode, postgresConstraint } from "../../../../tests/support/postgres-error.ts"
 
 const databaseUrl = process.env["DATABASE_URL"]
 const postgresFailure = <A>(effect: () => Promise<A>) =>
@@ -227,62 +228,41 @@ it.effect.skipIf(databaseUrl === undefined)(
           `,
         )
 
-        assert.strictEqual((nonRunningWorkflow as { code?: string }).code, "23514")
+        assert.strictEqual(postgresCode(nonRunningWorkflow), "23514")
         assert.strictEqual(
-          (nonRunningWorkflow as { constraint_name?: string }).constraint_name,
+          postgresConstraint(nonRunningWorkflow),
           "workflow_runs_state_transition_check",
         )
-        assert.strictEqual((nonPendingJob as { code?: string }).code, "23514")
+        assert.strictEqual(postgresCode(nonPendingJob), "23514")
+        assert.strictEqual(postgresConstraint(nonPendingJob), "process_jobs_state_transition_check")
+        assert.strictEqual(postgresCode(unknownWorkflowType), "23514")
+        assert.strictEqual(postgresConstraint(unknownWorkflowType), "workflow_runs_type_check")
+        assert.strictEqual(postgresCode(emptyWorkflowIdempotency), "23514")
         assert.strictEqual(
-          (nonPendingJob as { constraint_name?: string }).constraint_name,
-          "process_jobs_state_transition_check",
-        )
-        assert.strictEqual((unknownWorkflowType as { code?: string }).code, "23514")
-        assert.strictEqual(
-          (unknownWorkflowType as { constraint_name?: string }).constraint_name,
-          "workflow_runs_type_check",
-        )
-        assert.strictEqual((emptyWorkflowIdempotency as { code?: string }).code, "23514")
-        assert.strictEqual(
-          (emptyWorkflowIdempotency as { constraint_name?: string }).constraint_name,
+          postgresConstraint(emptyWorkflowIdempotency),
           "workflow_runs_idempotency_key_check",
         )
-        assert.strictEqual((unknownJobType as { code?: string }).code, "23514")
+        assert.strictEqual(postgresCode(unknownJobType), "23514")
+        assert.strictEqual(postgresConstraint(unknownJobType), "process_jobs_type_check")
+        assert.strictEqual(postgresCode(emptyJobIdempotency), "23514")
         assert.strictEqual(
-          (unknownJobType as { constraint_name?: string }).constraint_name,
-          "process_jobs_type_check",
-        )
-        assert.strictEqual((emptyJobIdempotency as { code?: string }).code, "23514")
-        assert.strictEqual(
-          (emptyJobIdempotency as { constraint_name?: string }).constraint_name,
+          postgresConstraint(emptyJobIdempotency),
           "process_jobs_idempotency_key_check",
         )
-        assert.strictEqual((emptyJobCorrelation as { code?: string }).code, "23514")
+        assert.strictEqual(postgresCode(emptyJobCorrelation), "23514")
         assert.strictEqual(
-          (emptyJobCorrelation as { constraint_name?: string }).constraint_name,
+          postgresConstraint(emptyJobCorrelation),
           "process_jobs_correlation_id_check",
         )
-        assert.strictEqual((invalidJobLease as { code?: string }).code, "23514")
-        assert.strictEqual(
-          (invalidJobLease as { constraint_name?: string }).constraint_name,
-          "process_jobs_lease_state_check",
-        )
-        assert.strictEqual((invalidJobCompletion as { code?: string }).code, "23514")
-        assert.strictEqual(
-          (invalidJobCompletion as { constraint_name?: string }).constraint_name,
-          "process_jobs_state_check",
-        )
-        assert.strictEqual((runningRecovery as { code?: string }).code, "23514")
-        assert.strictEqual(
-          (runningRecovery as { constraint_name?: string }).constraint_name,
-          "workflow_runs_state_check",
-        )
+        assert.strictEqual(postgresCode(invalidJobLease), "23514")
+        assert.strictEqual(postgresConstraint(invalidJobLease), "process_jobs_lease_state_check")
+        assert.strictEqual(postgresCode(invalidJobCompletion), "23514")
+        assert.strictEqual(postgresConstraint(invalidJobCompletion), "process_jobs_state_check")
+        assert.strictEqual(postgresCode(runningRecovery), "23514")
+        assert.strictEqual(postgresConstraint(runningRecovery), "workflow_runs_state_check")
         for (const failure of [succeededRecovery, completedRecovery]) {
-          assert.strictEqual((failure as { code?: string }).code, "23514")
-          assert.strictEqual(
-            (failure as { constraint_name?: string }).constraint_name,
-            "workflow_runs_state_transition_check",
-          )
+          assert.strictEqual(postgresCode(failure), "23514")
+          assert.strictEqual(postgresConstraint(failure), "workflow_runs_state_transition_check")
         }
       }),
     ),
@@ -328,9 +308,9 @@ it.effect.skipIf(databaseUrl === undefined)(
             where id = ${workflow!.id}
           `,
         )
-        assert.strictEqual((workflowTerminalFailure as { code?: string }).code, "23514")
+        assert.strictEqual(postgresCode(workflowTerminalFailure), "23514")
         assert.strictEqual(
-          (workflowTerminalFailure as { constraint_name?: string }).constraint_name,
+          postgresConstraint(workflowTerminalFailure),
           "workflow_runs_state_transition_check",
         )
 
@@ -370,9 +350,9 @@ it.effect.skipIf(databaseUrl === undefined)(
             update process.jobs set status = 'completed' where id = ${job!.id}
           `,
         )
-        assert.strictEqual((invalidJobTransition as { code?: string }).code, "23514")
+        assert.strictEqual(postgresCode(invalidJobTransition), "23514")
         assert.strictEqual(
-          (invalidJobTransition as { constraint_name?: string }).constraint_name,
+          postgresConstraint(invalidJobTransition),
           "process_jobs_state_transition_check",
         )
         yield* Effect.promise(
@@ -401,9 +381,9 @@ it.effect.skipIf(databaseUrl === undefined)(
             where id = ${job!.id}
           `,
         )
-        assert.strictEqual((jobTerminalFailure as { code?: string }).code, "23514")
+        assert.strictEqual(postgresCode(jobTerminalFailure), "23514")
         assert.strictEqual(
-          (jobTerminalFailure as { constraint_name?: string }).constraint_name,
+          postgresConstraint(jobTerminalFailure),
           "process_jobs_state_transition_check",
         )
       }),

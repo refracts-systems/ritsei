@@ -15,6 +15,7 @@ import {
   makeAccountingTestLayer,
 } from "../mod.ts"
 import { hashFinancialStagingEvidence } from "../mod.ts"
+import { partial } from "../../../../tests/support/partial.ts"
 
 const principal = { userAccountId: "staging-operator", sessionId: "staging-session" }
 const tenantId = "00000000-0000-4000-8000-000000000001"
@@ -76,7 +77,7 @@ const layer = makeAccountingTestLayer().pipe(
         },
       ]),
       makeMessagingTestLayer(),
-      Layer.succeed(SalesService, {} as SalesService),
+      Layer.succeed(SalesService, partial<SalesService>({})),
     ),
   ),
 )
@@ -86,7 +87,7 @@ const deniedLayer = makeAccountingTestLayer().pipe(
     Layer.mergeAll(
       makeAuthorizationTestLayer([]),
       makeMessagingTestLayer(),
-      Layer.succeed(SalesService, {} as SalesService),
+      Layer.succeed(SalesService, partial<SalesService>({})),
     ),
   ),
 )
@@ -156,6 +157,7 @@ it.effect("records staging evidence through the authorized Accounting contract",
     )
     assert.instanceOf(operatorFailure, FinancialStagingEvidenceInvalid)
     assert.strictEqual(
+      // SAFETY: the test passes values of this type.
       (operatorFailure as FinancialStagingEvidenceInvalid).reason,
       "operator_mismatch",
     )

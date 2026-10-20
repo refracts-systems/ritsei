@@ -234,7 +234,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             }),
           )
           assert.instanceOf(overBill, BillExceedsReceipt)
-          assert.strictEqual((overBill as BillExceedsReceipt).billable, "55")
+          assert.strictEqual(overBill.billable, "55")
           const firstBill = yield* billing.billPurchaseOrder({
             ...scope,
             purchaseOrderId: drafted.purchaseOrderId,

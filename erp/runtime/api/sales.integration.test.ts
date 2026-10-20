@@ -95,6 +95,7 @@ it.layer(TestHttpServices)("sales API contracts", (it) => {
         yield* client.Sales.listCustomers({ headers, query: { search: "sales", limit: 10 } }),
         [customer],
       )
+      // SAFETY: the test calls this double only with inputs of the shape it reads.
       const captured = observedInputs.at(-1) as { tenantId: string; principal: typeof principal }
       assert.strictEqual(captured.tenantId, tenantId)
       assert.deepStrictEqual(captured.principal, principal)

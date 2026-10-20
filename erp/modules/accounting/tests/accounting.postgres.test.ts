@@ -25,6 +25,7 @@ import {
   makeAccountingService,
 } from "../mod.ts"
 import { partial } from "../../../../tests/support/partial.ts"
+import { postgresCode, postgresConstraint } from "../../../../tests/support/postgres-error.ts"
 
 const salesFacts = partial<SalesService>({
   getConfirmedOrderTotal: () => Effect.succeed("10.00"),
@@ -164,9 +165,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and legal_entity_id = ${legalEntity!.id}
             `,
         )
-        assert.strictEqual((engineDowngrade as { code?: string }).code, "23514")
+        assert.strictEqual(postgresCode(engineDowngrade), "23514")
         assert.strictEqual(
-          (engineDowngrade as { constraint_name?: string }).constraint_name,
+          postgresConstraint(engineDowngrade),
           "legal_entity_accounting_engine_downgrade_check",
         )
 
@@ -178,9 +179,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and legal_entity_id = ${legalEntity!.id}
             `,
         )
-        assert.strictEqual((unsupportedPrecision as { code?: string }).code, "23514")
+        assert.strictEqual(postgresCode(unsupportedPrecision), "23514")
         assert.strictEqual(
-          (unsupportedPrecision as { constraint_name?: string }).constraint_name,
+          postgresConstraint(unsupportedPrecision),
           "legal_entity_accounting_configurations_precision_check",
         )
 
@@ -193,9 +194,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${tenant!.id}, ${legalEntity!.id}, 'USD', 2, 1, true)
             `,
         )
-        assert.strictEqual((duplicate as { code?: string }).code, "23505")
+        assert.strictEqual(postgresCode(duplicate), "23505")
         assert.strictEqual(
-          (duplicate as { constraint_name?: string }).constraint_name,
+          postgresConstraint(duplicate),
           "legal_entity_accounting_configurations_pkey",
         )
 
@@ -214,9 +215,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${otherTenant!.id}, ${legalEntity!.id}, 'USD', 2, 1, true)
             `,
         )
-        assert.strictEqual((crossTenant as { code?: string }).code, "23503")
+        assert.strictEqual(postgresCode(crossTenant), "23503")
         assert.strictEqual(
-          (crossTenant as { constraint_name?: string }).constraint_name,
+          postgresConstraint(crossTenant),
           "legal_entity_accounting_configurations_legal_entity_fkey",
         )
       }),
@@ -963,9 +964,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${tenant!.id}, ${legalEntity!.id}, '2026-01-01', '2026-12-31', 'closed')
             `,
         )
-        assert.strictEqual((invalidPeriodInsert as { code?: string }).code, "23514")
+        assert.strictEqual(postgresCode(invalidPeriodInsert), "23514")
         assert.strictEqual(
-          (invalidPeriodInsert as { constraint_name?: string }).constraint_name,
+          postgresConstraint(invalidPeriodInsert),
           "accounting_period_state_transition_check",
         )
         const [period] = yield* Effect.promise(
@@ -991,9 +992,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               where id = ${period!.id}
             `,
         )
-        assert.strictEqual((reopenedPeriod as { code?: string }).code, "23514")
+        assert.strictEqual(postgresCode(reopenedPeriod), "23514")
         assert.strictEqual(
-          (reopenedPeriod as { constraint_name?: string }).constraint_name,
+          postgresConstraint(reopenedPeriod),
           "accounting_period_state_transition_check",
         )
         const accounts = yield* Effect.promise(
@@ -1014,9 +1015,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${tenant!.id}, 'INVALID-INITIAL-JOURNAL', 'posted', now())
             `,
         )
-        assert.strictEqual((invalidJournalInsert as { code?: string }).code, "23514")
+        assert.strictEqual(postgresCode(invalidJournalInsert), "23514")
         assert.strictEqual(
-          (invalidJournalInsert as { constraint_name?: string }).constraint_name,
+          postgresConstraint(invalidJournalInsert),
           "accounting_journal_state_transition_check",
         )
         const blankReference = yield* postgresFailure(
@@ -1026,11 +1027,8 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${tenant!.id}, '   ')
             `,
         )
-        assert.strictEqual((blankReference as { code?: string }).code, "23514")
-        assert.strictEqual(
-          (blankReference as { constraint_name?: string }).constraint_name,
-          "journal_entries_reference_check",
-        )
+        assert.strictEqual(postgresCode(blankReference), "23514")
+        assert.strictEqual(postgresConstraint(blankReference), "journal_entries_reference_check")
         const [source] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -1046,9 +1044,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${tenant!.id}, 'INVALID-REVERSAL-STATE', ${source!.id})
             `,
         )
-        assert.strictEqual((invalidReversalState as { code?: string }).code, "23514")
+        assert.strictEqual(postgresCode(invalidReversalState), "23514")
         assert.strictEqual(
-          (invalidReversalState as { constraint_name?: string }).constraint_name,
+          postgresConstraint(invalidReversalState),
           "journal_entries_reversal_state_check",
         )
         const [unpostedReversal] = yield* Effect.promise(
@@ -1066,9 +1064,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and id = ${unpostedReversal!.id}
             `,
         )
-        assert.strictEqual((unpostedSourceReversal as { code?: string }).code, "23514")
+        assert.strictEqual(postgresCode(unpostedSourceReversal), "23514")
         assert.strictEqual(
-          (unpostedSourceReversal as { constraint_name?: string }).constraint_name,
+          postgresConstraint(unpostedSourceReversal),
           "journal_entries_reversal_source_check",
         )
         const selfReversalState = yield* postgresFailure(
@@ -1079,9 +1077,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and id = ${source!.id}
             `,
         )
-        assert.strictEqual((selfReversalState as { code?: string }).code, "23514")
+        assert.strictEqual(postgresCode(selfReversalState), "23514")
         assert.strictEqual(
-          (selfReversalState as { constraint_name?: string }).constraint_name,
+          postgresConstraint(selfReversalState),
           "journal_entries_reversal_state_check",
         )
 
@@ -1103,11 +1101,8 @@ it.effect.skipIf(databaseUrl === undefined)(
               `
           }),
         )
-        assert.strictEqual((unbalanced as { code?: string }).code, "23514")
-        assert.strictEqual(
-          (unbalanced as { constraint_name?: string }).constraint_name,
-          "journal_entries_balanced_check",
-        )
+        assert.strictEqual(postgresCode(unbalanced), "23514")
+        assert.strictEqual(postgresConstraint(unbalanced), "journal_entries_balanced_check")
 
         const [posted] = yield* Effect.promise(() =>
           client.begin(async (transaction) => {
@@ -1138,9 +1133,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               where entry_id = ${posted!.id} and debit > 0
             `,
         )
-        assert.strictEqual((immutable as { code?: string }).code, "55000")
+        assert.strictEqual(postgresCode(immutable), "55000")
         assert.strictEqual(
-          (immutable as { constraint_name?: string }).constraint_name,
+          postgresConstraint(immutable),
           "accounting_posted_journal_lines_immutable",
         )
 
@@ -1167,9 +1162,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               where entry_id = ${draft!.id}
             `,
         )
-        assert.strictEqual((reparented as { code?: string }).code, "55000")
+        assert.strictEqual(postgresCode(reparented), "55000")
         assert.strictEqual(
-          (reparented as { constraint_name?: string }).constraint_name,
+          postgresConstraint(reparented),
           "accounting_posted_journal_lines_immutable",
         )
 
@@ -1181,9 +1176,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${tenant!.id}, ${posted!.id}, ${accounts[0]!.id}, 1, 0)
             `,
         )
-        assert.strictEqual((inserted as { code?: string }).code, "55000")
+        assert.strictEqual(postgresCode(inserted), "55000")
         assert.strictEqual(
-          (inserted as { constraint_name?: string }).constraint_name,
+          postgresConstraint(inserted),
           "accounting_posted_journal_lines_immutable",
         )
 
@@ -1195,11 +1190,8 @@ it.effect.skipIf(databaseUrl === undefined)(
               where id = ${posted!.id}
             `,
         )
-        assert.strictEqual((entryMutation as { code?: string }).code, "55000")
-        assert.strictEqual(
-          (entryMutation as { constraint_name?: string }).constraint_name,
-          "accounting_posted_journal_immutable",
-        )
+        assert.strictEqual(postgresCode(entryMutation), "55000")
+        assert.strictEqual(postgresConstraint(entryMutation), "accounting_posted_journal_immutable")
       }),
     ),
 )
@@ -1283,11 +1275,8 @@ it.effect.skipIf(databaseUrl === undefined)("rejects journal reversal cycles in 
               where tenant_id = ${tenant!.id} and id = ${entries.sourceId}
             `,
       )
-      assert.strictEqual((cycle as { code?: string }).code, "23514")
-      assert.strictEqual(
-        (cycle as { constraint_name?: string }).constraint_name,
-        "journal_entries_reversal_source_check",
-      )
+      assert.strictEqual(postgresCode(cycle), "23514")
+      assert.strictEqual(postgresConstraint(cycle), "journal_entries_reversal_source_check")
 
       const [state] = yield* Effect.promise(
         () =>

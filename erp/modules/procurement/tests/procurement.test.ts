@@ -154,13 +154,16 @@ const makeDatabaseStub = (
   calls: string[] = [],
 ): DatabaseService => {
   const failure = new DatabaseFailure({ operation: `${name}.transaction`, cause: "test" })
+  const failing = (): Effect.Effect<never, DatabaseFailure> => Effect.fail(failure)
+  const succeeding = <A>(): Effect.Effect<A, DatabaseFailure> => {
+    // SAFETY: the test supplies a transaction result of the type its caller asks for.
+    return Effect.succeed(transactionResult as A)
+  }
   return {
-    query: <A>() => Effect.fail(failure) as Effect.Effect<A, DatabaseFailure>,
+    query: () => failing(),
     transaction: <A>() => {
       calls.push(name)
-      return transactionResult === undefined
-        ? (Effect.fail(failure) as Effect.Effect<A, DatabaseFailure>)
-        : Effect.succeed(transactionResult as A)
+      return transactionResult === undefined ? failing() : succeeding<A>()
     },
     withTransaction: <A, E, R>(operation: Effect.Effect<A, E, R>) => operation,
   }

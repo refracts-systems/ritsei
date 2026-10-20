@@ -99,7 +99,7 @@ describe("financial staging evidence store", () => {
         append(store, { ...evidence, gateId: "global_reconciliation" }),
       )
       assert.instanceOf(conflict, FinancialStagingEvidenceConflict)
-      assert.strictEqual((conflict as FinancialStagingEvidenceConflict).reason, "different_content")
+      assert.strictEqual(conflict.reason, "different_content")
 
       const invalidHash = yield* Effect.flip(
         store.append({
@@ -110,7 +110,7 @@ describe("financial staging evidence store", () => {
         }),
       )
       assert.instanceOf(invalidHash, FinancialStagingEvidenceInvalid)
-      assert.strictEqual((invalidHash as FinancialStagingEvidenceInvalid).reason, "hash_mismatch")
+      assert.strictEqual(invalidHash.reason, "hash_mismatch")
 
       const tampered = yield* Effect.flip(
         verifyFinancialStagingEvidenceRecord({

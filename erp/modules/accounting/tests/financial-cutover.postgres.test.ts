@@ -38,9 +38,11 @@ import {
   FinancialVerificationSigner,
   hashFinancialStoreWatermarks,
 } from "../mod.ts"
+import { postgresConstraint } from "../../../../tests/support/postgres-error.ts"
+import { partial } from "../../../../tests/support/partial.ts"
 
 const databaseUrl = process.env["DATABASE_URL"]
-const sales = {} as SalesService
+const sales = partial<SalesService>({})
 
 it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover state machine", () =>
   withTemporaryDatabase(databaseUrl!, (client) =>
@@ -193,7 +195,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
         }),
       )
       assert.strictEqual(
-        (artifactMutation as { constraint_name?: string }).constraint_name,
+        postgresConstraint(artifactMutation),
         "financial_verification_artifacts_immutable",
       )
       const blocked = yield* Effect.flip(
@@ -377,6 +379,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
             authority === "postgresql" ? observedSourceWatermark : observedTargetWatermark,
           ),
         scan: (authority, input) => {
+          // SAFETY: the test calls this double only with inputs of the shape it reads.
           const request = input as {
             readonly scope: string
             readonly watermark: FinancialStoreWatermarkType
@@ -585,6 +588,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
       assert.strictEqual(mappingMismatchCheckpoint.reason, "mapping_version_mismatch")
 
       let failReceipt = true
+      // SAFETY: the double keeps the real messaging members and replaces only append.
       const failingMessaging = {
         ...messaging,
         append: (event: unknown) =>
@@ -933,7 +937,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
         }),
       )
       assert.strictEqual(
-        (bypass as { constraint_name?: string }).constraint_name,
+        postgresConstraint(bypass),
         "legal_entity_accounting_engine_activation_gate_check",
       )
     }),

@@ -36,6 +36,7 @@ describe("PostgreSQL 19 capability boundaries", () => {
   it("keeps operational rehearsal evidence separate from production eligibility", () => {
     const rehearsal = read("tooling/postgresql-19/rehearse.ts")
     const operations = read("docs/operations/postgresql-19.md")
+    // SAFETY: the file has the shape this test reads.
     const evidence = JSON.parse(read("docs/operations/postgresql-19-evidence-2026-08-31.json")) as {
       readonly serverVersionNum: number
       readonly productionEligible: boolean

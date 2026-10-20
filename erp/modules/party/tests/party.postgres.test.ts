@@ -33,6 +33,7 @@ import {
   PartyRepresentationAlreadyExists,
   PartyRepresentationNotFound,
 } from "../mod.ts"
+import { postgresCode, postgresConstraint } from "../../../../tests/support/postgres-error.ts"
 
 const databaseUrl = process.env["DATABASE_URL"]
 const postgresFailure = <A>(effect: () => Promise<A>) =>
@@ -125,9 +126,9 @@ it.effect.skipIf(databaseUrl === undefined)(
                 (${tenant.id}, ${first.id}, ' gs1 ', 'GLN', 'global', ${uuidv7()})
             `,
           )
-          assert.strictEqual((invalidProvider as { code?: string }).code, "23514")
+          assert.strictEqual(postgresCode(invalidProvider), "23514")
           assert.strictEqual(
-            (invalidProvider as { constraint_name?: string }).constraint_name,
+            postgresConstraint(invalidProvider),
             "party_identifiers_provider_check",
           )
           const invalidScheme = yield* postgresFailure(
@@ -139,11 +140,8 @@ it.effect.skipIf(databaseUrl === undefined)(
                 (${tenant.id}, ${first.id}, 'GS1', ' gln ', 'global', ${uuidv7()})
             `,
           )
-          assert.strictEqual((invalidScheme as { code?: string }).code, "23514")
-          assert.strictEqual(
-            (invalidScheme as { constraint_name?: string }).constraint_name,
-            "party_identifiers_scheme_check",
-          )
+          assert.strictEqual(postgresCode(invalidScheme), "23514")
+          assert.strictEqual(postgresConstraint(invalidScheme), "party_identifiers_scheme_check")
           const invalidScope = yield* postgresFailure(
             () =>
               client`
@@ -153,11 +151,8 @@ it.effect.skipIf(databaseUrl === undefined)(
                 (${tenant.id}, ${first.id}, 'GS1', 'GLN', ' ', ${uuidv7()})
             `,
           )
-          assert.strictEqual((invalidScope as { code?: string }).code, "23514")
-          assert.strictEqual(
-            (invalidScope as { constraint_name?: string }).constraint_name,
-            "party_identifiers_scope_check",
-          )
+          assert.strictEqual(postgresCode(invalidScope), "23514")
+          assert.strictEqual(postgresConstraint(invalidScope), "party_identifiers_scope_check")
           const invalidValue = yield* postgresFailure(
             () =>
               client`
@@ -167,11 +162,8 @@ it.effect.skipIf(databaseUrl === undefined)(
                 (${tenant.id}, ${first.id}, 'GS1', 'GLN', 'global', ${` ${uuidv7()} `})
             `,
           )
-          assert.strictEqual((invalidValue as { code?: string }).code, "23514")
-          assert.strictEqual(
-            (invalidValue as { constraint_name?: string }).constraint_name,
-            "party_identifiers_value_check",
-          )
+          assert.strictEqual(postgresCode(invalidValue), "23514")
+          assert.strictEqual(postgresConstraint(invalidValue), "party_identifiers_value_check")
         }).pipe(
           Effect.provide(
             makeAuthorizationTestLayer([
@@ -483,9 +475,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             `,
           )
           const explainPlan = explain[0]?.["QUERY PLAN"]
-          const explainRoot = Array.isArray(explainPlan)
-            ? (explainPlan[0] as { Plan?: { "Actual Rows"?: number; "Node Type"?: string } })
-            : undefined
+          const explainRoot = Array.isArray(explainPlan) ? explainPlan[0] : undefined
           assert.strictEqual(explainRoot?.Plan?.["Node Type"], "Limit")
           assert.isAtMost(explainRoot?.Plan?.["Actual Rows"] ?? Number.POSITIVE_INFINITY, 10)
           assert.isTrue(JSON.stringify(explainPlan).includes("Execution Time"))
@@ -557,9 +547,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${tenant.id}, ${person.id})
             `,
           )
-          assert.strictEqual((invalidLegalEntity as { code?: string }).code, "23514")
+          assert.strictEqual(postgresCode(invalidLegalEntity), "23514")
           assert.strictEqual(
-            (invalidLegalEntity as { constraint_name?: string }).constraint_name,
+            postgresConstraint(invalidLegalEntity),
             "legal_entities_organization_party_kind_check",
           )
           const invalidPartyKindChange = yield* postgresFailure(
@@ -569,9 +559,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant.id} and id = ${organization.id}
             `,
           )
-          assert.strictEqual((invalidPartyKindChange as { code?: string }).code, "23514")
+          assert.strictEqual(postgresCode(invalidPartyKindChange), "23514")
           assert.strictEqual(
-            (invalidPartyKindChange as { constraint_name?: string }).constraint_name,
+            postgresConstraint(invalidPartyKindChange),
             "legal_entities_organization_party_kind_check",
           )
           const branch = yield* party.createBranch({
@@ -705,11 +695,8 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${tenant.id}, ${userAccount.id}, ${representedParty.id}, '   ')
             `,
           )
-          assert.strictEqual((blankKind as { code?: string }).code, "23514")
-          assert.strictEqual(
-            (blankKind as { constraint_name?: string }).constraint_name,
-            "party_representations_kind_check",
-          )
+          assert.strictEqual(postgresCode(blankKind), "23514")
+          assert.strictEqual(postgresConstraint(blankKind), "party_representations_kind_check")
           assert.instanceOf(
             yield* Effect.flip(party.createPartyRepresentation(input)),
             PartyRepresentationAlreadyExists,

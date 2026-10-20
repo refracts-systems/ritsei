@@ -1,3 +1,4 @@
+import type * as Schema from "effect/Schema"
 import { AxeBuilder } from "@axe-core/playwright"
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
@@ -52,11 +53,13 @@ it.effect(
       }> = [{ party: northwind, legalEntityId: northwindLegalEntityId }]
       const detail = {
         party: createdParty,
-        roles: [] as string[],
-        identifiers: [] as unknown[],
+        roles: new Array<string>(),
+        identifiers: new Array<Schema.Json>(),
+        // SAFETY: the test passes values of this type.
         legalEntity: null as null | { id: string; tenantId: string; organizationId: string },
-        branches: [] as unknown[],
-        relationships: [] as unknown[],
+        branches: new Array<Schema.Json>(),
+        relationships: new Array<Schema.Json>(),
+        // SAFETY: the test passes values of this type.
         representations: [] as Array<{
           id: string
           tenantId: string

@@ -182,6 +182,7 @@ describe("catalog compatibility", () => {
       assert.strictEqual(AccountingRevenuePostAction.outputSchema, JournalEntry)
       assert.strictEqual(AccountingRevenuePostAction.idempotency, "inherent")
       assert.isFalse(
+        // SAFETY: preconditions are declared as strings.
         (AccountingRevenuePostAction.preconditions as readonly string[]).includes(
           "idempotency_key_stable",
         ),

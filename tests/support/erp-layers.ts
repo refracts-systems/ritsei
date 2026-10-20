@@ -35,6 +35,7 @@ type Grant = {
 export const erpChainLayers = (client: Sql, grants: ReadonlyArray<Grant>) => {
   const database = Layer.succeed(Database, makePostgresDatabase(client))
   const authorization = makeAuthorizationTestLayer(
+    // SAFETY: the grants have the shape the test layer takes.
     grants as Parameters<typeof makeAuthorizationTestLayer>[0],
   )
   const platform = Layer.mergeAll(database, authorization)

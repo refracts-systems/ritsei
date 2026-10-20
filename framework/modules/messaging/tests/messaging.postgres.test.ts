@@ -9,6 +9,7 @@ import { makePostgresDatabase, runMigrations } from "../../../platform/mod.ts"
 import { withTemporaryDatabase } from "../../../../tests/support/postgres-database.ts"
 import { EventIdempotencyConflict, makeMessagingService } from "../mod.ts"
 import type { Overrides } from "../../../../tests/support/overrides.ts"
+import { postgresCode, postgresConstraint } from "../../../../tests/support/postgres-error.ts"
 
 const databaseUrl = process.env["DATABASE_URL"]
 const postgresFailure = <A>(effect: () => Promise<A>) =>
@@ -184,8 +185,8 @@ it.effect.skipIf(databaseUrl === undefined)("rejects blank persisted messaging i
       ] as const
 
       for (const [failure, constraint] of failures) {
-        assert.strictEqual((failure as { code?: string }).code, "23514")
-        assert.strictEqual((failure as { constraint_name?: string }).constraint_name, constraint)
+        assert.strictEqual(postgresCode(failure), "23514")
+        assert.strictEqual(postgresConstraint(failure), constraint)
       }
     }),
   ),
@@ -219,9 +220,9 @@ it.effect.skipIf(databaseUrl === undefined)(
             where tenant_id = ${tenant!.id} and id = ${input.eventId}
           `,
         )
-        assert.strictEqual((occurredAtFailure as { code?: string }).code, "23514")
+        assert.strictEqual(postgresCode(occurredAtFailure), "23514")
         assert.strictEqual(
-          (occurredAtFailure as { constraint_name?: string }).constraint_name,
+          postgresConstraint(occurredAtFailure),
           "event_outbox_immutable_identity_check",
         )
 
@@ -235,11 +236,8 @@ it.effect.skipIf(databaseUrl === undefined)(
             where tenant_id = ${tenant!.id} and id = ${input.eventId}
           `,
         )
-        assert.strictEqual((failure as { code?: string }).code, "23514")
-        assert.strictEqual(
-          (failure as { constraint_name?: string }).constraint_name,
-          "event_outbox_immutable_identity_check",
-        )
+        assert.strictEqual(postgresCode(failure), "23514")
+        assert.strictEqual(postgresConstraint(failure), "event_outbox_immutable_identity_check")
 
         const rows = yield* Effect.promise(
           () =>
@@ -291,9 +289,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               and event_id = ${input.eventId}
           `,
         )
-        assert.strictEqual((completedAtFailure as { code?: string }).code, "23514")
+        assert.strictEqual(postgresCode(completedAtFailure), "23514")
         assert.strictEqual(
-          (completedAtFailure as { constraint_name?: string }).constraint_name,
+          postgresConstraint(completedAtFailure),
           "consumer_receipts_immutable_identity_check",
         )
         const failure = yield* postgresFailure(
@@ -306,9 +304,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               and event_id = ${input.eventId}
           `,
         )
-        assert.strictEqual((failure as { code?: string }).code, "23514")
+        assert.strictEqual(postgresCode(failure), "23514")
         assert.strictEqual(
-          (failure as { constraint_name?: string }).constraint_name,
+          postgresConstraint(failure),
           "consumer_receipts_immutable_identity_check",
         )
         let executions = 0
@@ -975,9 +973,9 @@ it.effect.skipIf(databaseUrl === undefined)(
             where tenant_id = ${tenant!.id} and id = ${source.eventId}
           `,
         )
-        assert.strictEqual((sourceMutation as { code?: string }).code, "23514")
+        assert.strictEqual(postgresCode(sourceMutation), "23514")
         assert.strictEqual(
-          (sourceMutation as { constraint_name?: string }).constraint_name,
+          postgresConstraint(sourceMutation),
           "event_outbox_immutable_identity_check",
         )
         let executions = 0

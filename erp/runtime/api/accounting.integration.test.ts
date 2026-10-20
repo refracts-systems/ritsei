@@ -89,7 +89,7 @@ const accountingService = partial<AccountingServiceContract>({
   postJournal: () => Effect.succeed(journal),
 })
 
-const financialOperations = {} as FinancialOperationServiceContract
+const financialOperations = partial<FinancialOperationServiceContract>({})
 // The ledger endpoints are covered by the general-ledger tests; these contracts never reach them.
 const ledger = unusedService<GeneralLedgerServiceContract>("ledger")
 const TestHttpServices = Layer.mergeAll(Path.layer, Etag.layerWeak, HttpPlatform.layer).pipe(
@@ -195,6 +195,7 @@ it.layer(TestHttpServices)("Accounting API contracts", (it) => {
         }),
         journal,
       )
+      // SAFETY: the test calls this double only with inputs of the shape it reads.
       const captured = observedInputs.at(-1) as { tenantId: string; principal: typeof principal }
       assert.strictEqual(captured.tenantId, tenantId)
       assert.deepStrictEqual(captured.principal, principal)

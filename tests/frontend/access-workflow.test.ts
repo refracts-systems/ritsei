@@ -123,6 +123,7 @@ it.effect(
           }
           if (path === "/capabilities" && method === "POST") {
             grantBody = request.postDataJSON()
+            // SAFETY: the test calls this double only with inputs of the shape it reads.
             const body = grantBody as { userAccountId: string; capability: string }
             grants.get(body.userAccountId)?.push(body.capability)
             return route.fulfill({ status: 204 })

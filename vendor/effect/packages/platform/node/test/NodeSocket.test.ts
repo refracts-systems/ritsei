@@ -14,6 +14,7 @@ import * as Tls from "node:tls"
 import { fileURLToPath } from "node:url"
 import { vi } from "vitest"
 import { WS } from "vitest-websocket-mock"
+import { postgresCode } from "../../../../../../tests/support/postgres-error.ts"
 
 vi.mock("node:net", async (importOriginal) => {
   const original = await importOriginal<typeof Net>()
@@ -323,7 +324,7 @@ describe("Socket", () => {
         assert.strictEqual(error.reason._tag, "SocketOpenError")
         if (error.reason._tag === "SocketOpenError") {
           assert.strictEqual(error.reason.kind, "Unknown")
-          assert.strictEqual((error.reason.cause as { code?: string }).code, "DEPTH_ZERO_SELF_SIGNED_CERT")
+          assert.strictEqual(postgresCode(error.reason.cause), "DEPTH_ZERO_SELF_SIGNED_CERT")
         }
       }))
 
@@ -529,7 +530,7 @@ describe("Socket", () => {
 
         assert.strictEqual(error.reason._tag, "SocketUpgradeError")
         if (error.reason._tag === "SocketUpgradeError") {
-          assert.strictEqual((error.reason.cause as { code?: string }).code, "DEPTH_ZERO_SELF_SIGNED_CERT")
+          assert.strictEqual(postgresCode(error.reason.cause), "DEPTH_ZERO_SELF_SIGNED_CERT")
         }
       }))
   })

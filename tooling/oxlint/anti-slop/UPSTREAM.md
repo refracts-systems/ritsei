@@ -21,8 +21,7 @@ formatting, and Fallow because it keeps upstream's tab-indented style.
 `anti-slop/no-widen-then-assert`, `anti-slop-effect/no-manual-effect-error-tag`,
 `anti-slop-effect/prefer-effect-match`, `anti-slop/no-chained-type-assertions`,
 `anti-slop/no-unsafe-dictionary-type`, `anti-slop/no-runtime-typeof`, `anti-slop/no-unknown-returns`, and
-`anti-slop/require-safety-comment-for-type-assertion` (production source only; tests are exempt
-through an `overrides` block in `.oxlintrc.json`), `anti-slop-effect/no-service-constructor-imports`, `anti-slop/no-shape-in-symbol-names`, `anti-slop/no-conditional-empty-object-spread`.
+`anti-slop/require-safety-comment-for-type-assertion` (everywhere, tests included), `anti-slop-effect/no-service-constructor-imports`, `anti-slop/no-shape-in-symbol-names`, `anti-slop/no-conditional-empty-object-spread`.
 
 `pnpm run lint` passes with this set. Fixes made when enabling it:
 
@@ -57,12 +56,14 @@ through an `overrides` block in `.oxlintrc.json`), `anti-slop-effect/no-service-
   decodes with `Schema.Json`; event payload callbacks return `Schema.Json`; postgres test helpers
   are generic over their result. `canonicalize` is one generic helper in `framework/foundation`,
   `redactExternalPayload` takes and returns `Schema.Json`, and `unwrapCause` became a loop.
-- `require-safety-comment-for-type-assertion` (about 100 production assertions): where the type
+- `require-safety-comment-for-type-assertion` (production source and tests; the test exemption was removed): where the type
   could be proven, the assertion went away (annotated empty arrays, `Predicate.hasProperty` for
   errno codes through `tooling/errno.ts`, `find` instead of a membership check plus cast, type
   predicates in `Array.find`, `Form` handing callers its `FormData`). The rest carry a `SAFETY:`
   comment naming the invariant: a database check constraint, a prior validation, or a module-owned
-  writer.
+  writer. Tests gained `postgresCode`/`postgresConstraint` (`tests/support/postgres-error.ts`) in
+  place of about 215 `as { code?: string }` casts, narrow with `assert.instanceOf`, and build
+  doubles with `partial<T>()`; the rest carry a `SAFETY:` comment.
 - `anti-slop-effect/no-service-constructor-imports` (109 sites): the vendored rule now skips test
   support, `tooling/`, and imports from the same directory (`./`), since a constructor imported
   from a sibling stays inside its owning module (a deviation from upstream, in

@@ -254,7 +254,9 @@ it.layer(TestHttpServices)("Process API", (it) => {
 
       assert.strictEqual(observed.length, 7)
       for (const input of observed) {
+        // SAFETY: the test calls this double only with inputs of the shape it reads.
         assert.deepStrictEqual((input as { principal: unknown }).principal, principal)
+        // SAFETY: the test calls this double only with inputs of the shape it reads.
         assert.strictEqual((input as { tenantId: string }).tenantId, tenantId)
       }
       assert.deepStrictEqual(observed[0], {

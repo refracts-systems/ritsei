@@ -27,6 +27,7 @@ const migrationDirectories = async () => {
 }
 
 const readSnapshot = async (name: string): Promise<SnapshotMetadata> =>
+  // SAFETY: the file has the shape this test reads.
   JSON.parse(
     await readFile(`${migrationsDirectory}/${name}/snapshot.json`, "utf8"),
   ) as SnapshotMetadata

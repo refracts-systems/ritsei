@@ -52,11 +52,5 @@
     "anti-slop-effect/no-service-constructor-imports": "error",
     "anti-slop/no-shape-in-symbol-names": "error",
     "anti-slop/no-conditional-empty-object-spread": "error"
-  },
-  "overrides": [
-    {
-      "files": ["**/*.test.ts", "**/*.test.tsx", "**/tests/**", "tests/**"],
-      "rules": { "anti-slop/require-safety-comment-for-type-assertion": "off" }
-    }
-  ]
+  }
 }

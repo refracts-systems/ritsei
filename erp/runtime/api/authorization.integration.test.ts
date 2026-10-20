@@ -48,6 +48,7 @@ it.layer(TestHttpServices)("Authorization API", (it) => {
       }
       const authorization: AuthorizationServiceContract = {
         authorize: (input) => {
+          // SAFETY: the test calls this double only with inputs of the shape it reads.
           const request = input as {
             readonly tenantId: string
             readonly capability: CapabilityType

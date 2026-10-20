@@ -49,8 +49,8 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const { page, url, errors } = yield* builtApp
-      let customers = [] as (typeof customer)[]
-      let quotations = [] as (typeof quotation)[]
+      let customers = new Array<typeof customer>()
+      let quotations = new Array<typeof quotation>()
       let currentOrder: SalesOrder | undefined
       const requests: Array<{
         path: string
