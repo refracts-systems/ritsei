@@ -49,8 +49,56 @@
     "anti-slop/no-runtime-typeof": "error",
     "anti-slop/no-unknown-returns": "error",
     "anti-slop/require-safety-comment-for-type-assertion": "error",
+    "anti-slop/no-unknown-parameters": "error",
     "anti-slop-effect/no-service-constructor-imports": "error",
     "anti-slop/no-shape-in-symbol-names": "error",
     "anti-slop/no-conditional-empty-object-spread": "error"
-  }
+  },
+  // ADR-0105: modules not yet migrated to typed service inputs. Remove each entry with its
+  // module's migration; the block goes away with the last one.
+  "overrides": [
+    {
+      "files": [
+        "apps/web/src/features/accounting/**",
+        "apps/web/src/features/authorization/**",
+        "apps/web/src/features/identity/**",
+        "apps/web/src/features/inventory/**",
+        "apps/web/src/features/party/**",
+        "apps/web/src/features/process-studio/**",
+        "apps/web/src/features/procurement/**",
+        "apps/web/src/features/product/**",
+        "apps/web/src/features/sales/**",
+        "apps/web/src/features/tax/**",
+        "apps/web/src/shared/**",
+        "erp/modules/accounting/**",
+        "erp/modules/billing/**",
+        "erp/modules/communication/**",
+        "erp/modules/inventory/**",
+        "erp/modules/party/**",
+        "erp/modules/process/**",
+        "erp/modules/procurement/**",
+        "erp/modules/product/**",
+        "erp/modules/sales/**",
+        "erp/modules/settlement/**",
+        "erp/modules/tax/**",
+        "erp/runtime/**",
+        "framework/foundation/communication/**",
+        "framework/foundation/database/**",
+        "framework/foundation/document-rendering/**",
+        "framework/foundation/jobs/**",
+        "framework/foundation/workload/**",
+        "framework/modules/approvals/**",
+        "framework/modules/auth/**",
+        "framework/modules/authorization/**",
+        "framework/modules/identity/**",
+        "framework/modules/integrations/**",
+        "framework/modules/messaging/**",
+        "framework/modules/numbering/**",
+        "framework/platform/postgres/**",
+        "tests/**",
+        "tooling/**"
+      ],
+      "rules": { "anti-slop/no-unknown-parameters": "off" }
+    }
+  ]
 }
