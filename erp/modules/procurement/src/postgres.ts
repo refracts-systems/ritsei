@@ -21,11 +21,13 @@ import {
   ReplicaConsistencyFailure,
   uuidv7,
 } from "../../../../framework/foundation/mod.ts"
+import { ApprovalService } from "../../../../framework/modules/approvals/mod.ts"
 import { AuthorizationService } from "../../../../framework/modules/authorization/mod.ts"
 import { InventoryService } from "../../inventory/mod.ts"
 import { MessagingService } from "../../../../framework/modules/messaging/mod.ts"
 import { PartyService } from "../../party/mod.ts"
 import { ProcurementCapabilities } from "./capabilities.ts"
+import { PurchaseApprovalSubject } from "./documents-contract.ts"
 import {
   CancelPurchaseOrderInput,
   ConfirmPurchaseOrderInput,
@@ -55,6 +57,7 @@ import {
   SupplierAccountAlreadyExists,
   SupplierAccountNotFound,
   SupplierRelationshipNotEligible,
+  PurchaseOrderApprovalRequired,
 } from "./errors.ts"
 import {
   ProcurementPurchaseOrderConfirmedEvent,
@@ -84,6 +87,7 @@ export const makeProcurementService = Effect.gen(function* () {
   const authorization = yield* AuthorizationService
   const party = yield* PartyService
   const messaging = yield* MessagingService
+  const approvalsOption = yield* Effect.serviceOption(ApprovalService)
   const clock = yield* Clock.Clock
   const now = () => new Date(clock.currentTimeMillisUnsafe())
 
@@ -417,6 +421,36 @@ export const makeProcurementService = Effect.gen(function* () {
               if (row.status !== "draft") {
                 return { _tag: "invalid-state" as const, status: row.status }
               }
+              // Where an approval policy covers this total, every confirmation path needs it.
+              if (Option.isSome(approvalsOption)) {
+                const approvals = approvalsOption.value
+                const scope = { principal: decoded.principal, tenantId: decoded.tenantId }
+                const required = yield* approvals.isRequired({
+                  ...scope,
+                  subjectType: PurchaseApprovalSubject,
+                  amount: current.total,
+                })
+                if (required) {
+                  const granted = yield* approvals.getForSubject({
+                    ...scope,
+                    subjectType: PurchaseApprovalSubject,
+                    subjectId: row.id,
+                  })
+                  if (granted?.status !== "approved" || granted.amount !== current.total) {
+                    // Leave a pending request so an approver can act on it.
+                    const request =
+                      granted ??
+                      (yield* approvals.submit({
+                        ...scope,
+                        subjectType: PurchaseApprovalSubject,
+                        subjectId: row.id,
+                        amount: current.total,
+                        reason: "Purchase order total exceeds the approval threshold",
+                      }))
+                    return { _tag: "approval-required" as const, status: request.status }
+                  }
+                }
+              }
               const confirmedAt = now()
               const [confirmed] = yield* database.query(
                 (db) =>
@@ -496,6 +530,15 @@ export const makeProcurementService = Effect.gen(function* () {
         if (result._tag === "invalid-state") {
           return yield* Effect.fail(
             new PurchaseOrderInvalidState({
+              tenantId: decoded.tenantId,
+              purchaseOrderId: decoded.purchaseOrderId,
+              status: result.status,
+            }),
+          )
+        }
+        if (result._tag === "approval-required") {
+          return yield* Effect.fail(
+            new PurchaseOrderApprovalRequired({
               tenantId: decoded.tenantId,
               purchaseOrderId: decoded.purchaseOrderId,
               status: result.status,

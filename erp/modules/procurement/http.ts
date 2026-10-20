@@ -135,6 +135,7 @@ const ProcurementHttpApi = makeModuleApi(ProcurementHttpGroup)
 
 export const ProcurementHttpErrors = makeApiErrorMapping({
   ...BaseApiErrorPolicy,
+  PurchaseOrderApprovalRequired: "conflict",
   PurchaseOrderConfirmationIdempotencyConflict: "conflict",
   PurchaseOrderHasReceipts: "conflict",
   PurchaseOrderInvalidState: "conflict",

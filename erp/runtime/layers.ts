@@ -171,8 +171,18 @@ export const serviceLayers = (
     Layer.provide(Layer.merge(DatabaseLive, AuthorizationLive)),
   )
 
+  const ApprovalServiceLive = ApprovalsLive.pipe(Layer.provide(BusinessRequirements))
+
   const ProcurementLiveWithRequirements = ProcurementLive.pipe(
-    Layer.provide(Layer.mergeAll(BusinessRequirements, PartyLive, InventoryLive, MessagingLive)),
+    Layer.provide(
+      Layer.mergeAll(
+        BusinessRequirements,
+        PartyLive,
+        InventoryLive,
+        MessagingLive,
+        ApprovalServiceLive,
+      ),
+    ),
   )
 
   const ProductServiceLive = ProductLive.pipe(Layer.provide(BusinessRequirements))
@@ -188,8 +198,6 @@ export const serviceLayers = (
       Layer.mergeAll(BusinessRequirements, PartyLive, TaxServiceLive, NumberingServiceLive),
     ),
   )
-
-  const ApprovalServiceLive = ApprovalsLive.pipe(Layer.provide(BusinessRequirements))
 
   const PurchaseDocumentServiceLive = PurchaseDocumentsLive.pipe(
     Layer.provide(

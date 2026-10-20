@@ -144,6 +144,35 @@ it.effect.skipIf(databaseUrl === undefined)(
           }
           const unapproved = yield* Effect.flip(purchasing.releasePurchaseOrder(release))
           assert.instanceOf(unapproved, PurchaseOrderApprovalRequired)
+          // The legacy confirm command honors the same policy, and a legacy-created order gets a
+          // pending request an approver can act on.
+          const legacyConfirm = yield* Effect.flip(
+            procurement.confirmPurchaseOrder({
+              ...scope,
+              purchaseOrderId: drafted.purchaseOrderId,
+              idempotencyKey: "legacy-confirm",
+            }),
+          )
+          assert.instanceOf(legacyConfirm, PurchaseOrderApprovalRequired)
+          const legacyOrder = yield* procurement.createPurchaseOrder({
+            ...scope,
+            supplierAccountId: supplier.id,
+            lines: [{ itemId: widget.id, quantity: "100", unitPrice: "6.00" }],
+          })
+          const legacyBlocked = yield* Effect.flip(
+            procurement.confirmPurchaseOrder({
+              ...scope,
+              purchaseOrderId: legacyOrder.id,
+              idempotencyKey: "legacy-order-confirm",
+            }),
+          )
+          assert.instanceOf(legacyBlocked, PurchaseOrderApprovalRequired)
+          const legacyRequest = yield* approvals.getForSubject({
+            ...scope,
+            subjectType: "procurement.purchase_order",
+            subjectId: legacyOrder.id,
+          })
+          assert.strictEqual(legacyRequest?.status, "pending")
           const selfApproval = yield* Effect.flip(
             approvals.decide({ ...scope, requestId: drafted.approval!.id, decision: "approve" }),
           )
