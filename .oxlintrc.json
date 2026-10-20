@@ -77,7 +77,6 @@
         "erp/modules/party/**",
         "erp/modules/process/**",
         "erp/modules/procurement/**",
-        "erp/modules/product/**",
         "erp/modules/sales/**",
         "erp/modules/settlement/**",
         "erp/runtime/**",

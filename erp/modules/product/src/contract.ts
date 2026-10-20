@@ -55,10 +55,14 @@ export type CreateProductCommand = Omit<Schema.Schema.Type<typeof CreateProductI
 type CommonFailure = AuthorizationDenied | DatabaseFailure | Schema.SchemaError
 
 export interface ProductService {
-  readonly listProducts: (input: unknown) => Effect.Effect<ReadonlyArray<Product>, CommonFailure>
-  readonly getProduct: (input: unknown) => Effect.Effect<Product, ProductNotFound | CommonFailure>
+  readonly listProducts: (
+    input: Schema.Codec.Encoded<typeof ListProductsInput>,
+  ) => Effect.Effect<ReadonlyArray<Product>, CommonFailure>
+  readonly getProduct: (
+    input: Schema.Codec.Encoded<typeof GetProductInput>,
+  ) => Effect.Effect<Product, ProductNotFound | CommonFailure>
   readonly createProduct: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreateProductInput>,
   ) => Effect.Effect<Product, ProductAlreadyExists | CommonFailure>
 }
 

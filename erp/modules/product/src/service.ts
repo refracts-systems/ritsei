@@ -13,6 +13,7 @@ import {
 } from "./contract.ts"
 import { ProductNotFound } from "./errors.ts"
 import type { ProductStore } from "./store.ts"
+import type * as Schema from "effect/Schema"
 
 export const makeProductServiceFromStore = <R>(
   storeEffect: Effect.Effect<ProductStore, never, R>,
@@ -22,11 +23,15 @@ export const makeProductServiceFromStore = <R>(
     const authorization = yield* AuthorizationService
     const authorized = scopedCommand(authorization)
 
-    const listProducts = Effect.fn("ProductService.listProducts")(function* (input: unknown) {
+    const listProducts = Effect.fn("ProductService.listProducts")(function* (
+      input: Schema.Codec.Encoded<typeof ListProductsInput>,
+    ) {
       const decoded = yield* authorized(ListProductsInput, ProductCapabilities.productRead)(input)
       return yield* store.listProducts(decoded)
     })
-    const getProduct = Effect.fn("ProductService.getProduct")(function* (input: unknown) {
+    const getProduct = Effect.fn("ProductService.getProduct")(function* (
+      input: Schema.Codec.Encoded<typeof GetProductInput>,
+    ) {
       const decoded = yield* authorized(GetProductInput, ProductCapabilities.productRead)(input)
       const product = yield* store.getProduct(decoded.tenantId, decoded.productId)
       if (product === undefined) {
@@ -36,7 +41,9 @@ export const makeProductServiceFromStore = <R>(
       }
       return product
     })
-    const createProduct = Effect.fn("ProductService.createProduct")(function* (input: unknown) {
+    const createProduct = Effect.fn("ProductService.createProduct")(function* (
+      input: Schema.Codec.Encoded<typeof CreateProductInput>,
+    ) {
       const decoded = yield* authorized(
         CreateProductInput,
         ProductCapabilities.productCreate,
