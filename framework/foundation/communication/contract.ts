@@ -379,7 +379,7 @@ export interface EmailTransport {
 
 export const EmailTransport = Context.Service<EmailTransport>("RITSEI/EmailTransport")
 
-export const makeCommunicationIntent = (input: unknown) =>
+export const createCommunicationIntent = (input: unknown) =>
   Effect.gen(function* () {
     const decoded = yield* Schema.decodeUnknownEffect(CommunicationIntentInput)(input)
     return {

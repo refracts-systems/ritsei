@@ -127,12 +127,13 @@ export {
   PostFinancialJournalInput,
 } from "./src/financial-ledger.ts"
 export {
-  makePostgresqlFinancialStoreObservation,
+  postgresqlFinancialStoreObservation,
   makePostgresqlFinancialStoreObservationLayer,
 } from "./src/financial-observation.ts"
 export {
   AccountingLive,
   AccountingPostgresLive,
+  AccountingServiceLive,
   FinancialOperationsLive,
   FinancialOperationsPostgresLive,
   makeAccountingTestLive,
@@ -140,7 +141,7 @@ export {
 } from "./src/layers.ts"
 export {
   makePostgresqlFinancialLedger,
-  makePostgresqlFinancialLedgerLayer,
+  postgresqlFinancialLedgerLayer,
 } from "./src/postgresql-ledger.ts"
 
 export {

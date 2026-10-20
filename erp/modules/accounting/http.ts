@@ -19,8 +19,8 @@ import {
   ShortString,
   TenantHeaders as tenantHeaders,
   Uuid,
-  makeApiErrorMapping,
-  makeModuleApi,
+  apiErrorMapping,
+  moduleApi,
 } from "../../../framework/modules/http/mod.ts"
 import {
   Account,
@@ -382,9 +382,9 @@ export const AccountingHttpGroup = HttpApiGroup.make("Accounting").add(
   }).middleware(BearerAuth),
 )
 
-const AccountingHttpApi = makeModuleApi(AccountingHttpGroup)
+const AccountingHttpApi = moduleApi(AccountingHttpGroup)
 
-export const AccountingHttpErrors = makeApiErrorMapping({
+export const AccountingHttpErrors = apiErrorMapping({
   ...BaseApiErrorPolicy,
   SalesOrderInvalidState: "conflict",
   SalesOrderNotFound: "not_found",

@@ -12,11 +12,7 @@ import {
   AuthorizationDenied,
   makeAuthorizationTestLayer,
 } from "../../../../framework/modules/authorization/mod.ts"
-import {
-  BearerAuth,
-  CurrentPrincipal,
-  makeModuleApi,
-} from "../../../../framework/modules/http/mod.ts"
+import { BearerAuth, CurrentPrincipal, moduleApi } from "../../../../framework/modules/http/mod.ts"
 import { validateModuleRegistry } from "../../../../framework/modules/module/mod.ts"
 import { ProductHttpGroup, ProductHttpHandlers } from "../http.ts"
 import {
@@ -99,7 +95,7 @@ it.layer(TestHttpServices)("product HTTP endpoint", (it) => {
         next(HttpClientRequest.bearerToken(request, "product-token")),
       )
       const handlers = ProductHttpHandlers.pipe(Layer.provide(bearer), Layer.provide(granted))
-      const client = yield* HttpApiTest.groups(makeModuleApi(ProductHttpGroup), ["Product"]).pipe(
+      const client = yield* HttpApiTest.groups(moduleApi(ProductHttpGroup), ["Product"]).pipe(
         Effect.provide(Layer.mergeAll(handlers, bearerClient, bearer)),
       )
       const headers = { "x-tenant-id": tenantId }

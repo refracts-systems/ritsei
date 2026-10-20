@@ -21,7 +21,7 @@ import {
 import type { Principal as PrincipalSchema } from "../../../../framework/modules/auth/mod.ts"
 import {
   AuthorizationService,
-  makeScopedCommand,
+  scopedCommand,
 } from "../../../../framework/modules/authorization/mod.ts"
 import { NumberingService } from "../../../../framework/modules/numbering/mod.ts"
 import { GeneralLedgerService } from "../../accounting/mod.ts"
@@ -103,7 +103,7 @@ const sumBuckets = (rows: Iterable<Buckets>) => {
 export const makeSettlementService = Effect.gen(function* () {
   const database = yield* Database
   const authorization = yield* AuthorizationService
-  const authorized = makeScopedCommand(authorization)
+  const authorized = scopedCommand(authorization)
   const ledger = yield* GeneralLedgerService
   const billing = yield* BillingService
   const numbering = yield* NumberingService

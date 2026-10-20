@@ -3,7 +3,8 @@
 Source: [dmmulroy/anti-slop](https://github.com/dmmulroy/anti-slop), commit
 `13909c9e07590f5a85d93c62712259fe14a883f7` (2026-10-13), copied with the upstream
 `skills/install-anti-slop/scripts/install.mjs` from the bundled assets. The generic plugin
-(`index.ts`) and the opt-in Effect plugin (`effect/index.ts`) are unmodified copies; the
+(`index.ts`) and the opt-in Effect plugin (`effect/index.ts`) are copies, except where a deviation is
+recorded below (so far `effect/rules/no-service-constructor-imports.ts`); the
 `vendor/eslint-stylistic` files keep their own `UPSTREAM.md` and `LICENSE`.
 
 The files are owned by this repository: change them to match RITSEI's standards, and record each
@@ -22,7 +23,7 @@ formatting, and Fallow because it keeps upstream's tab-indented style.
 `anti-slop/no-unsafe-dictionary-type`, `anti-slop/no-runtime-typeof` (with
 `allowInTypeGuards`), `anti-slop/no-unknown-returns`, and
 `anti-slop/require-safety-comment-for-type-assertion` (production source only; tests are exempt
-through an `overrides` block in `.oxlintrc.json`).
+through an `overrides` block in `.oxlintrc.json`), `anti-slop-effect/no-service-constructor-imports`.
 
 `pnpm run lint` passes with this set. Fixes made when enabling it:
 
@@ -65,6 +66,15 @@ through an `overrides` block in `.oxlintrc.json`).
   predicates in `Array.find`, `Form` handing callers its `FormData`). The rest carry a `SAFETY:`
   comment naming the invariant: a database check constraint, a prior validation, or a module-owned
   writer.
+- `anti-slop-effect/no-service-constructor-imports` (109 sites): the vendored rule now skips test
+  support, `tooling/`, and imports from the same directory (`./`), since a constructor imported
+  from a sibling stays inside its owning module (a deviation from upstream, in
+  `effect/rules/no-service-constructor-imports.ts`). Helpers and builders that were not service
+  constructors lost the `make` prefix (`scopedCommand`, `moduleApi`, `apiErrorMapping`,
+  `createDocumentSnapshot`, `financialLedgerLayer`, ...). The composition root in
+  `erp/runtime/layers.ts` imports each module's `...Live` layer instead of rebuilding it from
+  `make<Service>`; Accounting gained `AccountingServiceLive` and Process `ProcessJobEnqueuerLive`
+  for that.
 - `no-reflect-get` (1 site): the `Proxy` default branch in `request-limits.ts` keeps
   `Reflect.get` with a justified `oxlint-disable-next-line`.
 
@@ -81,4 +91,3 @@ cleanup it needs.
 | `require-readable-spacing` | 8468 | Formatting belongs to oxfmt; the autofix would rewrite most files and fight the formatter. |
 | `anti-slop-effect/no-manual-tag-comparison` | 146 | Outcome unions (`{ _tag: "posted" }`) are matched by hand throughout. |
 | `anti-slop-effect/no-manual-tagged-construction` | 182 | The same outcome unions are built as literals. |
-| `anti-slop-effect/no-service-constructor-imports` | 109 | Layers and runtime composition import `make<Service>` constructors from module entry points by design. |

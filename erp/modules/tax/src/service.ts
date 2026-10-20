@@ -6,7 +6,7 @@ import {
 } from "../../../../framework/foundation/mod.ts"
 import {
   AuthorizationService,
-  makeScopedCommand,
+  scopedCommand,
 } from "../../../../framework/modules/authorization/mod.ts"
 import { TaxCapabilities } from "./capabilities.ts"
 import {
@@ -28,7 +28,7 @@ export const makeTaxServiceFromStore = <R>(storeEffect: Effect.Effect<TaxStore, 
   Effect.gen(function* () {
     const store = yield* storeEffect
     const authorization = yield* AuthorizationService
-    const authorized = makeScopedCommand(authorization)
+    const authorized = scopedCommand(authorization)
 
     const listTaxCodes = Effect.fn("TaxService.listTaxCodes")(function* (input: unknown) {
       const decoded = yield* authorized(ListTaxCodesInput, TaxCapabilities.taxCodeRead)(input)

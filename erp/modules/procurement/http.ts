@@ -21,8 +21,8 @@ import {
   ShortString,
   TenantHeaders as tenantHeaders,
   Uuid,
-  makeApiErrorMapping,
-  makeModuleApi,
+  apiErrorMapping,
+  moduleApi,
 } from "../../../framework/modules/http/mod.ts"
 import {
   GoodsReceipt,
@@ -131,9 +131,9 @@ export const ProcurementHttpGroup = HttpApiGroup.make("Procurement").add(
   }).middleware(BearerAuth),
 )
 
-const ProcurementHttpApi = makeModuleApi(ProcurementHttpGroup)
+const ProcurementHttpApi = moduleApi(ProcurementHttpGroup)
 
-export const ProcurementHttpErrors = makeApiErrorMapping({
+export const ProcurementHttpErrors = apiErrorMapping({
   ...BaseApiErrorPolicy,
   PurchaseOrderApprovalRequired: "conflict",
   PurchaseOrderConfirmationIdempotencyConflict: "conflict",

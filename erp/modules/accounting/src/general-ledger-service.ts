@@ -9,7 +9,7 @@ import {
 import type { Principal } from "../../../../framework/modules/auth/mod.ts"
 import {
   AuthorizationService,
-  makeScopedCommand,
+  scopedCommand,
 } from "../../../../framework/modules/authorization/mod.ts"
 import { AccountingCapabilities } from "./capabilities.ts"
 import { chartTemplates } from "./chart-templates.ts"
@@ -64,7 +64,7 @@ export const makeGeneralLedgerServiceFromStore = <R>(
   Effect.gen(function* () {
     const store = yield* storeEffect
     const authorization = yield* AuthorizationService
-    const authorized = makeScopedCommand(authorization)
+    const authorized = scopedCommand(authorization)
     const authorize = (
       input: { principal: Schema.Schema.Type<typeof Principal>; tenantId: string },
       capability: string,

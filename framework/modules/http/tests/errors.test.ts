@@ -8,10 +8,10 @@ import {
   ApiNotFound,
   ApiServiceUnavailable,
   BaseApiErrorPolicy,
-  makeApiErrorMapping,
+  apiErrorMapping,
 } from "../mod.ts"
 
-const { toApiError, apiEffect } = makeApiErrorMapping({
+const { toApiError, apiEffect } = apiErrorMapping({
   ...BaseApiErrorPolicy,
   OrderNotFound: "not_found",
   OrderLocked: "conflict",

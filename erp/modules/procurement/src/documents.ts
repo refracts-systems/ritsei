@@ -25,7 +25,7 @@ import { ApprovalService } from "../../../../framework/modules/approvals/mod.ts"
 import type { Principal as PrincipalSchema } from "../../../../framework/modules/auth/mod.ts"
 import {
   AuthorizationService,
-  makeScopedCommand,
+  scopedCommand,
 } from "../../../../framework/modules/authorization/mod.ts"
 import { NumberingService } from "../../../../framework/modules/numbering/mod.ts"
 import { StockKeepingService } from "../../inventory/mod.ts"
@@ -65,7 +65,7 @@ const normalize = (value: string) => major(minor(value))
 export const makePurchaseDocumentService = Effect.gen(function* () {
   const database = yield* Database
   const authorization = yield* AuthorizationService
-  const authorized = makeScopedCommand(authorization)
+  const authorized = scopedCommand(authorization)
   const approvals = yield* ApprovalService
   const numbering = yield* NumberingService
   const party = yield* PartyService

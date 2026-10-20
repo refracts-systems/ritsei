@@ -97,7 +97,7 @@ export const ConsistencyHeaders = {
 export const RitseiApiId = "RITSEI"
 
 /** A one-group API a module builds its handlers against; the composed API adds the same group. */
-export const makeModuleApi = <const Group extends HttpApiGroup.Constraint>(group: Group) =>
+export const moduleApi = <const Group extends HttpApiGroup.Constraint>(group: Group) =>
   HttpApi.make(RitseiApiId).add(group)
 
 export type ApiErrorKind =
@@ -140,7 +140,7 @@ const invalidConsistencyTokenReasons = new Set<ReplicaConsistencyFailure["reason
   "placement_mismatch",
 ])
 
-export const makeApiErrorMapping = <const Policy extends Record<string, ApiErrorKind>>(
+export const apiErrorMapping = <const Policy extends Record<string, ApiErrorKind>>(
   policy: Policy,
 ) => {
   const toApiError = (error: ApiFailure<Policy>) => {

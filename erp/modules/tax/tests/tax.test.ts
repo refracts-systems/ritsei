@@ -13,11 +13,7 @@ import {
   AuthorizationDenied,
   makeAuthorizationTestLayer,
 } from "../../../../framework/modules/authorization/mod.ts"
-import {
-  BearerAuth,
-  CurrentPrincipal,
-  makeModuleApi,
-} from "../../../../framework/modules/http/mod.ts"
+import { BearerAuth, CurrentPrincipal, moduleApi } from "../../../../framework/modules/http/mod.ts"
 import { validateModuleRegistry } from "../../../../framework/modules/module/mod.ts"
 import { makePostgresDatabase, runMigrations } from "../../../../framework/platform/mod.ts"
 import { seedErpFixture } from "../../../../tests/support/erp-fixture.ts"
@@ -173,7 +169,7 @@ it.layer(TestHttpServices)("tax HTTP endpoint", (it) => {
         next(HttpClientRequest.bearerToken(request, "tax-token")),
       )
       const handlers = TaxHttpHandlers.pipe(Layer.provide(bearer), Layer.provide(granted))
-      const client = yield* HttpApiTest.groups(makeModuleApi(TaxHttpGroup), ["Tax"]).pipe(
+      const client = yield* HttpApiTest.groups(moduleApi(TaxHttpGroup), ["Tax"]).pipe(
         Effect.provide(Layer.mergeAll(handlers, bearerClient, bearer)),
       )
       const headers = { "x-tenant-id": tenantId }

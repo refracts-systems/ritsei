@@ -73,4 +73,4 @@ export type {
   SeparationOfDutiesDecision as SeparationOfDutiesDecisionType,
   SeparationOfDutiesInput as SeparationOfDutiesInputType,
 } from "./src/sod.ts"
-export { makeScopedCommand } from "./src/scoped-command.ts"
+export { scopedCommand } from "./src/scoped-command.ts"

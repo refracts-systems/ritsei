@@ -390,7 +390,7 @@ export const hashJson = (input: unknown) =>
     return yield* sha256Hex(canonicalizeJson(decoded))
   })
 
-export const makeDocumentSnapshot = (input: unknown) =>
+export const createDocumentSnapshot = (input: unknown) =>
   Effect.gen(function* () {
     const decoded = yield* Schema.decodeUnknownEffect(DocumentSnapshotInput)(input)
     const checksum = yield* hashJson({
@@ -416,7 +416,7 @@ export const documentContextFromSnapshot = (snapshot: DocumentSnapshot): Documen
   snapshotChecksum: snapshot.checksum,
 })
 
-export const makeDocumentAst = (input: unknown) =>
+export const createDocumentAst = (input: unknown) =>
   Effect.gen(function* () {
     const decoded = yield* Schema.decodeUnknownEffect(DocumentAstInput)(input)
     const checksum = yield* hashJson({
@@ -432,7 +432,7 @@ export const makeDocumentAst = (input: unknown) =>
     } satisfies DocumentAst
   })
 
-export const makeDocumentRenderRequest = (input: unknown) =>
+export const createDocumentRenderRequest = (input: unknown) =>
   Effect.gen(function* () {
     const decoded = yield* Schema.decodeUnknownEffect(DocumentRenderRequestInput)(input)
     const renderFingerprint = yield* hashJson({

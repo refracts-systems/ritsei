@@ -17,8 +17,8 @@ import {
   ShortString,
   TenantHeaders as tenantHeaders,
   Uuid,
-  makeApiErrorMapping,
-  makeModuleApi,
+  apiErrorMapping,
+  moduleApi,
   ReadLimit,
 } from "../../../framework/modules/http/mod.ts"
 import {
@@ -147,9 +147,9 @@ export const ProcessHttpGroup = HttpApiGroup.make("Process").add(
   }).middleware(BearerAuth),
 )
 
-const ProcessHttpApi = makeModuleApi(ProcessHttpGroup)
+const ProcessHttpApi = moduleApi(ProcessHttpGroup)
 
-export const ProcessHttpErrors = makeApiErrorMapping({
+export const ProcessHttpErrors = apiErrorMapping({
   ...BaseApiErrorPolicy,
   AccountingPeriodNotOpen: "conflict",
   FinancialEngineActivated: "conflict",

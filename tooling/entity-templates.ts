@@ -311,8 +311,8 @@ import {
   BaseApiErrorPolicy,
   BearerAuth,
   CurrentPrincipal,
-  makeApiErrorMapping,
-  makeModuleApi,
+  apiErrorMapping,
+  moduleApi,
   ReadLimit,
   ShortString,
   TenantHeaders,
@@ -334,9 +334,9 @@ export const ${n.Module}HttpGroup = HttpApiGroup.make("${n.Module}").add(
   }).middleware(BearerAuth),
 )
 
-const ${n.Module}HttpApi = makeModuleApi(${n.Module}HttpGroup)
+const ${n.Module}HttpApi = moduleApi(${n.Module}HttpGroup)
 
-export const ${n.Module}HttpErrors = makeApiErrorMapping({
+export const ${n.Module}HttpErrors = apiErrorMapping({
   ...BaseApiErrorPolicy,
   ${n.Entity}AlreadyExists: "conflict",
 })
@@ -383,7 +383,7 @@ import {
   AuthorizationDenied,
   makeAuthorizationTestLayer,
 } from "../../../../framework/modules/authorization/mod.ts"
-import { BearerAuth, CurrentPrincipal, makeModuleApi } from "../../../../framework/modules/http/mod.ts"
+import { BearerAuth, CurrentPrincipal, moduleApi } from "../../../../framework/modules/http/mod.ts"
 import { validateModuleRegistry } from "../../../../framework/modules/module/mod.ts"
 import { ${n.Module}HttpGroup, ${n.Module}HttpHandlers } from "../http.ts"
 import {
@@ -444,7 +444,7 @@ it.layer(TestHttpServices)("${n.module} HTTP endpoint", (it) => {
         next(HttpClientRequest.bearerToken(request, "${n.module}-token")),
       )
       const handlers = ${n.Module}HttpHandlers.pipe(Layer.provide(bearer), Layer.provide(granted))
-      const client = yield* HttpApiTest.groups(makeModuleApi(${n.Module}HttpGroup), ["${n.Module}"]).pipe(
+      const client = yield* HttpApiTest.groups(moduleApi(${n.Module}HttpGroup), ["${n.Module}"]).pipe(
         Effect.provide(Layer.mergeAll(handlers, bearerClient, bearer)),
       )
       const headers = { "x-tenant-id": tenantId }

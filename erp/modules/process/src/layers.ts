@@ -1,12 +1,13 @@
 import * as Layer from "effect/Layer"
 
+import { DurableJobEnqueuer } from "../../../../framework/foundation/mod.ts"
 import { ProcessService } from "./contract.ts"
 import {
   makeMemoryProcessOperatorStore,
   makePostgresProcessOperatorStore,
   ProcessOperatorStore,
 } from "./operations-store.ts"
-import { makeProcessService } from "./postgres.ts"
+import { makeProcessJobEnqueuer, makeProcessService } from "./postgres.ts"
 import {
   makeMemoryProcessReleaseStore,
   makePostgresProcessReleaseStore,
@@ -20,6 +21,7 @@ import {
 import { makeProcessStudioService, ProcessStudioService } from "./studio.ts"
 
 export const ProcessLive = Layer.effect(ProcessService, makeProcessService)
+export const ProcessJobEnqueuerLive = Layer.effect(DurableJobEnqueuer, makeProcessJobEnqueuer)
 export const ProcessPostgresLive = ProcessLive
 export const ProcessStudioLive = Layer.effect(ProcessStudioService, makeProcessStudioService)
 export const ProcessStudioPostgresLive = ProcessStudioLive

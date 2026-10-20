@@ -16,8 +16,8 @@ import {
   ShortString,
   TenantHeaders as tenantHeaders,
   Uuid,
-  makeApiErrorMapping,
-  makeModuleApi,
+  apiErrorMapping,
+  moduleApi,
 } from "../../../framework/modules/http/mod.ts"
 import { CalendarDate, FinancialMajorAmount } from "../../../framework/foundation/mod.ts"
 import {
@@ -259,9 +259,9 @@ export const InventoryHttpGroup = HttpApiGroup.make("Inventory").add(
   }).middleware(BearerAuth),
 )
 
-const InventoryHttpApi = makeModuleApi(InventoryHttpGroup)
+const InventoryHttpApi = moduleApi(InventoryHttpGroup)
 
-export const InventoryHttpErrors = makeApiErrorMapping({
+export const InventoryHttpErrors = apiErrorMapping({
   ...BaseApiErrorPolicy,
   InventoryReferenceNotFound: "not_found",
   InventoryUnitOfMeasureMismatch: "conflict",

@@ -13,7 +13,7 @@ type Scoped = {
  * Decodes a tenant-scoped command and authorizes one capability for its principal before the
  * owner acts on it: the paved road for "decode, authorize, then mutate or read".
  */
-export const makeScopedCommand =
+export const scopedCommand =
   (authorization: AuthorizationService) =>
   <T extends Scoped>(schema: Schema.Decoder<T>, capability: string) =>
   (input: unknown) =>

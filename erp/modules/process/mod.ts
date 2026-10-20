@@ -159,6 +159,7 @@ export {
   ProcessReleasePostgresLive,
   ProcessRuntimeMemoryLive,
   ProcessRuntimePostgresLive,
+  ProcessJobEnqueuerLive,
   ProcessStudioLive,
   ProcessStudioPostgresLive,
 } from "./src/layers.ts"

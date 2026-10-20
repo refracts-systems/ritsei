@@ -21,7 +21,7 @@ import {
 import type { Principal as PrincipalSchema } from "../../../../framework/modules/auth/mod.ts"
 import {
   AuthorizationService,
-  makeScopedCommand,
+  scopedCommand,
 } from "../../../../framework/modules/authorization/mod.ts"
 import { GeneralLedgerService, type PostingRoleType } from "../../accounting/mod.ts"
 import { ProductService } from "../../product/mod.ts"
@@ -162,7 +162,7 @@ const lineFailure = (
 export const makeStockKeepingService = Effect.gen(function* () {
   const database = yield* Database
   const authorization = yield* AuthorizationService
-  const authorized = makeScopedCommand(authorization)
+  const authorized = scopedCommand(authorization)
   const ledger = yield* GeneralLedgerService
   const productService = yield* ProductService
 

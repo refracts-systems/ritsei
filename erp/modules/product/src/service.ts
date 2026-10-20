@@ -2,7 +2,7 @@ import * as Effect from "effect/Effect"
 
 import {
   AuthorizationService,
-  makeScopedCommand,
+  scopedCommand,
 } from "../../../../framework/modules/authorization/mod.ts"
 import { ProductCapabilities } from "./capabilities.ts"
 import {
@@ -20,7 +20,7 @@ export const makeProductServiceFromStore = <R>(
   Effect.gen(function* () {
     const store = yield* storeEffect
     const authorization = yield* AuthorizationService
-    const authorized = makeScopedCommand(authorization)
+    const authorized = scopedCommand(authorization)
 
     const listProducts = Effect.fn("ProductService.listProducts")(function* (input: unknown) {
       const decoded = yield* authorized(ListProductsInput, ProductCapabilities.productRead)(input)

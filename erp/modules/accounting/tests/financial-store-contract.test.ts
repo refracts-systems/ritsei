@@ -11,7 +11,7 @@ import {
   FinancialStoreObservationFailure,
   hashFinancialStagingEvidence,
   hashFinancialStoreWatermarks,
-  makeFinancialStoreObservationRegistry,
+  financialStoreObservationRegistry,
 } from "../mod.ts"
 
 const watermark = (authority: "postgresql" | "tigerbeetle", value: string) => ({
@@ -31,7 +31,7 @@ describe("financial readiness contracts", () => {
     Effect.gen(function* () {
       const source = watermark("postgresql", "source")
       const target = watermark("tigerbeetle", "target")
-      const registry = makeFinancialStoreObservationRegistry([
+      const registry = financialStoreObservationRegistry([
         {
           authority: "postgresql",
           collector: { collect: () => Effect.succeed(source) },
@@ -70,7 +70,7 @@ describe("financial readiness contracts", () => {
         yield* registry.collect("tigerbeetle", { scope: target.scope, maxRecords: 1 }),
         target,
       )
-      const missingRegistry = makeFinancialStoreObservationRegistry([
+      const missingRegistry = financialStoreObservationRegistry([
         {
           authority: "postgresql",
           collector: { collect: () => Effect.succeed(source) },

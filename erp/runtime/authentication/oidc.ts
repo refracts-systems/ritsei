@@ -162,7 +162,7 @@ export const makeOidcIdentityProvider = (
   }
 }
 
-export const makeIdentityProviderLayer = (configuration: RitseiRuntimeConfiguration) => {
+export const identityProviderLayer = (configuration: RitseiRuntimeConfiguration) => {
   const authentication = configuration.authentication
   return authentication?.profile === "oidc"
     ? Layer.succeed(IdentityProvider, makeOidcIdentityProvider(authentication))

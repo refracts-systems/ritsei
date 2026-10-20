@@ -23,7 +23,7 @@ import {
 } from "../../../../framework/foundation/mod.ts"
 import {
   AuthorizationService,
-  makeScopedCommand,
+  scopedCommand,
 } from "../../../../framework/modules/authorization/mod.ts"
 import { NumberingService } from "../../../../framework/modules/numbering/mod.ts"
 import { PartyService } from "../../party/mod.ts"
@@ -112,7 +112,7 @@ const toPartyCustomer = (row: {
 export const makeSalesDocumentService = Effect.gen(function* () {
   const database = yield* Database
   const authorization = yield* AuthorizationService
-  const authorized = makeScopedCommand(authorization)
+  const authorized = scopedCommand(authorization)
   const party = yield* PartyService
   const tax = yield* TaxService
   const numbering = yield* NumberingService

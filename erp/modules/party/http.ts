@@ -15,8 +15,8 @@ import {
   ShortString,
   TenantHeaders as tenantHeaders,
   Uuid,
-  makeApiErrorMapping,
-  makeModuleApi,
+  apiErrorMapping,
+  moduleApi,
 } from "../../../framework/modules/http/mod.ts"
 import {
   Branch,
@@ -202,9 +202,9 @@ export const PartyHttpGroup = HttpApiGroup.make("Parties").add(
   }).middleware(BearerAuth),
 )
 
-const PartyHttpApi = makeModuleApi(PartyHttpGroup)
+const PartyHttpApi = moduleApi(PartyHttpGroup)
 
-export const PartyHttpErrors = makeApiErrorMapping({
+export const PartyHttpErrors = apiErrorMapping({
   ...BaseApiErrorPolicy,
   BranchAlreadyExists: "conflict",
   ExternalIdentifierAlreadyAssigned: "conflict",

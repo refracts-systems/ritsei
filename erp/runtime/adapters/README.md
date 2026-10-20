@@ -90,7 +90,7 @@ The selection is configuration-driven:
 
 ```ts
 if (configuration.financialAuthority === "postgresql") {
-  return makePostgresqlFinancialLedgerLayer.pipe(Layer.provide(database))
+  return postgresqlFinancialLedgerLayer.pipe(Layer.provide(database))
 }
 
 return Layer.effect(FinancialLedgerPort, makeTigerBeetleFinancialLedger(configuration.tigerBeetle))

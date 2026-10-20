@@ -20,7 +20,7 @@ import type { Principal as PrincipalSchema } from "../../../../framework/modules
 import { ApprovalService } from "../../../../framework/modules/approvals/mod.ts"
 import {
   AuthorizationService,
-  makeScopedCommand,
+  scopedCommand,
 } from "../../../../framework/modules/authorization/mod.ts"
 import { NumberingService } from "../../../../framework/modules/numbering/mod.ts"
 import { GeneralLedgerService, type LedgerLineInput } from "../../accounting/mod.ts"
@@ -255,7 +255,7 @@ const creditLinesFor = (
 export const makeBillingService = Effect.gen(function* () {
   const database = yield* Database
   const authorization = yield* AuthorizationService
-  const authorized = makeScopedCommand(authorization)
+  const authorized = scopedCommand(authorization)
   const ledger = yield* GeneralLedgerService
   const numbering = yield* NumberingService
   const tax = yield* TaxService

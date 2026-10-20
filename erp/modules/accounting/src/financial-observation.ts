@@ -364,16 +364,16 @@ const makePostgresqlInventoryServices = (now: () => Date) =>
     return { collector, scanner }
   })
 
-export const makePostgresqlFinancialStoreObservation = (now: () => Date = () => new Date()) =>
+export const postgresqlFinancialStoreObservation = (now: () => Date = () => new Date()) =>
   makePostgresqlInventoryServices(now)
 
 export const makePostgresqlFinancialStoreObservationLayer = Layer.mergeAll(
   Layer.effect(
     FinancialStoreWatermarkCollector,
-    makePostgresqlFinancialStoreObservation().pipe(Effect.map(({ collector }) => collector)),
+    postgresqlFinancialStoreObservation().pipe(Effect.map(({ collector }) => collector)),
   ),
   Layer.effect(
     FinancialStoreInventoryScanner,
-    makePostgresqlFinancialStoreObservation().pipe(Effect.map(({ scanner }) => scanner)),
+    postgresqlFinancialStoreObservation().pipe(Effect.map(({ scanner }) => scanner)),
   ),
 )

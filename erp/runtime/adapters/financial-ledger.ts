@@ -3,24 +3,22 @@ import * as Layer from "effect/Layer"
 
 import {
   FinancialStoreObservationRegistry,
-  makeFinancialStoreObservationRegistry,
-  makePostgresqlFinancialLedgerLayer,
-  makePostgresqlFinancialStoreObservation,
+  financialStoreObservationRegistry,
+  postgresqlFinancialLedgerLayer,
+  postgresqlFinancialStoreObservation,
 } from "../../modules/accounting/mod.ts"
 import { PostgresDatabaseLive } from "../../../framework/platform/mod.ts"
 
 // PostgreSQL is the only financial authority (ADR-0091).
-export const makeFinancialLedgerLayer = (database: ReturnType<typeof PostgresDatabaseLive>) =>
-  makePostgresqlFinancialLedgerLayer.pipe(Layer.provide(database))
+export const financialLedgerLayer = (database: ReturnType<typeof PostgresDatabaseLive>) =>
+  postgresqlFinancialLedgerLayer.pipe(Layer.provide(database))
 
-export const makeFinancialStoreObservationLayer = (
-  database: ReturnType<typeof PostgresDatabaseLive>,
-) =>
+export const financialStoreObservationLayer = (database: ReturnType<typeof PostgresDatabaseLive>) =>
   Layer.effect(
     FinancialStoreObservationRegistry,
-    makePostgresqlFinancialStoreObservation().pipe(
+    postgresqlFinancialStoreObservation().pipe(
       Effect.map(({ collector, scanner }) =>
-        makeFinancialStoreObservationRegistry([
+        financialStoreObservationRegistry([
           { authority: "postgresql" as const, collector, scanner },
         ]),
       ),

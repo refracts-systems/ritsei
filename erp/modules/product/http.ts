@@ -11,8 +11,8 @@ import {
   BaseApiErrorPolicy,
   BearerAuth,
   CurrentPrincipal,
-  makeApiErrorMapping,
-  makeModuleApi,
+  apiErrorMapping,
+  moduleApi,
   ReadLimit,
   ShortString,
   TenantHeaders,
@@ -51,9 +51,9 @@ export const ProductHttpGroup = HttpApiGroup.make("Product").add(
   }).middleware(BearerAuth),
 )
 
-const ProductHttpApi = makeModuleApi(ProductHttpGroup)
+const ProductHttpApi = moduleApi(ProductHttpGroup)
 
-export const ProductHttpErrors = makeApiErrorMapping({
+export const ProductHttpErrors = apiErrorMapping({
   ...BaseApiErrorPolicy,
   ProductAlreadyExists: "conflict",
   ProductNotFound: "not_found",

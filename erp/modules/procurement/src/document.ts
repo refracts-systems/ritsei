@@ -8,8 +8,8 @@ import {
   DocumentNode,
   DocumentSnapshot,
   DocumentSnapshotInput,
-  makeDocumentAst,
-  makeDocumentSnapshot,
+  createDocumentAst,
+  createDocumentSnapshot,
 } from "../../../../framework/foundation/mod.ts"
 import { PurchaseOrder, PurchaseOrderLineSnapshot } from "./contract.ts"
 import { PurchaseOrderInvalidState } from "./errors.ts"
@@ -68,7 +68,7 @@ export const makePurchaseOrderDocumentSnapshot = (order: unknown, input: unknown
       total: decodedOrder.total,
       lines: decodedOrder.lines,
     })
-    return yield* makeDocumentSnapshot({
+    return yield* createDocumentSnapshot({
       snapshotId: decodedInput.snapshotId,
       tenantId: decodedOrder.tenantId,
       source: {
@@ -108,7 +108,7 @@ export const makePurchaseOrderDocumentAst = (snapshot: unknown) =>
       },
       { _tag: "text", value: `Total ${payload.total}` },
     ]
-    return yield* makeDocumentAst({
+    return yield* createDocumentAst({
       snapshotId: decodedSnapshot.snapshotId,
       documentType: "purchase_order",
       astVersion: 1,

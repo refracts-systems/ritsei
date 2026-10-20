@@ -13,7 +13,7 @@ import {
   EmailRenderer,
   EmailRenderInput,
   EmailTransport,
-  makeCommunicationIntent,
+  createCommunicationIntent,
   PreparedEmail,
   RecipientMailbox,
   RecipientSnapshot,
@@ -139,7 +139,7 @@ export const makeCommunicationTestLayer = (options: CommunicationTestLayerOption
           }),
         )
       }
-      return yield* makeCommunicationIntent({
+      return yield* createCommunicationIntent({
         tenantId: event.tenantId,
         intentType: "purchase-order-confirmed",
         subject: {

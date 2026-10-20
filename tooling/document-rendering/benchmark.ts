@@ -5,9 +5,9 @@ import { isMain } from "../entrypoint.ts"
 import {
   documentContextFromSnapshot,
   type DocumentRenderPolicy,
-  makeDocumentAst,
-  makeDocumentRenderRequest,
-  makeDocumentSnapshot,
+  createDocumentAst,
+  createDocumentRenderRequest,
+  createDocumentSnapshot,
 } from "../../framework/foundation/mod.ts"
 import { makePdfNativeDocumentRenderer } from "../../framework/platform/mod.ts"
 import { documentBenchmarkCorpus } from "./corpus.ts"
@@ -53,7 +53,7 @@ const benchmarkFixture = (fixture: BenchmarkFixture) =>
         reason: "publishing capability is outside the pdfnative transactional adapter",
       })
     : Effect.gen(function* () {
-        const snapshot = yield* makeDocumentSnapshot({
+        const snapshot = yield* createDocumentSnapshot({
           snapshotId,
           tenantId,
           source: { owner: "benchmark", type: "document_fixture", id: sourceId },
@@ -68,14 +68,14 @@ const benchmarkFixture = (fixture: BenchmarkFixture) =>
         let lastFingerprint = ""
 
         for (let index = 0; index < iterations; index += 1) {
-          const ast = yield* makeDocumentAst({
+          const ast = yield* createDocumentAst({
             astId,
             snapshotId,
             documentType: fixture.name,
             astVersion: 1,
             nodes: fixture.nodes,
           })
-          const request = yield* makeDocumentRenderRequest({
+          const request = yield* createDocumentRenderRequest({
             tenantId,
             snapshotId,
             snapshotChecksum: snapshot.checksum,

@@ -17,7 +17,7 @@ import {
 import {
   type ApiFailure,
   BaseApiErrorPolicy,
-  makeApiErrorMapping,
+  apiErrorMapping,
 } from "../../../framework/modules/http/mod.ts"
 import {
   IdentityCapabilities,
@@ -52,7 +52,7 @@ const coreApiErrorPolicy = {
 
 export type CoreApiFailure = ApiFailure<typeof coreApiErrorPolicy>
 
-const coreApiMapping = makeApiErrorMapping(coreApiErrorPolicy)
+const coreApiMapping = apiErrorMapping(coreApiErrorPolicy)
 export const toCoreApiError = coreApiMapping.toApiError
 const coreApiEffect = coreApiMapping.apiEffect
 

@@ -8,8 +8,8 @@ import {
   DocumentRenderLimitExceeded,
   DocumentRenderPolicyViolation,
   makeDocumentRenderJobPayload,
-  makeDocumentRenderRequest,
-  makeDocumentSnapshot,
+  createDocumentRenderRequest,
+  createDocumentSnapshot,
   makeMemoryDocumentArtifactStore,
   sha256Hex,
   validateDocumentRenderPolicy,
@@ -53,7 +53,7 @@ describe("document rendering contracts", () => {
 
   it.effect("creates deterministic snapshots and render job identity", () =>
     Effect.gen(function* () {
-      const first = yield* makeDocumentSnapshot({
+      const first = yield* createDocumentSnapshot({
         snapshotId,
         tenantId,
         source: { owner: "procurement", type: "purchase_order", id: sourceId },
@@ -61,7 +61,7 @@ describe("document rendering contracts", () => {
         schemaVersion: 1,
         payload: { total: "12.50", lines: [{ quantity: "1" }] },
       })
-      const second = yield* makeDocumentSnapshot({
+      const second = yield* createDocumentSnapshot({
         snapshotId,
         tenantId,
         source: { owner: "procurement", type: "purchase_order", id: sourceId },
@@ -71,8 +71,8 @@ describe("document rendering contracts", () => {
       })
       assert.strictEqual(first.checksum, second.checksum)
 
-      const request = yield* makeDocumentRenderRequest(requestInput())
-      const replay = yield* makeDocumentRenderRequest(requestInput("different-correlation"))
+      const request = yield* createDocumentRenderRequest(requestInput())
+      const replay = yield* createDocumentRenderRequest(requestInput("different-correlation"))
       assert.strictEqual(request.renderFingerprint, replay.renderFingerprint)
       assert.strictEqual(request.fenceScope, replay.fenceScope)
 

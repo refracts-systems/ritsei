@@ -11,8 +11,8 @@ import {
   BaseApiErrorPolicy,
   BearerAuth,
   CurrentPrincipal,
-  makeApiErrorMapping,
-  makeModuleApi,
+  apiErrorMapping,
+  moduleApi,
   ReadLimit,
   ShortString,
   TenantHeaders,
@@ -47,9 +47,9 @@ export const TaxHttpGroup = HttpApiGroup.make("Tax").add(
   }).middleware(BearerAuth),
 )
 
-const TaxHttpApi = makeModuleApi(TaxHttpGroup)
+const TaxHttpApi = moduleApi(TaxHttpGroup)
 
-export const TaxHttpErrors = makeApiErrorMapping({
+export const TaxHttpErrors = apiErrorMapping({
   ...BaseApiErrorPolicy,
   TaxCodeAlreadyExists: "conflict",
   TaxCodeNotFound: "not_found",

@@ -10,7 +10,7 @@ import {
   CommunicationIntent,
   DeliveryAttempt,
   EmailMessage,
-  makeCommunicationIntent,
+  createCommunicationIntent,
   RecipientSnapshot,
 } from "../mod.ts"
 
@@ -52,7 +52,7 @@ const intent = {
 
 it.effect("creates a versioned intent without coupling it to a provider", () =>
   Effect.gen(function* () {
-    const created = yield* makeCommunicationIntent(
+    const created = yield* createCommunicationIntent(
       Object.fromEntries(Object.entries(intent).filter(([key]) => key !== "communicationId")),
     )
     const decoded = yield* Schema.decodeUnknownEffect(CommunicationIntent)(created)

@@ -17,8 +17,8 @@ import {
   ShortString,
   TenantHeaders as tenantHeaders,
   Uuid,
-  makeApiErrorMapping,
-  makeModuleApi,
+  apiErrorMapping,
+  moduleApi,
 } from "../../../framework/modules/http/mod.ts"
 import {
   Customer,
@@ -139,9 +139,9 @@ export const SalesHttpGroup = HttpApiGroup.make("Sales").add(
   }).middleware(BearerAuth),
 )
 
-const SalesHttpApi = makeModuleApi(SalesHttpGroup)
+const SalesHttpApi = moduleApi(SalesHttpGroup)
 
-export const SalesHttpErrors = makeApiErrorMapping({
+export const SalesHttpErrors = apiErrorMapping({
   ...BaseApiErrorPolicy,
   CustomerAlreadyExists: "conflict",
   CustomerNotFound: "not_found",

@@ -802,7 +802,7 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
   } satisfies FinancialLedgerPort
 })
 
-export const makePostgresqlFinancialLedgerLayer = Layer.effect(
+export const postgresqlFinancialLedgerLayer = Layer.effect(
   FinancialLedgerPort,
   makePostgresqlFinancialLedger,
 )

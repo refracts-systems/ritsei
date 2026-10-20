@@ -180,7 +180,7 @@ const observationScope = (input: unknown) =>
     ? input.scope
     : "observation-registry"
 
-export const makeFinancialStoreObservationRegistry = (
+export const financialStoreObservationRegistry = (
   providers: readonly FinancialStoreObservationProvider[],
 ): FinancialStoreObservationRegistryService => {
   const byAuthority = new Map(providers.map((provider) => [provider.authority, provider]))
@@ -212,8 +212,7 @@ export const makeFinancialStoreObservationRegistry = (
 
 export const makeFinancialStoreObservationRegistryLayer = (
   providers: readonly FinancialStoreObservationProvider[],
-) =>
-  Layer.succeed(FinancialStoreObservationRegistry, makeFinancialStoreObservationRegistry(providers))
+) => Layer.succeed(FinancialStoreObservationRegistry, financialStoreObservationRegistry(providers))
 
 export type FinancialStoreInventoryMismatch = Readonly<{
   readonly kind:

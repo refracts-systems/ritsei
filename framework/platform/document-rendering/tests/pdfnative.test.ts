@@ -7,9 +7,9 @@ import {
   documentContextFromSnapshot,
   DocumentRenderInput,
   type DocumentRenderPolicy,
-  makeDocumentAst,
-  makeDocumentRenderRequest,
-  makeDocumentSnapshot,
+  createDocumentAst,
+  createDocumentRenderRequest,
+  createDocumentSnapshot,
   UnsupportedDocumentCapability,
 } from "../../../foundation/mod.ts"
 import { makePdfNativeDocumentRenderer } from "../mod.ts"
@@ -39,7 +39,7 @@ const policy: DocumentRenderPolicy = {
 
 const renderInput = () =>
   Effect.gen(function* () {
-    const snapshot = yield* makeDocumentSnapshot({
+    const snapshot = yield* createDocumentSnapshot({
       snapshotId,
       tenantId,
       source: { owner: "procurement", type: "purchase_order", id: sourceId },
@@ -48,7 +48,7 @@ const renderInput = () =>
       payload: { status: "confirmed", total: "25.00" },
     })
     const context = documentContextFromSnapshot(snapshot)
-    const ast = yield* makeDocumentAst({
+    const ast = yield* createDocumentAst({
       astId,
       snapshotId,
       documentType: "purchase_order",
@@ -68,7 +68,7 @@ const renderInput = () =>
         { _tag: "signature", assetId: "signature-v1", label: "Approved by" },
       ],
     })
-    const request = yield* makeDocumentRenderRequest({
+    const request = yield* createDocumentRenderRequest({
       tenantId,
       snapshotId,
       snapshotChecksum: snapshot.checksum,

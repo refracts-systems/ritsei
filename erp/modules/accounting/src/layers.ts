@@ -11,8 +11,11 @@ import { makeGeneralLedgerPostgresStore } from "./general-ledger-postgres.ts"
 import { makeGeneralLedgerServiceFromStore } from "./general-ledger-service.ts"
 import { AccountingService, makeAccountingService, makeAccountingTestLayer } from "./service.ts"
 
+/** The Accounting control-plane service with its requirements left to the composition root. */
+export const AccountingServiceLive = Layer.effect(AccountingService, makeAccountingService)
+
 /** Named production composition for the Accounting control-plane service. */
-export const AccountingLive = Layer.effect(AccountingService, makeAccountingService).pipe(
+export const AccountingLive = AccountingServiceLive.pipe(
   Layer.provide(FinancialStagingEvidencePostgresLive),
 )
 
