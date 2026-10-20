@@ -17,7 +17,11 @@ import {
 } from "../../../../framework/foundation/mod.ts"
 import { NumberingService } from "../../../../framework/modules/numbering/mod.ts"
 import type { LedgerAccount, LedgerEntry, PostingRole } from "./general-ledger-contract.ts"
-import type { GeneralLedgerStore, PostEntryOutcome } from "./general-ledger-store.ts"
+import type {
+  GeneralLedgerStore,
+  PostEntryCommand,
+  PostEntryOutcome,
+} from "./general-ledger-store.ts"
 import {
   AccountAlreadyExists,
   AccountingLegalEntityNotFound,
@@ -44,12 +48,38 @@ const normalize = (value: string) => {
 const lineKey = (line: { accountId: string; debit: string; credit: string }) =>
   `${line.accountId}:${requireExactMajorToMinor(line.debit, 2)}:${requireExactMajorToMinor(line.credit, 2)}`
 
-const sameLines = (
-  left: ReadonlyArray<{ accountId: string; debit: string; credit: string }>,
-  right: ReadonlyArray<{ accountId: string; debit: string; credit: string }>,
-) => JSON.stringify(left.map(lineKey).toSorted()) === JSON.stringify(right.map(lineKey).toSorted())
+type Posting = {
+  readonly legalEntityId: string
+  readonly postingDate: string
+  readonly sourceType: string | null
+  readonly sourceId: string | null
+}
+
+/** What a retried posting must repeat: legal entity, date, source, and lines. */
+const postingKey = (posting: Posting, lines: ReadonlyArray<AccountLine>) =>
+  JSON.stringify([
+    posting.legalEntityId,
+    posting.postingDate,
+    posting.sourceType,
+    posting.sourceId,
+    lines.map(lineKey).toSorted(),
+  ])
+
+const NO_SOURCE = { type: null, id: null } as const
+
+const commandPosting = (command: PostEntryCommand): Posting => {
+  const source = command.source ?? NO_SOURCE
+  return {
+    legalEntityId: command.legalEntityId,
+    postingDate: command.postingDate,
+    sourceType: source.type,
+    sourceId: source.id,
+  }
+}
 
 const POSTED_STATUSES = ["posted", "reversed"] as const
+
+type AccountLine = { accountId: string; debit: string; credit: string }
 
 export const makeGeneralLedgerPostgresStore = Effect.fn("GeneralLedger.makePostgresStore")(
   function* () {
@@ -251,93 +281,162 @@ export const makeGeneralLedgerPostgresStore = Effect.fn("GeneralLedger.makePostg
             lines: row.lines,
           }
 
+    /** Locks the configuration and open period, and loads posting rules. */
+    const preparePosting = (command: PostEntryCommand) =>
+      database.transaction(async (tx) => {
+        const configuration = (
+          await tx
+            .select({
+              postingEnabled: legalEntityAccountingConfigurations.postingEnabled,
+              financialEngine: legalEntityAccountingConfigurations.financialEngine,
+              fiscalYearStartMonth: legalEntityAccountingConfigurations.fiscalYearStartMonth,
+            })
+            .from(legalEntityAccountingConfigurations)
+            .where(
+              and(
+                eq(legalEntityAccountingConfigurations.tenantId, command.tenantId),
+                eq(legalEntityAccountingConfigurations.legalEntityId, command.legalEntityId),
+              ),
+            )
+            .for("share")
+        )[0]
+        if (configuration === undefined) return { _tag: "not-configured" as const }
+        if (configuration.financialEngine !== "postgresql") {
+          return { _tag: "engine-activated" as const }
+        }
+        // A shared lock on the open period makes a concurrent close wait for this posting.
+        const period = (
+          await tx
+            .select({ id: accountingPeriods.id })
+            .from(accountingPeriods)
+            .where(
+              and(
+                eq(accountingPeriods.tenantId, command.tenantId),
+                eq(accountingPeriods.legalEntityId, command.legalEntityId),
+                eq(accountingPeriods.status, "open"),
+                lte(accountingPeriods.startsOn, command.postingDate),
+                gte(accountingPeriods.endsOn, command.postingDate),
+              ),
+            )
+            .for("share")
+        )[0]
+        if (period === undefined || !configuration.postingEnabled) {
+          return { _tag: "period-not-open" as const }
+        }
+        const rules = await tx
+          .select({ role: postingRules.role, accountId: postingRules.accountId })
+          .from(postingRules)
+          .where(
+            and(
+              eq(postingRules.tenantId, command.tenantId),
+              eq(postingRules.legalEntityId, command.legalEntityId),
+            ),
+          )
+        return {
+          _tag: "ready" as const,
+          fiscalYearStartMonth: configuration.fiscalYearStartMonth,
+          rules: new Map<PostingRole, string>(rules.map((rule) => [rule.role, rule.accountId])),
+        }
+      }, "accounting.ledger.entry.prepare")
+
+    /** Resolves role lines to accounts, or names the first role without a posting rule. */
+    const resolveLines = (
+      lines: PostEntryCommand["lines"],
+      rules: ReadonlyMap<PostingRole, string>,
+    ): { readonly lines: AccountLine[] } | { readonly missing: PostingRole } => {
+      const resolved: AccountLine[] = []
+      for (const line of lines) {
+        const accountId = "accountId" in line ? line.accountId : rules.get(line.role)
+        if (accountId === undefined) return { missing: (line as { role: PostingRole }).role }
+        resolved.push({ accountId, debit: line.debit, credit: line.credit })
+      }
+      return { lines: resolved }
+    }
+
+    /** A retried posting must repeat the entry it posted before. */
+    const replay = (
+      existing: NonNullable<Effect.Success<ReturnType<typeof loadEntry>>>,
+      command: PostEntryCommand,
+      lines: ReadonlyArray<AccountLine>,
+    ): PostEntryOutcome => {
+      const entry = toEntry(existing)
+      return entry !== undefined &&
+        postingKey(entry, entry.lines) === postingKey(commandPosting(command), lines)
+        ? { _tag: "posted", entry }
+        : { _tag: "idempotency-conflict" }
+    }
+
+    /** Inserts the draft entry and its lines, then posts it, which runs the balance check. */
+    const insertEntry = (
+      command: PostEntryCommand,
+      entryId: string,
+      number: string,
+      lines: ReadonlyArray<AccountLine>,
+    ) =>
+      database
+        .transaction(async (tx) => {
+          await tx.insert(journalEntries).values({
+            id: entryId,
+            tenantId: command.tenantId,
+            reference: command.reference,
+            legalEntityId: command.legalEntityId,
+            postingDate: command.postingDate,
+            number,
+            description: command.description,
+            sourceType: command.source?.type ?? null,
+            sourceId: command.source?.id ?? null,
+          })
+          await tx.insert(journalLines).values(
+            lines.map((line) => ({
+              tenantId: command.tenantId,
+              entryId,
+              accountId: line.accountId,
+              debit: line.debit,
+              credit: line.credit,
+            })),
+          )
+          const postedAt = new Date()
+          await tx
+            .update(journalEntries)
+            .set({ status: "posted", postedAt, updatedAt: postedAt })
+            .where(eq(journalEntries.id, entryId))
+          return {
+            _tag: "posted",
+            entry: {
+              id: entryId,
+              tenantId: command.tenantId,
+              legalEntityId: command.legalEntityId,
+              number,
+              reference: command.reference,
+              postingDate: command.postingDate,
+              description: command.description,
+              sourceType: command.source?.type ?? null,
+              sourceId: command.source?.id ?? null,
+              postedAt: postedAt.toISOString(),
+              lines: lines.map((line) => ({
+                accountId: line.accountId,
+                debit: normalize(line.debit),
+                credit: normalize(line.credit),
+              })),
+            },
+          } satisfies PostEntryOutcome as PostEntryOutcome
+        }, "accounting.ledger.entry.post")
+        .pipe(
+          Effect.catchIf(
+            (error) => isDatabaseConstraint(error, "journal_lines_account_fkey", "23503"),
+            () => Effect.succeed<PostEntryOutcome>({ _tag: "account-missing" }),
+          ),
+        )
+
     const postEntry: GeneralLedgerStore["postEntry"] = (command) =>
       database.withTransaction(
         Effect.gen(function* () {
-          const context = yield* database.transaction(async (tx) => {
-            const configuration = (
-              await tx
-                .select({
-                  postingEnabled: legalEntityAccountingConfigurations.postingEnabled,
-                  financialEngine: legalEntityAccountingConfigurations.financialEngine,
-                  fiscalYearStartMonth: legalEntityAccountingConfigurations.fiscalYearStartMonth,
-                })
-                .from(legalEntityAccountingConfigurations)
-                .where(
-                  and(
-                    eq(legalEntityAccountingConfigurations.tenantId, command.tenantId),
-                    eq(legalEntityAccountingConfigurations.legalEntityId, command.legalEntityId),
-                  ),
-                )
-                .for("share")
-            )[0]
-            if (configuration === undefined) return { _tag: "not-configured" as const }
-            if (configuration.financialEngine !== "postgresql") {
-              return { _tag: "engine-activated" as const }
-            }
-            if (!configuration.postingEnabled) return { _tag: "period-not-open" as const }
-            // A shared lock on the open period makes a concurrent close wait for this posting.
-            const period = (
-              await tx
-                .select({ id: accountingPeriods.id })
-                .from(accountingPeriods)
-                .where(
-                  and(
-                    eq(accountingPeriods.tenantId, command.tenantId),
-                    eq(accountingPeriods.legalEntityId, command.legalEntityId),
-                    eq(accountingPeriods.status, "open"),
-                    lte(accountingPeriods.startsOn, command.postingDate),
-                    gte(accountingPeriods.endsOn, command.postingDate),
-                  ),
-                )
-                .for("share")
-            )[0]
-            if (period === undefined) return { _tag: "period-not-open" as const }
-            const rules = await tx
-              .select({ role: postingRules.role, accountId: postingRules.accountId })
-              .from(postingRules)
-              .where(
-                and(
-                  eq(postingRules.tenantId, command.tenantId),
-                  eq(postingRules.legalEntityId, command.legalEntityId),
-                ),
-              )
-            return {
-              _tag: "ready" as const,
-              fiscalYearStartMonth: configuration.fiscalYearStartMonth,
-              rules: new Map<PostingRole, string>(rules.map((rule) => [rule.role, rule.accountId])),
-            }
-          }, "accounting.ledger.entry.prepare")
+          const context = yield* preparePosting(command)
           if (context._tag !== "ready") return context satisfies PostEntryOutcome
-
-          const lines: Array<{ accountId: string; debit: string; credit: string }> = []
-          for (const line of command.lines) {
-            if ("accountId" in line) {
-              lines.push(line)
-              continue
-            }
-            const accountId = context.rules.get(line.role)
-            if (accountId === undefined) {
-              return { _tag: "rule-missing" as const, role: line.role } satisfies PostEntryOutcome
-            }
-            lines.push({ accountId, debit: line.debit, credit: line.credit })
-          }
-
+          const resolved = resolveLines(command.lines, context.rules)
+          if ("missing" in resolved) return { _tag: "rule-missing", role: resolved.missing }
           const existing = yield* loadEntry(command.tenantId, command.reference)
-          if (existing !== undefined) {
-            const entry = toEntry(existing)
-            const matches =
-              entry !== undefined &&
-              entry.legalEntityId === command.legalEntityId &&
-              entry.postingDate === command.postingDate &&
-              entry.sourceType === (command.source?.type ?? null) &&
-              entry.sourceId === (command.source?.id ?? null) &&
-              sameLines(entry.lines, lines)
-            return matches
-              ? ({ _tag: "posted", entry } satisfies PostEntryOutcome)
-              : ({ _tag: "idempotency-conflict" } satisfies PostEntryOutcome)
-          }
-
+          if (existing !== undefined) return replay(existing, command, resolved.lines)
           const entryId = uuidv7()
           const allocated = yield* numbering
             .allocate({
@@ -350,64 +449,7 @@ export const makeGeneralLedgerPostgresStore = Effect.fn("GeneralLedger.makePostg
               prefix: "JE/",
             })
             .pipe(Effect.catchTag("SchemaError", (error) => Effect.die(error)))
-
-          const inserted = yield* database
-            .transaction(async (tx) => {
-              await tx.insert(journalEntries).values({
-                id: entryId,
-                tenantId: command.tenantId,
-                reference: command.reference,
-                legalEntityId: command.legalEntityId,
-                postingDate: command.postingDate,
-                number: allocated.number,
-                description: command.description,
-                sourceType: command.source?.type ?? null,
-                sourceId: command.source?.id ?? null,
-              })
-              await tx.insert(journalLines).values(
-                lines.map((line) => ({
-                  tenantId: command.tenantId,
-                  entryId,
-                  accountId: line.accountId,
-                  debit: line.debit,
-                  credit: line.credit,
-                })),
-              )
-              const postedAt = new Date()
-              // Posting runs the deferred balance check in the database.
-              await tx
-                .update(journalEntries)
-                .set({ status: "posted", postedAt, updatedAt: postedAt })
-                .where(eq(journalEntries.id, entryId))
-              return { _tag: "inserted" as const, postedAt }
-            }, "accounting.ledger.entry.post")
-            .pipe(
-              Effect.catchIf(
-                (error) => isDatabaseConstraint(error, "journal_lines_account_fkey", "23503"),
-                () => Effect.succeed({ _tag: "account-missing" as const }),
-              ),
-            )
-          if (inserted._tag === "account-missing") return inserted satisfies PostEntryOutcome
-          return {
-            _tag: "posted",
-            entry: {
-              id: entryId,
-              tenantId: command.tenantId,
-              legalEntityId: command.legalEntityId,
-              number: allocated.number,
-              reference: command.reference,
-              postingDate: command.postingDate,
-              description: command.description,
-              sourceType: command.source?.type ?? null,
-              sourceId: command.source?.id ?? null,
-              postedAt: inserted.postedAt.toISOString(),
-              lines: lines.map((line) => ({
-                accountId: line.accountId,
-                debit: normalize(line.debit),
-                credit: normalize(line.credit),
-              })),
-            },
-          } satisfies PostEntryOutcome
+          return yield* insertEntry(command, entryId, allocated.number, resolved.lines)
         }),
         "accounting.ledger.entry.atomic",
       )

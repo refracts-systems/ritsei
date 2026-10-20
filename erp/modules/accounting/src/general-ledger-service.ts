@@ -7,7 +7,10 @@ import {
   requireExactMajorToMinor,
 } from "../../../../framework/foundation/mod.ts"
 import type { Principal } from "../../../../framework/modules/auth/mod.ts"
-import { AuthorizationService } from "../../../../framework/modules/authorization/mod.ts"
+import {
+  AuthorizationService,
+  makeScopedCommand,
+} from "../../../../framework/modules/authorization/mod.ts"
 import { AccountingCapabilities } from "./capabilities.ts"
 import { chartTemplates } from "./chart-templates.ts"
 import {
@@ -61,6 +64,7 @@ export const makeGeneralLedgerServiceFromStore = <R>(
   Effect.gen(function* () {
     const store = yield* storeEffect
     const authorization = yield* AuthorizationService
+    const authorized = makeScopedCommand(authorization)
     const authorize = (
       input: { principal: Schema.Schema.Type<typeof Principal>; tenantId: string },
       capability: string,
@@ -98,8 +102,10 @@ export const makeGeneralLedgerServiceFromStore = <R>(
     const createAccount = Effect.fn("GeneralLedgerService.createAccount")(function* (
       input: unknown,
     ) {
-      const decoded = yield* Schema.decodeUnknownEffect(CreateLedgerAccountInput)(input)
-      yield* authorize(decoded, AccountingCapabilities.accountCreate)
+      const decoded = yield* authorized(
+        CreateLedgerAccountInput,
+        AccountingCapabilities.accountCreate,
+      )(input)
       return yield* store.createAccount({
         tenantId: decoded.tenantId,
         code: decoded.code.toUpperCase(),
@@ -110,16 +116,17 @@ export const makeGeneralLedgerServiceFromStore = <R>(
     })
 
     const listChart = Effect.fn("GeneralLedgerService.listChart")(function* (input: unknown) {
-      const decoded = yield* Schema.decodeUnknownEffect(ListChartInput)(input)
-      yield* authorize(decoded, AccountingCapabilities.accountRead)
+      const decoded = yield* authorized(ListChartInput, AccountingCapabilities.accountRead)(input)
       return yield* store.listChart(decoded.tenantId)
     })
 
     const applyChartTemplate = Effect.fn("GeneralLedgerService.applyChartTemplate")(function* (
       input: unknown,
     ) {
-      const decoded = yield* Schema.decodeUnknownEffect(ApplyChartTemplateInput)(input)
-      yield* authorize(decoded, AccountingCapabilities.chartApply)
+      const decoded = yield* authorized(
+        ApplyChartTemplateInput,
+        AccountingCapabilities.chartApply,
+      )(input)
       const template = chartTemplates[decoded.template]
       const created = yield* store.ensureTemplateAccounts(decoded.tenantId, template.accounts)
       if (decoded.legalEntityId !== undefined) {
@@ -150,8 +157,10 @@ export const makeGeneralLedgerServiceFromStore = <R>(
     const configurePostingRule = Effect.fn("GeneralLedgerService.configurePostingRule")(function* (
       input: unknown,
     ) {
-      const decoded = yield* Schema.decodeUnknownEffect(ConfigurePostingRuleInput)(input)
-      yield* authorize(decoded, AccountingCapabilities.postingRuleConfigure)
+      const decoded = yield* authorized(
+        ConfigurePostingRuleInput,
+        AccountingCapabilities.postingRuleConfigure,
+      )(input)
       return yield* store.setPostingRule(
         {
           tenantId: decoded.tenantId,
@@ -166,16 +175,20 @@ export const makeGeneralLedgerServiceFromStore = <R>(
     const listPostingRules = Effect.fn("GeneralLedgerService.listPostingRules")(function* (
       input: unknown,
     ) {
-      const decoded = yield* Schema.decodeUnknownEffect(ListPostingRulesInput)(input)
-      yield* authorize(decoded, AccountingCapabilities.postingRuleRead)
+      const decoded = yield* authorized(
+        ListPostingRulesInput,
+        AccountingCapabilities.postingRuleRead,
+      )(input)
       return yield* store.listPostingRules(decoded.tenantId, decoded.legalEntityId)
     })
 
     const postManualEntry = Effect.fn("GeneralLedgerService.postManualEntry")(function* (
       input: unknown,
     ) {
-      const decoded = yield* Schema.decodeUnknownEffect(PostManualEntryInput)(input)
-      yield* authorize(decoded, AccountingCapabilities.journalPost)
+      const decoded = yield* authorized(
+        PostManualEntryInput,
+        AccountingCapabilities.journalPost,
+      )(input)
       return yield* post({
         tenantId: decoded.tenantId,
         legalEntityId: decoded.legalEntityId,
@@ -190,8 +203,10 @@ export const makeGeneralLedgerServiceFromStore = <R>(
     const postDocumentEntry = Effect.fn("GeneralLedgerService.postDocumentEntry")(function* (
       input: unknown,
     ) {
-      const decoded = yield* Schema.decodeUnknownEffect(PostDocumentEntryInput)(input)
-      yield* authorize(decoded, AccountingCapabilities.documentJournalPost)
+      const decoded = yield* authorized(
+        PostDocumentEntryInput,
+        AccountingCapabilities.documentJournalPost,
+      )(input)
       return yield* post({
         tenantId: decoded.tenantId,
         legalEntityId: decoded.legalEntityId,
@@ -204,8 +219,7 @@ export const makeGeneralLedgerServiceFromStore = <R>(
     })
 
     const trialBalance = Effect.fn("GeneralLedgerService.trialBalance")(function* (input: unknown) {
-      const decoded = yield* Schema.decodeUnknownEffect(TrialBalanceInput)(input)
-      yield* authorize(decoded, AccountingCapabilities.ledgerRead)
+      const decoded = yield* authorized(TrialBalanceInput, AccountingCapabilities.ledgerRead)(input)
       const activity = yield* store.accountActivity({
         tenantId: decoded.tenantId,
         legalEntityId: decoded.legalEntityId,
@@ -247,8 +261,10 @@ export const makeGeneralLedgerServiceFromStore = <R>(
     const generalLedger = Effect.fn("GeneralLedgerService.generalLedger")(function* (
       input: unknown,
     ) {
-      const decoded = yield* Schema.decodeUnknownEffect(GeneralLedgerInput)(input)
-      yield* authorize(decoded, AccountingCapabilities.ledgerRead)
+      const decoded = yield* authorized(
+        GeneralLedgerInput,
+        AccountingCapabilities.ledgerRead,
+      )(input)
       const account = (yield* store.listChart(decoded.tenantId)).find(
         (candidate) => candidate.id === decoded.accountId,
       )
@@ -287,8 +303,7 @@ export const makeGeneralLedgerServiceFromStore = <R>(
     })
 
     const roleBalance = Effect.fn("GeneralLedgerService.roleBalance")(function* (input: unknown) {
-      const decoded = yield* Schema.decodeUnknownEffect(RoleBalanceInput)(input)
-      yield* authorize(decoded, AccountingCapabilities.ledgerRead)
+      const decoded = yield* authorized(RoleBalanceInput, AccountingCapabilities.ledgerRead)(input)
       const rule = (yield* store.listPostingRules(decoded.tenantId, decoded.legalEntityId)).find(
         (candidate) => candidate.role === decoded.role,
       )

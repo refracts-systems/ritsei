@@ -19,6 +19,18 @@ const typeLabels = {
 } as const
 const typeOptions = Object.entries(typeLabels).map(([value, label]) => ({ value, label }))
 
+const text = (value: unknown) => (typeof value === "string" ? value.trim() : "")
+
+/** The create payload, or undefined when the code or name is missing. */
+const productPayload = (value: Record<string, unknown>) => {
+  const payload = {
+    code: text(value.code).toUpperCase(),
+    name: text(value.name),
+    type: text(value.type) || "stockable",
+  }
+  return payload.code !== "" && payload.name !== "" ? payload : undefined
+}
+
 function ProductTable(props: { records: readonly Product[] }) {
   return (
     <DataTable
@@ -65,13 +77,9 @@ function CreateProductDialog(props: { reload: () => Promise<unknown> }) {
         }}
         class={layout.stack}
         onSubmit={(value) => {
-          const code = typeof value.code === "string" ? value.code.trim().toUpperCase() : ""
-          const name = typeof value.name === "string" ? value.name.trim() : ""
-          const type = typeof value.type === "string" ? value.type : "stockable"
-          setInvalid(code === "" || name === "")
-          if (code !== "" && name !== "" && !mutation.isPending) {
-            mutation.mutate({ code, name, type })
-          }
+          const payload = productPayload(value)
+          setInvalid(payload === undefined)
+          if (payload !== undefined && !mutation.isPending) mutation.mutate(payload)
         }}
       >
         <FormField label="Code" required error={invalid() ? "Enter a code and a name." : undefined}>

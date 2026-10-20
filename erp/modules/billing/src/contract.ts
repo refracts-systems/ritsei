@@ -6,6 +6,10 @@ import {
   CalendarDate,
   type DatabaseFailure,
   FinancialMajorAmount,
+  Uuid,
+  PositiveQuantity,
+  SignedAmount,
+  DottedName,
 } from "../../../../framework/foundation/mod.ts"
 import { Principal } from "../../../../framework/modules/auth/mod.ts"
 import type { AuthorizationDenied } from "../../../../framework/modules/authorization/mod.ts"
@@ -21,15 +25,8 @@ import type { PurchaseOrderInvalidState, PurchaseOrderNotFound } from "../../pro
 import type { TaxCodeNotFound } from "../../tax/mod.ts"
 import type * as BillingErrors from "./errors.ts"
 
-const Uuid = Schema.String.check(Schema.isUUID())
-const Quantity = Schema.String.check(
-  Schema.makeFilter(
-    (value) => /^[1-9]\d*$/.test(value) && BigInt(value) <= 9_223_372_036_854_775_807n,
-    { expected: "a positive PostgreSQL bigint quantity" },
-  ),
-)
-const SignedAmount = Schema.String.check(Schema.isPattern(/^-?\d{1,20}\.\d{2}$/))
-const SourceType = Schema.String.check(Schema.isPattern(/^[a-z][a-z0-9_.]*$/))
+const Quantity = PositiveQuantity
+const SourceType = DottedName
 const ScopedInput = { principal: Principal, tenantId: Uuid }
 
 export const InvoiceKind = Schema.Literals([

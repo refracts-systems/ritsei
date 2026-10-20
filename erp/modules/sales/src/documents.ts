@@ -1,7 +1,6 @@
 import { and, asc, eq, inArray, lt, sum } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
-import * as Schema from "effect/Schema"
 
 import {
   customers,
@@ -22,8 +21,10 @@ import {
   requireExactMajorToMinor,
   uuidv7,
 } from "../../../../framework/foundation/mod.ts"
-import type { Principal as PrincipalSchema } from "../../../../framework/modules/auth/mod.ts"
-import { AuthorizationService } from "../../../../framework/modules/authorization/mod.ts"
+import {
+  AuthorizationService,
+  makeScopedCommand,
+} from "../../../../framework/modules/authorization/mod.ts"
 import { NumberingService } from "../../../../framework/modules/numbering/mod.ts"
 import { PartyService } from "../../party/mod.ts"
 import { TaxService } from "../../tax/mod.ts"
@@ -59,8 +60,6 @@ import {
   SalesOrderInvalidState,
   SalesOrderNotFound,
 } from "./errors.ts"
-
-type Principal = Schema.Schema.Type<typeof PrincipalSchema>
 
 const minor = (value: string) => requireExactMajorToMinor(value, 2)
 const major = (value: bigint) => formatSignedMinor(value, 2)
@@ -113,12 +112,10 @@ const toPartyCustomer = (row: {
 export const makeSalesDocumentService = Effect.gen(function* () {
   const database = yield* Database
   const authorization = yield* AuthorizationService
+  const authorized = makeScopedCommand(authorization)
   const party = yield* PartyService
   const tax = yield* TaxService
   const numbering = yield* NumberingService
-
-  const authorize = (input: { principal: Principal; tenantId: string }, capability: string) =>
-    authorization.authorize({ principal: input.principal, tenantId: input.tenantId, capability })
 
   const loadCustomer = (tenantId: string, customerId: string) =>
     Effect.gen(function* () {
@@ -194,8 +191,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
     to: "sent" | "accepted" | "rejected",
   ) =>
     Effect.gen(function* () {
-      const decoded = yield* Schema.decodeUnknownEffect(QuotationCommandInput)(input)
-      yield* authorize(decoded, capability)
+      const decoded = yield* authorized(QuotationCommandInput, capability)(input)
       return yield* database.withTransaction(
         Effect.gen(function* () {
           const quotation = yield* loadQuotation(decoded.tenantId, decoded.quotationId, true)
@@ -236,8 +232,10 @@ export const makeSalesDocumentService = Effect.gen(function* () {
   const createPartyCustomer = Effect.fn("SalesDocumentService.createPartyCustomer")(function* (
     input: unknown,
   ) {
-    const decoded = yield* Schema.decodeUnknownEffect(CreatePartyCustomerInput)(input)
-    yield* authorize(decoded, SalesCapabilities.customerCreate)
+    const decoded = yield* authorized(
+      CreatePartyCustomerInput,
+      SalesCapabilities.customerCreate,
+    )(input)
     const relationship = yield* party.getRelationship({
       principal: decoded.principal,
       tenantId: decoded.tenantId,
@@ -300,8 +298,10 @@ export const makeSalesDocumentService = Effect.gen(function* () {
   const createPriceList = Effect.fn("SalesDocumentService.createPriceList")(function* (
     input: unknown,
   ) {
-    const decoded = yield* Schema.decodeUnknownEffect(CreatePriceListInput)(input)
-    yield* authorize(decoded, SalesCapabilities.priceListConfigure)
+    const decoded = yield* authorized(
+      CreatePriceListInput,
+      SalesCapabilities.priceListConfigure,
+    )(input)
     const rows = yield* database
       .query(
         (db) =>
@@ -327,8 +327,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
   })
 
   const setPrice = Effect.fn("SalesDocumentService.setPrice")(function* (input: unknown) {
-    const decoded = yield* Schema.decodeUnknownEffect(SetPriceInput)(input)
-    yield* authorize(decoded, SalesCapabilities.priceListConfigure)
+    const decoded = yield* authorized(SetPriceInput, SalesCapabilities.priceListConfigure)(input)
     yield* database
       .query(
         (db) =>
@@ -376,8 +375,10 @@ export const makeSalesDocumentService = Effect.gen(function* () {
 
   const assignCustomerPriceList = Effect.fn("SalesDocumentService.assignCustomerPriceList")(
     function* (input: unknown) {
-      const decoded = yield* Schema.decodeUnknownEffect(AssignCustomerPriceListInput)(input)
-      yield* authorize(decoded, SalesCapabilities.priceListConfigure)
+      const decoded = yield* authorized(
+        AssignCustomerPriceListInput,
+        SalesCapabilities.priceListConfigure,
+      )(input)
       const list = yield* database.query(
         (db) =>
           db
@@ -418,8 +419,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
   const draftQuotation = Effect.fn("SalesDocumentService.draftQuotation")(function* (
     input: unknown,
   ) {
-    const decoded = yield* Schema.decodeUnknownEffect(DraftQuotationInput)(input)
-    yield* authorize(decoded, SalesCapabilities.quotationCreate)
+    const decoded = yield* authorized(DraftQuotationInput, SalesCapabilities.quotationCreate)(input)
     const customer = yield* loadCustomer(decoded.tenantId, decoded.customerId)
     const productIds = [...new Set(decoded.lines.map((line) => line.productId))]
     const listed =
@@ -513,16 +513,17 @@ export const makeSalesDocumentService = Effect.gen(function* () {
   })
 
   const getQuotation = Effect.fn("SalesDocumentService.getQuotation")(function* (input: unknown) {
-    const decoded = yield* Schema.decodeUnknownEffect(QuotationCommandInput)(input)
-    yield* authorize(decoded, SalesCapabilities.quotationRead)
+    const decoded = yield* authorized(QuotationCommandInput, SalesCapabilities.quotationRead)(input)
     return yield* loadQuotation(decoded.tenantId, decoded.quotationId, false)
   })
 
   const expireQuotations = Effect.fn("SalesDocumentService.expireQuotations")(function* (
     input: unknown,
   ) {
-    const decoded = yield* Schema.decodeUnknownEffect(ExpireQuotationsInput)(input)
-    yield* authorize(decoded, SalesCapabilities.quotationDecide)
+    const decoded = yield* authorized(
+      ExpireQuotationsInput,
+      SalesCapabilities.quotationDecide,
+    )(input)
     const now = new Date()
     const rows = yield* database.query(
       (db) =>
@@ -545,8 +546,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
   const convertQuotation = Effect.fn("SalesDocumentService.convertQuotation")(function* (
     input: unknown,
   ) {
-    const decoded = yield* Schema.decodeUnknownEffect(QuotationCommandInput)(input)
-    yield* authorize(decoded, SalesCapabilities.orderCreate)
+    const decoded = yield* authorized(QuotationCommandInput, SalesCapabilities.orderCreate)(input)
     return yield* database.withTransaction(
       Effect.gen(function* () {
         const quotation = yield* loadQuotation(decoded.tenantId, decoded.quotationId, true)
@@ -686,8 +686,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
   const getFulfillment = Effect.fn("SalesDocumentService.getFulfillment")(function* (
     input: unknown,
   ) {
-    const decoded = yield* Schema.decodeUnknownEffect(OrderQueryInput)(input)
-    yield* authorize(decoded, SalesCapabilities.orderRead)
+    const decoded = yield* authorized(OrderQueryInput, SalesCapabilities.orderRead)(input)
     return yield* loadFulfillment(decoded.tenantId, decoded.orderId, false)
   })
 
@@ -731,8 +730,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
   const recordDelivery = Effect.fn("SalesDocumentService.recordDelivery")(function* (
     input: unknown,
   ) {
-    const decoded = yield* Schema.decodeUnknownEffect(RecordDeliveryInput)(input)
-    yield* authorize(decoded, SalesCapabilities.deliveryRecord)
+    const decoded = yield* authorized(RecordDeliveryInput, SalesCapabilities.deliveryRecord)(input)
     return yield* database.withTransaction(
       Effect.gen(function* () {
         // Locking the order serializes deliveries, so the cumulative guard holds.

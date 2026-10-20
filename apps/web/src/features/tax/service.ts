@@ -12,7 +12,7 @@ export const TaxCode = Schema.Struct({
   tenantId: Uuid,
   code: Name,
   name: Name,
-  rate: Schema.String.check(Schema.isPattern(/^d{1,3}.d{4}$/)),
+  rate: Schema.String.check(Schema.isPattern(/^\d{1,3}\.\d{4}$/)),
   direction: Direction,
   active: Schema.Boolean,
 })
@@ -21,7 +21,7 @@ const TaxCodeList = Schema.Array(TaxCode).check(Schema.isMaxLength(200))
 const CreateTaxCodeInput = Schema.Struct({
   code: Name,
   name: Name,
-  rate: Schema.String.check(Schema.isPattern(/^d{1,3}(.d{1,4})?$/)),
+  rate: Schema.String.check(Schema.isPattern(/^\d{1,3}(\.\d{1,4})?$/)),
   direction: Direction,
 })
 const route = "/tax/tax-codes"

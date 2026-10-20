@@ -3,6 +3,7 @@ import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 
 import {
+  CalendarDate,
   DatabaseFailure,
   FinancialMajorAmount,
   requireExactMajorToMinor,
@@ -53,16 +54,7 @@ const FinancialCutoverStatus = Schema.Literals([
 ])
 const Precision = Schema.Literal(2)
 const FiscalYearStartMonth = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 12 }))
-const IsoDate = Schema.String.check(
-  Schema.makeFilter(
-    (value) => {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
-      const date = new Date(`${value}T00:00:00.000Z`)
-      return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
-    },
-    { expected: "a valid ISO calendar date" },
-  ),
-)
+const IsoDate = CalendarDate
 const InstantString = EventEnvelope.fields.occurredAt
 
 export const AccountingConfiguration = Schema.Struct({

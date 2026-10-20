@@ -6,6 +6,10 @@ import {
   CalendarDate,
   type DatabaseFailure,
   FinancialMajorAmount,
+  Uuid,
+  PositiveQuantity,
+  NonNegativeQuantity,
+  DottedName,
 } from "../../../../framework/foundation/mod.ts"
 import { Principal } from "../../../../framework/modules/auth/mod.ts"
 import type { AuthorizationDenied } from "../../../../framework/modules/authorization/mod.ts"
@@ -19,20 +23,8 @@ import type {
   StockValuationUnavailable,
 } from "./errors.ts"
 
-const Uuid = Schema.String.check(Schema.isUUID())
-const Quantity = Schema.String.check(
-  Schema.makeFilter(
-    (value) => /^[1-9]\d*$/.test(value) && BigInt(value) <= 9_223_372_036_854_775_807n,
-    { expected: "a positive PostgreSQL bigint quantity" },
-  ),
-)
-const NonNegativeQuantity = Schema.String.check(
-  Schema.makeFilter(
-    (value) => /^(0|[1-9]\d*)$/.test(value) && BigInt(value) <= 9_223_372_036_854_775_807n,
-    { expected: "a non-negative PostgreSQL bigint quantity" },
-  ),
-)
-const SourceType = Schema.String.check(Schema.isPattern(/^[a-z][a-z0-9_.]*$/))
+const Quantity = PositiveQuantity
+const SourceType = DottedName
 const ScopedInput = { principal: Principal, tenantId: Uuid }
 
 /** The business document that moved stock; one document moves an item at most once. */

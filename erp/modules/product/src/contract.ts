@@ -2,27 +2,18 @@ import * as Context from "effect/Context"
 import type * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 
-import type { DatabaseFailure } from "../../../../framework/foundation/mod.ts"
+import {
+  type DatabaseFailure,
+  Uuid,
+  TrimmedText,
+  UpperCode,
+} from "../../../../framework/foundation/mod.ts"
 import { Principal } from "../../../../framework/modules/auth/mod.ts"
 import type { AuthorizationDenied } from "../../../../framework/modules/authorization/mod.ts"
 import type { ProductAlreadyExists, ProductNotFound } from "./errors.ts"
 
-const Uuid = Schema.String.check(Schema.isUUID())
-const Name = Schema.String.check(
-  Schema.makeFilter((value) => /\S/.test(value) && value === value.trim() && value.length <= 256, {
-    expected: "a trimmed nonblank name of at most 256 characters",
-  }),
-)
-const Code = Schema.String.check(
-  Schema.makeFilter(
-    (value) =>
-      /\S/.test(value) &&
-      value === value.trim() &&
-      value === value.toUpperCase() &&
-      value.length <= 64,
-    { expected: "a trimmed uppercase product code of at most 64 characters" },
-  ),
-)
+const Name = TrimmedText(256)
+const Code = UpperCode(64)
 const ScopedInput = { principal: Principal, tenantId: Uuid }
 
 /** Stockable products keep stock in Inventory; consumables and services never do. */

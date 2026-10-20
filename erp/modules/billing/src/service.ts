@@ -18,11 +18,18 @@ import {
 } from "../../../../framework/foundation/mod.ts"
 import type { Principal as PrincipalSchema } from "../../../../framework/modules/auth/mod.ts"
 import { ApprovalService } from "../../../../framework/modules/approvals/mod.ts"
-import { AuthorizationService } from "../../../../framework/modules/authorization/mod.ts"
+import {
+  AuthorizationService,
+  makeScopedCommand,
+} from "../../../../framework/modules/authorization/mod.ts"
 import { NumberingService } from "../../../../framework/modules/numbering/mod.ts"
 import { GeneralLedgerService, type LedgerLineInput } from "../../accounting/mod.ts"
 import { ProductService } from "../../product/mod.ts"
-import { PurchaseDocumentService, PurchaseOrderInvalidState } from "../../procurement/mod.ts"
+import {
+  PurchaseDocumentService,
+  PurchaseOrderInvalidState,
+  type PurchaseMatchingType,
+} from "../../procurement/mod.ts"
 import { SalesDocumentService, SalesOrderInvalidState } from "../../sales/mod.ts"
 import { TaxService } from "../../tax/mod.ts"
 import { BillingCapabilities } from "./capabilities.ts"
@@ -100,9 +107,127 @@ export type DraftDocument = {
   }) => ReadonlyArray<LedgerLine>
 }
 
+type MatchingLine = PurchaseMatchingType["lines"][number]
+type RequestedBillLine = {
+  readonly purchaseOrderLineId: string
+  readonly quantity: string
+  readonly unitPrice: string
+}
+type BillMatch = {
+  readonly matched: ReadonlyArray<{
+    readonly line: MatchingLine
+    readonly requested: RequestedBillLine
+  }>
+  /** Received value cleared from goods received not invoiced, at the purchase price. */
+  readonly grni: bigint
+  /** Billed value beyond what was received, which needs an approved variance. */
+  readonly excessValue: bigint
+  readonly excess: ReadonlyArray<{
+    readonly lineId: string
+    readonly billable: bigint
+    readonly requested: bigint
+  }>
+}
+
+/**
+ * Three-way match: each line may bill what was received, net of returns, minus what was billed
+ * net of supplier credits. Returns the unknown line id when a line is not on the order.
+ */
+const matchBill = (
+  requestedLines: ReadonlyArray<RequestedBillLine>,
+  orderLines: ReadonlyArray<MatchingLine>,
+  billed: ReadonlyMap<string, bigint>,
+  credited: ReadonlyMap<string, bigint>,
+): BillMatch | { readonly unknownLineId: string } => {
+  const byLine = new Map(orderLines.map((line) => [line.purchaseOrderLineId, line]))
+  const match = {
+    matched: [] as BillMatch["matched"][number][],
+    grni: 0n,
+    excessValue: 0n,
+    excess: [] as BillMatch["excess"][number][],
+  }
+  for (const requested of requestedLines) {
+    const line = byLine.get(requested.purchaseOrderLineId)
+    if (line === undefined) return { unknownLineId: requested.purchaseOrderLineId }
+    const netBilled =
+      (billed.get(line.purchaseOrderLineId) ?? 0n) - (credited.get(line.purchaseOrderLineId) ?? 0n)
+    const billable = BigInt(line.received) - BigInt(line.returned) - netBilled
+    const quantity = BigInt(requested.quantity)
+    const matched = quantity < billable ? quantity : billable > 0n ? billable : 0n
+    match.grni += matched * minor(line.unitPrice)
+    if (quantity > matched) {
+      match.excess.push({ lineId: line.purchaseOrderLineId, billable, requested: quantity })
+      match.excessValue += (quantity - matched) * minor(requested.unitPrice)
+    }
+    match.matched.push({ line, requested })
+  }
+  return match
+}
+
+/** Goods received not invoiced clears at the purchase price; the rest posts as price variance. */
+const supplierBillJournal =
+  (grni: bigint): DraftDocument["journal"] =>
+  ({ subtotal, taxTotal, total }) => {
+    const variance = minor(subtotal) - grni
+    return [
+      { role: "goods_received_not_invoiced", debit: major(grni), credit: "0" },
+      variance >= 0n
+        ? { role: "purchase_price_variance", debit: major(variance), credit: "0" }
+        : { role: "purchase_price_variance", debit: "0", credit: major(-variance) },
+      { role: "input_tax", debit: taxTotal, credit: "0" },
+      { role: "payable", debit: "0", credit: total },
+    ]
+  }
+
+/** A credit note reverses its document's revenue and tax, or its payable and receipt value. */
+const creditJournal =
+  (receivable: boolean): DraftDocument["journal"] =>
+  ({ subtotal, taxTotal, total }) =>
+    receivable
+      ? [
+          { role: "revenue", debit: subtotal, credit: "0" },
+          { role: "output_tax", debit: taxTotal, credit: "0" },
+          { role: "receivable", debit: "0", credit: total },
+        ]
+      : [
+          { role: "payable", debit: total, credit: "0" },
+          { role: "goods_received_not_invoiced", debit: "0", credit: subtotal },
+          { role: "input_tax", debit: "0", credit: taxTotal },
+        ]
+
+/** Credit lines copy the credited lines' prices and taxes; quantities stay within what is left. */
+const creditLinesFor = (
+  invoice: BillingDocument,
+  requested: ReadonlyArray<{ readonly invoiceLineId: string; readonly quantity: string }>,
+  credited: ReadonlyMap<string, bigint>,
+):
+  | { readonly lines: DraftLine[] }
+  | { readonly invoiceLineId: string; readonly available: bigint } => {
+  const byId = new Map(invoice.lines.map((line) => [line.id, line]))
+  const lines: DraftLine[] = []
+  for (const request of requested) {
+    const line = byId.get(request.invoiceLineId)
+    const available =
+      line === undefined ? 0n : BigInt(line.quantity) - (credited.get(line.id) ?? 0n)
+    if (line === undefined || BigInt(request.quantity) > available) {
+      return { invoiceLineId: request.invoiceLineId, available }
+    }
+    lines.push({
+      productId: line.productId,
+      description: line.description,
+      quantity: request.quantity,
+      unitPrice: line.unitPrice,
+      taxCodeId: line.taxCodeId,
+      sourceLineId: line.id,
+    })
+  }
+  return { lines }
+}
+
 export const makeBillingService = Effect.gen(function* () {
   const database = yield* Database
   const authorization = yield* AuthorizationService
+  const authorized = makeScopedCommand(authorization)
   const ledger = yield* GeneralLedgerService
   const numbering = yield* NumberingService
   const tax = yield* TaxService
@@ -110,9 +235,6 @@ export const makeBillingService = Effect.gen(function* () {
   const products = yield* ProductService
   const purchasing = yield* PurchaseDocumentService
   const approvals = yield* ApprovalService
-
-  const authorize = (input: { principal: Principal; tenantId: string }, capability: string) =>
-    authorization.authorize({ principal: input.principal, tenantId: input.tenantId, capability })
 
   const loadDocument = (tenantId: string, invoiceId: string, lock = false) =>
     Effect.gen(function* () {
@@ -373,8 +495,10 @@ export const makeBillingService = Effect.gen(function* () {
   const invoiceSalesOrder = Effect.fn("BillingService.invoiceSalesOrder")(function* (
     input: unknown,
   ) {
-    const decoded = yield* Schema.decodeUnknownEffect(InvoiceSalesOrderInput)(input)
-    yield* authorize(decoded, BillingCapabilities.customerInvoiceCreate)
+    const decoded = yield* authorized(
+      InvoiceSalesOrderInput,
+      BillingCapabilities.customerInvoiceCreate,
+    )(input)
     return yield* database.withTransaction(
       Effect.gen(function* () {
         if (decoded.invoiceId !== undefined) {
@@ -493,18 +617,46 @@ export const makeBillingService = Effect.gen(function* () {
           )
   }
 
+  /** Fails unless an approved variance covers the value billed beyond receipts. */
+  const requireVariance = (
+    scope: { readonly principal: Principal; readonly tenantId: string },
+    billId: string,
+    match: BillMatch,
+  ) =>
+    Effect.gen(function* () {
+      if (match.excess.length === 0) return
+      const approval = yield* approvals.getForSubject({
+        ...scope,
+        subjectType: BillVarianceSubject,
+        subjectId: billId,
+      })
+      if (approval?.status === "approved" && minor(approval.amount) >= match.excessValue) return
+      const first = match.excess[0]!
+      return yield* Effect.fail(
+        new BillExceedsReceipt({
+          tenantId: scope.tenantId,
+          purchaseOrderLineId: first.lineId,
+          billable: (first.billable > 0n ? first.billable : 0n).toString(),
+          requested: first.requested.toString(),
+        }),
+      )
+    })
+
   const billPurchaseOrder = Effect.fn("BillingService.billPurchaseOrder")(function* (
     input: unknown,
   ) {
-    const decoded = yield* Schema.decodeUnknownEffect(BillPurchaseOrderInput)(input)
-    yield* authorize(decoded, BillingCapabilities.supplierBillCreate)
+    const decoded = yield* authorized(
+      BillPurchaseOrderInput,
+      BillingCapabilities.supplierBillCreate,
+    )(input)
     const scope = { principal: decoded.principal, tenantId: decoded.tenantId }
     return yield* database.withTransaction(
       Effect.gen(function* () {
-        if (decoded.billId !== undefined) {
-          const posted = yield* existing(decoded.tenantId, decoded.billId)
-          if (posted !== undefined) return posted
-        }
+        const posted =
+          decoded.billId === undefined
+            ? undefined
+            : yield* existing(decoded.tenantId, decoded.billId)
+        if (posted !== undefined) return posted
         const billId = decoded.billId ?? uuidv7()
         yield* lockSource(decoded.tenantId, "procurement.purchase_order", decoded.purchaseOrderId)
         const matching = yield* purchasing.getMatching({
@@ -521,38 +673,25 @@ export const makeBillingService = Effect.gen(function* () {
           )
         }
         const lineIds = matching.lines.map((line) => line.purchaseOrderLineId)
-        const billed = yield* billedQuantities(decoded.tenantId, "supplier_bill", lineIds)
-        const credited = yield* creditedPurchaseQuantities(decoded.tenantId, lineIds)
-        const byLine = new Map(matching.lines.map((line) => [line.purchaseOrderLineId, line]))
-        let grni = 0n
-        let excessValue = 0n
-        const excess: Array<{ lineId: string; billable: bigint; requested: bigint }> = []
+        const match = matchBill(
+          decoded.lines,
+          matching.lines,
+          yield* billedQuantities(decoded.tenantId, "supplier_bill", lineIds),
+          yield* creditedPurchaseQuantities(decoded.tenantId, lineIds),
+        )
+        if ("unknownLineId" in match) {
+          return yield* Effect.fail(
+            new BillExceedsReceipt({
+              tenantId: decoded.tenantId,
+              purchaseOrderLineId: match.unknownLineId,
+              billable: "0",
+              requested: "0",
+            }),
+          )
+        }
+        yield* requireVariance(scope, billId, match)
         const lines: DraftLine[] = []
-        for (const requested of decoded.lines) {
-          const line = byLine.get(requested.purchaseOrderLineId)
-          if (line === undefined) {
-            return yield* Effect.fail(
-              new BillExceedsReceipt({
-                tenantId: decoded.tenantId,
-                purchaseOrderLineId: requested.purchaseOrderLineId,
-                billable: "0",
-                requested: requested.quantity,
-              }),
-            )
-          }
-          // Three-way match: billable is received, net of returns, minus billed net of credits.
-          const billable =
-            BigInt(line.received) -
-            BigInt(line.returned) -
-            ((billed.get(line.purchaseOrderLineId) ?? 0n) -
-              (credited.get(line.purchaseOrderLineId) ?? 0n))
-          const quantity = BigInt(requested.quantity)
-          const matched = quantity < billable ? quantity : billable > 0n ? billable : 0n
-          grni += matched * minor(line.unitPrice)
-          if (quantity > matched) {
-            excess.push({ lineId: line.purchaseOrderLineId, billable, requested: quantity })
-            excessValue += (quantity - matched) * minor(requested.unitPrice)
-          }
+        for (const { line, requested } of match.matched) {
           const product = yield* products.getProduct({ ...scope, productId: line.productId })
           lines.push({
             productId: line.productId,
@@ -563,26 +702,6 @@ export const makeBillingService = Effect.gen(function* () {
             sourceLineId: line.purchaseOrderLineId,
           })
         }
-        if (excess.length > 0) {
-          // Billing beyond receipts needs an approved variance covering the excess value.
-          const approval = yield* approvals.getForSubject({
-            ...scope,
-            subjectType: BillVarianceSubject,
-            subjectId: billId,
-          })
-          if (approval?.status !== "approved" || minor(approval.amount) < excessValue) {
-            const first = excess[0]!
-            return yield* Effect.fail(
-              new BillExceedsReceipt({
-                tenantId: decoded.tenantId,
-                purchaseOrderLineId: first.lineId,
-                billable: (first.billable > 0n ? first.billable : 0n).toString(),
-                requested: first.requested.toString(),
-              }),
-            )
-          }
-        }
-        const grniAmount = major(grni)
         return yield* post({
           principal: decoded.principal,
           tenantId: decoded.tenantId,
@@ -596,33 +715,51 @@ export const makeBillingService = Effect.gen(function* () {
           creditedInvoiceId: null,
           supplierReference: decoded.supplierReference,
           lines,
-          journal: ({ subtotal, taxTotal, total }) => {
-            // Goods received not invoiced clears at the purchase price; the rest is variance.
-            const variance = minor(subtotal) - grni
-            return [
-              { role: "goods_received_not_invoiced", debit: grniAmount, credit: "0" },
-              variance >= 0n
-                ? { role: "purchase_price_variance", debit: major(variance), credit: "0" }
-                : { role: "purchase_price_variance", debit: "0", credit: major(-variance) },
-              { role: "input_tax", debit: taxTotal, credit: "0" },
-              { role: "payable", debit: "0", credit: total },
-            ]
-          },
+          journal: supplierBillJournal(match.grni),
         })
       }),
       "billing.supplier_bill.atomic",
     )
   })
 
+  /** The credit settles the invoice first; any remainder stays open as a credit balance. */
+  const applyCredit = (invoice: BillingDocument, creditNote: BillingDocument) =>
+    Effect.gen(function* () {
+      const applied =
+        minor(invoice.openAmount) < minor(creditNote.total)
+          ? minor(invoice.openAmount)
+          : minor(creditNote.total)
+      if (applied === 0n) return creditNote
+      // The applied amount never exceeds either open amount, so settlement cannot fail here.
+      const impossible = (error: unknown) => Effect.die(error)
+      const guarded = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+        effect.pipe(Effect.catch(impossible))
+      yield* guarded(
+        settle(invoice.tenantId, invoice.id, applied, {
+          type: `billing.${creditNote.kind}`,
+          id: creditNote.id,
+        }),
+      )
+      return yield* guarded(
+        settle(invoice.tenantId, creditNote.id, applied, {
+          type: `billing.${invoice.kind}`,
+          id: invoice.id,
+        }),
+      )
+    })
+
   const creditInvoice = Effect.fn("BillingService.creditInvoice")(function* (input: unknown) {
-    const decoded = yield* Schema.decodeUnknownEffect(CreditInvoiceInput)(input)
-    yield* authorize(decoded, BillingCapabilities.creditNoteCreate)
+    const decoded = yield* authorized(
+      CreditInvoiceInput,
+      BillingCapabilities.creditNoteCreate,
+    )(input)
     return yield* database.withTransaction(
       Effect.gen(function* () {
-        if (decoded.creditNoteId !== undefined) {
-          const posted = yield* existing(decoded.tenantId, decoded.creditNoteId)
-          if (posted !== undefined) return posted
-        }
+        const posted =
+          decoded.creditNoteId === undefined
+            ? undefined
+            : yield* existing(decoded.tenantId, decoded.creditNoteId)
+        if (posted !== undefined) return posted
         const invoice = yield* loadDocument(decoded.tenantId, decoded.invoiceId, true)
         if (isCreditNote(invoice.kind)) {
           return yield* Effect.fail(
@@ -632,38 +769,23 @@ export const makeBillingService = Effect.gen(function* () {
             }),
           )
         }
-        const creditKind: InvoiceKind =
-          invoice.kind === "customer_invoice" ? "customer_credit_note" : "supplier_credit_note"
+        const receivable = invoice.kind === "customer_invoice"
+        const creditKind: InvoiceKind = receivable ? "customer_credit_note" : "supplier_credit_note"
         const credited = yield* billedQuantities(
           decoded.tenantId,
           creditKind,
           invoice.lines.map((line) => line.id),
         )
-        const byId = new Map(invoice.lines.map((line) => [line.id, line]))
-        const lines: DraftLine[] = []
-        for (const requested of decoded.lines) {
-          const line = byId.get(requested.invoiceLineId)
-          const available =
-            line === undefined ? 0n : BigInt(line.quantity) - (credited.get(line.id) ?? 0n)
-          if (line === undefined || BigInt(requested.quantity) > available) {
-            return yield* Effect.fail(
-              new CreditExceedsInvoice({
-                tenantId: decoded.tenantId,
-                invoiceLineId: requested.invoiceLineId,
-                available: available.toString(),
-              }),
-            )
-          }
-          lines.push({
-            productId: line.productId,
-            description: line.description,
-            quantity: requested.quantity,
-            unitPrice: line.unitPrice,
-            taxCodeId: line.taxCodeId,
-            sourceLineId: line.id,
-          })
+        const built = creditLinesFor(invoice, decoded.lines, credited)
+        if (!("lines" in built)) {
+          return yield* Effect.fail(
+            new CreditExceedsInvoice({
+              tenantId: decoded.tenantId,
+              invoiceLineId: built.invoiceLineId,
+              available: built.available.toString(),
+            }),
+          )
         }
-        const receivable = invoice.kind === "customer_invoice"
         const creditNote = yield* post({
           principal: decoded.principal,
           tenantId: decoded.tenantId,
@@ -676,56 +798,20 @@ export const makeBillingService = Effect.gen(function* () {
           sourceId: invoice.sourceId,
           creditedInvoiceId: invoice.id,
           supplierReference: null,
-          lines,
-          journal: ({ subtotal, taxTotal, total }) =>
-            receivable
-              ? [
-                  { role: "revenue", debit: subtotal, credit: "0" },
-                  { role: "output_tax", debit: taxTotal, credit: "0" },
-                  { role: "receivable", debit: "0", credit: total },
-                ]
-              : [
-                  { role: "payable", debit: total, credit: "0" },
-                  { role: "goods_received_not_invoiced", debit: "0", credit: subtotal },
-                  { role: "input_tax", debit: "0", credit: taxTotal },
-                ],
+          lines: built.lines,
+          journal: creditJournal(receivable),
         })
-        // The credit settles the invoice first; any remainder stays open as a credit balance.
-        const applied =
-          minor(invoice.openAmount) < minor(creditNote.total)
-            ? minor(invoice.openAmount)
-            : minor(creditNote.total)
-        if (applied === 0n) return creditNote
-        // The applied amount never exceeds either open amount, so settlement cannot fail here.
-        const impossible = (error: unknown) => Effect.die(error)
-        yield* settle(decoded.tenantId, invoice.id, applied, {
-          type: `billing.${creditKind}`,
-          id: creditNote.id,
-        }).pipe(
-          Effect.catchTags({
-            BillingDocumentNotFound: impossible,
-            SettlementConflict: impossible,
-            SettlementExceedsOpenAmount: impossible,
-          }),
-        )
-        return yield* settle(decoded.tenantId, creditNote.id, applied, {
-          type: `billing.${invoice.kind}`,
-          id: invoice.id,
-        }).pipe(
-          Effect.catchTags({
-            BillingDocumentNotFound: impossible,
-            SettlementConflict: impossible,
-            SettlementExceedsOpenAmount: impossible,
-          }),
-        )
+        return yield* applyCredit(invoice, creditNote)
       }),
       "billing.credit_note.atomic",
     )
   })
 
   const applySettlement = Effect.fn("BillingService.applySettlement")(function* (input: unknown) {
-    const decoded = yield* Schema.decodeUnknownEffect(ApplySettlementInput)(input)
-    yield* authorize(decoded, BillingCapabilities.settlementApply)
+    const decoded = yield* authorized(
+      ApplySettlementInput,
+      BillingCapabilities.settlementApply,
+    )(input)
     return yield* database.withTransaction(
       settle(decoded.tenantId, decoded.invoiceId, minor(decoded.amount), decoded.source),
       "billing.settlement.atomic",
@@ -733,14 +819,18 @@ export const makeBillingService = Effect.gen(function* () {
   })
 
   const getDocument = Effect.fn("BillingService.getDocument")(function* (input: unknown) {
-    const decoded = yield* Schema.decodeUnknownEffect(GetBillingDocumentInput)(input)
-    yield* authorize(decoded, BillingCapabilities.documentRead)
+    const decoded = yield* authorized(
+      GetBillingDocumentInput,
+      BillingCapabilities.documentRead,
+    )(input)
     return yield* loadDocument(decoded.tenantId, decoded.invoiceId)
   })
 
   const listDocuments = Effect.fn("BillingService.listDocuments")(function* (input: unknown) {
-    const decoded = yield* Schema.decodeUnknownEffect(ListBillingDocumentsInput)(input)
-    yield* authorize(decoded, BillingCapabilities.documentRead)
+    const decoded = yield* authorized(
+      ListBillingDocumentsInput,
+      BillingCapabilities.documentRead,
+    )(input)
     const rows = yield* database.query(
       (db) =>
         db
@@ -767,8 +857,7 @@ export const makeBillingService = Effect.gen(function* () {
   })
 
   const listOpenItems = Effect.fn("BillingService.listOpenItems")(function* (input: unknown) {
-    const decoded = yield* Schema.decodeUnknownEffect(ListOpenItemsInput)(input)
-    yield* authorize(decoded, BillingCapabilities.documentRead)
+    const decoded = yield* authorized(ListOpenItemsInput, BillingCapabilities.documentRead)(input)
     const rows = yield* database.query(
       (db) =>
         db

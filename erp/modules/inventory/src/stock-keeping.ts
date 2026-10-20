@@ -13,12 +13,16 @@ import {
 } from "../../../../db/schema/inventory.ts"
 import {
   Database,
+  type DrizzleTransaction,
   formatSignedMinor,
   requireExactMajorToMinor,
   requireSignedMajorToMinor,
 } from "../../../../framework/foundation/mod.ts"
 import type { Principal as PrincipalSchema } from "../../../../framework/modules/auth/mod.ts"
-import { AuthorizationService } from "../../../../framework/modules/authorization/mod.ts"
+import {
+  AuthorizationService,
+  makeScopedCommand,
+} from "../../../../framework/modules/authorization/mod.ts"
 import { GeneralLedgerService, type PostingRoleType } from "../../accounting/mod.ts"
 import { ProductService } from "../../product/mod.ts"
 import { InventoryCapabilities } from "./capabilities.ts"
@@ -73,14 +77,94 @@ type Plan = {
   readonly lossRole: PostingRoleType
 }
 
+type ValuedLine = { readonly itemId: string; readonly quantity: bigint; readonly value: bigint }
+type Balance = { readonly onHand: bigint; readonly reserved: bigint }
+type Valuation = { readonly quantity: bigint; readonly value: bigint }
+type LockedStock = {
+  readonly units: Map<string, string>
+  readonly balances: Map<string, Balance>
+  readonly valuations: Map<string, Valuation>
+}
+type LineValue =
+  | { readonly _tag: "valued"; readonly line: ValuedLine }
+  | { readonly _tag: "unavailable" }
+  | { readonly _tag: "unvalued" }
+
+/** An issue removes the moving-average cost, or its stated cost, from valued stock. */
+const valueIssue = (line: PlannedLine, balance: Balance, valuation: Valuation): LineValue => {
+  const quantity = -line.quantity
+  if (balance.onHand - balance.reserved < quantity) return { _tag: "unavailable" }
+  if (valuation.quantity < quantity) return { _tag: "unvalued" }
+  // The last units take the remaining value, so rounding or a stated cost never strands value.
+  const cost =
+    quantity === valuation.quantity
+      ? valuation.value
+      : (line.issueValue ?? divideHalfUp(valuation.value * quantity, valuation.quantity))
+  if (cost > valuation.value) return { _tag: "unvalued" }
+  return { _tag: "valued", line: { itemId: line.itemId, quantity: line.quantity, value: -cost } }
+}
+
+/** A receipt adds its value; a gain without one takes the average or the fallback cost. */
+const valueReceipt = (line: PlannedLine, valuation: Valuation): LineValue => {
+  const value =
+    line.receiptValue ??
+    (valuation.quantity > 0n
+      ? divideHalfUp(valuation.value * line.quantity, valuation.quantity)
+      : line.fallbackUnitCost === undefined
+        ? undefined
+        : line.fallbackUnitCost * line.quantity)
+  return value === undefined
+    ? { _tag: "unvalued" }
+    : { _tag: "valued", line: { itemId: line.itemId, quantity: line.quantity, value } }
+}
+
+const valueLine = (line: PlannedLine, balance: Balance, valuation: Valuation) =>
+  line.quantity < 0n ? valueIssue(line, balance, valuation) : valueReceipt(line, valuation)
+
+/** One journal per document: gains against the gain role, losses against the loss role. */
+const journalFor = (
+  valued: ReadonlyArray<ValuedLine>,
+  gainRole: PostingRoleType,
+  lossRole: PostingRoleType,
+) => {
+  const gains = valued.reduce((sum, line) => (line.value > 0n ? sum + line.value : sum), 0n)
+  const losses = valued.reduce((sum, line) => (line.value < 0n ? sum - line.value : sum), 0n)
+  return [
+    ...(gains > 0n
+      ? [
+          { role: "inventory" as const, debit: major(gains), credit: "0" },
+          { role: gainRole, debit: "0", credit: major(gains) },
+        ]
+      : []),
+    ...(losses > 0n
+      ? [
+          { role: lossRole, debit: major(losses), credit: "0" },
+          { role: "inventory" as const, debit: "0", credit: major(losses) },
+        ]
+      : []),
+  ]
+}
+
+/** The tagged failure for a line that cannot move. */
+const lineFailure = (
+  reason: "unavailable" | "unvalued",
+  plan: Plan,
+  legalEntityId: string,
+  line: PlannedLine,
+) => {
+  const requested = (line.quantity < 0n ? -line.quantity : line.quantity).toString()
+  const scope = { tenantId: plan.tenantId, itemId: line.itemId, requested }
+  return reason === "unavailable"
+    ? new StockUnavailable({ ...scope, warehouseId: plan.warehouseId })
+    : new StockValuationUnavailable({ ...scope, legalEntityId })
+}
+
 export const makeStockKeepingService = Effect.gen(function* () {
   const database = yield* Database
   const authorization = yield* AuthorizationService
+  const authorized = makeScopedCommand(authorization)
   const ledger = yield* GeneralLedgerService
   const productService = yield* ProductService
-
-  const authorize = (input: { principal: Principal; tenantId: string }, capability: string) =>
-    authorization.authorize({ principal: input.principal, tenantId: input.tenantId, capability })
 
   const replay = (tenantId: string, source: Plan["source"], legalEntityId: string) =>
     database
@@ -123,189 +207,208 @@ export const makeStockKeepingService = Effect.gen(function* () {
         ),
       )
 
+  /** Locks balances and valuations in item order so concurrent documents cannot deadlock. */
+  const lockStock = (plan: Plan, legalEntityId: string) =>
+    database.transaction(async (tx) => {
+      const state: LockedStock = { units: new Map(), balances: new Map(), valuations: new Map() }
+      for (const itemId of [...new Set(plan.itemIds)].toSorted()) {
+        const item = (
+          await tx
+            .select({ unitOfMeasure: items.unitOfMeasure })
+            .from(items)
+            .where(and(eq(items.tenantId, plan.tenantId), eq(items.id, itemId)))
+        )[0]
+        if (item === undefined) return { missingItemId: itemId }
+        state.units.set(itemId, item.unitOfMeasure)
+        const balance = (
+          await tx
+            .select({ onHand: stockBalances.onHand, reserved: stockBalances.reserved })
+            .from(stockBalances)
+            .where(
+              and(
+                eq(stockBalances.tenantId, plan.tenantId),
+                eq(stockBalances.warehouseId, plan.warehouseId),
+                eq(stockBalances.itemId, itemId),
+              ),
+            )
+            .for("update")
+        )[0]
+        state.balances.set(itemId, {
+          onHand: BigInt(balance?.onHand ?? "0"),
+          reserved: BigInt(balance?.reserved ?? "0"),
+        })
+        await tx
+          .insert(itemValuations)
+          .values({ tenantId: plan.tenantId, legalEntityId, itemId })
+          .onConflictDoNothing()
+        const valuation = (
+          await tx
+            .select({ quantity: itemValuations.quantity, value: itemValuations.value })
+            .from(itemValuations)
+            .where(
+              and(
+                eq(itemValuations.tenantId, plan.tenantId),
+                eq(itemValuations.legalEntityId, legalEntityId),
+                eq(itemValuations.itemId, itemId),
+              ),
+            )
+            .for("update")
+        )[0]!
+        state.valuations.set(itemId, {
+          quantity: BigInt(valuation.quantity),
+          value: requireExactMajorToMinor(valuation.value, 2),
+        })
+      }
+      return { state }
+    }, "inventory.valuation.lock")
+
+  /** Writes one valued line: balance, movement, valuation, and its valuation entry. */
+  const writeLine = async (
+    tx: DrizzleTransaction,
+    plan: Plan,
+    legalEntityId: string,
+    line: ValuedLine,
+    unitOfMeasure: string,
+    journalEntryId: string | null,
+  ) => {
+    const delta = sql`${stockBalances.onHand} + ${line.quantity.toString()}`
+    if (line.quantity > 0n) {
+      await tx
+        .insert(stockBalances)
+        .values({
+          tenantId: plan.tenantId,
+          warehouseId: plan.warehouseId,
+          itemId: line.itemId,
+          onHand: line.quantity.toString(),
+        })
+        .onConflictDoUpdate({
+          target: [stockBalances.tenantId, stockBalances.warehouseId, stockBalances.itemId],
+          set: { onHand: delta, updatedAt: new Date() },
+        })
+    } else {
+      // The balance row exists and is locked: availability was checked against it.
+      await tx
+        .update(stockBalances)
+        .set({ onHand: delta, updatedAt: new Date() })
+        .where(
+          and(
+            eq(stockBalances.tenantId, plan.tenantId),
+            eq(stockBalances.warehouseId, plan.warehouseId),
+            eq(stockBalances.itemId, line.itemId),
+          ),
+        )
+    }
+    const movement = (
+      await tx
+        .insert(movements)
+        .values({
+          tenantId: plan.tenantId,
+          warehouseId: plan.warehouseId,
+          itemId: line.itemId,
+          quantity: line.quantity.toString(),
+          kind: line.quantity > 0n ? "receipt" : "issue",
+          referenceId: plan.source.id,
+          unitOfMeasure,
+          reason: plan.reason,
+          idempotencyKey: `${plan.source.type}:${plan.source.id}:${line.itemId}`,
+        })
+        .returning({ id: movements.id })
+    )[0]!
+    await tx
+      .update(itemValuations)
+      .set({
+        quantity: sql`${itemValuations.quantity} + ${line.quantity.toString()}`,
+        value: sql`${itemValuations.value} + ${major(line.value)}`,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(itemValuations.tenantId, plan.tenantId),
+          eq(itemValuations.legalEntityId, legalEntityId),
+          eq(itemValuations.itemId, line.itemId),
+        ),
+      )
+    await tx.insert(valuationEntries).values({
+      tenantId: plan.tenantId,
+      legalEntityId,
+      itemId: line.itemId,
+      movementId: movement.id,
+      quantity: line.quantity.toString(),
+      value: major(line.value),
+      sourceType: plan.source.type,
+      sourceId: plan.source.id,
+      journalEntryId,
+    })
+    return {
+      itemId: line.itemId,
+      movementId: movement.id,
+      quantity: line.quantity.toString(),
+      value: major(line.value),
+    }
+  }
+
+  const loadWarehouseLegalEntity = (plan: Plan) =>
+    Effect.gen(function* () {
+      const warehouse = (yield* database.query(
+        (db) =>
+          db
+            .select({ legalEntityId: warehouses.legalEntityId })
+            .from(warehouses)
+            .where(and(eq(warehouses.tenantId, plan.tenantId), eq(warehouses.id, plan.warehouseId)))
+            .for("share"),
+        "inventory.valuation.warehouse",
+      ))[0]
+      if (warehouse === undefined) {
+        return yield* Effect.fail(
+          new InventoryReferenceNotFound({
+            tenantId: plan.tenantId,
+            warehouseId: plan.warehouseId,
+            itemId: plan.itemIds[0]!,
+          }),
+        )
+      }
+      return warehouse.legalEntityId
+    })
+
+  /** Values every changed line against the locked stock, failing on the first that cannot move. */
+  const valueAll = (plan: Plan, legalEntityId: string, state: LockedStock) =>
+    Effect.gen(function* () {
+      const onHand = new Map(
+        [...state.balances].map(([itemId, balance]) => [itemId, balance.onHand]),
+      )
+      const valued: ValuedLine[] = []
+      for (const line of plan.resolve(onHand).filter((candidate) => candidate.quantity !== 0n)) {
+        const outcome = valueLine(
+          line,
+          state.balances.get(line.itemId)!,
+          state.valuations.get(line.itemId)!,
+        )
+        if (outcome._tag !== "valued")
+          return yield* Effect.fail(lineFailure(outcome._tag, plan, legalEntityId, line))
+        valued.push(outcome.line)
+      }
+      return valued
+    })
+
   const move = (plan: Plan) =>
     database.withTransaction(
       Effect.gen(function* () {
-        const warehouse = (yield* database.query(
-          (db) =>
-            db
-              .select({ legalEntityId: warehouses.legalEntityId })
-              .from(warehouses)
-              .where(
-                and(eq(warehouses.tenantId, plan.tenantId), eq(warehouses.id, plan.warehouseId)),
-              )
-              .for("share"),
-          "inventory.valuation.warehouse",
-        ))[0]
-        if (warehouse === undefined) {
-          return yield* Effect.fail(
-            new InventoryReferenceNotFound({
-              tenantId: plan.tenantId,
-              warehouseId: plan.warehouseId,
-              itemId: plan.itemIds[0]!,
-            }),
-          )
-        }
-        const legalEntityId = warehouse.legalEntityId
+        const legalEntityId = yield* loadWarehouseLegalEntity(plan)
         const replayed = yield* replay(plan.tenantId, plan.source, legalEntityId)
         if (replayed !== undefined) return replayed
-
-        // Lock balances and valuations in item order so concurrent documents cannot deadlock.
-        const state = yield* database.transaction(async (tx) => {
-          const itemIds = [...new Set(plan.itemIds)].toSorted()
-          const found = new Map<string, string>()
-          const balances = new Map<string, { onHand: bigint; reserved: bigint }>()
-          const valuations = new Map<string, { quantity: bigint; value: bigint }>()
-          for (const itemId of itemIds) {
-            const item = (
-              await tx
-                .select({ unitOfMeasure: items.unitOfMeasure })
-                .from(items)
-                .where(and(eq(items.tenantId, plan.tenantId), eq(items.id, itemId)))
-            )[0]
-            if (item === undefined) return { _tag: "item-missing" as const, itemId }
-            found.set(itemId, item.unitOfMeasure)
-            const balance = (
-              await tx
-                .select({ onHand: stockBalances.onHand, reserved: stockBalances.reserved })
-                .from(stockBalances)
-                .where(
-                  and(
-                    eq(stockBalances.tenantId, plan.tenantId),
-                    eq(stockBalances.warehouseId, plan.warehouseId),
-                    eq(stockBalances.itemId, itemId),
-                  ),
-                )
-                .for("update")
-            )[0]
-            balances.set(itemId, {
-              onHand: BigInt(balance?.onHand ?? "0"),
-              reserved: BigInt(balance?.reserved ?? "0"),
-            })
-            await tx
-              .insert(itemValuations)
-              .values({ tenantId: plan.tenantId, legalEntityId, itemId })
-              .onConflictDoNothing()
-            const valuation = (
-              await tx
-                .select({ quantity: itemValuations.quantity, value: itemValuations.value })
-                .from(itemValuations)
-                .where(
-                  and(
-                    eq(itemValuations.tenantId, plan.tenantId),
-                    eq(itemValuations.legalEntityId, legalEntityId),
-                    eq(itemValuations.itemId, itemId),
-                  ),
-                )
-                .for("update")
-            )[0]!
-            valuations.set(itemId, {
-              quantity: BigInt(valuation.quantity),
-              value: requireExactMajorToMinor(valuation.value, 2),
-            })
-          }
-          return { _tag: "locked" as const, units: found, balances, valuations }
-        }, "inventory.valuation.lock")
-        if (state._tag === "item-missing") {
+        const locked = yield* lockStock(plan, legalEntityId)
+        if (locked.missingItemId !== undefined) {
           return yield* Effect.fail(
             new InventoryReferenceNotFound({
               tenantId: plan.tenantId,
               warehouseId: plan.warehouseId,
-              itemId: state.itemId,
+              itemId: locked.missingItemId,
             }),
           )
         }
-
-        const onHand = new Map(
-          [...state.balances].map(([itemId, balance]) => [itemId, balance.onHand]),
-        )
-        const lines = plan.resolve(onHand).filter((line) => line.quantity !== 0n)
-        const valued: Array<{ itemId: string; quantity: bigint; value: bigint }> = []
-        for (const line of lines.toSorted((left, right) =>
-          left.itemId.localeCompare(right.itemId),
-        )) {
-          const balance = state.balances.get(line.itemId)!
-          const valuation = state.valuations.get(line.itemId)!
-          if (line.quantity < 0n) {
-            const quantity = -line.quantity
-            if (balance.onHand - balance.reserved < quantity) {
-              return yield* Effect.fail(
-                new StockUnavailable({
-                  tenantId: plan.tenantId,
-                  warehouseId: plan.warehouseId,
-                  itemId: line.itemId,
-                  requested: quantity.toString(),
-                }),
-              )
-            }
-            if (valuation.quantity < quantity) {
-              return yield* Effect.fail(
-                new StockValuationUnavailable({
-                  tenantId: plan.tenantId,
-                  legalEntityId,
-                  itemId: line.itemId,
-                  requested: quantity.toString(),
-                }),
-              )
-            }
-            // The last units take the remaining value, so rounding or a stated cost never strands
-            // value in stock.
-            const cost =
-              quantity === valuation.quantity
-                ? valuation.value
-                : (line.issueValue ?? divideHalfUp(valuation.value * quantity, valuation.quantity))
-            if (cost > valuation.value) {
-              return yield* Effect.fail(
-                new StockValuationUnavailable({
-                  tenantId: plan.tenantId,
-                  legalEntityId,
-                  itemId: line.itemId,
-                  requested: quantity.toString(),
-                }),
-              )
-            }
-            valued.push({ itemId: line.itemId, quantity: line.quantity, value: -cost })
-            continue
-          }
-          let value = line.receiptValue
-          if (value === undefined) {
-            if (valuation.quantity > 0n) {
-              value = divideHalfUp(valuation.value * line.quantity, valuation.quantity)
-            } else if (line.fallbackUnitCost !== undefined) {
-              value = line.fallbackUnitCost * line.quantity
-            } else {
-              return yield* Effect.fail(
-                new StockValuationUnavailable({
-                  tenantId: plan.tenantId,
-                  legalEntityId,
-                  itemId: line.itemId,
-                  requested: line.quantity.toString(),
-                }),
-              )
-            }
-          }
-          valued.push({ itemId: line.itemId, quantity: line.quantity, value })
-        }
-        if (valued.length === 0) {
-          return { legalEntityId, source: plan.source, lines: [], journalEntryId: null }
-        }
-
-        const gains = valued.reduce((sum, line) => (line.value > 0n ? sum + line.value : sum), 0n)
-        const losses = valued.reduce((sum, line) => (line.value < 0n ? sum - line.value : sum), 0n)
-        const journalLines = [
-          ...(gains > 0n
-            ? [
-                { role: "inventory" as const, debit: major(gains), credit: "0" },
-                { role: plan.gainRole, debit: "0", credit: major(gains) },
-              ]
-            : []),
-          ...(losses > 0n
-            ? [
-                { role: plan.lossRole, debit: major(losses), credit: "0" },
-                { role: "inventory" as const, debit: "0", credit: major(losses) },
-              ]
-            : []),
-        ]
+        const state = locked.state!
+        const valued = yield* valueAll(plan, legalEntityId, state)
+        const journalLines = journalFor(valued, plan.gainRole, plan.lossRole)
         const journal =
           journalLines.length === 0
             ? null
@@ -319,94 +422,16 @@ export const makeStockKeepingService = Effect.gen(function* () {
                 source: plan.source,
                 lines: journalLines,
               })
-
         const written = yield* database.transaction(async (tx) => {
           const result: Array<ValuedStockMovement["lines"][number]> = []
-          for (const line of valued) {
-            const unitOfMeasure = state.units.get(line.itemId)!
-            if (line.quantity > 0n) {
-              await tx
-                .insert(stockBalances)
-                .values({
-                  tenantId: plan.tenantId,
-                  warehouseId: plan.warehouseId,
-                  itemId: line.itemId,
-                  onHand: line.quantity.toString(),
-                })
-                .onConflictDoUpdate({
-                  target: [stockBalances.tenantId, stockBalances.warehouseId, stockBalances.itemId],
-                  set: {
-                    onHand: sql`${stockBalances.onHand} + ${line.quantity.toString()}`,
-                    updatedAt: new Date(),
-                  },
-                })
-            } else {
-              // The balance row exists and is locked: availability was checked against it.
-              await tx
-                .update(stockBalances)
-                .set({
-                  onHand: sql`${stockBalances.onHand} + ${line.quantity.toString()}`,
-                  updatedAt: new Date(),
-                })
-                .where(
-                  and(
-                    eq(stockBalances.tenantId, plan.tenantId),
-                    eq(stockBalances.warehouseId, plan.warehouseId),
-                    eq(stockBalances.itemId, line.itemId),
-                  ),
-                )
-            }
-            const movement = (
-              await tx
-                .insert(movements)
-                .values({
-                  tenantId: plan.tenantId,
-                  warehouseId: plan.warehouseId,
-                  itemId: line.itemId,
-                  quantity: line.quantity.toString(),
-                  kind: line.quantity > 0n ? "receipt" : "issue",
-                  referenceId: plan.source.id,
-                  unitOfMeasure,
-                  reason: plan.reason,
-                  idempotencyKey: `${plan.source.type}:${plan.source.id}:${line.itemId}`,
-                })
-                .returning({ id: movements.id })
-            )[0]!
-            await tx
-              .update(itemValuations)
-              .set({
-                quantity: sql`${itemValuations.quantity} + ${line.quantity.toString()}`,
-                value: sql`${itemValuations.value} + ${major(line.value)}`,
-                updatedAt: new Date(),
-              })
-              .where(
-                and(
-                  eq(itemValuations.tenantId, plan.tenantId),
-                  eq(itemValuations.legalEntityId, legalEntityId),
-                  eq(itemValuations.itemId, line.itemId),
-                ),
-              )
-            await tx.insert(valuationEntries).values({
-              tenantId: plan.tenantId,
-              legalEntityId,
-              itemId: line.itemId,
-              movementId: movement.id,
-              quantity: line.quantity.toString(),
-              value: major(line.value),
-              sourceType: plan.source.type,
-              sourceId: plan.source.id,
-              journalEntryId: journal?.id ?? null,
-            })
-            result.push({
-              itemId: line.itemId,
-              movementId: movement.id,
-              quantity: line.quantity.toString(),
-              value: major(line.value),
-            })
+          for (const line of valued.toSorted((left, right) =>
+            left.itemId.localeCompare(right.itemId),
+          )) {
+            const unit = state.units.get(line.itemId)!
+            result.push(await writeLine(tx, plan, legalEntityId, line, unit, journal?.id ?? null))
           }
           return result
         }, "inventory.valuation.write")
-
         return {
           legalEntityId,
           source: plan.source,
@@ -420,8 +445,10 @@ export const makeStockKeepingService = Effect.gen(function* () {
   const registerProductItem = Effect.fn("StockKeepingService.registerProductItem")(function* (
     input: unknown,
   ) {
-    const decoded = yield* Schema.decodeUnknownEffect(RegisterProductItemInput)(input)
-    yield* authorize(decoded, InventoryCapabilities.itemCreate)
+    const decoded = yield* authorized(
+      RegisterProductItemInput,
+      InventoryCapabilities.itemCreate,
+    )(input)
     const product = yield* productService.getProduct(decoded)
     if (product.type !== "stockable") {
       return yield* Effect.fail(
@@ -463,8 +490,10 @@ export const makeStockKeepingService = Effect.gen(function* () {
   })
 
   const receiveValued = Effect.fn("StockKeepingService.receiveValued")(function* (input: unknown) {
-    const decoded = yield* Schema.decodeUnknownEffect(ReceiveValuedStockInput)(input)
-    yield* authorize(decoded, InventoryCapabilities.stockReceive)
+    const decoded = yield* authorized(
+      ReceiveValuedStockInput,
+      InventoryCapabilities.stockReceive,
+    )(input)
     return yield* move({
       ...decoded,
       reason: `receipt ${decoded.source.type}`,
@@ -481,8 +510,10 @@ export const makeStockKeepingService = Effect.gen(function* () {
   })
 
   const issueValued = Effect.fn("StockKeepingService.issueValued")(function* (input: unknown) {
-    const decoded = yield* Schema.decodeUnknownEffect(IssueValuedStockInput)(input)
-    yield* authorize(decoded, InventoryCapabilities.stockIssue)
+    const decoded = yield* authorized(
+      IssueValuedStockInput,
+      InventoryCapabilities.stockIssue,
+    )(input)
     return yield* move({
       ...decoded,
       reason: `issue ${decoded.source.type}`,
@@ -501,8 +532,7 @@ export const makeStockKeepingService = Effect.gen(function* () {
   })
 
   const countStock = Effect.fn("StockKeepingService.countStock")(function* (input: unknown) {
-    const decoded = yield* Schema.decodeUnknownEffect(CountStockInput)(input)
-    yield* authorize(decoded, InventoryCapabilities.stockCount)
+    const decoded = yield* authorized(CountStockInput, InventoryCapabilities.stockCount)(input)
     return yield* move({
       principal: decoded.principal,
       tenantId: decoded.tenantId,
@@ -523,8 +553,10 @@ export const makeStockKeepingService = Effect.gen(function* () {
   })
 
   const valuation = Effect.fn("StockKeepingService.valuation")(function* (input: unknown) {
-    const decoded = yield* Schema.decodeUnknownEffect(ValuationReportInput)(input)
-    yield* authorize(decoded, InventoryCapabilities.valuationRead)
+    const decoded = yield* authorized(
+      ValuationReportInput,
+      InventoryCapabilities.valuationRead,
+    )(input)
     const rows = yield* database.query(
       (db) =>
         db

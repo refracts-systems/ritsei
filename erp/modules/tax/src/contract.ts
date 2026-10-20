@@ -7,17 +7,14 @@ import {
   FinancialMajorAmount,
   formatSignedMinor,
   requireExactMajorToMinor,
+  Uuid,
+  TrimmedText,
 } from "../../../../framework/foundation/mod.ts"
 import { Principal } from "../../../../framework/modules/auth/mod.ts"
 import type { AuthorizationDenied } from "../../../../framework/modules/authorization/mod.ts"
 import type { TaxCodeAlreadyExists, TaxCodeNotFound, TaxProductNotFound } from "./errors.ts"
 
-const Uuid = Schema.String.check(Schema.isUUID())
-const Text = Schema.String.check(
-  Schema.makeFilter((value) => /\S/.test(value) && value === value.trim() && value.length <= 128, {
-    expected: "a trimmed nonblank text of at most 128 characters",
-  }),
-)
+const Text = TrimmedText(128)
 const ScopedInput = { principal: Principal, tenantId: Uuid }
 
 /** A percent with up to four decimals between 0 and 100, for example `11` or `11.5000`. */

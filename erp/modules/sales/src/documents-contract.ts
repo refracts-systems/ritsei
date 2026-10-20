@@ -6,6 +6,10 @@ import {
   CalendarDate,
   type DatabaseFailure,
   FinancialMajorAmount,
+  Uuid,
+  TrimmedText,
+  PositiveQuantity,
+  NonNegativeQuantity,
 } from "../../../../framework/foundation/mod.ts"
 import { Principal } from "../../../../framework/modules/auth/mod.ts"
 import type { AuthorizationDenied } from "../../../../framework/modules/authorization/mod.ts"
@@ -26,22 +30,11 @@ import type {
   SalesOrderNotFound,
 } from "./errors.ts"
 
-const Uuid = Schema.String.check(Schema.isUUID())
-const Text = Schema.String.check(
-  Schema.makeFilter((value) => /\S/.test(value) && value === value.trim() && value.length <= 256, {
-    expected: "a trimmed nonblank text of at most 256 characters",
-  }),
-)
+const Text = TrimmedText(256)
 const Email = Schema.String.check(
   Schema.makeFilter((value) => /^[^\s@]+@[^\s@]+$/.test(value), { expected: "an email address" }),
 )
-const Quantity = Schema.String.check(
-  Schema.makeFilter(
-    (value) => /^[1-9]\d*$/.test(value) && BigInt(value) <= 9_223_372_036_854_775_807n,
-    { expected: "a positive PostgreSQL bigint quantity" },
-  ),
-)
-const NonNegativeQuantity = Schema.String.check(Schema.isPattern(/^(0|[1-9]\d*)$/))
+const Quantity = PositiveQuantity
 /** Percent with up to two decimals between 0 and 100. */
 export const DiscountPercent = Schema.String.check(
   Schema.makeFilter((value) => /^\d{1,3}(\.\d{1,2})?$/.test(value) && Number(value) <= 100, {

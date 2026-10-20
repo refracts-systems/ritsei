@@ -7,26 +7,20 @@ import {
   type DatabaseFailure,
   FinancialMajorAmount,
   InstantString,
+  Uuid,
+  TrimmedText,
+  UpperCode,
+  SignedAmount,
+  DottedName,
 } from "../../../../framework/foundation/mod.ts"
 import { Principal } from "../../../../framework/modules/auth/mod.ts"
 import type { AuthorizationDenied } from "../../../../framework/modules/authorization/mod.ts"
 import type * as AccountingErrors from "./errors.ts"
 
-const Uuid = Schema.String.check(Schema.isUUID())
-const TrimmedNonEmptyString = Schema.String.check(
-  Schema.makeFilter((value) => /\S/.test(value) && value === value.trim(), {
-    expected: "a trimmed nonblank string",
-  }),
-)
-const AccountCode = Schema.String.check(
-  Schema.makeFilter(
-    (value) => /\S/.test(value) && value === value.trim() && value === value.toUpperCase(),
-    { expected: "a trimmed uppercase account code" },
-  ),
-)
+const TrimmedNonEmptyString = TrimmedText(256)
+const AccountCode = UpperCode(64)
 /** Signed exact amount: positive is a debit balance, negative a credit balance. */
-const SignedAmount = Schema.String.check(Schema.isPattern(/^-?\d{1,20}\.\d{2}$/))
-const SourceType = Schema.String.check(Schema.isPattern(/^[a-z][a-z0-9_.]*$/))
+const SourceType = DottedName
 
 export const AccountType = Schema.Literals(["asset", "liability", "equity", "revenue", "expense"])
 export type AccountType = Schema.Schema.Type<typeof AccountType>

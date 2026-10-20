@@ -19,7 +19,10 @@ import {
   uuidv7,
 } from "../../../../framework/foundation/mod.ts"
 import type { Principal as PrincipalSchema } from "../../../../framework/modules/auth/mod.ts"
-import { AuthorizationService } from "../../../../framework/modules/authorization/mod.ts"
+import {
+  AuthorizationService,
+  makeScopedCommand,
+} from "../../../../framework/modules/authorization/mod.ts"
 import { NumberingService } from "../../../../framework/modules/numbering/mod.ts"
 import { GeneralLedgerService } from "../../accounting/mod.ts"
 import { BillingService } from "../../billing/mod.ts"
@@ -57,9 +60,48 @@ const rules = {
   outgoing: { side: "payable", kind: "supplier_bill", prefix: "PAY/" },
 } as const
 
+type BucketName = "current" | "days1To30" | "days31To60" | "days61To90" | "over90" | "unapplied"
+type Buckets = Record<BucketName, bigint>
+
+const emptyBuckets = (): Buckets => ({
+  current: 0n,
+  days1To30: 0n,
+  days31To60: 0n,
+  days61To90: 0n,
+  over90: 0n,
+  unapplied: 0n,
+})
+
+/** The aging bucket for a number of days past due. */
+const bucketFor = (overdue: number): BucketName => {
+  if (overdue <= 0) return "current"
+  if (overdue <= 30) return "days1To30"
+  if (overdue <= 60) return "days31To60"
+  return overdue <= 90 ? "days61To90" : "over90"
+}
+
+const formatBuckets = (values: Buckets) => ({
+  current: major(values.current),
+  days1To30: major(values.days1To30),
+  days31To60: major(values.days31To60),
+  days61To90: major(values.days61To90),
+  over90: major(values.over90),
+  unapplied: major(values.unapplied),
+  total: major(Object.values(values).reduce((sum, value) => sum + value, 0n)),
+})
+
+const sumBuckets = (rows: Iterable<Buckets>) => {
+  const totals = emptyBuckets()
+  for (const values of rows) {
+    for (const key of Object.keys(totals) as BucketName[]) totals[key] += values[key]
+  }
+  return totals
+}
+
 export const makeSettlementService = Effect.gen(function* () {
   const database = yield* Database
   const authorization = yield* AuthorizationService
+  const authorized = makeScopedCommand(authorization)
   const ledger = yield* GeneralLedgerService
   const billing = yield* BillingService
   const numbering = yield* NumberingService
@@ -248,14 +290,15 @@ export const makeSettlementService = Effect.gen(function* () {
     )
 
   const receivePayment = Effect.fn("SettlementService.receivePayment")(function* (input: unknown) {
-    const decoded = yield* Schema.decodeUnknownEffect(ReceivePaymentInput)(input)
-    yield* authorize(decoded, SettlementCapabilities.paymentReceive)
+    const decoded = yield* authorized(
+      ReceivePaymentInput,
+      SettlementCapabilities.paymentReceive,
+    )(input)
     return yield* record("incoming", decoded)
   })
 
   const makePayment = Effect.fn("SettlementService.makePayment")(function* (input: unknown) {
-    const decoded = yield* Schema.decodeUnknownEffect(MakePaymentInput)(input)
-    yield* authorize(decoded, SettlementCapabilities.paymentMake)
+    const decoded = yield* authorized(MakePaymentInput, SettlementCapabilities.paymentMake)(input)
     return yield* record("outgoing", decoded)
   })
 
@@ -282,8 +325,10 @@ export const makeSettlementService = Effect.gen(function* () {
   const createPaymentTerm = Effect.fn("SettlementService.createPaymentTerm")(function* (
     input: unknown,
   ) {
-    const decoded = yield* Schema.decodeUnknownEffect(CreatePaymentTermInput)(input)
-    yield* authorize(decoded, SettlementCapabilities.paymentTermConfigure)
+    const decoded = yield* authorized(
+      CreatePaymentTermInput,
+      SettlementCapabilities.paymentTermConfigure,
+    )(input)
     const code = decoded.code.toUpperCase()
     const rows = yield* database
       .query(
@@ -318,8 +363,10 @@ export const makeSettlementService = Effect.gen(function* () {
   const assignPartyTerm = Effect.fn("SettlementService.assignPartyTerm")(function* (
     input: unknown,
   ) {
-    const decoded = yield* Schema.decodeUnknownEffect(AssignPartyTermInput)(input)
-    yield* authorize(decoded, SettlementCapabilities.paymentTermConfigure)
+    const decoded = yield* authorized(
+      AssignPartyTermInput,
+      SettlementCapabilities.paymentTermConfigure,
+    )(input)
     yield* database
       .query(
         (db) =>
@@ -376,15 +423,12 @@ export const makeSettlementService = Effect.gen(function* () {
       "settlement.payment.unallocated",
     )
 
-  const aging = Effect.fn("SettlementService.aging")(function* (input: unknown) {
-    const decoded = yield* Schema.decodeUnknownEffect(AgingInput)(input)
-    yield* authorize(decoded, SettlementCapabilities.reportRead)
-    const items = yield* billing.listOpenItems(decoded)
-    const partyIds = [...new Set(items.map((item) => item.partyId))]
-    const terms =
-      partyIds.length === 0
-        ? []
-        : yield* database.query(
+  /** Net payment days per party for one side; parties without terms are due immediately. */
+  const netDaysFor = (tenantId: string, side: "receivable" | "payable", partyIds: string[]) =>
+    partyIds.length === 0
+      ? Effect.succeed(new Map<string, number>())
+      : database
+          .query(
             (db) =>
               db
                 .select({ partyId: partyPaymentTerms.partyId, netDays: paymentTerms.netDays })
@@ -398,53 +442,33 @@ export const makeSettlementService = Effect.gen(function* () {
                 )
                 .where(
                   and(
-                    eq(partyPaymentTerms.tenantId, decoded.tenantId),
-                    eq(partyPaymentTerms.side, decoded.side),
+                    eq(partyPaymentTerms.tenantId, tenantId),
+                    eq(partyPaymentTerms.side, side),
                     inArray(partyPaymentTerms.partyId, partyIds),
                   ),
                 ),
             "settlement.party_term.list",
           )
-    const netDays = new Map(terms.map((term) => [term.partyId, term.netDays]))
-    type Row = Record<
-      "current" | "days1To30" | "days31To60" | "days61To90" | "over90" | "unapplied",
-      bigint
-    >
-    const rows = new Map<string, Row>()
+          .pipe(Effect.map((terms) => new Map(terms.map((term) => [term.partyId, term.netDays]))))
+
+  const aging = Effect.fn("SettlementService.aging")(function* (input: unknown) {
+    const decoded = yield* authorized(AgingInput, SettlementCapabilities.reportRead)(input)
+    const items = yield* billing.listOpenItems(decoded)
+    const netDays = yield* netDaysFor(decoded.tenantId, decoded.side, [
+      ...new Set(items.map((item) => item.partyId)),
+    ])
+    const rows = new Map<string, Buckets>()
     const row = (partyId: string) => {
-      const existing = rows.get(partyId)
-      if (existing !== undefined) return existing
-      const created: Row = {
-        current: 0n,
-        days1To30: 0n,
-        days31To60: 0n,
-        days61To90: 0n,
-        over90: 0n,
-        unapplied: 0n,
-      }
-      rows.set(partyId, created)
-      return created
+      const values = rows.get(partyId) ?? emptyBuckets()
+      rows.set(partyId, values)
+      return values
     }
     for (const item of items) {
       const amount = signedMinor(item.openAmount)
-      const target = row(item.partyId)
-      if (amount < 0n) {
-        target.unapplied += amount
-        continue
-      }
+      // Credit notes are unapplied credit; documents age from their due date.
       const due = addDays(item.invoiceDate, netDays.get(item.partyId) ?? 0)
-      const overdue = daysBetween(due, decoded.asOf)
-      const bucket =
-        overdue <= 0
-          ? "current"
-          : overdue <= 30
-            ? "days1To30"
-            : overdue <= 60
-              ? "days31To60"
-              : overdue <= 90
-                ? "days61To90"
-                : "over90"
-      target[bucket] += amount
+      const bucket = amount < 0n ? "unapplied" : bucketFor(daysBetween(due, decoded.asOf))
+      row(item.partyId)[bucket] += amount
     }
     const direction = decoded.side === "receivable" ? "incoming" : "outgoing"
     for (const payment of yield* unallocatedPayments(
@@ -455,45 +479,21 @@ export const makeSettlementService = Effect.gen(function* () {
     )) {
       row(payment.partyId).unapplied -= minor(payment.unallocated)
     }
-    const format = (values: Row) => {
-      const total = Object.values(values).reduce((sum, value) => sum + value, 0n)
-      return {
-        current: major(values.current),
-        days1To30: major(values.days1To30),
-        days31To60: major(values.days31To60),
-        days61To90: major(values.days61To90),
-        over90: major(values.over90),
-        unapplied: major(values.unapplied),
-        total: major(total),
-      }
-    }
-    const totals: Row = {
-      current: 0n,
-      days1To30: 0n,
-      days31To60: 0n,
-      days61To90: 0n,
-      over90: 0n,
-      unapplied: 0n,
-    }
-    for (const values of rows.values()) {
-      for (const key of Object.keys(totals) as Array<keyof Row>) totals[key] += values[key]
-    }
     return {
       legalEntityId: decoded.legalEntityId,
       side: decoded.side,
       asOf: decoded.asOf,
       rows: [...rows]
         .toSorted(([left], [right]) => left.localeCompare(right))
-        .map(([partyId, values]) => ({ partyId, ...format(values) })),
-      totals: format(totals),
+        .map(([partyId, values]) => ({ partyId, ...formatBuckets(values) })),
+      totals: formatBuckets(sumBuckets(rows.values())),
     }
   })
 
   const customerStatement = Effect.fn("SettlementService.customerStatement")(function* (
     input: unknown,
   ) {
-    const decoded = yield* Schema.decodeUnknownEffect(StatementInput)(input)
-    yield* authorize(decoded, SettlementCapabilities.reportRead)
+    const decoded = yield* authorized(StatementInput, SettlementCapabilities.reportRead)(input)
     const documents = yield* billing.listDocuments({
       principal: decoded.principal,
       tenantId: decoded.tenantId,

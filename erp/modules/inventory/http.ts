@@ -243,7 +243,7 @@ export const InventoryHttpGroup = HttpApiGroup.make("Inventory").add(
       lines: BoundedArray(
         Schema.Struct({
           itemId: Uuid,
-          countedQuantity: Schema.String.check(Schema.isPattern(/^(0|[1-9]d{0,17})$/)),
+          countedQuantity: Schema.String.check(Schema.isPattern(/^(0|[1-9]\d{0,17})$/)),
           unitCost: Schema.optionalKey(FinancialMajorAmount),
         }),
       ),

@@ -6,6 +6,9 @@ import {
   CalendarDate,
   type DatabaseFailure,
   FinancialMajorAmount,
+  Uuid,
+  TrimmedText,
+  SignedAmount,
 } from "../../../../framework/foundation/mod.ts"
 import { Principal } from "../../../../framework/modules/auth/mod.ts"
 import type { AuthorizationDenied } from "../../../../framework/modules/authorization/mod.ts"
@@ -17,13 +20,7 @@ import type {
 } from "../../billing/mod.ts"
 import type * as SettlementErrors from "./errors.ts"
 
-const Uuid = Schema.String.check(Schema.isUUID())
-const Text = Schema.String.check(
-  Schema.makeFilter((value) => /\S/.test(value) && value === value.trim() && value.length <= 128, {
-    expected: "a trimmed nonblank text of at most 128 characters",
-  }),
-)
-const SignedAmount = Schema.String.check(Schema.isPattern(/^-?\d{1,20}\.\d{2}$/))
+const Text = TrimmedText(128)
 const ScopedInput = { principal: Principal, tenantId: Uuid }
 
 export const SettlementSide = Schema.Literals(["receivable", "payable"])

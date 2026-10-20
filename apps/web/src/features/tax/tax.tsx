@@ -17,6 +17,24 @@ const directionOptions = [
   { value: "purchase", label: "Purchases" },
 ]
 
+const text = (value: unknown) => (typeof value === "string" ? value.trim() : "")
+
+const directionOf = (value: unknown) => (value === "purchase" ? "purchase" : "sales")
+
+const isComplete = (payload: { code: string; name: string; rate: string }) =>
+  payload.code !== "" && payload.name !== "" && /^\d{1,3}(\.\d{1,4})?$/.test(payload.rate)
+
+/** The create payload, or undefined when the code, name, or rate is missing or malformed. */
+const taxCodePayload = (value: Record<string, unknown>) => {
+  const payload = {
+    code: text(value.code).toUpperCase(),
+    name: text(value.name),
+    rate: text(value.rate),
+    direction: directionOf(value.direction),
+  }
+  return isComplete(payload) ? payload : undefined
+}
+
 function TaxCodeTable(props: { records: readonly TaxCode[] }) {
   return (
     <DataTable
@@ -67,13 +85,9 @@ function CreateTaxCodeDialog(props: { reload: () => Promise<unknown> }) {
         }}
         class={layout.stack}
         onSubmit={(value) => {
-          const code = typeof value.code === "string" ? value.code.trim().toUpperCase() : ""
-          const name = typeof value.name === "string" ? value.name.trim() : ""
-          const rate = typeof value.rate === "string" ? value.rate.trim() : ""
-          const direction = value.direction === "purchase" ? "purchase" : "sales"
-          const valid = code !== "" && name !== "" && /^d{1,3}(.d{1,4})?$/.test(rate)
-          setInvalid(!valid)
-          if (valid && !mutation.isPending) mutation.mutate({ code, name, rate, direction })
+          const payload = taxCodePayload(value)
+          setInvalid(payload === undefined)
+          if (payload !== undefined && !mutation.isPending) mutation.mutate(payload)
         }}
       >
         <FormField

@@ -6,6 +6,9 @@ import {
   CalendarDate,
   type DatabaseFailure,
   FinancialMajorAmount,
+  Uuid,
+  PositiveQuantity,
+  NonNegativeQuantity,
 } from "../../../../framework/foundation/mod.ts"
 import type { ApprovalRequest } from "../../../../framework/modules/approvals/mod.ts"
 import { Principal } from "../../../../framework/modules/auth/mod.ts"
@@ -22,14 +25,7 @@ import type { PartyRelationshipNotFound } from "../../party/mod.ts"
 import type { ProductNotFound } from "../../product/mod.ts"
 import type * as ProcurementErrors from "./errors.ts"
 
-const Uuid = Schema.String.check(Schema.isUUID())
-const Quantity = Schema.String.check(
-  Schema.makeFilter(
-    (value) => /^[1-9]\d*$/.test(value) && BigInt(value) <= 9_223_372_036_854_775_807n,
-    { expected: "a positive PostgreSQL bigint quantity" },
-  ),
-)
-const NonNegativeQuantity = Schema.String.check(Schema.isPattern(/^(0|[1-9]\d*)$/))
+const Quantity = PositiveQuantity
 const ScopedInput = { principal: Principal, tenantId: Uuid }
 const uniqueLines = <T extends { readonly purchaseOrderLineId: string }>(lines: ReadonlyArray<T>) =>
   new Set(lines.map((line) => line.purchaseOrderLineId)).size === lines.length
