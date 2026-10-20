@@ -70,7 +70,9 @@ export const makeAuthService = Effect.gen(function* () {
       )
   })
 
-  const createTenant = Effect.fn("auth.createTenant")(function* (input: unknown) {
+  const createTenant = Effect.fn("auth.createTenant")(function* (
+    input: Schema.Codec.Encoded<typeof CreateTenantInput>,
+  ) {
     const decoded = yield* Schema.decodeUnknownEffect(CreateTenantInput)(input)
     const { slug, timezone } = normalizeTenant(decoded)
     return yield* store
@@ -78,7 +80,9 @@ export const makeAuthService = Effect.gen(function* () {
       .pipe(Effect.map((tenant) => ({ ...tenant }) satisfies Tenant))
   })
 
-  const issueSession = Effect.fn("auth.issueSession")(function* (input: unknown) {
+  const issueSession = Effect.fn("auth.issueSession")(function* (
+    input: Schema.Codec.Encoded<typeof IssueSessionInput>,
+  ) {
     const decoded = yield* Schema.decodeUnknownEffect(IssueSessionInput)(input)
     const account = yield* userAccounts
       .getAuthenticationState(decoded.userAccountId)

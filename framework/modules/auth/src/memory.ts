@@ -34,7 +34,9 @@ export const makeMemoryAuthLayer = (
         )
       })
 
-      const createTenant = Effect.fn("auth.createTenant")(function* (input: unknown) {
+      const createTenant = Effect.fn("auth.createTenant")(function* (
+        input: Schema.Codec.Encoded<typeof CreateTenantInput>,
+      ) {
         const decoded = yield* Schema.decodeUnknownEffect(CreateTenantInput)(input)
         const slug = decoded.slug.trim().toLowerCase()
         const timezone = decoded.timezone?.trim() ?? "UTC"
@@ -46,7 +48,9 @@ export const makeMemoryAuthLayer = (
         return tenant
       })
 
-      const issueSession = Effect.fn("auth.issueSession")(function* (input: unknown) {
+      const issueSession = Effect.fn("auth.issueSession")(function* (
+        input: Schema.Codec.Encoded<typeof IssueSessionInput>,
+      ) {
         const decoded = yield* Schema.decodeUnknownEffect(IssueSessionInput)(input)
         if (validUserAccountIds !== undefined && !validUserAccountIds.has(decoded.userAccountId)) {
           return yield* Effect.fail(

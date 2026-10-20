@@ -52,7 +52,7 @@ export interface AuthService {
     slug: string,
   ) => Effect.Effect<Tenant | undefined, import("../../../foundation/mod.ts").DatabaseFailure>
   readonly createTenant: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreateTenantInput>,
   ) => Effect.Effect<
     Tenant,
     | import("./errors.ts").TenantAlreadyExists
@@ -60,7 +60,7 @@ export interface AuthService {
     | Schema.SchemaError
   >
   readonly issueSession: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof IssueSessionInput>,
   ) => Effect.Effect<
     IssuedSession,
     | import("./errors.ts").SessionUserAccountNotFound
