@@ -17,8 +17,8 @@ formatting, and Fallow because it keeps upstream's tab-indented style.
 `anti-slop/no-reduce-accumulator-copy`, `anti-slop/no-known-value-widening`,
 `anti-slop/no-module-mocking`, `anti-slop/no-object-parameters`, `anti-slop/no-reflect-apply`,
 `anti-slop/no-reflect-get`, `anti-slop/no-unknown-type-aliases`,
-`anti-slop/no-widen-then-assert`, `anti-slop-effect/no-manual-effect-error-tag`, and
-`anti-slop-effect/prefer-effect-match`.
+`anti-slop/no-widen-then-assert`, `anti-slop-effect/no-manual-effect-error-tag`,
+`anti-slop-effect/prefer-effect-match`, and `anti-slop/no-chained-type-assertions`.
 
 `pnpm run lint` passes with this set. Fixes made when enabling it:
 
@@ -33,6 +33,11 @@ formatting, and Fallow because it keeps upstream's tab-indented style.
   (a lookup is an accepted replacement for `Match`, so adding a union member is a type error);
   tagged outcomes use `Match.tag`; the action-to-effect choice in the process operator is a record
   of functions.
+- `no-chained-type-assertions` (35 sites): test doubles go through `partial<T>()` in
+  `tests/support/partial.ts`, the one place a double is asserted into its full type. The runtime
+  `postgres.js` client reaches the version check through `asPostgresClient` (now in
+  `framework/platform/postgres`, no longer private to migrations), which also dropped its own two
+  casts. The experiment facade `solid-effect.ts` keeps a file-level disable with its reason.
 - `no-reflect-get` (1 site): the `Proxy` default branch in `request-limits.ts` keeps
   `Reflect.get` with a justified `oxlint-disable-next-line`.
 
@@ -48,7 +53,6 @@ cleanup it needs.
 | `no-unsafe-dictionary-type` | 26 | `Record<string, unknown>` marks untrusted payloads (events, evidence, responses). |
 | `no-runtime-typeof` | 60 | Frontend and platform adapters narrow untrusted values without a schema. |
 | `no-conditional-empty-object-spread` | 51 | `...(x === undefined ? {} : { x })` is how optional keys are omitted for `Schema.optionalKey`; assigning `undefined` is not equivalent. |
-| `no-chained-type-assertions` | 35 | `as unknown as` in test doubles; needs a typed fixture approach first. |
 | `no-shape-in-symbol-names` | 110 | Effect service interfaces are named `...ServiceShape` by repository convention. |
 | `require-safety-comment-for-type-assertion` | 429 | Needs a repository-wide assertion cleanup. |
 | `require-readable-spacing` | 8468 | Formatting belongs to oxfmt; the autofix would rewrite most files and fight the formatter. |

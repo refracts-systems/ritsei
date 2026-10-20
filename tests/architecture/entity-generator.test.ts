@@ -12,6 +12,7 @@ import {
   addServiceLayer,
 } from "../../tooling/entity-edits.ts"
 import { entityNames, renderEntityModule } from "../../tooling/entity-templates.ts"
+import { partial } from "../support/partial.ts"
 
 const names = entityNames("service_contract", "contract")
 const read = (path: string) => Effect.promise(() => readFile(path, "utf8"))
@@ -25,7 +26,7 @@ const assertInserted = (
 ) => {
   const file = ts.createSourceFile(path, after, ts.ScriptTarget.Latest, true)
   assert.deepStrictEqual(
-    (file as unknown as { parseDiagnostics: readonly unknown[] }).parseDiagnostics,
+    partial<{ parseDiagnostics: readonly unknown[] }>(file).parseDiagnostics,
     [],
   )
   for (const text of expected) assert.include(after, text)

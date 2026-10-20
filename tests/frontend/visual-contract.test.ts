@@ -54,7 +54,7 @@ const styleOf = (locator: Locator) =>
       const style = getComputedStyle(element)
       return Object.fromEntries(names.map((name) => [name, style.getPropertyValue(name)]))
     },
-    properties as unknown as string[],
+    [...properties],
   )
 
 const capture = async (page: Page) => {

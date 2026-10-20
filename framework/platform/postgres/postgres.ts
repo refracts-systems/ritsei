@@ -9,8 +9,23 @@ import {
   type DatabaseService,
   type DrizzleDatabase,
   type PostgresClient,
+  type PostgresTransaction,
   UnsupportedPostgresVersion,
 } from "../../foundation/database/mod.ts"
+
+/** Presents a postgres.js client through the narrow client interface the version check needs. */
+export const asPostgresClient = (client: Sql): PostgresClient => ({
+  begin: <A>(callback: (transaction: PostgresTransaction) => Promise<A>) =>
+    client.begin((transaction) => {
+      const adapted: PostgresTransaction = {
+        unsafe: <Row extends Record<string, unknown>>(
+          query: string,
+          parameters?: readonly unknown[],
+        ) => transaction.unsafe<Row[]>(query, parameters as never[] | undefined),
+      }
+      return callback(adapted)
+    }) as Promise<A>,
+})
 
 class TransactionEffectFailure extends Error {
   constructor(readonly failure: unknown) {
@@ -50,7 +65,7 @@ const makeVersionValidation = (
 export const validatePostgresVersion = (client: PostgresClient) => makeVersionValidation(client)
 
 export const makePostgresDatabase = (client: Sql): DatabaseService => {
-  const validateVersion = makeVersionValidation(client as unknown as PostgresClient)
+  const validateVersion = makeVersionValidation(asPostgresClient(client))
   const database = drizzle({ client })
 
   const validate = validateVersion.pipe(
@@ -71,7 +86,7 @@ export const makePostgresDatabase = (client: Sql): DatabaseService => {
             try: () =>
               transaction === undefined
                 ? operation(database)
-                : operation(transaction as unknown as DrizzleDatabase),
+                : operation(transaction as DrizzleDatabase),
             catch: (cause) => new DatabaseFailure({ operation: operationName, cause }),
           })
         }),

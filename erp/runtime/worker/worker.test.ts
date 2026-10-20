@@ -16,6 +16,7 @@ import {
   runFinancialOperationOnce,
   WorkerInjectedFailure,
 } from "./runner.ts"
+import { partial } from "../../../tests/support/partial.ts"
 
 const tenantId = "00000000-0000-4000-8000-000000000001"
 const jobId = "00000000-0000-4000-8000-000000000002"
@@ -67,7 +68,7 @@ it.effect("claims a financial job and completes it through the Accounting contra
     payload: { tenantId, operationId },
     correlationId: operationId,
   }
-  const process = {
+  const process = partial<ProcessService>({
     claimJob: () => Effect.succeed(job),
     completeJob: (input: { leaseToken: string }) => {
       assert.strictEqual(input.leaseToken, leaseToken)
@@ -81,8 +82,8 @@ it.effect("claims a financial job and completes it through the Accounting contra
     },
     renewJob: () => Effect.succeed(job),
     failJob: () => Effect.succeed(job),
-  } as unknown as ProcessService
-  const accounting = {
+  })
+  const accounting = partial<FinancialOperationService>({
     submitFinancialOperation: () =>
       Effect.gen(function* () {
         const fence = yield* FencingContextService
@@ -120,7 +121,7 @@ it.effect("claims a financial job and completes it through the Accounting contra
     createJournalIntent: () => Effect.die("not used"),
     createRevenueIntent: () => Effect.die("not used"),
     createReversalIntent: () => Effect.die("not used"),
-  } as unknown as FinancialOperationService
+  })
 
   return runFinancialOperationOnce({ tenantId, workerId: "worker-1" }).pipe(
     Effect.provide(
@@ -158,7 +159,7 @@ it.effect("releases an unknown reconciliation for a bounded retry", () => {
     payload: { tenantId, operationId },
     correlationId: operationId,
   }
-  const process = {
+  const process = partial<ProcessService>({
     claimJob: () => Effect.succeed(job),
     completeJob: () => Effect.die("reconciliation must be retried"),
     renewJob: () => Effect.die("not used"),
@@ -168,8 +169,8 @@ it.effect("releases an unknown reconciliation for a bounded retry", () => {
       failed = true
       return Effect.succeed({ ...job, status: "pending" as const })
     },
-  } as unknown as ProcessService
-  const accounting = {
+  })
+  const accounting = partial<FinancialOperationService>({
     submitFinancialOperation: () => Effect.die("not used"),
     reconcileFinancialOperation: () =>
       Effect.succeed({
@@ -200,7 +201,7 @@ it.effect("releases an unknown reconciliation for a bounded retry", () => {
     createJournalIntent: () => Effect.die("not used"),
     createRevenueIntent: () => Effect.die("not used"),
     createReversalIntent: () => Effect.die("not used"),
-  } as unknown as FinancialOperationService
+  })
 
   return runFinancialOperationOnce({ tenantId, workerId: "worker-1" }).pipe(
     Effect.provide(
@@ -240,13 +241,13 @@ it.effect(
       payload: { tenantId, operationId },
       correlationId: operationId,
     }
-    const process = {
+    const process = partial<ProcessService>({
       claimJob: () => Effect.succeed(job),
       completeJob: () => Effect.die("must not complete a terminated lease"),
       renewJob: () => Effect.succeed(job),
       failJob: () => Effect.die("must not mutate a terminated lease"),
-    } as unknown as ProcessService
-    const accounting = {
+    })
+    const accounting = partial<FinancialOperationService>({
       submitFinancialOperation: () => {
         accounted = true
         return Effect.succeed(workerOperation("reconciled"))
@@ -255,7 +256,7 @@ it.effect(
       createJournalIntent: () => Effect.die("not used"),
       createRevenueIntent: () => Effect.die("not used"),
       createReversalIntent: () => Effect.die("not used"),
-    } as unknown as FinancialOperationService
+    })
 
     return Effect.flip(runFinancialOperationOnce({ tenantId, workerId: "worker-1" })).pipe(
       Effect.provide(
@@ -296,7 +297,7 @@ it.effect("renews a long-running financial lease with its generation", () =>
       payload: { tenantId, operationId },
       correlationId: operationId,
     }
-    const process = {
+    const process = partial<ProcessService>({
       claimJob: () => Effect.succeed(job),
       renewJob: (input: { leaseGeneration: string }) => {
         assert.strictEqual(input.leaseGeneration, "5")
@@ -305,15 +306,15 @@ it.effect("renews a long-running financial lease with its generation", () =>
       },
       completeJob: () => Effect.succeed({ ...job, status: "completed" as const }),
       failJob: () => Effect.die("must not fail a successful operation"),
-    } as unknown as ProcessService
-    const accounting = {
+    })
+    const accounting = partial<FinancialOperationService>({
       submitFinancialOperation: () =>
         Effect.sleep("2 minutes").pipe(Effect.as(workerOperation("reconciled"))),
       reconcileFinancialOperation: () => Effect.die("not used"),
       createJournalIntent: () => Effect.die("not used"),
       createRevenueIntent: () => Effect.die("not used"),
       createReversalIntent: () => Effect.die("not used"),
-    } as unknown as FinancialOperationService
+    })
     const fiber = yield* runFinancialOperationOnce({ tenantId, workerId: "worker-1" }).pipe(
       Effect.provide(
         Layer.mergeAll(
@@ -351,7 +352,7 @@ it.effect("restarts after Accounting acceptance and fences stale duplicate compl
     payload: { tenantId, operationId },
     correlationId: operationId,
   }
-  const process = {
+  const process = partial<ProcessService>({
     claimJob: () => Effect.succeed(job),
     completeJob: () => {
       completions += 1
@@ -361,14 +362,14 @@ it.effect("restarts after Accounting acceptance and fences stale duplicate compl
     },
     renewJob: () => Effect.succeed(job),
     failJob: () => Effect.succeed(job),
-  } as unknown as ProcessService
-  const accounting = {
+  })
+  const accounting = partial<FinancialOperationService>({
     submitFinancialOperation: () => Effect.succeed(workerOperation("reconciled")),
     reconcileFinancialOperation: () => Effect.die("not used"),
     createJournalIntent: () => Effect.die("not used"),
     createRevenueIntent: () => Effect.die("not used"),
     createReversalIntent: () => Effect.die("not used"),
-  } as unknown as FinancialOperationService
+  })
   const services = Layer.mergeAll(
     Layer.succeed(ProcessService, process),
     Layer.succeed(FinancialOperationService, accounting),

@@ -1,3 +1,4 @@
+/* oxlint-disable anti-slop/no-chained-type-assertions -- this facade re-exports the production module under the experiment's narrower public types, which TypeScript cannot relate without going through unknown */
 import type * as Effect from "effect/Effect"
 import type * as Layer from "effect/Layer"
 import type * as ManagedRuntime from "effect/ManagedRuntime"

@@ -28,6 +28,7 @@ import {
 } from "../../modules/party/mod.ts"
 import { SalesService } from "../../modules/sales/mod.ts"
 import { bootstrapTenant } from "./bootstrap.ts"
+import { partial } from "../../../tests/support/partial.ts"
 
 const principal = { userAccountId: "bootstrap-admin", sessionId: "session" }
 const input = {
@@ -60,9 +61,10 @@ const withBootstrap = <A, E>(
       Layer.mergeAll(
         authorizationLayer,
         messagingLayer,
-        Layer.succeed(SalesService, {
-          getConfirmedOrderTotal: () => Effect.succeed("0.00"),
-        } as unknown as SalesService),
+        Layer.succeed(
+          SalesService,
+          partial<SalesService>({ getConfirmedOrderTotal: () => Effect.succeed("0.00") }),
+        ),
       ),
     ),
   )

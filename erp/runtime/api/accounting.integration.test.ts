@@ -19,6 +19,7 @@ import {
 import { BearerAuth, CurrentPrincipal, RitseiApi } from "./api.ts"
 import { AccountingHttpHandlers as AccountingHandlers } from "../../modules/accounting/http.ts"
 import { unusedService } from "../../../tests/support/unused-service.ts"
+import { partial } from "../../../tests/support/partial.ts"
 
 const tenantId = "01920000-0000-7000-8000-000000000001"
 const legalEntityId = "01920000-0000-7000-8000-000000000002"
@@ -70,7 +71,7 @@ const journal = {
 }
 
 const observedInputs: unknown[] = []
-const accountingService: AccountingServiceContract = {
+const accountingService = partial<AccountingServiceContract>({
   listAccountingConfigurations: (input: unknown) =>
     Effect.sync(() => {
       observedInputs.push(input)
@@ -86,7 +87,7 @@ const accountingService: AccountingServiceContract = {
   openPeriod: () => Effect.succeed(period),
   closePeriod: () => Effect.succeed(closedPeriod),
   postJournal: () => Effect.succeed(journal),
-} as unknown as AccountingServiceContract
+})
 
 const financialOperations = {} as FinancialOperationServiceContract
 // The ledger endpoints are covered by the general-ledger tests; these contracts never reach them.

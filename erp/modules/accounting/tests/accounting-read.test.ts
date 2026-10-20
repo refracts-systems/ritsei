@@ -9,6 +9,7 @@ import {
 import { makeMessagingTestLayer } from "../../../../framework/modules/messaging/mod.ts"
 import { SalesService } from "../../sales/mod.ts"
 import { AccountingCapabilities, AccountingService, makeAccountingTestLayer } from "../mod.ts"
+import { partial } from "../../../../tests/support/partial.ts"
 
 const principal = { userAccountId: "accounting-reader", sessionId: "accounting-session" }
 const tenantId = "01900000-0000-7000-8000-000000000001"
@@ -16,9 +17,9 @@ const otherTenantId = "01900000-0000-7000-8000-000000000002"
 const legalEntityId = "01900000-0000-7000-8000-000000000010"
 const otherLegalEntityId = "01900000-0000-7000-8000-000000000011"
 const capabilities = Object.values(AccountingCapabilities)
-const salesFacts = {
+const salesFacts = partial<SalesService>({
   getConfirmedOrderTotal: () => Effect.succeed("125.00"),
-} as unknown as SalesService
+})
 
 const withAccounting = <A, E>(
   program: Effect.Effect<A, E, AccountingService>,

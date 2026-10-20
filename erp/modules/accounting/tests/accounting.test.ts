@@ -49,6 +49,7 @@ import {
   ReverseRevenueForOrderInput,
   UnbalancedJournal,
 } from "../mod.ts"
+import { partial } from "../../../../tests/support/partial.ts"
 
 const principal = { userAccountId: "accountant", sessionId: "session" }
 const tenantId = "00000000-0000-4000-8000-000000000001"
@@ -61,9 +62,9 @@ const revenueOrderIds = {
   idempotency: "00000000-0000-4000-8000-000000000013",
   rollback: "00000000-0000-4000-8000-000000000014",
 } as const
-const salesFacts = {
+const salesFacts = partial<SalesService>({
   getConfirmedOrderTotal: () => Effect.succeed("125.00"),
-} as unknown as SalesService
+})
 const revenueMetadata = {
   commandId: "revenue-command-1",
   correlationId: "revenue-correlation-1",

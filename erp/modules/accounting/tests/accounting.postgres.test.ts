@@ -24,10 +24,11 @@ import {
   JournalIdempotencyConflict,
   makeAccountingService,
 } from "../mod.ts"
+import { partial } from "../../../../tests/support/partial.ts"
 
-const salesFacts = {
+const salesFacts = partial<SalesService>({
   getConfirmedOrderTotal: () => Effect.succeed("10.00"),
-} as unknown as SalesService
+})
 
 const databaseUrl = process.env["DATABASE_URL"]
 

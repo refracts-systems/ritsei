@@ -48,6 +48,7 @@ import {
   type FinancialStoreWatermarkType,
   hashFinancialStoreWatermarks,
 } from "../mod.ts"
+import { partial } from "../../../../tests/support/partial.ts"
 
 const databaseUrl = process.env["DATABASE_URL"]
 const postgresFailure = (effect: () => Promise<unknown>) =>
@@ -278,9 +279,9 @@ it.effect.skipIf(databaseUrl === undefined)(
           Effect.service(FinancialLedgerPort),
           makeFinancialLedgerTestLayer(),
         )
-        const sales = {
+        const sales = partial<SalesService>({
           getConfirmedOrderTotal: () => Effect.succeed(LARGE_FINANCIAL_MAJOR),
-        } as unknown as SalesService
+        })
         const observationScope = `tenant:${tenant!.id}/legal-entity:${legalEntity!.id}`
         const observedSourceWatermark = {
           authority: "postgresql" as const,

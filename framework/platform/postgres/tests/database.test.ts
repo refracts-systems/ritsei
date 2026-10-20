@@ -15,6 +15,7 @@ import {
   makePostgresReadYourWrites,
   validatePostgresVersion,
 } from "../mod.ts"
+import { partial } from "../../../../tests/support/partial.ts"
 
 const makeClient = (version = "190000") => {
   const queries: Array<{ sql: string; parameters: readonly unknown[] }> = []
@@ -29,14 +30,14 @@ const makeClient = (version = "190000") => {
         query === "show server_version_num"
           ? [{ server_version_num: version }]
           : [{ id: "018f0000-0000-7000-8000-000000000000", email: "typed@example.com" }]
-      const result = Promise.resolve(rows as unknown as readonly Row[])
+      const result = Promise.resolve(partial<readonly Row[]>(rows))
       return Object.assign(result, {
         values: () => Promise.resolve(rows.map((row) => Object.values(row))),
       })
     },
     begin: <A>(operation: (transaction: unknown) => Promise<A>) => operation(client),
   }
-  return { client: client as unknown as Sql, queries }
+  return { client: partial<Sql>(client), queries }
 }
 
 const makeConsistencyClient = (
@@ -62,10 +63,10 @@ const makeConsistencyClient = (
                 timeline_id: options.timelineId ?? 1,
               },
             ]
-      return Promise.resolve(rows as unknown as readonly Row[])
+      return Promise.resolve(partial<readonly Row[]>(rows))
     },
   }
-  return { client: client as unknown as Sql, queries }
+  return { client: partial<Sql>(client), queries }
 }
 
 const consistencyConfig = {
@@ -107,7 +108,7 @@ describe("database service", () => {
   it.effect("rejects PostgreSQL versions below 19", () =>
     Effect.gen(function* () {
       const { client } = makeClient("180000")
-      const error = yield* Effect.flip(validatePostgresVersion(client as unknown as PostgresClient))
+      const error = yield* Effect.flip(validatePostgresVersion(partial<PostgresClient>(client)))
 
       assert.instanceOf(error, UnsupportedPostgresVersion)
     }),

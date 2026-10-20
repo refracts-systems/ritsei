@@ -5,13 +5,8 @@ import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import type { Sql } from "postgres"
 
-import {
-  DatabaseFailure,
-  type PostgresClient,
-  type PostgresTransaction,
-  UnsupportedPostgresVersion,
-} from "../../foundation/database/mod.ts"
-import { validatePostgresVersion } from "./postgres.ts"
+import { DatabaseFailure, UnsupportedPostgresVersion } from "../../foundation/database/mod.ts"
+import { asPostgresClient, validatePostgresVersion } from "./postgres.ts"
 
 export class MigrationFailure extends Schema.TaggedError<MigrationFailure>()("MigrationFailure", {
   filename: Schema.String,
@@ -123,22 +118,6 @@ const readAppliedMigrations = async (client: Sql): Promise<readonly AppliedMigra
     order by id
   `
 }
-
-const asPostgresClient = (client: Sql): PostgresClient => ({
-  begin: <A>(callback: (transaction: PostgresTransaction) => Promise<A>) =>
-    client.begin((transaction) => {
-      const adapted: PostgresTransaction = {
-        unsafe: <Row extends Record<string, unknown>>(
-          query: string,
-          parameters?: readonly unknown[],
-        ) =>
-          transaction.unsafe(query, parameters as never[] | undefined) as unknown as Promise<
-            readonly Row[]
-          >,
-      }
-      return callback(adapted)
-    }) as unknown as Promise<A>,
-})
 
 export const runMigrations = (
   client: Sql,

@@ -2,6 +2,7 @@ import { assert, describe, it } from "@effect/vitest"
 
 import { defineModule, validateModuleRegistry } from "../mod.ts"
 import type { EventCatalogEntry, ModuleManifest } from "../mod.ts"
+import { partial } from "../../../../tests/support/partial.ts"
 
 const empty = {
   layer: "erp",
@@ -16,7 +17,7 @@ const empty = {
 } as const
 
 const releasedEvent = (owningDomain: string, id: string) =>
-  ({ id, owningDomain }) as unknown as EventCatalogEntry
+  partial<EventCatalogEntry>({ id, owningDomain })
 
 const failuresOf = (manifests: ReadonlyArray<ModuleManifest>) => validateModuleRegistry(manifests)
 

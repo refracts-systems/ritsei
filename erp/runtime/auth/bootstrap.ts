@@ -4,7 +4,6 @@ import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import postgres from "postgres"
 
-import { type PostgresClient } from "../../../framework/foundation/mod.ts"
 import {
   AuthService,
   type Principal,
@@ -19,7 +18,7 @@ import {
   UserAccountAlreadyExists,
   UserAccountService,
 } from "../../../framework/modules/identity/mod.ts"
-import { validatePostgresVersion } from "../../../framework/platform/mod.ts"
+import { asPostgresClient, validatePostgresVersion } from "../../../framework/platform/mod.ts"
 import { isMain } from "../../../tooling/entrypoint.ts"
 import { bootstrapCapabilities, bootstrapTenant } from "../api/bootstrap.ts"
 import { readRuntimeConfiguration } from "../config.ts"
@@ -204,7 +203,7 @@ const run = Effect.scoped(
     }
     const client = postgres(url)
     yield* Effect.addFinalizer(() => Effect.promise(() => client.end()))
-    yield* validatePostgresVersion(client as unknown as PostgresClient)
+    yield* validatePostgresVersion(asPostgresClient(client))
     yield* Effect.provide(provision(input), serviceLayers(client, configuration))
   }),
 )
