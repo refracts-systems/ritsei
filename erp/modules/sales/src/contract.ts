@@ -180,34 +180,38 @@ type CommonFailure =
   | import("../../../../framework/foundation/mod.ts").DatabaseFailure
   | Schema.SchemaError
 export interface SalesService {
-  readonly listCustomers: (input: unknown) => Effect.Effect<ReadonlyArray<Customer>, CommonFailure>
+  readonly listCustomers: (
+    input: Schema.Codec.Encoded<typeof ListCustomersInput>,
+  ) => Effect.Effect<ReadonlyArray<Customer>, CommonFailure>
   readonly getCustomer: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof GetCustomerInput>,
   ) => Effect.Effect<Customer, CustomerNotFound | CommonFailure>
   readonly listQuotations: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ListQuotationsInput>,
   ) => Effect.Effect<ReadonlyArray<Quotation>, CommonFailure>
   readonly getQuotation: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof GetQuotationInput>,
   ) => Effect.Effect<Quotation, QuotationNotFound | CommonFailure>
-  readonly listOrders: (input: unknown) => Effect.Effect<ReadonlyArray<SalesOrder>, CommonFailure>
+  readonly listOrders: (
+    input: Schema.Codec.Encoded<typeof ListOrdersInput>,
+  ) => Effect.Effect<ReadonlyArray<SalesOrder>, CommonFailure>
   readonly getOrder: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof GetOrderInput>,
   ) => Effect.Effect<SalesOrder, SalesOrderNotFound | CommonFailure>
   readonly createCustomer: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreateCustomerInput>,
   ) => Effect.Effect<Customer, CustomerAlreadyExists | CommonFailure>
   readonly createQuotation: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreateQuotationInput>,
   ) => Effect.Effect<Quotation, CustomerNotFound | CommonFailure>
   readonly createOrder: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreateOrderInput>,
   ) => Effect.Effect<
     SalesOrder,
     CustomerNotFound | QuotationCustomerMismatch | QuotationNotFound | CommonFailure
   >
   readonly confirmOrder: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ConfirmOrderInput>,
   ) => Effect.Effect<
     SalesOrder,
     | EventIdempotencyConflict
@@ -217,10 +221,10 @@ export interface SalesService {
     | CommonFailure
   >
   readonly cancelConfirmedOrder: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CancelConfirmedOrderInput>,
   ) => Effect.Effect<SalesOrder, SalesOrderInvalidState | SalesOrderNotFound | CommonFailure>
   readonly getConfirmedOrderTotal: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof GetConfirmedOrderTotalInput>,
   ) => Effect.Effect<string, SalesOrderInvalidState | SalesOrderNotFound | CommonFailure>
 }
 

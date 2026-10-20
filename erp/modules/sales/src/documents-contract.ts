@@ -194,7 +194,7 @@ type CommonFailure = AuthorizationDenied | DatabaseFailure | Schema.SchemaError
  */
 export interface SalesDocumentService {
   readonly createPartyCustomer: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreatePartyCustomerInput>,
   ) => Effect.Effect<
     PartyCustomer,
     | CustomerAlreadyExists
@@ -204,52 +204,54 @@ export interface SalesDocumentService {
     | CommonFailure
   >
   readonly createPriceList: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreatePriceListInput>,
   ) => Effect.Effect<PriceList, PriceListAlreadyExists | CommonFailure>
   readonly setPrice: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof SetPriceInput>,
   ) => Effect.Effect<
     Schema.Schema.Type<typeof PriceListItem>,
     PriceListNotFound | ProductPriceNotFound | CommonFailure
   >
   readonly assignCustomerPriceList: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof AssignCustomerPriceListInput>,
   ) => Effect.Effect<PartyCustomer, CustomerNotFound | PriceListNotFound | CommonFailure>
   readonly draftQuotation: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof DraftQuotationInput>,
   ) => Effect.Effect<
     SalesQuotation,
     CustomerNotFound | CustomerLegalEntityRequired | ProductPriceNotFound | CommonFailure
   >
   readonly getQuotation: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof QuotationCommandInput>,
   ) => Effect.Effect<SalesQuotation, QuotationNotFound | CommonFailure>
   readonly sendQuotation: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof QuotationCommandInput>,
   ) => Effect.Effect<SalesQuotation, QuotationNotFound | QuotationInvalidState | CommonFailure>
   readonly acceptQuotation: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof QuotationCommandInput>,
   ) => Effect.Effect<SalesQuotation, QuotationNotFound | QuotationInvalidState | CommonFailure>
   readonly rejectQuotation: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof QuotationCommandInput>,
   ) => Effect.Effect<SalesQuotation, QuotationNotFound | QuotationInvalidState | CommonFailure>
   /** Expires every sent quotation whose validity ended before `asOf`; returns the expired ids. */
-  readonly expireQuotations: (input: unknown) => Effect.Effect<ReadonlyArray<string>, CommonFailure>
+  readonly expireQuotations: (
+    input: Schema.Codec.Encoded<typeof ExpireQuotationsInput>,
+  ) => Effect.Effect<ReadonlyArray<string>, CommonFailure>
   /** Creates the draft order for an accepted quotation, or returns the one already created. */
   readonly convertQuotation: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof QuotationCommandInput>,
   ) => Effect.Effect<
     { readonly orderId: string },
     QuotationNotFound | QuotationInvalidState | CommonFailure
   >
   readonly getFulfillment: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof OrderQueryInput>,
   ) => Effect.Effect<
     OrderFulfillment,
     SalesOrderNotFound | CustomerLegalEntityRequired | CommonFailure
   >
   readonly recordDelivery: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof RecordDeliveryInput>,
   ) => Effect.Effect<
     Delivery,
     | SalesOrderNotFound

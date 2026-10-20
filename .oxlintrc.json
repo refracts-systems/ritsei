@@ -75,7 +75,6 @@
         "erp/modules/party/**",
         "erp/modules/process/**",
         "erp/modules/procurement/**",
-        "erp/modules/sales/**",
         "erp/runtime/**",
         "framework/foundation/database/**",
         "framework/foundation/document-rendering/**",

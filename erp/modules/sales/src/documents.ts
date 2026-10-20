@@ -60,6 +60,7 @@ import {
   SalesOrderInvalidState,
   SalesOrderNotFound,
 } from "./errors.ts"
+import type * as Schema from "effect/Schema"
 
 const minor = (value: string) => requireExactMajorToMinor(value, 2)
 const major = (value: bigint) => formatSignedMinor(value, 2)
@@ -185,7 +186,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
     })
 
   const transition = (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof QuotationCommandInput>,
     capability: string,
     from: SalesQuotation["status"],
     to: "sent" | "accepted" | "rejected",
@@ -230,7 +231,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
     })
 
   const createPartyCustomer = Effect.fn("SalesDocumentService.createPartyCustomer")(function* (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreatePartyCustomerInput>,
   ) {
     const decoded = yield* authorized(
       CreatePartyCustomerInput,
@@ -296,7 +297,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
   })
 
   const createPriceList = Effect.fn("SalesDocumentService.createPriceList")(function* (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreatePriceListInput>,
   ) {
     const decoded = yield* authorized(
       CreatePriceListInput,
@@ -326,7 +327,9 @@ export const makeSalesDocumentService = Effect.gen(function* () {
     return rows[0]!
   })
 
-  const setPrice = Effect.fn("SalesDocumentService.setPrice")(function* (input: unknown) {
+  const setPrice = Effect.fn("SalesDocumentService.setPrice")(function* (
+    input: Schema.Codec.Encoded<typeof SetPriceInput>,
+  ) {
     const decoded = yield* authorized(SetPriceInput, SalesCapabilities.priceListConfigure)(input)
     yield* database
       .query(
@@ -374,7 +377,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
   })
 
   const assignCustomerPriceList = Effect.fn("SalesDocumentService.assignCustomerPriceList")(
-    function* (input: unknown) {
+    function* (input: Schema.Codec.Encoded<typeof AssignCustomerPriceListInput>) {
       const decoded = yield* authorized(
         AssignCustomerPriceListInput,
         SalesCapabilities.priceListConfigure,
@@ -417,7 +420,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
   )
 
   const draftQuotation = Effect.fn("SalesDocumentService.draftQuotation")(function* (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof DraftQuotationInput>,
   ) {
     const decoded = yield* authorized(DraftQuotationInput, SalesCapabilities.quotationCreate)(input)
     const customer = yield* loadCustomer(decoded.tenantId, decoded.customerId)
@@ -512,13 +515,15 @@ export const makeSalesDocumentService = Effect.gen(function* () {
     }
   })
 
-  const getQuotation = Effect.fn("SalesDocumentService.getQuotation")(function* (input: unknown) {
+  const getQuotation = Effect.fn("SalesDocumentService.getQuotation")(function* (
+    input: Schema.Codec.Encoded<typeof QuotationCommandInput>,
+  ) {
     const decoded = yield* authorized(QuotationCommandInput, SalesCapabilities.quotationRead)(input)
     return yield* loadQuotation(decoded.tenantId, decoded.quotationId, false)
   })
 
   const expireQuotations = Effect.fn("SalesDocumentService.expireQuotations")(function* (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ExpireQuotationsInput>,
   ) {
     const decoded = yield* authorized(
       ExpireQuotationsInput,
@@ -544,7 +549,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
   })
 
   const convertQuotation = Effect.fn("SalesDocumentService.convertQuotation")(function* (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof QuotationCommandInput>,
   ) {
     const decoded = yield* authorized(QuotationCommandInput, SalesCapabilities.orderCreate)(input)
     return yield* database.withTransaction(
@@ -684,7 +689,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
     })
 
   const getFulfillment = Effect.fn("SalesDocumentService.getFulfillment")(function* (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof OrderQueryInput>,
   ) {
     const decoded = yield* authorized(OrderQueryInput, SalesCapabilities.orderRead)(input)
     return yield* loadFulfillment(decoded.tenantId, decoded.orderId, false)
@@ -728,7 +733,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
     }, "sales.delivery.load")
 
   const recordDelivery = Effect.fn("SalesDocumentService.recordDelivery")(function* (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof RecordDeliveryInput>,
   ) {
     const decoded = yield* authorized(RecordDeliveryInput, SalesCapabilities.deliveryRecord)(input)
     return yield* database.withTransaction(
@@ -828,14 +833,17 @@ export const makeSalesDocumentService = Effect.gen(function* () {
     assignCustomerPriceList,
     draftQuotation,
     getQuotation,
-    sendQuotation: Effect.fn("SalesDocumentService.sendQuotation")((input: unknown) =>
-      transition(input, SalesCapabilities.quotationSend, "draft", "sent"),
+    sendQuotation: Effect.fn("SalesDocumentService.sendQuotation")(
+      (input: Schema.Codec.Encoded<typeof QuotationCommandInput>) =>
+        transition(input, SalesCapabilities.quotationSend, "draft", "sent"),
     ),
-    acceptQuotation: Effect.fn("SalesDocumentService.acceptQuotation")((input: unknown) =>
-      transition(input, SalesCapabilities.quotationDecide, "sent", "accepted"),
+    acceptQuotation: Effect.fn("SalesDocumentService.acceptQuotation")(
+      (input: Schema.Codec.Encoded<typeof QuotationCommandInput>) =>
+        transition(input, SalesCapabilities.quotationDecide, "sent", "accepted"),
     ),
-    rejectQuotation: Effect.fn("SalesDocumentService.rejectQuotation")((input: unknown) =>
-      transition(input, SalesCapabilities.quotationDecide, "sent", "rejected"),
+    rejectQuotation: Effect.fn("SalesDocumentService.rejectQuotation")(
+      (input: Schema.Codec.Encoded<typeof QuotationCommandInput>) =>
+        transition(input, SalesCapabilities.quotationDecide, "sent", "rejected"),
     ),
     expireQuotations,
     convertQuotation,
