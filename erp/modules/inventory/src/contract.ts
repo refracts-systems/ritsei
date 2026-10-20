@@ -301,36 +301,40 @@ type CommonFailure = AuthorizationDenied | DatabaseFailure | Schema.SchemaError
 
 export interface InventoryService {
   readonly listWarehouses: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ListWarehousesInput>,
   ) => Effect.Effect<ReadonlyArray<Warehouse>, CommonFailure>
-  readonly listItems: (input: unknown) => Effect.Effect<ReadonlyArray<Item>, CommonFailure>
+  readonly listItems: (
+    input: Schema.Codec.Encoded<typeof ListItemsInput>,
+  ) => Effect.Effect<ReadonlyArray<Item>, CommonFailure>
   readonly listStockBalances: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ListStockBalancesInput>,
   ) => Effect.Effect<ReadonlyArray<StockBalance>, CommonFailure>
   readonly listStockReservations: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ListStockReservationsInput>,
   ) => Effect.Effect<ReadonlyArray<StockReservation>, CommonFailure>
   readonly listStockTransfers: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ListStockTransfersInput>,
   ) => Effect.Effect<ReadonlyArray<StockTransfer>, CommonFailure>
   readonly listStockMovements: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ListStockMovementsInput>,
   ) => Effect.Effect<ReadonlyArray<StockMovement>, CommonFailure>
   readonly createWarehouse: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreateWarehouseInput>,
   ) => Effect.Effect<
     Warehouse,
     WarehouseAlreadyExists | WarehouseBranchNotFound | WarehouseLegalEntityNotFound | CommonFailure
   >
-  readonly createItem: (input: unknown) => Effect.Effect<Item, ItemAlreadyExists | CommonFailure>
+  readonly createItem: (
+    input: Schema.Codec.Encoded<typeof CreateItemInput>,
+  ) => Effect.Effect<Item, ItemAlreadyExists | CommonFailure>
   readonly receiveStock: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ReceiveStockInput>,
   ) => Effect.Effect<
     StockBalance,
     InventoryReferenceNotFound | InventoryWarehouseLegalEntityMismatch | CommonFailure
   >
   readonly adjustStock: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof AdjustStockInput>,
   ) => Effect.Effect<
     StockCorrection,
     | InventoryReferenceNotFound
@@ -341,7 +345,7 @@ export interface InventoryService {
     | CommonFailure
   >
   readonly reserveStock: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ReserveStockInput>,
   ) => Effect.Effect<
     StockReservation,
     | StockReservationIdempotencyConflict
@@ -350,19 +354,19 @@ export interface InventoryService {
     | CommonFailure
   >
   readonly releaseReservation: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ReleaseReservationInput>,
   ) => Effect.Effect<
     StockReservation,
     StockReservationInvalidState | StockReservationNotFound | StockUnavailable | CommonFailure
   >
   readonly fulfillReservation: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof FulfillReservationInput>,
   ) => Effect.Effect<
     StockReservation,
     StockReservationInvalidState | StockReservationNotFound | StockUnavailable | CommonFailure
   >
   readonly createTransfer: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreateStockTransferInput>,
   ) => Effect.Effect<
     StockTransfer,
     | StockTransferDifferentLegalEntity
@@ -373,10 +377,10 @@ export interface InventoryService {
     | CommonFailure
   >
   readonly confirmTransfer: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ConfirmStockTransferInput>,
   ) => Effect.Effect<StockTransfer, StockUnavailable | StockTransferNotFound | CommonFailure>
   readonly completeTransfer: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CompleteStockTransferInput>,
   ) => Effect.Effect<
     StockTransfer,
     StockTransferInvalidState | StockTransferNotFound | CommonFailure

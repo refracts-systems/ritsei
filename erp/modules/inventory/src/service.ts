@@ -9,53 +9,68 @@ export const makeInventoryServiceFromStore = <R>(
   Effect.gen(function* () {
     const implementation = yield* store
     return {
-      listWarehouses: Effect.fn("InventoryService.listWarehouses")((input: unknown) =>
-        implementation.listWarehouses(input),
+      listWarehouses: Effect.fn("InventoryService.listWarehouses")(
+        (input: Parameters<typeof implementation.listWarehouses>[0]) =>
+          implementation.listWarehouses(input),
       ),
-      listItems: Effect.fn("InventoryService.listItems")((input: unknown) =>
-        implementation.listItems(input),
+      listItems: Effect.fn("InventoryService.listItems")(
+        (input: Parameters<typeof implementation.listItems>[0]) => implementation.listItems(input),
       ),
-      listStockBalances: Effect.fn("InventoryService.listStockBalances")((input: unknown) =>
-        implementation.listStockBalances(input),
+      listStockBalances: Effect.fn("InventoryService.listStockBalances")(
+        (input: Parameters<typeof implementation.listStockBalances>[0]) =>
+          implementation.listStockBalances(input),
       ),
-      listStockReservations: Effect.fn("InventoryService.listStockReservations")((input: unknown) =>
-        implementation.listStockReservations(input),
+      listStockReservations: Effect.fn("InventoryService.listStockReservations")(
+        (input: Parameters<typeof implementation.listStockReservations>[0]) =>
+          implementation.listStockReservations(input),
       ),
-      listStockTransfers: Effect.fn("InventoryService.listStockTransfers")((input: unknown) =>
-        implementation.listStockTransfers(input),
+      listStockTransfers: Effect.fn("InventoryService.listStockTransfers")(
+        (input: Parameters<typeof implementation.listStockTransfers>[0]) =>
+          implementation.listStockTransfers(input),
       ),
-      listStockMovements: Effect.fn("InventoryService.listStockMovements")((input: unknown) =>
-        implementation.listStockMovements(input),
+      listStockMovements: Effect.fn("InventoryService.listStockMovements")(
+        (input: Parameters<typeof implementation.listStockMovements>[0]) =>
+          implementation.listStockMovements(input),
       ),
-      createWarehouse: Effect.fn("InventoryService.createWarehouse")((input: unknown) =>
-        implementation.createWarehouse(input),
+      createWarehouse: Effect.fn("InventoryService.createWarehouse")(
+        (input: Parameters<typeof implementation.createWarehouse>[0]) =>
+          implementation.createWarehouse(input),
       ),
-      createItem: Effect.fn("InventoryService.createItem")((input: unknown) =>
-        implementation.createItem(input),
+      createItem: Effect.fn("InventoryService.createItem")(
+        (input: Parameters<typeof implementation.createItem>[0]) =>
+          implementation.createItem(input),
       ),
-      receiveStock: Effect.fn("InventoryService.receiveStock")((input: unknown) =>
-        implementation.receiveStock(input),
+      receiveStock: Effect.fn("InventoryService.receiveStock")(
+        (input: Parameters<typeof implementation.receiveStock>[0]) =>
+          implementation.receiveStock(input),
       ),
-      adjustStock: Effect.fn("InventoryService.adjustStock")((input: unknown) =>
-        implementation.adjustStock(input),
+      adjustStock: Effect.fn("InventoryService.adjustStock")(
+        (input: Parameters<typeof implementation.adjustStock>[0]) =>
+          implementation.adjustStock(input),
       ),
-      reserveStock: Effect.fn("InventoryService.reserveStock")((input: unknown) =>
-        implementation.reserveStock(input),
+      reserveStock: Effect.fn("InventoryService.reserveStock")(
+        (input: Parameters<typeof implementation.reserveStock>[0]) =>
+          implementation.reserveStock(input),
       ),
-      releaseReservation: Effect.fn("InventoryService.releaseReservation")((input: unknown) =>
-        implementation.releaseReservation(input),
+      releaseReservation: Effect.fn("InventoryService.releaseReservation")(
+        (input: Parameters<typeof implementation.releaseReservation>[0]) =>
+          implementation.releaseReservation(input),
       ),
-      fulfillReservation: Effect.fn("InventoryService.fulfillReservation")((input: unknown) =>
-        implementation.fulfillReservation(input),
+      fulfillReservation: Effect.fn("InventoryService.fulfillReservation")(
+        (input: Parameters<typeof implementation.fulfillReservation>[0]) =>
+          implementation.fulfillReservation(input),
       ),
-      createTransfer: Effect.fn("InventoryService.createTransfer")((input: unknown) =>
-        implementation.createTransfer(input),
+      createTransfer: Effect.fn("InventoryService.createTransfer")(
+        (input: Parameters<typeof implementation.createTransfer>[0]) =>
+          implementation.createTransfer(input),
       ),
-      confirmTransfer: Effect.fn("InventoryService.confirmTransfer")((input: unknown) =>
-        implementation.confirmTransfer(input),
+      confirmTransfer: Effect.fn("InventoryService.confirmTransfer")(
+        (input: Parameters<typeof implementation.confirmTransfer>[0]) =>
+          implementation.confirmTransfer(input),
       ),
-      completeTransfer: Effect.fn("InventoryService.completeTransfer")((input: unknown) =>
-        implementation.completeTransfer(input),
+      completeTransfer: Effect.fn("InventoryService.completeTransfer")(
+        (input: Parameters<typeof implementation.completeTransfer>[0]) =>
+          implementation.completeTransfer(input),
       ),
     } satisfies InventoryService
   })

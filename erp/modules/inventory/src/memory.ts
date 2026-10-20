@@ -53,6 +53,7 @@ import {
   WarehouseAlreadyExists,
 } from "./errors.ts"
 import { InventoryStockCorrectedEvent } from "./events.ts"
+import type { Principal } from "../../../../framework/modules/auth/mod.ts"
 
 const referenceFailure = (tenantId: string, warehouseId: string, itemId: string) =>
   new InventoryReferenceNotFound({ tenantId, warehouseId, itemId })
@@ -77,8 +78,11 @@ export const makeInventoryMemoryLayer = () =>
       const recordMovement = (movement: Omit<StockMovement, "id"> & { id?: string }) => {
         storedMovements.push({ id: movement.id ?? nextId(), ...movement })
       }
-      const authorize = (principal: unknown, tenantId: string, capability: string) =>
-        authorization.authorize({ principal, tenantId, capability })
+      const authorize = (
+        principal: Schema.Codec.Encoded<typeof Principal>,
+        tenantId: string,
+        capability: string,
+      ) => authorization.authorize({ principal, tenantId, capability })
       const service: InventoryService = {
         listWarehouses: (input) =>
           Effect.gen(function* () {
@@ -786,53 +790,60 @@ export const makeInventoryMemoryLayer = () =>
           }),
       }
       return {
-        listWarehouses: Effect.fn("InventoryStore.memory.listWarehouses")((input: unknown) =>
-          service.listWarehouses(input),
+        listWarehouses: Effect.fn("InventoryStore.memory.listWarehouses")(
+          (input: Parameters<typeof service.listWarehouses>[0]) => service.listWarehouses(input),
         ),
-        listItems: Effect.fn("InventoryStore.memory.listItems")((input: unknown) =>
-          service.listItems(input),
+        listItems: Effect.fn("InventoryStore.memory.listItems")(
+          (input: Parameters<typeof service.listItems>[0]) => service.listItems(input),
         ),
-        listStockBalances: Effect.fn("InventoryStore.memory.listStockBalances")((input: unknown) =>
-          service.listStockBalances(input),
+        listStockBalances: Effect.fn("InventoryStore.memory.listStockBalances")(
+          (input: Parameters<typeof service.listStockBalances>[0]) =>
+            service.listStockBalances(input),
         ),
         listStockReservations: Effect.fn("InventoryStore.memory.listStockReservations")(
-          (input: unknown) => service.listStockReservations(input),
+          (input: Parameters<typeof service.listStockReservations>[0]) =>
+            service.listStockReservations(input),
         ),
         listStockTransfers: Effect.fn("InventoryStore.memory.listStockTransfers")(
-          (input: unknown) => service.listStockTransfers(input),
+          (input: Parameters<typeof service.listStockTransfers>[0]) =>
+            service.listStockTransfers(input),
         ),
         listStockMovements: Effect.fn("InventoryStore.memory.listStockMovements")(
-          (input: unknown) => service.listStockMovements(input),
+          (input: Parameters<typeof service.listStockMovements>[0]) =>
+            service.listStockMovements(input),
         ),
-        createWarehouse: Effect.fn("InventoryStore.memory.createWarehouse")((input: unknown) =>
-          service.createWarehouse(input),
+        createWarehouse: Effect.fn("InventoryStore.memory.createWarehouse")(
+          (input: Parameters<typeof service.createWarehouse>[0]) => service.createWarehouse(input),
         ),
-        createItem: Effect.fn("InventoryStore.memory.createItem")((input: unknown) =>
-          service.createItem(input),
+        createItem: Effect.fn("InventoryStore.memory.createItem")(
+          (input: Parameters<typeof service.createItem>[0]) => service.createItem(input),
         ),
-        receiveStock: Effect.fn("InventoryStore.memory.receiveStock")((input: unknown) =>
-          service.receiveStock(input),
+        receiveStock: Effect.fn("InventoryStore.memory.receiveStock")(
+          (input: Parameters<typeof service.receiveStock>[0]) => service.receiveStock(input),
         ),
-        adjustStock: Effect.fn("InventoryStore.memory.adjustStock")((input: unknown) =>
-          service.adjustStock(input),
+        adjustStock: Effect.fn("InventoryStore.memory.adjustStock")(
+          (input: Parameters<typeof service.adjustStock>[0]) => service.adjustStock(input),
         ),
-        reserveStock: Effect.fn("InventoryStore.memory.reserveStock")((input: unknown) =>
-          service.reserveStock(input),
+        reserveStock: Effect.fn("InventoryStore.memory.reserveStock")(
+          (input: Parameters<typeof service.reserveStock>[0]) => service.reserveStock(input),
         ),
         releaseReservation: Effect.fn("InventoryStore.memory.releaseReservation")(
-          (input: unknown) => service.releaseReservation(input),
+          (input: Parameters<typeof service.releaseReservation>[0]) =>
+            service.releaseReservation(input),
         ),
         fulfillReservation: Effect.fn("InventoryStore.memory.fulfillReservation")(
-          (input: unknown) => service.fulfillReservation(input),
+          (input: Parameters<typeof service.fulfillReservation>[0]) =>
+            service.fulfillReservation(input),
         ),
-        createTransfer: Effect.fn("InventoryStore.memory.createTransfer")((input: unknown) =>
-          service.createTransfer(input),
+        createTransfer: Effect.fn("InventoryStore.memory.createTransfer")(
+          (input: Parameters<typeof service.createTransfer>[0]) => service.createTransfer(input),
         ),
-        confirmTransfer: Effect.fn("InventoryStore.memory.confirmTransfer")((input: unknown) =>
-          service.confirmTransfer(input),
+        confirmTransfer: Effect.fn("InventoryStore.memory.confirmTransfer")(
+          (input: Parameters<typeof service.confirmTransfer>[0]) => service.confirmTransfer(input),
         ),
-        completeTransfer: Effect.fn("InventoryStore.memory.completeTransfer")((input: unknown) =>
-          service.completeTransfer(input),
+        completeTransfer: Effect.fn("InventoryStore.memory.completeTransfer")(
+          (input: Parameters<typeof service.completeTransfer>[0]) =>
+            service.completeTransfer(input),
         ),
       } satisfies InventoryService
     }),

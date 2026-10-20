@@ -1583,49 +1583,54 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
       }),
   } satisfies InventoryService
   return {
-    listWarehouses: Effect.fn("InventoryStore.listWarehouses")((input: unknown) =>
-      store.listWarehouses(input),
+    listWarehouses: Effect.fn("InventoryStore.listWarehouses")(
+      (input: Parameters<typeof store.listWarehouses>[0]) => store.listWarehouses(input),
     ),
-    listItems: Effect.fn("InventoryStore.listItems")((input: unknown) => store.listItems(input)),
-    listStockBalances: Effect.fn("InventoryStore.listStockBalances")((input: unknown) =>
-      store.listStockBalances(input),
+    listItems: Effect.fn("InventoryStore.listItems")(
+      (input: Parameters<typeof store.listItems>[0]) => store.listItems(input),
     ),
-    listStockReservations: Effect.fn("InventoryStore.listStockReservations")((input: unknown) =>
-      store.listStockReservations(input),
+    listStockBalances: Effect.fn("InventoryStore.listStockBalances")(
+      (input: Parameters<typeof store.listStockBalances>[0]) => store.listStockBalances(input),
     ),
-    listStockTransfers: Effect.fn("InventoryStore.listStockTransfers")((input: unknown) =>
-      store.listStockTransfers(input),
+    listStockReservations: Effect.fn("InventoryStore.listStockReservations")(
+      (input: Parameters<typeof store.listStockReservations>[0]) =>
+        store.listStockReservations(input),
     ),
-    listStockMovements: Effect.fn("InventoryStore.listStockMovements")((input: unknown) =>
-      store.listStockMovements(input),
+    listStockTransfers: Effect.fn("InventoryStore.listStockTransfers")(
+      (input: Parameters<typeof store.listStockTransfers>[0]) => store.listStockTransfers(input),
     ),
-    createWarehouse: Effect.fn("InventoryStore.createWarehouse")((input: unknown) =>
-      store.createWarehouse(input),
+    listStockMovements: Effect.fn("InventoryStore.listStockMovements")(
+      (input: Parameters<typeof store.listStockMovements>[0]) => store.listStockMovements(input),
     ),
-    createItem: Effect.fn("InventoryStore.createItem")((input: unknown) => store.createItem(input)),
-    receiveStock: Effect.fn("InventoryStore.receiveStock")((input: unknown) =>
-      store.receiveStock(input),
+    createWarehouse: Effect.fn("InventoryStore.createWarehouse")(
+      (input: Parameters<typeof store.createWarehouse>[0]) => store.createWarehouse(input),
     ),
-    adjustStock: Effect.fn("InventoryStore.adjustStock")((input: unknown) =>
-      store.adjustStock(input),
+    createItem: Effect.fn("InventoryStore.createItem")(
+      (input: Parameters<typeof store.createItem>[0]) => store.createItem(input),
     ),
-    reserveStock: Effect.fn("InventoryStore.reserveStock")((input: unknown) =>
-      store.reserveStock(input),
+    receiveStock: Effect.fn("InventoryStore.receiveStock")(
+      (input: Parameters<typeof store.receiveStock>[0]) => store.receiveStock(input),
     ),
-    releaseReservation: Effect.fn("InventoryStore.releaseReservation")((input: unknown) =>
-      store.releaseReservation(input),
+    adjustStock: Effect.fn("InventoryStore.adjustStock")(
+      (input: Parameters<typeof store.adjustStock>[0]) => store.adjustStock(input),
     ),
-    fulfillReservation: Effect.fn("InventoryStore.fulfillReservation")((input: unknown) =>
-      store.fulfillReservation(input),
+    reserveStock: Effect.fn("InventoryStore.reserveStock")(
+      (input: Parameters<typeof store.reserveStock>[0]) => store.reserveStock(input),
     ),
-    createTransfer: Effect.fn("InventoryStore.createTransfer")((input: unknown) =>
-      store.createTransfer(input),
+    releaseReservation: Effect.fn("InventoryStore.releaseReservation")(
+      (input: Parameters<typeof store.releaseReservation>[0]) => store.releaseReservation(input),
     ),
-    confirmTransfer: Effect.fn("InventoryStore.confirmTransfer")((input: unknown) =>
-      store.confirmTransfer(input),
+    fulfillReservation: Effect.fn("InventoryStore.fulfillReservation")(
+      (input: Parameters<typeof store.fulfillReservation>[0]) => store.fulfillReservation(input),
     ),
-    completeTransfer: Effect.fn("InventoryStore.completeTransfer")((input: unknown) =>
-      store.completeTransfer(input),
+    createTransfer: Effect.fn("InventoryStore.createTransfer")(
+      (input: Parameters<typeof store.createTransfer>[0]) => store.createTransfer(input),
+    ),
+    confirmTransfer: Effect.fn("InventoryStore.confirmTransfer")(
+      (input: Parameters<typeof store.confirmTransfer>[0]) => store.confirmTransfer(input),
+    ),
+    completeTransfer: Effect.fn("InventoryStore.completeTransfer")(
+      (input: Parameters<typeof store.completeTransfer>[0]) => store.completeTransfer(input),
     ),
   } satisfies InventoryService
 })

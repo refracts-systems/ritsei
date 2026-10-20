@@ -137,12 +137,20 @@ type MovementFailure =
  */
 export interface StockKeepingService {
   readonly registerProductItem: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof RegisterProductItemInput>,
   ) => Effect.Effect<Item, ProductNotFound | StockNotStockable | CommonFailure>
-  readonly receiveValued: (input: unknown) => Effect.Effect<ValuedStockMovement, MovementFailure>
-  readonly issueValued: (input: unknown) => Effect.Effect<ValuedStockMovement, MovementFailure>
-  readonly countStock: (input: unknown) => Effect.Effect<ValuedStockMovement, MovementFailure>
-  readonly valuation: (input: unknown) => Effect.Effect<StockValuation, CommonFailure>
+  readonly receiveValued: (
+    input: Schema.Codec.Encoded<typeof ReceiveValuedStockInput>,
+  ) => Effect.Effect<ValuedStockMovement, MovementFailure>
+  readonly issueValued: (
+    input: Schema.Codec.Encoded<typeof IssueValuedStockInput>,
+  ) => Effect.Effect<ValuedStockMovement, MovementFailure>
+  readonly countStock: (
+    input: Schema.Codec.Encoded<typeof CountStockInput>,
+  ) => Effect.Effect<ValuedStockMovement, MovementFailure>
+  readonly valuation: (
+    input: Schema.Codec.Encoded<typeof ValuationReportInput>,
+  ) => Effect.Effect<StockValuation, CommonFailure>
 }
 
 export const StockKeepingService = Context.Service<StockKeepingService>(

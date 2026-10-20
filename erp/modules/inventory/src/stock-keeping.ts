@@ -444,7 +444,7 @@ export const makeStockKeepingService = Effect.gen(function* () {
     )
 
   const registerProductItem = Effect.fn("StockKeepingService.registerProductItem")(function* (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof RegisterProductItemInput>,
   ) {
     const decoded = yield* authorized(
       RegisterProductItemInput,
@@ -490,7 +490,9 @@ export const makeStockKeepingService = Effect.gen(function* () {
     }
   })
 
-  const receiveValued = Effect.fn("StockKeepingService.receiveValued")(function* (input: unknown) {
+  const receiveValued = Effect.fn("StockKeepingService.receiveValued")(function* (
+    input: Schema.Codec.Encoded<typeof ReceiveValuedStockInput>,
+  ) {
     const decoded = yield* authorized(
       ReceiveValuedStockInput,
       InventoryCapabilities.stockReceive,
@@ -510,7 +512,9 @@ export const makeStockKeepingService = Effect.gen(function* () {
     })
   })
 
-  const issueValued = Effect.fn("StockKeepingService.issueValued")(function* (input: unknown) {
+  const issueValued = Effect.fn("StockKeepingService.issueValued")(function* (
+    input: Schema.Codec.Encoded<typeof IssueValuedStockInput>,
+  ) {
     const decoded = yield* authorized(
       IssueValuedStockInput,
       InventoryCapabilities.stockIssue,
@@ -535,7 +539,9 @@ export const makeStockKeepingService = Effect.gen(function* () {
     })
   })
 
-  const countStock = Effect.fn("StockKeepingService.countStock")(function* (input: unknown) {
+  const countStock = Effect.fn("StockKeepingService.countStock")(function* (
+    input: Schema.Codec.Encoded<typeof CountStockInput>,
+  ) {
     const decoded = yield* authorized(CountStockInput, InventoryCapabilities.stockCount)(input)
     return yield* move({
       principal: decoded.principal,
@@ -558,7 +564,9 @@ export const makeStockKeepingService = Effect.gen(function* () {
     })
   })
 
-  const valuation = Effect.fn("StockKeepingService.valuation")(function* (input: unknown) {
+  const valuation = Effect.fn("StockKeepingService.valuation")(function* (
+    input: Schema.Codec.Encoded<typeof ValuationReportInput>,
+  ) {
     const decoded = yield* authorized(
       ValuationReportInput,
       InventoryCapabilities.valuationRead,
