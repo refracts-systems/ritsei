@@ -62,7 +62,7 @@ const decodeRow = (row: {
     | null
   readonly currentNodeId: string
   readonly revision: number
-  readonly state: unknown
+  readonly state: Schema.Json
   readonly correlationId: string
   readonly executionPrincipal: string
 }) =>

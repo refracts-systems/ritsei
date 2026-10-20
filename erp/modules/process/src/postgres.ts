@@ -154,27 +154,33 @@ const cancellationWorkflowType = ProcessWorkflowTypes.cancellation
 const fulfillmentWorkflowType = ProcessWorkflowTypes.fulfillment
 
 const withProcessOperationNames = (service: ProcessService): ProcessService => ({
-  confirmOrder: Effect.fn("ProcessService.confirmOrder")((input: unknown) =>
-    service.confirmOrder(input),
+  confirmOrder: Effect.fn("ProcessService.confirmOrder")(
+    (input: Parameters<typeof service.confirmOrder>[0]) => service.confirmOrder(input),
   ),
-  cancelOrder: Effect.fn("ProcessService.cancelOrder")((input: unknown) =>
-    service.cancelOrder(input),
+  cancelOrder: Effect.fn("ProcessService.cancelOrder")(
+    (input: Parameters<typeof service.cancelOrder>[0]) => service.cancelOrder(input),
   ),
-  fulfillOrder: Effect.fn("ProcessService.fulfillOrder")((input: unknown) =>
-    service.fulfillOrder(input),
+  fulfillOrder: Effect.fn("ProcessService.fulfillOrder")(
+    (input: Parameters<typeof service.fulfillOrder>[0]) => service.fulfillOrder(input),
   ),
-  recoverOrder: Effect.fn("ProcessService.recoverOrder")((input: unknown) =>
-    service.recoverOrder(input),
+  recoverOrder: Effect.fn("ProcessService.recoverOrder")(
+    (input: Parameters<typeof service.recoverOrder>[0]) => service.recoverOrder(input),
   ),
-  markManualRecovery: Effect.fn("ProcessService.markManualRecovery")((input: unknown) =>
-    service.markManualRecovery(input),
+  markManualRecovery: Effect.fn("ProcessService.markManualRecovery")(
+    (input: Parameters<typeof service.markManualRecovery>[0]) => service.markManualRecovery(input),
   ),
-  claimJob: Effect.fn("ProcessService.claimJob")((input: unknown) => service.claimJob(input)),
-  renewJob: Effect.fn("ProcessService.renewJob")((input: unknown) => service.renewJob(input)),
-  completeJob: Effect.fn("ProcessService.completeJob")((input: unknown) =>
-    service.completeJob(input),
+  claimJob: Effect.fn("ProcessService.claimJob")((input: Parameters<typeof service.claimJob>[0]) =>
+    service.claimJob(input),
   ),
-  failJob: Effect.fn("ProcessService.failJob")((input: unknown) => service.failJob(input)),
+  renewJob: Effect.fn("ProcessService.renewJob")((input: Parameters<typeof service.renewJob>[0]) =>
+    service.renewJob(input),
+  ),
+  completeJob: Effect.fn("ProcessService.completeJob")(
+    (input: Parameters<typeof service.completeJob>[0]) => service.completeJob(input),
+  ),
+  failJob: Effect.fn("ProcessService.failJob")((input: Parameters<typeof service.failJob>[0]) =>
+    service.failJob(input),
+  ),
 })
 
 const defaultFenceScope = (tenantId: string, jobType: string, idempotencyKey: string) =>
@@ -308,7 +314,7 @@ const toProcessJob = (row: {
   readonly leaseOwner: string | null
   readonly leaseToken: string | null
   readonly attempts: number
-  readonly payload: unknown
+  readonly payload: Schema.Json
   readonly correlationId: string
 }) => ({
   jobId: row.id,
@@ -349,8 +355,8 @@ type WorkflowRunRow = {
   readonly idempotencyKey: string
   readonly aggregateId: string
   readonly status: WorkflowRun["status"]
-  readonly payload: unknown
-  readonly result: unknown
+  readonly payload: Schema.Json
+  readonly result: Schema.Json | null
   readonly recoveryReason: string | null
   readonly completedAt: Date | null
 }
@@ -376,7 +382,7 @@ const businessPayload = (input: Schema.Schema.Type<typeof ConfirmOrderConfirmati
   idempotencyKey: input.idempotencyKey,
 })
 
-const payloadMatches = (stored: unknown, current: unknown) =>
+const payloadMatches = (stored: Schema.Json, current: Schema.Json) =>
   JSON.stringify(canonicalize(stored)) === JSON.stringify(canonicalize(current))
 
 const lifecyclePayload = (
@@ -575,7 +581,7 @@ export const makeProcessService = Effect.gen(function* () {
   const resolveExisting = (
     row: WorkflowRunRow,
     input: Schema.Schema.Type<typeof ConfirmOrderConfirmationInput>,
-    payload: unknown,
+    payload: Schema.Json,
   ): Effect.Effect<OrderConfirmationResult, OrderConfirmationFailure> =>
     Effect.gen(function* () {
       yield* authorization.authorize({
@@ -679,7 +685,7 @@ export const makeProcessService = Effect.gen(function* () {
 
   const loadExistingAfterConflict = (
     input: Schema.Schema.Type<typeof ConfirmOrderConfirmationInput>,
-    payload: unknown,
+    payload: Schema.Json,
   ) =>
     Effect.gen(function* () {
       const rows = yield* database.query(
@@ -824,8 +830,8 @@ export const makeProcessService = Effect.gen(function* () {
   >(
     rows: ReadonlyArray<WorkflowRunRow>,
     input: Schema.Schema.Type<typeof CancelOrderInput>,
-    payload: unknown,
-    decodeResult: (value: unknown) => Effect.Effect<A, Schema.SchemaError>,
+    payload: Schema.Json,
+    decodeResult: (value: Schema.Json) => Effect.Effect<A, Schema.SchemaError>,
     jobType: string,
     event: {
       readonly eventType: string
@@ -904,7 +910,7 @@ export const makeProcessService = Effect.gen(function* () {
       return result
     })
 
-  const execute = (input: unknown) =>
+  const execute = (input: Schema.Codec.Encoded<typeof ConfirmOrderConfirmationInput>) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ConfirmOrderConfirmationInput)(input)
       const payload = businessPayload(decoded)
@@ -1076,7 +1082,7 @@ export const makeProcessService = Effect.gen(function* () {
     })
 
   const cancelOrder = (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CancelOrderInput>,
     retry = false,
   ): Effect.Effect<OrderCancellationResult, OrderLifecycleFailure> =>
     Effect.gen(function* () {
@@ -1298,7 +1304,7 @@ export const makeProcessService = Effect.gen(function* () {
     })
 
   const fulfillOrder = (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof FulfillOrderInput>,
     retry = false,
   ): Effect.Effect<OrderFulfillmentResult, OrderLifecycleFailure> =>
     Effect.gen(function* () {
@@ -1488,7 +1494,7 @@ export const makeProcessService = Effect.gen(function* () {
       return outcome.success
     })
 
-  const markManualRecovery = (input: unknown) =>
+  const markManualRecovery = (input: Schema.Codec.Encoded<typeof ManualRecoveryInput>) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ManualRecoveryInput)(input)
       yield* authorization.authorize({
@@ -1537,14 +1543,14 @@ export const makeProcessService = Effect.gen(function* () {
       return result.run
     })
 
-  const decodeJob = (row: unknown, tenantId: string, jobId: string) =>
+  const decodeJob = (row: ReturnType<typeof toProcessJob>, tenantId: string, jobId: string) =>
     Schema.decodeUnknownEffect(ProcessJob)(row).pipe(
       Effect.mapError(() => new ProcessJobCorrupt({ tenantId, jobId })),
     )
 
   const leaseDurationMs = 5 * 60_000
 
-  const claimJob = (input: unknown) =>
+  const claimJob = (input: Schema.Codec.Encoded<typeof ProcessJobClaimInput>) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ProcessJobClaimInput)(input)
       const claimed = yield* database.transaction(async (tx) => {
@@ -1613,7 +1619,7 @@ export const makeProcessService = Effect.gen(function* () {
         : yield* decodeJob(toProcessJob(claimed), decoded.tenantId, claimed.id)
     })
 
-  const renewJob = (input: unknown) =>
+  const renewJob = (input: Schema.Codec.Encoded<typeof ProcessJobRenewInput>) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ProcessJobRenewInput)(input)
       const result = yield* database.transaction(async (tx) => {
@@ -1675,7 +1681,7 @@ export const makeProcessService = Effect.gen(function* () {
       return yield* decodeJob(toProcessJob(result.row), decoded.tenantId, decoded.jobId)
     })
 
-  const completeJob = (input: unknown) =>
+  const completeJob = (input: Schema.Codec.Encoded<typeof ProcessJobCompleteInput>) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ProcessJobCompleteInput)(input)
       const result = yield* database.transaction(async (tx) => {
@@ -1741,7 +1747,7 @@ export const makeProcessService = Effect.gen(function* () {
       return yield* decodeJob(toProcessJob(result.row), decoded.tenantId, decoded.jobId)
     })
 
-  const failJob = (input: unknown) =>
+  const failJob = (input: Schema.Codec.Encoded<typeof ProcessJobFailInput>) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ProcessJobFailInput)(input)
       const result = yield* database.transaction(async (tx) => {
@@ -1816,7 +1822,7 @@ export const makeProcessService = Effect.gen(function* () {
     confirmOrder: execute,
     cancelOrder,
     fulfillOrder,
-    recoverOrder: (input: unknown) =>
+    recoverOrder: (input: Schema.Codec.Encoded<typeof RecoverOrderConfirmationInput>) =>
       Effect.gen(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(RecoverOrderConfirmationInput)(input)
         yield* authorization.authorize({

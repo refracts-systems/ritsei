@@ -99,6 +99,9 @@ export const runFinancialOperationOnce = (input: unknown) =>
       })
     }
     if (job === null) return { status: "idle", jobId: null, operationId: null } as const
+    // A claimed job is leased, and ProcessJob requires a leased job to carry its lease token.
+    const leaseToken = job.leaseToken
+    if (leaseToken === null) return yield* Effect.die(new Error("claimed job has no lease token"))
     yield* hit("after_lease_before_accounting")
 
     const payload = yield* Schema.decodeUnknownEffect(FinancialOperationJobPayload)(job.payload)
@@ -119,7 +122,7 @@ export const runFinancialOperationOnce = (input: unknown) =>
             tenantId: decoded.tenantId,
             workerId: decoded.workerId,
             jobId: job.jobId,
-            leaseToken: job.leaseToken,
+            leaseToken,
             leaseGeneration: job.leaseGeneration,
           }),
         ),
@@ -137,7 +140,7 @@ export const runFinancialOperationOnce = (input: unknown) =>
           tenantId: decoded.tenantId,
           workerId: decoded.workerId,
           jobId: job.jobId,
-          leaseToken: job.leaseToken,
+          leaseToken,
           leaseGeneration: job.leaseGeneration,
           error: "financial_operation_unknown",
           retryAt: value.scheduledAt,
@@ -159,7 +162,7 @@ export const runFinancialOperationOnce = (input: unknown) =>
           tenantId: decoded.tenantId,
           workerId: decoded.workerId,
           jobId: job.jobId,
-          leaseToken: job.leaseToken,
+          leaseToken,
           leaseGeneration: job.leaseGeneration,
         })
         return {
@@ -173,7 +176,7 @@ export const runFinancialOperationOnce = (input: unknown) =>
         tenantId: decoded.tenantId,
         workerId: decoded.workerId,
         jobId: job.jobId,
-        leaseToken: job.leaseToken,
+        leaseToken,
         leaseGeneration: job.leaseGeneration,
         error: `financial_operation_${value.status}`,
         retryAt: value.scheduledAt,
@@ -192,7 +195,7 @@ export const runFinancialOperationOnce = (input: unknown) =>
       tenantId: decoded.tenantId,
       workerId: decoded.workerId,
       jobId: job.jobId,
-      leaseToken: job.leaseToken,
+      leaseToken,
       leaseGeneration: job.leaseGeneration,
       error: `financial_operation_${error._tag}`,
       retryAt: permanent ? null : retryAfter(5_000),

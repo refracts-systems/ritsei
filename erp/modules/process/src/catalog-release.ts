@@ -40,7 +40,7 @@ export class ProcessReleaseValidationFailed extends Schema.TaggedError<ProcessRe
 
 export const validateProcessRelease = (
   registry: ProcessCatalogRegistry,
-  input: unknown,
+  input: Schema.Codec.Encoded<typeof ProcessReleaseRequest>,
 ): Effect.Effect<ProcessReleaseValidation, ProcessReleaseValidationFailed | Schema.SchemaError> =>
   Effect.gen(function* () {
     const decoded = yield* Schema.decodeUnknownEffect(ProcessReleaseRequest)(input)

@@ -95,13 +95,13 @@ export class ProcessReleaseNotFound extends Schema.TaggedError<ProcessReleaseNot
 // deployment binding is a separate append-only record so DEV, TEST, and PROD promotion stay explicit.
 export interface ProcessReleaseStore {
   readonly release: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ProcessReleaseInput>,
   ) => Effect.Effect<
     ProcessReleaseArtifact,
     ProcessReleaseConflict | DatabaseFailure | Schema.SchemaError
   >
   readonly deploy: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ProcessDeploymentInput>,
   ) => Effect.Effect<
     ProcessDeployment,
     ProcessDeploymentConflict | ProcessReleaseNotFound | DatabaseFailure | Schema.SchemaError
@@ -286,7 +286,7 @@ const recordDeployment = async (
 export const makePostgresProcessReleaseStore = Effect.gen(function* () {
   const database = yield* Database
   return {
-    release: (input: unknown) =>
+    release: (input: Schema.Codec.Encoded<typeof ProcessReleaseInput>) =>
       Effect.gen(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(ProcessReleaseInput)(input)
         const result = yield* database
@@ -317,7 +317,7 @@ export const makePostgresProcessReleaseStore = Effect.gen(function* () {
         }
         return yield* Effect.fail(result.failure)
       }),
-    deploy: (input: unknown) =>
+    deploy: (input: Schema.Codec.Encoded<typeof ProcessDeploymentInput>) =>
       Effect.gen(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(ProcessDeploymentInput)(input)
         const result = yield* database

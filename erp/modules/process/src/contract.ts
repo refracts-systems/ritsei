@@ -308,19 +308,19 @@ type OrderLifecycleFailure =
 
 export interface ProcessService {
   readonly confirmOrder: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ConfirmOrderConfirmationInput>,
   ) => Effect.Effect<OrderConfirmationResult, OrderConfirmationFailure>
   readonly cancelOrder: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CancelOrderInput>,
   ) => Effect.Effect<OrderCancellationResult, OrderLifecycleFailure>
   readonly fulfillOrder: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof FulfillOrderInput>,
   ) => Effect.Effect<OrderFulfillmentResult, OrderLifecycleFailure>
   readonly recoverOrder: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof RecoverOrderConfirmationInput>,
   ) => Effect.Effect<OrderConfirmationResult, OrderConfirmationFailure>
   readonly markManualRecovery: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ManualRecoveryInput>,
   ) => Effect.Effect<
     WorkflowRun,
     | AuthorizationDenied
@@ -330,10 +330,10 @@ export interface ProcessService {
     | WorkflowRunNotFound
   >
   readonly claimJob: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ProcessJobClaimInput>,
   ) => Effect.Effect<ProcessJob | null, DatabaseFailure | Schema.SchemaError | ProcessJobCorrupt>
   readonly renewJob: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ProcessJobRenewInput>,
   ) => Effect.Effect<
     ProcessJob,
     | DatabaseFailure
@@ -343,7 +343,7 @@ export interface ProcessService {
     | ProcessJobLeaseLost
   >
   readonly completeJob: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ProcessJobCompleteInput>,
   ) => Effect.Effect<
     ProcessJob,
     | DatabaseFailure
@@ -353,7 +353,7 @@ export interface ProcessService {
     | ProcessJobLeaseLost
   >
   readonly failJob: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ProcessJobFailInput>,
   ) => Effect.Effect<
     ProcessJob,
     | DatabaseFailure

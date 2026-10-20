@@ -125,7 +125,7 @@ export type ProcessRuntime = {
     catalogVersion: number,
   ) => Effect.Effect<ProcessCheckpoint, ProcessRuntimeVersionConflict>
   readonly recoverCheckpoint: (
-    input: unknown,
+    input: Schema.Json,
   ) => Effect.Effect<ProcessCheckpoint, ProcessCheckpointInvalid>
   readonly recordCommand: (
     checkpoint: ProcessCheckpoint,
@@ -144,7 +144,8 @@ export type ProcessRuntime = {
 const has = (values: readonly string[], value: string): boolean => values.includes(value)
 const nextRevision = (checkpoint: ProcessCheckpoint): number => checkpoint.revision + 1
 
-export const recoverCheckpoint = (input: unknown) =>
+/** Decodes a checkpoint as stored, so a corrupt row fails instead of resuming. */
+export const recoverCheckpoint = (input: Schema.Json) =>
   Schema.decodeUnknownEffect(ProcessCheckpoint)(input).pipe(
     Effect.mapError(
       () =>

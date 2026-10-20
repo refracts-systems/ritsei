@@ -37,7 +37,7 @@ export type ProcessOperatorControl = Schema.Schema.Type<typeof ProcessOperatorCo
 // authorized operator commands cover retry, manual recovery, and compensation.
 export interface ProcessOperatorStore {
   readonly record: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ProcessOperatorControlInput>,
   ) => Effect.Effect<
     ProcessOperatorControl,
     ProcessOperatorConflict | DatabaseFailure | Schema.SchemaError
@@ -115,7 +115,7 @@ const recordRow = async (
 export const makePostgresProcessOperatorStore = Effect.gen(function* () {
   const database = yield* Database
   return {
-    record: (input: unknown) =>
+    record: (input: Schema.Codec.Encoded<typeof ProcessOperatorControlInput>) =>
       Effect.gen(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(ProcessOperatorControlInput)(input)
         const result = yield* database

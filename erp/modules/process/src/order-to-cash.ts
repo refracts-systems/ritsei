@@ -75,7 +75,9 @@ export type DeliverOrderFailure =
  * Inventory's valued stock issue in one transaction; each owner authorizes its own part.
  */
 export interface OrderToCashService {
-  readonly deliverOrder: (input: unknown) => Effect.Effect<OrderDelivery, DeliverOrderFailure>
+  readonly deliverOrder: (
+    input: Schema.Codec.Encoded<typeof DeliverOrderInput>,
+  ) => Effect.Effect<OrderDelivery, DeliverOrderFailure>
 }
 
 export const OrderToCashService = Context.Service<OrderToCashService>("RITSEI/OrderToCashService")
@@ -86,7 +88,9 @@ export const makeOrderToCashService = Effect.gen(function* () {
   const stock = yield* StockKeepingService
   const products = yield* ProductService
 
-  const deliverOrder = Effect.fn("OrderToCashService.deliverOrder")(function* (input: unknown) {
+  const deliverOrder = Effect.fn("OrderToCashService.deliverOrder")(function* (
+    input: Schema.Codec.Encoded<typeof DeliverOrderInput>,
+  ) {
     const decoded = yield* Schema.decodeUnknownEffect(DeliverOrderInput)(input)
     const scope = { principal: decoded.principal, tenantId: decoded.tenantId }
     return yield* database.withTransaction(

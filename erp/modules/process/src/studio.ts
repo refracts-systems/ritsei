@@ -281,31 +281,35 @@ export const ProcessStudioService = Context.Service<ProcessStudioService>(
 
 export interface ProcessStudioService {
   readonly listCatalog: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ListProcessCatalogInput>,
   ) => Effect.Effect<
     ReadonlyArray<ProcessCatalogDescriptor>,
     Schema.SchemaError | AuthorizationDenied | DatabaseFailure
   >
   readonly validateDefinition: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ValidateProcessDefinitionInput>,
   ) => Effect.Effect<
     ProcessStaticValidation,
     Schema.SchemaError | AuthorizationDenied | DatabaseFailure | ProcessReleaseValidationFailed
   >
   readonly listRuntimeInstances: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ListProcessRuntimeInstancesInput>,
   ) => Effect.Effect<ReadonlyArray<ProcessRuntimeInstance>, StudioFailure>
   readonly getRuntimeInstance: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof GetProcessRuntimeInstanceInput>,
   ) => Effect.Effect<ProcessRuntimeDetail, StudioFailure>
   readonly listWorkflowRuns: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ListProcessWorkflowRunsInput>,
   ) => Effect.Effect<ReadonlyArray<ProcessWorkflowRun>, StudioFailure>
-  readonly listOperatorInbox: (input: unknown) => Effect.Effect<ProcessOperatorInbox, StudioFailure>
+  readonly listOperatorInbox: (
+    input: Schema.Codec.Encoded<typeof ListProcessOperatorInboxInput>,
+  ) => Effect.Effect<ProcessOperatorInbox, StudioFailure>
   readonly listOperatorControls: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ListProcessOperatorControlsInput>,
   ) => Effect.Effect<ReadonlyArray<ProcessOperatorControl>, StudioFailure>
-  readonly operateRuntime: (input: unknown) => Effect.Effect<ProcessRuntimeInstance, StudioFailure>
+  readonly operateRuntime: (
+    input: Schema.Codec.Encoded<typeof ProcessRuntimeOperatorInput>,
+  ) => Effect.Effect<ProcessRuntimeInstance, StudioFailure>
 }
 
 export class ProcessRuntimeInstanceNotFound extends Schema.TaggedError<ProcessRuntimeInstanceNotFound>()(
@@ -451,7 +455,7 @@ const decodeCheckpointRow = (row: {
     | null
   readonly currentNodeId: string
   readonly revision: number
-  readonly state: unknown
+  readonly state: Schema.Json
   readonly correlationId: string
   readonly executionPrincipal: string
 }) =>
@@ -670,7 +674,7 @@ export const makeProcessStudioService = Effect.gen(function* () {
     capability: string,
   ) => authorization.authorize({ principal, tenantId, capability })
 
-  const listCatalog = (input: unknown) =>
+  const listCatalog = (input: Schema.Codec.Encoded<typeof ListProcessCatalogInput>) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ListProcessCatalogInput)(input)
       yield* authorize(decoded.principal, decoded.tenantId, ProcessCapabilities.catalogRead)
@@ -681,7 +685,7 @@ export const makeProcessStudioService = Effect.gen(function* () {
       return entries.slice(0, decoded.limit ?? 200)
     })
 
-  const validateDefinition = (input: unknown) =>
+  const validateDefinition = (input: Schema.Codec.Encoded<typeof ValidateProcessDefinitionInput>) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ValidateProcessDefinitionInput)(input)
       yield* authorize(decoded.principal, decoded.tenantId, ProcessCapabilities.definitionValidate)
@@ -693,7 +697,9 @@ export const makeProcessStudioService = Effect.gen(function* () {
       })
     })
 
-  const listRuntimeInstances = (input: unknown) =>
+  const listRuntimeInstances = (
+    input: Schema.Codec.Encoded<typeof ListProcessRuntimeInstancesInput>,
+  ) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ListProcessRuntimeInstancesInput)(input)
       yield* authorize(decoded.principal, decoded.tenantId, ProcessCapabilities.monitorRead)
@@ -708,7 +714,7 @@ export const makeProcessStudioService = Effect.gen(function* () {
       )
     })
 
-  const getRuntimeInstance = (input: unknown) =>
+  const getRuntimeInstance = (input: Schema.Codec.Encoded<typeof GetProcessRuntimeInstanceInput>) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(GetProcessRuntimeInstanceInput)(input)
       yield* authorize(decoded.principal, decoded.tenantId, ProcessCapabilities.monitorRead)
@@ -732,7 +738,7 @@ export const makeProcessStudioService = Effect.gen(function* () {
       }
     })
 
-  const listWorkflowRuns = (input: unknown) =>
+  const listWorkflowRuns = (input: Schema.Codec.Encoded<typeof ListProcessWorkflowRunsInput>) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ListProcessWorkflowRunsInput)(input)
       yield* authorize(decoded.principal, decoded.tenantId, ProcessCapabilities.monitorRead)
@@ -768,7 +774,7 @@ export const makeProcessStudioService = Effect.gen(function* () {
       return yield* Effect.forEach(rows, toWorkflowRun)
     })
 
-  const listOperatorInbox = (input: unknown) =>
+  const listOperatorInbox = (input: Schema.Codec.Encoded<typeof ListProcessOperatorInboxInput>) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ListProcessOperatorInboxInput)(input)
       yield* authorize(decoded.principal, decoded.tenantId, ProcessCapabilities.inboxRead)
@@ -848,7 +854,9 @@ export const makeProcessStudioService = Effect.gen(function* () {
       return { runtimeInstances, jobs }
     })
 
-  const listOperatorControls = (input: unknown) =>
+  const listOperatorControls = (
+    input: Schema.Codec.Encoded<typeof ListProcessOperatorControlsInput>,
+  ) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ListProcessOperatorControlsInput)(input)
       yield* authorize(decoded.principal, decoded.tenantId, ProcessCapabilities.historyRead)
@@ -909,7 +917,7 @@ export const makeProcessStudioService = Effect.gen(function* () {
       forUpdate ? "process.studio.runtime.lock" : "process.studio.runtime.load",
     )
 
-  const operateRuntime = (input: unknown) =>
+  const operateRuntime = (input: Schema.Codec.Encoded<typeof ProcessRuntimeOperatorInput>) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ProcessRuntimeOperatorInput)(input)
       yield* authorize(decoded.principal, decoded.tenantId, operatorCapability(decoded.action))

@@ -71,7 +71,6 @@
         "apps/web/src/features/tax/**",
         "apps/web/src/shared/**",
         "erp/modules/accounting/**",
-        "erp/modules/process/**",
         "erp/runtime/**",
         "framework/foundation/database/**",
         "framework/foundation/document-rendering/**",
