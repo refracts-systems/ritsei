@@ -108,6 +108,11 @@ export const invoiceLines = billingSchema.table(
     taxAmount: money("tax_amount"),
     /** The order line, purchase order line, or credited invoice line this line bills. */
     sourceLineId: uuid("source_line_id"),
+    /**
+     * Received value a supplier bill line clears from goods received not invoiced, at the purchase
+     * price; a credit note line carries its share so the credit posts back the same value.
+     */
+    matchedValue: money("matched_value").default("0"),
     createdAt: createdAt(),
   },
   (table) => [
@@ -118,6 +123,7 @@ export const invoiceLines = billingSchema.table(
       foreignColumns: [invoices.tenantId, invoices.id],
       name: "invoice_lines_invoice_fkey",
     }),
+    check("invoice_lines_matched_value_check", sql`${table.matchedValue} >= 0`),
     check(
       "invoice_lines_amounts_check",
       sql`${table.quantity} > 0 and ${table.unitPrice} >= 0 and ${table.taxAmount} >= 0 and

@@ -56,6 +56,8 @@ export const BillingDocumentLine = Schema.Struct({
   taxCodeId: Schema.NullOr(Uuid),
   taxAmount: FinancialMajorAmount,
   sourceLineId: Schema.NullOr(Uuid),
+  /** Value cleared from goods received not invoiced; zero outside supplier documents. */
+  matchedValue: FinancialMajorAmount,
 })
 
 export const BillingDocument = Schema.Struct({

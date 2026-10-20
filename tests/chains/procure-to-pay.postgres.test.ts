@@ -355,6 +355,35 @@ it.effect.skipIf(databaseUrl === undefined)(
           assert.strictEqual(yield* balance("goods_received_not_invoiced"), "0.00")
           assert.strictEqual(yield* balance("purchase_price_variance"), "41.00")
           assert.strictEqual(yield* balance("input_tax"), "67.21")
+
+          // A supplier credit note for the whole first bill, billed at 6.20 against a 6.00 purchase
+          // price, returns goods received not invoiced at the 330.00 the bill cleared and reverses
+          // the 11.00 variance it booked.
+          const credit = yield* billing.creditInvoice({
+            ...scope,
+            invoiceId: firstBill.id,
+            creditDate: "2026-10-22",
+            lines: [{ invoiceLineId: firstBill.lines[0]!.id, quantity: "55" }],
+          })
+          assert.strictEqual(credit.total, "378.51")
+          assert.strictEqual(credit.lines[0]!.matchedValue, "330.00")
+          assert.strictEqual(yield* balance("goods_received_not_invoiced"), "-330.00")
+          assert.strictEqual(yield* balance("purchase_price_variance"), "30.00")
+          assert.strictEqual(yield* balance("input_tax"), "29.70")
+          const agingAfterCredit = yield* settlement.aging({
+            ...scope,
+            legalEntityId,
+            side: "payable",
+            asOf: "2026-12-31",
+          })
+          const payableAfterCredit = yield* ledger.roleBalance({
+            ...scope,
+            legalEntityId,
+            role: "payable",
+            asOf: "2026-12-31",
+          })
+          assert.strictEqual(agingAfterCredit.totals.total, "-278.81")
+          assert.strictEqual(payableAfterCredit.balance, "278.81")
           const trialBalance = yield* ledger.trialBalance({
             ...scope,
             legalEntityId,

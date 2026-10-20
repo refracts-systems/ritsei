@@ -84,6 +84,8 @@ export type DraftLine = {
   readonly unitPrice: string
   readonly taxCodeId: string | null
   readonly sourceLineId: string | null
+  /** Supplier documents: the received value this line clears from goods received not invoiced. */
+  readonly matchedValue?: string
 }
 
 export type DraftDocument = {
@@ -104,6 +106,7 @@ export type DraftDocument = {
     readonly subtotal: string
     readonly taxTotal: string
     readonly total: string
+    readonly matched: string
   }) => ReadonlyArray<LedgerLine>
 }
 
@@ -117,9 +120,9 @@ type BillMatch = {
   readonly matched: ReadonlyArray<{
     readonly line: MatchingLine
     readonly requested: RequestedBillLine
+    /** Received value this line clears from goods received not invoiced, at the purchase price. */
+    readonly matchedValue: bigint
   }>
-  /** Received value cleared from goods received not invoiced, at the purchase price. */
-  readonly grni: bigint
   /** Billed value beyond what was received, which needs an approved variance. */
   readonly excessValue: bigint
   readonly excess: ReadonlyArray<{
@@ -142,7 +145,6 @@ const matchBill = (
   const byLine = new Map(orderLines.map((line) => [line.purchaseOrderLineId, line]))
   const match = {
     matched: [] as BillMatch["matched"][number][],
-    grni: 0n,
     excessValue: 0n,
     excess: [] as BillMatch["excess"][number][],
   }
@@ -154,52 +156,77 @@ const matchBill = (
     const billable = BigInt(line.received) - BigInt(line.returned) - netBilled
     const quantity = BigInt(requested.quantity)
     const matched = quantity < billable ? quantity : billable > 0n ? billable : 0n
-    match.grni += matched * minor(line.unitPrice)
     if (quantity > matched) {
       match.excess.push({ lineId: line.purchaseOrderLineId, billable, requested: quantity })
       match.excessValue += (quantity - matched) * minor(requested.unitPrice)
     }
-    match.matched.push({ line, requested })
+    match.matched.push({ line, requested, matchedValue: matched * minor(line.unitPrice) })
   }
   return match
 }
 
 /** Goods received not invoiced clears at the purchase price; the rest posts as price variance. */
-const supplierBillJournal =
-  (grni: bigint): DraftDocument["journal"] =>
-  ({ subtotal, taxTotal, total }) => {
-    const variance = minor(subtotal) - grni
-    return [
-      { role: "goods_received_not_invoiced", debit: major(grni), credit: "0" },
-      variance >= 0n
-        ? { role: "purchase_price_variance", debit: major(variance), credit: "0" }
-        : { role: "purchase_price_variance", debit: "0", credit: major(-variance) },
-      { role: "input_tax", debit: taxTotal, credit: "0" },
-      { role: "payable", debit: "0", credit: total },
-    ]
-  }
+const supplierBillJournal: DraftDocument["journal"] = ({ subtotal, taxTotal, total, matched }) => {
+  const variance = minor(subtotal) - minor(matched)
+  return [
+    { role: "goods_received_not_invoiced", debit: matched, credit: "0" },
+    variance >= 0n
+      ? { role: "purchase_price_variance", debit: major(variance), credit: "0" }
+      : { role: "purchase_price_variance", debit: "0", credit: major(-variance) },
+    { role: "input_tax", debit: taxTotal, credit: "0" },
+    { role: "payable", debit: "0", credit: total },
+  ]
+}
 
 /** A credit note reverses its document's revenue and tax, or its payable and receipt value. */
 const creditJournal =
   (receivable: boolean): DraftDocument["journal"] =>
-  ({ subtotal, taxTotal, total }) =>
-    receivable
-      ? [
-          { role: "revenue", debit: subtotal, credit: "0" },
-          { role: "output_tax", debit: taxTotal, credit: "0" },
-          { role: "receivable", debit: "0", credit: total },
-        ]
-      : [
-          { role: "payable", debit: total, credit: "0" },
-          { role: "goods_received_not_invoiced", debit: "0", credit: subtotal },
-          { role: "input_tax", debit: "0", credit: taxTotal },
-        ]
+  ({ subtotal, taxTotal, total, matched }) => {
+    if (receivable) {
+      return [
+        { role: "revenue", debit: subtotal, credit: "0" },
+        { role: "output_tax", debit: taxTotal, credit: "0" },
+        { role: "receivable", debit: "0", credit: total },
+      ]
+    }
+    // Mirror the bill: goods received not invoiced returns at its cleared value, and the price
+    // variance the bill booked reverses.
+    const variance = minor(subtotal) - minor(matched)
+    return [
+      { role: "payable", debit: total, credit: "0" },
+      { role: "goods_received_not_invoiced", debit: "0", credit: matched },
+      variance >= 0n
+        ? { role: "purchase_price_variance", debit: "0", credit: major(variance) }
+        : { role: "purchase_price_variance", debit: major(-variance), credit: "0" },
+      { role: "input_tax", debit: "0", credit: taxTotal },
+    ]
+  }
+
+/**
+ * The part of a bill line's matched value a credit of `quantity` units returns: proportional, and
+ * the last units take what is left so credits never over- or under-return it.
+ */
+const creditShare = (
+  line: BillingDocument["lines"][number],
+  quantity: bigint,
+  credited: ReadonlyMap<string, bigint>,
+  creditedMatched: ReadonlyMap<string, bigint>,
+) => {
+  const matched = minor(line.matchedValue)
+  const total = BigInt(line.quantity)
+  const done = credited.get(line.id) ?? 0n
+  const returned = creditedMatched.get(line.id) ?? 0n
+  return done + quantity === total
+    ? matched - returned
+    : (matched * quantity * 2n + total) / (total * 2n)
+}
 
 /** Credit lines copy the credited lines' prices and taxes; quantities stay within what is left. */
 const creditLinesFor = (
   invoice: BillingDocument,
   requested: ReadonlyArray<{ readonly invoiceLineId: string; readonly quantity: string }>,
   credited: ReadonlyMap<string, bigint>,
+  creditedMatched: ReadonlyMap<string, bigint>,
 ):
   | { readonly lines: DraftLine[] }
   | { readonly invoiceLineId: string; readonly available: bigint } => {
@@ -219,6 +246,7 @@ const creditLinesFor = (
       unitPrice: line.unitPrice,
       taxCodeId: line.taxCodeId,
       sourceLineId: line.id,
+      matchedValue: major(creditShare(line, BigInt(request.quantity), credited, creditedMatched)),
     })
   }
   return { lines }
@@ -283,6 +311,7 @@ export const makeBillingService = Effect.gen(function* () {
           taxCodeId: line.taxCodeId,
           taxAmount: normalize(line.taxAmount),
           sourceLineId: line.sourceLineId,
+          matchedValue: normalize(line.matchedValue),
         })),
       } satisfies BillingDocument
     })
@@ -313,8 +342,14 @@ export const makeBillingService = Effect.gen(function* () {
         .for("update")
     }, "billing.source.lock")
 
-  /** Quantity already billed per source line by documents of the given kind. */
-  const billedQuantities = (tenantId: string, kind: InvoiceKind, sourceLineIds: string[]) =>
+  /** A column of the lines already billed per source line by documents of the given kind. */
+  const billedSums = (
+    tenantId: string,
+    kind: InvoiceKind,
+    sourceLineIds: string[],
+    column: typeof invoiceLines.quantity | typeof invoiceLines.matchedValue,
+    parse: (value: string) => bigint,
+  ) =>
     sourceLineIds.length === 0
       ? Effect.succeed(new Map<string, bigint>())
       : database
@@ -323,7 +358,7 @@ export const makeBillingService = Effect.gen(function* () {
               db
                 .select({
                   sourceLineId: invoiceLines.sourceLineId,
-                  quantity: sum(invoiceLines.quantity),
+                  total: sum(column),
                 })
                 .from(invoiceLines)
                 .innerJoin(
@@ -341,14 +376,19 @@ export const makeBillingService = Effect.gen(function* () {
                   ),
                 )
                 .groupBy(invoiceLines.sourceLineId),
-            "billing.billed_quantities",
+            "billing.billed_sums",
           )
           .pipe(
             Effect.map(
-              (rows) =>
-                new Map(rows.map((row) => [row.sourceLineId!, BigInt(row.quantity ?? "0")])),
+              (rows) => new Map(rows.map((row) => [row.sourceLineId!, parse(row.total ?? "0")])),
             ),
           )
+
+  const billedQuantities = (tenantId: string, kind: InvoiceKind, sourceLineIds: string[]) =>
+    billedSums(tenantId, kind, sourceLineIds, invoiceLines.quantity, BigInt)
+
+  const billedMatchedValues = (tenantId: string, kind: InvoiceKind, sourceLineIds: string[]) =>
+    billedSums(tenantId, kind, sourceLineIds, invoiceLines.matchedValue, minor)
 
   /** Computes tax, numbers, posts, and stores a document in the caller's transaction. */
   const post = (draft: DraftDocument) =>
@@ -373,6 +413,7 @@ export const makeBillingService = Effect.gen(function* () {
       const subtotal = major(priced.reduce((sum, line) => sum + minor(line.netAmount), 0n))
       const taxTotal = computed.totalTax
       const total = major(minor(subtotal) + minor(taxTotal))
+      const matched = major(priced.reduce((sum, line) => sum + minor(line.matchedValue ?? "0"), 0n))
       const allocated = yield* numbering
         .allocate({
           tenantId: draft.tenantId,
@@ -392,7 +433,7 @@ export const makeBillingService = Effect.gen(function* () {
         description: `${allocated.number}`,
         source: { type: `billing.${draft.kind}`, id: draft.invoiceId },
         lines: draft
-          .journal({ subtotal, taxTotal, total })
+          .journal({ subtotal, taxTotal, total, matched })
           .filter((line) => minor(line.debit) > 0n || minor(line.credit) > 0n),
       })
       yield* database.transaction(async (tx) => {
@@ -426,6 +467,7 @@ export const makeBillingService = Effect.gen(function* () {
             taxCodeId: line.taxCodeId,
             taxAmount: taxByKey.get(line.key)!,
             sourceLineId: line.sourceLineId,
+            matchedValue: line.matchedValue ?? "0",
           })),
         )
       }, "billing.document.insert")
@@ -690,7 +732,7 @@ export const makeBillingService = Effect.gen(function* () {
         }
         yield* requireVariance(scope, billId, match)
         const lines: DraftLine[] = []
-        for (const { line, requested } of match.matched) {
+        for (const { line, requested, matchedValue } of match.matched) {
           const product = yield* products.getProduct({ ...scope, productId: line.productId })
           lines.push({
             productId: line.productId,
@@ -699,6 +741,7 @@ export const makeBillingService = Effect.gen(function* () {
             unitPrice: requested.unitPrice,
             taxCodeId: line.taxCodeId,
             sourceLineId: line.purchaseOrderLineId,
+            matchedValue: major(matchedValue),
           })
         }
         return yield* post({
@@ -714,7 +757,7 @@ export const makeBillingService = Effect.gen(function* () {
           creditedInvoiceId: null,
           supplierReference: decoded.supplierReference,
           lines,
-          journal: supplierBillJournal(match.grni),
+          journal: supplierBillJournal,
         })
       }),
       "billing.supplier_bill.atomic",
@@ -775,7 +818,12 @@ export const makeBillingService = Effect.gen(function* () {
           creditKind,
           invoice.lines.map((line) => line.id),
         )
-        const built = creditLinesFor(invoice, decoded.lines, credited)
+        const creditedMatched = yield* billedMatchedValues(
+          decoded.tenantId,
+          creditKind,
+          invoice.lines.map((line) => line.id),
+        )
+        const built = creditLinesFor(invoice, decoded.lines, credited, creditedMatched)
         if (!("lines" in built)) {
           return yield* Effect.fail(
             new CreditExceedsInvoice({
