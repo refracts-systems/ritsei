@@ -61,8 +61,12 @@ const quotationTone = (status: QuotationStatus): "neutral" | "success" | "warnin
     : status === "rejected" || status === "expired"
       ? "warning"
       : "neutral"
-const orderTone = (status: SalesOrderStatus): "neutral" | "success" | "warning" =>
-  status === "confirmed" ? "success" : status === "cancelled" ? "warning" : "neutral"
+const orderTones: Record<SalesOrderStatus, "neutral" | "success" | "warning"> = {
+  draft: "neutral",
+  confirmed: "success",
+  cancelled: "warning",
+}
+const orderTone = (status: SalesOrderStatus) => orderTones[status]
 
 function CreateCustomerDialog(props: { reload: () => Promise<unknown> }) {
   const scope = useContext(ApiRuntime)

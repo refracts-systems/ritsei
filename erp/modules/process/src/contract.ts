@@ -220,12 +220,11 @@ export const WorkflowRun = Schema.Struct({
   completedAt: Schema.NullOr(InstantString),
 }).check(
   Schema.makeFilter(
-    (run) =>
-      run.status === "running"
-        ? run.completedAt === null && run.recoveryReason === null
-        : run.status === "succeeded"
-          ? run.completedAt !== null && run.recoveryReason === null
-          : run.completedAt === null && run.recoveryReason !== null,
+    (run) => {
+      if (run.status === "running") return run.completedAt === null && run.recoveryReason === null
+      if (run.status === "succeeded") return run.completedAt !== null && run.recoveryReason === null
+      return run.completedAt === null && run.recoveryReason !== null
+    },
     { expected: "workflow status metadata consistent with its durable state" },
   ),
 )

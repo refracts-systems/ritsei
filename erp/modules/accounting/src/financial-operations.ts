@@ -2,6 +2,7 @@ import { and, eq, gte, inArray, lte } from "drizzle-orm"
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
+import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
@@ -107,6 +108,20 @@ export const FinancialOperationStatus = Schema.Literals([
   "reconciled",
 ])
 export type FinancialOperationStatus = Schema.Schema.Type<typeof FinancialOperationStatus>
+
+// The reconciliation snapshot has no rejected state: a rejected operation reads as reconciled.
+const snapshotOperationStatus: Record<
+  FinancialOperationStatus,
+  FinancialFactSnapshot["operations"][number]["status"]
+> = {
+  intent: "intent",
+  submitted: "submitted",
+  accepted: "accepted",
+  rejected: "reconciled",
+  unknown: "unknown",
+  manual_recovery: "manual_recovery",
+  reconciled: "reconciled",
+}
 
 const financialOperationStatusMatchesMetadata = (operation: {
   readonly status: FinancialOperationStatus
@@ -1614,12 +1629,11 @@ export const makeFinancialOperationService = Effect.gen(function* () {
             return updated!
           }
 
-          const status =
-            outcome._tag === "rejected"
-              ? ("rejected" as const)
-              : outcome._tag === "manual_recovery"
-                ? ("manual_recovery" as const)
-                : ("unknown" as const)
+          const status = Match.value(outcome).pipe(
+            Match.tag("rejected", () => "rejected" as const),
+            Match.tag("manual_recovery", () => "manual_recovery" as const),
+            Match.orElse(() => "unknown" as const),
+          )
           const [updated] = yield* database.query(
             (db) =>
               db
@@ -2186,18 +2200,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
         }
         sourceOperations.push({
           operationId: operation.operationId,
-          status:
-            operation.status === "intent"
-              ? "intent"
-              : operation.status === "submitted"
-                ? "submitted"
-                : operation.status === "accepted"
-                  ? "accepted"
-                  : operation.status === "unknown"
-                    ? "unknown"
-                    : operation.status === "manual_recovery"
-                      ? "manual_recovery"
-                      : "reconciled",
+          status: snapshotOperationStatus[operation.status],
           currency: operation.currency,
           mappingVersion: operation.mappingVersion,
         })
@@ -2774,12 +2777,11 @@ export const makeFinancialOperationService = Effect.gen(function* () {
               tenantId,
               legalEntityId,
               operationId: target.operationId,
-              reason:
-                outcome._tag === "not_found"
-                  ? "not_found"
-                  : outcome._tag === "unknown"
-                    ? "unavailable"
-                    : "mapping_mismatch",
+              reason: Match.value(outcome).pipe(
+                Match.tag("not_found", () => "not_found" as const),
+                Match.tag("unknown", () => "unavailable" as const),
+                Match.orElse(() => "mapping_mismatch" as const),
+              ),
             }),
           )
         }
@@ -3295,24 +3297,25 @@ export const makeFinancialOperationService = Effect.gen(function* () {
           balanceConstraint: balanceConstraintForAccountType(accountType),
         })
         if (accountOutcome._tag !== "accepted") {
-          const operationOutcome: FinancialExecutionOutcome =
-            accountOutcome._tag === "rejected"
-              ? {
-                  _tag: "rejected",
-                  operationId: state.operation.operationId,
-                  reason: accountOutcome.reason,
-                }
-              : accountOutcome._tag === "unknown"
-                ? {
-                    _tag: "unknown",
-                    operationId: state.operation.operationId,
-                    reason: accountOutcome.reason,
-                  }
-                : {
-                    _tag: "manual_recovery",
-                    operationId: state.operation.operationId,
-                    reason: accountOutcome.reason,
-                  }
+          const operationId = state.operation.operationId
+          const operationOutcome: FinancialExecutionOutcome = Match.value(accountOutcome).pipe(
+            Match.tag("rejected", ({ reason }) => ({
+              _tag: "rejected" as const,
+              operationId,
+              reason,
+            })),
+            Match.tag("unknown", ({ reason }) => ({
+              _tag: "unknown" as const,
+              operationId,
+              reason,
+            })),
+            Match.tag("manual_recovery", ({ reason }) => ({
+              _tag: "manual_recovery" as const,
+              operationId,
+              reason,
+            })),
+            Match.exhaustive,
+          )
           return toOperation(
             yield* writeReceipt(
               decoded.operationId,

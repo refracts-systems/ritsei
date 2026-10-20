@@ -404,12 +404,13 @@ const catalogDescriptors = allCatalogEntries
     ),
   )
 
+const operatorCapabilities = {
+  retry: ProcessCapabilities.runtimeRetry,
+  compensate: ProcessCapabilities.runtimeCompensate,
+  manual_recovery: ProcessCapabilities.runtimeManualRecovery,
+} as const satisfies Record<Schema.Schema.Type<typeof ProcessOperatorAction>, string>
 const operatorCapability = (action: Schema.Schema.Type<typeof ProcessOperatorAction>) =>
-  action === "retry"
-    ? ProcessCapabilities.runtimeRetry
-    : action === "compensate"
-      ? ProcessCapabilities.runtimeCompensate
-      : ProcessCapabilities.runtimeManualRecovery
+  operatorCapabilities[action]
 
 const iso = (value: Date | null): string | null => value?.toISOString() ?? null
 
@@ -980,12 +981,11 @@ export const makeProcessStudioService = Effect.gen(function* () {
             )
           }
           const checkpoint = yield* decodeCheckpointRow(row)
-          const updatedCheckpoint =
-            decoded.action === "retry"
-              ? yield* operator.retry(checkpoint)
-              : decoded.action === "compensate"
-                ? yield* operator.startCompensation(checkpoint)
-                : yield* operator.requireManualRecovery(checkpoint)
+          const updatedCheckpoint = yield* {
+            retry: operator.retry,
+            compensate: operator.startCompensation,
+            manual_recovery: operator.requireManualRecovery,
+          }[decoded.action](checkpoint)
           const updatedAt = now()
           const updatedRows = yield* database.query(
             (db) =>

@@ -46,8 +46,12 @@ const requiredText = (value: FormDataEntryValue | null | undefined): string | nu
 
 // Fallow: procurement statuses intentionally use the same small UI mapping as Inventory.
 // fallow-ignore-next-line code-duplication
-const statusTone = (status: PurchaseOrderStatus): "neutral" | "success" | "warning" =>
-  status === "confirmed" ? "success" : status === "cancelled" ? "warning" : "neutral"
+const statusTones: Record<PurchaseOrderStatus, "neutral" | "success" | "warning"> = {
+  draft: "neutral",
+  confirmed: "success",
+  cancelled: "warning",
+}
+const statusTone = (status: PurchaseOrderStatus) => statusTones[status]
 
 // Fallow: this dialog intentionally combines supplier validation and guarded procurement commands.
 // fallow-ignore-next-line complexity

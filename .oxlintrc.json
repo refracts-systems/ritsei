@@ -42,6 +42,7 @@
     "anti-slop/no-reflect-get": "error",
     "anti-slop/no-unknown-type-aliases": "error",
     "anti-slop/no-widen-then-assert": "error",
-    "anti-slop-effect/no-manual-effect-error-tag": "error"
+    "anti-slop-effect/no-manual-effect-error-tag": "error",
+    "anti-slop-effect/prefer-effect-match": "error"
   }
 }

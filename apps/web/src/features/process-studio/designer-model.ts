@@ -248,13 +248,13 @@ export const toProcessIr = (model: DesignerModel): ProcessDesignIr => {
 export const serializeProcessIr = (ir: ProcessDesignIr): string =>
   JSON.stringify({ ...canonical(ir), checksum: ir.checksum })
 
+const expectedCapabilityKinds: Partial<Record<ProcessNodeKind, "DomainAction" | "DomainEvent">> = {
+  DomainCommand: "DomainAction",
+  WaitForEvent: "DomainEvent",
+}
+
 const capabilityIssue = (node: DesignerNode): DesignerValidationIssue | undefined => {
-  const expectedKind =
-    node.kind === "DomainCommand"
-      ? "DomainAction"
-      : node.kind === "WaitForEvent"
-        ? "DomainEvent"
-        : undefined
+  const expectedKind = expectedCapabilityKinds[node.kind]
   if (expectedKind === undefined) {
     return node.capability === undefined
       ? undefined

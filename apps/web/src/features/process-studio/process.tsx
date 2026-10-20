@@ -58,12 +58,12 @@ const statusTone = (status: string): "neutral" | "success" | "warning" | "danger
     } as const
   )[status] ?? "warning"
 
-const actionLabel = (action: OperateRuntimeInput["action"]): string =>
-  action === "manual_recovery"
-    ? "Mark manual recovery"
-    : action === "compensate"
-      ? "Start compensation"
-      : "Retry runtime"
+const actionLabels: Record<OperateRuntimeInput["action"], string> = {
+  manual_recovery: "Mark manual recovery",
+  compensate: "Start compensation",
+  retry: "Retry runtime",
+}
+const actionLabel = (action: OperateRuntimeInput["action"]): string => actionLabels[action]
 
 const formatTime = (value: string): string => {
   const date = new Date(value)

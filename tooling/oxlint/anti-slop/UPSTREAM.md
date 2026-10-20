@@ -17,7 +17,8 @@ formatting, and Fallow because it keeps upstream's tab-indented style.
 `anti-slop/no-reduce-accumulator-copy`, `anti-slop/no-known-value-widening`,
 `anti-slop/no-module-mocking`, `anti-slop/no-object-parameters`, `anti-slop/no-reflect-apply`,
 `anti-slop/no-reflect-get`, `anti-slop/no-unknown-type-aliases`,
-`anti-slop/no-widen-then-assert`, and `anti-slop-effect/no-manual-effect-error-tag`.
+`anti-slop/no-widen-then-assert`, `anti-slop-effect/no-manual-effect-error-tag`, and
+`anti-slop-effect/prefer-effect-match`.
 
 `pnpm run lint` passes with this set. Fixes made when enabling it:
 
@@ -28,6 +29,10 @@ formatting, and Fallow because it keeps upstream's tab-indented style.
   typed helper, and `compareFinancialFactSnapshots` returns a named type.
 - `no-object-parameters` (1 site): `responseMatches` is generic over the checked owner, so expected
   keys are typed against it.
+- `prefer-effect-match` (13 sites): pure literal lookups became typed `Record<Union, T>` tables
+  (a lookup is an accepted replacement for `Match`, so adding a union member is a type error);
+  tagged outcomes use `Match.tag`; the action-to-effect choice in the process operator is a record
+  of functions.
 - `no-reflect-get` (1 site): the `Proxy` default branch in `request-limits.ts` keeps
   `Reflect.get` with a justified `oxlint-disable-next-line`.
 
@@ -50,4 +55,3 @@ cleanup it needs.
 | `anti-slop-effect/no-manual-tag-comparison` | 146 | Outcome unions (`{ _tag: "posted" }`) are matched by hand throughout. |
 | `anti-slop-effect/no-manual-tagged-construction` | 182 | The same outcome unions are built as literals. |
 | `anti-slop-effect/no-service-constructor-imports` | 109 | Layers and runtime composition import `make<Service>` constructors from module entry points by design. |
-| `anti-slop-effect/prefer-effect-match` | 13 | Small literal lookup ternaries in UI and financial code; some branches `yield*`, which `Match` callbacks cannot. |

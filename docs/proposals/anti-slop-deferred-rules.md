@@ -1,6 +1,6 @@
 # Proposal: Anti-Slop Rules Deferred for Discussion
 
-> **Status:** Decided 2026-10-20: the owner accepted the lean of every rule (section 9). Each rule is
+> **Status:** Decided 2026-10-20: the owner accepted the lean of every rule (section 8). Each rule is
 > enabled in the commit that cleans it up.
 >
 > **Owns:** The reasoning for six vendored anti-slop rules that are installed but turned off, their

@@ -70,16 +70,18 @@ export class ProcessOperatorActionUnavailable extends Schema.TaggedError<Process
 const lastStep = (checkpoint: ProcessCheckpoint): ProcessStepExecution | undefined =>
   checkpoint.stepExecutions.at(-1)
 
+const compensationStatuses: Partial<
+  Record<ProcessStepExecution["status"], Schema.Schema.Type<typeof ProcessCompensationStatus>>
+> = {
+  compensation_started: "in_progress",
+  compensation_succeeded: "succeeded",
+  manual_recovery_required: "manual_recovery",
+}
+
 const compensationStatus = (
   step: ProcessStepExecution | undefined,
 ): Schema.Schema.Type<typeof ProcessCompensationStatus> =>
-  step?.status === "compensation_started"
-    ? "in_progress"
-    : step?.status === "compensation_succeeded"
-      ? "succeeded"
-      : step?.status === "manual_recovery_required"
-        ? "manual_recovery"
-        : "not_started"
+  step === undefined ? "not_started" : (compensationStatuses[step.status] ?? "not_started")
 
 const replaceLastStep = (
   checkpoint: ProcessCheckpoint,

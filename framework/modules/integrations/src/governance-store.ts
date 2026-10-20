@@ -336,10 +336,12 @@ const transitionStatus = (
   return { _tag: "updated", status: "retired" }
 }
 
-const transitionAuditAction = (
-  action: ExternalConnectorTransitionInput["action"],
-): AuditRow["action"] =>
-  action === "review" ? "reviewed" : action === "activate" ? "activated" : "retired"
+const transitionAuditActions: Record<
+  ExternalConnectorTransitionInput["action"],
+  AuditRow["action"]
+> = { review: "reviewed", activate: "activated", retire: "retired" }
+const transitionAuditAction = (action: ExternalConnectorTransitionInput["action"]) =>
+  transitionAuditActions[action]
 
 const mapMutationFailure = (
   result: TransitionResult,
