@@ -5,6 +5,7 @@ import { DurableJobEnqueuer } from "../../framework/foundation/mod.ts"
 import {
   AccountingService,
   FinancialOperationServiceLive,
+  AccountingFiscalCalendarLive,
   GeneralLedgerLive,
   makeAccountingService,
 } from "../modules/accounting/mod.ts"
@@ -138,7 +139,11 @@ export const serviceLayers = (
     Layer.provide(AccountingRequirements),
   )
 
-  const NumberingServiceLive = NumberingLive.pipe(Layer.provide(DatabaseLive))
+  const NumberingServiceLive = NumberingLive.pipe(
+    Layer.provide(
+      Layer.merge(DatabaseLive, AccountingFiscalCalendarLive.pipe(Layer.provide(DatabaseLive))),
+    ),
+  )
 
   const LedgerLive = GeneralLedgerLive.pipe(
     Layer.provide(Layer.merge(BusinessRequirements, NumberingServiceLive)),

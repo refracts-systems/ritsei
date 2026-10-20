@@ -6,7 +6,10 @@ import { makeAuthorizationTestLayer } from "../../framework/modules/authorizatio
 import { NumberingLive } from "../../framework/modules/numbering/mod.ts"
 import { ApprovalsLive } from "../../framework/modules/approvals/mod.ts"
 import { makePostgresDatabase } from "../../framework/platform/mod.ts"
-import { GeneralLedgerLive } from "../../erp/modules/accounting/mod.ts"
+import {
+  AccountingFiscalCalendarLive,
+  GeneralLedgerLive,
+} from "../../erp/modules/accounting/mod.ts"
 import { StockKeepingLive } from "../../erp/modules/inventory/mod.ts"
 import { BillingLive } from "../../erp/modules/billing/mod.ts"
 import { PartyLive } from "../../erp/modules/party/mod.ts"
@@ -35,7 +38,11 @@ export const erpChainLayers = (client: Sql, grants: ReadonlyArray<Grant>) => {
     grants as Parameters<typeof makeAuthorizationTestLayer>[0],
   )
   const platform = Layer.mergeAll(database, authorization)
-  const numbering = NumberingLive.pipe(Layer.provide(database))
+  const numbering = NumberingLive.pipe(
+    Layer.provide(
+      Layer.merge(database, AccountingFiscalCalendarLive.pipe(Layer.provide(database))),
+    ),
+  )
   const ledger = GeneralLedgerLive.pipe(Layer.provide(Layer.merge(platform, numbering)))
   const product = ProductLive.pipe(Layer.provide(platform))
   const stock = StockKeepingLive.pipe(Layer.provide(Layer.mergeAll(platform, ledger, product)))

@@ -380,7 +380,6 @@ export const makeBillingService = Effect.gen(function* () {
           documentType: `billing.${draft.kind}`,
           documentId: draft.invoiceId,
           documentDate: draft.invoiceDate,
-          fiscalYearStartMonth: 1,
           prefix: prefixes[draft.kind],
         })
         .pipe(Effect.catchTag("SchemaError", (error) => Effect.die(error)))

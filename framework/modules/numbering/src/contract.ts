@@ -27,8 +27,13 @@ export const AllocateNumberInput = Schema.Struct({
   documentType: DocumentType,
   documentId: Uuid,
   documentDate: CalendarDate,
-  /** First month of the scope's fiscal year; the series restarts every fiscal year. */
-  fiscalYearStartMonth: Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 12 })),
+  /**
+   * First month of the scope's fiscal year; the series restarts every fiscal year. Omit it to use
+   * the composed `FiscalCalendar` (calendar year when none is composed).
+   */
+  fiscalYearStartMonth: Schema.optionalKey(
+    Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 12 })),
+  ),
   /** Prefix for a new fiscal-year series, for example `INV/`. */
   prefix: Prefix,
   padding: Schema.optionalKey(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 12 }))),
@@ -50,6 +55,20 @@ export interface NumberingService {
 }
 
 export const NumberingService = Context.Service<NumberingService>("RITSEI/NumberingService")
+
+/**
+ * The fiscal calendar of a numbering scope. The owner of the scope's accounting configuration (the
+ * legal entity's Accounting configuration) provides it, so document owners never pass or guess the
+ * fiscal-year start month (ADR-0095).
+ */
+export interface FiscalCalendar {
+  readonly fiscalYearStartMonth: (
+    tenantId: string,
+    scopeId: string,
+  ) => Effect.Effect<number, DatabaseFailure>
+}
+
+export const FiscalCalendar = Context.Service<FiscalCalendar>("RITSEI/FiscalCalendar")
 
 /** The fiscal year label: the calendar year in which the document's fiscal year starts. */
 export const fiscalPeriodKey = (documentDate: string, fiscalYearStartMonth: number): string => {

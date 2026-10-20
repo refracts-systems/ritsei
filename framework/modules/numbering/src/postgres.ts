@@ -1,5 +1,6 @@
 import { and, eq, sql } from "drizzle-orm"
 import * as Effect from "effect/Effect"
+import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 
 import { issuedNumbers, numberSeries } from "../../../../db/schema/numbering.ts"
@@ -7,6 +8,7 @@ import { Database } from "../../../foundation/mod.ts"
 import {
   AllocateNumberInput,
   DEFAULT_PADDING,
+  FiscalCalendar,
   fiscalPeriodKey,
   formatNumber,
   type NumberingService,
@@ -15,10 +17,16 @@ import {
 export const makePostgresNumberingService = Effect.fn("Numbering.makePostgresService")(
   function* () {
     const database = yield* Database
+    const calendar = yield* Effect.serviceOption(FiscalCalendar)
 
     const allocate = Effect.fn("NumberingService.allocate")(function* (input: unknown) {
       const decoded = yield* Schema.decodeUnknownEffect(AllocateNumberInput)(input)
-      const periodKey = fiscalPeriodKey(decoded.documentDate, decoded.fiscalYearStartMonth)
+      const startMonth =
+        decoded.fiscalYearStartMonth ??
+        (Option.isSome(calendar)
+          ? yield* calendar.value.fiscalYearStartMonth(decoded.tenantId, decoded.scopeId)
+          : 1)
+      const periodKey = fiscalPeriodKey(decoded.documentDate, startMonth)
       return yield* database.transaction(async (tx) => {
         await tx
           .insert(numberSeries)

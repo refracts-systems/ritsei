@@ -537,7 +537,6 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
             documentType: "procurement.receipt",
             documentId: receiptId,
             documentDate: decoded.receiptDate,
-            fiscalYearStartMonth: 1,
             prefix: "GR/",
           })
           .pipe(Effect.catchTag("SchemaError", (error) => Effect.die(error)))
@@ -606,7 +605,6 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
               documentType: "procurement.return",
               documentId: returnId,
               documentDate: decoded.returnDate,
-              fiscalYearStartMonth: 1,
               prefix: "RET/",
             })
             .pipe(Effect.catchTag("SchemaError", (error) => Effect.die(error)))

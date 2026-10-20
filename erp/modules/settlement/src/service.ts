@@ -238,7 +238,6 @@ export const makeSettlementService = Effect.gen(function* () {
             documentType: `settlement.payment_${direction}`,
             documentId: paymentId,
             documentDate: input.paymentDate,
-            fiscalYearStartMonth: 1,
             prefix: rule.prefix,
           })
           .pipe(Effect.catchTag("SchemaError", (error) => Effect.die(error)))

@@ -226,5 +226,6 @@ export type {
   TrialBalance as TrialBalanceType,
 } from "./src/general-ledger-contract.ts"
 export { InvalidParentAccount, PostingRuleNotFound } from "./src/errors.ts"
+export { AccountingFiscalCalendarLive } from "./src/fiscal-calendar.ts"
 export { GeneralLedgerLive, makeGeneralLedgerService } from "./src/layers.ts"
 export { AccountingModule } from "./manifest.ts"

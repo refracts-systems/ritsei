@@ -779,7 +779,6 @@ export const makeSalesDocumentService = Effect.gen(function* () {
             documentType: "sales.delivery",
             documentId: deliveryId,
             documentDate: decoded.deliveryDate,
-            fiscalYearStartMonth: 1,
             prefix: "DO/",
           })
           .pipe(Effect.catchTag("SchemaError", (error) => Effect.die(error)))

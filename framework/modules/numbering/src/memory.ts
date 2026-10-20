@@ -19,7 +19,7 @@ export const makeMemoryNumberingService = (): NumberingService => {
     allocate: (input) =>
       Effect.gen(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(AllocateNumberInput)(input)
-        const periodKey = fiscalPeriodKey(decoded.documentDate, decoded.fiscalYearStartMonth)
+        const periodKey = fiscalPeriodKey(decoded.documentDate, decoded.fiscalYearStartMonth ?? 1)
         const key = [decoded.tenantId, decoded.scopeId, decoded.documentType, periodKey].join(":")
         const current = series.get(key) ?? {
           id: uuidv7(),
