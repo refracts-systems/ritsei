@@ -2,6 +2,7 @@ import { and, desc, eq } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import * as Predicate from "effect/Predicate"
+import * as Match from "effect/Match"
 
 import {
   externalConnectorGovernance,
@@ -338,12 +339,15 @@ const transitionStatus = (
   return { _tag: "updated", status: "retired" }
 }
 
-const transitionAuditActions: Record<
-  ExternalConnectorTransitionInput["action"],
-  AuditRow["action"]
-> = { review: "reviewed", activate: "activated", retire: "retired" }
-const transitionAuditAction = (action: ExternalConnectorTransitionInput["action"]) =>
-  transitionAuditActions[action]
+const transitionAuditAction = (
+  action: ExternalConnectorTransitionInput["action"],
+): AuditRow["action"] =>
+  Match.value(action).pipe(
+    Match.when("review", () => "reviewed" as const),
+    Match.when("activate", () => "activated" as const),
+    Match.when("retire", () => "retired" as const),
+    Match.exhaustive,
+  )
 
 const mapMutationFailure = (
   result: TransitionResult,

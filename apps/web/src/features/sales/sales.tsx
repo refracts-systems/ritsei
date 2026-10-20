@@ -1,4 +1,5 @@
 import * as Predicate from "effect/Predicate"
+import * as Match from "effect/Match"
 import { useNavigate } from "@solidjs/router"
 import { createSignal, For, Show, untrack, useContext } from "solid-js"
 import type {
@@ -63,12 +64,13 @@ const quotationTone = (status: QuotationStatus): "neutral" | "success" | "warnin
     : status === "rejected" || status === "expired"
       ? "warning"
       : "neutral"
-const orderTones: Record<SalesOrderStatus, "neutral" | "success" | "warning"> = {
-  draft: "neutral",
-  confirmed: "success",
-  cancelled: "warning",
-}
-const orderTone = (status: SalesOrderStatus) => orderTones[status]
+const orderTone = (status: SalesOrderStatus) =>
+  Match.value(status).pipe(
+    Match.when("draft", () => "neutral" as const),
+    Match.when("confirmed", () => "success" as const),
+    Match.when("cancelled", () => "warning" as const),
+    Match.exhaustive,
+  )
 
 function CreateCustomerDialog(props: { reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)

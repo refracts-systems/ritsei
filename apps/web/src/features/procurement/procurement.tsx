@@ -1,4 +1,5 @@
 import * as Predicate from "effect/Predicate"
+import * as Match from "effect/Match"
 import { useNavigate } from "@solidjs/router"
 import { createSignal, For, Show, untrack, useContext } from "solid-js"
 import type {
@@ -48,12 +49,13 @@ const requiredText = (value: FormDataEntryValue | null | undefined): string | nu
 
 // Fallow: procurement statuses intentionally use the same small UI mapping as Inventory.
 // fallow-ignore-next-line code-duplication
-const statusTones: Record<PurchaseOrderStatus, "neutral" | "success" | "warning"> = {
-  draft: "neutral",
-  confirmed: "success",
-  cancelled: "warning",
-}
-const statusTone = (status: PurchaseOrderStatus) => statusTones[status]
+const statusTone = (status: PurchaseOrderStatus) =>
+  Match.value(status).pipe(
+    Match.when("draft", () => "neutral" as const),
+    Match.when("confirmed", () => "success" as const),
+    Match.when("cancelled", () => "warning" as const),
+    Match.exhaustive,
+  )
 
 // Fallow: this dialog intentionally combines supplier validation and guarded procurement commands.
 // fallow-ignore-next-line complexity

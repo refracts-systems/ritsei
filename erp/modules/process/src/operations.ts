@@ -1,5 +1,6 @@
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import * as Match from "effect/Match"
 
 import type { ProcessCheckpoint, ProcessStepExecution } from "./runtime.ts"
 
@@ -70,18 +71,15 @@ export class ProcessOperatorActionUnavailable extends Schema.TaggedError<Process
 const lastStep = (checkpoint: ProcessCheckpoint): ProcessStepExecution | undefined =>
   checkpoint.stepExecutions.at(-1)
 
-const compensationStatuses: Partial<
-  Record<ProcessStepExecution["status"], Schema.Schema.Type<typeof ProcessCompensationStatus>>
-> = {
-  compensation_started: "in_progress",
-  compensation_succeeded: "succeeded",
-  manual_recovery_required: "manual_recovery",
-}
-
 const compensationStatus = (
   step: ProcessStepExecution | undefined,
 ): Schema.Schema.Type<typeof ProcessCompensationStatus> =>
-  step === undefined ? "not_started" : (compensationStatuses[step.status] ?? "not_started")
+  Match.value(step?.status).pipe(
+    Match.when("compensation_started", () => "in_progress" as const),
+    Match.when("compensation_succeeded", () => "succeeded" as const),
+    Match.when("manual_recovery_required", () => "manual_recovery" as const),
+    Match.orElse(() => "not_started" as const),
+  )
 
 const replaceLastStep = (
   checkpoint: ProcessCheckpoint,

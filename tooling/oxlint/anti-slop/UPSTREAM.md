@@ -34,10 +34,8 @@ through an `overrides` block in `.oxlintrc.json`), `anti-slop-effect/no-service-
   typed helper, and `compareFinancialFactSnapshots` returns a named type.
 - `no-object-parameters` (1 site): `responseMatches` is generic over the checked owner, so expected
   keys are typed against it.
-- `prefer-effect-match` (13 sites): pure literal lookups became typed `Record<Union, T>` tables
-  (a lookup is an accepted replacement for `Match`, so adding a union member is a type error);
-  tagged outcomes use `Match.tag`; the action-to-effect choice in the process operator is a record
-  of functions.
+- `prefer-effect-match` (13 sites): literal lookups and outcome choices use `Match.value`/`Match.tag`
+  (`Match.exhaustive` where the union is closed), including the process operator's choice of effect.
 - `no-chained-type-assertions` (35 sites): test doubles go through `partial<T>()` in
   `tests/support/partial.ts`, the one place a double is asserted into its full type. The runtime
   `postgres.js` client reaches the version check through `asPostgresClient` (now in

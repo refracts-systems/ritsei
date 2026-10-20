@@ -1,6 +1,7 @@
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import * as Match from "effect/Match"
 
 import { DatabaseFailure, LeaseGeneration } from "../../../../framework/foundation/mod.ts"
 import {
@@ -220,11 +221,12 @@ export const WorkflowRun = Schema.Struct({
   completedAt: Schema.NullOr(InstantString),
 }).check(
   Schema.makeFilter(
-    (run) => {
-      if (run.status === "running") return run.completedAt === null && run.recoveryReason === null
-      if (run.status === "succeeded") return run.completedAt !== null && run.recoveryReason === null
-      return run.completedAt === null && run.recoveryReason !== null
-    },
+    (run) =>
+      Match.value(run.status).pipe(
+        Match.when("running", () => run.completedAt === null && run.recoveryReason === null),
+        Match.when("succeeded", () => run.completedAt !== null && run.recoveryReason === null),
+        Match.orElse(() => run.completedAt === null && run.recoveryReason !== null),
+      ),
     { expected: "workflow status metadata consistent with its durable state" },
   ),
 )

@@ -110,18 +110,13 @@ export const FinancialOperationStatus = Schema.Literals([
 export type FinancialOperationStatus = Schema.Schema.Type<typeof FinancialOperationStatus>
 
 // The reconciliation snapshot has no rejected state: a rejected operation reads as reconciled.
-const snapshotOperationStatus: Record<
-  FinancialOperationStatus,
-  FinancialFactSnapshot["operations"][number]["status"]
-> = {
-  intent: "intent",
-  submitted: "submitted",
-  accepted: "accepted",
-  rejected: "reconciled",
-  unknown: "unknown",
-  manual_recovery: "manual_recovery",
-  reconciled: "reconciled",
-}
+const snapshotOperationStatus = (
+  status: FinancialOperationStatus,
+): FinancialFactSnapshot["operations"][number]["status"] =>
+  Match.value(status).pipe(
+    Match.when("rejected", () => "reconciled" as const),
+    Match.orElse((other) => other),
+  )
 
 const financialOperationStatusMatchesMetadata = (operation: {
   readonly status: FinancialOperationStatus
@@ -2200,7 +2195,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
         }
         sourceOperations.push({
           operationId: operation.operationId,
-          status: snapshotOperationStatus[operation.status],
+          status: snapshotOperationStatus(operation.status),
           currency: operation.currency,
           mappingVersion: operation.mappingVersion,
         })

@@ -4,6 +4,7 @@ import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
+import * as Match from "effect/Match"
 
 import {
   processJobs,
@@ -404,13 +405,13 @@ const catalogDescriptors = allCatalogEntries
     ),
   )
 
-const operatorCapabilities = {
-  retry: ProcessCapabilities.runtimeRetry,
-  compensate: ProcessCapabilities.runtimeCompensate,
-  manual_recovery: ProcessCapabilities.runtimeManualRecovery,
-} as const satisfies Record<Schema.Schema.Type<typeof ProcessOperatorAction>, string>
 const operatorCapability = (action: Schema.Schema.Type<typeof ProcessOperatorAction>) =>
-  operatorCapabilities[action]
+  Match.value(action).pipe(
+    Match.when("retry", () => ProcessCapabilities.runtimeRetry),
+    Match.when("compensate", () => ProcessCapabilities.runtimeCompensate),
+    Match.when("manual_recovery", () => ProcessCapabilities.runtimeManualRecovery),
+    Match.exhaustive,
+  )
 
 const iso = (value: Date | null): string | null => value?.toISOString() ?? null
 
@@ -981,11 +982,12 @@ export const makeProcessStudioService = Effect.gen(function* () {
             )
           }
           const checkpoint = yield* decodeCheckpointRow(row)
-          const updatedCheckpoint = yield* {
-            retry: operator.retry,
-            compensate: operator.startCompensation,
-            manual_recovery: operator.requireManualRecovery,
-          }[decoded.action](checkpoint)
+          const updatedCheckpoint = yield* Match.value(decoded.action).pipe(
+            Match.when("retry", () => operator.retry(checkpoint)),
+            Match.when("compensate", () => operator.startCompensation(checkpoint)),
+            Match.when("manual_recovery", () => operator.requireManualRecovery(checkpoint)),
+            Match.exhaustive,
+          )
           const updatedAt = now()
           const updatedRows = yield* database.query(
             (db) =>

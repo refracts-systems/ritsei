@@ -1,3 +1,5 @@
+import * as Match from "effect/Match"
+
 // The process designer keeps only typed mapping and deterministic Process IR in the browser.
 // Catalog authority and release validation remain on the backend.
 export type ProcessNodeKind =
@@ -248,13 +250,12 @@ export const toProcessIr = (model: DesignerModel): ProcessDesignIr => {
 export const serializeProcessIr = (ir: ProcessDesignIr): string =>
   JSON.stringify({ ...canonical(ir), checksum: ir.checksum })
 
-const expectedCapabilityKinds: Partial<Record<ProcessNodeKind, "DomainAction" | "DomainEvent">> = {
-  DomainCommand: "DomainAction",
-  WaitForEvent: "DomainEvent",
-}
-
 const capabilityIssue = (node: DesignerNode): DesignerValidationIssue | undefined => {
-  const expectedKind = expectedCapabilityKinds[node.kind]
+  const expectedKind = Match.value(node.kind).pipe(
+    Match.when("DomainCommand", () => "DomainAction" as const),
+    Match.when("WaitForEvent", () => "DomainEvent" as const),
+    Match.orElse(() => undefined),
+  )
   if (expectedKind === undefined) {
     return node.capability === undefined
       ? undefined

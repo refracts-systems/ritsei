@@ -1,4 +1,5 @@
 import * as Predicate from "effect/Predicate"
+import * as Match from "effect/Match"
 import type { JSX } from "@solidjs/web"
 import { createEffect, createSignal, For, onSettled, Show, useContext } from "solid-js"
 import { failureMessage } from "../../shared/api.ts"
@@ -59,13 +60,14 @@ const statusTone = (status: string): "neutral" | "success" | "warning" | "danger
     } as const
   )[status] ?? "warning"
 
-const actionLabels: Record<OperateRuntimeInput["action"] | "none", string> = {
-  none: "No action required",
-  manual_recovery: "Mark manual recovery",
-  compensate: "Start compensation",
-  retry: "Retry runtime",
-}
-const actionLabel = (action: OperateRuntimeInput["action"] | "none"): string => actionLabels[action]
+const actionLabel = (action: OperateRuntimeInput["action"] | "none"): string =>
+  Match.value(action).pipe(
+    Match.when("none", () => "No action required"),
+    Match.when("manual_recovery", () => "Mark manual recovery"),
+    Match.when("compensate", () => "Start compensation"),
+    Match.when("retry", () => "Retry runtime"),
+    Match.exhaustive,
+  )
 
 const formatTime = (value: string): string => {
   const date = new Date(value)
