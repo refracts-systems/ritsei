@@ -114,6 +114,7 @@ const signPayload = (key: CryptoKey, payload: TokenPayload) =>
       const signature = new Uint8Array(
         await crypto.subtle.sign("HMAC", key, encoder.encode(encodedPayload)),
       )
+      // SAFETY: ConsistencyToken brands the token this module signs and encodes itself.
       return `${encodedPayload}.${toBase64Url(signature)}` as ConsistencyToken
     },
     catch: () => new ReplicaConsistencyFailure({ reason: "capture_failed" }),
@@ -139,7 +140,7 @@ const decodePayload = (key: CryptoKey, token: string) =>
       return yield* Effect.fail(new ReplicaConsistencyFailure({ reason: "invalid_token" }))
     }
     const unknownPayload = yield* Effect.try({
-      try: () => JSON.parse(decoder.decode(fromBase64Url(encodedPayload))) as unknown,
+      try: () => JSON.parse(decoder.decode(fromBase64Url(encodedPayload))),
       catch: () => new ReplicaConsistencyFailure({ reason: "invalid_token" }),
     })
     return yield* Schema.decodeUnknownEffect(TokenPayload)(unknownPayload).pipe(

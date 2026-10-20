@@ -34,6 +34,7 @@ const decodeArtifactWrite = (input: unknown) =>
         }),
       )
     }
+    // SAFETY: input is an object here and every field is validated before use below.
     const write = input as Partial<DocumentArtifactWrite>
     if (!(write.bytes instanceof Uint8Array)) {
       return yield* Effect.fail(

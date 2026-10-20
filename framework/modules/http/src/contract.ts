@@ -145,6 +145,7 @@ export const makeApiErrorMapping = <const Policy extends Record<string, ApiError
 ) => {
   const toApiError = (error: ApiFailure<Policy>) => {
     if (!(error instanceof ReplicaConsistencyFailure)) {
+      // SAFETY: Policy maps every failure tag to an ApiErrorKind.
       return transportErrors[policy[error._tag] as ApiErrorKind](error._tag)
     }
     return invalidConsistencyTokenReasons.has(error.reason)

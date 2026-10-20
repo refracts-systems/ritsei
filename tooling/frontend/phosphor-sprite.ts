@@ -30,6 +30,7 @@ export const spriteSymbolId = (glyph: string, variant: keyof typeof variants) =>
 const loadSelection = async (variant: keyof typeof variants) => {
   // The package's export map hides its source assets, so read them from the web app's install.
   const root = join(process.cwd(), "apps/web/node_modules/@phosphor-icons/web")
+  // SAFETY: selection.json has the shape published by the installed @phosphor-icons/web package.
   const selection = JSON.parse(
     await readFile(join(root, "src", variant, "selection.json"), "utf8"),
   ) as { icons: readonly SelectionIcon[] }
@@ -41,6 +42,7 @@ const loadSelection = async (variant: keyof typeof variants) => {
 export const buildSprite = async (): Promise<string> => {
   const glyphs = await readRegistryGlyphs()
   const symbols: string[] = []
+  // SAFETY: Object.keys of the variants record yields exactly its declared keys.
   for (const variant of Object.keys(variants) as (keyof typeof variants)[]) {
     const selection = await loadSelection(variant)
     for (const glyph of glyphs) {

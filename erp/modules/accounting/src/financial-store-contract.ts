@@ -653,6 +653,7 @@ export const canonicalizeFinancialStagingEvidence = (evidence: FinancialStagingE
   JSON.stringify(
     evidenceKeys.map((key) => [
       key,
+      // SAFETY: the keys in unorderedEvidenceKeys name array-valued evidence fields.
       unorderedEvidenceKeys.has(key)
         ? canonicalArray(evidence[key] as readonly unknown[])
         : canonicalValue(evidence[key]),

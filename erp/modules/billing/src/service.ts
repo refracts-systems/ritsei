@@ -144,9 +144,9 @@ const matchBill = (
 ): BillMatch | { readonly unknownLineId: string } => {
   const byLine = new Map(orderLines.map((line) => [line.purchaseOrderLineId, line]))
   const match = {
-    matched: [] as BillMatch["matched"][number][],
+    matched: new Array<BillMatch["matched"][number]>(),
     excessValue: 0n,
-    excess: [] as BillMatch["excess"][number][],
+    excess: new Array<BillMatch["excess"][number]>(),
   }
   for (const requested of requestedLines) {
     const line = byLine.get(requested.purchaseOrderLineId)
@@ -318,7 +318,7 @@ export const makeBillingService = Effect.gen(function* () {
 
   const existing = (tenantId: string, invoiceId: string) =>
     loadDocument(tenantId, invoiceId).pipe(
-      Effect.map((document) => document as BillingDocument | undefined),
+      Effect.map((document): BillingDocument | undefined => document),
       Effect.catchTag("BillingDocumentNotFound", () => Effect.succeed(undefined)),
     )
 

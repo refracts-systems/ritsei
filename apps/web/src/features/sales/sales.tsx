@@ -289,11 +289,10 @@ function CreateOrderDialog(props: {
           onSubmit={
             // Fallow: this form intentionally keeps sales-order line validation at the UI boundary.
             // fallow-ignore-next-line complexity
-            (value, event) => {
+            (value, _event, form) => {
               if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
               const customerId = requiredText(value.customerId)
               const quotationId = requiredText(value.quotationId)
-              const form = new FormData(event.currentTarget as HTMLFormElement)
               const itemId = requiredText(form.get("itemId"))
               const quantity = requiredText(form.get("quantity"))
               const unitPrice = requiredText(form.get("unitPrice"))

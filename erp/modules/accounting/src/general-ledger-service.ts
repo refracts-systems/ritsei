@@ -139,6 +139,7 @@ export const makeGeneralLedgerServiceFromStore = <R>(
               {
                 tenantId: decoded.tenantId,
                 legalEntityId: decoded.legalEntityId,
+                // SAFETY: Object.entries yields only the declared keys of template.postingRules.
                 role: role as keyof typeof template.postingRules,
                 accountId: byCode.get(code)!,
               },

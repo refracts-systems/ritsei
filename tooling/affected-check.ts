@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process"
 import { readdir, stat } from "node:fs/promises"
+import { hasErrnoCode } from "./errno.ts"
 
 const testFilePattern = /\.(?:test|spec)\.(?:ts|tsx)$/
 const sourceFilePattern = /\.(?:ts|tsx|js|jsx)$/
@@ -10,7 +11,7 @@ const broadTestTriggers = new Set([
   "vitest.contract.config.ts",
 ])
 
-const notFound = (cause: unknown) => (cause as NodeJS.ErrnoException).code === "ENOENT"
+const notFound = (cause: unknown) => hasErrnoCode(cause, "ENOENT")
 
 const normalizePath = (path: string) => path.replaceAll("\\", "/")
 const isTestFile = (path: string) => testFilePattern.test(path)

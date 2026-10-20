@@ -5,16 +5,19 @@ import type * as ManagedRuntime from "effect/ManagedRuntime"
 import type { ContextProviderComponent } from "solid-js"
 import * as Production from "../../../shared/solid-effect"
 
+// SAFETY: the experiment narrows the production context's types for its own examples.
 export const RuntimeContext = Production.RuntimeContext as unknown as ContextProviderComponent<
   ManagedRuntime.ManagedRuntime<never, never>
 >
 export const MissingRuntimeContextError = Production.MissingRuntimeContextError
 export const ActionInterruptedError = Production.ActionInterruptedError
 
+// SAFETY: the experiment narrows the production runtime factory's types for its own examples.
 export const createRuntime = Production.createRuntime as unknown as <R>(
   layer: Layer.Layer<R>,
 ) => ManagedRuntime.ManagedRuntime<R, never>
 
+// SAFETY: the experiment narrows the production runner's types for its own examples.
 export const runEffect = Production.runEffect as unknown as <A, E, R = never>(
   effect: Effect.Effect<A, E, R>,
 ) => AsyncIterable<A>
@@ -26,6 +29,7 @@ type EffectAction<Args extends unknown[], A> = {
   interrupt(): void
 }
 
+// SAFETY: the experiment narrows the production action's types for its own examples.
 export const effectAction = Production.effectAction as unknown as <
   Args extends unknown[],
   A,

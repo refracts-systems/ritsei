@@ -73,6 +73,7 @@ function resolveFork() {
   return <A, E, R>(effect: Effect.Effect<A, E, R>) =>
     // RuntimeContext intentionally erases the provider's concrete R so nested
     // providers can carry different service sets through one Solid context.
+    // SAFETY: the runtime was built with the services this effect requires.
     runtime.runFork(effect as Effect.Effect<A, E, never>)
 }
 
@@ -174,6 +175,7 @@ export function effectAction<Args extends unknown[], A, R = never>(
       const exit: Exit.Exit<unknown, unknown> = yield Effect.runPromise(Fiber.await(fiber))
       if (inFlight === fiber) inFlight = null
       if (Exit.isSuccess(exit)) {
+        // SAFETY: the saga generator is typed to receive the value of the step it yielded.
         step = iterator.next(exit.value as never)
       } else if (Exit.isFailure(exit)) {
         const cause = exit.cause

@@ -106,7 +106,10 @@ export const addSchemaExports = (path: string, source: string, n: EntityNames) =
   const target = `./${n.module}.ts`
   const exports = file.statements.filter(ts.isExportDeclaration)
   const next = exports.find(
-    (statement) => (statement.moduleSpecifier as ts.StringLiteral).text > target,
+    (statement) =>
+      statement.moduleSpecifier !== undefined &&
+      ts.isStringLiteral(statement.moduleSpecifier) &&
+      statement.moduleSpecifier.text > target,
   )
   const line = `export { ${n.moduleCamel}Schema, ${n.tableCamel} } from "${target}"\n`
   const edit = new MagicString(source)
@@ -129,13 +132,13 @@ export const addServiceLayer = (path: string, source: string, n: EntityNames) =>
     throw new Error(`${path}: serviceLayers is not a function with a body`)
   }
   const application = serviceLayers.body.statements.find(
-    (statement) =>
+    (statement): statement is ts.VariableStatement =>
       ts.isVariableStatement(statement) &&
       statement.declarationList.declarations.some(
         (declaration) =>
           ts.isIdentifier(declaration.name) && declaration.name.text === "ApplicationLive",
       ),
-  ) as ts.VariableStatement | undefined
+  )
   const call = application?.declarationList.declarations[0]?.initializer
   if (application === undefined || call === undefined || !ts.isCallExpression(call)) {
     throw new Error(`${path}: ApplicationLive is not a Layer.mergeAll call`)

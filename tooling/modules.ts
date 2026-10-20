@@ -6,6 +6,7 @@ import { extractModuleImports, resolveLocal } from "./architecture.ts"
 import { isMain } from "./entrypoint.ts"
 import { parseOwnership } from "./schema-ownership.ts"
 import { collectSourceFiles, type SourceFile } from "./source-files.ts"
+import { hasErrnoCode } from "./errno.ts"
 
 const moduleRoot = "erp/modules"
 
@@ -18,7 +19,7 @@ const moduleDirectories = async () => {
     try {
       if ((await stat(`${moduleRoot}/${entry.name}/mod.ts`)).isFile()) names.push(entry.name)
     } catch (cause) {
-      if ((cause as NodeJS.ErrnoException).code !== "ENOENT") throw cause
+      if (!hasErrnoCode(cause, "ENOENT")) throw cause
     }
   }
   return names

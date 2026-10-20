@@ -41,7 +41,7 @@ const fontLoader =
     if (!Predicate.isObjectKeyword(font) || !("fontName" in font) || !("ttfBase64" in font)) {
       throw new TypeError("pdfnative font module did not expose FontData")
     }
-    // pdfnative's generated font declarations describe module fields loosely; the runtime object is
+    // SAFETY: pdfnative's generated font declarations describe module fields loosely; the runtime object is
     // the FontData shape documented by its FontLoader contract.
     return font as FontData
   }
@@ -215,7 +215,7 @@ const toPdfBlocks = (
         }
       }),
     )
-    const result = { blocks: [] as PdfDocumentBlock[], assetBytes: 0 }
+    const result = { blocks: new Array<PdfDocumentBlock>(), assetBytes: 0 }
     for (const blockResult of blockResults) {
       result.blocks.push(...blockResult.blocks)
       result.assetBytes += blockResult.assetBytes

@@ -64,7 +64,7 @@ Each item gets its own branch from `master`, and an ADR only where noted.
 | F3 | **Custom fields (extension points, decision D8)** | Needs an ADR before code. Released extension points join the manifest (ADR-0094). First consumers: Product and Sales documents. |
 | F4 | **Credit limit** | Decided in the parity plan to live in Sales and gate order confirmation; reads the customer's open items from Billing. Check for a dependency cycle: Sales cannot import Billing today because Billing depends on Sales. Likely a coordinator in `process` or an Accounting-style query port. |
 | F5 | **Indonesian localization (`localization-id`)** | Parity plan Phases 7–8: chart template, PPN codes, withholding, Coretax export, built only through public extension points. Depends on F3. |
-| F6 | **Anti-slop rule discussion** | Six rules, in [`anti-slop-deferred-rules.md`](./anti-slop-deferred-rules.md). Independent of the ERP work; one rule and its cleanup per commit. |
+| F6 | **Anti-slop rule discussion** | Done: all six rules are decided and enabled, see [`anti-slop-deferred-rules.md`](./anti-slop-deferred-rules.md). |
 
 ## 5. Risks and assumptions
 

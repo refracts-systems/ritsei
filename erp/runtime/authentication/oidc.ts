@@ -73,6 +73,7 @@ export const makeOidcIdentityProvider = (
     })
     const document = await readTextJson(response)
     if (!isObject(document) || !Array.isArray(document.keys)) throw new ProviderUnavailable()
+    // SAFETY: Jwk only adds optional members to a JSON object; each is compared before use.
     const keys = document.keys.filter(isObject) as readonly Jwk[]
     if (keys.length === 0) throw new ProviderUnavailable()
     cachedKeys = keys
@@ -86,6 +87,7 @@ export const makeOidcIdentityProvider = (
     if (parts.length !== 3 || parts.some((part) => part.length === 0)) {
       throw new InvalidTokenShape()
     }
+    // SAFETY: parts.length === 3 was checked above.
     const [encodedHeader, encodedPayload, encodedSignature] = parts as [string, string, string]
     const header = decodeJsonPart(encodedHeader)
     const payload = decodeJsonPart(encodedPayload)
@@ -129,6 +131,7 @@ export const makeOidcIdentityProvider = (
       .verify(
         { name: "RSASSA-PKCS1-v1_5" },
         key,
+        // SAFETY: a Uint8Array built from a fresh array owns a plain ArrayBuffer, never a shared one.
         new Uint8Array(decodeBase64Url(encodedSignature)).buffer as ArrayBuffer,
         new TextEncoder().encode(`${encodedHeader}.${encodedPayload}`),
       )

@@ -13,6 +13,7 @@ import {
   type FinancialVerificationVerifierService,
 } from "../../modules/accounting/mod.ts"
 
+// SAFETY: WebCrypto accepts { name: "Ed25519" }; the DOM typings omit this algorithm name.
 const ed25519 = { name: "Ed25519" } as AlgorithmIdentifier
 
 /**
@@ -97,6 +98,7 @@ export const makeEd25519FinancialVerificationSigner = (
 export const generateEd25519FinancialVerificationSigner = (keyId: string) =>
   Effect.tryPromise({
     try: async () => {
+      // SAFETY: generateKey with an asymmetric algorithm resolves with a key pair.
       const pair = (await globalThis.crypto.subtle.generateKey(ed25519, false, [
         "sign",
         "verify",

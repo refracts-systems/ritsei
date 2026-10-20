@@ -12,5 +12,6 @@ export const membershipKey = (userAccountId: string, tenantId: string) =>
 export const toTenantMembership = (row: MembershipRow): TenantMembership => ({
   userAccountId: row.userAccountId,
   tenantId: row.tenantId,
+  // SAFETY: tenant_memberships_status_check limits the column to the status union.
   status: row.status as TenantMembershipStatus,
 })

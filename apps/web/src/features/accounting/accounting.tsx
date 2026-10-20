@@ -281,6 +281,7 @@ function CreateAccountDialog(props: { reload: () => Promise<void> }) {
             mutation.mutate({
               code,
               name,
+              // SAFETY: type was matched against accountTypeOptions above.
               type: type as AccountType,
             })
           }
@@ -692,10 +693,9 @@ function PostJournalDialog(props: {
           onSubmit={
             // Fallow: this form intentionally keeps balanced journal validation at the UI boundary.
             // fallow-ignore-next-line complexity
-            (value, event) => {
+            (value, _event, form) => {
               if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
               const reference = requiredText(value.reference)
-              const form = new FormData(event.currentTarget as HTMLFormElement)
               const lines = lineIndexes().flatMap((index) => {
                 const accountId = requiredText(form.get(`accountId-${index}`))
                 const debit = requiredText(form.get(`debit-${index}`))

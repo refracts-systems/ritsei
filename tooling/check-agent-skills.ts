@@ -2,6 +2,7 @@ import { readdir, readFile, stat } from "node:fs/promises"
 import { dirname, relative, resolve } from "node:path"
 
 import { isMain } from "./entrypoint.ts"
+import { hasErrnoCode } from "./errno.ts"
 
 const unquote = (value: string) => {
   const trimmed = value.trim()
@@ -75,7 +76,7 @@ const validateLinks = async (path: string, content: string): Promise<readonly st
     try {
       await stat(resolved)
     } catch (cause) {
-      if ((cause as NodeJS.ErrnoException).code === "ENOENT") {
+      if (hasErrnoCode(cause, "ENOENT")) {
         failures.push(`${path}: broken relative link ${rawTarget}`)
       } else throw cause
     }

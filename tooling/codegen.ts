@@ -6,6 +6,7 @@ import { createRequire } from "node:module"
 import { resolve } from "node:path"
 import { pathToFileURL } from "node:url"
 
+import * as Predicate from "effect/Predicate"
 import { createJiti } from "jiti"
 
 import type { ModuleManifest } from "../framework/modules/module/mod.ts"
@@ -31,10 +32,10 @@ const exists = async (path: string) =>
   )
 
 const isManifest = (value: unknown): value is ModuleManifest =>
-  typeof value === "object" &&
-  value !== null &&
-  typeof (value as ModuleManifest).name === "string" &&
-  Array.isArray((value as ModuleManifest).pages)
+  Predicate.hasProperty(value, "name") &&
+  Predicate.isString(value.name) &&
+  Predicate.hasProperty(value, "pages") &&
+  Array.isArray(value.pages)
 
 /** Loads each module's manifest.ts with jiti, so codegen reads the same values the runtime uses. */
 export const discoverModules = async (): Promise<readonly DiscoveredModule[]> => {
@@ -45,11 +46,11 @@ export const discoverModules = async (): Promise<readonly DiscoveredModule[]> =>
     const path = `${moduleRoot}/${entry.name}/manifest.ts`
     if (!entry.isDirectory() || !(await exists(path))) continue
     const exports = await jiti.import<object>(resolve(path))
-    const found = Object.entries(exports).filter(
-      ([key, value]) => key.endsWith("Module") && isManifest(value),
+    const found = Object.entries(exports).flatMap(([key, value]) =>
+      key.endsWith("Module") && isManifest(value) ? [[key, value] as const] : [],
     )
     if (found.length !== 1) throw new Error(`${path} must export exactly one <Name>Module manifest`)
-    const [key, manifest] = found[0]! as [string, ModuleManifest]
+    const [key, manifest] = found[0]!
     modules.push({ directory: entry.name, type: key.slice(0, -"Module".length), manifest })
   }
   return modules
@@ -128,6 +129,7 @@ const camel = (directory: string) =>
 const oxfmt = (() => {
   const require = createRequire(import.meta.url)
   const packagePath = require.resolve("oxfmt/package.json")
+  // SAFETY: oxfmt's package.json declares a bin map of command names to paths.
   const { bin } = require(packagePath) as { bin: Record<string, string> }
   return resolve(packagePath, "..", bin.oxfmt!)
 })()

@@ -79,6 +79,7 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
     const rolePrefix = `${tenantId}:${partyId}:`
     return {
       party,
+      // SAFETY: role keys are written only as the prefix followed by a PartyRole.
       roles: roles
         .values()
         .filter((key) => key.startsWith(rolePrefix))

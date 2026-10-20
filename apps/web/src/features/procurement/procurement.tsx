@@ -176,10 +176,9 @@ function CreatePurchaseOrderDialog(props: {
           onSubmit={
             // Fallow: this form intentionally keeps purchase-order line validation at the UI boundary.
             // fallow-ignore-next-line complexity
-            (value, event) => {
+            (value, _event, form) => {
               if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
               const supplierAccountId = requiredText(value.supplierAccountId)
-              const form = new FormData(event.currentTarget as HTMLFormElement)
               const lines = lineIndexes().flatMap((index) => {
                 const itemId = requiredText(form.get(`itemId-${index}`))
                 const quantity = requiredText(form.get(`quantity-${index}`))
@@ -462,11 +461,10 @@ function ReceivePurchaseOrderDialog(props: { order: PurchaseOrder; reload: () =>
         onSubmit={
           // Fallow: this form intentionally keeps receipt evidence validation at the UI boundary.
           // fallow-ignore-next-line complexity
-          (value, event) => {
+          (value, _event, form) => {
             if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
             const warehouseId = requiredText(value.warehouseId)
             const idempotencyKey = requiredText(value.idempotencyKey)
-            const form = new FormData(event.currentTarget as HTMLFormElement)
             const lines = props.order.lines.flatMap((line) => {
               const quantity = requiredText(form.get(`receipt-quantity-${line.id}`))
               return quantity === null ? [] : [{ purchaseOrderLineId: line.id, quantity }]

@@ -32,6 +32,7 @@ const toUserAccount = (row: {
 }): UserAccount => ({
   id: row.id,
   email: row.email,
+  // SAFETY: user_accounts_status_check limits the column to the status union.
   status: row.status as UserAccountStatus,
 })
 
@@ -41,6 +42,7 @@ const toAuthenticationState = (row: {
   readonly sessionInvalidatedAt: Date | null
 }): UserAccountAuthenticationState => ({
   id: row.id,
+  // SAFETY: user_accounts_status_check limits the column to the status union.
   status: row.status as UserAccountStatus,
   sessionInvalidatedAt:
     row.sessionInvalidatedAt === null ? null : row.sessionInvalidatedAt.toISOString(),

@@ -1,7 +1,8 @@
 # Proposal: Anti-Slop Rules Deferred for Discussion
 
-> **Status:** Decided 2026-10-20: the owner accepted the lean of every rule (section 8). Each rule is
-> enabled in the commit that cleans it up.
+> **Status:** Decided and done 2026-10-20: the owner accepted the lean of every rule (section 8), and
+> all six rules are enabled, each in the commit that cleaned it up. What each cleanup changed is in
+> [`UPSTREAM.md`](../../tooling/oxlint/anti-slop/UPSTREAM.md).
 >
 > **Owns:** The reasoning for six vendored anti-slop rules that are installed but turned off, their
 > measured findings, and the options for enabling each.
@@ -17,7 +18,8 @@
 
 ## 1. Why these six
 
-Eleven anti-slop rules are enabled and `pnpm run lint` passes. Seven more stay off because they
+Eleven anti-slop rules were enabled when this was written (seventeen now, with these six) and
+`pnpm run lint` passes. Seven more stay off because they
 conflict with a documented repository convention (services decode `input: unknown` with Schema;
 `_tag` outcome unions; `...ServiceShape` names; oxfmt owns formatting). The six below are different:
 they are not clearly wrong for this repository, they need a decision and a cleanup, and each cleanup

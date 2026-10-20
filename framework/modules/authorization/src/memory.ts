@@ -119,6 +119,7 @@ export const makeMemoryAuthorizationService = (
           .filter((grant) => grant.startsWith(prefix))
           .map((grant): DirectCapabilityGrant => ({
             ...decoded,
+            // SAFETY: grants are stored only as the prefix followed by a decoded capability.
             capability: grant.slice(prefix.length) as DirectCapabilityGrant["capability"],
             scope: "tenant",
           }))

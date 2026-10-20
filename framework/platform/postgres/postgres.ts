@@ -16,8 +16,10 @@ import {
 /** Presents a postgres.js client through the narrow client interface the version check needs. */
 export const asPostgresClient = (client: Sql): PostgresClient => ({
   begin: <A>(callback: (transaction: PostgresTransaction) => Promise<A>) =>
+    // SAFETY: begin resolves with the callback's result; postgres.js types it through UnwrapPromiseArray.
     client.begin((transaction) => {
       const adapted: PostgresTransaction = {
+        // SAFETY: postgres.js types parameters as its own union; any readonly array of bindable values works.
         unsafe: <Row extends Record<string, unknown>>(
           query: string,
           parameters?: readonly unknown[],
@@ -86,7 +88,8 @@ export const makePostgresDatabase = (client: Sql): DatabaseService => {
             try: () =>
               transaction === undefined
                 ? operation(database)
-                : operation(transaction as DrizzleDatabase),
+                : // SAFETY: a drizzle transaction exposes the query surface that operations use on DrizzleDatabase.
+                  operation(transaction as DrizzleDatabase),
             catch: (cause) => new DatabaseFailure({ operation: operationName, cause }),
           })
         }),
@@ -128,7 +131,8 @@ export const makePostgresDatabase = (client: Sql): DatabaseService => {
               }),
             catch: (cause) =>
               cause instanceof TransactionEffectFailure
-                ? { _tag: "effect-failure" as const, error: cause.failure as E }
+                ? // SAFETY: TransactionEffectFailure is thrown only with the failure of this transaction's effect.
+                  { _tag: "effect-failure" as const, error: cause.failure as E }
                 : {
                     _tag: "database-failure" as const,
                     error: new DatabaseFailure({ operation: operationName, cause }),

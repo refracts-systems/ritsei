@@ -1,4 +1,5 @@
 import { readdir, readFile } from "node:fs/promises"
+import { hasErrnoCode } from "./errno.ts"
 
 export interface SourceFile {
   readonly path: string
@@ -53,7 +54,7 @@ export const collectSourceFiles = async (
   try {
     await visit(directory)
   } catch (cause) {
-    if ((cause as NodeJS.ErrnoException).code !== "ENOENT") throw cause
+    if (!hasErrnoCode(cause, "ENOENT")) throw cause
   }
   return files
 }

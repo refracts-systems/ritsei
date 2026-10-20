@@ -59,12 +59,13 @@ const statusTone = (status: string): "neutral" | "success" | "warning" | "danger
     } as const
   )[status] ?? "warning"
 
-const actionLabels: Record<OperateRuntimeInput["action"], string> = {
+const actionLabels: Record<OperateRuntimeInput["action"] | "none", string> = {
+  none: "No action required",
   manual_recovery: "Mark manual recovery",
   compensate: "Start compensation",
   retry: "Retry runtime",
 }
-const actionLabel = (action: OperateRuntimeInput["action"]): string => actionLabels[action]
+const actionLabel = (action: OperateRuntimeInput["action"] | "none"): string => actionLabels[action]
 
 const formatTime = (value: string): string => {
   const date = new Date(value)
@@ -164,7 +165,7 @@ function RuntimeTable(props: { instances: readonly ProcessRuntimeInstance[] }) {
             <>
               <Badge tone={statusTone(instance.status)}>{instance.status}</Badge>
               <Show when={instance.requiredAction !== "none"}>
-                <div>{actionLabel(instance.requiredAction as OperateRuntimeInput["action"])}</div>
+                <div>{actionLabel(instance.requiredAction)}</div>
               </Show>
             </>
           ),

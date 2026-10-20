@@ -2762,7 +2762,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
       for (const row of balanceRows) {
         balanceTargets.set(`${row.accountId}:${row.currency}:${row.mappingVersion}`, row)
       }
-      const balances = [] as Array<FinancialFactSnapshot["balances"][number]>
+      const balances: Array<FinancialFactSnapshot["balances"][number]> = []
       for (const target of balanceTargets.values()) {
         const outcome = yield* ledger.getBalance({
           tenantId,
@@ -2802,7 +2802,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
     transferRows: readonly FinancialProjectionReportTransferRow[],
   ) =>
     Effect.gen(function* () {
-      const reportTransfers = [] as Array<FinancialFactSnapshot["transfers"][number]>
+      const reportTransfers: Array<FinancialFactSnapshot["transfers"][number]> = []
       for (const row of transferRows) {
         if (row.engineTransferId === null) {
           return yield* Effect.fail(
@@ -2847,7 +2847,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
       const journalStatusByOperation = new Map(
         journalRows.map((row) => [row.operationId, row.journalStatus]),
       )
-      const projections = [] as Array<FinancialFactSnapshot["projections"][number]>
+      const projections: Array<FinancialFactSnapshot["projections"][number]> = []
       for (const operation of finalOperations) {
         const journalStatus = journalStatusByOperation.get(operation.operationId)
         const transferIds = transfersByOperation.get(operation.operationId)
@@ -3053,7 +3053,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
           ) {
             return {
               operation: current,
-              lines: [] as never[],
+              lines: [],
               blocked: false as const,
               routingChanged: false as const,
               reconcile: false as const,
@@ -3080,7 +3080,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
           if (!current.engineVerified || current.engine !== ledgerOption.value.authority) {
             return {
               operation: current,
-              lines: [] as never[],
+              lines: [],
               blocked: false as const,
               routingChanged: true as const,
               observedEngine: null,
@@ -3162,7 +3162,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
           ) {
             return {
               operation: current,
-              lines: [] as never[],
+              lines: [],
               blocked: false as const,
               routingChanged: true as const,
               observedEngine: configuration?.financialEngine ?? null,
@@ -3172,7 +3172,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
           if (configuration.postingEnabled !== true || period?.status !== "open") {
             return {
               operation: current,
-              lines: [] as never[],
+              lines: [],
               blocked: true as const,
               routingChanged: false as const,
               reconcile: false as const,

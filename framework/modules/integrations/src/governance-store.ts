@@ -266,6 +266,7 @@ const toAuditRecord = (row: AuditRow): ExternalGovernanceAuditRecord => ({
   idempotencyKey: row.idempotencyKey,
   reason: row.reason,
   retentionUntil: row.retentionUntil.toISOString(),
+  // SAFETY: audit details are written only from ExternalGovernanceAuditRecord["details"].
   details: row.details as ExternalGovernanceAuditRecord["details"],
   createdAt: row.createdAt.toISOString(),
 })

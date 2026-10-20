@@ -94,6 +94,7 @@ const formatBuckets = (values: Buckets) => ({
 const sumBuckets = (rows: Iterable<Buckets>) => {
   const totals = emptyBuckets()
   for (const values of rows) {
+    // SAFETY: emptyBuckets creates exactly the BucketName keys.
     for (const key of Object.keys(totals) as BucketName[]) totals[key] += values[key]
   }
   return totals
@@ -238,7 +239,7 @@ export const makeSettlementService = Effect.gen(function* () {
       Effect.gen(function* () {
         if (input.paymentId !== undefined) {
           const recorded = yield* loadPayment(input.tenantId, input.paymentId).pipe(
-            Effect.map((payment) => payment as Payment | undefined),
+            Effect.map((payment): Payment | undefined => payment),
             Effect.catchTag("PaymentNotFound", () => Effect.succeed(undefined)),
           )
           if (recorded !== undefined) return recorded

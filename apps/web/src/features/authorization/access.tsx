@@ -499,6 +499,7 @@ function GrantCapabilityDialog(props: {
               placeholder="Choose capability"
               value={capability()}
               disabled={mutation.isPending}
+              // SAFETY: the select offers only capabilities and the empty choice.
               onChange={(event) => setCapability(event.currentTarget.value as Capability | "")}
             />
           )}

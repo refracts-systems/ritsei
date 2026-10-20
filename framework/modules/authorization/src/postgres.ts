@@ -207,6 +207,7 @@ export const makePostgresAuthorizationService = (
       )
       return rows.map(({ capability }): DirectCapabilityGrant => ({
         ...decoded,
+        // SAFETY: grants are written only from a decoded DirectCapabilityGrant capability.
         capability: capability as DirectCapabilityGrant["capability"],
         scope: "tenant",
       }))

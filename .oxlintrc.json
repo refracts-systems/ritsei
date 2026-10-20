@@ -47,6 +47,13 @@
     "anti-slop/no-chained-type-assertions": "error",
     "anti-slop/no-unsafe-dictionary-type": "error",
     "anti-slop/no-runtime-typeof": ["error", { "allowInTypeGuards": true }],
-    "anti-slop/no-unknown-returns": "error"
-  }
+    "anti-slop/no-unknown-returns": "error",
+    "anti-slop/require-safety-comment-for-type-assertion": "error"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.test.ts", "**/*.test.tsx", "**/tests/**", "tests/**"],
+      "rules": { "anti-slop/require-safety-comment-for-type-assertion": "off" }
+    }
+  ]
 }

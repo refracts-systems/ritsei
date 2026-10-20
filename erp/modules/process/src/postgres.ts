@@ -315,6 +315,7 @@ const toProcessJob = (row: {
   tenantId: row.tenantId,
   fenceScope: row.fenceScope,
   leaseGeneration: row.leaseGeneration,
+  // SAFETY: job types are written only by ProcessService from ProcessJob["jobType"].
   jobType: row.jobType as ProcessJob["jobType"],
   idempotencyKey: row.idempotencyKey,
   priority: row.priority,

@@ -49,6 +49,7 @@ function useRegistry() {
 function useAtomValue<A>(atom: () => Atom.Atom<A>): () => A {
   const registry = useRegistry()
   const current = createMemo(atom)
+  // SAFETY: the registry holds a value of A for this atom before any subscription fires.
   const [value, setValue] = createSignal<A>(untrack(() => registry.get(current())) as any)
 
   createEffect(
@@ -59,6 +60,7 @@ function useAtomValue<A>(atom: () => Atom.Atom<A>): () => A {
       }),
   )
 
+  // SAFETY: the signal getter returns the A set above.
   return value as () => A
 }
 
@@ -97,6 +99,7 @@ function AtomTypeahead() {
     const result = searchResult()
     return AsyncResult.isFailure(result) ? Cause.squash(result.cause) : undefined
   }
+  // SAFETY: an empty array is a valid Package list.
   const results = () => AsyncResult.getOrElse(searchResult(), () => [] as Package[])
 
   return (
@@ -281,6 +284,7 @@ function AtomCheckout() {
 
   const total = () => cart().reduce((sum, item) => sum + item.price * item.quantity, 0)
   const inFlight = () => phase() !== "idle"
+  // SAFETY: an empty array is a valid Order list.
   const orders = () => AsyncResult.getOrElse(ordersResult(), () => [] as Order[])
   const ordersLoading = () => {
     const result = ordersResult()

@@ -721,6 +721,7 @@ export const verifyOpeningBalances = (
       mismatches.push({ key, kind: "missing_target", source: sourceEntry })
       continue
     }
+    // SAFETY: OpeningBalance entries are built with exactly their declared fields.
     const fields = (Object.keys(sourceEntry) as (keyof OpeningBalance)[]).filter((field) => {
       if (field === "currency") {
         return sourceEntry[field].toUpperCase() !== targetEntry[field].toUpperCase()

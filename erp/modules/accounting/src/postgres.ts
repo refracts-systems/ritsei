@@ -207,7 +207,9 @@ export const makeAccountingService = Effect.gen(function* () {
     tenantId: row.tenantId,
     legalEntityId: row.legalEntityId,
     status: row.status,
+    // SAFETY: financial_cutover_controls_source_engine_check limits the column to postgresql.
     sourceEngine: row.sourceEngine as "postgresql",
+    // SAFETY: financial_cutover_controls_target_engine_check limits the column to tigerbeetle.
     targetEngine: row.targetEngine as "tigerbeetle",
     cutoverWatermark: row.cutoverWatermark,
     verificationHash: row.verificationHash,
@@ -283,6 +285,7 @@ export const makeAccountingService = Effect.gen(function* () {
     tenantId: row.tenantId,
     legalEntityId: row.legalEntityId,
     artifactHash: row.artifactHash,
+    // SAFETY: financial_verification_artifacts_hash_check limits the column to Ed25519.
     signatureAlgorithm: row.signatureAlgorithm as "Ed25519",
     signingKeyId: row.signingKeyId,
     signature: row.signature,
@@ -538,6 +541,7 @@ export const makeAccountingService = Effect.gen(function* () {
           id: row.id,
           tenantId: row.tenantId,
           reference: row.reference,
+          // SAFETY: the list filter admits only posted and reversed entries.
           status: row.status as "posted" | "reversed",
           postedAt: row.postedAt!.toISOString(),
           ...(row.reversesEntryId === null ? {} : { reversesEntryId: row.reversesEntryId }),

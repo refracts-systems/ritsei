@@ -37,8 +37,11 @@ const DocumentLines = <S extends Schema.Top>(line: S) =>
     .check(Schema.isMinLength(1))
     .check(
       Schema.makeFilter(
+        // SAFETY: every caller passes a line schema that declares itemId, which `uniqueItems` reads.
         (lines) => uniqueItems(lines as ReadonlyArray<{ readonly itemId: string }>),
-        { expected: "each item appears once per stock document" },
+        {
+          expected: "each item appears once per stock document",
+        },
       ),
     )
 

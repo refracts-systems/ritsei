@@ -61,8 +61,10 @@ export const makeTaxServiceFromStore = <R>(storeEffect: Effect.Effect<TaxStore, 
       )
       const byProduct = new Map(defaults.map((value) => [value.productId, value.taxCodeId]))
       return new Map(
-        decoded.productIds.map((productId) => [productId, byProduct.get(productId) ?? null]),
-      ) as ReadonlyMap<string, string | null>
+        decoded.productIds.map(
+          (productId) => [productId, byProduct.get(productId) ?? null] as const,
+        ),
+      )
     })
 
     const computeTax = Effect.fn("TaxService.computeTax")(function* (input: unknown) {

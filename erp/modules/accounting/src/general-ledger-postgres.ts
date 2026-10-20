@@ -346,8 +346,12 @@ export const makeGeneralLedgerPostgresStore = Effect.fn("GeneralLedger.makePostg
     ): { readonly lines: AccountLine[] } | { readonly missing: PostingRole } => {
       const resolved: AccountLine[] = []
       for (const line of lines) {
-        const accountId = "accountId" in line ? line.accountId : rules.get(line.role)
-        if (accountId === undefined) return { missing: (line as { role: PostingRole }).role }
+        if ("accountId" in line) {
+          resolved.push({ accountId: line.accountId, debit: line.debit, credit: line.credit })
+          continue
+        }
+        const accountId = rules.get(line.role)
+        if (accountId === undefined) return { missing: line.role }
         resolved.push({ accountId, debit: line.debit, credit: line.credit })
       }
       return { lines: resolved }
@@ -419,7 +423,7 @@ export const makeGeneralLedgerPostgresStore = Effect.fn("GeneralLedger.makePostg
                 credit: normalize(line.credit),
               })),
             },
-          } satisfies PostEntryOutcome as PostEntryOutcome
+          } satisfies PostEntryOutcome
         }, "accounting.ledger.entry.post")
         .pipe(
           Effect.catchIf(

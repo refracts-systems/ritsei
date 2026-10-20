@@ -4,6 +4,7 @@ import ts from "typescript"
 
 import { isMain } from "./entrypoint.ts"
 import { collectSourceFiles, type SourceFile } from "./source-files.ts"
+import { hasErrnoCode } from "./errno.ts"
 
 const sourceRoots = ["apps", "framework", "erp", "extensions", "tests", "tooling"] as const
 
@@ -352,7 +353,7 @@ export const checkArchitecture = async (): Promise<readonly string[]> => {
   const packageNames: string[] = []
   for (const root of packageRoots) {
     const entries = await readdir(root, { withFileTypes: true }).catch((cause: unknown) => {
-      if ((cause as NodeJS.ErrnoException).code === "ENOENT") return []
+      if (hasErrnoCode(cause, "ENOENT")) return []
       throw cause
     })
     for (const entry of entries) {
@@ -361,7 +362,7 @@ export const checkArchitecture = async (): Promise<readonly string[]> => {
         if ((await stat(`${root}/${entry.name}/mod.ts`)).isFile())
           packageNames.push(`${root}/${entry.name}`)
       } catch (cause) {
-        if ((cause as NodeJS.ErrnoException).code !== "ENOENT") throw cause
+        if (!hasErrnoCode(cause, "ENOENT")) throw cause
       }
     }
   }

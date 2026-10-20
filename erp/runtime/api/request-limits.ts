@@ -97,6 +97,7 @@ const requestBodyLimitMiddleware = (
     const declaredResponse = declaredBodyResponse(request.headers["content-length"])
     if (declaredResponse !== undefined) return declaredResponse
 
+    // SAFETY: the Node request source may expose a web body; its absence is checked with `in` below.
     const source = request.source as { readonly body?: ReadableStream<Uint8Array> | null }
     if ("body" in source && source.body === null) return yield* effect
 

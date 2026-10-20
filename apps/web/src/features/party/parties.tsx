@@ -320,8 +320,7 @@ function CreateLegalEntityCommand(props: {
 function AssignRoleCommand(props: { detail: PartyDetailValue; reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const mutation = assignPartyRoleMutation(scope)
-  const options = () =>
-    roleOptions.filter((option) => !props.detail.roles.includes(option.value as PartyRole))
+  const options = () => roleOptions.filter((option) => !props.detail.roles.includes(option.value))
   return (
     <details>
       <summary>Assign business role</summary>
@@ -338,9 +337,9 @@ function AssignRoleCommand(props: { detail: PartyDetailValue; reload: () => Prom
               // fallow-ignore-next-line complexity
               (value) => {
                 if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
-                const role = value.role
-                if (!roleOptions.some((option) => option.value === role)) return
-                mutation.mutate({ partyId: props.detail.party.id, role: role as PartyRole })
+                const role = roleOptions.find((option) => option.value === value.role)?.value
+                if (role === undefined) return
+                mutation.mutate({ partyId: props.detail.party.id, role })
               }
             }
           >
@@ -476,7 +475,7 @@ function CreateRelationshipCommand(props: {
   const scope = useContext(ApiRuntime)
   const mutation = createPartyRelationshipMutation(scope)
   const eligibleKinds = () =>
-    roleOptions.filter((option) => props.detail.roles.includes(option.value as PartyRole))
+    roleOptions.filter((option) => props.detail.roles.includes(option.value))
   return (
     <details>
       <summary>Create legal-entity relationship</summary>
@@ -494,17 +493,9 @@ function CreateRelationshipCommand(props: {
               (value) => {
                 if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
                 const legalEntityId = requiredText(value.legalEntityId)
-                const kind = value.kind
-                if (
-                  legalEntityId === null ||
-                  !eligibleKinds().some((option) => option.value === kind)
-                )
-                  return
-                mutation.mutate({
-                  partyId: props.detail.party.id,
-                  legalEntityId,
-                  kind: kind as PartyRole,
-                })
+                const kind = eligibleKinds().find((option) => option.value === value.kind)?.value
+                if (legalEntityId === null || kind === undefined) return
+                mutation.mutate({ partyId: props.detail.party.id, legalEntityId, kind })
               }
             }
           >

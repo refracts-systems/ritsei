@@ -130,6 +130,7 @@ export const definedFields = <Fields extends { readonly [Key in keyof Fields]: u
 
 export const responseMatches = <Owner>(value: Owner, expected: Readonly<Partial<Owner>>) =>
   Object.entries(expected).every(
+    // SAFETY: Object.entries(expected) yields keys of Partial<Owner>.
     ([key, expectedValue]) => value[key as keyof Owner] === expectedValue,
   )
 

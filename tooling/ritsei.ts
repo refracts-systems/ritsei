@@ -3,6 +3,7 @@ import { mkdir, stat, writeFile } from "node:fs/promises"
 import { generate } from "./codegen.ts"
 import { newEntityModule } from "./entity.ts"
 import { isMain } from "./entrypoint.ts"
+import { hasErrnoCode } from "./errno.ts"
 
 const moduleName = /^[a-z][a-z0-9_]*$/
 
@@ -102,7 +103,7 @@ const exists = async (path: string) => {
     await stat(path)
     return true
   } catch (cause) {
-    if ((cause as NodeJS.ErrnoException).code === "ENOENT") return false
+    if (hasErrnoCode(cause, "ENOENT")) return false
     throw cause
   }
 }
