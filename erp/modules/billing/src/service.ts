@@ -539,7 +539,7 @@ export const makeBillingService = Effect.gen(function* () {
     })
 
   const invoiceSalesOrder = Effect.fn("BillingService.invoiceSalesOrder")(function* (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof InvoiceSalesOrderInput>,
   ) {
     const decoded = yield* authorized(
       InvoiceSalesOrderInput,
@@ -689,7 +689,7 @@ export const makeBillingService = Effect.gen(function* () {
     })
 
   const billPurchaseOrder = Effect.fn("BillingService.billPurchaseOrder")(function* (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof BillPurchaseOrderInput>,
   ) {
     const decoded = yield* authorized(
       BillPurchaseOrderInput,
@@ -778,7 +778,7 @@ export const makeBillingService = Effect.gen(function* () {
           : minor(creditNote.total)
       if (applied === 0n) return creditNote
       // The applied amount never exceeds either open amount, so settlement cannot fail here.
-      const impossible = (error: unknown) => Effect.die(error)
+      const impossible = (error: Parameters<typeof Effect.die>[0]) => Effect.die(error)
       const guarded = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
         effect.pipe(Effect.catch(impossible))
       yield* guarded(
@@ -801,7 +801,9 @@ export const makeBillingService = Effect.gen(function* () {
       )
     })
 
-  const creditInvoice = Effect.fn("BillingService.creditInvoice")(function* (input: unknown) {
+  const creditInvoice = Effect.fn("BillingService.creditInvoice")(function* (
+    input: Schema.Codec.Encoded<typeof CreditInvoiceInput>,
+  ) {
     const decoded = yield* authorized(
       CreditInvoiceInput,
       BillingCapabilities.creditNoteCreate,
@@ -865,7 +867,9 @@ export const makeBillingService = Effect.gen(function* () {
     )
   })
 
-  const applySettlement = Effect.fn("BillingService.applySettlement")(function* (input: unknown) {
+  const applySettlement = Effect.fn("BillingService.applySettlement")(function* (
+    input: Schema.Codec.Encoded<typeof ApplySettlementInput>,
+  ) {
     const decoded = yield* authorized(
       ApplySettlementInput,
       BillingCapabilities.settlementApply,
@@ -882,7 +886,9 @@ export const makeBillingService = Effect.gen(function* () {
     )
   })
 
-  const getDocument = Effect.fn("BillingService.getDocument")(function* (input: unknown) {
+  const getDocument = Effect.fn("BillingService.getDocument")(function* (
+    input: Schema.Codec.Encoded<typeof GetBillingDocumentInput>,
+  ) {
     const decoded = yield* authorized(
       GetBillingDocumentInput,
       BillingCapabilities.documentRead,
@@ -890,7 +896,9 @@ export const makeBillingService = Effect.gen(function* () {
     return yield* loadDocument(decoded.tenantId, decoded.invoiceId)
   })
 
-  const listDocuments = Effect.fn("BillingService.listDocuments")(function* (input: unknown) {
+  const listDocuments = Effect.fn("BillingService.listDocuments")(function* (
+    input: Schema.Codec.Encoded<typeof ListBillingDocumentsInput>,
+  ) {
     const decoded = yield* authorized(
       ListBillingDocumentsInput,
       BillingCapabilities.documentRead,
@@ -920,7 +928,9 @@ export const makeBillingService = Effect.gen(function* () {
     )
   })
 
-  const listOpenItems = Effect.fn("BillingService.listOpenItems")(function* (input: unknown) {
+  const listOpenItems = Effect.fn("BillingService.listOpenItems")(function* (
+    input: Schema.Codec.Encoded<typeof ListOpenItemsInput>,
+  ) {
     const decoded = yield* authorized(ListOpenItemsInput, BillingCapabilities.documentRead)(input)
     // The open amount on the as-of date: the total less what was settled by then.
     const openAsOf = sql<string>`${invoices.total} - coalesce((

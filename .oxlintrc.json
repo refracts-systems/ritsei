@@ -71,7 +71,6 @@
         "apps/web/src/features/tax/**",
         "apps/web/src/shared/**",
         "erp/modules/accounting/**",
-        "erp/modules/billing/**",
         "erp/modules/communication/**",
         "erp/modules/inventory/**",
         "erp/modules/party/**",

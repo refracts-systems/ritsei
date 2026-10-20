@@ -168,10 +168,12 @@ export type InvoiceFailure =
 /** Posted invoices, credit notes, and supplier bills with their open amounts (ADR-0102). */
 export interface BillingService {
   /** Invoices the delivered, not yet invoiced quantities of a confirmed sales order. */
-  readonly invoiceSalesOrder: (input: unknown) => Effect.Effect<BillingDocument, InvoiceFailure>
+  readonly invoiceSalesOrder: (
+    input: Schema.Codec.Encoded<typeof InvoiceSalesOrderInput>,
+  ) => Effect.Effect<BillingDocument, InvoiceFailure>
   /** Bills received purchase order quantities; the price difference posts as variance. */
   readonly billPurchaseOrder: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof BillPurchaseOrderInput>,
   ) => Effect.Effect<
     BillingDocument,
     | BillingErrors.BillExceedsReceipt
@@ -186,7 +188,7 @@ export interface BillingService {
   >
   /** Credits invoice lines and applies the credit to the invoice's open amount. */
   readonly creditInvoice: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreditInvoiceInput>,
   ) => Effect.Effect<
     BillingDocument,
     | BillingErrors.BillingDocumentNotFound
@@ -197,7 +199,7 @@ export interface BillingService {
   >
   /** Reduces a document's open amount for a payment or other settlement source. */
   readonly applySettlement: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ApplySettlementInput>,
   ) => Effect.Effect<
     BillingDocument,
     | BillingErrors.BillingDocumentNotFound
@@ -206,12 +208,14 @@ export interface BillingService {
     | CommonFailure
   >
   readonly getDocument: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof GetBillingDocumentInput>,
   ) => Effect.Effect<BillingDocument, BillingErrors.BillingDocumentNotFound | CommonFailure>
   readonly listDocuments: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ListBillingDocumentsInput>,
   ) => Effect.Effect<ReadonlyArray<BillingDocument>, CommonFailure>
-  readonly listOpenItems: (input: unknown) => Effect.Effect<ReadonlyArray<OpenItem>, CommonFailure>
+  readonly listOpenItems: (
+    input: Schema.Codec.Encoded<typeof ListOpenItemsInput>,
+  ) => Effect.Effect<ReadonlyArray<OpenItem>, CommonFailure>
 }
 
 export const BillingService = Context.Service<BillingService>("RITSEI/BillingService")
