@@ -76,7 +76,7 @@ export class FinancialStoreObservationFailure extends Schema.TaggedError<Financi
 
 export interface FinancialStoreWatermarkCollectorService {
   readonly collect: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof FinancialStoreWatermarkInput>,
   ) => Effect.Effect<FinancialStoreWatermark, FinancialStoreObservationFailure | Schema.SchemaError>
 }
 
@@ -148,7 +148,7 @@ export type FinancialStoreInventory = Schema.Schema.Type<typeof FinancialStoreIn
 
 export interface FinancialStoreInventoryScannerService {
   readonly scan: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof FinancialStoreInventoryRequest>,
   ) => Effect.Effect<FinancialStoreInventory, FinancialStoreObservationFailure | Schema.SchemaError>
 }
 
@@ -164,11 +164,11 @@ export type FinancialStoreObservationProvider = Readonly<{
 export interface FinancialStoreObservationRegistryService {
   readonly collect: (
     authority: FinancialStoreAuthority,
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof FinancialStoreWatermarkInput>,
   ) => Effect.Effect<FinancialStoreWatermark, FinancialStoreObservationFailure | Schema.SchemaError>
   readonly scan: (
     authority: FinancialStoreAuthority,
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof FinancialStoreInventoryRequest>,
   ) => Effect.Effect<FinancialStoreInventory, FinancialStoreObservationFailure | Schema.SchemaError>
 }
 
@@ -177,7 +177,11 @@ export const FinancialStoreObservationRegistry =
     "RITSEI/FinancialStoreObservationRegistry",
   )
 
-const observationScope = (input: unknown) =>
+const observationScope = (
+  input:
+    | Schema.Codec.Encoded<typeof FinancialStoreWatermarkInput>
+    | Schema.Codec.Encoded<typeof FinancialStoreInventoryRequest>,
+) =>
   Predicate.isObjectOrArray(input) && "scope" in input && Predicate.isString(input.scope)
     ? input.scope
     : "observation-registry"
@@ -278,7 +282,7 @@ const accountKey = (account: FinancialStoreAccountObservation) =>
 
 const transferKey = (transfer: FinancialStoreTransferObservation) => transfer.transferRef
 
-const canonicalJson = (value: unknown) => JSON.stringify(canonicalize(value)) ?? ""
+const canonicalJson = <A>(value: A) => JSON.stringify(canonicalize(value)) ?? ""
 
 const canonicalArray = (values: readonly unknown[]) =>
   [...values]
@@ -529,7 +533,7 @@ export class FinancialStagingTelemetryFailure extends Schema.TaggedError<Financi
 
 export interface FinancialStagingTelemetryService {
   readonly collect: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof FinancialStagingTelemetryInput>,
   ) => Effect.Effect<
     FinancialStagingTelemetrySnapshot,
     FinancialStagingTelemetryFailure | Schema.SchemaError

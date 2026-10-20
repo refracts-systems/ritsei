@@ -106,7 +106,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               { role: "receivable", debit: "111.00", credit: "0" },
               { role: "revenue", debit: "0", credit: "100.00" },
               { role: "output_tax", debit: "0", credit: "11.00" },
-            ],
+            ] as const,
           }
           const posted = yield* ledger.postDocumentEntry(invoice)
           assert.strictEqual(posted.number, "JE/2026/00001")

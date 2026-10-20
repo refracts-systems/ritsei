@@ -218,20 +218,22 @@ export type PostEntryFailure =
  */
 export interface GeneralLedgerService {
   readonly createAccount: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreateLedgerAccountInput>,
   ) => Effect.Effect<
     LedgerAccount,
     AccountingErrors.AccountAlreadyExists | AccountingErrors.InvalidParentAccount | CommonFailure
   >
-  readonly listChart: (input: unknown) => Effect.Effect<ReadonlyArray<LedgerAccount>, CommonFailure>
+  readonly listChart: (
+    input: Schema.Codec.Encoded<typeof ListChartInput>,
+  ) => Effect.Effect<ReadonlyArray<LedgerAccount>, CommonFailure>
   readonly applyChartTemplate: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ApplyChartTemplateInput>,
   ) => Effect.Effect<
     ReadonlyArray<LedgerAccount>,
     AccountingErrors.AccountingLegalEntityNotFound | CommonFailure
   >
   readonly configurePostingRule: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ConfigurePostingRuleInput>,
   ) => Effect.Effect<
     PostingRule,
     | AccountingErrors.AccountNotFound
@@ -239,16 +241,22 @@ export interface GeneralLedgerService {
     | CommonFailure
   >
   readonly listPostingRules: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ListPostingRulesInput>,
   ) => Effect.Effect<ReadonlyArray<PostingRule>, CommonFailure>
-  readonly postManualEntry: (input: unknown) => Effect.Effect<LedgerEntry, PostEntryFailure>
-  readonly postDocumentEntry: (input: unknown) => Effect.Effect<LedgerEntry, PostEntryFailure>
-  readonly trialBalance: (input: unknown) => Effect.Effect<TrialBalance, CommonFailure>
+  readonly postManualEntry: (
+    input: Schema.Codec.Encoded<typeof PostManualEntryInput>,
+  ) => Effect.Effect<LedgerEntry, PostEntryFailure>
+  readonly postDocumentEntry: (
+    input: Schema.Codec.Encoded<typeof PostDocumentEntryInput>,
+  ) => Effect.Effect<LedgerEntry, PostEntryFailure>
+  readonly trialBalance: (
+    input: Schema.Codec.Encoded<typeof TrialBalanceInput>,
+  ) => Effect.Effect<TrialBalance, CommonFailure>
   readonly generalLedger: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof GeneralLedgerInput>,
   ) => Effect.Effect<GeneralLedger, AccountingErrors.AccountNotFound | CommonFailure>
   readonly roleBalance: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof RoleBalanceInput>,
   ) => Effect.Effect<RoleBalance, AccountingErrors.PostingRuleNotFound | CommonFailure>
 }
 

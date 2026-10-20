@@ -500,7 +500,7 @@ export class FinancialReconciliationCheckpointConflict extends Schema.TaggedErro
 
 export interface FinancialOperationService {
   readonly createJournalIntent: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreateFinancialJournalIntentInput>,
   ) => Effect.Effect<
     FinancialOperation,
     | AuthorizationDenied
@@ -523,7 +523,7 @@ export interface FinancialOperationService {
     | FinancialOperationInjectedFailure
   >
   readonly createRevenueIntent: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreateFinancialRevenueIntentInput>,
   ) => Effect.Effect<
     FinancialOperation,
     | AuthorizationDenied
@@ -551,7 +551,7 @@ export interface FinancialOperationService {
     | FinancialOperationInjectedFailure
   >
   readonly createReversalIntent: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreateFinancialReversalIntentInput>,
   ) => Effect.Effect<
     FinancialOperation,
     | AuthorizationDenied
@@ -574,7 +574,7 @@ export interface FinancialOperationService {
     | FinancialOperationInjectedFailure
   >
   readonly submitFinancialOperation: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof FinancialOperationCommandInput>,
   ) => Effect.Effect<
     FinancialOperation,
     | AuthorizationDenied
@@ -589,7 +589,7 @@ export interface FinancialOperationService {
     | FinancialOperationInjectedFailure
   >
   readonly reconcileFinancialOperation: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof FinancialOperationCommandInput>,
   ) => Effect.Effect<
     FinancialOperation,
     | AuthorizationDenied
@@ -604,7 +604,7 @@ export interface FinancialOperationService {
     | FinancialOperationInjectedFailure
   >
   readonly reconcileFinancialCheckpoint: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ReconcileFinancialCheckpointInput>,
   ) => Effect.Effect<
     FinancialReconciliationCheckpoint,
     | AuthorizationDenied
@@ -616,7 +616,7 @@ export interface FinancialOperationService {
     | Schema.SchemaError
   >
   readonly rebuildFinancialProjections: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof RebuildFinancialProjectionInput>,
   ) => Effect.Effect<
     FinancialProjectionRebuildResult,
     | AuthorizationDenied
@@ -1874,7 +1874,9 @@ export const makeFinancialOperationService = Effect.gen(function* () {
       "accounting.financial_projection_rebuild.quarantine",
     )
 
-  const reconcileFinancialCheckpoint = (input: unknown) =>
+  const reconcileFinancialCheckpoint = (
+    input: Schema.Codec.Encoded<typeof ReconcileFinancialCheckpointInput>,
+  ) =>
     Effect.gen(function* () {
       const parsed = yield* Schema.decodeUnknownEffect(ReconcileFinancialCheckpointInput)(input)
       let decoded = {
@@ -2910,7 +2912,9 @@ export const makeFinancialOperationService = Effect.gen(function* () {
       return reportSnapshot
     })
 
-  const rebuildFinancialProjections = (input: unknown) =>
+  const rebuildFinancialProjections = (
+    input: Schema.Codec.Encoded<typeof RebuildFinancialProjectionInput>,
+  ) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(RebuildFinancialProjectionInput)(input)
       yield* authorization.authorize({
@@ -2982,7 +2986,10 @@ export const makeFinancialOperationService = Effect.gen(function* () {
       }
     })
 
-  const submit = (input: unknown, jobType: string) =>
+  const submit = (
+    input: Schema.Codec.Encoded<typeof FinancialOperationCommandInput>,
+    jobType: string,
+  ) =>
     Effect.gen(function* () {
       const parsed = yield* Schema.decodeUnknownEffect(FinancialOperationCommandInput)(input)
       const decoded = { ...parsed, operationId: parsed.operationId.trim() }
@@ -3472,7 +3479,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
     })
 
   const createJournalIntent = (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreateFinancialJournalIntentInput>,
     capability:
       | typeof AccountingCapabilities.journalPost
       | typeof AccountingCapabilities.revenuePost = AccountingCapabilities.journalPost,
@@ -3918,7 +3925,9 @@ export const makeFinancialOperationService = Effect.gen(function* () {
       return toOperation(operation)
     })
 
-  const createRevenueIntent = (input: unknown) =>
+  const createRevenueIntent = (
+    input: Schema.Codec.Encoded<typeof CreateFinancialRevenueIntentInput>,
+  ) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(CreateFinancialRevenueIntentInput)(input)
       yield* authorization.authorize({
@@ -3987,7 +3996,9 @@ export const makeFinancialOperationService = Effect.gen(function* () {
       )
     })
 
-  const createReversalIntent = (input: unknown) =>
+  const createReversalIntent = (
+    input: Schema.Codec.Encoded<typeof CreateFinancialReversalIntentInput>,
+  ) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(CreateFinancialReversalIntentInput)(input)
       yield* authorization.authorize({

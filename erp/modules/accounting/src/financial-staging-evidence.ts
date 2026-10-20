@@ -69,7 +69,7 @@ type FinancialStagingEvidenceListError =
  */
 export interface FinancialStagingEvidenceStoreService {
   readonly append: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof StoreAppendFinancialStagingEvidenceInput>,
   ) => Effect.Effect<FinancialStagingEvidenceAppendResult, FinancialStagingEvidenceStoreError>
   readonly get: (
     tenantId: string,
@@ -79,7 +79,7 @@ export interface FinancialStagingEvidenceStoreService {
     FinancialStagingEvidenceInvalid | DatabaseFailure
   >
   readonly list: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof StoreFinancialStagingEvidenceLookupInput>,
   ) => Effect.Effect<
     readonly FinancialStagingEvidenceRecordType[],
     FinancialStagingEvidenceListError
@@ -96,7 +96,7 @@ const invalid = (
   reason: ConstructorParameters<typeof FinancialStagingEvidenceInvalid>[0]["reason"],
 ) => new FinancialStagingEvidenceInvalid({ tenantId, recordId, reason })
 
-const prepare = (input: unknown) =>
+const prepare = (input: Schema.Codec.Encoded<typeof StoreAppendFinancialStagingEvidenceInput>) =>
   Effect.gen(function* () {
     const decoded = yield* Schema.decodeUnknownEffect(StoreAppendFinancialStagingEvidenceInput)(
       input,
@@ -311,7 +311,7 @@ export const makeMemoryFinancialStagingEvidenceStore = (): FinancialStagingEvide
 export const makePostgresFinancialStagingEvidenceStore = Effect.gen(function* () {
   const database = yield* Database
   return {
-    append: (input: unknown) =>
+    append: (input: Schema.Codec.Encoded<typeof StoreAppendFinancialStagingEvidenceInput>) =>
       Effect.gen(function* () {
         const candidate = yield* prepare(input)
         const result = yield* database.transaction(async (transaction) => {
@@ -376,7 +376,7 @@ export const makePostgresFinancialStagingEvidenceStore = Effect.gen(function* ()
         const row = rows[0]
         return row === undefined ? undefined : yield* validateStoredRow(row)
       }),
-    list: (input: unknown) =>
+    list: (input: Schema.Codec.Encoded<typeof StoreFinancialStagingEvidenceLookupInput>) =>
       Effect.gen(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(StoreFinancialStagingEvidenceLookupInput)(
           input,

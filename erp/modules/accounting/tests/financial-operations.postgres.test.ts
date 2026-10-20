@@ -543,7 +543,7 @@ it.effect.skipIf(databaseUrl === undefined)(
         // SAFETY: the double keeps the real messaging members and replaces only append.
         const failingRebuildMessaging = {
           ...messaging,
-          append: (_event: unknown) =>
+          append: (_event: Parameters<typeof messaging.append>[0]) =>
             Effect.fail(
               new DatabaseFailure({
                 operation: "financial-operation.test.rebuild-append",
@@ -687,7 +687,7 @@ it.effect.skipIf(databaseUrl === undefined)(
         })
         const submissionIdentityLedger = {
           ...ledger,
-          postJournal: (input: unknown) =>
+          postJournal: (input: Parameters<typeof ledger.postJournal>[0]) =>
             ledger
               .postJournal(input)
               .pipe(
@@ -778,7 +778,7 @@ it.effect.skipIf(databaseUrl === undefined)(
         assert.strictEqual(rebuildIdentityPosted.status, "reconciled")
         const mappingMismatchLedger = {
           ...ledger,
-          reconcileJournal: (input: unknown) =>
+          reconcileJournal: (input: Parameters<typeof ledger.reconcileJournal>[0]) =>
             ledger.reconcileJournal(input).pipe(
               Effect.map((outcome) => {
                 if (outcome._tag !== "accepted") return outcome
@@ -1451,7 +1451,7 @@ it.effect.skipIf(databaseUrl === undefined)(
         assert.instanceOf(checkpointConflict, FinancialReconciliationCheckpointConflict)
         const checkpointMismatchLedger = {
           ...ledger,
-          reconcileJournal: (journalInput: unknown) =>
+          reconcileJournal: (journalInput: Parameters<typeof ledger.reconcileJournal>[0]) =>
             ledger.reconcileJournal(journalInput).pipe(
               Effect.map((outcome) => {
                 if (outcome._tag !== "accepted") return outcome
@@ -1775,7 +1775,7 @@ it.effect.skipIf(databaseUrl === undefined)(
         let providerCalls = 0
         const blockingLedger = {
           ...ledger,
-          postJournal: (input: unknown) => {
+          postJournal: (input: Parameters<typeof ledger.postJournal>[0]) => {
             providerCalls += 1
             return ledger.postJournal(input)
           },
@@ -1877,7 +1877,9 @@ it.effect.skipIf(databaseUrl === undefined)(
           readonly unknownReason?: "unavailable" | "not_found"
         }>
         const makeRebuildLedger = (behavior: RebuildLedgerBehavior = {}) => {
-          const acceptedOutcome = (journalInput: unknown) => {
+          const acceptedOutcome = (
+            journalInput: Parameters<typeof ledger.expectedTransferIds>[0],
+          ) => {
             // SAFETY: the test calls this double only with inputs of the shape it reads.
             const request = journalInput as {
               readonly operationId: string
@@ -1899,12 +1901,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             createExecutionAccount: ledger.createExecutionAccount,
             postJournal: ledger.postJournal,
             expectedTransferIds: ledger.expectedTransferIds,
-            getBalance: (balanceInput: unknown) => {
-              // SAFETY: the test calls this double only with inputs of the shape it reads.
-              const target = balanceInput as {
-                readonly accountId: string
-                readonly mappingVersion: number
-              }
+            getBalance: (target: Parameters<FinancialLedgerPort["getBalance"]>[0]) => {
               return Effect.succeed({
                 _tag: "available" as const,
                 accountId: target.accountId,
@@ -1915,9 +1912,10 @@ it.effect.skipIf(databaseUrl === undefined)(
                 creditsPostedMinor: "0",
               })
             },
-            reconcileJournal: (journalInput: unknown) => {
-              // SAFETY: the test calls this double only with inputs of the shape it reads.
-              const operationId = (journalInput as { readonly operationId: string }).operationId
+            reconcileJournal: (
+              journalInput: Parameters<FinancialLedgerPort["reconcileJournal"]>[0],
+            ) => {
+              const operationId = journalInput.operationId
               if (operationId === behavior.identityOperationId) {
                 return acceptedOutcome(journalInput).pipe(
                   Effect.map((outcome) => ({

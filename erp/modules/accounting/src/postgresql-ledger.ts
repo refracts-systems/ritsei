@@ -374,7 +374,9 @@ const toRejected = (reason: string | null): FinancialExecutionOutcome => ({
 export const makePostgresqlFinancialLedger = Effect.gen(function* () {
   const database = yield* Database
 
-  const createExecutionAccount = (input: unknown) =>
+  const createExecutionAccount = (
+    input: Schema.Codec.Encoded<typeof CreateExecutionAccountInput>,
+  ) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(CreateExecutionAccountInput)(input)
       const [account] = yield* database.query(
@@ -424,13 +426,13 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
       ),
     )
 
-  const expectedTransferIds = (input: unknown) =>
+  const expectedTransferIds = (input: Schema.Codec.Encoded<typeof PostFinancialJournalInput>) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(PostFinancialJournalInput)(input)
       return pairLines(decoded.lines).map((_, index) => transferId(decoded, index))
     })
 
-  const postJournal = (input: unknown) =>
+  const postJournal = (input: Schema.Codec.Encoded<typeof PostFinancialJournalInput>) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(PostFinancialJournalInput)(input)
       const validation = validateJournal(decoded)
@@ -656,7 +658,7 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
       ),
     )
 
-  const reconcileJournal = (input: unknown) =>
+  const reconcileJournal = (input: Schema.Codec.Encoded<typeof PostFinancialJournalInput>) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(PostFinancialJournalInput)(input)
       const validation = validateJournal(decoded)
@@ -752,7 +754,7 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
       ),
     )
 
-  const getBalance = (input: unknown) =>
+  const getBalance = (input: Schema.Codec.Encoded<typeof GetFinancialBalanceInput>) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(GetFinancialBalanceInput)(input)
       const [account] = yield* database.query(

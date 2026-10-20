@@ -398,7 +398,7 @@ type CommonFailure = AuthorizationDenied | DatabaseFailure | Schema.SchemaError
 
 export interface AccountingService {
   readonly configureLegalEntity: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ConfigureLegalEntityInput>,
   ) => Effect.Effect<
     AccountingConfiguration,
     | AccountingErrors.AccountingConfigurationAlreadyExists
@@ -407,7 +407,7 @@ export interface AccountingService {
     | CommonFailure
   >
   readonly recordFinancialVerificationArtifact: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof RecordFinancialVerificationArtifactInput>,
   ) => Effect.Effect<
     FinancialVerificationArtifact,
     | AccountingErrors.FinancialVerificationArtifactInvalid
@@ -416,7 +416,7 @@ export interface AccountingService {
     | Schema.SchemaError
   >
   readonly recordFinancialStagingEvidence: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof RecordFinancialStagingEvidenceInput>,
   ) => Effect.Effect<
     FinancialStagingEvidenceRecord,
     | AccountingErrors.FinancialStagingEvidenceConflict
@@ -427,7 +427,7 @@ export interface AccountingService {
     | Schema.SchemaError
   >
   readonly listFinancialStagingEvidence: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ListFinancialStagingEvidenceInput>,
   ) => Effect.Effect<
     readonly FinancialStagingEvidenceRecord[],
     | AccountingErrors.FinancialStagingEvidenceInvalid
@@ -436,7 +436,7 @@ export interface AccountingService {
     | Schema.SchemaError
   >
   readonly prepareTigerBeetleCutover: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof PrepareTigerBeetleCutoverInput>,
   ) => Effect.Effect<
     FinancialCutoverControl,
     | AccountingErrors.AccountingLegalEntityNotFound
@@ -445,7 +445,7 @@ export interface AccountingService {
     | CommonFailure
   >
   readonly approveTigerBeetleCutover: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ApproveTigerBeetleCutoverInput>,
   ) => Effect.Effect<
     FinancialCutoverControl,
     | AccountingErrors.AccountingLegalEntityNotFound
@@ -456,7 +456,7 @@ export interface AccountingService {
     | CommonFailure
   >
   readonly activateTigerBeetleCutover: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ActivateTigerBeetleCutoverInput>,
   ) => Effect.Effect<
     FinancialCutoverControl,
     | AccountingErrors.AccountingLegalEntityNotFound
@@ -465,23 +465,25 @@ export interface AccountingService {
     | CommonFailure
   >
   readonly listAccountingConfigurations: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ListAccountingConfigurationsInput>,
   ) => Effect.Effect<readonly AccountingConfiguration[], CommonFailure>
-  readonly listAccounts: (input: unknown) => Effect.Effect<readonly Account[], CommonFailure>
+  readonly listAccounts: (
+    input: Schema.Codec.Encoded<typeof ListAccountsInput>,
+  ) => Effect.Effect<readonly Account[], CommonFailure>
   readonly listAccountingPeriods: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ListAccountingPeriodsInput>,
   ) => Effect.Effect<readonly AccountingPeriod[], CommonFailure>
   readonly listRevenuePostingProfiles: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ListRevenuePostingProfilesInput>,
   ) => Effect.Effect<readonly RevenuePostingProfile[], CommonFailure>
   readonly listJournalEntries: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ListJournalEntriesInput>,
   ) => Effect.Effect<readonly JournalEntry[], CommonFailure>
   readonly createAccount: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreateAccountInput>,
   ) => Effect.Effect<Account, AccountingErrors.AccountAlreadyExists | CommonFailure>
   readonly configureRevenuePosting: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ConfigureRevenuePostingInput>,
   ) => Effect.Effect<
     RevenuePostingProfile,
     | AccountingErrors.AccountNotFound
@@ -490,10 +492,10 @@ export interface AccountingService {
     | CommonFailure
   >
   readonly openPeriod: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof OpenPeriodInput>,
   ) => Effect.Effect<AccountingPeriod, AccountingErrors.AccountingPeriodOverlap | CommonFailure>
   readonly closePeriod: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ClosePeriodInput>,
   ) => Effect.Effect<
     AccountingPeriod,
     | AccountingErrors.FinancialOperationsPending
@@ -501,7 +503,7 @@ export interface AccountingService {
     | CommonFailure
   >
   readonly postRevenueForOrder: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof PostRevenueForOrderInput>,
   ) => Effect.Effect<
     JournalEntry,
     | AccountingErrors.AccountingPeriodNotOpen
@@ -514,7 +516,7 @@ export interface AccountingService {
     | CommonFailure
   >
   readonly reverseRevenueForOrder: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ReverseRevenueForOrderInput>,
   ) => Effect.Effect<
     JournalEntry,
     | AccountingErrors.AccountingPeriodNotOpen
@@ -525,7 +527,7 @@ export interface AccountingService {
     | CommonFailure
   >
   readonly postJournal: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof PostJournalInput>,
   ) => Effect.Effect<
     JournalEntry,
     | AccountingErrors.AccountNotFound

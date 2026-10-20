@@ -153,19 +153,19 @@ export type FinancialBalanceOutcome = Schema.Schema.Type<typeof FinancialBalance
 export interface FinancialLedgerPort {
   readonly authority: FinancialLedgerAuthority
   readonly createExecutionAccount: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreateExecutionAccountInput>,
   ) => Effect.Effect<ExecutionAccountOutcome, Schema.SchemaError>
   readonly postJournal: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof PostFinancialJournalInput>,
   ) => Effect.Effect<FinancialExecutionOutcome, Schema.SchemaError>
   readonly reconcileJournal: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof PostFinancialJournalInput>,
   ) => Effect.Effect<FinancialExecutionOutcome, Schema.SchemaError>
   readonly expectedTransferIds: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof PostFinancialJournalInput>,
   ) => Effect.Effect<readonly string[], Schema.SchemaError>
   readonly getBalance: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof GetFinancialBalanceInput>,
   ) => Effect.Effect<FinancialBalanceOutcome, Schema.SchemaError>
 }
 

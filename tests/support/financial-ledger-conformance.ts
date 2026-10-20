@@ -1,6 +1,8 @@
 import { assert } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 
+import type { FinancialLedgerPort } from "../../erp/modules/accounting/mod.ts"
+
 export const LARGE_FINANCIAL_MAJOR = "500000000000000.00"
 export const LARGE_FINANCIAL_MINOR = "50000000000000000"
 
@@ -21,19 +23,9 @@ export type ConformanceJournal = {
   readonly lines: readonly JournalLine[]
 }
 
-type Ledger = {
-  readonly authority: Authority
-  readonly createExecutionAccount: (
-    input: unknown,
-  ) => Effect.Effect<{ readonly _tag: string }, unknown>
-  readonly postJournal: (input: unknown) => Effect.Effect<unknown, unknown>
-  readonly reconcileJournal: (input: unknown) => Effect.Effect<{ readonly _tag: string }, unknown>
-  readonly getBalance: (input: unknown) => Effect.Effect<unknown, unknown>
-}
-
 /** Shared assertions used by the test, PostgreSQL, and real TigerBeetle adapters. */
 export const assertFinancialLedgerConformance = (
-  ledger: Ledger,
+  ledger: FinancialLedgerPort,
   input: ConformanceJournal,
   expectedAuthority: Authority,
 ) =>

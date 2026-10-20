@@ -452,7 +452,7 @@ export type FinancialFactMismatch = Readonly<{
 }>
 
 const factKey = (...parts: readonly (string | number)[]) => parts.join(":")
-const sortedJson = (value: unknown) => JSON.stringify(value)
+const sortedJson = (value: Parameters<typeof JSON.stringify>[0]) => JSON.stringify(value)
 const sortFacts = <A>(facts: readonly A[], key: (fact: A) => string) =>
   [...facts].toSorted((left, right) => {
     const keyOrder = key(left).localeCompare(key(right))
@@ -605,7 +605,7 @@ export const compareFinancialFactSnapshots = (
   return { ok: mismatches.length === 0, mismatches }
 }
 
-const hashJson = (value: unknown) =>
+const hashJson = <A>(value: A) =>
   Effect.promise(async () => {
     const digest = new Uint8Array(
       await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(value))),

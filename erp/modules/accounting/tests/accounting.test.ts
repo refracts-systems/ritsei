@@ -217,15 +217,17 @@ describe("accounting contract", () => {
 
         assert.strictEqual(
           (yield* Effect.flip(
-            accounting.configureLegalEntity({
-              principal,
-              tenantId,
-              legalEntityId: "00000000-0000-4000-8000-000000000072",
-              baseCurrency: "USD",
-              precision: 3,
-              fiscalYearStartMonth: 1,
-              postingEnabled: true,
-            }),
+            accounting.configureLegalEntity(
+              partial<Parameters<typeof accounting.configureLegalEntity>[0]>({
+                principal,
+                tenantId,
+                legalEntityId: "00000000-0000-4000-8000-000000000072",
+                baseCurrency: "USD",
+                precision: 3,
+                fiscalYearStartMonth: 1,
+                postingEnabled: true,
+              }),
+            ),
           ))._tag,
           "SchemaError",
         )

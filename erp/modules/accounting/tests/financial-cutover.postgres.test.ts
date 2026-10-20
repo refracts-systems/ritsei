@@ -694,7 +694,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
 
       const balanceMismatchLedger = {
         ...operationLedgerService,
-        getBalance: (input: unknown) =>
+        getBalance: (input: Parameters<typeof operationLedgerService.getBalance>[0]) =>
           operationLedgerService.getBalance(input).pipe(
             Effect.map((outcome) =>
               outcome._tag === "available"
