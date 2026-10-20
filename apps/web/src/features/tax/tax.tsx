@@ -1,6 +1,6 @@
 import * as Predicate from "effect/Predicate"
 import { createSignal, Show, useContext } from "solid-js"
-import { CommandFeedback, QueryBoundary } from "../../shared/request-feedback.tsx"
+import { CommandFeedback, QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
 import { ApiRuntime } from "../../shared/runtime.ts"
 import { layout } from "../../ui/foundations/layout.ts"
 import { DataTable } from "../../ui/patterns/data-table.tsx"
@@ -62,7 +62,7 @@ function TaxCodeTable(props: { records: readonly TaxCode[] }) {
   )
 }
 
-function CreateTaxCodeDialog(props: { reload: () => Promise<unknown> }) {
+function CreateTaxCodeDialog(props: { reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
@@ -167,9 +167,9 @@ export function Tax() {
           <h1>Tax</h1>
           <p class={layout.workspaceDescription}>Tax codes recorded in this tenant.</p>
         </div>
-        <CreateTaxCodeDialog reload={() => query.refetch()} />
+        <CreateTaxCodeDialog reload={() => reloaded(query.refetch())} />
       </header>
-      <QueryBoundary label="tax codes" retry={() => query.refetch()}>
+      <QueryBoundary label="tax codes" retry={() => reloaded(query.refetch())}>
         <Show
           when={query.data.length > 0}
           fallback={

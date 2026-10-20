@@ -12,7 +12,7 @@ import type {
   JournalStatus,
   RevenuePostingProfile,
 } from "../../shared/contracts/generated/accounting.ts"
-import { CommandFeedback, QueryBoundary } from "../../shared/request-feedback.tsx"
+import { CommandFeedback, QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
 import { ApiRuntime } from "../../shared/runtime.ts"
 import { formatDecimal } from "../../ui/foundations/format.ts"
 import { layout } from "../../ui/foundations/layout.ts"
@@ -91,7 +91,7 @@ const journalTone = (status: JournalStatus): "neutral" | "success" | "warning" =
 
 // Fallow: this dialog intentionally owns the complete guarded Accounting setup flow.
 // fallow-ignore-next-line complexity
-function ConfigureLegalEntityDialog(props: { reload: () => Promise<unknown> }) {
+function ConfigureLegalEntityDialog(props: { reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
@@ -238,7 +238,7 @@ function ConfigureLegalEntityDialog(props: { reload: () => Promise<unknown> }) {
 
 // Fallow: this dialog intentionally owns the complete guarded Accounting setup flow.
 // fallow-ignore-next-line complexity
-function CreateAccountDialog(props: { reload: () => Promise<unknown> }) {
+function CreateAccountDialog(props: { reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
@@ -356,7 +356,7 @@ function CreateAccountDialog(props: { reload: () => Promise<unknown> }) {
 // fallow-ignore-next-line complexity
 function ConfigureRevenuePostingDialog(props: {
   accounts: () => readonly Account[]
-  reload: () => Promise<unknown>
+  reload: () => Promise<void>
 }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
@@ -487,7 +487,7 @@ function ConfigureRevenuePostingDialog(props: {
 
 // Fallow: this dialog intentionally owns the complete guarded Accounting setup flow.
 // fallow-ignore-next-line complexity
-function OpenPeriodDialog(props: { reload: () => Promise<unknown> }) {
+function OpenPeriodDialog(props: { reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
@@ -601,7 +601,7 @@ function OpenPeriodDialog(props: { reload: () => Promise<unknown> }) {
   )
 }
 
-function ClosePeriodDialog(props: { period: AccountingPeriod; reload: () => Promise<unknown> }) {
+function ClosePeriodDialog(props: { period: AccountingPeriod; reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
   const mutation = createClosePeriodMutation(scope, props.period.id, () => {
@@ -655,7 +655,7 @@ function ClosePeriodDialog(props: { period: AccountingPeriod; reload: () => Prom
 // fallow-ignore-next-line complexity
 function PostJournalDialog(props: {
   accounts: () => readonly Account[]
-  reload: () => Promise<unknown>
+  reload: () => Promise<void>
 }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
@@ -1050,10 +1050,7 @@ function AccountTable(props: { accounts: readonly Account[] }) {
   )
 }
 
-function PeriodTable(props: {
-  periods: readonly AccountingPeriod[]
-  reload: () => Promise<unknown>
-}) {
+function PeriodTable(props: { periods: readonly AccountingPeriod[]; reload: () => Promise<void> }) {
   return (
     <DataTable
       surface={false}
@@ -1293,13 +1290,15 @@ export function Accounting(props: {
     limit: 200,
   })
   const reload = () =>
-    Promise.all([
-      configurations.refetch(),
-      accounts.refetch(),
-      periods.refetch(),
-      profiles.refetch(),
-      journals.refetch(),
-    ])
+    reloaded(
+      Promise.all([
+        configurations.refetch(),
+        accounts.refetch(),
+        periods.refetch(),
+        profiles.refetch(),
+        journals.refetch(),
+      ]),
+    )
 
   return (
     <EntityWorkspace
@@ -1356,7 +1355,7 @@ export function Accounting(props: {
             </p>
           </div>
         </div>
-        <QueryBoundary label="configurations" retry={() => configurations.refetch()}>
+        <QueryBoundary label="configurations" retry={() => reloaded(configurations.refetch())}>
           <Show
             when={(configurations.data ?? []).length > 0}
             fallback={
@@ -1374,7 +1373,7 @@ export function Accounting(props: {
             <p>Account records are tenant-scoped and normalized by the Accounting service.</p>
           </div>
         </div>
-        <QueryBoundary label="accounts" retry={() => accounts.refetch()}>
+        <QueryBoundary label="accounts" retry={() => reloaded(accounts.refetch())}>
           <Show
             when={(accounts.data ?? []).length > 0}
             fallback={<EmptyState>No accounts match the current filter.</EmptyState>}
@@ -1385,7 +1384,7 @@ export function Accounting(props: {
       </section>
       <section class={[surface(), layout.stack]} aria-labelledby="accounting-periods-heading">
         <h2 id="accounting-periods-heading">Accounting periods</h2>
-        <QueryBoundary label="periods" retry={() => periods.refetch()}>
+        <QueryBoundary label="periods" retry={() => reloaded(periods.refetch())}>
           <Show
             when={(periods.data ?? []).length > 0}
             fallback={<EmptyState>No accounting periods match the current filter.</EmptyState>}
@@ -1400,7 +1399,7 @@ export function Accounting(props: {
           Profiles identify the owner-controlled receivable and revenue accounts for each legal
           entity.
         </p>
-        <QueryBoundary label="revenue posting profiles" retry={() => profiles.refetch()}>
+        <QueryBoundary label="revenue posting profiles" retry={() => reloaded(profiles.refetch())}>
           <Show
             when={(profiles.data ?? []).length > 0}
             fallback={
@@ -1420,7 +1419,7 @@ export function Accounting(props: {
             </p>
           </div>
         </div>
-        <QueryBoundary label="journal history" retry={() => journals.refetch()}>
+        <QueryBoundary label="journal history" retry={() => reloaded(journals.refetch())}>
           <Show
             when={(journals.data ?? []).length > 0}
             fallback={

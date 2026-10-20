@@ -35,7 +35,7 @@ import {
 } from "../mod.ts"
 
 const databaseUrl = process.env["DATABASE_URL"]
-const postgresFailure = (effect: () => Promise<unknown>) =>
+const postgresFailure = <A>(effect: () => Promise<A>) =>
   Effect.tryPromise({ try: effect, catch: (cause) => cause }).pipe(Effect.flip)
 
 it.effect.skipIf(databaseUrl === undefined)(

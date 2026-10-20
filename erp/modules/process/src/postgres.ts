@@ -375,6 +375,7 @@ const businessPayload = (input: Schema.Schema.Type<typeof ConfirmOrderConfirmati
   idempotencyKey: input.idempotencyKey,
 })
 
+// oxlint-disable-next-line anti-slop/no-unknown-returns -- canonicalizes arbitrary stored payloads for comparison, never parsing them
 const canonicalize = (value: unknown): unknown => {
   if (Array.isArray(value)) return value.map(canonicalize)
   if (Predicate.isObjectOrArray(value)) {
@@ -558,7 +559,7 @@ export const makeProcessService = Effect.gen(function* () {
       readonly eventVersion: number
       readonly aggregateType: string
       readonly aggregateId: string
-      readonly payload: (result: A) => unknown
+      readonly payload: (result: A) => Schema.Json
     },
   ) =>
     Effect.gen(function* () {
@@ -842,7 +843,7 @@ export const makeProcessService = Effect.gen(function* () {
       readonly eventType: string
       readonly eventVersion: number
       readonly aggregateType: string
-      readonly payload: (result: A) => unknown
+      readonly payload: (result: A) => Schema.Json
     },
     resultMatches: (result: A) => boolean,
   ): Effect.Effect<

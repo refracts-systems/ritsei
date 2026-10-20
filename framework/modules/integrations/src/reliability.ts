@@ -47,6 +47,7 @@ const sensitiveField = (key: string): boolean =>
   )
 
 // redaction removes credentials before a delivery record is exposed or retained.
+// oxlint-disable-next-line anti-slop/no-unknown-returns -- redacts arbitrary provider payloads without parsing them
 export const redactExternalPayload = (value: unknown): unknown => {
   if (Array.isArray(value)) return value.map(redactExternalPayload)
   if (!Predicate.isObjectOrArray(value)) return value

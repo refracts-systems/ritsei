@@ -277,6 +277,7 @@ const accountKey = (account: FinancialStoreAccountObservation) =>
 
 const transferKey = (transfer: FinancialStoreTransferObservation) => transfer.transferRef
 
+// oxlint-disable-next-line anti-slop/no-unknown-returns -- canonicalizes arbitrary provider facts for hashing, never parsing them
 const canonicalValue = (value: unknown): unknown => {
   if (Array.isArray(value)) return value.map(canonicalValue)
   if (!Predicate.isObjectOrArray(value)) return value

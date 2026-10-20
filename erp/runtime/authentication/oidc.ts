@@ -37,12 +37,12 @@ const decodeJsonPart = (value: string): JsonObject => {
   return parsed
 }
 
-const readTextJson = async (response: Response): Promise<unknown> => {
+const readTextJson = async (response: Response): Promise<Schema.Json> => {
   if (!response.ok) throw new ProviderUnavailable()
   const text = await response.text()
   if (text.length > 1_048_576) throw new ProviderUnavailable()
   try {
-    return JSON.parse(text)
+    return Schema.decodeUnknownSync(Schema.Json)(JSON.parse(text))
   } catch {
     throw new ProviderUnavailable()
   }

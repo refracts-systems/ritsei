@@ -34,7 +34,7 @@ import {
 } from "../../foundation/mod.ts"
 
 const fontLoader =
-  (load: () => Promise<unknown>): FontLoader =>
+  (load: () => Promise<object>): FontLoader =>
   async () => {
     const module = await load()
     const font = Predicate.isObjectOrArray(module) && "default" in module ? module.default : module

@@ -1,6 +1,6 @@
 import * as Predicate from "effect/Predicate"
 import { createSignal, Show, useContext } from "solid-js"
-import { CommandFeedback, QueryBoundary } from "../../shared/request-feedback.tsx"
+import { CommandFeedback, QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
 import { ApiRuntime } from "../../shared/runtime.ts"
 import { layout } from "../../ui/foundations/layout.ts"
 import { DataTable } from "../../ui/patterns/data-table.tsx"
@@ -54,7 +54,7 @@ function ProductTable(props: { records: readonly Product[] }) {
   )
 }
 
-function CreateProductDialog(props: { reload: () => Promise<unknown> }) {
+function CreateProductDialog(props: { reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
@@ -146,9 +146,9 @@ export function Products() {
             Goods and services that sales, purchasing, billing, and inventory share.
           </p>
         </div>
-        <CreateProductDialog reload={() => query.refetch()} />
+        <CreateProductDialog reload={() => reloaded(query.refetch())} />
       </header>
-      <QueryBoundary label="products" retry={() => query.refetch()}>
+      <QueryBoundary label="products" retry={() => reloaded(query.refetch())}>
         <Show
           when={query.data.length > 0}
           fallback={

@@ -40,7 +40,7 @@ function mountRuntime<R>(layer: Layer.Layer<R>, children: () => Element) {
       () => {
         let output: unknown = provider
         while (Predicate.isFunction(output)) {
-          output = (output as () => unknown)()
+          output = output()
         }
         return output
       },

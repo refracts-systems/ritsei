@@ -46,6 +46,7 @@
     "anti-slop-effect/prefer-effect-match": "error",
     "anti-slop/no-chained-type-assertions": "error",
     "anti-slop/no-unsafe-dictionary-type": "error",
-    "anti-slop/no-runtime-typeof": ["error", { "allowInTypeGuards": true }]
+    "anti-slop/no-runtime-typeof": ["error", { "allowInTypeGuards": true }],
+    "anti-slop/no-unknown-returns": "error"
   }
 }

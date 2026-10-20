@@ -9,7 +9,7 @@ import type {
   PartyKind,
   PartyRole,
 } from "../../shared/contracts/generated/party.ts"
-import { CommandFeedback, QueryBoundary } from "../../shared/request-feedback.tsx"
+import { CommandFeedback, QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
 import { ApiRuntime } from "../../shared/runtime.ts"
 import { layout } from "../../ui/foundations/layout.ts"
 import { DataTable } from "../../ui/patterns/data-table.tsx"
@@ -65,7 +65,7 @@ function PartyCommandSubmit(props: {
   pending: boolean
   success: boolean
   successMessage: string
-  reload: () => Promise<unknown>
+  reload: () => Promise<void>
   reset: () => void
   label: string
 }) {
@@ -94,7 +94,7 @@ function PartyCommandSubmit(props: {
 
 // Fallow: this dialog intentionally combines party input validation and command feedback.
 // fallow-ignore-next-line complexity
-function CreatePartyDialog(props: { reload: () => Promise<unknown> }) {
+function CreatePartyDialog(props: { reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const navigate = useNavigate()
   const [open, setOpen] = createSignal(false)
@@ -279,7 +279,7 @@ function PartyTable(props: { parties: readonly PartyDirectoryEntry[]; selectedPa
 
 function CreateLegalEntityCommand(props: {
   detail: PartyDetailValue
-  reload: () => Promise<unknown>
+  reload: () => Promise<void>
 }) {
   const scope = useContext(ApiRuntime)
   const mutation = createLegalEntityMutation(scope)
@@ -317,7 +317,7 @@ function CreateLegalEntityCommand(props: {
   )
 }
 
-function AssignRoleCommand(props: { detail: PartyDetailValue; reload: () => Promise<unknown> }) {
+function AssignRoleCommand(props: { detail: PartyDetailValue; reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const mutation = assignPartyRoleMutation(scope)
   const options = () =>
@@ -375,7 +375,7 @@ function AssignRoleCommand(props: { detail: PartyDetailValue; reload: () => Prom
 function AttachIdentifierCommand(props: {
   detail: PartyDetailValue
   legalEntities: PartyDirectoryAccessor
-  reload: () => Promise<unknown>
+  reload: () => Promise<void>
 }) {
   const scope = useContext(ApiRuntime)
   // Fallow: identifier and representation commands intentionally share the same guarded form shape.
@@ -471,7 +471,7 @@ function AttachIdentifierCommand(props: {
 
 function CreateRelationshipCommand(props: {
   detail: PartyDetailValue
-  reload: () => Promise<unknown>
+  reload: () => Promise<void>
 }) {
   const scope = useContext(ApiRuntime)
   const mutation = createPartyRelationshipMutation(scope)
@@ -542,7 +542,7 @@ function CreateRelationshipCommand(props: {
   )
 }
 
-function CreateBranchCommand(props: { detail: PartyDetailValue; reload: () => Promise<unknown> }) {
+function CreateBranchCommand(props: { detail: PartyDetailValue; reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const mutation = createBranchMutation(scope)
   const [invalid, setInvalid] = createSignal(false)
@@ -618,7 +618,7 @@ function CreateBranchCommand(props: { detail: PartyDetailValue; reload: () => Pr
 
 function CreateRepresentationCommand(props: {
   detail: PartyDetailValue
-  reload: () => Promise<unknown>
+  reload: () => Promise<void>
 }) {
   const scope = useContext(ApiRuntime)
   // Fallow: identifier and representation commands intentionally share the same guarded form shape.
@@ -676,7 +676,7 @@ function CreateRepresentationCommand(props: {
   )
 }
 
-function RepresentationTable(props: { detail: PartyDetailValue; reload: () => Promise<unknown> }) {
+function RepresentationTable(props: { detail: PartyDetailValue; reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const mutation = setPartyRepresentationActiveMutation(scope)
   return (
@@ -760,7 +760,7 @@ function RelatedPaths(props: { partyId: string; legalEntities: PartyDirectoryAcc
         </Button>
       </div>
       <p class={layout.muted}>Bounded two-edge analysis; never authorization evidence.</p>
-      <QueryBoundary label="related paths" retry={() => query.refetch()}>
+      <QueryBoundary label="related paths" retry={() => reloaded(query.refetch())}>
         <Show
           when={query.data.length > 0}
           fallback={<p>No non-reflexive related-party paths were found.</p>}
@@ -784,7 +784,7 @@ function RelatedPaths(props: { partyId: string; legalEntities: PartyDirectoryAcc
 function PartyFacts(props: {
   detail: PartyDetailValue
   legalEntities: PartyDirectoryAccessor
-  reload: () => Promise<unknown>
+  reload: () => Promise<void>
 }) {
   const nameForLegalEntity = (legalEntityId: string) =>
     props.legalEntities().find((entry) => entry.legalEntityId === legalEntityId)?.party.name ??
@@ -918,7 +918,7 @@ function PartyFacts(props: {
 function PartyCommands(props: {
   detail: PartyDetailValue
   legalEntities: PartyDirectoryAccessor
-  reload: () => Promise<unknown>
+  reload: () => Promise<void>
 }) {
   return (
     <section class={[surface(), layout.stack]} aria-labelledby="party-commands-heading">
@@ -954,19 +954,19 @@ function PartyDetail(props: { id: string }) {
           Reload detail
         </Button>
       </div>
-      <QueryBoundary label="Party detail" retry={() => query.refetch()}>
+      <QueryBoundary label="Party detail" retry={() => reloaded(query.refetch())}>
         <Show when={query.data} keyed>
           {(detail) => (
             <div class={layout.stack}>
               <PartyFacts
                 detail={detail}
                 legalEntities={() => directory.data}
-                reload={() => query.refetch()}
+                reload={() => reloaded(query.refetch())}
               />
               <PartyCommands
                 detail={detail}
                 legalEntities={() => directory.data}
-                reload={() => Promise.all([query.refetch(), directory.refetch()])}
+                reload={() => reloaded(Promise.all([query.refetch(), directory.refetch()]))}
               />
             </div>
           )}
@@ -995,7 +995,7 @@ export function Parties(props: { selectedPartyId?: string; search?: string; kind
       }
       headerActions={
         <div class={layout.row}>
-          <CreatePartyDialog reload={() => query.refetch()} />
+          <CreatePartyDialog reload={() => reloaded(query.refetch())} />
           <Button type="button" onClick={() => void query.refetch()}>
             Reload Parties
           </Button>
@@ -1004,7 +1004,7 @@ export function Parties(props: { selectedPartyId?: string; search?: string; kind
       toolbar={<PartyFilters search={props.search} kind={props.kind} />}
       aside={props.selectedPartyId ? <PartyDetail id={props.selectedPartyId} /> : undefined}
     >
-      <QueryBoundary label="Parties" retry={() => query.refetch()}>
+      <QueryBoundary label="Parties" retry={() => reloaded(query.refetch())}>
         <Show
           when={query.data.length > 0}
           fallback={<p role="status">No Parties match the current filters.</p>}

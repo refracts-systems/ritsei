@@ -7,7 +7,7 @@ import type {
   PurchaseOrderStatus,
   SupplierAccount,
 } from "../../shared/contracts/generated/procurement.ts"
-import { CommandFeedback, QueryBoundary } from "../../shared/request-feedback.tsx"
+import { CommandFeedback, QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
 import { ApiRuntime } from "../../shared/runtime.ts"
 import { formatDecimal } from "../../ui/foundations/format.ts"
 import { layout } from "../../ui/foundations/layout.ts"
@@ -56,7 +56,7 @@ const statusTone = (status: PurchaseOrderStatus) => statusTones[status]
 
 // Fallow: this dialog intentionally combines supplier validation and guarded procurement commands.
 // fallow-ignore-next-line complexity
-function CreateSupplierAccountDialog(props: { reload: () => Promise<unknown> }) {
+function CreateSupplierAccountDialog(props: { reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
@@ -140,7 +140,7 @@ function CreateSupplierAccountDialog(props: { reload: () => Promise<unknown> }) 
 
 function CreatePurchaseOrderDialog(props: {
   supplierAccounts: () => readonly SupplierAccount[]
-  reload: () => Promise<unknown>
+  reload: () => Promise<void>
 }) {
   const scope = useContext(ApiRuntime)
   const navigate = useNavigate()
@@ -337,10 +337,7 @@ function CreatePurchaseOrderDialog(props: {
   )
 }
 
-function ConfirmPurchaseOrderDialog(props: {
-  order: PurchaseOrder
-  reload: () => Promise<unknown>
-}) {
+function ConfirmPurchaseOrderDialog(props: { order: PurchaseOrder; reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
   const mutation = createConfirmPurchaseOrderMutation(scope, () => setOpen(false))
@@ -409,10 +406,7 @@ function ConfirmPurchaseOrderDialog(props: {
   )
 }
 
-function CancelPurchaseOrderDialog(props: {
-  order: PurchaseOrder
-  reload: () => Promise<unknown>
-}) {
+function CancelPurchaseOrderDialog(props: { order: PurchaseOrder; reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
   const mutation = createCancelPurchaseOrderMutation(scope, () => setOpen(false))
@@ -449,10 +443,7 @@ function CancelPurchaseOrderDialog(props: {
   )
 }
 
-function ReceivePurchaseOrderDialog(props: {
-  order: PurchaseOrder
-  reload: () => Promise<unknown>
-}) {
+function ReceivePurchaseOrderDialog(props: { order: PurchaseOrder; reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
@@ -821,7 +812,7 @@ function PurchaseOrderDetail(props: { id: string }) {
   const id = untrack(() => props.id)
   const query = createPurchaseOrderQuery(scope, id)
   const receipts = createPurchaseReceiptsQuery(scope, id, { limit: 200 })
-  const reload = () => Promise.all([query.refetch(), receipts.refetch()])
+  const reload = () => reloaded(Promise.all([query.refetch(), receipts.refetch()]))
   return (
     <section class={layout.stack} aria-labelledby="purchase-order-detail-heading">
       <div class={layout.row}>
@@ -830,7 +821,7 @@ function PurchaseOrderDetail(props: { id: string }) {
           Reload detail
         </Button>
       </div>
-      <QueryBoundary label="purchase order" retry={() => query.refetch()}>
+      <QueryBoundary label="purchase order" retry={() => reloaded(query.refetch())}>
         <Show when={query.data} keyed>
           {(order) => (
             <div class={layout.stack}>
@@ -854,7 +845,7 @@ function PurchaseOrderDetail(props: { id: string }) {
                   </Show>
                 </div>
               </section>
-              <QueryBoundary label="receipt evidence" retry={() => receipts.refetch()}>
+              <QueryBoundary label="receipt evidence" retry={() => reloaded(receipts.refetch())}>
                 <ReceiptTable receipts={receipts.data} />
               </QueryBoundary>
             </div>
@@ -867,7 +858,7 @@ function PurchaseOrderDetail(props: { id: string }) {
 
 function SupplierAccountsSection(props: {
   accounts: readonly SupplierAccount[]
-  reload: () => Promise<unknown>
+  reload: () => Promise<void>
 }) {
   return (
     <section class={[surface(), layout.stack]} aria-labelledby="supplier-accounts-heading">
@@ -915,10 +906,10 @@ export function Procurement(props: {
       }
       headerActions={
         <div class={layout.row}>
-          <CreateSupplierAccountDialog reload={() => supplierAccounts.refetch()} />
+          <CreateSupplierAccountDialog reload={() => reloaded(supplierAccounts.refetch())} />
           <CreatePurchaseOrderDialog
             supplierAccounts={() => supplierAccounts.data}
-            reload={() => orders.refetch()}
+            reload={() => reloaded(orders.refetch())}
           />
           <Button type="button" onClick={() => void orders.refetch()}>
             Reload orders
@@ -938,10 +929,10 @@ export function Procurement(props: {
         ) : undefined
       }
     >
-      <QueryBoundary label="procurement" retry={() => orders.refetch()}>
+      <QueryBoundary label="procurement" retry={() => reloaded(orders.refetch())}>
         <SupplierAccountsSection
           accounts={supplierAccounts.data}
-          reload={() => supplierAccounts.refetch()}
+          reload={() => reloaded(supplierAccounts.refetch())}
         />
         <Show
           when={orders.data.length > 0}

@@ -9,7 +9,7 @@ import type {
   TenantMembership,
   TenantMembershipStatus,
 } from "../../shared/contracts/generated/authorization.ts"
-import { QueryBoundary } from "../../shared/request-feedback.tsx"
+import { QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
 import { ApiRuntime } from "../../shared/runtime.ts"
 import { layout } from "../../ui/foundations/layout.ts"
 import { DataTable } from "../../ui/patterns/data-table.tsx"
@@ -169,7 +169,7 @@ function MembershipTable(props: {
 
 // Fallow: this dialog intentionally combines scoped membership validation and command feedback.
 // fallow-ignore-next-line complexity
-function AddMembershipDialog(props: { reload: () => Promise<unknown> }) {
+function AddMembershipDialog(props: { reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const navigate = useNavigate()
   const [open, setOpen] = createSignal(false)
@@ -273,7 +273,7 @@ function ImpactDialog(props: {
   success: boolean
   error?: RequestFailure | null
   onConfirm: () => void
-  reload: () => Promise<unknown>
+  reload: () => Promise<void>
   reset: () => void
 }) {
   const [open, setOpen] = createSignal(false)
@@ -337,8 +337,8 @@ function ImpactDialog(props: {
 
 function MembershipLifecycle(props: {
   membership: TenantMembership
-  reloadDetail: () => Promise<unknown>
-  reloadAfterRemoval: () => Promise<unknown>
+  reloadDetail: () => Promise<void>
+  reloadAfterRemoval: () => Promise<void>
 }) {
   const scope = useContext(ApiRuntime)
   const navigate = useNavigate()
@@ -455,7 +455,7 @@ function GrantCapabilityDialog(props: {
   membership: TenantMembership
   grants: readonly DirectCapabilityGrant[]
   definitions: readonly CapabilityDefinition[]
-  reload: () => Promise<unknown>
+  reload: () => Promise<void>
 }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
@@ -579,14 +579,14 @@ function GrantCapabilityDialog(props: {
 
 function MembershipDetail(props: {
   userAccountId: string
-  reloadMemberships: () => Promise<unknown>
+  reloadMemberships: () => Promise<void>
 }) {
   const scope = useContext(ApiRuntime)
   const id = untrack(() => props.userAccountId)
   const membership = createTenantMembershipQuery(scope, id)
   const grants = createDirectCapabilityGrantsQuery(scope, id)
   const definitions = createCapabilityDefinitionsQuery(scope)
-  const reloadDetail = () => Promise.all([membership.refetch(), grants.refetch()])
+  const reloadDetail = () => reloaded(Promise.all([membership.refetch(), grants.refetch()]))
   const reloadAfterRemoval = () => props.reloadMemberships().then(() => undefined)
   return (
     <section class={layout.stack} aria-labelledby="access-detail-heading">
@@ -596,7 +596,7 @@ function MembershipDetail(props: {
           Reload access
         </Button>
       </div>
-      <QueryBoundary label="membership" retry={() => membership.refetch()}>
+      <QueryBoundary label="membership" retry={() => reloaded(membership.refetch())}>
         <Show when={membership.data} keyed>
           {(member) => (
             <div class={layout.stack}>
@@ -645,7 +645,7 @@ function MembershipDetail(props: {
                 </div>
                 <QueryBoundary
                   label="permissions"
-                  retry={() => Promise.all([grants.refetch(), definitions.refetch()])}
+                  retry={() => reloaded(Promise.all([grants.refetch(), definitions.refetch()]))}
                 >
                   <CapabilityGrantTable
                     grants={grants.data}
@@ -660,7 +660,7 @@ function MembershipDetail(props: {
                       membership={member}
                       grants={grants.data}
                       definitions={definitions.data}
-                      reload={() => Promise.all([grants.refetch(), membership.refetch()])}
+                      reload={() => reloaded(Promise.all([grants.refetch(), membership.refetch()]))}
                     />
                   </Show>
                 </QueryBoundary>
@@ -712,7 +712,7 @@ export function Access(props: {
       }
       headerActions={
         <div class={layout.row}>
-          <AddMembershipDialog reload={() => query.refetch()} />
+          <AddMembershipDialog reload={() => reloaded(query.refetch())} />
           <Button type="button" onClick={() => void query.refetch()}>
             Reload memberships
           </Button>
@@ -723,12 +723,12 @@ export function Access(props: {
         selectedUserAccountId ? (
           <MembershipDetail
             userAccountId={selectedUserAccountId}
-            reloadMemberships={() => query.refetch()}
+            reloadMemberships={() => reloaded(query.refetch())}
           />
         ) : undefined
       }
     >
-      <QueryBoundary label="memberships" retry={() => query.refetch()}>
+      <QueryBoundary label="memberships" retry={() => reloaded(query.refetch())}>
         <Show
           when={query.data.length > 0}
           fallback={<p role="status">No tenant memberships match this search or status.</p>}

@@ -2,7 +2,7 @@ import * as Predicate from "effect/Predicate"
 import { createMemo, createSignal, onSettled, Show, untrack, useContext } from "solid-js"
 import { failureMessage } from "../../shared/api.ts"
 import type { UserAccount } from "../../shared/contracts/generated/identity.ts"
-import { CommandFeedback, QueryBoundary } from "../../shared/request-feedback.tsx"
+import { CommandFeedback, QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
 import { ApiRuntime } from "../../shared/runtime.ts"
 import { layout } from "../../ui/foundations/layout.ts"
 import { DataTable } from "../../ui/patterns/data-table.tsx"
@@ -84,7 +84,7 @@ function AccountTable(props: { accounts: readonly UserAccount[] }) {
 
 // Fallow: this dialog intentionally combines identity input validation and unknown-outcome recovery.
 // fallow-ignore-next-line complexity
-function CreateAccountDialog(props: { reload: () => Promise<unknown> }) {
+function CreateAccountDialog(props: { reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
@@ -171,7 +171,7 @@ function CreateAccountDialog(props: { reload: () => Promise<unknown> }) {
 function EmailEditor(props: {
   account: UserAccount
   close: () => void
-  reload: () => Promise<unknown>
+  reload: () => Promise<void>
   saved: () => void
 }) {
   const scope = useContext(ApiRuntime)
@@ -321,7 +321,7 @@ function AccountDetail(props: { id: string }) {
           Email saved.
         </p>
       </Show>
-      <QueryBoundary label="account detail" retry={() => query.refetch()}>
+      <QueryBoundary label="account detail" retry={() => reloaded(query.refetch())}>
         <Show when={query.data} keyed>
           {(account) => (
             <div class={layout.documentGrid}>
@@ -345,7 +345,7 @@ function AccountDetail(props: { id: string }) {
                       closeEditor()
                       setSaved(true)
                     }}
-                    reload={() => query.refetch()}
+                    reload={() => reloaded(query.refetch())}
                   />
                 </Show>
               </section>
@@ -393,12 +393,12 @@ function AccountCollection() {
             Global accounts linked to this tenant. Manage membership and permissions in Access.
           </p>
         </div>
-        <CreateAccountDialog reload={() => query.refetch()} />
+        <CreateAccountDialog reload={() => reloaded(query.refetch())} />
       </header>
       <QueryBoundary
         label="user accounts"
         retryLabel="Try loading again"
-        retry={() => query.refetch()}
+        retry={() => reloaded(query.refetch())}
       >
         <div class={layout.collectionToolbar}>
           <p class={layout.resultCount} role="status">

@@ -11,7 +11,7 @@ import type {
   ProcessStaticValidation,
   ProcessWorkflowRun,
 } from "../../shared/contracts/generated/process.ts"
-import { CommandFeedback, QueryBoundary } from "../../shared/request-feedback.tsx"
+import { CommandFeedback, QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
 import { ApiRuntime, type ApiScope } from "../../shared/runtime.ts"
 import { layout } from "../../ui/foundations/layout.ts"
 import { DataTable } from "../../ui/patterns/data-table.tsx"
@@ -319,7 +319,7 @@ function OperatorControlTable(props: { controls: readonly ProcessOperatorControl
 function RuntimeActionDialog(props: {
   instance: ProcessRuntimeInstance
   scope: ApiScope
-  reload: () => Promise<unknown>
+  reload: () => Promise<void>
 }) {
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
@@ -452,7 +452,11 @@ function DesignPanel(props: {
           </div>
           <Badge tone="info">{(props.catalog.data ?? []).length} entries</Badge>
         </div>
-        <QueryBoundary variant="retry" label="catalog" retry={() => props.catalog.refetch()}>
+        <QueryBoundary
+          variant="retry"
+          label="catalog"
+          retry={() => reloaded(props.catalog.refetch())}
+        >
           <Show
             when={(props.catalog.data ?? []).length > 0}
             fallback={<p role="status">No public catalog entries are available for this tenant.</p>}
@@ -512,13 +516,15 @@ export function ProcessStudio() {
   const controls = createProcessControlsQuery(scope, { limit: 200 })
   const validation = createProcessValidationMutation(scope)
   const reload = () =>
-    Promise.all([
-      catalog.refetch(),
-      runtime.refetch(),
-      workflowRuns.refetch(),
-      inbox.refetch(),
-      controls.refetch(),
-    ])
+    reloaded(
+      Promise.all([
+        catalog.refetch(),
+        runtime.refetch(),
+        workflowRuns.refetch(),
+        inbox.refetch(),
+        controls.refetch(),
+      ]),
+    )
 
   const design = <DesignPanel catalog={catalog} validation={validation} />
   const monitor = (
@@ -534,7 +540,11 @@ export function ProcessStudio() {
           </div>
           <Badge tone="info">{(runtime.data ?? []).length} instances</Badge>
         </div>
-        <QueryBoundary variant="retry" label="runtime instances" retry={() => runtime.refetch()}>
+        <QueryBoundary
+          variant="retry"
+          label="runtime instances"
+          retry={() => reloaded(runtime.refetch())}
+        >
           <Show
             when={(runtime.data ?? []).length > 0}
             fallback={<EmptyState>No runtime instances are visible for this tenant.</EmptyState>}
@@ -548,7 +558,7 @@ export function ProcessStudio() {
         <QueryBoundary
           variant="retry"
           label="workflow history"
-          retry={() => workflowRuns.refetch()}
+          retry={() => reloaded(workflowRuns.refetch())}
         >
           <Show
             when={(workflowRuns.data ?? []).length > 0}
@@ -574,7 +584,11 @@ export function ProcessStudio() {
           </div>
           <Badge tone="warning">Action required</Badge>
         </div>
-        <QueryBoundary variant="retry" label="operator inbox" retry={() => inbox.refetch()}>
+        <QueryBoundary
+          variant="retry"
+          label="operator inbox"
+          retry={() => reloaded(inbox.refetch())}
+        >
           <Show
             when={(inbox.data?.runtimeInstances.length ?? 0) > 0}
             fallback={<EmptyState>No runtime recovery actions are waiting.</EmptyState>}
@@ -614,7 +628,11 @@ export function ProcessStudio() {
         </div>
         <Badge tone="info">{(controls.data ?? []).length} records</Badge>
       </div>
-      <QueryBoundary variant="retry" label="operator history" retry={() => controls.refetch()}>
+      <QueryBoundary
+        variant="retry"
+        label="operator history"
+        retry={() => reloaded(controls.refetch())}
+      >
         <Show
           when={(controls.data ?? []).length > 0}
           fallback={<EmptyState>No operator controls have been recorded.</EmptyState>}

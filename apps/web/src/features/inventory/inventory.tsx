@@ -15,7 +15,7 @@ import type {
   StockTransfer,
   Warehouse,
 } from "../../shared/contracts/generated/inventory.ts"
-import { CommandFeedback, QueryBoundary } from "../../shared/request-feedback.tsx"
+import { CommandFeedback, QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
 import { ApiRuntime } from "../../shared/runtime.ts"
 import { formatDecimal } from "../../ui/foundations/format.ts"
 import { layout } from "../../ui/foundations/layout.ts"
@@ -166,7 +166,7 @@ function ItemQuantityFields(props: { options: InventoryLookupOptions; disabled: 
   )
 }
 
-function CreateWarehouseDialog(props: { reload: () => Promise<unknown> }) {
+function CreateWarehouseDialog(props: { reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
@@ -250,7 +250,7 @@ function CreateWarehouseDialog(props: { reload: () => Promise<unknown> }) {
   )
 }
 
-function CreateItemDialog(props: { reload: () => Promise<unknown> }) {
+function CreateItemDialog(props: { reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
@@ -338,7 +338,7 @@ function CreateItemDialog(props: { reload: () => Promise<unknown> }) {
 function ReceiveStockDialog(props: {
   warehouses: readonly Warehouse[]
   items: readonly Item[]
-  reload: () => Promise<unknown>
+  reload: () => Promise<void>
 }) {
   const scope = useContext(ApiRuntime)
   const options = {
@@ -425,7 +425,7 @@ function ReceiveStockDialog(props: {
 function AdjustStockDialog(props: {
   warehouses: readonly Warehouse[]
   items: readonly Item[]
-  reload: () => Promise<unknown>
+  reload: () => Promise<void>
 }) {
   const scope = useContext(ApiRuntime)
   const options = {
@@ -625,7 +625,7 @@ function AdjustStockDialog(props: {
 function ReserveStockDialog(props: {
   warehouses: readonly Warehouse[]
   items: readonly Item[]
-  reload: () => Promise<unknown>
+  reload: () => Promise<void>
 }) {
   const scope = useContext(ApiRuntime)
   const options = {
@@ -728,7 +728,7 @@ function ReserveStockDialog(props: {
 function CreateTransferDialog(props: {
   warehouses: readonly Warehouse[]
   items: readonly Item[]
-  reload: () => Promise<unknown>
+  reload: () => Promise<void>
 }) {
   const scope = useContext(ApiRuntime)
   const options = {
@@ -843,7 +843,7 @@ function CreateTransferDialog(props: {
 function ReservationCommand(props: {
   reservation: StockReservation
   kind: "release" | "fulfill"
-  reload: () => Promise<unknown>
+  reload: () => Promise<void>
 }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
@@ -888,7 +888,7 @@ function ReservationCommand(props: {
 function TransferCommand(props: {
   transfer: StockTransfer
   kind: "confirm" | "complete"
-  reload: () => Promise<unknown>
+  reload: () => Promise<void>
 }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
@@ -1047,7 +1047,7 @@ function BalanceTable(props: { balances: readonly StockBalance[]; names: Invento
 function ReservationTable(props: {
   reservations: readonly StockReservation[]
   names: InventoryNames
-  reload: () => Promise<unknown>
+  reload: () => Promise<void>
 }) {
   return (
     <DataTable
@@ -1118,7 +1118,7 @@ function ReservationTable(props: {
 function TransferTable(props: {
   transfers: readonly StockTransfer[]
   selectedTransferId?: string
-  reload: () => Promise<unknown>
+  reload: () => Promise<void>
 }) {
   return (
     <DataTable
@@ -1374,7 +1374,7 @@ function InventoryFilters(props: {
   )
 }
 
-function TransferDetail(props: { transfer: StockTransfer; reload: () => Promise<unknown> }) {
+function TransferDetail(props: { transfer: StockTransfer; reload: () => Promise<void> }) {
   return (
     <section class={layout.stack} aria-labelledby="inventory-transfer-detail-heading">
       <div class={layout.row}>
@@ -1491,14 +1491,16 @@ export function Inventory(props: {
     limit: 200,
   })
   const reload = () =>
-    Promise.all([
-      warehouses.refetch(),
-      items.refetch(),
-      balances.refetch(),
-      reservations.refetch(),
-      transfers.refetch(),
-      movements.refetch(),
-    ])
+    reloaded(
+      Promise.all([
+        warehouses.refetch(),
+        items.refetch(),
+        balances.refetch(),
+        reservations.refetch(),
+        transfers.refetch(),
+        movements.refetch(),
+      ]),
+    )
   const warehouseData = createMemo(() => warehouses.data ?? [])
   const itemData = createMemo(() => items.data ?? [])
   const names: InventoryNames = {

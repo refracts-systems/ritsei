@@ -8,7 +8,7 @@ import type {
   SalesOrder,
   SalesOrderStatus,
 } from "../../shared/contracts/generated/sales.ts"
-import { CommandFeedback, QueryBoundary } from "../../shared/request-feedback.tsx"
+import { CommandFeedback, QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
 import { ApiRuntime } from "../../shared/runtime.ts"
 import { formatDecimal } from "../../ui/foundations/format.ts"
 import { layout } from "../../ui/foundations/layout.ts"
@@ -69,7 +69,7 @@ const orderTones: Record<SalesOrderStatus, "neutral" | "success" | "warning"> = 
 }
 const orderTone = (status: SalesOrderStatus) => orderTones[status]
 
-function CreateCustomerDialog(props: { reload: () => Promise<unknown> }) {
+function CreateCustomerDialog(props: { reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
@@ -155,7 +155,7 @@ function CreateCustomerDialog(props: { reload: () => Promise<unknown> }) {
 // fallow-ignore-next-line code-duplication
 function CreateQuotationDialog(props: {
   customers: () => readonly Customer[]
-  reload: () => Promise<unknown>
+  reload: () => Promise<void>
 }) {
   const scope = useContext(ApiRuntime)
   const navigate = useNavigate()
@@ -261,7 +261,7 @@ function CreateQuotationDialog(props: {
 // fallow-ignore-next-line code-duplication
 function CreateOrderDialog(props: {
   customers: () => readonly Customer[]
-  reload: () => Promise<unknown>
+  reload: () => Promise<void>
 }) {
   const scope = useContext(ApiRuntime)
   const navigate = useNavigate()
@@ -417,7 +417,7 @@ function CreateOrderDialog(props: {
   )
 }
 
-function ConfirmOrderDialog(props: { order: SalesOrder; reload: () => Promise<unknown> }) {
+function ConfirmOrderDialog(props: { order: SalesOrder; reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
   const mutation = createConfirmOrderMutation(scope, () => {
@@ -471,7 +471,7 @@ function ConfirmOrderDialog(props: { order: SalesOrder; reload: () => Promise<un
   )
 }
 
-function CancelOrderDialog(props: { order: SalesOrder; reload: () => Promise<unknown> }) {
+function CancelOrderDialog(props: { order: SalesOrder; reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
   const mutation = createCancelOrderMutation(scope, () => {
@@ -653,7 +653,7 @@ function CustomerDetail(props: { id: string }) {
           Reload customer
         </Button>
       </div>
-      <QueryBoundary label="customer" retry={() => query.refetch()}>
+      <QueryBoundary label="customer" retry={() => reloaded(query.refetch())}>
         <Show when={query.data} keyed>
           {(customer) => (
             <dl class={layout.detailList}>
@@ -697,7 +697,7 @@ function QuotationDetail(props: { id: string }) {
           Reload quotation
         </Button>
       </div>
-      <QueryBoundary label="quotation" retry={() => query.refetch()}>
+      <QueryBoundary label="quotation" retry={() => reloaded(query.refetch())}>
         <Show when={query.data} keyed>
           {(quotation) => (
             <dl class={layout.detailList}>
@@ -733,11 +733,11 @@ function QuotationDetail(props: { id: string }) {
   )
 }
 
-function OrderDetail(props: { id: string; reloadLists: () => Promise<unknown> }) {
+function OrderDetail(props: { id: string; reloadLists: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const id = untrack(() => props.id)
   const query = createOrderQuery(scope, id)
-  const reload = () => Promise.all([query.refetch(), props.reloadLists()])
+  const reload = () => reloaded(Promise.all([query.refetch(), props.reloadLists()]))
   return (
     <section class={layout.stack} aria-labelledby="sales-order-detail-heading">
       <div class={layout.row}>
@@ -746,7 +746,7 @@ function OrderDetail(props: { id: string; reloadLists: () => Promise<unknown> })
           Reload order
         </Button>
       </div>
-      <QueryBoundary label="sales order" retry={() => query.refetch()}>
+      <QueryBoundary label="sales order" retry={() => reloaded(query.refetch())}>
         <Show when={query.data} keyed>
           {(order) => (
             <div class={layout.stack}>
@@ -950,7 +950,8 @@ export function Sales(props: {
   const customerData = () => customers.data ?? []
   const quotationData = () => quotations.data ?? []
   const orderData = () => orders.data ?? []
-  const reload = () => Promise.all([customers.refetch(), quotations.refetch(), orders.refetch()])
+  const reload = () =>
+    reloaded(Promise.all([customers.refetch(), quotations.refetch(), orders.refetch()]))
   return (
     <EntityWorkspace
       title="Sales"
@@ -962,9 +963,12 @@ export function Sales(props: {
       }
       headerActions={
         <div class={layout.row}>
-          <CreateCustomerDialog reload={() => customers.refetch()} />
-          <CreateQuotationDialog customers={customerData} reload={() => quotations.refetch()} />
-          <CreateOrderDialog customers={customerData} reload={() => orders.refetch()} />
+          <CreateCustomerDialog reload={() => reloaded(customers.refetch())} />
+          <CreateQuotationDialog
+            customers={customerData}
+            reload={() => reloaded(quotations.refetch())}
+          />
+          <CreateOrderDialog customers={customerData} reload={() => reloaded(orders.refetch())} />
           <Button type="button" onClick={() => void reload()}>
             Reload Sales
           </Button>

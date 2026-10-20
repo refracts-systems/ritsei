@@ -130,7 +130,7 @@ const transportErrors = {
   invalid_request: () => new ApiConflict({ code: "invalid_request" }),
   service_unavailable: () => new ApiServiceUnavailable({ code: "service_unavailable" }),
   conflict: (tag: string) => new ApiConflict({ code: tag }),
-} satisfies Record<ApiErrorKind, (tag: string) => unknown>
+} satisfies Record<ApiErrorKind, (tag: string) => object>
 
 // A bad or mismatched token is the caller's to fix; any other replica failure is availability.
 const invalidConsistencyTokenReasons = new Set<ReplicaConsistencyFailure["reason"]>([

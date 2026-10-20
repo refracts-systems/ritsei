@@ -10,7 +10,7 @@ import { EventIdempotencyConflict, makeMessagingService } from "../mod.ts"
 import type { UntypedRecord } from "../../../../tests/support/untyped-record.ts"
 
 const databaseUrl = process.env["DATABASE_URL"]
-const postgresFailure = (effect: () => Promise<unknown>) =>
+const postgresFailure = <A>(effect: () => Promise<A>) =>
   Effect.tryPromise({ try: effect, catch: (cause) => cause }).pipe(Effect.flip)
 
 const event = (tenantId: string, overrides: UntypedRecord = {}) => ({
