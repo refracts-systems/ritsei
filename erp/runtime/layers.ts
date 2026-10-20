@@ -35,11 +35,12 @@ import {
 import {
   makeProcessJobEnqueuer,
   makeProcessService,
+  OrderToCashLive,
   ProcessService,
   ProcessStudioLive,
 } from "../modules/process/mod.ts"
 import { ProcurementLive } from "../modules/procurement/mod.ts"
-import { makeSalesService, SalesService } from "../modules/sales/mod.ts"
+import { makeSalesService, SalesDocumentsLive, SalesService } from "../modules/sales/mod.ts"
 import {
   PostgresDatabaseLive,
   PostgresReadYourWritesLive,
@@ -54,6 +55,8 @@ import { makeIdentityProviderLayer } from "./authentication/oidc.ts"
 import type { RitseiRuntimeConfiguration } from "./config.ts"
 import { ProductLive } from "../modules/product/mod.ts"
 import { TaxLive } from "../modules/tax/mod.ts"
+import { BillingLive } from "../modules/billing/mod.ts"
+import { SettlementLive } from "../modules/settlement/mod.ts"
 
 export const serviceLayers = (
   client: Sql,
@@ -179,6 +182,42 @@ export const serviceLayers = (
 
   const TaxServiceLive = TaxLive.pipe(Layer.provide(BusinessRequirements))
 
+  const SalesDocumentServiceLive = SalesDocumentsLive.pipe(
+    Layer.provide(
+      Layer.mergeAll(BusinessRequirements, PartyLive, TaxServiceLive, NumberingServiceLive),
+    ),
+  )
+
+  const BillingServiceLive = BillingLive.pipe(
+    Layer.provide(
+      Layer.mergeAll(
+        BusinessRequirements,
+        LedgerLive,
+        NumberingServiceLive,
+        TaxServiceLive,
+        SalesDocumentServiceLive,
+        ProductServiceLive,
+      ),
+    ),
+  )
+
+  const SettlementServiceLive = SettlementLive.pipe(
+    Layer.provide(
+      Layer.mergeAll(BusinessRequirements, LedgerLive, BillingServiceLive, NumberingServiceLive),
+    ),
+  )
+
+  const OrderToCashServiceLive = OrderToCashLive.pipe(
+    Layer.provide(
+      Layer.mergeAll(
+        BusinessRequirements,
+        SalesDocumentServiceLive,
+        StockKeepingServiceLive,
+        ProductServiceLive,
+      ),
+    ),
+  )
+
   const ApplicationLive = Layer.mergeAll(
     IdentityLive,
     AuthLive,
@@ -199,6 +238,10 @@ export const serviceLayers = (
     ProductServiceLive,
     StockKeepingServiceLive,
     TaxServiceLive,
+    SalesDocumentServiceLive,
+    BillingServiceLive,
+    SettlementServiceLive,
+    OrderToCashServiceLive,
   )
 
   return ApplicationLive

@@ -31,6 +31,8 @@ export default defineConfig({
     "accounting",
     "process",
     "messaging",
+    "billing",
+    "settlement",
     "numbering",
     "product",
     "tax",

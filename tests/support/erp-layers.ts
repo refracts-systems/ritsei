@@ -7,7 +7,14 @@ import { NumberingLive } from "../../framework/modules/numbering/mod.ts"
 import { makePostgresDatabase } from "../../framework/platform/mod.ts"
 import { GeneralLedgerLive } from "../../erp/modules/accounting/mod.ts"
 import { StockKeepingLive } from "../../erp/modules/inventory/mod.ts"
+import { BillingLive } from "../../erp/modules/billing/mod.ts"
+import { PartyLive } from "../../erp/modules/party/mod.ts"
+import { OrderToCashLive } from "../../erp/modules/process/mod.ts"
+import { SettlementLive } from "../../erp/modules/settlement/mod.ts"
 import { ProductLive } from "../../erp/modules/product/mod.ts"
+import { SalesDocumentsLive, SalesLive } from "../../erp/modules/sales/mod.ts"
+import { TaxLive } from "../../erp/modules/tax/mod.ts"
+import { makeMessagingService, MessagingService } from "../../framework/modules/messaging/mod.ts"
 
 type Grant = {
   readonly userAccountId: string
@@ -29,5 +36,37 @@ export const erpChainLayers = (client: Sql, grants: ReadonlyArray<Grant>) => {
   const ledger = GeneralLedgerLive.pipe(Layer.provide(Layer.merge(platform, numbering)))
   const product = ProductLive.pipe(Layer.provide(platform))
   const stock = StockKeepingLive.pipe(Layer.provide(Layer.mergeAll(platform, ledger, product)))
-  return Layer.mergeAll(platform, numbering, ledger, product, stock)
+  const messaging = Layer.effect(MessagingService, makeMessagingService).pipe(
+    Layer.provide(database),
+  )
+  const party = PartyLive.pipe(Layer.provide(Layer.mergeAll(platform, messaging)))
+  const tax = TaxLive.pipe(Layer.provide(platform))
+  const sales = SalesDocumentsLive.pipe(
+    Layer.provide(Layer.mergeAll(platform, party, tax, numbering)),
+  )
+  const legacySales = SalesLive.pipe(Layer.provide(Layer.merge(platform, messaging)))
+  const billing = BillingLive.pipe(
+    Layer.provide(Layer.mergeAll(platform, ledger, numbering, tax, sales, product)),
+  )
+  const settlement = SettlementLive.pipe(
+    Layer.provide(Layer.mergeAll(platform, ledger, billing, numbering)),
+  )
+  const orderToCash = OrderToCashLive.pipe(
+    Layer.provide(Layer.mergeAll(platform, sales, stock, product)),
+  )
+  return Layer.mergeAll(
+    platform,
+    numbering,
+    ledger,
+    product,
+    stock,
+    messaging,
+    party,
+    tax,
+    sales,
+    legacySales,
+    billing,
+    settlement,
+    orderToCash,
+  )
 }

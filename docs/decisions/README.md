@@ -120,5 +120,11 @@ current system; ADRs preserve decision history.
 | [`0094`](./0094-adopt-module-manifest-registry-and-generator.md)                              | Adopt the module manifest, registry, and generator                                               | Accepted   |
 | [`0095`](./0095-adopt-gapless-document-numbering.md)                                          | Adopt gapless document numbering                                                                 | Proposed   |
 | [`0096`](./0096-adopt-posting-rules-and-legal-entity-ledger.md)                               | Adopt posting rules and the legal-entity general ledger                                          | Proposed   |
+| [`0097`](./0097-move-product-identity-to-a-product-module.md)                                 | Move product identity to a product module                                                        | Proposed   |
+| [`0098`](./0098-adopt-a-neutral-tax-module.md)                                                | Adopt a neutral tax module                                                                       | Proposed   |
+| [`0099`](./0099-make-sales-customers-party-roles.md)                                          | Make sales customers party roles                                                                 | Proposed   |
+| [`0100`](./0100-adopt-moving-average-inventory-valuation.md)                                  | Adopt moving-average inventory valuation                                                         | Proposed   |
+| [`0101`](./0101-coordinate-sales-delivery-with-inventory.md)                                  | Coordinate sales delivery with inventory                                                         | Proposed   |
+| [`0102`](./0102-split-billing-and-settlement.md)                                              | Split billing and settlement                                                                     | Proposed   |
 
 Accepted ADRs must not be rewritten to alter history. Create a new ADR and use `Supersedes`.

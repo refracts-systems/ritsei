@@ -92,6 +92,20 @@ export const CapabilityIds = [
   "tax.tax_code.read",
   "tax.tax_code.create",
   "tax.product_tax.configure",
+  "sales.price_list.configure",
+  "sales.price_list.read",
+  "sales.quotation.send",
+  "sales.quotation.decide",
+  "sales.delivery.record",
+  "billing.customer_invoice.create",
+  "billing.credit_note.create",
+  "billing.supplier_bill.create",
+  "billing.document.read",
+  "billing.settlement.apply",
+  "settlement.payment_term.configure",
+  "settlement.payment.receive",
+  "settlement.payment.make",
+  "settlement.report.read",
 ] as const
 
 export const Capability = Schema.Literals(CapabilityIds)
@@ -139,6 +153,8 @@ export const CapabilityOwner = Schema.Literals([
   "process",
   "product",
   "tax",
+  "billing",
+  "settlement",
 ])
 export type CapabilityOwner = Schema.Schema.Type<typeof CapabilityOwner>
 
@@ -317,6 +333,20 @@ export const CapabilityDefinitions: ReadonlyArray<CapabilityDefinition> = [
   definition("tax.tax_code.read", "tax", "tax_code", "read"),
   definition("tax.tax_code.create", "tax", "tax_code", "create"),
   definition("tax.product_tax.configure", "tax", "product_tax", "configure"),
+  definition("sales.price_list.configure", "sales", "price_list", "configure"),
+  definition("sales.price_list.read", "sales", "price_list", "read"),
+  definition("sales.quotation.send", "sales", "quotation", "send"),
+  definition("sales.quotation.decide", "sales", "quotation", "decide"),
+  definition("sales.delivery.record", "sales", "delivery", "record"),
+  definition("billing.customer_invoice.create", "billing", "customer_invoice", "create"),
+  definition("billing.credit_note.create", "billing", "credit_note", "create"),
+  definition("billing.supplier_bill.create", "billing", "supplier_bill", "create"),
+  definition("billing.document.read", "billing", "document", "read"),
+  definition("billing.settlement.apply", "billing", "settlement", "apply"),
+  definition("settlement.payment_term.configure", "settlement", "payment_term", "configure"),
+  definition("settlement.payment.receive", "settlement", "payment", "receive"),
+  definition("settlement.payment.make", "settlement", "payment", "make"),
+  definition("settlement.report.read", "settlement", "report", "read"),
 ]
 
 const capabilityIdSet = new Set<string>(CapabilityIds)
