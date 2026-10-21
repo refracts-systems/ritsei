@@ -18,9 +18,11 @@ const directionOptions = [
   { value: "purchase", label: "Purchases" },
 ]
 
-const text = (value: unknown) => (Predicate.isString(value) ? value.trim() : "")
+const text = (value: FormValue[string] | undefined) =>
+  Predicate.isString(value) ? value.trim() : ""
 
-const directionOf = (value: unknown) => (value === "purchase" ? "purchase" : "sales")
+const directionOf = (value: FormValue[string] | undefined) =>
+  value === "purchase" ? ("purchase" as const) : ("sales" as const)
 
 const isComplete = (payload: { code: string; name: string; rate: string }) =>
   payload.code !== "" && payload.name !== "" && /^\d{1,3}(\.\d{1,4})?$/.test(payload.rate)

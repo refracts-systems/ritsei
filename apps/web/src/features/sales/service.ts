@@ -36,7 +36,7 @@ const QuotationList = Schema.Array(Quotation).check(Schema.isMaxLength(200))
 const SalesOrderList = Schema.Array(SalesOrder).check(Schema.isMaxLength(200))
 
 export const listCustomers = Effect.fn("Frontend.Sales.listCustomers")(function* (
-  input: unknown = {},
+  input: Schema.Codec.Encoded<typeof ListCustomersInput> = {},
 ) {
   const decoded = yield* decodeInput(ListCustomersInput, input)
   const body = yield* requestJson(`${salesRoutes.listCustomers}${querySuffix(decoded)}`)
@@ -48,7 +48,7 @@ export const listCustomers = Effect.fn("Frontend.Sales.listCustomers")(function*
   return customers
 })
 
-export const getCustomer = Effect.fn("Frontend.Sales.getCustomer")(function* (id: unknown) {
+export const getCustomer = Effect.fn("Frontend.Sales.getCustomer")(function* (id: string) {
   const decoded = yield* decodeInput(GetCustomerInput, { customerId: id })
   const body = yield* requestJson(routeWithId(salesRoutes.getCustomer, decoded.customerId))
   const customer = yield* decodeResponse(Customer, body, "invalid-response")
@@ -65,7 +65,7 @@ export const getCustomer = Effect.fn("Frontend.Sales.getCustomer")(function* (id
 })
 
 export const createCustomer = Effect.fn("Frontend.Sales.createCustomer")(function* (
-  input: unknown,
+  input: Schema.Codec.Encoded<typeof CreateCustomerInput>,
 ) {
   const decoded = yield* decodeInput(CreateCustomerInput, input)
   const connection = yield* BrowserConnection
@@ -84,7 +84,7 @@ export const createCustomer = Effect.fn("Frontend.Sales.createCustomer")(functio
 })
 
 export const listQuotations = Effect.fn("Frontend.Sales.listQuotations")(function* (
-  input: unknown = {},
+  input: Schema.Codec.Encoded<typeof ListQuotationsInput> = {},
 ) {
   const decoded = yield* decodeInput(ListQuotationsInput, input)
   const body = yield* requestJson(`${salesRoutes.listQuotations}${querySuffix(decoded)}`)
@@ -101,7 +101,7 @@ export const listQuotations = Effect.fn("Frontend.Sales.listQuotations")(functio
   return quotations
 })
 
-export const getQuotation = Effect.fn("Frontend.Sales.getQuotation")(function* (id: unknown) {
+export const getQuotation = Effect.fn("Frontend.Sales.getQuotation")(function* (id: string) {
   const decoded = yield* decodeInput(GetQuotationInput, { quotationId: id })
   const body = yield* requestJson(routeWithId(salesRoutes.getQuotation, decoded.quotationId))
   const quotation = yield* decodeResponse(Quotation, body, "invalid-response")
@@ -118,7 +118,7 @@ export const getQuotation = Effect.fn("Frontend.Sales.getQuotation")(function* (
 })
 
 export const createQuotation = Effect.fn("Frontend.Sales.createQuotation")(function* (
-  input: unknown,
+  input: Schema.Codec.Encoded<typeof CreateQuotationInput>,
 ) {
   const decoded = yield* decodeInput(CreateQuotationInput, input)
   const connection = yield* BrowserConnection
@@ -137,7 +137,9 @@ export const createQuotation = Effect.fn("Frontend.Sales.createQuotation")(funct
   return quotation
 })
 
-export const listOrders = Effect.fn("Frontend.Sales.listOrders")(function* (input: unknown = {}) {
+export const listOrders = Effect.fn("Frontend.Sales.listOrders")(function* (
+  input: Schema.Codec.Encoded<typeof ListOrdersInput> = {},
+) {
   const decoded = yield* decodeInput(ListOrdersInput, input)
   const body = yield* requestJson(`${salesRoutes.listOrders}${querySuffix(decoded)}`)
   const orders = yield* decodeResponse(SalesOrderList, body, "invalid-response")
@@ -153,7 +155,7 @@ export const listOrders = Effect.fn("Frontend.Sales.listOrders")(function* (inpu
   return orders
 })
 
-export const getOrder = Effect.fn("Frontend.Sales.getOrder")(function* (id: unknown) {
+export const getOrder = Effect.fn("Frontend.Sales.getOrder")(function* (id: string) {
   const decoded = yield* decodeInput(GetOrderInput, { orderId: id })
   const body = yield* requestJson(routeWithId(salesRoutes.getOrder, decoded.orderId))
   const order = yield* decodeResponse(SalesOrder, body, "invalid-response")
@@ -169,7 +171,9 @@ export const getOrder = Effect.fn("Frontend.Sales.getOrder")(function* (id: unkn
   return order
 })
 
-export const createOrder = Effect.fn("Frontend.Sales.createOrder")(function* (input: unknown) {
+export const createOrder = Effect.fn("Frontend.Sales.createOrder")(function* (
+  input: Schema.Codec.Encoded<typeof CreateOrderInput>,
+) {
   const decoded = yield* decodeInput(CreateOrderInput, input)
   const connection = yield* BrowserConnection
   const body = yield* mutationRequest(salesRoutes.createOrder, decoded)
@@ -190,8 +194,8 @@ export const createOrder = Effect.fn("Frontend.Sales.createOrder")(function* (in
 // Fallow: confirm and cancel are paired lifecycle adapters with the same verified mutation shape.
 // fallow-ignore-next-line code-duplication
 export const confirmOrder = Effect.fn("Frontend.Sales.confirmOrder")(function* (
-  id: unknown,
-  input: unknown,
+  id: Schema.Codec.Encoded<typeof Uuid>,
+  input: Schema.Codec.Encoded<typeof ConfirmOrderInput>,
 ) {
   const decodedId = yield* decodeInput(Uuid, id)
   const decoded = yield* decodeInput(ConfirmOrderInput, input)
@@ -212,7 +216,9 @@ export const confirmOrder = Effect.fn("Frontend.Sales.confirmOrder")(function* (
 
 // Fallow: confirm and cancel are paired lifecycle adapters with the same verified mutation shape.
 // fallow-ignore-next-line code-duplication
-export const cancelOrder = Effect.fn("Frontend.Sales.cancelOrder")(function* (id: unknown) {
+export const cancelOrder = Effect.fn("Frontend.Sales.cancelOrder")(function* (
+  id: Schema.Codec.Encoded<typeof Uuid>,
+) {
   const decodedId = yield* decodeInput(Uuid, id)
   const connection = yield* BrowserConnection
   const body = yield* mutationRequest(routeWithId(salesRoutes.cancelOrder, decodedId))

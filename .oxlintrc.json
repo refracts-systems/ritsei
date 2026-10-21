@@ -53,25 +53,5 @@
     "anti-slop-effect/no-service-constructor-imports": "error",
     "anti-slop/no-shape-in-symbol-names": "error",
     "anti-slop/no-conditional-empty-object-spread": "error"
-  },
-  // ADR-0105: modules not yet migrated to typed service inputs. Remove each entry with its
-  // module's migration; the block goes away with the last one.
-  "overrides": [
-    {
-      "files": [
-        "apps/web/src/features/accounting/**",
-        "apps/web/src/features/authorization/**",
-        "apps/web/src/features/identity/**",
-        "apps/web/src/features/inventory/**",
-        "apps/web/src/features/party/**",
-        "apps/web/src/features/process-studio/**",
-        "apps/web/src/features/procurement/**",
-        "apps/web/src/features/product/**",
-        "apps/web/src/features/sales/**",
-        "apps/web/src/features/tax/**",
-        "apps/web/src/shared/**"
-      ],
-      "rules": { "anti-slop/no-unknown-parameters": "off" }
-    }
-  ]
+  }
 }

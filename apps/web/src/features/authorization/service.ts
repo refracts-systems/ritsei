@@ -31,7 +31,7 @@ const routeWithUserAccountId = (route: string, userAccountId: string) =>
   route.replace(":userAccountId", encodeURIComponent(userAccountId))
 
 export const listMemberships = Effect.fn("Frontend.Authorization.listMemberships")(function* (
-  input: unknown = {},
+  input: Schema.Codec.Encoded<typeof ListTenantMembershipsInput> = {},
 ) {
   const decoded = yield* decodeInput(ListTenantMembershipsInput, input)
   const connection = yield* BrowserConnection
@@ -54,7 +54,7 @@ export const listMemberships = Effect.fn("Frontend.Authorization.listMemberships
 })
 
 export const getMembership = Effect.fn("Frontend.Authorization.getMembership")(function* (
-  userAccountId: unknown,
+  userAccountId: Schema.Codec.Encoded<typeof Uuid>,
 ) {
   const decodedId = yield* decodeInput(Uuid, userAccountId)
   const connection = yield* BrowserConnection
@@ -72,7 +72,7 @@ export const getMembership = Effect.fn("Frontend.Authorization.getMembership")(f
 })
 
 export const listDirectGrants = Effect.fn("Frontend.Authorization.listDirectGrants")(function* (
-  userAccountId: unknown,
+  userAccountId: Schema.Codec.Encoded<typeof Uuid>,
 ) {
   const decodedId = yield* decodeInput(Uuid, userAccountId)
   const connection = yield* BrowserConnection
@@ -99,7 +99,7 @@ export const listCapabilityDefinitions = Effect.fn(
 })
 
 export const addMembership = Effect.fn("Frontend.Authorization.addMembership")(function* (
-  input: unknown,
+  input: Schema.Codec.Encoded<typeof AddTenantMembershipInput>,
 ) {
   const decoded = yield* decodeInput(AddTenantMembershipInput, input)
   const connection = yield* BrowserConnection
@@ -117,7 +117,7 @@ export const addMembership = Effect.fn("Frontend.Authorization.addMembership")(f
 })
 
 export const suspendMembership = Effect.fn("Frontend.Authorization.suspendMembership")(function* (
-  userAccountId: unknown,
+  userAccountId: Schema.Codec.Encoded<typeof Uuid>,
 ) {
   const decodedId = yield* decodeInput(Uuid, userAccountId)
   const connection = yield* BrowserConnection
@@ -139,7 +139,7 @@ export const suspendMembership = Effect.fn("Frontend.Authorization.suspendMember
 })
 
 export const activateMembership = Effect.fn("Frontend.Authorization.activateMembership")(function* (
-  userAccountId: unknown,
+  userAccountId: Schema.Codec.Encoded<typeof Uuid>,
 ) {
   const decodedId = yield* decodeInput(Uuid, userAccountId)
   const connection = yield* BrowserConnection
@@ -161,14 +161,14 @@ export const activateMembership = Effect.fn("Frontend.Authorization.activateMemb
 })
 
 export const removeMembership = Effect.fn("Frontend.Authorization.removeMembership")(function* (
-  userAccountId: unknown,
+  userAccountId: Schema.Codec.Encoded<typeof Uuid>,
 ) {
   const decodedId = yield* decodeInput(Uuid, userAccountId)
   yield* mutationRequest(routeWithUserAccountId(authorizationRoutes.remove, decodedId), "DELETE")
 })
 
 export const grantCapability = Effect.fn("Frontend.Authorization.grantCapability")(function* (
-  input: unknown,
+  input: Schema.Codec.Encoded<typeof GrantCapabilityInput>,
 ) {
   const decoded = yield* decodeInput(GrantCapabilityInput, input)
   yield* mutationRequest(authorizationRoutes.grant, "POST", decoded)

@@ -76,6 +76,12 @@ const isPermanentFinancialOperationFailure = (error: FinancialOperationFailure):
   return exhaustive
 }
 
+/** A claimed job is leased, and ProcessJob requires a leased job to carry its lease token. */
+const leaseTokenOf = (job: { readonly leaseToken: string | null }) =>
+  job.leaseToken === null
+    ? Effect.die(new Error("claimed job has no lease token"))
+    : Effect.succeed(job.leaseToken)
+
 const retryAfter = (milliseconds: number) => new Date(Date.now() + milliseconds).toISOString()
 
 export const runFinancialOperationOnce = (
@@ -101,9 +107,7 @@ export const runFinancialOperationOnce = (
       })
     }
     if (job === null) return { status: "idle", jobId: null, operationId: null } as const
-    // A claimed job is leased, and ProcessJob requires a leased job to carry its lease token.
-    const leaseToken = job.leaseToken
-    if (leaseToken === null) return yield* Effect.die(new Error("claimed job has no lease token"))
+    const leaseToken = yield* leaseTokenOf(job)
     yield* hit("after_lease_before_accounting")
 
     const payload = yield* Schema.decodeUnknownEffect(FinancialOperationJobPayload)(job.payload)

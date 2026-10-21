@@ -54,7 +54,7 @@ const belongsToWarehouse = (
   destinationWarehouseId === warehouseId
 
 export const listWarehouses = Effect.fn("Frontend.Inventory.listWarehouses")(function* (
-  input: unknown = {},
+  input: Schema.Codec.Encoded<typeof ListWarehousesInput> = {},
 ) {
   const decoded = yield* decodeInput(ListWarehousesInput, input)
   const body = yield* requestJson(`${inventoryRoutes.listWarehouses}${querySuffix(decoded)}`)
@@ -71,7 +71,9 @@ export const listWarehouses = Effect.fn("Frontend.Inventory.listWarehouses")(fun
   return warehouses
 })
 
-export const listItems = Effect.fn("Frontend.Inventory.listItems")(function* (input: unknown = {}) {
+export const listItems = Effect.fn("Frontend.Inventory.listItems")(function* (
+  input: Schema.Codec.Encoded<typeof ListItemsInput> = {},
+) {
   const decoded = yield* decodeInput(ListItemsInput, input)
   const body = yield* requestJson(`${inventoryRoutes.listItems}${querySuffix(decoded)}`)
   const items = yield* decodeResponse(ItemList, body, "invalid-response")
@@ -83,7 +85,7 @@ export const listItems = Effect.fn("Frontend.Inventory.listItems")(function* (in
 })
 
 export const listStockBalances = Effect.fn("Frontend.Inventory.listStockBalances")(function* (
-  input: unknown = {},
+  input: Schema.Codec.Encoded<typeof ListStockBalancesInput> = {},
 ) {
   const decoded = yield* decodeInput(ListStockBalancesInput, input)
   const body = yield* requestJson(`${inventoryRoutes.listStockBalances}${querySuffix(decoded)}`)
@@ -101,7 +103,7 @@ export const listStockBalances = Effect.fn("Frontend.Inventory.listStockBalances
 })
 
 export const listStockReservations = Effect.fn("Frontend.Inventory.listStockReservations")(
-  function* (input: unknown = {}) {
+  function* (input: Schema.Codec.Encoded<typeof ListStockReservationsInput> = {}) {
     const decoded = yield* decodeInput(ListStockReservationsInput, input)
     const body = yield* requestJson(
       `${inventoryRoutes.listStockReservations}${querySuffix(decoded)}`,
@@ -125,7 +127,7 @@ export const listStockReservations = Effect.fn("Frontend.Inventory.listStockRese
 )
 
 export const listStockTransfers = Effect.fn("Frontend.Inventory.listStockTransfers")(function* (
-  input: unknown = {},
+  input: Schema.Codec.Encoded<typeof ListStockTransfersInput> = {},
 ) {
   const decoded = yield* decodeInput(ListStockTransfersInput, input)
   const body = yield* requestJson(`${inventoryRoutes.listStockTransfers}${querySuffix(decoded)}`)
@@ -150,7 +152,7 @@ export const listStockTransfers = Effect.fn("Frontend.Inventory.listStockTransfe
 })
 
 export const listStockMovements = Effect.fn("Frontend.Inventory.listStockMovements")(function* (
-  input: unknown = {},
+  input: Schema.Codec.Encoded<typeof ListStockMovementsInput> = {},
 ) {
   const decoded = yield* decodeInput(ListStockMovementsInput, input)
   const body = yield* requestJson(`${inventoryRoutes.listStockMovements}${querySuffix(decoded)}`)
@@ -172,7 +174,7 @@ export const listStockMovements = Effect.fn("Frontend.Inventory.listStockMovemen
 })
 
 export const createWarehouse = Effect.fn("Frontend.Inventory.createWarehouse")(function* (
-  input: unknown,
+  input: Schema.Codec.Encoded<typeof CreateWarehouseInput>,
 ) {
   const decoded = yield* decodeInput(CreateWarehouseInput, input)
   const connection = yield* connectionTenant
@@ -190,7 +192,9 @@ export const createWarehouse = Effect.fn("Frontend.Inventory.createWarehouse")(f
   return warehouse
 })
 
-export const createItem = Effect.fn("Frontend.Inventory.createItem")(function* (input: unknown) {
+export const createItem = Effect.fn("Frontend.Inventory.createItem")(function* (
+  input: Schema.Codec.Encoded<typeof CreateItemInput>,
+) {
   const decoded = yield* decodeInput(CreateItemInput, input)
   const connection = yield* connectionTenant
   const body = yield* mutationRequest(inventoryRoutes.createItem, decoded)
@@ -210,7 +214,9 @@ export const createItem = Effect.fn("Frontend.Inventory.createItem")(function* (
   return item
 })
 
-export const adjustStock = Effect.fn("Frontend.Inventory.adjustStock")(function* (input: unknown) {
+export const adjustStock = Effect.fn("Frontend.Inventory.adjustStock")(function* (
+  input: Schema.Codec.Encoded<typeof AdjustStockInput>,
+) {
   const decoded = yield* decodeInput(AdjustStockInput, input)
   const connection = yield* connectionTenant
   const body = yield* mutationRequest(inventoryRoutes.adjustStock, decoded)
@@ -230,7 +236,7 @@ export const adjustStock = Effect.fn("Frontend.Inventory.adjustStock")(function*
 })
 
 export const receiveStock = Effect.fn("Frontend.Inventory.receiveStock")(function* (
-  input: unknown,
+  input: Schema.Codec.Encoded<typeof ReceiveStockInput>,
 ) {
   const decoded = yield* decodeInput(ReceiveStockInput, input)
   const connection = yield* connectionTenant
@@ -249,7 +255,7 @@ export const receiveStock = Effect.fn("Frontend.Inventory.receiveStock")(functio
 })
 
 export const reserveStock = Effect.fn("Frontend.Inventory.reserveStock")(function* (
-  input: unknown,
+  input: Schema.Codec.Encoded<typeof ReserveStockInput>,
 ) {
   const decoded = yield* decodeInput(ReserveStockInput, input)
   const connection = yield* connectionTenant
@@ -276,7 +282,7 @@ const reservationCommand = (
   route: string,
   expectedStatus: "released" | "fulfilled",
 ) =>
-  Effect.fn(`Frontend.Inventory.${name}`)(function* (id: unknown) {
+  Effect.fn(`Frontend.Inventory.${name}`)(function* (id: Schema.Codec.Encoded<typeof Uuid>) {
     const decodedId = yield* decodeInput(Uuid, id)
     const connection = yield* connectionTenant
     const body = yield* mutationRequest(routeWithId(route, decodedId))
@@ -305,7 +311,7 @@ export const fulfillReservation = reservationCommand(
 )
 
 export const createTransfer = Effect.fn("Frontend.Inventory.createTransfer")(function* (
-  input: unknown,
+  input: Schema.Codec.Encoded<typeof CreateStockTransferInput>,
 ) {
   const decoded = yield* decodeInput(CreateStockTransferInput, input)
   const connection = yield* connectionTenant
@@ -331,7 +337,7 @@ const transferCommand = (
   route: string,
   expectedStatus: "confirmed" | "completed",
 ) =>
-  Effect.fn(`Frontend.Inventory.${name}`)(function* (id: unknown) {
+  Effect.fn(`Frontend.Inventory.${name}`)(function* (id: Schema.Codec.Encoded<typeof Uuid>) {
     const decodedId = yield* decodeInput(Uuid, id)
     const connection = yield* connectionTenant
     const body = yield* mutationRequest(routeWithId(route, decodedId))

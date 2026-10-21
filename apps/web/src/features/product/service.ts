@@ -28,7 +28,7 @@ export const listProducts = Effect.fn("Frontend.Product.listProducts")(function*
 })
 
 export const createProduct = Effect.fn("Frontend.Product.createProduct")(function* (
-  input: unknown,
+  input: Schema.Codec.Encoded<typeof CreateProductInput>,
 ) {
   const decoded = yield* decodeInput(CreateProductInput, input)
   const body = yield* mutationRequest(route, "POST", decoded)

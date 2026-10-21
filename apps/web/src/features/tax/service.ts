@@ -31,7 +31,9 @@ export const listTaxCodes = Effect.fn("Frontend.Tax.listTaxCodes")(function* () 
   return yield* decodeResponse(TaxCodeList, body)
 })
 
-export const createTaxCode = Effect.fn("Frontend.Tax.createTaxCode")(function* (input: unknown) {
+export const createTaxCode = Effect.fn("Frontend.Tax.createTaxCode")(function* (
+  input: Schema.Codec.Encoded<typeof CreateTaxCodeInput>,
+) {
   const decoded = yield* decodeInput(CreateTaxCodeInput, input)
   const body = yield* mutationRequest(route, "POST", decoded)
   return yield* decodeResponse(TaxCode, body, "unknown-outcome")

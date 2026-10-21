@@ -57,7 +57,7 @@ const validProcessValidation = (
   )
 
 export const listCatalog = Effect.fn("Frontend.Process.listCatalog")(function* (
-  input: unknown = {},
+  input: Schema.Codec.Encoded<typeof ListProcessCatalogInput> = {},
 ) {
   const decoded = yield* decodeInput(ListProcessCatalogInput, input)
   const body = yield* requestJson(`${processRoutes.listCatalog}${querySuffix(decoded)}`)
@@ -65,7 +65,7 @@ export const listCatalog = Effect.fn("Frontend.Process.listCatalog")(function* (
 })
 
 export const validateDefinition = Effect.fn("Frontend.Process.validateDefinition")(function* (
-  input: unknown,
+  input: Schema.Codec.Encoded<typeof ValidateProcessDefinitionInput>,
 ) {
   const decoded = yield* decodeInput(ValidateProcessDefinitionInput, input)
   const body = yield* requestJson(processRoutes.validateDefinition, "POST", decoded)
@@ -77,7 +77,7 @@ export const validateDefinition = Effect.fn("Frontend.Process.validateDefinition
 })
 
 export const listRuntimeInstances = Effect.fn("Frontend.Process.listRuntimeInstances")(function* (
-  input: unknown = {},
+  input: Schema.Codec.Encoded<typeof ListProcessRuntimeInstancesInput> = {},
 ) {
   const decoded = yield* decodeInput(ListProcessRuntimeInstancesInput, input)
   const body = yield* requestJson(`${processRoutes.listRuntimeInstances}${querySuffix(decoded)}`)
@@ -95,7 +95,7 @@ export const listRuntimeInstances = Effect.fn("Frontend.Process.listRuntimeInsta
 })
 
 export const listWorkflowRuns = Effect.fn("Frontend.Process.listWorkflowRuns")(function* (
-  input: unknown = {},
+  input: Schema.Codec.Encoded<typeof ListProcessWorkflowRunsInput> = {},
 ) {
   const decoded = yield* decodeInput(ListProcessWorkflowRunsInput, input)
   const body = yield* requestJson(`${processRoutes.listWorkflowRuns}${querySuffix(decoded)}`)
@@ -113,7 +113,7 @@ export const listWorkflowRuns = Effect.fn("Frontend.Process.listWorkflowRuns")(f
 })
 
 export const listOperatorInbox = Effect.fn("Frontend.Process.listOperatorInbox")(function* (
-  input: unknown = {},
+  input: Schema.Codec.Encoded<typeof ListProcessOperatorInboxInput> = {},
 ) {
   const decoded = yield* decodeInput(ListProcessOperatorInboxInput, input)
   const body = yield* requestJson(`${processRoutes.listOperatorInbox}${querySuffix(decoded)}`)
@@ -129,7 +129,7 @@ export const listOperatorInbox = Effect.fn("Frontend.Process.listOperatorInbox")
 })
 
 export const listOperatorControls = Effect.fn("Frontend.Process.listOperatorControls")(function* (
-  input: unknown = {},
+  input: Schema.Codec.Encoded<typeof ListProcessOperatorControlsInput> = {},
 ) {
   const decoded = yield* decodeInput(ListProcessOperatorControlsInput, input)
   const body = yield* requestJson(`${processRoutes.listOperatorControls}${querySuffix(decoded)}`)
@@ -147,8 +147,8 @@ export const listOperatorControls = Effect.fn("Frontend.Process.listOperatorCont
 })
 
 export const operateRuntime = Effect.fn("Frontend.Process.operateRuntime")(function* (
-  instanceId: unknown,
-  input: unknown,
+  instanceId: Schema.Codec.Encoded<typeof Uuid>,
+  input: Schema.Codec.Encoded<typeof OperateRuntimeInput>,
 ) {
   const decodedId = yield* decodeInput(Uuid, instanceId)
   const decoded = yield* decodeInput(OperateRuntimeInput, input)

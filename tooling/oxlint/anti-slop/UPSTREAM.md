@@ -21,7 +21,7 @@ formatting, and Fallow because it keeps upstream's tab-indented style.
 `anti-slop/no-widen-then-assert`, `anti-slop-effect/no-manual-effect-error-tag`,
 `anti-slop-effect/prefer-effect-match`, `anti-slop/no-chained-type-assertions`,
 `anti-slop/no-unsafe-dictionary-type`, `anti-slop/no-runtime-typeof`, `anti-slop/no-unknown-returns`, and
-`anti-slop/require-safety-comment-for-type-assertion` (everywhere, tests included), `anti-slop-effect/no-service-constructor-imports`, `anti-slop/no-shape-in-symbol-names`, `anti-slop/no-conditional-empty-object-spread`.
+`anti-slop/require-safety-comment-for-type-assertion` (everywhere, tests included), `anti-slop-effect/no-service-constructor-imports`, `anti-slop/no-shape-in-symbol-names`, `anti-slop/no-conditional-empty-object-spread`, `anti-slop/no-unknown-parameters`.
 
 `pnpm run lint` passes with this set. Fixes made when enabling it:
 
@@ -81,6 +81,13 @@ formatting, and Fallow because it keeps upstream's tab-indented style.
   `omitUndefined`/`omitNullish` (`framework/foundation/optional`) in server code and
   `definedFields`/`presentFields` (`apps/web/src/shared/api.ts`) in the web app, so the
   `...(x === undefined ? {} : { x })` pattern is gone.
+- `no-unknown-parameters` (668 sites, ADR-0105): service and port operations take the encoded type
+  of the schema that decodes them, interfaces and implementations alike, and still decode at
+  runtime. Stored JSON (`jsonb` columns, checkpoints, mapping files) is typed as JSON through the
+  `json()` column helper and `Schema.Json`; error predicates and pass-through helpers are generic;
+  capability parameters use the catalog `Capability` union. Tests that send invalid input build it
+  with `partial<T>()(value)`. The migration ran module by module behind a shrinking `overrides`
+  block, now removed.
 - `no-reflect-get` (1 site): the `Proxy` default branch in `request-limits.ts` reads the wrapped
   request directly, with a `SAFETY:` comment.
 
@@ -91,7 +98,6 @@ cleanup it needs.
 
 | Rule | Findings | Reason |
 | --- | --- | --- |
-| `no-unknown-parameters` | 668 | Module services take `input: unknown` and decode it with Effect Schema at the boundary (`AGENTS.md`, default Effect feature shape); the rule targets the opposite pattern. |
 | `require-readable-spacing` | 8468 | Formatting belongs to oxfmt; the autofix would rewrite most files and fight the formatter. |
 | `anti-slop-effect/no-manual-tag-comparison` | 146 | Outcome unions (`{ _tag: "posted" }`) are matched by hand throughout. |
 | `anti-slop-effect/no-manual-tagged-construction` | 182 | The same outcome unions are built as literals. |

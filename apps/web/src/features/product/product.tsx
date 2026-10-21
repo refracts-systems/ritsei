@@ -1,3 +1,4 @@
+import * as Match from "effect/Match"
 import * as Predicate from "effect/Predicate"
 import { createSignal, Show, useContext } from "solid-js"
 import { CommandFeedback, QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
@@ -20,14 +21,23 @@ const typeLabels = {
 } as const
 const typeOptions = Object.entries(typeLabels).map(([value, label]) => ({ value, label }))
 
-const text = (value: unknown) => (Predicate.isString(value) ? value.trim() : "")
+const text = (value: FormValue[string] | undefined) =>
+  Predicate.isString(value) ? value.trim() : ""
+
+/** The selected product type; anything else falls back to stockable, the form default. */
+const productTypeOf = (value: string) =>
+  Match.value(value).pipe(
+    Match.when("consumable", () => "consumable" as const),
+    Match.when("service", () => "service" as const),
+    Match.orElse(() => "stockable" as const),
+  )
 
 /** The create payload, or undefined when the code or name is missing. */
 const productPayload = (value: FormValue) => {
   const payload = {
     code: text(value.code).toUpperCase(),
     name: text(value.name),
-    type: text(value.type) || "stockable",
+    type: productTypeOf(text(value.type)),
   }
   return payload.code !== "" && payload.name !== "" ? payload : undefined
 }

@@ -36,13 +36,17 @@ import {
 const PartyDirectory = Schema.Array(PartyDirectoryEntry).check(Schema.isMaxLength(200))
 const PartyId = Schema.String.check(Schema.isUUID())
 
-export const listParties = Effect.fn("Frontend.Party.listParties")(function* (input: unknown = {}) {
+export const listParties = Effect.fn("Frontend.Party.listParties")(function* (
+  input: Schema.Codec.Encoded<typeof ListPartiesInput> = {},
+) {
   const decoded = yield* decodeInput(ListPartiesInput, input)
   const body = yield* requestJson(`${partyRoutes.list}${querySuffix(decoded)}`)
   return yield* decodeResponse(PartyDirectory, body, "invalid-response")
 })
 
-export const getPartyDetail = Effect.fn("Frontend.Party.getPartyDetail")(function* (id: unknown) {
+export const getPartyDetail = Effect.fn("Frontend.Party.getPartyDetail")(function* (
+  id: Schema.Codec.Encoded<typeof PartyId>,
+) {
   const decodedId = yield* decodeInput(PartyId, id)
   const body = yield* requestJson(routeWithId(partyRoutes.get, decodedId))
   const detail = yield* decodeResponse(PartyDetail, body, "invalid-response")
@@ -53,8 +57,8 @@ export const getPartyDetail = Effect.fn("Frontend.Party.getPartyDetail")(functio
 })
 
 export const findRelatedPartyPaths = Effect.fn("Frontend.Party.findRelatedPartyPaths")(function* (
-  partyId: unknown,
-  input: unknown = {},
+  partyId: Schema.Codec.Encoded<typeof PartyId>,
+  input: Schema.Codec.Encoded<typeof ListRelatedPartyPathsInput> = {},
 ) {
   const decodedId = yield* decodeInput(PartyId, partyId)
   const decoded = yield* decodeInput(ListRelatedPartyPathsInput, input)
@@ -72,14 +76,16 @@ export const findRelatedPartyPaths = Effect.fn("Frontend.Party.findRelatedPartyP
   return paths
 })
 
-export const createParty = Effect.fn("Frontend.Party.createParty")(function* (input: unknown) {
+export const createParty = Effect.fn("Frontend.Party.createParty")(function* (
+  input: Schema.Codec.Encoded<typeof CreatePartyInput>,
+) {
   const decoded = yield* decodeInput(CreatePartyInput, input)
   const body = yield* mutationRequest(partyRoutes.create, "POST", decoded)
   return yield* decodeResponse(Party, body, "unknown-outcome")
 })
 
 export const createLegalEntity = Effect.fn("Frontend.Party.createLegalEntity")(function* (
-  partyId: unknown,
+  partyId: Schema.Codec.Encoded<typeof PartyId>,
 ) {
   const decodedPartyId = yield* decodeInput(PartyId, partyId)
   const body = yield* mutationRequest(
@@ -94,8 +100,8 @@ export const createLegalEntity = Effect.fn("Frontend.Party.createLegalEntity")(f
 })
 
 export const createBranch = Effect.fn("Frontend.Party.createBranch")(function* (
-  legalEntityId: unknown,
-  input: unknown,
+  legalEntityId: Schema.Codec.Encoded<typeof PartyId>,
+  input: Schema.Codec.Encoded<typeof CreateBranchInput>,
 ) {
   const decodedId = yield* decodeInput(PartyId, legalEntityId)
   const decoded = yield* decodeInput(CreateBranchInput, input)
@@ -112,8 +118,8 @@ export const createBranch = Effect.fn("Frontend.Party.createBranch")(function* (
 })
 
 export const assignPartyRole = Effect.fn("Frontend.Party.assignPartyRole")(function* (
-  partyId: unknown,
-  input: unknown,
+  partyId: Schema.Codec.Encoded<typeof PartyId>,
+  input: Schema.Codec.Encoded<typeof AssignPartyRoleInput>,
 ) {
   const decodedId = yield* decodeInput(PartyId, partyId)
   const decoded = yield* decodeInput(AssignPartyRoleInput, input)
@@ -121,8 +127,8 @@ export const assignPartyRole = Effect.fn("Frontend.Party.assignPartyRole")(funct
 })
 
 export const attachPartyIdentifier = Effect.fn("Frontend.Party.attachPartyIdentifier")(function* (
-  partyId: unknown,
-  input: unknown,
+  partyId: Schema.Codec.Encoded<typeof PartyId>,
+  input: Schema.Codec.Encoded<typeof AttachPartyIdentifierInput>,
 ) {
   const decodedId = yield* decodeInput(PartyId, partyId)
   const decoded = yield* decodeInput(AttachPartyIdentifierInput, input)
@@ -144,7 +150,10 @@ export const attachPartyIdentifier = Effect.fn("Frontend.Party.attachPartyIdenti
 })
 
 export const createPartyRelationship = Effect.fn("Frontend.Party.createPartyRelationship")(
-  function* (partyId: unknown, input: unknown) {
+  function* (
+    partyId: Schema.Codec.Encoded<typeof PartyId>,
+    input: Schema.Codec.Encoded<typeof CreatePartyRelationshipInput>,
+  ) {
     const decodedId = yield* decodeInput(PartyId, partyId)
     const decoded = yield* decodeInput(CreatePartyRelationshipInput, input)
     const body = yield* mutationRequest(
@@ -167,7 +176,10 @@ export const createPartyRelationship = Effect.fn("Frontend.Party.createPartyRela
 )
 
 export const createPartyRepresentation = Effect.fn("Frontend.Party.createPartyRepresentation")(
-  function* (partyId: unknown, input: unknown) {
+  function* (
+    partyId: Schema.Codec.Encoded<typeof PartyId>,
+    input: Schema.Codec.Encoded<typeof CreatePartyRepresentationInput>,
+  ) {
     const decodedId = yield* decodeInput(PartyId, partyId)
     const decoded = yield* decodeInput(CreatePartyRepresentationInput, input)
     const body = yield* mutationRequest(
@@ -191,7 +203,10 @@ export const createPartyRepresentation = Effect.fn("Frontend.Party.createPartyRe
 
 export const setPartyRepresentationActive = Effect.fn(
   "Frontend.Party.setPartyRepresentationActive",
-)(function* (representationId: unknown, input: unknown) {
+)(function* (
+  representationId: Schema.Codec.Encoded<typeof PartyId>,
+  input: Schema.Codec.Encoded<typeof SetPartyRepresentationActiveInput>,
+) {
   const decodedId = yield* decodeInput(PartyId, representationId)
   const decoded = yield* decodeInput(SetPartyRepresentationActiveInput, input)
   const body = yield* mutationRequest(

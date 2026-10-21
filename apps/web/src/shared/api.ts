@@ -40,7 +40,7 @@ const failureMessages = {
     "The server may have saved this change. Reload the workspace before trying again.",
 } as const
 
-export const failureMessage = (error: unknown): string =>
+export const failureMessage = <Failure>(error: Failure): string =>
   error instanceof RequestFailure
     ? failureMessages[error.kind]
     : "The request could not be completed. Reload the page to try again."
@@ -72,7 +72,10 @@ const readBounded = async (response: Response): Promise<string> => {
 
 export type ResponseFailureKind = "invalid-response" | "unknown-outcome"
 
-export const decodeInput = <S extends Schema.Constraint>(schema: S, input: unknown) =>
+export const decodeInput = <S extends Schema.Constraint>(
+  schema: S,
+  input: Schema.Codec.Encoded<S>,
+) =>
   Schema.decodeUnknownEffect(schema)(input).pipe(
     Effect.mapError(() => new RequestFailure({ kind: "validation" })),
   )
@@ -88,19 +91,22 @@ export const decodeResponse = <S extends Schema.Constraint>(
 
 type MutationMethod = "POST" | "PATCH" | "DELETE"
 
-const isMutationMethod = (value: unknown): value is MutationMethod =>
+const isMutationMethod = <Value>(value: Value | MutationMethod): value is MutationMethod =>
   value === "POST" || value === "PATCH" || value === "DELETE"
 
-export function mutationRequest(path: string, payload?: unknown): ReturnType<typeof requestJson>
-export function mutationRequest(
+export function mutationRequest<Payload>(
+  path: string,
+  payload?: Payload,
+): ReturnType<typeof requestJson>
+export function mutationRequest<Payload>(
   path: string,
   method: MutationMethod,
-  payload?: unknown,
+  payload?: Payload,
 ): ReturnType<typeof requestJson>
-export function mutationRequest(
+export function mutationRequest<Payload>(
   path: string,
-  methodOrPayload: MutationMethod | unknown = "POST",
-  payload?: unknown,
+  methodOrPayload: MutationMethod | Payload = "POST",
+  payload?: Payload,
 ) {
   const method = isMutationMethod(methodOrPayload) ? methodOrPayload : "POST"
   const requestPayload = isMutationMethod(methodOrPayload) ? payload : methodOrPayload
@@ -144,10 +150,10 @@ export const responseMatches = <Owner>(value: Owner, expected: Readonly<Partial<
 export const responseListMatches = <A>(values: readonly A[], expected: Readonly<Partial<A>>) =>
   values.every((value) => responseMatches(value, expected))
 
-export const requestJson = Effect.fn("Frontend.requestJson")(function* (
+export const requestJson = Effect.fn("Frontend.requestJson")(function* <Payload>(
   path: string,
   method: "GET" | "POST" | "PATCH" | "DELETE" = "GET",
-  payload?: unknown,
+  payload?: Payload,
 ) {
   const connection = yield* BrowserConnection
   const mutatesState = method !== "GET"

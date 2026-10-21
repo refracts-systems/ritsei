@@ -24,7 +24,9 @@ export const listAccounts = Effect.fn("Frontend.Identity.listAccounts")(function
   return yield* decodeResponse(AccountList, body)
 })
 
-export const getAccount = Effect.fn("Frontend.Identity.getAccount")(function* (id: unknown) {
+export const getAccount = Effect.fn("Frontend.Identity.getAccount")(function* (
+  id: Schema.Codec.Encoded<typeof AccountId>,
+) {
   const decodedId = yield* decodeInput(AccountId, id)
   const body = yield* requestJson(routeWithId(userAccountRoutes.get, decodedId))
   const account = yield* decodeResponse(UserAccount, body)
@@ -35,7 +37,7 @@ export const getAccount = Effect.fn("Frontend.Identity.getAccount")(function* (i
 })
 
 export const createAccount = Effect.fn("Frontend.Identity.createAccount")(function* (
-  input: unknown,
+  input: Schema.Codec.Encoded<typeof CreateUserAccountInput>,
 ) {
   const decoded = yield* decodeInput(CreateUserAccountInput, input)
   const body = yield* mutationRequest(userAccountRoutes.create, "POST", decoded)
@@ -43,7 +45,7 @@ export const createAccount = Effect.fn("Frontend.Identity.createAccount")(functi
 })
 
 export const updateAccount = Effect.fn("Frontend.Identity.updateAccount")(function* (
-  input: unknown,
+  input: Schema.Codec.Encoded<typeof UpdateUserAccountInput>,
 ) {
   const decoded = yield* decodeInput(UpdateUserAccountInput, input)
   const body = yield* requestJson(routeWithId(userAccountRoutes.update, decoded.id), "PATCH", {

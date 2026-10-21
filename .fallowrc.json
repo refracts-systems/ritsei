@@ -77,7 +77,7 @@
     },
     {
       "file": "framework/modules/auth/src/contract.ts",
-      "exports": ["ExternalIdentityType", "IdentityProviderShape"]
+      "exports": ["ExternalIdentityType", "IdentityProviderContract"]
     },
     {
       "file": "erp/modules/inventory/src/contract.ts",

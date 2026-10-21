@@ -33,7 +33,7 @@ const PurchaseOrderList = Schema.Array(PurchaseOrder).check(Schema.isMaxLength(2
 const GoodsReceiptList = Schema.Array(GoodsReceipt).check(Schema.isMaxLength(200))
 
 export const listSupplierAccounts = Effect.fn("Frontend.Procurement.listSupplierAccounts")(
-  function* (input: unknown = {}) {
+  function* (input: Schema.Codec.Encoded<typeof ListSupplierAccountsInput> = {}) {
     const decoded = yield* decodeInput(ListSupplierAccountsInput, input)
     const body = yield* requestJson(
       `${procurementRoutes.listSupplierAccounts}${querySuffix(decoded)}`,
@@ -48,7 +48,7 @@ export const listSupplierAccounts = Effect.fn("Frontend.Procurement.listSupplier
 )
 
 export const createSupplierAccount = Effect.fn("Frontend.Procurement.createSupplierAccount")(
-  function* (input: unknown) {
+  function* (input: Schema.Codec.Encoded<typeof CreateSupplierAccountInput>) {
     const decoded = yield* decodeInput(CreateSupplierAccountInput, input)
     const connection = yield* BrowserConnection
     const body = yield* mutationRequest(procurementRoutes.createSupplierAccount, "POST", decoded)
@@ -66,7 +66,7 @@ export const createSupplierAccount = Effect.fn("Frontend.Procurement.createSuppl
 )
 
 export const listPurchaseOrders = Effect.fn("Frontend.Procurement.listPurchaseOrders")(function* (
-  input: unknown = {},
+  input: Schema.Codec.Encoded<typeof ListPurchaseOrdersInput> = {},
 ) {
   const decoded = yield* decodeInput(ListPurchaseOrdersInput, input)
   const body = yield* requestJson(`${procurementRoutes.listPurchaseOrders}${querySuffix(decoded)}`)
@@ -87,7 +87,7 @@ export const listPurchaseOrders = Effect.fn("Frontend.Procurement.listPurchaseOr
 })
 
 export const createPurchaseOrder = Effect.fn("Frontend.Procurement.createPurchaseOrder")(function* (
-  input: unknown,
+  input: Schema.Codec.Encoded<typeof CreatePurchaseOrderInput>,
 ) {
   const decoded = yield* decodeInput(CreatePurchaseOrderInput, input)
   const connection = yield* BrowserConnection
@@ -106,7 +106,7 @@ export const createPurchaseOrder = Effect.fn("Frontend.Procurement.createPurchas
 })
 
 export const getPurchaseOrder = Effect.fn("Frontend.Procurement.getPurchaseOrder")(function* (
-  id: unknown,
+  id: Schema.Codec.Encoded<typeof Uuid>,
 ) {
   const decodedId = yield* decodeInput(Uuid, id)
   const connection = yield* BrowserConnection
@@ -126,7 +126,10 @@ export const getPurchaseOrder = Effect.fn("Frontend.Procurement.getPurchaseOrder
 // Fallow: confirm and cancel are paired lifecycle adapters with the same verified mutation shape.
 // fallow-ignore-next-line code-duplication
 export const confirmPurchaseOrder = Effect.fn("Frontend.Procurement.confirmPurchaseOrder")(
-  function* (id: unknown, input: unknown) {
+  function* (
+    id: Schema.Codec.Encoded<typeof Uuid>,
+    input: Schema.Codec.Encoded<typeof ConfirmPurchaseOrderInput>,
+  ) {
     const decodedId = yield* decodeInput(Uuid, id)
     const decoded = yield* decodeInput(ConfirmPurchaseOrderInput, input)
     const connection = yield* BrowserConnection
@@ -152,7 +155,7 @@ export const confirmPurchaseOrder = Effect.fn("Frontend.Procurement.confirmPurch
 // Fallow: confirm and cancel are paired lifecycle adapters with the same verified mutation shape.
 // fallow-ignore-next-line code-duplication
 export const cancelPurchaseOrder = Effect.fn("Frontend.Procurement.cancelPurchaseOrder")(function* (
-  id: unknown,
+  id: Schema.Codec.Encoded<typeof Uuid>,
 ) {
   const decodedId = yield* decodeInput(Uuid, id)
   const connection = yield* BrowserConnection
@@ -174,7 +177,10 @@ export const cancelPurchaseOrder = Effect.fn("Frontend.Procurement.cancelPurchas
 })
 
 export const listPurchaseReceipts = Effect.fn("Frontend.Procurement.listPurchaseReceipts")(
-  function* (id: unknown, input: unknown = {}) {
+  function* (
+    id: Schema.Codec.Encoded<typeof Uuid>,
+    input: Schema.Codec.Encoded<typeof ListPurchaseReceiptsInput> = {},
+  ) {
     const decodedId = yield* decodeInput(Uuid, id)
     const decoded = yield* decodeInput(ListPurchaseReceiptsInput, input)
     const body = yield* requestJson(
@@ -195,7 +201,10 @@ export const listPurchaseReceipts = Effect.fn("Frontend.Procurement.listPurchase
 )
 
 export const receivePurchaseOrder = Effect.fn("Frontend.Procurement.receivePurchaseOrder")(
-  function* (id: unknown, input: unknown) {
+  function* (
+    id: Schema.Codec.Encoded<typeof Uuid>,
+    input: Schema.Codec.Encoded<typeof ReceivePurchaseOrderInput>,
+  ) {
     const decodedId = yield* decodeInput(Uuid, id)
     const decoded = yield* decodeInput(ReceivePurchaseOrderInput, input)
     const connection = yield* BrowserConnection

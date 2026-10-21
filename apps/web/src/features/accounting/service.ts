@@ -66,7 +66,7 @@ const validJournal = (journal: JournalEntry): boolean => {
 }
 
 export const listConfigurations = Effect.fn("Frontend.Accounting.listConfigurations")(function* (
-  input: unknown = {},
+  input: Schema.Codec.Encoded<typeof ListAccountingConfigurationsInput> = {},
 ) {
   const decoded = yield* decodeInput(ListAccountingConfigurationsInput, input)
   const body = yield* requestJson(`${accountingRoutes.listConfigurations}${querySuffix(decoded)}`)
@@ -84,7 +84,7 @@ export const listConfigurations = Effect.fn("Frontend.Accounting.listConfigurati
 })
 
 export const listAccounts = Effect.fn("Frontend.Accounting.listAccounts")(function* (
-  input: unknown = {},
+  input: Schema.Codec.Encoded<typeof ListAccountsInput> = {},
 ) {
   const decoded = yield* decodeInput(ListAccountsInput, input)
   const body = yield* requestJson(`${accountingRoutes.listAccounts}${querySuffix(decoded)}`)
@@ -102,7 +102,7 @@ export const listAccounts = Effect.fn("Frontend.Accounting.listAccounts")(functi
 })
 
 export const listPeriods = Effect.fn("Frontend.Accounting.listPeriods")(function* (
-  input: unknown = {},
+  input: Schema.Codec.Encoded<typeof ListAccountingPeriodsInput> = {},
 ) {
   const decoded = yield* decodeInput(ListAccountingPeriodsInput, input)
   const body = yield* requestJson(`${accountingRoutes.listPeriods}${querySuffix(decoded)}`)
@@ -121,7 +121,7 @@ export const listPeriods = Effect.fn("Frontend.Accounting.listPeriods")(function
 
 export const listRevenuePostingProfiles = Effect.fn(
   "Frontend.Accounting.listRevenuePostingProfiles",
-)(function* (input: unknown = {}) {
+)(function* (input: Schema.Codec.Encoded<typeof ListRevenuePostingProfilesInput> = {}) {
   const decoded = yield* decodeInput(ListRevenuePostingProfilesInput, input)
   const body = yield* requestJson(
     `${accountingRoutes.listRevenuePostingProfiles}${querySuffix(decoded)}`,
@@ -140,7 +140,7 @@ export const listRevenuePostingProfiles = Effect.fn(
 })
 
 export const configureLegalEntity = Effect.fn("Frontend.Accounting.configureLegalEntity")(
-  function* (legalEntityId: unknown, input: unknown) {
+  function* (legalEntityId: string, input: Schema.Codec.Encoded<typeof ConfigureLegalEntityInput>) {
     const decodedId = yield* decodeInput(Schema.String.check(Schema.isUUID()), legalEntityId)
     const decoded = yield* decodeInput(ConfigureLegalEntityInput, input)
     const body = yield* mutationRequest(
@@ -167,7 +167,7 @@ export const configureLegalEntity = Effect.fn("Frontend.Accounting.configureLega
 )
 
 export const configureRevenuePosting = Effect.fn("Frontend.Accounting.configureRevenuePosting")(
-  function* (input: unknown) {
+  function* (input: Schema.Codec.Encoded<typeof ConfigureRevenuePostingInput>) {
     const decoded = yield* decodeInput(ConfigureRevenuePostingInput, input)
     const body = yield* mutationRequest(accountingRoutes.configureRevenuePosting, decoded)
     const profile = yield* decodeResponse(RevenuePostingProfile, body, "unknown-outcome")
@@ -186,7 +186,9 @@ export const configureRevenuePosting = Effect.fn("Frontend.Accounting.configureR
   },
 )
 
-export const openPeriod = Effect.fn("Frontend.Accounting.openPeriod")(function* (input: unknown) {
+export const openPeriod = Effect.fn("Frontend.Accounting.openPeriod")(function* (
+  input: Schema.Codec.Encoded<typeof OpenPeriodInput>,
+) {
   const decoded = yield* decodeInput(OpenPeriodInput, input)
   const body = yield* mutationRequest(accountingRoutes.openPeriod, decoded)
   const period = yield* decodeResponse(AccountingPeriod, body, "unknown-outcome")
@@ -206,8 +208,8 @@ export const openPeriod = Effect.fn("Frontend.Accounting.openPeriod")(function* 
 })
 
 export const closePeriod = Effect.fn("Frontend.Accounting.closePeriod")(function* (
-  periodId: unknown,
-  input: unknown,
+  periodId: string,
+  input: Schema.Codec.Encoded<typeof ClosePeriodInput>,
 ) {
   const decodedId = yield* decodeInput(Schema.String.check(Schema.isUUID()), periodId)
   const decoded = yield* decodeInput(ClosePeriodInput, input)
@@ -231,7 +233,7 @@ export const closePeriod = Effect.fn("Frontend.Accounting.closePeriod")(function
 })
 
 export const createAccount = Effect.fn("Frontend.Accounting.createAccount")(function* (
-  input: unknown,
+  input: Schema.Codec.Encoded<typeof CreateAccountInput>,
 ) {
   const decoded = yield* decodeInput(CreateAccountInput, input)
   const body = yield* mutationRequest(accountingRoutes.createAccount, decoded)
@@ -250,7 +252,9 @@ export const createAccount = Effect.fn("Frontend.Accounting.createAccount")(func
   return account
 })
 
-export const postJournal = Effect.fn("Frontend.Accounting.postJournal")(function* (input: unknown) {
+export const postJournal = Effect.fn("Frontend.Accounting.postJournal")(function* (
+  input: Schema.Codec.Encoded<typeof PostJournalInput>,
+) {
   const decoded = yield* decodeInput(PostJournalInput, input)
   const body = yield* mutationRequest(accountingRoutes.postJournal, decoded)
   const journal = yield* decodeResponse(JournalEntry, body, "unknown-outcome")
@@ -269,7 +273,7 @@ export const postJournal = Effect.fn("Frontend.Accounting.postJournal")(function
 })
 
 export const listJournals = Effect.fn("Frontend.Accounting.listJournals")(function* (
-  input: unknown = {},
+  input: Schema.Codec.Encoded<typeof ListJournalEntriesInput> = {},
 ) {
   const decoded = yield* decodeInput(ListJournalEntriesInput, input)
   const body = yield* requestJson(`${accountingRoutes.listJournals}${querySuffix(decoded)}`)
