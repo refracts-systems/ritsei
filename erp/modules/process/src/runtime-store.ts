@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm"
 import * as Context from "effect/Context"
+import * as Data from "effect/Data"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 
@@ -85,13 +86,11 @@ const decodeRow = (row: {
     ),
   )
 
-type SaveResult =
-  | { readonly _tag: "Saved" }
-  | {
-      readonly _tag: "Conflict"
-      readonly expectedRevision: number
-      readonly actualRevision: number
-    }
+type SaveResult = Data.TaggedEnum<{
+  Saved: {}
+  Conflict: { readonly expectedRevision: number; readonly actualRevision: number }
+}>
+const SaveResult = Data.taggedEnum<SaveResult>()
 
 const saveRow = async (
   transaction: DrizzleTransaction,
@@ -114,7 +113,7 @@ const saveRow = async (
 
   if (current === undefined) {
     if (checkpoint.revision !== 0) {
-      return { _tag: "Conflict", expectedRevision: 0, actualRevision: checkpoint.revision }
+      return SaveResult.Conflict({ expectedRevision: 0, actualRevision: checkpoint.revision })
     }
     await transaction.insert(processRuntimeCheckpoints).values({
       id: checkpoint.instanceId,
@@ -131,16 +130,12 @@ const saveRow = async (
       correlationId: checkpoint.correlationId,
       executionPrincipal: checkpoint.executionPrincipal,
     })
-    return { _tag: "Saved" }
+    return SaveResult.Saved()
   }
 
   const expectedRevision = current.revision + 1
   if (checkpoint.revision !== expectedRevision) {
-    return {
-      _tag: "Conflict",
-      expectedRevision,
-      actualRevision: checkpoint.revision,
-    }
+    return SaveResult.Conflict({ expectedRevision, actualRevision: checkpoint.revision })
   }
 
   const updated = await transaction
@@ -169,12 +164,8 @@ const saveRow = async (
     .returning({ id: processRuntimeCheckpoints.id })
 
   return updated.length === 1
-    ? { _tag: "Saved" }
-    : {
-        _tag: "Conflict",
-        expectedRevision,
-        actualRevision: checkpoint.revision,
-      }
+    ? SaveResult.Saved()
+    : SaveResult.Conflict({ expectedRevision, actualRevision: checkpoint.revision })
 }
 
 export const makePostgresProcessCheckpointStore = Effect.gen(function* () {
@@ -207,7 +198,7 @@ export const makePostgresProcessCheckpointStore = Effect.gen(function* () {
           (transaction) => saveRow(transaction, checkpoint),
           "process.runtime.checkpoint.save",
         )
-        if (result._tag === "Conflict") {
+        if (SaveResult.$is("Conflict")(result)) {
           return yield* Effect.fail(
             new ProcessCheckpointRevisionConflict({
               instanceId: checkpoint.instanceId,

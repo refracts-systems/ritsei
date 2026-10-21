@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm"
 import * as Context from "effect/Context"
+import * as Data from "effect/Data"
 import * as Effect from "effect/Effect"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
@@ -73,9 +74,11 @@ const sameControl = (
   control.idempotencyKey === input.idempotencyKey &&
   control.reason === input.reason
 
-type RecordResult =
-  | { readonly _tag: "Recorded"; readonly control: ProcessOperatorControl }
-  | { readonly _tag: "Conflict" }
+type RecordResult = Data.TaggedEnum<{
+  Recorded: { readonly control: ProcessOperatorControl }
+  Conflict: {}
+}>
+const RecordResult = Data.taggedEnum<RecordResult>()
 
 const recordRow = async (
   transaction: DrizzleTransaction,
@@ -94,7 +97,9 @@ const recordRow = async (
   const existing = existingRows[0]
   if (existing !== undefined) {
     const control = toControl(existing)
-    return sameControl(control, input) ? { _tag: "Recorded", control } : { _tag: "Conflict" }
+    return sameControl(control, input)
+      ? RecordResult.Recorded({ control })
+      : RecordResult.Conflict()
   }
 
   const rows = await transaction
@@ -109,7 +114,7 @@ const recordRow = async (
       reason: input.reason,
     })
     .returning()
-  return { _tag: "Recorded", control: toControl(rows[0]!) }
+  return RecordResult.Recorded({ control: toControl(rows[0]!) })
 }
 
 export const makePostgresProcessOperatorStore = Effect.gen(function* () {
@@ -125,7 +130,7 @@ export const makePostgresProcessOperatorStore = Effect.gen(function* () {
           )
           .pipe(Effect.result)
         if (Result.isSuccess(result)) {
-          return result.success._tag === "Recorded"
+          return RecordResult.$is("Recorded")(result.success)
             ? result.success.control
             : yield* Effect.fail(
                 new ProcessOperatorConflict({

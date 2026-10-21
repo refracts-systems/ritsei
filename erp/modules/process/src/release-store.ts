@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm"
 import * as Context from "effect/Context"
+import * as Data from "effect/Data"
 import * as Effect from "effect/Effect"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
@@ -157,9 +158,11 @@ const sameRelease = (release: ProcessReleaseArtifact, input: ProcessReleaseInput
   release.approvalReason === input.approvalReason &&
   release.releasedBy === input.releasedBy
 
-type ReleaseRecord =
-  | { readonly _tag: "Recorded"; readonly release: ProcessReleaseArtifact }
-  | { readonly _tag: "Conflict" }
+type ReleaseRecord = Data.TaggedEnum<{
+  Recorded: { readonly release: ProcessReleaseArtifact }
+  Conflict: {}
+}>
+const ReleaseRecord = Data.taggedEnum<ReleaseRecord>()
 
 const recordRelease = async (
   transaction: DrizzleTransaction,
@@ -179,7 +182,9 @@ const recordRelease = async (
   const existing = existingRows[0]
   if (existing !== undefined) {
     const release = toRelease(existing)
-    return sameRelease(release, input) ? { _tag: "Recorded", release } : { _tag: "Conflict" }
+    return sameRelease(release, input)
+      ? ReleaseRecord.Recorded({ release })
+      : ReleaseRecord.Conflict()
   }
 
   const rows = await transaction
@@ -218,13 +223,15 @@ const recordRelease = async (
       reason: "immutable release artifact created",
     },
   ])
-  return { _tag: "Recorded", release }
+  return ReleaseRecord.Recorded({ release })
 }
 
-type DeploymentRecord =
-  | { readonly _tag: "Recorded"; readonly deployment: ProcessDeployment }
-  | { readonly _tag: "Conflict" }
-  | { readonly _tag: "MissingRelease" }
+type DeploymentRecord = Data.TaggedEnum<{
+  Recorded: { readonly deployment: ProcessDeployment }
+  Conflict: {}
+  MissingRelease: {}
+}>
+const DeploymentRecord = Data.taggedEnum<DeploymentRecord>()
 
 const recordDeployment = async (
   transaction: DrizzleTransaction,
@@ -237,7 +244,7 @@ const recordDeployment = async (
       and(eq(processReleases.tenantId, input.tenantId), eq(processReleases.id, input.releaseId)),
     )
     .for("update")
-  if (releaseRows[0] === undefined) return { _tag: "MissingRelease" }
+  if (releaseRows[0] === undefined) return DeploymentRecord.MissingRelease()
 
   const existingRows = await transaction
     .select()
@@ -255,8 +262,8 @@ const recordDeployment = async (
     const deployment = toDeployment(existing)
     return deployment.deployedBy === input.deployedBy &&
       deployment.promotionReason === input.promotionReason
-      ? { _tag: "Recorded", deployment }
-      : { _tag: "Conflict" }
+      ? DeploymentRecord.Recorded({ deployment })
+      : DeploymentRecord.Conflict()
   }
 
   const rows = await transaction
@@ -280,7 +287,7 @@ const recordDeployment = async (
     environment: input.environment,
     reason: input.promotionReason,
   })
-  return { _tag: "Recorded", deployment }
+  return DeploymentRecord.Recorded({ deployment })
 }
 
 export const makePostgresProcessReleaseStore = Effect.gen(function* () {
@@ -296,7 +303,7 @@ export const makePostgresProcessReleaseStore = Effect.gen(function* () {
           )
           .pipe(Effect.result)
         if (Result.isSuccess(result)) {
-          return result.success._tag === "Recorded"
+          return ReleaseRecord.$is("Recorded")(result.success)
             ? result.success.release
             : yield* Effect.fail(
                 new ProcessReleaseConflict({
@@ -327,8 +334,8 @@ export const makePostgresProcessReleaseStore = Effect.gen(function* () {
           )
           .pipe(Effect.result)
         if (Result.isSuccess(result)) {
-          if (result.success._tag === "Recorded") return result.success.deployment
-          if (result.success._tag === "MissingRelease") {
+          if (DeploymentRecord.$is("Recorded")(result.success)) return result.success.deployment
+          if (DeploymentRecord.$is("MissingRelease")(result.success)) {
             return yield* Effect.fail(
               new ProcessReleaseNotFound({
                 tenantId: decoded.tenantId,
