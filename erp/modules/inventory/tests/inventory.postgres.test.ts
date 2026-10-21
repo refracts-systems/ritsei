@@ -1,5 +1,6 @@
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
+import * as Result from "effect/Result"
 import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
 import type { Sql } from "postgres"
@@ -611,8 +612,8 @@ it.effect.skipIf(databaseUrl === undefined)(
             ],
             { concurrency: "unbounded" },
           )
-          assert.strictEqual(competing.filter((result) => result._tag === "Success").length, 1)
-          assert.strictEqual(competing.filter((result) => result._tag === "Failure").length, 1)
+          assert.strictEqual(competing.filter(Result.isSuccess).length, 1)
+          assert.strictEqual(competing.filter(Result.isFailure).length, 1)
           const [balance] = yield* Effect.promise(() => readBalances(client, tenant.id))
           assert.deepStrictEqual(balance, {
             warehouse_id: warehouse.id,

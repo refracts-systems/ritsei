@@ -2,6 +2,7 @@ import { and, asc, eq, gte, ilike, inArray, or, sql } from "drizzle-orm"
 import * as Clock from "effect/Clock"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import * as Data from "effect/Data"
 
 import {
   items,
@@ -205,6 +206,170 @@ const mapTransferCreateError = (
 
 const escapeLikePattern = (value: string) =>
   value.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_")
+
+export type CompleteTransferOutcome = Data.TaggedEnum<{
+  NotFound: {}
+  Existing: {
+    readonly transfer: {
+      readonly id: string
+      readonly tenantId: string
+      readonly legalEntityId: string
+      readonly sourceWarehouseId: string
+      readonly destinationWarehouseId: string
+      readonly status: "draft" | "confirmed" | "completed"
+      readonly confirmedAt: string | null
+      readonly completedAt: string | null
+      readonly lines: readonly { readonly itemId: string; readonly quantity: string }[]
+    }
+  }
+  InvalidState: { readonly status: "draft" | "confirmed" | "completed" }
+  Completed: { readonly transfer: ReturnType<typeof toStockTransfer> }
+}>
+export const CompleteTransferOutcome = Data.taggedEnum<CompleteTransferOutcome>()
+
+export type ConfirmTransferOutcome = Data.TaggedEnum<{
+  NotFound: {}
+  Existing: {
+    readonly transfer: {
+      readonly id: string
+      readonly tenantId: string
+      readonly legalEntityId: string
+      readonly sourceWarehouseId: string
+      readonly destinationWarehouseId: string
+      readonly status: "draft" | "confirmed" | "completed"
+      readonly confirmedAt: string | null
+      readonly completedAt: string | null
+      readonly lines: readonly { readonly itemId: string; readonly quantity: string }[]
+    }
+  }
+  Unavailable: { readonly warehouseId: string; readonly itemId: string; readonly requested: string }
+  Confirmed: { readonly transfer: ReturnType<typeof toStockTransfer> }
+}>
+export const ConfirmTransferOutcome = Data.taggedEnum<ConfirmTransferOutcome>()
+
+export type CreateTransferOutcome = Data.TaggedEnum<{
+  WarehouseNotFound: { readonly warehouseId: string }
+  DifferentLegalEntity: {
+    readonly sourceWarehouseId: string
+    readonly destinationWarehouseId: string
+  }
+  ItemNotFound: { readonly itemId: string }
+  Created: { readonly transfer: ReturnType<typeof toStockTransfer> }
+}>
+export const CreateTransferOutcome = Data.taggedEnum<CreateTransferOutcome>()
+
+export type FulfillReservationOutcome = Data.TaggedEnum<{
+  NotFound: {}
+  Existing: {
+    readonly reservation: {
+      id: string
+      tenantId: string
+      warehouseId: string
+      itemId: string
+      quantity: string
+      idempotencyKey: string | null
+      status: "active" | "released" | "fulfilled"
+    }
+  }
+  InvalidState: { readonly status: "active" | "released" | "fulfilled" }
+  Unavailable: { readonly warehouseId: string; readonly itemId: string; readonly requested: string }
+  Fulfilled: {
+    readonly reservation: {
+      id: string
+      tenantId: string
+      warehouseId: string
+      itemId: string
+      quantity: string
+      idempotencyKey: string | null
+      status: "active" | "released" | "fulfilled"
+    }
+  }
+}>
+export const FulfillReservationOutcome = Data.taggedEnum<FulfillReservationOutcome>()
+
+export type ReleaseReservationOutcome = Data.TaggedEnum<{
+  NotFound: {}
+  Existing: {
+    readonly reservation: {
+      id: string
+      tenantId: string
+      warehouseId: string
+      itemId: string
+      quantity: string
+      idempotencyKey: string | null
+      status: "active" | "released" | "fulfilled"
+    }
+  }
+  InvalidState: { readonly status: "active" | "released" | "fulfilled" }
+  Unavailable: { readonly warehouseId: string; readonly itemId: string; readonly requested: string }
+  Released: {
+    readonly reservation: {
+      id: string
+      tenantId: string
+      warehouseId: string
+      itemId: string
+      quantity: string
+      idempotencyKey: string | null
+      status: "active" | "released" | "fulfilled"
+    }
+  }
+}>
+export const ReleaseReservationOutcome = Data.taggedEnum<ReleaseReservationOutcome>()
+
+export type ReserveStockOutcome = Data.TaggedEnum<{
+  LegalEntityMismatch: {}
+  IdempotencyConflict: {}
+  Existing: {
+    readonly reservation: {
+      id: string
+      tenantId: string
+      warehouseId: string
+      itemId: string
+      quantity: string
+      idempotencyKey: string | null
+      status: "active" | "released" | "fulfilled"
+    }
+  }
+  Unavailable: {}
+  Created: {
+    readonly reservation: {
+      id: string
+      tenantId: string
+      warehouseId: string
+      itemId: string
+      quantity: string
+      idempotencyKey: string | null
+      status: "active" | "released" | "fulfilled"
+    }
+  }
+}>
+export const ReserveStockOutcome = Data.taggedEnum<ReserveStockOutcome>()
+
+export type AdjustStockOutcome = Data.TaggedEnum<{
+  IdempotencyConflict: {}
+  Existing: { readonly correction: ReturnType<typeof toStockCorrection> }
+  NotFound: {}
+  UomMismatch: { readonly expected: string; readonly actual: string }
+  Unavailable: {}
+  Created: { readonly correction: ReturnType<typeof toStockCorrection>; readonly occurredAt: Date }
+}>
+export const AdjustStockOutcome = Data.taggedEnum<AdjustStockOutcome>()
+
+export type ReceiveStockOutcome = Data.TaggedEnum<{
+  NotFound: {}
+  LegalEntityMismatch: {}
+  Created: {
+    readonly balance: {
+      unitOfMeasure: string
+      tenantId: string
+      warehouseId: string
+      itemId: string
+      onHand: string
+      reserved: string
+    }
+  }
+}>
+export const ReceiveStockOutcome = Data.taggedEnum<ReceiveStockOutcome>()
 
 export const makeInventoryPostgresService = Effect.gen(function* () {
   const database = yield* Database
@@ -535,12 +700,12 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
               .select({ unitOfMeasure: items.unitOfMeasure })
               .from(items)
               .where(and(eq(items.tenantId, decoded.tenantId), eq(items.id, decoded.itemId)))
-            if (warehouse === undefined || item === undefined) return { _tag: "not-found" as const }
+            if (warehouse === undefined || item === undefined) return ReceiveStockOutcome.NotFound()
             if (
               decoded.legalEntityId !== undefined &&
               warehouse.legalEntityId !== decoded.legalEntityId
             ) {
-              return { _tag: "legal-entity-mismatch" as const }
+              return ReceiveStockOutcome.LegalEntityMismatch()
             }
             const rows = await tx
               .insert(stockBalances)
@@ -572,10 +737,9 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
               kind: "receipt",
               referenceId: decoded.referenceId ?? null,
             })
-            return {
-              _tag: "created" as const,
+            return ReceiveStockOutcome.Created({
               balance: { ...rows[0]!, unitOfMeasure: item.unitOfMeasure },
-            }
+            })
           }, "inventory.stock.receive")
           .pipe(
             Effect.mapError((error) =>
@@ -585,12 +749,12 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
                 : error,
             ),
           )
-        if (balance._tag === "not-found") {
+        if (ReceiveStockOutcome.$is("NotFound")(balance)) {
           return yield* Effect.fail(
             referenceFailure(decoded.tenantId, decoded.warehouseId, decoded.itemId),
           )
         }
-        if (balance._tag === "legal-entity-mismatch") {
+        if (ReceiveStockOutcome.$is("LegalEntityMismatch")(balance)) {
           return yield* Effect.fail(
             new InventoryWarehouseLegalEntityMismatch({
               tenantId: decoded.tenantId,
@@ -637,8 +801,8 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
                     existing.unitOfMeasure !== unitOfMeasure ||
                     existing.reason !== reason
                   )
-                    return { _tag: "idempotency-conflict" as const }
-                  return { _tag: "existing" as const, correction: toStockCorrection(existing) }
+                    return AdjustStockOutcome.IdempotencyConflict()
+                  return AdjustStockOutcome.Existing({ correction: toStockCorrection(existing) })
                 }
 
                 const [item] = await tx
@@ -656,14 +820,13 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
                     ),
                   )
                 if (item === undefined || warehouse === undefined) {
-                  return { _tag: "not-found" as const }
+                  return AdjustStockOutcome.NotFound()
                 }
                 if (item.unitOfMeasure !== unitOfMeasure) {
-                  return {
-                    _tag: "uom-mismatch" as const,
+                  return AdjustStockOutcome.UomMismatch({
                     expected: item.unitOfMeasure,
                     actual: unitOfMeasure,
-                  }
+                  })
                 }
 
                 const adjustment = BigInt(decoded.adjustment)
@@ -701,11 +864,10 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
                       existingAfterLock.unitOfMeasure !== unitOfMeasure ||
                       existingAfterLock.reason !== reason
                     )
-                      return { _tag: "idempotency-conflict" as const }
-                    return {
-                      _tag: "existing" as const,
+                      return AdjustStockOutcome.IdempotencyConflict()
+                    return AdjustStockOutcome.Existing({
                       correction: toStockCorrection(existingAfterLock),
-                    }
+                    })
                   }
                 }
                 if (adjustment < 0n) {
@@ -713,7 +875,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
                     balance === undefined ||
                     BigInt(balance.onHand) + adjustment < BigInt(balance.reserved)
                   )
-                    return { _tag: "unavailable" as const }
+                    return AdjustStockOutcome.Unavailable()
                   await tx
                     .update(stockBalances)
                     .set({
@@ -761,14 +923,13 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
                     idempotencyKey,
                   })
                   .returning(correctionSelection)
-                return {
-                  _tag: "created" as const,
+                return AdjustStockOutcome.Created({
                   correction: toStockCorrection(correction!),
                   occurredAt,
-                }
+                })
               }, "inventory.stock.adjust")
 
-              if (mutation._tag === "created") {
+              if (AdjustStockOutcome.$is("Created")(mutation)) {
                 const payload = yield* Schema.decodeUnknownEffect(StockCorrectedEventPayload)({
                   correctionId: mutation.correction.id,
                   warehouseId: mutation.correction.warehouseId,
@@ -822,23 +983,23 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
                       existing.adjustment === decoded.adjustment &&
                       existing.unitOfMeasure === unitOfMeasure &&
                       existing.reason === reason
-                      ? { _tag: "existing" as const, correction: toStockCorrection(existing) }
-                      : { _tag: "idempotency-conflict" as const }
+                      ? AdjustStockOutcome.Existing({ correction: toStockCorrection(existing) })
+                      : AdjustStockOutcome.IdempotencyConflict()
                   }),
                 )
             }),
           )
-        if (result._tag === "idempotency-conflict") {
+        if (AdjustStockOutcome.$is("IdempotencyConflict")(result)) {
           return yield* Effect.fail(
             new StockCorrectionIdempotencyConflict({ tenantId: decoded.tenantId, idempotencyKey }),
           )
         }
-        if (result._tag === "not-found") {
+        if (AdjustStockOutcome.$is("NotFound")(result)) {
           return yield* Effect.fail(
             referenceFailure(decoded.tenantId, decoded.warehouseId, decoded.itemId),
           )
         }
-        if (result._tag === "uom-mismatch") {
+        if (AdjustStockOutcome.$is("UomMismatch")(result)) {
           return yield* Effect.fail(
             new InventoryUnitOfMeasureMismatch({
               tenantId: decoded.tenantId,
@@ -848,7 +1009,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
             }),
           )
         }
-        if (result._tag === "unavailable") {
+        if (AdjustStockOutcome.$is("Unavailable")(result)) {
           return yield* Effect.fail(
             new StockUnavailable({
               tenantId: decoded.tenantId,
@@ -883,7 +1044,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
                 )
                 .for("update")
               if (warehouse?.legalEntityId !== decoded.legalEntityId) {
-                return { _tag: "legal-entity-mismatch" as const }
+                return ReserveStockOutcome.LegalEntityMismatch()
               }
             }
             if (normalizedIdempotencyKey !== undefined) {
@@ -912,9 +1073,9 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
                   existing.itemId !== decoded.itemId ||
                   existing.quantity !== decoded.quantity
                 ) {
-                  return { _tag: "idempotency-conflict" as const }
+                  return ReserveStockOutcome.IdempotencyConflict()
                 }
-                return { _tag: "existing" as const, reservation: existing }
+                return ReserveStockOutcome.Existing({ reservation: existing })
               }
             }
 
@@ -933,7 +1094,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
                 ),
               )
               .returning({ itemId: stockBalances.itemId })
-            if (updated[0] === undefined) return { _tag: "unavailable" as const }
+            if (updated[0] === undefined) return ReserveStockOutcome.Unavailable()
 
             const rows = await tx
               .insert(reservations)
@@ -962,7 +1123,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
               kind: "reservation",
               referenceId: row.id,
             })
-            return { _tag: "created" as const, reservation: row }
+            return ReserveStockOutcome.Created({ reservation: row })
           }, "inventory.stock.reserve")
           .pipe(
             Effect.catch((error) => {
@@ -992,13 +1153,13 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
                       existing.warehouseId === decoded.warehouseId &&
                       existing.itemId === decoded.itemId &&
                       existing.quantity === decoded.quantity
-                      ? { _tag: "existing" as const, reservation: existing }
-                      : { _tag: "idempotency-conflict" as const }
+                      ? ReserveStockOutcome.Existing({ reservation: existing })
+                      : ReserveStockOutcome.IdempotencyConflict()
                   }),
                 )
             }),
           )
-        if (reservation._tag === "legal-entity-mismatch") {
+        if (ReserveStockOutcome.$is("LegalEntityMismatch")(reservation)) {
           return yield* Effect.fail(
             new StockReservationLegalEntityMismatch({
               tenantId: decoded.tenantId,
@@ -1007,7 +1168,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
             }),
           )
         }
-        if (reservation._tag === "idempotency-conflict") {
+        if (ReserveStockOutcome.$is("IdempotencyConflict")(reservation)) {
           return yield* Effect.fail(
             new StockReservationIdempotencyConflict({
               tenantId: decoded.tenantId,
@@ -1015,7 +1176,10 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
             }),
           )
         }
-        if (reservation._tag === "existing" || reservation._tag === "created") {
+        if (
+          ReserveStockOutcome.$is("Existing")(reservation) ||
+          ReserveStockOutcome.$is("Created")(reservation)
+        ) {
           return reservation.reservation
         }
         return yield* Effect.fail(
@@ -1046,12 +1210,12 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
               ),
             )
             .for("update")
-          if (reservation === undefined) return { _tag: "not-found" as const }
+          if (reservation === undefined) return ReleaseReservationOutcome.NotFound()
           if (reservation.status === "released") {
-            return { _tag: "existing" as const, reservation }
+            return ReleaseReservationOutcome.Existing({ reservation })
           }
           if (reservation.status !== "active") {
-            return { _tag: "invalid-state" as const, status: reservation.status }
+            return ReleaseReservationOutcome.InvalidState({ status: reservation.status })
           }
 
           const timestamp = now()
@@ -1071,12 +1235,11 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
             )
             .returning({ tenantId: stockBalances.tenantId })
           if (releasedBalance === undefined) {
-            return {
-              _tag: "unavailable" as const,
+            return ReleaseReservationOutcome.Unavailable({
               warehouseId: reservation.warehouseId,
               itemId: reservation.itemId,
               requested: reservation.quantity,
-            }
+            })
           }
           const [released] = await tx
             .update(reservations)
@@ -1091,9 +1254,9 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
             kind: "release",
             referenceId: reservation.id,
           })
-          return { _tag: "released" as const, reservation: released! }
+          return ReleaseReservationOutcome.Released({ reservation: released! })
         }, "inventory.stock.release")
-        if (result._tag === "not-found") {
+        if (ReleaseReservationOutcome.$is("NotFound")(result)) {
           return yield* Effect.fail(
             new StockReservationNotFound({
               tenantId: decoded.tenantId,
@@ -1101,7 +1264,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
             }),
           )
         }
-        if (result._tag === "invalid-state") {
+        if (ReleaseReservationOutcome.$is("InvalidState")(result)) {
           return yield* Effect.fail(
             new StockReservationInvalidState({
               tenantId: decoded.tenantId,
@@ -1111,7 +1274,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
             }),
           )
         }
-        if (result._tag === "unavailable") {
+        if (ReleaseReservationOutcome.$is("Unavailable")(result)) {
           return yield* Effect.fail(
             new StockUnavailable({
               tenantId: decoded.tenantId,
@@ -1142,12 +1305,12 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
               ),
             )
             .for("update")
-          if (reservation === undefined) return { _tag: "not-found" as const }
+          if (reservation === undefined) return FulfillReservationOutcome.NotFound()
           if (reservation.status === "fulfilled") {
-            return { _tag: "existing" as const, reservation }
+            return FulfillReservationOutcome.Existing({ reservation })
           }
           if (reservation.status !== "active") {
-            return { _tag: "invalid-state" as const, status: reservation.status }
+            return FulfillReservationOutcome.InvalidState({ status: reservation.status })
           }
 
           const timestamp = now()
@@ -1169,12 +1332,11 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
             )
             .returning({ tenantId: stockBalances.tenantId })
           if (fulfilledBalance === undefined) {
-            return {
-              _tag: "unavailable" as const,
+            return FulfillReservationOutcome.Unavailable({
               warehouseId: reservation.warehouseId,
               itemId: reservation.itemId,
               requested: reservation.quantity,
-            }
+            })
           }
           const [fulfilled] = await tx
             .update(reservations)
@@ -1189,9 +1351,9 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
             kind: "issue",
             referenceId: reservation.id,
           })
-          return { _tag: "fulfilled" as const, reservation: fulfilled! }
+          return FulfillReservationOutcome.Fulfilled({ reservation: fulfilled! })
         }, "inventory.stock.fulfill")
-        if (result._tag === "not-found") {
+        if (FulfillReservationOutcome.$is("NotFound")(result)) {
           return yield* Effect.fail(
             new StockReservationNotFound({
               tenantId: decoded.tenantId,
@@ -1199,7 +1361,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
             }),
           )
         }
-        if (result._tag === "invalid-state") {
+        if (FulfillReservationOutcome.$is("InvalidState")(result)) {
           return yield* Effect.fail(
             new StockReservationInvalidState({
               tenantId: decoded.tenantId,
@@ -1209,7 +1371,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
             }),
           )
         }
-        if (result._tag === "unavailable") {
+        if (FulfillReservationOutcome.$is("Unavailable")(result)) {
           return yield* Effect.fail(
             new StockUnavailable({
               tenantId: decoded.tenantId,
@@ -1275,14 +1437,13 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
                   ? decoded.destinationWarehouseId
                   : undefined
             if (missingWarehouseId !== undefined) {
-              return { _tag: "warehouse-not-found" as const, warehouseId: missingWarehouseId }
+              return CreateTransferOutcome.WarehouseNotFound({ warehouseId: missingWarehouseId })
             }
             if (sourceWarehouse!.legalEntityId !== destinationWarehouse!.legalEntityId) {
-              return {
-                _tag: "different-legal-entity" as const,
+              return CreateTransferOutcome.DifferentLegalEntity({
                 sourceWarehouseId: decoded.sourceWarehouseId,
                 destinationWarehouseId: decoded.destinationWarehouseId,
-              }
+              })
             }
 
             const itemRows = await tx
@@ -1295,7 +1456,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
               (line) => !existingItemIds.has(line.itemId),
             )?.itemId
             if (missingItemId !== undefined) {
-              return { _tag: "item-not-found" as const, itemId: missingItemId }
+              return CreateTransferOutcome.ItemNotFound({ itemId: missingItemId })
             }
 
             const [row] = await tx
@@ -1315,14 +1476,11 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
                 quantity: line.quantity,
               })),
             )
-            return {
-              _tag: "created" as const,
-              transfer: toStockTransfer(row!, decoded.lines),
-            }
+            return CreateTransferOutcome.Created({ transfer: toStockTransfer(row!, decoded.lines) })
           }, "inventory.stock.transfer.create")
           .pipe(Effect.mapError((error) => mapTransferCreateError(error, decoded)))
 
-        if (result._tag === "warehouse-not-found") {
+        if (CreateTransferOutcome.$is("WarehouseNotFound")(result)) {
           return yield* Effect.fail(
             new StockTransferWarehouseNotFound({
               tenantId: decoded.tenantId,
@@ -1330,7 +1488,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
             }),
           )
         }
-        if (result._tag === "different-legal-entity") {
+        if (CreateTransferOutcome.$is("DifferentLegalEntity")(result)) {
           return yield* Effect.fail(
             new StockTransferDifferentLegalEntity({
               tenantId: decoded.tenantId,
@@ -1339,7 +1497,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
             }),
           )
         }
-        if (result._tag === "item-not-found") {
+        if (CreateTransferOutcome.$is("ItemNotFound")(result)) {
           return yield* Effect.fail(
             new StockTransferItemNotFound({ tenantId: decoded.tenantId, itemId: result.itemId }),
           )
@@ -1365,7 +1523,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
               ),
             )
             .for("update")
-          if (row === undefined) return { _tag: "not-found" as const }
+          if (row === undefined) return ConfirmTransferOutcome.NotFound()
 
           const lines = await tx
             .select(transferLineSelection)
@@ -1378,7 +1536,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
             )
             .orderBy(stockTransferLines.itemId)
           const current = toStockTransfer(row, lines)
-          if (row.status !== "draft") return { _tag: "existing" as const, transfer: current }
+          if (row.status !== "draft") return ConfirmTransferOutcome.Existing({ transfer: current })
 
           const balances =
             lines.length === 0
@@ -1409,12 +1567,11 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
               balance === undefined ||
               BigInt(balance.onHand) - BigInt(balance.reserved) < BigInt(line.quantity)
             ) {
-              return {
-                _tag: "unavailable" as const,
+              return ConfirmTransferOutcome.Unavailable({
                 warehouseId: row.sourceWarehouseId,
                 itemId: line.itemId,
                 requested: line.quantity,
-              }
+              })
             }
           }
 
@@ -1457,10 +1614,10 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
               ),
             )
             .returning(transferSelection)
-          return { _tag: "confirmed" as const, transfer: toStockTransfer(confirmed!, lines) }
+          return ConfirmTransferOutcome.Confirmed({ transfer: toStockTransfer(confirmed!, lines) })
         }, "inventory.stock.transfer.confirm")
 
-        if (result._tag === "not-found") {
+        if (ConfirmTransferOutcome.$is("NotFound")(result)) {
           return yield* Effect.fail(
             new StockTransferNotFound({
               tenantId: decoded.tenantId,
@@ -1468,7 +1625,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
             }),
           )
         }
-        if (result._tag === "unavailable") {
+        if (ConfirmTransferOutcome.$is("Unavailable")(result)) {
           return yield* Effect.fail(
             new StockUnavailable({
               tenantId: decoded.tenantId,
@@ -1499,7 +1656,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
               ),
             )
             .for("update")
-          if (row === undefined) return { _tag: "not-found" as const }
+          if (row === undefined) return CompleteTransferOutcome.NotFound()
 
           const lines = await tx
             .select(transferLineSelection)
@@ -1512,9 +1669,10 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
             )
             .orderBy(stockTransferLines.itemId)
           const current = toStockTransfer(row, lines)
-          if (row.status === "completed") return { _tag: "existing" as const, transfer: current }
+          if (row.status === "completed")
+            return CompleteTransferOutcome.Existing({ transfer: current })
           if (row.status !== "confirmed") {
-            return { _tag: "invalid-state" as const, status: row.status }
+            return CompleteTransferOutcome.InvalidState({ status: row.status })
           }
 
           const timestamp = now()
@@ -1558,10 +1716,10 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
               ),
             )
             .returning(transferSelection)
-          return { _tag: "completed" as const, transfer: toStockTransfer(completed!, lines) }
+          return CompleteTransferOutcome.Completed({ transfer: toStockTransfer(completed!, lines) })
         }, "inventory.stock.transfer.complete")
 
-        if (result._tag === "not-found") {
+        if (CompleteTransferOutcome.$is("NotFound")(result)) {
           return yield* Effect.fail(
             new StockTransferNotFound({
               tenantId: decoded.tenantId,
@@ -1569,7 +1727,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
             }),
           )
         }
-        if (result._tag === "invalid-state") {
+        if (CompleteTransferOutcome.$is("InvalidState")(result)) {
           return yield* Effect.fail(
             new StockTransferInvalidState({
               tenantId: decoded.tenantId,
