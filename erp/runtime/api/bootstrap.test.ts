@@ -63,7 +63,7 @@ const withBootstrap = <A, E>(
         messagingLayer,
         Layer.succeed(
           SalesService,
-          partial<SalesService>({ getConfirmedOrderTotal: () => Effect.succeed("0.00") }),
+          partial<SalesService>()({ getConfirmedOrderTotal: () => Effect.succeed("0.00") }),
         ),
       ),
     ),

@@ -171,7 +171,7 @@ describe("authorization contract", () => {
 
         assert.deepStrictEqual(
           yield* service.listAccessibleTenants(
-            partial<Parameters<typeof service.listAccessibleTenants>[0]>({
+            partial<Parameters<typeof service.listAccessibleTenants>[0]>()({
               userAccountId: principal.userAccountId,
               tenantId: "tenant-not-selected",
             }),

@@ -166,7 +166,7 @@ it.effect.skipIf(databaseUrl === undefined)(
         assert.strictEqual(updateDuplicate.email, "duplicate@example.com")
 
         const invalid = yield* Effect.flip(
-          service.create(partial<Parameters<typeof service.create>[0]>({ email: 42 })),
+          service.create(partial<Parameters<typeof service.create>[0]>()({ email: 42 })),
         )
         assert.instanceOf(invalid, Error)
         assert.match(invalid.message, /email/)

@@ -54,7 +54,7 @@ type Membership = {
   status: "active" | "suspended"
 }
 
-const fulfillJson = (route: Route, status: number, body: unknown) =>
+const fulfillJson = <Body>(route: Route, status: number, body: Body) =>
   route.fulfill({
     status,
     contentType: "application/json",

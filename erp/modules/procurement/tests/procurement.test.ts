@@ -750,7 +750,7 @@ describe("procurement contract", () => {
         const supplierAccount = yield* createSupplierAccount
         const create = (lines: ReadonlyArray<Schema.Json>) =>
           procurement.createPurchaseOrder(
-            partial<Parameters<typeof procurement.createPurchaseOrder>[0]>({
+            partial<Parameters<typeof procurement.createPurchaseOrder>[0]>()({
               principal,
               tenantId,
               supplierAccountId: supplierAccount.id,

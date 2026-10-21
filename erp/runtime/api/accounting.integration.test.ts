@@ -71,7 +71,7 @@ const journal = {
 }
 
 const observedInputs: unknown[] = []
-const accountingService = partial<AccountingServiceContract>({
+const accountingService = partial<AccountingServiceContract>()({
   listAccountingConfigurations: (
     input: Parameters<AccountingServiceContract["listAccountingConfigurations"]>[0],
   ) =>
@@ -91,7 +91,7 @@ const accountingService = partial<AccountingServiceContract>({
   postJournal: () => Effect.succeed(journal),
 })
 
-const financialOperations = partial<FinancialOperationServiceContract>({})
+const financialOperations = partial<FinancialOperationServiceContract>()({})
 // The ledger endpoints are covered by the general-ledger tests; these contracts never reach them.
 const ledger = unusedService<GeneralLedgerServiceContract>("ledger")
 const TestHttpServices = Layer.mergeAll(Path.layer, Etag.layerWeak, HttpPlatform.layer).pipe(

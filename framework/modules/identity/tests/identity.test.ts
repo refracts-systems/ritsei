@@ -311,7 +311,7 @@ describe("user account contract", () => {
       Effect.gen(function* () {
         const error = yield* Effect.flip(
           UserAccountService.use((service) =>
-            service.create(partial<Parameters<typeof service.create>[0]>({ email: 42 })),
+            service.create(partial<Parameters<typeof service.create>[0]>()({ email: 42 })),
           ),
         )
 

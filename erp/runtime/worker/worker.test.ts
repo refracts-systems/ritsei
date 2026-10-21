@@ -68,7 +68,7 @@ it.effect("claims a financial job and completes it through the Accounting contra
     payload: { tenantId, operationId },
     correlationId: operationId,
   }
-  const process = partial<ProcessService>({
+  const process = partial<ProcessService>()({
     claimJob: () => Effect.succeed(job),
     completeJob: (input: { leaseToken: string }) => {
       assert.strictEqual(input.leaseToken, leaseToken)
@@ -83,7 +83,7 @@ it.effect("claims a financial job and completes it through the Accounting contra
     renewJob: () => Effect.succeed(job),
     failJob: () => Effect.succeed(job),
   })
-  const accounting = partial<FinancialOperationService>({
+  const accounting = partial<FinancialOperationService>()({
     submitFinancialOperation: () =>
       Effect.gen(function* () {
         const fence = yield* FencingContextService
@@ -159,7 +159,7 @@ it.effect("releases an unknown reconciliation for a bounded retry", () => {
     payload: { tenantId, operationId },
     correlationId: operationId,
   }
-  const process = partial<ProcessService>({
+  const process = partial<ProcessService>()({
     claimJob: () => Effect.succeed(job),
     completeJob: () => Effect.die("reconciliation must be retried"),
     renewJob: () => Effect.die("not used"),
@@ -170,7 +170,7 @@ it.effect("releases an unknown reconciliation for a bounded retry", () => {
       return Effect.succeed({ ...job, status: "pending" as const })
     },
   })
-  const accounting = partial<FinancialOperationService>({
+  const accounting = partial<FinancialOperationService>()({
     submitFinancialOperation: () => Effect.die("not used"),
     reconcileFinancialOperation: () =>
       Effect.succeed({
@@ -241,13 +241,13 @@ it.effect(
       payload: { tenantId, operationId },
       correlationId: operationId,
     }
-    const process = partial<ProcessService>({
+    const process = partial<ProcessService>()({
       claimJob: () => Effect.succeed(job),
       completeJob: () => Effect.die("must not complete a terminated lease"),
       renewJob: () => Effect.succeed(job),
       failJob: () => Effect.die("must not mutate a terminated lease"),
     })
-    const accounting = partial<FinancialOperationService>({
+    const accounting = partial<FinancialOperationService>()({
       submitFinancialOperation: () => {
         accounted = true
         return Effect.succeed(workerOperation("reconciled"))
@@ -297,7 +297,7 @@ it.effect("renews a long-running financial lease with its generation", () =>
       payload: { tenantId, operationId },
       correlationId: operationId,
     }
-    const process = partial<ProcessService>({
+    const process = partial<ProcessService>()({
       claimJob: () => Effect.succeed(job),
       renewJob: (input: { leaseGeneration: string }) => {
         assert.strictEqual(input.leaseGeneration, "5")
@@ -307,7 +307,7 @@ it.effect("renews a long-running financial lease with its generation", () =>
       completeJob: () => Effect.succeed({ ...job, status: "completed" as const }),
       failJob: () => Effect.die("must not fail a successful operation"),
     })
-    const accounting = partial<FinancialOperationService>({
+    const accounting = partial<FinancialOperationService>()({
       submitFinancialOperation: () =>
         Effect.sleep("2 minutes").pipe(Effect.as(workerOperation("reconciled"))),
       reconcileFinancialOperation: () => Effect.die("not used"),
@@ -352,7 +352,7 @@ it.effect("restarts after Accounting acceptance and fences stale duplicate compl
     payload: { tenantId, operationId },
     correlationId: operationId,
   }
-  const process = partial<ProcessService>({
+  const process = partial<ProcessService>()({
     claimJob: () => Effect.succeed(job),
     completeJob: () => {
       completions += 1
@@ -363,7 +363,7 @@ it.effect("restarts after Accounting acceptance and fences stale duplicate compl
     renewJob: () => Effect.succeed(job),
     failJob: () => Effect.succeed(job),
   })
-  const accounting = partial<FinancialOperationService>({
+  const accounting = partial<FinancialOperationService>()({
     submitFinancialOperation: () => Effect.succeed(workerOperation("reconciled")),
     reconcileFinancialOperation: () => Effect.die("not used"),
     createJournalIntent: () => Effect.die("not used"),

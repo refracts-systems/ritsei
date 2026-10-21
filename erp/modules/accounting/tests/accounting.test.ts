@@ -62,7 +62,7 @@ const revenueOrderIds = {
   idempotency: "00000000-0000-4000-8000-000000000013",
   rollback: "00000000-0000-4000-8000-000000000014",
 } as const
-const salesFacts = partial<SalesService>({
+const salesFacts = partial<SalesService>()({
   getConfirmedOrderTotal: () => Effect.succeed("125.00"),
 })
 const revenueMetadata = {
@@ -218,7 +218,7 @@ describe("accounting contract", () => {
         assert.strictEqual(
           (yield* Effect.flip(
             accounting.configureLegalEntity(
-              partial<Parameters<typeof accounting.configureLegalEntity>[0]>({
+              partial<Parameters<typeof accounting.configureLegalEntity>[0]>()({
                 principal,
                 tenantId,
                 legalEntityId: "00000000-0000-4000-8000-000000000072",

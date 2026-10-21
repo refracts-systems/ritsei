@@ -77,7 +77,7 @@ const layer = makeAccountingTestLayer().pipe(
         },
       ]),
       makeMessagingTestLayer(),
-      Layer.succeed(SalesService, partial<SalesService>({})),
+      Layer.succeed(SalesService, partial<SalesService>()({})),
     ),
   ),
 )
@@ -87,7 +87,7 @@ const deniedLayer = makeAccountingTestLayer().pipe(
     Layer.mergeAll(
       makeAuthorizationTestLayer([]),
       makeMessagingTestLayer(),
-      Layer.succeed(SalesService, partial<SalesService>({})),
+      Layer.succeed(SalesService, partial<SalesService>()({})),
     ),
   ),
 )

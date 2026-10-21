@@ -69,9 +69,7 @@
         "apps/web/src/features/product/**",
         "apps/web/src/features/sales/**",
         "apps/web/src/features/tax/**",
-        "apps/web/src/shared/**",
-        "tests/**",
-        "tooling/**"
+        "apps/web/src/shared/**"
       ],
       "rules": { "anti-slop/no-unknown-parameters": "off" }
     }

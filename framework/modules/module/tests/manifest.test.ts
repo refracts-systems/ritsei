@@ -17,7 +17,7 @@ const empty = {
 } as const
 
 const releasedEvent = (owningDomain: string, id: string) =>
-  partial<EventCatalogEntry>({ id, owningDomain })
+  partial<EventCatalogEntry>()({ id, owningDomain })
 
 const failuresOf = (manifests: ReadonlyArray<ModuleManifest>) => validateModuleRegistry(manifests)
 

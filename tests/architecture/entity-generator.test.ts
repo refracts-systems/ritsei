@@ -26,7 +26,7 @@ const assertInserted = (
 ) => {
   const file = ts.createSourceFile(path, after, ts.ScriptTarget.Latest, true)
   assert.deepStrictEqual(
-    partial<{ parseDiagnostics: readonly unknown[] }>(file).parseDiagnostics,
+    partial<{ parseDiagnostics: readonly unknown[] }>()(file).parseDiagnostics,
     [],
   )
   for (const text of expected) assert.include(after, text)

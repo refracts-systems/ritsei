@@ -35,7 +35,7 @@ const draftOrder: SalesOrder = {
   lines: [{ itemId, quantity: "2", unitPrice: "12.50" }],
 }
 
-const fulfillJson = (route: Route, status: number, body: unknown) =>
+const fulfillJson = <Body>(route: Route, status: number, body: Body) =>
   route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) })
 
 const connectAndOpenSales = async (page: Page, url: string) => {

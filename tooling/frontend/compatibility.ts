@@ -1,4 +1,3 @@
-import * as Predicate from "effect/Predicate"
 import { build } from "vite"
 
 import { isMain } from "../entrypoint.ts"
@@ -27,17 +26,11 @@ export const probeKobalteCompatibility = () =>
 export const probeDndCompatibility = () =>
   probeSolidPackage("apps/web/src/ui/compatibility/dnd.tsx")
 
-const extractBundleCode = (result: unknown): string => {
-  const outputs = (Array.isArray(result) ? result : [result]).filter(
-    (value): value is { output: readonly { type: string; code?: string }[] } =>
-      Predicate.hasProperty(value, "output"),
-  )
-
-  return outputs
-    .flatMap(({ output }) => output)
-    .flatMap((asset) => (asset.type === "chunk" && asset.code !== undefined ? [asset.code] : []))
+const extractBundleCode = (result: Awaited<ReturnType<typeof build>>): string =>
+  (Array.isArray(result) ? result : [result])
+    .flatMap((value) => ("output" in value ? value.output : []))
+    .flatMap((asset) => (asset.type === "chunk" ? [asset.code] : []))
     .join("\n")
-}
 
 export const probeBoneyardCoreCompatibility = async () => {
   try {

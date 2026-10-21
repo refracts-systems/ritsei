@@ -17,7 +17,7 @@ const account = (email: string, status: "active" | "disabled" = "active", id = a
   status,
 })
 
-const fulfillJson = (route: Route, status: number, body: unknown) =>
+const fulfillJson = <Body>(route: Route, status: number, body: Body) =>
   route.fulfill({
     status,
     contentType: "application/json",

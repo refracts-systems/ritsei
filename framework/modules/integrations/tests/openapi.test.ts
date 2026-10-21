@@ -98,7 +98,7 @@ it.effect("rejects an oversized document section", () =>
   Effect.gen(function* () {
     const result = yield* Effect.result(
       validateOpenApiImport(
-        partial<Parameters<typeof validateOpenApiImport>[0]>({
+        partial<Parameters<typeof validateOpenApiImport>[0]>()({
           ...baseInput,
           document: { ...baseInput.document, paths: "x".repeat(512 * 1024 + 1) },
         }),

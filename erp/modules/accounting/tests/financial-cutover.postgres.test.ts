@@ -42,7 +42,7 @@ import { postgresConstraint } from "../../../../tests/support/postgres-error.ts"
 import { partial } from "../../../../tests/support/partial.ts"
 
 const databaseUrl = process.env["DATABASE_URL"]
-const sales = partial<SalesService>({})
+const sales = partial<SalesService>()({})
 
 it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover state machine", () =>
   withTemporaryDatabase(databaseUrl!, (client) =>

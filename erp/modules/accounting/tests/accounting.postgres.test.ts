@@ -27,7 +27,7 @@ import {
 import { partial } from "../../../../tests/support/partial.ts"
 import { postgresCode, postgresConstraint } from "../../../../tests/support/postgres-error.ts"
 
-const salesFacts = partial<SalesService>({
+const salesFacts = partial<SalesService>()({
   getConfirmedOrderTotal: () => Effect.succeed("10.00"),
 })
 

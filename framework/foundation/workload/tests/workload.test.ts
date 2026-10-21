@@ -66,7 +66,7 @@ describe("workload classification", () => {
         { ...query, pool: "command" },
       ]) {
         const result = yield* Effect.result(
-          classifyWorkload(partial<Parameters<typeof classifyWorkload>[0]>(invalid)),
+          classifyWorkload(partial<Parameters<typeof classifyWorkload>[0]>()(invalid)),
         )
         assert.strictEqual(result._tag, "Failure")
       }

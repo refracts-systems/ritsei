@@ -17,7 +17,7 @@ const otherTenantId = "01900000-0000-7000-8000-000000000002"
 const legalEntityId = "01900000-0000-7000-8000-000000000010"
 const otherLegalEntityId = "01900000-0000-7000-8000-000000000011"
 const capabilities = Object.values(AccountingCapabilities)
-const salesFacts = partial<SalesService>({
+const salesFacts = partial<SalesService>()({
   getConfirmedOrderTotal: () => Effect.succeed("125.00"),
 })
 

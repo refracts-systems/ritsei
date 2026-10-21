@@ -45,7 +45,7 @@ const properties = [
   "height",
 ] as const
 
-const fulfillJson = (route: Route, body: unknown) =>
+const fulfillJson = <Body>(route: Route, body: Body) =>
   route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) })
 
 const styleOf = (locator: Locator) =>

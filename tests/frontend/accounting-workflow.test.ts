@@ -18,7 +18,7 @@ const revenueId = "01930000-0000-7000-8000-000000000004"
 const journalId = "01930000-0000-7000-8000-000000000005"
 const periodId = "01930000-0000-7000-8000-000000000006"
 
-const fulfillJson = (route: Route, status: number, body: unknown) =>
+const fulfillJson = <Body>(route: Route, status: number, body: Body) =>
   route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) })
 
 const connectAndOpenAccounting = async (page: Page, url: string) => {

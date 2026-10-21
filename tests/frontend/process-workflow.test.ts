@@ -18,7 +18,7 @@ const workflowId = "01930000-0000-7000-8000-000000000012"
 const controlId = "01930000-0000-7000-8000-000000000013"
 const jobId = "01930000-0000-7000-8000-000000000014"
 
-const fulfillJson = (route: Route, status: number, body: unknown) =>
+const fulfillJson = <Body>(route: Route, status: number, body: Body) =>
   route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) })
 
 const connectAndOpenProcessStudio = async (page: Page, url: string) => {

@@ -281,7 +281,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           Effect.service(FinancialLedgerPort),
           makeFinancialLedgerTestLayer(),
         )
-        const sales = partial<SalesService>({
+        const sales = partial<SalesService>()({
           getConfirmedOrderTotal: () => Effect.succeed(LARGE_FINANCIAL_MAJOR),
         })
         const observationScope = `tenant:${tenant!.id}/legal-entity:${legalEntity!.id}`
