@@ -29,8 +29,8 @@ export const asPostgresClient = (client: Sql): PostgresClient => ({
     }) as Promise<A>,
 })
 
-class TransactionEffectFailure extends Error {
-  constructor(readonly failure: unknown) {
+class TransactionEffectFailure<E> extends Error {
+  constructor(readonly failure: E) {
     super("transaction effect failed")
   }
 }

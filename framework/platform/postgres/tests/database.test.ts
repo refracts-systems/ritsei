@@ -35,7 +35,7 @@ const makeClient = (version = "190000") => {
         values: () => Promise.resolve(rows.map((row) => Object.values(row))),
       })
     },
-    begin: <A>(operation: (transaction: unknown) => Promise<A>) => operation(client),
+    begin: <A>(operation: (transaction: Sql) => Promise<A>) => operation(partial<Sql>(client)),
   }
   return { client: partial<Sql>(client), queries }
 }

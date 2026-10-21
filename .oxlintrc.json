@@ -71,11 +71,6 @@
         "apps/web/src/features/tax/**",
         "apps/web/src/shared/**",
         "erp/runtime/**",
-        "framework/foundation/database/**",
-        "framework/foundation/document-rendering/**",
-        "framework/foundation/jobs/**",
-        "framework/foundation/workload/**",
-        "framework/platform/postgres/**",
         "tests/**",
         "tooling/**"
       ],

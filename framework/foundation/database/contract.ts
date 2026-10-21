@@ -29,7 +29,7 @@ export class DatabaseFailure extends Schema.TaggedError<DatabaseFailure>()("Data
   cause: Schema.Unknown,
 }) {}
 
-export const isDatabaseConstraint = (error: unknown, constraint: string, code = "23505") => {
+export const isDatabaseConstraint = <E>(error: E, constraint: string, code = "23505") => {
   if (!(error instanceof DatabaseFailure)) return false
   let cause: unknown = error.cause
   while (Predicate.isObjectOrArray(cause) && "cause" in cause && cause.cause !== undefined) {

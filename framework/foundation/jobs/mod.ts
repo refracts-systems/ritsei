@@ -38,7 +38,7 @@ export type DurableJob = Schema.Schema.Type<typeof DurableJob>
 
 export interface DurableJobEnqueuer {
   readonly enqueue: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof DurableJobInput>,
   ) => Effect.Effect<DurableJob, DatabaseFailure | Schema.SchemaError>
 }
 

@@ -19,12 +19,12 @@ import {
 const artifactKey = (tenantId: string, renderFingerprint: string) =>
   `${tenantId}:${renderFingerprint}`
 
-const artifactIdOf = (input: unknown) =>
+const artifactIdOf = (input: DocumentArtifactWrite["metadata"] | undefined) =>
   Predicate.isObjectOrArray(input) && "artifactId" in input && Predicate.isString(input.artifactId)
     ? input.artifactId
     : "unknown"
 
-const decodeArtifactWrite = (input: unknown) =>
+const decodeArtifactWrite = (input: DocumentArtifactWrite) =>
   Effect.gen(function* () {
     if (!Predicate.isObjectOrArray(input)) {
       return yield* Effect.fail(
@@ -34,8 +34,8 @@ const decodeArtifactWrite = (input: unknown) =>
         }),
       )
     }
-    // SAFETY: input is an object here and every field is validated before use below.
-    const write = input as Partial<DocumentArtifactWrite>
+    // Every field is still checked: callers outside TypeScript may send anything.
+    const write: Partial<DocumentArtifactWrite> = input
     if (!(write.bytes instanceof Uint8Array)) {
       return yield* Effect.fail(
         new DocumentArtifactInvalidContent({
@@ -103,7 +103,9 @@ export const makeMemoryDocumentArtifactStore = (): DocumentArtifactStore => {
   const artifactIds = new Map<string, string>()
   const generations = new Map<string, bigint>()
 
-  const put = Effect.fn("DocumentArtifactStore.memory.put")(function* (input: unknown) {
+  const put = Effect.fn("DocumentArtifactStore.memory.put")(function* (
+    input: DocumentArtifactWrite,
+  ) {
     const write = yield* decodeArtifactWrite(input)
     const contentHash = yield* sha256Hex(write.bytes)
     if (
@@ -131,7 +133,9 @@ export const makeMemoryDocumentArtifactStore = (): DocumentArtifactStore => {
     return yield* persistArtifact(artifacts, artifactIds, generations, write)
   })
 
-  const get = Effect.fn("DocumentArtifactStore.memory.get")(function* (input: unknown) {
+  const get = Effect.fn("DocumentArtifactStore.memory.get")(function* (
+    input: Schema.Codec.Encoded<typeof DocumentArtifactLookup>,
+  ) {
     const decoded = yield* Schema.decodeUnknownEffect(DocumentArtifactLookup)(input)
     const found = artifacts.get(artifactKey(decoded.tenantId, decoded.renderFingerprint))
     return found === undefined

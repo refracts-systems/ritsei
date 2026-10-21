@@ -36,8 +36,9 @@ export const EntryWorkloadLimits = {
   commandReserve: 8,
 } as const
 
-export const classifyWorkload = Effect.fn("Workload.classify")((input: unknown) =>
-  Schema.decodeUnknownEffect(WorkloadMetadata, { onExcessProperty: "error" })(input),
+export const classifyWorkload = Effect.fn("Workload.classify")(
+  (input: Schema.Codec.Encoded<typeof WorkloadMetadata>) =>
+    Schema.decodeUnknownEffect(WorkloadMetadata, { onExcessProperty: "error" })(input),
 )
 
 export class WorkloadAdmissionRejected extends Schema.TaggedError<WorkloadAdmissionRejected>()(
@@ -76,7 +77,7 @@ export type WorkloadLease = {
 export type WorkloadAdmission = {
   /** Admits or rejects immediately; the capacity returns when the surrounding scope closes. */
   readonly admit: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof WorkloadMetadata>,
   ) => Effect.Effect<WorkloadLease, WorkloadAdmissionRejected | Schema.SchemaError, Scope.Scope>
   readonly available: Effect.Effect<WorkloadCapacity>
 }
@@ -142,7 +143,9 @@ export const makeWorkloadAdmission = Effect.fn("WorkloadAdmission.make")(functio
     })
   }
 
-  const admit = Effect.fn("WorkloadAdmission.admit")(function* (input: unknown) {
+  const admit = Effect.fn("WorkloadAdmission.admit")(function* (
+    input: Schema.Codec.Encoded<typeof WorkloadMetadata>,
+  ) {
     const { workloadClass, estimatedCost: cost } = yield* classifyWorkload(input)
     return yield* Effect.acquireRelease(
       Effect.flatMap(take(workloadClass, cost), (outcome) =>

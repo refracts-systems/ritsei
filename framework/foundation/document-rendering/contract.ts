@@ -384,13 +384,13 @@ export const sha256Hex = (input: string | Uint8Array) =>
     catch: (cause) => new DocumentHashFailure({ cause }),
   })
 
-export const hashJson = (input: unknown) =>
+export const hashJson = (input: Schema.Codec.Encoded<typeof Schema.Json>) =>
   Effect.gen(function* () {
     const decoded = yield* Schema.decodeUnknownEffect(Schema.Json)(input)
     return yield* sha256Hex(canonicalizeJson(decoded))
   })
 
-export const createDocumentSnapshot = (input: unknown) =>
+export const createDocumentSnapshot = (input: Schema.Codec.Encoded<typeof DocumentSnapshotInput>) =>
   Effect.gen(function* () {
     const decoded = yield* Schema.decodeUnknownEffect(DocumentSnapshotInput)(input)
     const checksum = yield* hashJson({
@@ -416,7 +416,7 @@ export const documentContextFromSnapshot = (snapshot: DocumentSnapshot): Documen
   snapshotChecksum: snapshot.checksum,
 })
 
-export const createDocumentAst = (input: unknown) =>
+export const createDocumentAst = (input: Schema.Codec.Encoded<typeof DocumentAstInput>) =>
   Effect.gen(function* () {
     const decoded = yield* Schema.decodeUnknownEffect(DocumentAstInput)(input)
     const checksum = yield* hashJson({
@@ -432,7 +432,9 @@ export const createDocumentAst = (input: unknown) =>
     } satisfies DocumentAst
   })
 
-export const createDocumentRenderRequest = (input: unknown) =>
+export const createDocumentRenderRequest = (
+  input: Schema.Codec.Encoded<typeof DocumentRenderRequestInput>,
+) =>
   Effect.gen(function* () {
     const decoded = yield* Schema.decodeUnknownEffect(DocumentRenderRequestInput)(input)
     const renderFingerprint = yield* hashJson({
@@ -463,7 +465,9 @@ export const documentRenderIdempotencyKey = (
   request: Pick<DocumentRenderRequest, "tenantId" | "renderFingerprint">,
 ) => `document-render:${request.tenantId}:${request.renderFingerprint}`
 
-export const makeDocumentRenderJobPayload = (input: unknown) =>
+export const makeDocumentRenderJobPayload = (
+  input: Schema.Codec.Encoded<typeof DocumentRenderRequest>,
+) =>
   Effect.gen(function* () {
     const request = yield* Schema.decodeUnknownEffect(DocumentRenderRequest)(input)
     return {
@@ -549,7 +553,10 @@ const validateRenderLimits = (
     : Effect.fail(new DocumentRenderLimitExceeded(exceeded))
 }
 
-export const validateDocumentRenderPolicy = (requirements: unknown, policy: unknown) =>
+export const validateDocumentRenderPolicy = (
+  requirements: Schema.Codec.Encoded<typeof DocumentRenderRequestInput>,
+  policy: Schema.Codec.Encoded<typeof DocumentRenderPolicy>,
+) =>
   Effect.gen(function* () {
     const decodedRequirements = yield* Schema.decodeUnknownEffect(DocumentRenderRequestInput)(
       requirements,
@@ -564,7 +571,7 @@ export const validateDocumentRenderPolicy = (requirements: unknown, policy: unkn
 
 export interface DocumentArtifactStore {
   readonly put: (
-    input: unknown,
+    input: DocumentArtifactWrite,
   ) => Effect.Effect<
     DocumentArtifact,
     | DocumentArtifactConflict
@@ -574,7 +581,7 @@ export interface DocumentArtifactStore {
     | Schema.SchemaError
   >
   readonly get: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof DocumentArtifactLookup>,
   ) => Effect.Effect<DocumentArtifactRecord | undefined, Schema.SchemaError>
 }
 
