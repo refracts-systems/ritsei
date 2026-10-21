@@ -70,7 +70,6 @@
         "apps/web/src/features/sales/**",
         "apps/web/src/features/tax/**",
         "apps/web/src/shared/**",
-        "erp/runtime/**",
         "tests/**",
         "tooling/**"
       ],

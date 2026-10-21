@@ -99,7 +99,8 @@ const normalize = (input: P0Backfill): P0Backfill => ({
 
 const failureMessage = (cause: unknown) => (cause instanceof Error ? cause.message : String(cause))
 
-export const decodeP0BackfillInput = (input: unknown, context = "input") =>
+/** Decodes a mapping file as parsed JSON; nothing about its shape is assumed. */
+export const decodeP0BackfillInput = (input: Schema.Json, context = "input") =>
   Schema.decodeUnknownEffect(P0BackfillInput)(input).pipe(
     Effect.map(normalize),
     Effect.mapError(
@@ -120,7 +121,7 @@ export const decodeP0BackfillJson = (text: string, path: string) => {
   }).pipe(Effect.flatMap((input) => decodeP0BackfillInput(input, path)))
 }
 
-export const applyP0Backfill = (client: Sql, input: unknown) =>
+export const applyP0Backfill = (client: Sql, input: Schema.Json) =>
   Effect.gen(function* () {
     const decoded = yield* decodeP0BackfillInput(input)
     yield* Effect.tryPromise({

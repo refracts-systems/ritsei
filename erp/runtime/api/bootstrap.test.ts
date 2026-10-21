@@ -42,7 +42,7 @@ const input = {
   dedicatedJournalCode: "JKT-OPS",
   warehouseName: "Jakarta Main",
   baseCurrency: "usd",
-  precision: 2,
+  precision: 2 as const,
   fiscalYearStartMonth: 1,
   postingEnabled: true,
 }

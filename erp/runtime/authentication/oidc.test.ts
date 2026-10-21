@@ -1,3 +1,4 @@
+import type * as Schema from "effect/Schema"
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 
@@ -8,7 +9,7 @@ import {
 import type { OidcAuthenticationConfiguration } from "../config.ts"
 import { makeOidcIdentityProvider } from "./oidc.ts"
 
-const encode = (value: unknown) =>
+const encode = (value: Schema.Json) =>
   btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(value))))
     .replaceAll("+", "-")
     .replaceAll("/", "_")

@@ -85,7 +85,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           dedicatedJournalCode: "MAIN-OPS",
           warehouseName: "Main Warehouse",
           baseCurrency: "USD",
-          precision: 2,
+          precision: 2 as const,
           fiscalYearStartMonth: 1,
           postingEnabled: true,
         }

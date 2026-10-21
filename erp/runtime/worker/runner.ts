@@ -78,7 +78,9 @@ const isPermanentFinancialOperationFailure = (error: FinancialOperationFailure):
 
 const retryAfter = (milliseconds: number) => new Date(Date.now() + milliseconds).toISOString()
 
-export const runFinancialOperationOnce = (input: unknown) =>
+export const runFinancialOperationOnce = (
+  input: Schema.Codec.Encoded<typeof FinancialWorkerInput>,
+) =>
   Effect.gen(function* () {
     const decoded = yield* Schema.decodeUnknownEffect(FinancialWorkerInput)(input)
     const process = yield* ProcessService

@@ -72,7 +72,9 @@ const journal = {
 
 const observedInputs: unknown[] = []
 const accountingService = partial<AccountingServiceContract>({
-  listAccountingConfigurations: (input: unknown) =>
+  listAccountingConfigurations: (
+    input: Parameters<AccountingServiceContract["listAccountingConfigurations"]>[0],
+  ) =>
     Effect.sync(() => {
       observedInputs.push(input)
       return [configuration]

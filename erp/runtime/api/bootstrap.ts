@@ -84,7 +84,7 @@ export const bootstrapCapabilities = [
   InventoryCapabilities.warehouseCreate,
 ] as const satisfies readonly Capability[]
 
-export const bootstrapTenant = (input: unknown) =>
+export const bootstrapTenant = (input: Schema.Codec.Encoded<typeof BootstrapTenantInput>) =>
   Effect.gen(function* () {
     const decoded = yield* Schema.decodeUnknownEffect(BootstrapTenantInput)(input)
     const auth = yield* AuthService

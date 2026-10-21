@@ -48,7 +48,7 @@ const readTextJson = async (response: Response): Promise<Schema.Json> => {
   }
 }
 
-const hasAudience = (audience: unknown, expected: string): boolean =>
+const hasAudience = (audience: Schema.Json | undefined, expected: string): boolean =>
   Predicate.isString(audience)
     ? audience === expected
     : Array.isArray(audience) &&
