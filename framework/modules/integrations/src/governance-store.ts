@@ -3,6 +3,7 @@ import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import * as Predicate from "effect/Predicate"
 import * as Match from "effect/Match"
+import * as Data from "effect/Data"
 
 import {
   externalConnectorGovernance,
@@ -434,6 +435,68 @@ const applyTransition = async (
   return audit === undefined ? { _tag: "missing" } : { _tag: "updated", row, audit }
 }
 
+export type RecordDeliveryControlOutcome = Data.TaggedEnum<{
+  Duplicate: { readonly audit: AuditRow }
+  Conflict: {}
+  Missing: {}
+  Retired: {}
+  Created: {
+    readonly audit: {
+      tenantId: string
+      connectorId: string
+      actor: string
+      idempotencyKey: string
+      reason: string
+      retentionUntil: Date
+      id: string
+      createdAt: Date
+      action: "retired" | "reviewed" | "registered" | "activated" | "delivery_control"
+      connectorVersion: number
+      operationId: string | null
+      details: unknown
+    }
+  }
+}>
+export const RecordDeliveryControlOutcome = Data.taggedEnum<RecordDeliveryControlOutcome>()
+
+export type RegisterOutcome = Data.TaggedEnum<{
+  Missing: {}
+  Duplicate: { readonly row: GovernanceRow; readonly audit: AuditRow }
+  Conflict: {}
+  Updated: {
+    readonly row: {
+      minimumVersion: number
+      maximumVersion: number
+      tenantId: string
+      connectorId: string
+      version: number
+      owner: string
+      reviewedBy: string | null
+      reviewedAt: Date | null
+      retiredAt: Date | null
+      id: string
+      status: "retired" | "draft" | "reviewed" | "active"
+      createdAt: Date
+      updatedAt: Date
+    }
+    readonly audit: {
+      tenantId: string
+      connectorId: string
+      actor: string
+      idempotencyKey: string
+      reason: string
+      retentionUntil: Date
+      id: string
+      createdAt: Date
+      action: "retired" | "reviewed" | "registered" | "activated" | "delivery_control"
+      connectorVersion: number
+      operationId: string | null
+      details: unknown
+    }
+  }
+}>
+export const RegisterOutcome = Data.taggedEnum<RegisterOutcome>()
+
 export const makePostgresExternalGovernanceStore = Effect.gen(function* () {
   const database = yield* Database
 
@@ -450,12 +513,12 @@ export const makePostgresExternalGovernanceStore = Effect.gen(function* () {
             audit.connectorVersion,
           )
           return row === undefined
-            ? { _tag: "missing" as const }
+            ? RegisterOutcome.Missing()
             : audit.action === "registered" &&
                 audit.connectorId === decoded.connectorId &&
                 audit.connectorVersion === decoded.version
-              ? { _tag: "duplicate" as const, row, audit }
-              : { _tag: "conflict" as const }
+              ? RegisterOutcome.Duplicate({ row, audit })
+              : RegisterOutcome.Conflict()
         }
         const existing = await selectGovernance(
           transaction,
@@ -464,7 +527,7 @@ export const makePostgresExternalGovernanceStore = Effect.gen(function* () {
           decoded.version,
           true,
         )
-        if (existing !== undefined) return { _tag: "conflict" as const }
+        if (existing !== undefined) return RegisterOutcome.Conflict()
         const [row] = await transaction
           .insert(externalConnectorGovernance)
           .values({
@@ -478,7 +541,7 @@ export const makePostgresExternalGovernanceStore = Effect.gen(function* () {
             maximumVersion: decoded.compatibilityRange.maximumVersion,
           })
           .returning()
-        if (row === undefined) return { _tag: "missing" as const }
+        if (row === undefined) return RegisterOutcome.Missing()
         const [createdAudit] = await transaction
           .insert(externalGovernanceAudit)
           .values(
@@ -496,13 +559,13 @@ export const makePostgresExternalGovernanceStore = Effect.gen(function* () {
           )
           .returning()
         return createdAudit === undefined
-          ? { _tag: "missing" as const }
-          : { _tag: "updated" as const, row, audit: createdAudit }
+          ? RegisterOutcome.Missing()
+          : RegisterOutcome.Updated({ row, audit: createdAudit })
       }, "integration.connector.register")
-      if (result._tag === "conflict") {
+      if (RegisterOutcome.$is("Conflict")(result)) {
         return yield* Effect.fail(mapIdempotencyFailure(decoded.tenantId, decoded.idempotencyKey))
       }
-      if (result._tag === "missing") {
+      if (RegisterOutcome.$is("Missing")(result)) {
         return yield* Effect.fail(
           new DatabaseFailure({
             operation: "integration.connector.register",
@@ -510,7 +573,10 @@ export const makePostgresExternalGovernanceStore = Effect.gen(function* () {
           }),
         )
       }
-      return { record: toGovernanceRecord(result.row), duplicate: result._tag === "duplicate" }
+      return {
+        record: toGovernanceRecord(result.row),
+        duplicate: RegisterOutcome.$is("Duplicate")(result),
+      }
     }).pipe(
       Effect.catchIf(
         (error) =>
@@ -560,8 +626,8 @@ export const makePostgresExternalGovernanceStore = Effect.gen(function* () {
           return audit.action === "delivery_control" &&
             audit.connectorId === decoded.connectorId &&
             audit.connectorVersion === decoded.version
-            ? { _tag: "duplicate" as const, audit }
-            : { _tag: "conflict" as const }
+            ? RecordDeliveryControlOutcome.Duplicate({ audit })
+            : RecordDeliveryControlOutcome.Conflict()
         }
         const connector = await selectGovernance(
           transaction,
@@ -570,8 +636,8 @@ export const makePostgresExternalGovernanceStore = Effect.gen(function* () {
           decoded.version,
           true,
         )
-        if (connector === undefined) return { _tag: "missing" as const }
-        if (connector.status === "retired") return { _tag: "retired" as const }
+        if (connector === undefined) return RecordDeliveryControlOutcome.Missing()
+        if (connector.status === "retired") return RecordDeliveryControlOutcome.Retired()
         const [createdAudit] = await transaction
           .insert(externalGovernanceAudit)
           .values(
@@ -590,13 +656,13 @@ export const makePostgresExternalGovernanceStore = Effect.gen(function* () {
           )
           .returning()
         return createdAudit === undefined
-          ? { _tag: "missing" as const }
-          : { _tag: "created" as const, audit: createdAudit }
+          ? RecordDeliveryControlOutcome.Missing()
+          : RecordDeliveryControlOutcome.Created({ audit: createdAudit })
       }, "integration.delivery.control")
-      if (result._tag === "conflict") {
+      if (RecordDeliveryControlOutcome.$is("Conflict")(result)) {
         return yield* Effect.fail(mapIdempotencyFailure(decoded.tenantId, decoded.idempotencyKey))
       }
-      if (result._tag === "retired") {
+      if (RecordDeliveryControlOutcome.$is("Retired")(result)) {
         return yield* Effect.fail(
           new ExternalConnectorRetired({
             connectorId: decoded.connectorId,
@@ -604,12 +670,12 @@ export const makePostgresExternalGovernanceStore = Effect.gen(function* () {
           }),
         )
       }
-      if (result._tag === "missing") {
+      if (RecordDeliveryControlOutcome.$is("Missing")(result)) {
         return yield* Effect.fail(invalid(`${decoded.connectorId}:${decoded.version}`))
       }
       return {
         audit: toAuditRecord(result.audit),
-        duplicate: result._tag === "duplicate",
+        duplicate: RecordDeliveryControlOutcome.$is("Duplicate")(result),
       }
     })
 

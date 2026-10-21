@@ -1,5 +1,6 @@
 import "../../../tooling/load-env.ts"
 import * as Effect from "effect/Effect"
+import * as Exit from "effect/Exit"
 import postgres from "postgres"
 
 import { runMigrations } from "../../../framework/platform/mod.ts"
@@ -22,7 +23,7 @@ if (isMain(import.meta.url)) {
   }
 
   const result = await Effect.runPromiseExit(migrate(url))
-  if (result._tag === "Failure") {
+  if (Exit.isFailure(result)) {
     console.error(result.cause)
     process.exit(1)
   }

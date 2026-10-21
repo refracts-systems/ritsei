@@ -3,6 +3,7 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
+import * as Option from "effect/Option"
 
 import { FencingContextService } from "../../../framework/foundation/mod.ts"
 import {
@@ -93,7 +94,7 @@ export const runFinancialOperationOnce = (
     const accounting = yield* FinancialOperationService
     const failpointOption = yield* Effect.serviceOption(WorkerFailpointService)
     const hit = (point: WorkerFailpointName) =>
-      failpointOption._tag === "Some" ? failpointOption.value.hit(point) : Effect.void
+      Option.isSome(failpointOption) ? failpointOption.value.hit(point) : Effect.void
     let job = yield* process.claimJob({
       tenantId: decoded.tenantId,
       workerId: decoded.workerId,

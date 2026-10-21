@@ -2,6 +2,7 @@ import "../../../tooling/load-env.ts"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import * as Predicate from "effect/Predicate"
+import * as Exit from "effect/Exit"
 import { createReadStream } from "node:fs"
 import postgres, { type Sql } from "postgres"
 
@@ -274,7 +275,7 @@ if (isMain(import.meta.url)) {
       Effect.ensuring(Effect.promise(() => client.end())),
     ),
   )
-  if (result._tag === "Failure") {
+  if (Exit.isFailure(result)) {
     console.error(result.cause)
     process.exit(1)
   }

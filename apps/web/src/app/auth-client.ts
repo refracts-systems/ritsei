@@ -1,5 +1,6 @@
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import * as Exit from "effect/Exit"
 import {
   AuthConfiguration,
   AuthLoginResult,
@@ -38,7 +39,7 @@ const decodeJson = async <S extends Schema.ConstraintDecoder<unknown, never>>(
   const decoded = await Effect.runPromiseExit(
     Schema.decodeUnknownEffect(Schema.fromJsonString(schema))(body),
   )
-  if (decoded._tag === "Failure") throw new AuthClientFailure("invalid-response")
+  if (Exit.isFailure(decoded)) throw new AuthClientFailure("invalid-response")
   return decoded.value
 }
 

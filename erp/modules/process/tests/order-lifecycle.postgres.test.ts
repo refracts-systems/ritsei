@@ -2,6 +2,7 @@ import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
+import * as Result from "effect/Result"
 import type { Sql } from "postgres"
 
 import { Database, uuidv7 } from "../../../../framework/foundation/mod.ts"
@@ -1533,15 +1534,13 @@ it.effect.skipIf(databaseUrl === undefined)(
           ] as const,
           { concurrency: "unbounded" },
         )
-        const concurrentLifecycleSuccesses = [cancellationOutcome, fulfillmentOutcome].filter(
-          (outcome) => outcome._tag === "Success",
-        )
+        const lifecycleOutcomes: ReadonlyArray<Result.Result<unknown, unknown>> = [
+          cancellationOutcome,
+          fulfillmentOutcome,
+        ]
+        const concurrentLifecycleSuccesses = lifecycleOutcomes.filter(Result.isSuccess)
         assert.strictEqual(concurrentLifecycleSuccesses.length, 1)
-        assert.strictEqual(
-          [cancellationOutcome, fulfillmentOutcome].filter((outcome) => outcome._tag === "Failure")
-            .length,
-          1,
-        )
+        assert.strictEqual(lifecycleOutcomes.filter(Result.isFailure).length, 1)
 
         const [lifecycleRaceArtifacts] = yield* Effect.promise(
           () =>
@@ -1564,7 +1563,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           workflows: "1",
           events: "1",
           jobs: "1",
-          reversals: cancellationOutcome._tag === "Success" ? "1" : "0",
+          reversals: Result.isSuccess(cancellationOutcome) ? "1" : "0",
         })
 
         const [storedOrder] = yield* Effect.promise(

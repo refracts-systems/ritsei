@@ -3,6 +3,7 @@ import * as Clock from "effect/Clock"
 import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
+import * as Data from "effect/Data"
 
 import {
   purchaseOrderLines,
@@ -83,6 +84,70 @@ import {
 } from "./store.ts"
 
 type Principal = Schema.Schema.Type<typeof PrincipalSchema>
+
+export type CancelPurchaseOrderOutcome = Data.TaggedEnum<{
+  NotFound: {}
+  Existing: {
+    readonly order: {
+      readonly id: string
+      readonly tenantId: string
+      readonly supplierAccountId: string
+      readonly status: "draft" | "confirmed" | "cancelled"
+      readonly confirmedAt: string | null
+      readonly total: string
+      readonly lines: readonly {
+        readonly id: string
+        readonly itemId: string
+        readonly quantity: string
+        readonly unitPrice: string
+      }[]
+    }
+  }
+  InvalidState: { readonly status: "draft" | "confirmed" | "cancelled" }
+  HasReceipts: {}
+  Cancelled: { readonly order: ReturnType<typeof toPurchaseOrder> }
+}>
+export const CancelPurchaseOrderOutcome = Data.taggedEnum<CancelPurchaseOrderOutcome>()
+
+export type ConfirmPurchaseOrderOutcome = Data.TaggedEnum<{
+  NotFound: {}
+  Existing: {
+    readonly order: {
+      readonly id: string
+      readonly tenantId: string
+      readonly supplierAccountId: string
+      readonly status: "draft" | "confirmed" | "cancelled"
+      readonly confirmedAt: string | null
+      readonly total: string
+      readonly lines: readonly {
+        readonly id: string
+        readonly itemId: string
+        readonly quantity: string
+        readonly unitPrice: string
+      }[]
+    }
+  }
+  IdempotencyConflict: {}
+  InvalidState: { readonly status: "draft" | "confirmed" | "cancelled" }
+  ApprovalRequired: { readonly status: "pending" | "approved" | "rejected" }
+  Confirmed: {
+    readonly order: {
+      readonly id: string
+      readonly tenantId: string
+      readonly supplierAccountId: string
+      readonly status: "draft" | "confirmed" | "cancelled"
+      readonly confirmedAt: string | null
+      readonly total: string
+      readonly lines: readonly {
+        readonly id: string
+        readonly itemId: string
+        readonly quantity: string
+        readonly unitPrice: string
+      }[]
+    }
+  }
+}>
+export const ConfirmPurchaseOrderOutcome = Data.taggedEnum<ConfirmPurchaseOrderOutcome>()
 
 export const makeProcurementService = Effect.gen(function* () {
   const database = yield* Database
@@ -440,7 +505,7 @@ export const makeProcurementService = Effect.gen(function* () {
                     .for("update"),
                 "procurement.purchase_order.confirm.lookup",
               )
-              if (row === undefined) return { _tag: "not-found" as const }
+              if (row === undefined) return ConfirmPurchaseOrderOutcome.NotFound()
               const lines = yield* database.query(
                 (db) =>
                   db
@@ -457,11 +522,11 @@ export const makeProcurementService = Effect.gen(function* () {
               const current = toPurchaseOrder(row, lines)
               if (row.status === "confirmed") {
                 return row.confirmationIdempotencyKey === normalizedIdempotencyKey
-                  ? { _tag: "existing" as const, order: current }
-                  : { _tag: "idempotency-conflict" as const }
+                  ? ConfirmPurchaseOrderOutcome.Existing({ order: current })
+                  : ConfirmPurchaseOrderOutcome.IdempotencyConflict()
               }
               if (row.status !== "draft") {
-                return { _tag: "invalid-state" as const, status: row.status }
+                return ConfirmPurchaseOrderOutcome.InvalidState({ status: row.status })
               }
               const pending = yield* pendingApproval(
                 decoded.principal,
@@ -470,7 +535,7 @@ export const makeProcurementService = Effect.gen(function* () {
                 current.total,
               )
               if (pending !== undefined) {
-                return { _tag: "approval-required" as const, status: pending }
+                return ConfirmPurchaseOrderOutcome.ApprovalRequired({ status: pending })
               }
               const confirmedAt = now()
               const [confirmed] = yield* database.query(
@@ -516,7 +581,7 @@ export const makeProcurementService = Effect.gen(function* () {
                 occurredAt: confirmedAt.toISOString(),
                 payload,
               })
-              return { _tag: "confirmed" as const, order }
+              return ConfirmPurchaseOrderOutcome.Confirmed({ order })
             }),
             "procurement.purchase_order.confirm",
           )
@@ -531,7 +596,7 @@ export const makeProcurementService = Effect.gen(function* () {
                 : error,
             ),
           )
-        if (result._tag === "not-found") {
+        if (ConfirmPurchaseOrderOutcome.$is("NotFound")(result)) {
           return yield* Effect.fail(
             new PurchaseOrderNotFound({
               tenantId: decoded.tenantId,
@@ -539,7 +604,7 @@ export const makeProcurementService = Effect.gen(function* () {
             }),
           )
         }
-        if (result._tag === "idempotency-conflict") {
+        if (ConfirmPurchaseOrderOutcome.$is("IdempotencyConflict")(result)) {
           return yield* Effect.fail(
             new PurchaseOrderConfirmationIdempotencyConflict({
               tenantId: decoded.tenantId,
@@ -548,7 +613,7 @@ export const makeProcurementService = Effect.gen(function* () {
             }),
           )
         }
-        if (result._tag === "invalid-state") {
+        if (ConfirmPurchaseOrderOutcome.$is("InvalidState")(result)) {
           return yield* Effect.fail(
             new PurchaseOrderInvalidState({
               tenantId: decoded.tenantId,
@@ -557,7 +622,7 @@ export const makeProcurementService = Effect.gen(function* () {
             }),
           )
         }
-        if (result._tag === "approval-required") {
+        if (ConfirmPurchaseOrderOutcome.$is("ApprovalRequired")(result)) {
           return yield* Effect.fail(
             new PurchaseOrderApprovalRequired({
               tenantId: decoded.tenantId,
@@ -587,7 +652,7 @@ export const makeProcurementService = Effect.gen(function* () {
               ),
             )
             .for("update")
-          if (row === undefined) return { _tag: "not-found" as const }
+          if (row === undefined) return CancelPurchaseOrderOutcome.NotFound()
           const lines = await tx
             .select(purchaseOrderLineSelection)
             .from(purchaseOrderLines)
@@ -599,10 +664,10 @@ export const makeProcurementService = Effect.gen(function* () {
             )
           const current = toPurchaseOrder(row, lines)
           if (row.status === "cancelled") {
-            return { _tag: "existing" as const, order: current }
+            return CancelPurchaseOrderOutcome.Existing({ order: current })
           }
           if (row.status !== "confirmed") {
-            return { _tag: "invalid-state" as const, status: row.status }
+            return CancelPurchaseOrderOutcome.InvalidState({ status: row.status })
           }
           const [receipt] = await tx
             .select({ id: purchaseReceipts.id })
@@ -614,7 +679,7 @@ export const makeProcurementService = Effect.gen(function* () {
               ),
             )
             .limit(1)
-          if (receipt !== undefined) return { _tag: "has-receipts" as const }
+          if (receipt !== undefined) return CancelPurchaseOrderOutcome.HasReceipts()
           const [cancelled] = await tx
             .update(purchaseOrders)
             .set({ status: "cancelled", updatedAt: now() })
@@ -626,9 +691,9 @@ export const makeProcurementService = Effect.gen(function* () {
               ),
             )
             .returning(purchaseOrderSelection)
-          return { _tag: "cancelled" as const, order: toPurchaseOrder(cancelled!, lines) }
+          return CancelPurchaseOrderOutcome.Cancelled({ order: toPurchaseOrder(cancelled!, lines) })
         }, "procurement.purchase_order.cancel")
-        if (result._tag === "not-found") {
+        if (CancelPurchaseOrderOutcome.$is("NotFound")(result)) {
           return yield* Effect.fail(
             new PurchaseOrderNotFound({
               tenantId: decoded.tenantId,
@@ -636,7 +701,7 @@ export const makeProcurementService = Effect.gen(function* () {
             }),
           )
         }
-        if (result._tag === "invalid-state") {
+        if (CancelPurchaseOrderOutcome.$is("InvalidState")(result)) {
           return yield* Effect.fail(
             new PurchaseOrderInvalidState({
               tenantId: decoded.tenantId,
@@ -645,7 +710,7 @@ export const makeProcurementService = Effect.gen(function* () {
             }),
           )
         }
-        if (result._tag === "has-receipts") {
+        if (CancelPurchaseOrderOutcome.$is("HasReceipts")(result)) {
           return yield* Effect.fail(
             new PurchaseOrderHasReceipts({
               tenantId: decoded.tenantId,

@@ -5,6 +5,7 @@ import * as HttpApiEndpoint from "effect/http-api/HttpApiEndpoint"
 import * as HttpApiGroup from "effect/http-api/HttpApiGroup"
 import * as HttpApiSchema from "effect/http-api/HttpApiSchema"
 import * as Schema from "effect/Schema"
+import * as Option from "effect/Option"
 
 import {
   ConsistencyToken,
@@ -212,12 +213,11 @@ export const ProcurementHttpHandlers = HttpApiBuilder.group(
             )
             // ponytail: best-effort post-commit token capture; create has no idempotency key, so a
             // capture outage must not turn a committed success into a retryable failure.
-            const token =
-              readYourWrites._tag === "Some"
-                ? yield* readYourWrites.value
-                    .capture(headers["x-tenant-id"])
-                    .pipe(Effect.catch(() => Effect.succeed(undefined)))
-                : undefined
+            const token = Option.isSome(readYourWrites)
+              ? yield* readYourWrites.value
+                  .capture(headers["x-tenant-id"])
+                  .pipe(Effect.catch(() => Effect.succeed(undefined)))
+              : undefined
             return HttpApiSchema.withHeaders({
               body: order,
               headers: { "x-ritsei-consistency-token": token },

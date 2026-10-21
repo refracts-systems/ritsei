@@ -3,6 +3,7 @@ import * as Clock from "effect/Clock"
 import * as Effect from "effect/Effect"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
+import * as Data from "effect/Data"
 
 import { jobFenceScopes, processJobs, workflowRuns } from "../../../../db/schema/process.ts"
 import {
@@ -467,6 +468,88 @@ const orderFactsMatch = (expected: SalesOrder, actual: SalesOrder) =>
   expected.confirmedAt === actual.confirmedAt &&
   expected.total === actual.total &&
   JSON.stringify(canonicalize(expected.lines)) === JSON.stringify(canonicalize(actual.lines))
+
+export type FailJobOutcome = Data.TaggedEnum<{
+  NotFound: {}
+  LeaseLost: {}
+  Failed: {
+    readonly row: {
+      id: string
+      tenantId: string
+      fenceScope: string
+      leaseGeneration: string
+      jobType: string
+      idempotencyKey: string
+      priority: number
+      status: "manual_recovery" | "completed" | "failed" | "pending" | "leased"
+      scheduledAt: Date
+      leaseUntil: Date | null
+      leaseOwner: string | null
+      leaseToken: string | null
+      attempts: number
+      payload: Schema.Json
+      correlationId: string
+    }
+  }
+}>
+export const FailJobOutcome = Data.taggedEnum<FailJobOutcome>()
+
+export type CompleteJobOutcome = Data.TaggedEnum<{
+  NotFound: {}
+  LeaseLost: {}
+  Completed: {
+    readonly row: {
+      id: string
+      tenantId: string
+      fenceScope: string
+      leaseGeneration: string
+      jobType: string
+      idempotencyKey: string
+      priority: number
+      status: "manual_recovery" | "completed" | "failed" | "pending" | "leased"
+      scheduledAt: Date
+      leaseUntil: Date | null
+      leaseOwner: string | null
+      leaseToken: string | null
+      attempts: number
+      payload: Schema.Json
+      correlationId: string
+    }
+  }
+}>
+export const CompleteJobOutcome = Data.taggedEnum<CompleteJobOutcome>()
+
+export type RenewJobOutcome = Data.TaggedEnum<{
+  NotFound: {}
+  LeaseLost: {}
+  Updated: {
+    readonly row: {
+      id: string
+      tenantId: string
+      fenceScope: string
+      leaseGeneration: string
+      jobType: string
+      idempotencyKey: string
+      priority: number
+      status: "manual_recovery" | "completed" | "failed" | "pending" | "leased"
+      scheduledAt: Date
+      leaseUntil: Date | null
+      leaseOwner: string | null
+      leaseToken: string | null
+      attempts: number
+      payload: Schema.Json
+      correlationId: string
+    }
+  }
+}>
+export const RenewJobOutcome = Data.taggedEnum<RenewJobOutcome>()
+
+export type MarkManualRecoveryOutcome = Data.TaggedEnum<{
+  NotFound: {}
+  Completed: {}
+  Updated: { readonly run: ReturnType<typeof toWorkflowRun> }
+}>
+export const MarkManualRecoveryOutcome = Data.taggedEnum<MarkManualRecoveryOutcome>()
 
 export const makeProcessService = Effect.gen(function* () {
   const database = yield* Database
@@ -1515,16 +1598,16 @@ export const makeProcessService = Effect.gen(function* () {
           )
           .for("update")
         const row = rows[0]
-        if (row === undefined) return { _tag: "not-found" as const }
-        if (row.status === "succeeded") return { _tag: "completed" as const }
+        if (row === undefined) return MarkManualRecoveryOutcome.NotFound()
+        if (row.status === "succeeded") return MarkManualRecoveryOutcome.Completed()
         const [updated] = await tx
           .update(workflowRuns)
           .set({ status: "manual_recovery", recoveryReason: decoded.reason, updatedAt: now() })
           .where(eq(workflowRuns.id, row.id))
           .returning(workflowRunSelection)
-        return { _tag: "updated" as const, run: toWorkflowRun(updated!) }
+        return MarkManualRecoveryOutcome.Updated({ run: toWorkflowRun(updated!) })
       }, "process.workflow.run.manual-recovery")
-      if (result._tag === "not-found") {
+      if (MarkManualRecoveryOutcome.$is("NotFound")(result)) {
         return yield* Effect.fail(
           new WorkflowRunNotFound({
             tenantId: decoded.tenantId,
@@ -1532,7 +1615,7 @@ export const makeProcessService = Effect.gen(function* () {
           }),
         )
       }
-      if (result._tag === "completed") {
+      if (MarkManualRecoveryOutcome.$is("Completed")(result)) {
         return yield* Effect.fail(
           new WorkflowAlreadyCompleted({
             tenantId: decoded.tenantId,
@@ -1635,7 +1718,7 @@ export const makeProcessService = Effect.gen(function* () {
           .from(processJobs)
           .where(and(eq(processJobs.id, decoded.jobId), eq(processJobs.tenantId, decoded.tenantId)))
           .for("update")
-        if (current === undefined) return { _tag: "not-found" as const }
+        if (current === undefined) return RenewJobOutcome.NotFound()
         const nowDate = now()
         if (
           current.status !== "leased" ||
@@ -1645,7 +1728,7 @@ export const makeProcessService = Effect.gen(function* () {
           current.leaseToken !== decoded.leaseToken ||
           current.leaseGeneration !== decoded.leaseGeneration
         )
-          return { _tag: "lease-lost" as const }
+          return RenewJobOutcome.LeaseLost()
         const [updated] = await tx
           .update(processJobs)
           .set({
@@ -1665,15 +1748,15 @@ export const makeProcessService = Effect.gen(function* () {
           )
           .returning(processJobSelection)
         return updated === undefined
-          ? { _tag: "lease-lost" as const }
-          : { _tag: "updated" as const, row: updated }
+          ? RenewJobOutcome.LeaseLost()
+          : RenewJobOutcome.Updated({ row: updated })
       }, "process.job.renew")
-      if (result._tag === "not-found") {
+      if (RenewJobOutcome.$is("NotFound")(result)) {
         return yield* Effect.fail(
           new ProcessJobNotFound({ tenantId: decoded.tenantId, jobId: decoded.jobId }),
         )
       }
-      if (result._tag === "lease-lost") {
+      if (RenewJobOutcome.$is("LeaseLost")(result)) {
         return yield* Effect.fail(
           new ProcessJobLeaseLost({ tenantId: decoded.tenantId, jobId: decoded.jobId }),
         )
@@ -1697,7 +1780,7 @@ export const makeProcessService = Effect.gen(function* () {
           .from(processJobs)
           .where(and(eq(processJobs.id, decoded.jobId), eq(processJobs.tenantId, decoded.tenantId)))
           .for("update")
-        if (current === undefined) return { _tag: "not-found" as const }
+        if (current === undefined) return CompleteJobOutcome.NotFound()
         const completedAt = now()
         if (
           current.status !== "leased" ||
@@ -1707,7 +1790,7 @@ export const makeProcessService = Effect.gen(function* () {
           current.leaseToken !== decoded.leaseToken ||
           current.leaseGeneration !== decoded.leaseGeneration
         )
-          return { _tag: "lease-lost" as const }
+          return CompleteJobOutcome.LeaseLost()
         const [completed] = await tx
           .update(processJobs)
           .set({
@@ -1731,15 +1814,15 @@ export const makeProcessService = Effect.gen(function* () {
           )
           .returning(processJobSelection)
         return completed === undefined
-          ? { _tag: "lease-lost" as const }
-          : { _tag: "completed" as const, row: completed }
+          ? CompleteJobOutcome.LeaseLost()
+          : CompleteJobOutcome.Completed({ row: completed })
       }, "process.job.complete")
-      if (result._tag === "not-found") {
+      if (CompleteJobOutcome.$is("NotFound")(result)) {
         return yield* Effect.fail(
           new ProcessJobNotFound({ tenantId: decoded.tenantId, jobId: decoded.jobId }),
         )
       }
-      if (result._tag === "lease-lost") {
+      if (CompleteJobOutcome.$is("LeaseLost")(result)) {
         return yield* Effect.fail(
           new ProcessJobLeaseLost({ tenantId: decoded.tenantId, jobId: decoded.jobId }),
         )
@@ -1764,7 +1847,7 @@ export const makeProcessService = Effect.gen(function* () {
           .from(processJobs)
           .where(and(eq(processJobs.id, decoded.jobId), eq(processJobs.tenantId, decoded.tenantId)))
           .for("update")
-        if (current === undefined) return { _tag: "not-found" as const }
+        if (current === undefined) return FailJobOutcome.NotFound()
         const nowDate = now()
         if (
           current.status !== "leased" ||
@@ -1774,7 +1857,7 @@ export const makeProcessService = Effect.gen(function* () {
           current.leaseToken !== decoded.leaseToken ||
           current.leaseGeneration !== decoded.leaseGeneration
         )
-          return { _tag: "lease-lost" as const }
+          return FailJobOutcome.LeaseLost()
         const exhausted = current.attempts >= ProcessJobMaxAttempts
         const retry = !exhausted && decoded.retryAt !== null
         const [failed] = await tx
@@ -1802,15 +1885,15 @@ export const makeProcessService = Effect.gen(function* () {
           )
           .returning(processJobSelection)
         return failed === undefined
-          ? { _tag: "lease-lost" as const }
-          : { _tag: "failed" as const, row: failed }
+          ? FailJobOutcome.LeaseLost()
+          : FailJobOutcome.Failed({ row: failed })
       }, "process.job.fail")
-      if (result._tag === "not-found") {
+      if (FailJobOutcome.$is("NotFound")(result)) {
         return yield* Effect.fail(
           new ProcessJobNotFound({ tenantId: decoded.tenantId, jobId: decoded.jobId }),
         )
       }
-      if (result._tag === "lease-lost") {
+      if (FailJobOutcome.$is("LeaseLost")(result)) {
         return yield* Effect.fail(
           new ProcessJobLeaseLost({ tenantId: decoded.tenantId, jobId: decoded.jobId }),
         )
