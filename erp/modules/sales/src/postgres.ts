@@ -33,7 +33,14 @@ import {
   SalesOrderConfirmationIdempotencyConflict,
 } from "./errors.ts"
 import type { SalesStore } from "./store.ts"
-import { deriveTotal, toSalesOrder } from "./store.ts"
+import {
+  CancellationMutation,
+  ConfirmationMutation,
+  ConfirmedTotalLookup,
+  deriveTotal,
+  OrderCreation,
+  toSalesOrder,
+} from "./store.ts"
 
 const customerSelection = {
   id: customers.id,
@@ -289,7 +296,7 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
             )
             .for("update")
           if (quotation !== undefined && quotation.customerId !== decoded.customerId) {
-            return { _tag: "quotation-customer-mismatch" as const }
+            return OrderCreation.QuotationCustomerMismatch()
           }
         }
         const [order] = await tx
@@ -313,7 +320,7 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
             })),
           )
           .returning(orderLineSelection)
-        return { _tag: "created" as const, order: toSalesOrder(order!, lines) }
+        return OrderCreation.Created({ order: toSalesOrder(order!, lines) })
       }, "sales.order.create")
       .pipe(
         Effect.mapError((error) => {
@@ -345,16 +352,17 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
           return error
         }),
       )
-    if (result._tag === "quotation-customer-mismatch") {
-      return yield* Effect.fail(
-        new QuotationCustomerMismatch({
-          tenantId: decoded.tenantId,
-          quotationId: decoded.quotationId!,
-          customerId: decoded.customerId,
-        }),
-      )
-    }
-    return result.order
+    return yield* OrderCreation.$match(result, {
+      QuotationCustomerMismatch: () =>
+        Effect.fail(
+          new QuotationCustomerMismatch({
+            tenantId: decoded.tenantId,
+            quotationId: decoded.quotationId!,
+            customerId: decoded.customerId,
+          }),
+        ),
+      Created: ({ order }) => Effect.succeed(order),
+    })
   })
   const confirmOrder = Effect.fn("SalesStore.confirmOrder")(function* (
     decoded: ConfirmOrderCommand,
@@ -374,7 +382,7 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
               .from(orders)
               .where(and(eq(orders.tenantId, decoded.tenantId), eq(orders.id, decoded.orderId)))
               .for("update")
-            if (row === undefined) return { _tag: "not-found" as const }
+            if (row === undefined) return ConfirmationMutation.NotFound()
             const lines = await tx
               .select(orderLineSelection)
               .from(orderLines)
@@ -382,11 +390,11 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
             const current = toSalesOrder(row, lines)
             if (row.status === "confirmed") {
               return row.confirmationIdempotencyKey === decoded.idempotencyKey
-                ? { _tag: "existing" as const, order: current }
-                : { _tag: "idempotency-conflict" as const }
+                ? ConfirmationMutation.Existing({ order: current })
+                : ConfirmationMutation.IdempotencyConflict()
             }
             if (row.status !== "draft") {
-              return { _tag: "invalid-state" as const, status: row.status }
+              return ConfirmationMutation.InvalidState({ status: row.status })
             }
             const confirmedAt = now()
             const [confirmed] = await tx
@@ -405,9 +413,9 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
                 ),
               )
               .returning(orderSelection)
-            return { _tag: "confirmed" as const, order: toSalesOrder(confirmed!, lines) }
+            return ConfirmationMutation.Confirmed({ order: toSalesOrder(confirmed!, lines) })
           }, "sales.order.confirm")
-          if (mutation._tag === "confirmed") yield* append(mutation.order)
+          if (ConfirmationMutation.$is("Confirmed")(mutation)) yield* append(mutation.order)
           return mutation
         }),
         "sales.order.confirm.atomic",
@@ -433,14 +441,16 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
         .from(orders)
         .where(and(eq(orders.tenantId, decoded.tenantId), eq(orders.id, decoded.orderId)))
         .for("update")
-      if (row === undefined) return { _tag: "not-found" as const }
+      if (row === undefined) return CancellationMutation.NotFound()
       const lines = await tx
         .select(orderLineSelection)
         .from(orderLines)
         .where(and(eq(orderLines.tenantId, decoded.tenantId), eq(orderLines.orderId, row.id)))
-      if (row.status === "cancelled") return toSalesOrder(row, lines)
+      if (row.status === "cancelled") {
+        return CancellationMutation.Cancelled({ order: toSalesOrder(row, lines) })
+      }
       if (row.status !== "confirmed") {
-        return { _tag: "invalid-state" as const, status: row.status }
+        return CancellationMutation.InvalidState({ status: row.status })
       }
       const [cancelled] = await tx
         .update(orders)
@@ -453,7 +463,7 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
           ),
         )
         .returning(orderSelection)
-      return toSalesOrder(cancelled!, lines)
+      return CancellationMutation.Cancelled({ order: toSalesOrder(cancelled!, lines) })
     }, "sales.order.cancel")
   })
   const getConfirmedOrderTotal = Effect.fn("SalesStore.getConfirmedOrderTotal")(function* (
@@ -470,13 +480,12 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
     )
     const row = rows[0]
     return row === undefined
-      ? { _tag: "not-found" as const }
-      : {
-          _tag: "found" as const,
+      ? ConfirmedTotalLookup.NotFound()
+      : ConfirmedTotalLookup.Found({
           total: row.total,
           status: row.status,
           confirmedAt: row.confirmedAt?.toISOString() ?? null,
-        }
+        })
   })
   return {
     listCustomers,

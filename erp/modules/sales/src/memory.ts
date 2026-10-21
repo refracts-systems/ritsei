@@ -27,7 +27,12 @@ import {
   SalesOrderConfirmationIdempotencyConflict,
 } from "./errors.ts"
 import type { SalesStore } from "./store.ts"
-import { deriveTotal } from "./store.ts"
+import {
+  CancellationMutation,
+  ConfirmationMutation,
+  ConfirmedTotalLookup,
+  deriveTotal,
+} from "./store.ts"
 
 export const makeSalesMemoryStore = (): SalesStore => {
   const customers = new Map<string, Customer>()
@@ -172,10 +177,10 @@ export const makeSalesMemoryStore = (): SalesStore => {
     >,
   ) {
     const order = orders.get(input.orderId)
-    if (order?.tenantId !== input.tenantId) return { _tag: "not-found" as const }
+    if (order?.tenantId !== input.tenantId) return ConfirmationMutation.NotFound()
     if (order.status === "confirmed") {
       return keys.get(order.id) === input.idempotencyKey
-        ? { _tag: "existing" as const, order }
+        ? ConfirmationMutation.Existing({ order })
         : yield* Effect.fail(
             new SalesOrderConfirmationIdempotencyConflict({
               tenantId: input.tenantId,
@@ -184,7 +189,7 @@ export const makeSalesMemoryStore = (): SalesStore => {
             }),
           )
     }
-    if (order.status !== "draft") return { _tag: "invalid-state" as const, status: order.status }
+    if (order.status !== "draft") return ConfirmationMutation.InvalidState({ status: order.status })
     const confirmed = {
       ...order,
       status: "confirmed" as const,
@@ -193,37 +198,34 @@ export const makeSalesMemoryStore = (): SalesStore => {
     yield* append(confirmed)
     orders.set(order.id, confirmed)
     keys.set(order.id, input.idempotencyKey)
-    return { _tag: "confirmed" as const, order: confirmed }
+    return ConfirmationMutation.Confirmed({ order: confirmed })
   })
-  const cancelConfirmedOrder = Effect.fn("SalesStore.memory.cancelConfirmedOrder")(function* (
-    input: CancelConfirmedOrderCommand,
-  ) {
-    const order = orders.get(input.orderId)
-    if (order?.tenantId !== input.tenantId) {
-      return yield* Effect.succeed({ _tag: "not-found" as const })
-    }
-    if (order.status === "cancelled") return yield* Effect.succeed(order)
-    if (order.status !== "confirmed") {
-      return yield* Effect.succeed({ _tag: "invalid-state" as const, status: order.status })
-    }
-    const cancelled = { ...order, status: "cancelled" as const }
-    orders.set(order.id, cancelled)
-    return yield* Effect.succeed(cancelled)
-  })
-  const getConfirmedOrderTotal = Effect.fn("SalesStore.memory.getConfirmedOrderTotal")(function* (
-    input: GetConfirmedOrderTotalCommand,
-  ) {
-    const order = orders.get(input.orderId)
-    if (order?.tenantId !== input.tenantId) {
-      return yield* Effect.succeed({ _tag: "not-found" as const })
-    }
-    return yield* Effect.succeed({
-      _tag: "found" as const,
-      total: order.total,
-      status: order.status,
-      confirmedAt: order.confirmedAt,
-    })
-  })
+  const cancelConfirmedOrder = Effect.fn("SalesStore.memory.cancelConfirmedOrder")(
+    (input: CancelConfirmedOrderCommand) =>
+      Effect.sync(() => {
+        const order = orders.get(input.orderId)
+        if (order?.tenantId !== input.tenantId) return CancellationMutation.NotFound()
+        if (order.status === "cancelled") return CancellationMutation.Cancelled({ order })
+        if (order.status !== "confirmed") {
+          return CancellationMutation.InvalidState({ status: order.status })
+        }
+        const cancelled = { ...order, status: "cancelled" as const }
+        orders.set(order.id, cancelled)
+        return CancellationMutation.Cancelled({ order: cancelled })
+      }),
+  )
+  const getConfirmedOrderTotal = Effect.fn("SalesStore.memory.getConfirmedOrderTotal")(
+    (input: GetConfirmedOrderTotalCommand) =>
+      Effect.sync(() => {
+        const order = orders.get(input.orderId)
+        if (order?.tenantId !== input.tenantId) return ConfirmedTotalLookup.NotFound()
+        return ConfirmedTotalLookup.Found({
+          total: order.total,
+          status: order.status,
+          confirmedAt: order.confirmedAt,
+        })
+      }),
+  )
   return {
     listCustomers,
     getCustomer,

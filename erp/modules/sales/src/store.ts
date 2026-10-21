@@ -1,3 +1,4 @@
+import * as Data from "effect/Data"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 
@@ -21,6 +22,7 @@ import type {
   SalesOrder,
   SalesOrderLine,
 } from "./contract.ts"
+import type { SalesOrderStatus } from "./contract.ts"
 import {
   CustomerAlreadyExists,
   CustomerNotFound,
@@ -40,11 +42,37 @@ export type SalesStoreFailure =
   | SalesOrderNotFound
   | SalesOrderInvalidState
   | SalesOrderConfirmationIdempotencyConflict
-export type ConfirmationMutation =
-  | { readonly _tag: "confirmed" | "existing"; readonly order: SalesOrder }
-  | { readonly _tag: "not-found" }
-  | { readonly _tag: "idempotency-conflict" }
-  | { readonly _tag: "invalid-state"; readonly status: "draft" | "confirmed" | "cancelled" }
+export type ConfirmationMutation = Data.TaggedEnum<{
+  Confirmed: { readonly order: SalesOrder }
+  Existing: { readonly order: SalesOrder }
+  NotFound: {}
+  IdempotencyConflict: {}
+  InvalidState: { readonly status: SalesOrderStatus }
+}>
+export const ConfirmationMutation = Data.taggedEnum<ConfirmationMutation>()
+
+export type CancellationMutation = Data.TaggedEnum<{
+  Cancelled: { readonly order: SalesOrder }
+  NotFound: {}
+  InvalidState: { readonly status: SalesOrderStatus }
+}>
+export const CancellationMutation = Data.taggedEnum<CancellationMutation>()
+
+export type ConfirmedTotalLookup = Data.TaggedEnum<{
+  Found: {
+    readonly total: string
+    readonly status: SalesOrderStatus
+    readonly confirmedAt: string | null
+  }
+  NotFound: {}
+}>
+export const ConfirmedTotalLookup = Data.taggedEnum<ConfirmedTotalLookup>()
+
+export type OrderCreation = Data.TaggedEnum<{
+  Created: { readonly order: SalesOrder }
+  QuotationCustomerMismatch: {}
+}>
+export const OrderCreation = Data.taggedEnum<OrderCreation>()
 
 export const toSalesOrder = (
   row: {
@@ -111,25 +139,12 @@ export interface SalesStore {
     | Schema.SchemaError
     | SalesOrderConfirmationIdempotencyConflict
   >
-  readonly cancelConfirmedOrder: (input: CancelConfirmedOrderCommand) => Effect.Effect<
-    | SalesOrder
-    | { readonly _tag: "not-found" }
-    | {
-        readonly _tag: "invalid-state"
-        readonly status: "draft" | "confirmed" | "cancelled"
-      },
-    DatabaseFailure
-  >
-  readonly getConfirmedOrderTotal: (input: GetConfirmedOrderTotalCommand) => Effect.Effect<
-    | {
-        readonly _tag: "found"
-        readonly total: string
-        readonly status: "draft" | "confirmed" | "cancelled"
-        readonly confirmedAt: string | null
-      }
-    | { readonly _tag: "not-found" },
-    DatabaseFailure
-  >
+  readonly cancelConfirmedOrder: (
+    input: CancelConfirmedOrderCommand,
+  ) => Effect.Effect<CancellationMutation, DatabaseFailure>
+  readonly getConfirmedOrderTotal: (
+    input: GetConfirmedOrderTotalCommand,
+  ) => Effect.Effect<ConfirmedTotalLookup, DatabaseFailure>
 }
 
 export const deriveTotal = (lines: ReadonlyArray<SalesOrderLine>): string => {

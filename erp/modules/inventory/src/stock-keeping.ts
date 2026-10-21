@@ -1,4 +1,5 @@
 import { and, asc, eq, or, gt, sql } from "drizzle-orm"
+import * as Data from "effect/Data"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
@@ -86,23 +87,25 @@ type LockedStock = {
   readonly balances: Map<string, Balance>
   readonly valuations: Map<string, Valuation>
 }
-type LineValue =
-  | { readonly _tag: "valued"; readonly line: ValuedLine }
-  | { readonly _tag: "unavailable" }
-  | { readonly _tag: "unvalued" }
+type LineValue = Data.TaggedEnum<{
+  Valued: { readonly line: ValuedLine }
+  Unavailable: {}
+  Unvalued: {}
+}>
+const LineValue = Data.taggedEnum<LineValue>()
 
 /** An issue removes the moving-average cost, or its stated cost, from valued stock. */
 const valueIssue = (line: PlannedLine, balance: Balance, valuation: Valuation): LineValue => {
   const quantity = -line.quantity
-  if (balance.onHand - balance.reserved < quantity) return { _tag: "unavailable" }
-  if (valuation.quantity < quantity) return { _tag: "unvalued" }
+  if (balance.onHand - balance.reserved < quantity) return LineValue.Unavailable()
+  if (valuation.quantity < quantity) return LineValue.Unvalued()
   // The last units take the remaining value, so rounding or a stated cost never strands value.
   const cost =
     quantity === valuation.quantity
       ? valuation.value
       : (line.issueValue ?? divideHalfUp(valuation.value * quantity, valuation.quantity))
-  if (cost > valuation.value) return { _tag: "unvalued" }
-  return { _tag: "valued", line: { itemId: line.itemId, quantity: line.quantity, value: -cost } }
+  if (cost > valuation.value) return LineValue.Unvalued()
+  return LineValue.Valued({ line: { itemId: line.itemId, quantity: line.quantity, value: -cost } })
 }
 
 /** A receipt adds its value; a gain without one takes the average or the fallback cost. */
@@ -115,8 +118,8 @@ const valueReceipt = (line: PlannedLine, valuation: Valuation): LineValue => {
         ? undefined
         : line.fallbackUnitCost * line.quantity)
   return value === undefined
-    ? { _tag: "unvalued" }
-    : { _tag: "valued", line: { itemId: line.itemId, quantity: line.quantity, value } }
+    ? LineValue.Unvalued()
+    : LineValue.Valued({ line: { itemId: line.itemId, quantity: line.quantity, value } })
 }
 
 const valueLine = (line: PlannedLine, balance: Balance, valuation: Valuation) =>
@@ -384,9 +387,15 @@ export const makeStockKeepingService = Effect.gen(function* () {
           state.balances.get(line.itemId)!,
           state.valuations.get(line.itemId)!,
         )
-        if (outcome._tag !== "valued")
-          return yield* Effect.fail(lineFailure(outcome._tag, plan, legalEntityId, line))
-        valued.push(outcome.line)
+        const failure = LineValue.$match(outcome, {
+          Valued: (value) => {
+            valued.push(value.line)
+            return undefined
+          },
+          Unavailable: () => lineFailure("unavailable", plan, legalEntityId, line),
+          Unvalued: () => lineFailure("unvalued", plan, legalEntityId, line),
+        })
+        if (failure !== undefined) return yield* Effect.fail(failure)
       }
       return valued
     })

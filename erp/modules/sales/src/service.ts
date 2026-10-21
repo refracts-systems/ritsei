@@ -31,6 +31,7 @@ import {
 } from "./errors.ts"
 import { SalesOrderConfirmedEvent, SalesOrderConfirmedEventPayload } from "./events.ts"
 import type { SalesStore } from "./store.ts"
+import { CancellationMutation, ConfirmationMutation, ConfirmedTotalLookup } from "./store.ts"
 
 export const makeSalesServiceFromStore = <R>(storeEffect: Effect.Effect<SalesStore, never, R>) =>
   Effect.gen(function* () {
@@ -161,30 +162,30 @@ export const makeSalesServiceFromStore = <R>(storeEffect: Effect.Effect<SalesSto
           ),
         ),
       )
-      if (mutation._tag === "not-found") {
-        return yield* Effect.fail(
-          new SalesOrderNotFound({ tenantId: decoded.tenantId, orderId: decoded.orderId }),
-        )
-      }
-      if (mutation._tag === "idempotency-conflict") {
-        return yield* Effect.fail(
-          new SalesOrderConfirmationIdempotencyConflict({
-            tenantId: normalized.tenantId,
-            orderId: normalized.orderId,
-            idempotencyKey: normalized.idempotencyKey,
-          }),
-        )
-      }
-      if (mutation._tag === "invalid-state") {
-        return yield* Effect.fail(
-          new SalesOrderInvalidState({
-            tenantId: decoded.tenantId,
-            orderId: decoded.orderId,
-            status: mutation.status,
-          }),
-        )
-      }
-      return mutation.order
+      return yield* ConfirmationMutation.$match(mutation, {
+        Confirmed: ({ order }) => Effect.succeed(order),
+        Existing: ({ order }) => Effect.succeed(order),
+        NotFound: () =>
+          Effect.fail(
+            new SalesOrderNotFound({ tenantId: decoded.tenantId, orderId: decoded.orderId }),
+          ),
+        IdempotencyConflict: () =>
+          Effect.fail(
+            new SalesOrderConfirmationIdempotencyConflict({
+              tenantId: normalized.tenantId,
+              orderId: normalized.orderId,
+              idempotencyKey: normalized.idempotencyKey,
+            }),
+          ),
+        InvalidState: ({ status }) =>
+          Effect.fail(
+            new SalesOrderInvalidState({
+              tenantId: decoded.tenantId,
+              orderId: decoded.orderId,
+              status,
+            }),
+          ),
+      })
     })
     const cancelConfirmedOrder = Effect.fn("SalesService.cancelConfirmedOrder")(function* (
       input: Schema.Codec.Encoded<typeof CancelConfirmedOrderInput>,
@@ -192,21 +193,21 @@ export const makeSalesServiceFromStore = <R>(storeEffect: Effect.Effect<SalesSto
       const decoded = yield* Schema.decodeUnknownEffect(CancelConfirmedOrderInput)(input)
       yield* authorize(decoded, SalesCapabilities.orderCancel)
       const result = yield* store.cancelConfirmedOrder(decoded)
-      if ("_tag" in result && result._tag === "not-found") {
-        return yield* Effect.fail(
-          new SalesOrderNotFound({ tenantId: decoded.tenantId, orderId: decoded.orderId }),
-        )
-      }
-      if ("_tag" in result && result._tag === "invalid-state") {
-        return yield* Effect.fail(
-          new SalesOrderInvalidState({
-            tenantId: decoded.tenantId,
-            orderId: decoded.orderId,
-            status: result.status,
-          }),
-        )
-      }
-      return result
+      return yield* CancellationMutation.$match(result, {
+        Cancelled: ({ order }) => Effect.succeed(order),
+        NotFound: () =>
+          Effect.fail(
+            new SalesOrderNotFound({ tenantId: decoded.tenantId, orderId: decoded.orderId }),
+          ),
+        InvalidState: ({ status }) =>
+          Effect.fail(
+            new SalesOrderInvalidState({
+              tenantId: decoded.tenantId,
+              orderId: decoded.orderId,
+              status,
+            }),
+          ),
+      })
     })
     const getConfirmedOrderTotal = Effect.fn("SalesService.getConfirmedOrderTotal")(function* (
       input: Schema.Codec.Encoded<typeof GetConfirmedOrderTotalInput>,
@@ -214,21 +215,22 @@ export const makeSalesServiceFromStore = <R>(storeEffect: Effect.Effect<SalesSto
       const decoded = yield* Schema.decodeUnknownEffect(GetConfirmedOrderTotalInput)(input)
       yield* authorize(decoded, SalesCapabilities.orderRead)
       const result = yield* store.getConfirmedOrderTotal(decoded)
-      if (result._tag === "not-found") {
-        return yield* Effect.fail(
-          new SalesOrderNotFound({ tenantId: decoded.tenantId, orderId: decoded.orderId }),
-        )
-      }
-      if (result.status !== "confirmed" || result.confirmedAt === null) {
-        return yield* Effect.fail(
-          new SalesOrderInvalidState({
-            tenantId: decoded.tenantId,
-            orderId: decoded.orderId,
-            status: result.status,
-          }),
-        )
-      }
-      return result.total
+      return yield* ConfirmedTotalLookup.$match(result, {
+        NotFound: () =>
+          Effect.fail(
+            new SalesOrderNotFound({ tenantId: decoded.tenantId, orderId: decoded.orderId }),
+          ),
+        Found: ({ total, status, confirmedAt }) =>
+          status !== "confirmed" || confirmedAt === null
+            ? Effect.fail(
+                new SalesOrderInvalidState({
+                  tenantId: decoded.tenantId,
+                  orderId: decoded.orderId,
+                  status,
+                }),
+              )
+            : Effect.succeed(total),
+      })
     })
     return {
       listCustomers,
