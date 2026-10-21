@@ -83,7 +83,7 @@ const documentContainsSelectedOperation = (
 }
 
 export const validateOpenApiImport = (
-  input: unknown,
+  input: Schema.Codec.Encoded<typeof OpenApiImportRequest>,
 ): Effect.Effect<
   OpenApiOperationSelection,
   ExternalActionNotAllowlisted | ExternalPayloadInvalid | Schema.SchemaError

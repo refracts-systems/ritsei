@@ -55,7 +55,7 @@ const paymentSettled = defineExternalEvent({
   occurredAtSemantics: "provider_time",
 })
 
-const envelope = (id: string, data: unknown) => ({
+const envelope = (id: string, data: Schema.Json) => ({
   specversion: "1.0",
   type: paymentSettled.id,
   source: paymentSettled.source,

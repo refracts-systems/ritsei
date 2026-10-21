@@ -7,6 +7,7 @@ import {
   ExternalPayloadInvalid,
   validateOpenApiImport,
 } from "../mod.ts"
+import { partial } from "../../../../tests/support/partial.ts"
 
 const baseInput = {
   tenantId: "018f3f77-0c5a-7cc0-8b62-6a163d214123",
@@ -96,10 +97,12 @@ it.effect("rejects paths containing whitespace", () =>
 it.effect("rejects an oversized document section", () =>
   Effect.gen(function* () {
     const result = yield* Effect.result(
-      validateOpenApiImport({
-        ...baseInput,
-        document: { ...baseInput.document, paths: "x".repeat(512 * 1024 + 1) },
-      }),
+      validateOpenApiImport(
+        partial<Parameters<typeof validateOpenApiImport>[0]>({
+          ...baseInput,
+          document: { ...baseInput.document, paths: "x".repeat(512 * 1024 + 1) },
+        }),
+      ),
     )
     assert.isTrue(Result.isFailure(result))
   }),

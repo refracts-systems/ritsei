@@ -117,7 +117,7 @@ type ExternalReliabilityStoreError =
 
 export interface ExternalReliabilityStore {
   readonly record: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ExternalReliabilityRecordInput>,
   ) => Effect.Effect<ExternalReliabilityRecordResult, ExternalReliabilityStoreError>
   readonly get: (
     tenantId: string,
@@ -147,10 +147,10 @@ const dateFromMilliseconds = (
     : Effect.fail(invalid(boundary, identifier))
 }
 
-const payloadBytes = (payload: unknown): number =>
+const payloadBytes = (payload: Schema.Json): number =>
   new TextEncoder().encode(JSON.stringify(payload)!).byteLength
 
-const prepare = (input: unknown) =>
+const prepare = (input: Schema.Codec.Encoded<typeof ExternalReliabilityRecordInput>) =>
   Effect.gen(function* () {
     const decoded = yield* Schema.decodeUnknownEffect(ExternalReliabilityRecordInput)(input)
     const decision = yield* assessExternalDelivery(decoded.reliability)
@@ -186,7 +186,7 @@ const prepare = (input: unknown) =>
     })
   })
 
-const canonicalJson = (value: unknown): string =>
+const canonicalJson = <A>(value: A): string =>
   JSON.stringify(value, (_key, child) =>
     Predicate.isObjectOrArray(child) && !Array.isArray(child)
       ? Object.fromEntries(
@@ -408,7 +408,7 @@ type PersistedRecordResult =
 export const makePostgresExternalReliabilityStore = Effect.gen(function* () {
   const database = yield* Database
   return {
-    record: (input: unknown) =>
+    record: (input: Schema.Codec.Encoded<typeof ExternalReliabilityRecordInput>) =>
       Effect.gen(function* () {
         const candidate = yield* prepare(input)
         const result = yield* database.transaction(

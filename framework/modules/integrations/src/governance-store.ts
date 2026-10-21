@@ -143,13 +143,13 @@ type GovernanceStoreError =
 
 export interface ExternalGovernanceStore {
   readonly register: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof RegisterExternalConnectorInput>,
   ) => Effect.Effect<ExternalGovernanceMutation, GovernanceStoreError>
   readonly transition: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ExternalConnectorTransitionInput>,
   ) => Effect.Effect<ExternalGovernanceMutation, GovernanceStoreError>
   readonly recordDeliveryControl: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ExternalDeliveryControlInput>,
   ) => Effect.Effect<ExternalGovernanceAuditMutation, GovernanceStoreError>
   readonly get: (
     tenantId: string,
@@ -437,7 +437,7 @@ const applyTransition = async (
 export const makePostgresExternalGovernanceStore = Effect.gen(function* () {
   const database = yield* Database
 
-  const register = (input: unknown) =>
+  const register = (input: Schema.Codec.Encoded<typeof RegisterExternalConnectorInput>) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(RegisterExternalConnectorInput)(input)
       const result = yield* database.transaction(async (transaction) => {
@@ -521,7 +521,7 @@ export const makePostgresExternalGovernanceStore = Effect.gen(function* () {
       ),
     )
 
-  const transition = (input: unknown) =>
+  const transition = (input: Schema.Codec.Encoded<typeof ExternalConnectorTransitionInput>) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ExternalConnectorTransitionInput)(input)
       const result = yield* database.transaction(async (transaction): Promise<TransitionResult> => {
@@ -549,7 +549,9 @@ export const makePostgresExternalGovernanceStore = Effect.gen(function* () {
       return { record: toGovernanceRecord(result.row), duplicate: result._tag === "duplicate" }
     })
 
-  const recordDeliveryControl = (input: unknown) =>
+  const recordDeliveryControl = (
+    input: Schema.Codec.Encoded<typeof ExternalDeliveryControlInput>,
+  ) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ExternalDeliveryControlInput)(input)
       const result = yield* database.transaction(async (transaction) => {

@@ -1,3 +1,4 @@
+import type * as Schema from "effect/Schema"
 import * as Effect from "effect/Effect"
 
 import {
@@ -96,7 +97,7 @@ export const toProcessExternalCatalogEntry = (
 
 export const makeExternalProcessActionMapping = (
   action: ExternalActionCatalogEntry,
-  input: unknown,
+  input: Schema.Json,
 ): ExternalProcessActionMapping => ({
   actionId: action.id,
   actionVersion: action.version,
