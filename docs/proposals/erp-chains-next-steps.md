@@ -1,9 +1,10 @@
 # Proposal: ERP Chains, Next Steps and Merge Plan
 
-> **Status:** Proposal, not yet approved.
+> **Status:** The Phase 4–6 branch was merged into `master` in #17 (2026-10-20); section 4 is the
+> open follow-up list and is still a proposal until each item gets its own branch.
 >
-> **Owns:** The known gaps left by the Phase 4–6 implementation on branch `exp/erp-chains`, the order
-> to close them, and how to bring the branch into `master`.
+> **Owns:** The known gaps left by the Phase 4–6 implementation (the experiment branch merged in #17),
+> the order in which they were closed, and the follow-up work that remains.
 >
 > **Does not own:** The phase definitions and decisions D1–D10, which belong to the
 > [ERP parity plan](./erp-module-parity-plan.md), and each decision's rationale, which belongs to
@@ -15,9 +16,9 @@
 > - ADR index: [`../decisions/README.md`](../decisions/README.md)
 > - Deferred lint rules: [`./anti-slop-deferred-rules.md`](./anti-slop-deferred-rules.md)
 
-## 1. Where the branch stands
+## 1. Where the branch stood
 
-`exp/erp-chains` is 19 commits on `master` `143944c`: numbering, ledger, party contacts, product,
+The experiment branch (`exp/erp-chains`, merged as #17) was 19 commits on `master` `143944c`: numbering, ledger, party contacts, product,
 valued inventory, tax, Order-to-Cash, Procure-to-Pay, a cleanup, the anti-slop lint, and four fixes. Three chain
 tests prove the exit criteria against PostgreSQL. The diff is 292 files; about 300,000 of the added
 lines are Drizzle `snapshot.json` files, so the reviewable source is far smaller.
@@ -46,31 +47,36 @@ lines are Drizzle `snapshot.json` files, so the reviewable source is far smaller
 
 ## 3. Correctness gaps closed on this branch
 
-| # | Gap | Resolution | Proven by |
-| --- | --- | --- | --- |
-| C1 | The legacy purchase order confirmation bypassed approval policies | `confirmPurchaseOrder` consults `ApprovalService` when provided and fails with `PurchaseOrderApprovalRequired`, leaving a pending request | `tests/chains/procure-to-pay.postgres.test.ts` |
-| C2 | Documents were numbered by calendar year, not the legal entity's fiscal year | A `FiscalCalendar` port in numbering, implemented by Accounting from the accounting configuration; services no longer pass a month | `tests/chains/fiscal-calendar.postgres.test.ts` (April fiscal year) |
-| C3 | A supplier credit note left the price difference in goods received not invoiced | Bill lines store `matched_value`; a credit note returns it pro rata and reverses the variance. After a bill and a full credit, goods received not invoiced and variance return to their balances before the bill | `tests/chains/procure-to-pay.postgres.test.ts` |
-| C4 | Aging changed when later payments arrived | `invoice_settlements.settled_on` and `payment_allocations.allocated_on` record the business date; open items and unallocated payments are computed as of the report date | `tests/chains/order-to-cash.postgres.test.ts` and `procure-to-pay.postgres.test.ts` (aging equals the control account on past dates) |
+| #   | Gap                                                                             | Resolution                                                                                                                                                                                                       | Proven by                                                                                                                            |
+| --- | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| C1  | The legacy purchase order confirmation bypassed approval policies               | `confirmPurchaseOrder` consults `ApprovalService` when provided and fails with `PurchaseOrderApprovalRequired`, leaving a pending request                                                                        | `tests/chains/procure-to-pay.postgres.test.ts`                                                                                       |
+| C2  | Documents were numbered by calendar year, not the legal entity's fiscal year    | A `FiscalCalendar` port in numbering, implemented by Accounting from the accounting configuration; services no longer pass a month                                                                               | `tests/chains/fiscal-calendar.postgres.test.ts` (April fiscal year)                                                                  |
+| C3  | A supplier credit note left the price difference in goods received not invoiced | Bill lines store `matched_value`; a credit note returns it pro rata and reverses the variance. After a bill and a full credit, goods received not invoiced and variance return to their balances before the bill | `tests/chains/procure-to-pay.postgres.test.ts`                                                                                       |
+| C4  | Aging changed when later payments arrived                                       | `invoice_settlements.settled_on` and `payment_allocations.allocated_on` record the business date; open items and unallocated payments are computed as of the report date                                         | `tests/chains/order-to-cash.postgres.test.ts` and `procure-to-pay.postgres.test.ts` (aging equals the control account on past dates) |
 
 ## 4. Follow-up work after merge
 
 Each item gets its own branch from `master`, and an ADR only where noted.
 
-| # | Item | Notes |
-| --- | --- | --- |
-| F1 | **Web screens for the new documents** | Quotation, delivery, invoice, credit note, receipt, payment, supplier bill, aging, statement. The backend and HTTP routes for sales, billing, settlement, and purchasing documents are partly missing: only party contacts, accounting ledger, product, tax, and inventory valuation have routes today, so F1 starts with `http.ts` for sales documents, billing, settlement, and procurement documents. Follow the shell and design-system contracts; one workspace per module. |
-| F2 | **Invoice PDF and email** | PDF through `framework/foundation/document-rendering`; email through the `communication` module, which today only handles `PurchaseOrderConfirmed`. Needs a numbered, immutable rendering per invoice. |
-| F3 | **Custom fields (extension points, decision D8)** | Needs an ADR before code. Released extension points join the manifest (ADR-0094). First consumers: Product and Sales documents. |
-| F4 | **Credit limit** | Decided in the parity plan to live in Sales and gate order confirmation; reads the customer's open items from Billing. Check for a dependency cycle: Sales cannot import Billing today because Billing depends on Sales. Likely a coordinator in `process` or an Accounting-style query port. |
-| F5 | **Indonesian localization (`localization-id`)** | Parity plan Phases 7–8: chart template, PPN codes, withholding, Coretax export, built only through public extension points. Depends on F3. |
-| F6 | **Anti-slop rule discussion** | Done: all six rules are decided and enabled, see [`anti-slop-deferred-rules.md`](./anti-slop-deferred-rules.md). |
+| #   | Item                                              | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| --- | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| F1  | **Web screens for the new documents**             | Quotation, delivery, invoice, credit note, receipt, payment, supplier bill, aging, statement. The backend and HTTP routes for sales, billing, settlement, and purchasing documents are partly missing: only party contacts, accounting ledger, product, tax, and inventory valuation have routes today, so F1 starts with `http.ts` for sales documents, billing, settlement, and procurement documents. Follow the shell and design-system contracts; one workspace per module. |
+| F2  | **Invoice PDF and email**                         | PDF through `framework/foundation/document-rendering`; email through the `communication` module, which today only handles `PurchaseOrderConfirmed`. Needs a numbered, immutable rendering per invoice.                                                                                                                                                                                                                                                                           |
+| F3  | **Custom fields (extension points, decision D8)** | Needs an ADR before code. Released extension points join the manifest (ADR-0094). First consumers: Product and Sales documents.                                                                                                                                                                                                                                                                                                                                                  |
+| F4  | **Credit limit**                                  | Decided in the parity plan to live in Sales and gate order confirmation; reads the customer's open items from Billing. Check for a dependency cycle: Sales cannot import Billing today because Billing depends on Sales. Likely a coordinator in `process` or an Accounting-style query port.                                                                                                                                                                                    |
+| F5  | **Indonesian localization (`localization-id`)**   | Parity plan Phases 7–8: chart template, PPN codes, withholding, Coretax export, built only through public extension points. Depends on F3.                                                                                                                                                                                                                                                                                                                                       |
+| F6  | **Anti-slop rule discussion**                     | Done: all six rules are decided and enabled, see [`anti-slop-deferred-rules.md`](./anti-slop-deferred-rules.md).                                                                                                                                                                                                                                                                                                                                                                 |
 
 ## 5. Risks and assumptions
 
 - The chain tests use one fixture shape; multi-currency, several legal entities per tenant, and
   concurrent postings across legal entities are untested beyond the numbering and period locks.
-- `exp/erp-chains` was tested on PostgreSQL 19 in WSL. The migration SQL, especially the deferred
-  triggers on `billing`, `settlement`, `inventory`, and `approvals`, should be read once by a human
-  reviewer before merge.
+- The experiment branch was tested on PostgreSQL 19 in WSL. A code read of the three migrations with
+  deferred constraint triggers (`protect_valuation_consistency`, `protect_invoice_open_amounts`,
+  `protect_payment_allocations`, 2026-10-24) found them consistent with ADR-0100 and ADR-0102: each
+  `SECURITY DEFINER` function pins `search_path`, the checks run at commit and fail closed, and
+  posted rows are immutable except the one derived column. Not covered by any test: two transactions
+  settling the same invoice at once (the commit-time check should reject the loser), and
+  `TRUNCATE`, which no trigger blocks. A human reviewer should still read them; `approvals` and the
+  procurement documents add no deferred triggers.
 - Server build status is unverified, as the repository reports for every change.

@@ -1,7 +1,8 @@
 # Proposal: Anti-Slop Rules Deferred for Discussion
 
 > **Status:** Decided and done 2026-10-20: the owner accepted the lean of every rule (section 8), and
-> all six rules are enabled, each in the commit that cleaned it up. What each cleanup changed is in
+> all six rules are enabled, each in the commit that cleaned it up. The last of them, with the
+> `_tag` and spacing rules, landed in #19 (2026-10-24). What each cleanup changed is in
 > [`UPSTREAM.md`](../../tooling/oxlint/anti-slop/UPSTREAM.md).
 >
 > **Owns:** The reasoning for six vendored anti-slop rules that are installed but turned off, their
@@ -25,14 +26,14 @@ conflict with a documented repository convention (services decode `input: unknow
 they are not clearly wrong for this repository, they need a decision and a cleanup, and each cleanup
 touches a different part of the code. Counts are Oxlint findings when the rule was run alone.
 
-| Rule | Findings | Mostly in |
-| --- | --- | --- |
-| `require-safety-comment-for-type-assertion` | 429 | `erp/modules` (259), `erp/runtime` (46), `framework` (58); 329 in tests |
-| `no-unknown-returns` | 73 | `apps/web` (55), `erp/modules` (11) |
-| `no-runtime-typeof` | 60 | `apps/web` (17), `framework` (23), `erp/runtime` (9) |
-| `no-chained-type-assertions` | 35 | `erp/runtime` (15), `framework/platform` (9); 24 in tests |
-| `no-unsafe-dictionary-type` | 26 | `erp/modules` (9), `framework` (5), `apps/web` (6), `erp/runtime` (5) |
-| `prefer-effect-match` | 13 | `erp/modules` (8), `apps/web` (4), `framework` (1) |
+| Rule                                        | Findings | Mostly in                                                               |
+| ------------------------------------------- | -------- | ----------------------------------------------------------------------- |
+| `require-safety-comment-for-type-assertion` | 429      | `erp/modules` (259), `erp/runtime` (46), `framework` (58); 329 in tests |
+| `no-unknown-returns`                        | 73       | `apps/web` (55), `erp/modules` (11)                                     |
+| `no-runtime-typeof`                         | 60       | `apps/web` (17), `framework` (23), `erp/runtime` (9)                    |
+| `no-chained-type-assertions`                | 35       | `erp/runtime` (15), `framework/platform` (9); 24 in tests               |
+| `no-unsafe-dictionary-type`                 | 26       | `erp/modules` (9), `framework` (5), `apps/web` (6), `erp/runtime` (5)   |
+| `prefer-effect-match`                       | 13       | `erp/modules` (8), `apps/web` (4), `framework` (1)                      |
 
 Suggested order, cheapest and most mechanical first: `prefer-effect-match`, `no-chained-type-assertions`,
 `no-unsafe-dictionary-type`, `no-runtime-typeof`, `no-unknown-returns`, then
@@ -151,14 +152,14 @@ every assertion carry its reason?
 
 ## 8. Decisions
 
-| Rule | Decision |
-| --- | --- |
-| `prefer-effect-match` | Option 1. A typed `Record<Union, T>` lookup is an acceptable replacement for `Match`. Branches that `yield*` keep a narrow disable with a reason. |
-| `no-chained-type-assertions` | Option 1. Test support may hold one `partial<T>()` helper with a single justified `as unknown as`; no other chained assertions. Platform adapters get a justified disable where a driver type cannot be bridged otherwise. |
-| `no-unsafe-dictionary-type` | Options 1 and 2. `Schema.Json` or a named schema type where Schema already defines the payload; a justified disable at a true untrusted boundary; `Record<Union, T>` for finite keys. |
-| `no-runtime-typeof` | Option 2 first (enabled with `allowInTypeGuards`; the exemption was later removed, so the rule now applies everywhere), remaining checks in named type guards, then `effect/Predicate` or Schema where one exists. |
-| `no-unknown-returns` | Options 1 and 2. Reload callbacks return `Promise<void>`; JSON readers decode inside the reader; canonicalizers that hash or redact arbitrary values may return `unknown` with a justified disable. |
-| `require-safety-comment-for-type-assertion` | Option 1. Enforced for non-test source only; tests are exempt by `overrides`. Production assertions are removed or given a `SAFETY` comment. |
+| Rule                                        | Decision                                                                                                                                                                                                                   |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `prefer-effect-match`                       | Option 1. A typed `Record<Union, T>` lookup is an acceptable replacement for `Match`. Branches that `yield*` keep a narrow disable with a reason.                                                                          |
+| `no-chained-type-assertions`                | Option 1. Test support may hold one `partial<T>()` helper with a single justified `as unknown as`; no other chained assertions. Platform adapters get a justified disable where a driver type cannot be bridged otherwise. |
+| `no-unsafe-dictionary-type`                 | Options 1 and 2. `Schema.Json` or a named schema type where Schema already defines the payload; a justified disable at a true untrusted boundary; `Record<Union, T>` for finite keys.                                      |
+| `no-runtime-typeof`                         | Option 2 first (enabled with `allowInTypeGuards`; the exemption was later removed, so the rule now applies everywhere), remaining checks in named type guards, then `effect/Predicate` or Schema where one exists.         |
+| `no-unknown-returns`                        | Options 1 and 2. Reload callbacks return `Promise<void>`; JSON readers decode inside the reader; canonicalizers that hash or redact arbitrary values may return `unknown` with a justified disable.                        |
+| `require-safety-comment-for-type-assertion` | Option 1. Enforced for non-test source only; tests are exempt by `overrides`. Production assertions are removed or given a `SAFETY` comment.                                                                               |
 
 Order of work follows section 1. Each rule and its cleanup land in one commit.
 

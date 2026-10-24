@@ -129,5 +129,6 @@ current system; ADRs preserve decision history.
 | [`0103`](./0103-adopt-threshold-approvals-with-separation-of-duties.md)                       | Adopt threshold approvals with separation of duties                                              | Accepted   |
 | [`0104`](./0104-adopt-valued-procure-to-pay-documents.md)                                     | Adopt valued procure-to-pay documents                                                            | Accepted   |
 | [`0105`](./0105-type-service-inputs-at-the-contract.md)                                       | Type service inputs at the contract                                                              | Accepted   |
+| [`0106`](./0106-validate-service-inputs-once-with-schema-classes.md)                          | Validate service inputs once with Schema classes                                                 | Proposed   |
 
 Accepted ADRs must not be rewritten to alter history. Create a new ADR and use `Supersedes`.
