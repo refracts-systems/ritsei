@@ -1,8 +1,15 @@
 import { AxeBuilder } from "@axe-core/playwright"
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
-import type { Page, Route } from "playwright"
-import { builtApp, conflictBody, connectToTenant, forbiddenBody } from "./browser.ts"
+import type { Page } from "playwright"
+import {
+  builtApp,
+  conflictBody,
+  connectToTenant,
+  forbiddenBody,
+  fulfillJson,
+  mockRoutes,
+} from "./browser.ts"
 
 const tenantId = "01900000-0000-7000-8000-000000000010"
 const legalEntityId = "01900000-0000-7000-8000-000000000020"
@@ -66,23 +73,6 @@ const directory = [
     legalEntityId,
   },
 ]
-
-const fulfillJson = <Body>(route: Route, status: number, body: Body) =>
-  route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) })
-
-type Handler = (route: Route) => Promise<void>
-
-/** Answers each API path from a table; any path outside the table fails the test run. */
-const mockRoutes = (page: Page, table: Readonly<Record<string, Handler>>) =>
-  page.route("**/api/**", (route) => {
-    const path = new URL(route.request().url()).pathname.replace(/^\/api/, "")
-    const key = `${route.request().method()} ${path}`
-    const handler = table[key]
-
-    return handler === undefined
-      ? fulfillJson(route, 404, { code: "unexpected_test_request" })
-      : handler(route)
-  })
 
 const openBilling = async (page: Page, url: string) => {
   await connectToTenant(page, url, "billing-session", tenantId, "User accounts")

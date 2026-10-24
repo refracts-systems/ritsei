@@ -3,7 +3,7 @@ import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import * as Predicate from "effect/Predicate"
 import { chromium } from "playwright"
-import type { Page } from "playwright"
+import type { Page, Route } from "playwright"
 import { preview } from "vite"
 import { inject } from "vitest"
 
@@ -177,3 +177,19 @@ export const chooseMoreAction = async (page: Page, name: string) => {
   await page.getByRole("button", { name: "More actions", exact: true }).click()
   await page.getByRole("menuitem", { name, exact: true }).click()
 }
+
+export const fulfillJson = <Body>(route: Route, status: number, body: Body) =>
+  route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) })
+
+export type RouteHandler = (route: Route) => Promise<void>
+
+/** Answers each `METHOD /path` of the API from a table; any other request gets a 404. */
+export const mockRoutes = (page: Page, table: Readonly<Record<string, RouteHandler>>) =>
+  page.route("**/api/**", (route) => {
+    const path = new URL(route.request().url()).pathname.replace(/^\/api/, "")
+    const handler = table[`${route.request().method()} ${path}`]
+
+    return handler === undefined
+      ? fulfillJson(route, 404, { code: "unexpected_test_request" })
+      : handler(route)
+  })

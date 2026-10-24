@@ -32,11 +32,13 @@ import {
   createOrderMutation,
   createOrderQuery,
   createOrdersQuery,
-  createQuotationMutation,
   createQuotationQuery,
   createQuotationsQuery,
 } from "./queries.ts"
 import { presentFields, definedFields } from "../../shared/api.ts"
+import { DraftQuotationDialog } from "./draft-quotation-dialog.tsx"
+import { OrderDelivery } from "./order-delivery.tsx"
+import { QuotationLifecycle } from "./quotation-lifecycle.tsx"
 
 const quotationStatusOptions = [
   { value: "draft", label: "Draft" },
@@ -164,115 +166,6 @@ function CreateCustomerDialog(props: { reload: () => Promise<void> }) {
 
 // Fallow: quotation and order creation intentionally share the same guarded sales-document shell.
 // fallow-ignore-next-line code-duplication
-function CreateQuotationDialog(props: {
-  customers: () => readonly Customer[]
-  reload: () => Promise<void>
-}) {
-  const scope = useContext(ApiRuntime)
-  const navigate = useNavigate()
-  const [open, setOpen] = createSignal(false)
-  const [invalid, setInvalid] = createSignal(false)
-
-  const mutation = createQuotationMutation(scope, (quotation) => {
-    setOpen(false)
-    navigate(`/sales/quotations/${encodeURIComponent(quotation.id)}`)
-  })
-
-  return (
-    <Dialog
-      open={open()}
-      onOpenChange={createDialogOpenChange(mutation, setOpen, setInvalid)}
-      trigger={<span>Create quotation</span>}
-      title="Create quotation"
-      description="Create a draft quotation with a customer and exact two-decimal total. Quotation transitions are backend-owned."
-    >
-      <Show
-        when={props.customers().length > 0}
-        fallback={<p role="status">Create a customer before creating a quotation.</p>}
-      >
-        <Form
-          class={layout.stack}
-          onSubmit={
-            // Fallow: this form intentionally keeps quotation validation at the UI boundary.
-            // fallow-ignore-next-line complexity
-            (value) => {
-              if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
-              const customerId = requiredText(value.customerId)
-              const total = requiredText(value.total)
-
-              if (
-                customerId === null ||
-                !uuidPattern.test(customerId) ||
-                total === null ||
-                !moneyPattern.test(total)
-              ) {
-                setInvalid(true)
-
-                return
-              }
-
-              setInvalid(false)
-              mutation.mutate({ customerId, total })
-            }
-          }
-        >
-          <FormField
-            label="Customer"
-            required
-            error={invalid() ? "Choose a customer and enter a valid total." : undefined}
-          >
-            {(fieldProps) => (
-              <Select
-                {...fieldProps}
-                name="customerId"
-                options={props.customers().map((customer) => ({
-                  value: customer.id,
-                  label: `${customer.name} · ${customer.email}`,
-                }))}
-                placeholder="Choose customer"
-                required
-                disabled={mutation.isPending}
-              />
-            )}
-          </FormField>
-          <FormField
-            label="Quoted total"
-            required
-            helperText="Exact major amount, for example 1250.00."
-          >
-            {(fieldProps) => (
-              <Input
-                {...fieldProps}
-                name="total"
-                inputmode="decimal"
-                autocomplete="off"
-                required
-                disabled={mutation.isPending}
-              />
-            )}
-          </FormField>
-          <CommandFeedback
-            error={mutation.error}
-            pending={mutation.isPending}
-            success={mutation.isSuccess}
-            successMessage="Quotation created."
-            reload={props.reload}
-            reset={() => mutation.reset()}
-          />
-          <Button
-            variant="primary"
-            type="submit"
-            loading={mutation.isPending}
-            disabled={mutation.error?.kind === "unknown-outcome"}
-          >
-            Create quotation
-          </Button>
-        </Form>
-      </Show>
-    </Dialog>
-  )
-}
-
 // Fallow: quotation and order creation intentionally share the same guarded sales-document shell.
 // fallow-ignore-next-line code-duplication
 function CreateOrderDialog(props: {
@@ -757,6 +650,7 @@ function QuotationDetail(props: { id: string }) {
           )}
         </Show>
       </QueryBoundary>
+      <QuotationLifecycle id={id} />
     </section>
   )
 }
@@ -839,6 +733,9 @@ function OrderDetail(props: { id: string; reloadLists: () => Promise<void> }) {
                   </table>
                 </div>
               </section>
+              <Show when={order.status === "confirmed"}>
+                <OrderDelivery orderId={order.id} reloadOrder={reload} />
+              </Show>
               <section
                 class={[surface(), layout.stack]}
                 aria-labelledby="sales-order-commands-heading"
@@ -1005,7 +902,7 @@ export function Sales(props: {
       headerActions={
         <div class={layout.row}>
           <CreateCustomerDialog reload={() => reloaded(customers.refetch())} />
-          <CreateQuotationDialog
+          <DraftQuotationDialog
             customers={customerData}
             reload={() => reloaded(quotations.refetch())}
           />

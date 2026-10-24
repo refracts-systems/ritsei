@@ -26,6 +26,31 @@ const quotation = {
   total: "25.00",
 }
 
+const productId = "01910000-0000-7000-8000-000000000015"
+const legalEntityId = "01910000-0000-7000-8000-000000000016"
+
+const quotationDocument = {
+  id: quotationId,
+  tenantId,
+  customerId,
+  legalEntityId,
+  status: "draft" as const,
+  validUntil: "2026-12-31",
+  total: "25.00",
+  lines: [
+    {
+      id: "01910000-0000-7000-8000-000000000017",
+      productId,
+      quantity: "2",
+      listPrice: "12.50",
+      discountPercent: "0",
+      unitPrice: "12.50",
+      taxCodeId: null,
+      lineTotal: "25.00",
+    },
+  ],
+}
+
 const draftOrder: SalesOrder = {
   id: orderId,
   tenantId,
@@ -116,6 +141,22 @@ it.effect(
             return fulfillJson(route, 201, quotations[0])
           }
 
+          if (path === "/product/products") {
+            return fulfillJson(route, 200, [
+              { id: productId, tenantId, code: "WIDGET", name: "Widget", type: "stockable" },
+            ])
+          }
+
+          if (path === "/sales/quotation-documents" && method === "POST") {
+            quotations = [{ ...quotation, customerId: body.customerId, total: "25.00" }]
+
+            return fulfillJson(route, 201, quotationDocument)
+          }
+
+          if (path === `/sales/quotation-documents/${quotationId}` && method === "GET") {
+            return fulfillJson(route, 200, quotationDocument)
+          }
+
           if (path === `/sales/quotations/${quotationId}` && method === "GET") {
             return fulfillJson(route, 200, quotation)
           }
@@ -187,8 +228,9 @@ it.effect(
           .getByRole("combobox", { name: "Customer", exact: true })
           .selectOption(customerId)
         await quotationDialog
-          .getByRole("textbox", { name: "Quoted total", exact: true })
-          .fill("25.00")
+          .getByRole("combobox", { name: "Product 1", exact: true })
+          .selectOption(productId)
+        await quotationDialog.getByRole("textbox", { name: "Quantity 1", exact: true }).fill("2")
         await quotationDialog.getByRole("button", { name: "Create quotation", exact: true }).click()
         await quotationDialog.waitFor({ state: "hidden" })
         await page.getByRole("heading", { name: "Quotation detail", exact: true }).waitFor()
@@ -229,7 +271,7 @@ it.effect(
         )
         assert.isTrue(
           requests.some(
-            (request) => request.path === "/sales/quotations" && request.method === "POST",
+            (request) => request.path === "/sales/quotation-documents" && request.method === "POST",
           ),
         )
         assert.isTrue(

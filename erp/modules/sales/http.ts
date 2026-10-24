@@ -26,7 +26,6 @@ import {
 } from "../../../framework/modules/http/mod.ts"
 import {
   Customer,
-  Delivery,
   DiscountPercent,
   OrderFulfillment,
   Quotation,
@@ -43,7 +42,6 @@ const CreatedCustomer = Customer.pipe(HttpApiSchema.status(201))
 const CreatedQuotation = Quotation.pipe(HttpApiSchema.status(201))
 const CreatedOrder = SalesOrder.pipe(HttpApiSchema.status(201))
 const CreatedSalesQuotation = SalesQuotation.pipe(HttpApiSchema.status(201))
-const CreatedDelivery = Delivery.pipe(HttpApiSchema.status(201))
 
 export const SalesHttpGroup = HttpApiGroup.make("Sales").add(
   HttpApiEndpoint.get("listCustomers", "/sales/customers", {
@@ -200,20 +198,6 @@ export const SalesHttpGroup = HttpApiGroup.make("Sales").add(
     params: { id: Uuid },
     headers: tenantHeaders,
     success: OrderFulfillment,
-    error: errors,
-  }).middleware(BearerAuth),
-  HttpApiEndpoint.post("recordDelivery", "/sales/orders/:id/deliveries", {
-    params: { id: Uuid },
-    headers: tenantHeaders,
-    payload: Schema.Struct({
-      deliveryId: Schema.optionalKey(Uuid),
-      warehouseId: Uuid,
-      deliveryDate: CalendarDate,
-      lines: BoundedArray(Schema.Struct({ orderLineId: Uuid, quantity: PositiveQuantity })).check(
-        Schema.isMinLength(1),
-      ),
-    }),
-    success: CreatedDelivery,
     error: errors,
   }).middleware(BearerAuth),
 )
@@ -465,21 +449,6 @@ export const SalesHttpHandlers = HttpApiBuilder.group(SalesHttpApi, "Sales", (ha
               principal,
               tenantId: headers["x-tenant-id"],
               orderId: params.id,
-            }),
-          )
-        }),
-      )
-      .handle(
-        "recordDelivery",
-        Effect.fn("Http.Sales.recordDelivery")(function* ({ headers, params, payload }) {
-          const principal = yield* CurrentPrincipal
-
-          return yield* coreApiEffect(
-            documents.recordDelivery({
-              principal,
-              tenantId: headers["x-tenant-id"],
-              orderId: params.id,
-              ...payload,
             }),
           )
         }),
