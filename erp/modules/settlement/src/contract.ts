@@ -24,8 +24,11 @@ const Text = TrimmedText(128)
 const ScopedInput = { principal: Principal, tenantId: Uuid }
 
 export const SettlementSide = Schema.Literals(["receivable", "payable"])
+
 export type SettlementSide = Schema.Schema.Type<typeof SettlementSide>
+
 export const PaymentDirection = Schema.Literals(["incoming", "outgoing"])
+
 export type PaymentDirection = Schema.Schema.Type<typeof PaymentDirection>
 
 export const PaymentTerm = Schema.Struct({
@@ -35,6 +38,7 @@ export const PaymentTerm = Schema.Struct({
   name: Text,
   netDays: Schema.Int,
 })
+
 export type PaymentTerm = Schema.Schema.Type<typeof PaymentTerm>
 
 export const Allocation = Schema.Struct({ invoiceId: Uuid, amount: FinancialMajorAmount })
@@ -53,6 +57,7 @@ export const Payment = Schema.Struct({
   journalEntryId: Uuid,
   allocations: Schema.Array(Allocation),
 })
+
 export type Payment = Schema.Schema.Type<typeof Payment>
 
 const Buckets = {
@@ -65,6 +70,7 @@ const Buckets = {
   unapplied: SignedAmount,
   total: SignedAmount,
 }
+
 export const AgingReport = Schema.Struct({
   legalEntityId: Uuid,
   side: SettlementSide,
@@ -72,6 +78,7 @@ export const AgingReport = Schema.Struct({
   rows: Schema.Array(Schema.Struct({ partyId: Uuid, ...Buckets })),
   totals: Schema.Struct(Buckets),
 })
+
 export type AgingReport = Schema.Schema.Type<typeof AgingReport>
 
 export const StatementEntry = Schema.Struct({
@@ -83,6 +90,7 @@ export const StatementEntry = Schema.Struct({
   amount: SignedAmount,
   balance: SignedAmount,
 })
+
 export const CustomerStatement = Schema.Struct({
   legalEntityId: Uuid,
   partyId: Uuid,
@@ -92,6 +100,7 @@ export const CustomerStatement = Schema.Struct({
   entries: Schema.Array(StatementEntry),
   closingBalance: SignedAmount,
 })
+
 export type CustomerStatement = Schema.Schema.Type<typeof CustomerStatement>
 
 export const CreatePaymentTermInput = Schema.Struct({
@@ -100,12 +109,14 @@ export const CreatePaymentTermInput = Schema.Struct({
   name: Text,
   netDays: Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: 3650 })),
 })
+
 export const AssignPartyTermInput = Schema.Struct({
   ...ScopedInput,
   partyId: Uuid,
   side: SettlementSide,
   paymentTermId: Uuid,
 })
+
 const PaymentFields = {
   ...ScopedInput,
   /** Client-chosen id that makes a retried command return the recorded payment. */
@@ -126,8 +137,10 @@ const PaymentFields = {
     ),
   ),
 }
+
 export const ReceivePaymentInput = Schema.Struct(PaymentFields)
 export const MakePaymentInput = Schema.Struct(PaymentFields)
+
 export const AllocatePaymentInput = Schema.Struct({
   ...ScopedInput,
   paymentId: Uuid,
@@ -135,12 +148,14 @@ export const AllocatePaymentInput = Schema.Struct({
   allocatedOn: CalendarDate,
   allocations: Schema.Array(Allocation).check(Schema.isMinLength(1)),
 })
+
 export const AgingInput = Schema.Struct({
   ...ScopedInput,
   legalEntityId: Uuid,
   side: SettlementSide,
   asOf: CalendarDate,
 })
+
 export const StatementInput = Schema.Struct({
   ...ScopedInput,
   legalEntityId: Uuid,
@@ -150,6 +165,7 @@ export const StatementInput = Schema.Struct({
 })
 
 type CommonFailure = AuthorizationDenied | DatabaseFailure | Schema.SchemaError
+
 export type PaymentFailure =
   | SettlementErrors.AllocationBeforePayment
   | SettlementErrors.AllocationExceedsPayment
@@ -164,19 +180,29 @@ export type PaymentFailure =
 /** Payments, allocations to billing documents, payment terms, aging, and statements (ADR-0102). */
 export interface SettlementService {
   readonly createPaymentTerm: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreatePaymentTermInput>,
   ) => Effect.Effect<PaymentTerm, SettlementErrors.PaymentTermAlreadyExists | CommonFailure>
   readonly assignPartyTerm: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof AssignPartyTermInput>,
   ) => Effect.Effect<void, SettlementErrors.PaymentTermNotFound | CommonFailure>
   /** Records a customer receipt: cash against receivables, allocated to customer documents. */
-  readonly receivePayment: (input: unknown) => Effect.Effect<Payment, PaymentFailure>
+  readonly receivePayment: (
+    input: Schema.Codec.Encoded<typeof ReceivePaymentInput>,
+  ) => Effect.Effect<Payment, PaymentFailure>
   /** Records a supplier payment: payables against cash, allocated to supplier documents. */
-  readonly makePayment: (input: unknown) => Effect.Effect<Payment, PaymentFailure>
+  readonly makePayment: (
+    input: Schema.Codec.Encoded<typeof MakePaymentInput>,
+  ) => Effect.Effect<Payment, PaymentFailure>
   /** Allocates the unallocated part of a recorded payment. */
-  readonly allocatePayment: (input: unknown) => Effect.Effect<Payment, PaymentFailure>
-  readonly aging: (input: unknown) => Effect.Effect<AgingReport, CommonFailure>
-  readonly customerStatement: (input: unknown) => Effect.Effect<CustomerStatement, CommonFailure>
+  readonly allocatePayment: (
+    input: Schema.Codec.Encoded<typeof AllocatePaymentInput>,
+  ) => Effect.Effect<Payment, PaymentFailure>
+  readonly aging: (
+    input: Schema.Codec.Encoded<typeof AgingInput>,
+  ) => Effect.Effect<AgingReport, CommonFailure>
+  readonly customerStatement: (
+    input: Schema.Codec.Encoded<typeof StatementInput>,
+  ) => Effect.Effect<CustomerStatement, CommonFailure>
 }
 
 export const SettlementService = Context.Service<SettlementService>("RITSEI/SettlementService")

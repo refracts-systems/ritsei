@@ -3,6 +3,7 @@ import { mkdir, stat, writeFile } from "node:fs/promises"
 import { generate } from "./codegen.ts"
 import { newEntityModule } from "./entity.ts"
 import { isMain } from "./entrypoint.ts"
+import { hasErrnoCode } from "./errno.ts"
 
 const moduleName = /^[a-z][a-z0-9_]*$/
 
@@ -24,6 +25,7 @@ export const renderModule = (name: string): readonly GeneratedFile[] => {
   if (!isValidModuleName(name)) throw new Error(`module name must match ${moduleName}`)
   const type = pascalCase(name)
   const root = `erp/modules/${name}`
+
   return [
     {
       path: `${root}/manifest.ts`,
@@ -100,21 +102,25 @@ describe("${name} module", () => {
 const exists = async (path: string) => {
   try {
     await stat(path)
+
     return true
   } catch (cause) {
-    if ((cause as NodeJS.ErrnoException).code === "ENOENT") return false
+    if (hasErrnoCode(cause, "ENOENT")) return false
     throw cause
   }
 }
 
 export const newModule = async (name: string): Promise<readonly string[]> => {
   if (!isValidModuleName(name)) throw new Error(`module name must match ${moduleName}`)
+
   if (await exists(`erp/modules/${name}`)) throw new Error(`erp/modules/${name} already exists`)
   const files = renderModule(name)
+
   for (const file of files) {
     await mkdir(file.path.slice(0, file.path.lastIndexOf("/")), { recursive: true })
     await writeFile(file.path, file.content)
   }
+
   return [...files.map(({ path }) => path), ...(await generate({ check: false }))]
 }
 
@@ -125,30 +131,37 @@ const usage = [
 
 const runGen = async (check: boolean) => {
   const stale = await generate({ check })
+
   if (check && stale.length > 0) {
     throw new Error(`stale generated files: ${stale.join(", ")}; run pnpm run ritsei gen`)
   }
+
   for (const path of stale) console.log(`generated ${path}`)
 }
 
 /** Parses `new module <name> [--entity <entity>]`. */
 const parseNew = (args: readonly string[]) => {
   const [, kind, name, flag, entity, ...rest] = args
+
   const valid =
     kind === "module" &&
     name !== undefined &&
     rest.length === 0 &&
     (flag === undefined || (flag === "--entity" && entity !== undefined))
+
   if (!valid) throw new Error(usage)
+
   if (entity !== undefined && !isValidModuleName(entity)) {
     throw new Error(`entity name must match ${moduleName}`)
   }
+
   return { name, entity }
 }
 
 const runNew = async (args: readonly string[]) => {
   const { name, entity } = parseNew(args)
   const created = entity === undefined ? await newModule(name) : await newEntityModule(name, entity)
+
   for (const path of created) console.log(`wrote ${path}`)
   console.log(
     entity === undefined
@@ -159,6 +172,7 @@ const runNew = async (args: readonly string[]) => {
 
 const run = (args: readonly string[]) => {
   if (args[0] === "gen") return runGen(args[1] === "--check")
+
   if (args[0] === "new") return runNew(args)
   throw new Error(usage)
 }

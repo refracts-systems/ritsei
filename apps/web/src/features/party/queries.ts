@@ -40,6 +40,7 @@ const partyCollectionKey = ["party", "collection"] as const
 const partyCollectionQueryKey = (input: ListPartiesInput) => [...partyCollectionKey, input] as const
 const partyDetailsKey = ["party", "detail"] as const
 const partyDetailKey = (id: string) => [...partyDetailsKey, id] as const
+
 const relatedPartyPathsKey = (id: string, input: ListRelatedPartyPathsInput) =>
   ["party", "related-paths", id, input] as const
 
@@ -91,10 +92,12 @@ export function createRelatedPartyPathsQuery(
 
 export function createPartyMutation(scope: ApiScope, afterSuccess?: (party: Party) => void) {
   const client = useQueryClient()
+
   return useMutation<Party, RequestFailure, CreatePartyInput>(() => ({
     mutationFn: (input) => runRequest(scope, createParty(input)),
     onSuccess: (party) => {
       afterSuccess?.(party)
+
       return invalidatePartyCollection(client, scope.tenantId)
     },
   }))
@@ -102,6 +105,7 @@ export function createPartyMutation(scope: ApiScope, afterSuccess?: (party: Part
 
 export function createLegalEntityMutation(scope: ApiScope) {
   const client = useQueryClient()
+
   return useMutation<LegalEntity, RequestFailure, { partyId: string }>(() => ({
     mutationFn: ({ partyId }) => runRequest(scope, createLegalEntity(partyId)),
     onSuccess: (_, { partyId }) =>
@@ -114,6 +118,7 @@ export function createLegalEntityMutation(scope: ApiScope) {
 
 export function createBranchMutation(scope: ApiScope) {
   const client = useQueryClient()
+
   return useMutation<Branch, RequestFailure, CreateBranchInput & { legalEntityId: string }>(() => ({
     mutationFn: ({ legalEntityId, ...input }) =>
       runRequest(scope, createBranch(legalEntityId, input)),
@@ -123,6 +128,7 @@ export function createBranchMutation(scope: ApiScope) {
 
 export function assignPartyRoleMutation(scope: ApiScope) {
   const client = useQueryClient()
+
   return useMutation<void, RequestFailure, AssignPartyRoleInput & { partyId: string }>(() => ({
     mutationFn: ({ partyId, ...input }) => runRequest(scope, assignPartyRole(partyId, input)),
     onSuccess: (_, { partyId }) => invalidatePartyDetails(client, scope.tenantId, partyId),
@@ -131,6 +137,7 @@ export function assignPartyRoleMutation(scope: ApiScope) {
 
 export function attachPartyIdentifierMutation(scope: ApiScope) {
   const client = useQueryClient()
+
   return useMutation<
     ExternalIdentifier,
     RequestFailure,
@@ -143,6 +150,7 @@ export function attachPartyIdentifierMutation(scope: ApiScope) {
 
 export function createPartyRelationshipMutation(scope: ApiScope) {
   const client = useQueryClient()
+
   return useMutation<
     PartyRelationship,
     RequestFailure,
@@ -162,6 +170,7 @@ export function createPartyRelationshipMutation(scope: ApiScope) {
 
 export function createPartyRepresentationMutation(scope: ApiScope) {
   const client = useQueryClient()
+
   return useMutation<
     PartyRepresentation,
     RequestFailure,
@@ -175,6 +184,7 @@ export function createPartyRepresentationMutation(scope: ApiScope) {
 
 export function setPartyRepresentationActiveMutation(scope: ApiScope) {
   const client = useQueryClient()
+
   return useMutation<
     PartyRepresentation,
     RequestFailure,

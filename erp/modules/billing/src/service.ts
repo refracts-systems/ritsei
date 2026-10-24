@@ -20,7 +20,7 @@ import type { Principal as PrincipalSchema } from "../../../../framework/modules
 import { ApprovalService } from "../../../../framework/modules/approvals/mod.ts"
 import {
   AuthorizationService,
-  makeScopedCommand,
+  scopedCommand,
 } from "../../../../framework/modules/authorization/mod.ts"
 import { NumberingService } from "../../../../framework/modules/numbering/mod.ts"
 import { GeneralLedgerService, type LedgerLineInput } from "../../accounting/mod.ts"
@@ -58,6 +58,7 @@ import {
 } from "./errors.ts"
 
 type Principal = Schema.Schema.Type<typeof PrincipalSchema>
+
 type LedgerLine = Schema.Schema.Type<typeof LedgerLineInput>
 
 const minor = (value: string) => requireExactMajorToMinor(value, 2)
@@ -111,11 +112,13 @@ export type DraftDocument = {
 }
 
 type MatchingLine = PurchaseMatchingType["lines"][number]
+
 type RequestedBillLine = {
   readonly purchaseOrderLineId: string
   readonly quantity: string
   readonly unitPrice: string
 }
+
 type BillMatch = {
   readonly matched: ReadonlyArray<{
     readonly line: MatchingLine
@@ -143,31 +146,40 @@ const matchBill = (
   credited: ReadonlyMap<string, bigint>,
 ): BillMatch | { readonly unknownLineId: string } => {
   const byLine = new Map(orderLines.map((line) => [line.purchaseOrderLineId, line]))
+
   const match = {
-    matched: [] as BillMatch["matched"][number][],
+    matched: new Array<BillMatch["matched"][number]>(),
     excessValue: 0n,
-    excess: [] as BillMatch["excess"][number][],
+    excess: new Array<BillMatch["excess"][number]>(),
   }
+
   for (const requested of requestedLines) {
     const line = byLine.get(requested.purchaseOrderLineId)
+
     if (line === undefined) return { unknownLineId: requested.purchaseOrderLineId }
+
     const netBilled =
       (billed.get(line.purchaseOrderLineId) ?? 0n) - (credited.get(line.purchaseOrderLineId) ?? 0n)
+
     const billable = BigInt(line.received) - BigInt(line.returned) - netBilled
     const quantity = BigInt(requested.quantity)
     const matched = quantity < billable ? quantity : billable > 0n ? billable : 0n
+
     if (quantity > matched) {
       match.excess.push({ lineId: line.purchaseOrderLineId, billable, requested: quantity })
       match.excessValue += (quantity - matched) * minor(requested.unitPrice)
     }
+
     match.matched.push({ line, requested, matchedValue: matched * minor(line.unitPrice) })
   }
+
   return match
 }
 
 /** Goods received not invoiced clears at the purchase price; the rest posts as price variance. */
 const supplierBillJournal: DraftDocument["journal"] = ({ subtotal, taxTotal, total, matched }) => {
   const variance = minor(subtotal) - minor(matched)
+
   return [
     { role: "goods_received_not_invoiced", debit: matched, credit: "0" },
     variance >= 0n
@@ -189,9 +201,11 @@ const creditJournal =
         { role: "receivable", debit: "0", credit: total },
       ]
     }
+
     // Mirror the bill: goods received not invoiced returns at its cleared value, and the price
     // variance the bill booked reverses.
     const variance = minor(subtotal) - minor(matched)
+
     return [
       { role: "payable", debit: total, credit: "0" },
       { role: "goods_received_not_invoiced", debit: "0", credit: matched },
@@ -216,6 +230,7 @@ const creditShare = (
   const total = BigInt(line.quantity)
   const done = credited.get(line.id) ?? 0n
   const returned = creditedMatched.get(line.id) ?? 0n
+
   return done + quantity === total
     ? matched - returned
     : (matched * quantity * 2n + total) / (total * 2n)
@@ -232,13 +247,17 @@ const creditLinesFor = (
   | { readonly invoiceLineId: string; readonly available: bigint } => {
   const byId = new Map(invoice.lines.map((line) => [line.id, line]))
   const lines: DraftLine[] = []
+
   for (const request of requested) {
     const line = byId.get(request.invoiceLineId)
+
     const available =
       line === undefined ? 0n : BigInt(line.quantity) - (credited.get(line.id) ?? 0n)
+
     if (line === undefined || BigInt(request.quantity) > available) {
       return { invoiceLineId: request.invoiceLineId, available }
     }
+
     lines.push({
       productId: line.productId,
       description: line.description,
@@ -249,13 +268,14 @@ const creditLinesFor = (
       matchedValue: major(creditShare(line, BigInt(request.quantity), credited, creditedMatched)),
     })
   }
+
   return { lines }
 }
 
 export const makeBillingService = Effect.gen(function* () {
   const database = yield* Database
   const authorization = yield* AuthorizationService
-  const authorized = makeScopedCommand(authorization)
+  const authorized = scopedCommand(authorization)
   const ledger = yield* GeneralLedgerService
   const numbering = yield* NumberingService
   const tax = yield* TaxService
@@ -271,19 +291,26 @@ export const makeBillingService = Effect.gen(function* () {
           .select()
           .from(invoices)
           .where(and(eq(invoices.tenantId, tenantId), eq(invoices.id, invoiceId)))
+
         const header = (await (lock ? query.for("update") : query))[0]
+
         if (header === undefined) return undefined
+
         const lines = await tx
           .select()
           .from(invoiceLines)
           .where(and(eq(invoiceLines.tenantId, tenantId), eq(invoiceLines.invoiceId, invoiceId)))
           .orderBy(asc(invoiceLines.id))
+
         return { header, lines }
       }, "billing.document.load")
+
       if (loaded === undefined) {
         return yield* Effect.fail(new BillingDocumentNotFound({ tenantId, invoiceId }))
       }
+
       const { header, lines } = loaded
+
       return {
         id: header.id,
         tenantId: header.tenantId,
@@ -318,7 +345,7 @@ export const makeBillingService = Effect.gen(function* () {
 
   const existing = (tenantId: string, invoiceId: string) =>
     loadDocument(tenantId, invoiceId).pipe(
-      Effect.map((document) => document as BillingDocument | undefined),
+      Effect.map((document): BillingDocument | undefined => document),
       Effect.catchTag("BillingDocumentNotFound", () => Effect.succeed(undefined)),
     )
 
@@ -394,11 +421,13 @@ export const makeBillingService = Effect.gen(function* () {
   const post = (draft: DraftDocument) =>
     Effect.gen(function* () {
       const direction = sideOf(draft.kind) === "receivable" ? "sales" : "purchase"
+
       const priced = draft.lines.map((line, index) => ({
         ...line,
         key: String(index),
         netAmount: major(minor(line.unitPrice) * BigInt(line.quantity)),
       }))
+
       const computed = yield* tax.computeTax({
         principal: draft.principal,
         tenantId: draft.tenantId,
@@ -409,11 +438,13 @@ export const makeBillingService = Effect.gen(function* () {
           taxCodeId: line.taxCodeId,
         })),
       })
+
       const taxByKey = new Map(computed.lines.map((line) => [line.key, line.tax]))
       const subtotal = major(priced.reduce((sum, line) => sum + minor(line.netAmount), 0n))
       const taxTotal = computed.totalTax
       const total = major(minor(subtotal) + minor(taxTotal))
       const matched = major(priced.reduce((sum, line) => sum + minor(line.matchedValue ?? "0"), 0n))
+
       const allocated = yield* numbering
         .allocate({
           tenantId: draft.tenantId,
@@ -424,6 +455,7 @@ export const makeBillingService = Effect.gen(function* () {
           prefix: prefixes[draft.kind],
         })
         .pipe(Effect.catchTag("SchemaError", (error) => Effect.die(error)))
+
       const journal = yield* ledger.postDocumentEntry({
         principal: draft.principal,
         tenantId: draft.tenantId,
@@ -436,6 +468,7 @@ export const makeBillingService = Effect.gen(function* () {
           .journal({ subtotal, taxTotal, total, matched })
           .filter((line) => minor(line.debit) > 0n || minor(line.credit) > 0n),
       })
+
       yield* database.transaction(async (tx) => {
         await tx.insert(invoices).values({
           id: draft.invoiceId,
@@ -471,6 +504,7 @@ export const makeBillingService = Effect.gen(function* () {
           })),
         )
       }, "billing.document.insert")
+
       return yield* loadDocument(draft.tenantId, draft.invoiceId).pipe(
         Effect.catchTag("BillingDocumentNotFound", (error) => Effect.die(error)),
       )
@@ -489,6 +523,7 @@ export const makeBillingService = Effect.gen(function* () {
   ) =>
     Effect.gen(function* () {
       const document = yield* loadDocument(tenantId, invoiceId, true)
+
       const prior = (yield* database.query(
         (db) =>
           db
@@ -504,12 +539,15 @@ export const makeBillingService = Effect.gen(function* () {
             ),
         "billing.settlement.lookup",
       ))[0]
+
       if (prior !== undefined) {
         if (minor(prior.amount) === amount) return document
+
         return yield* Effect.fail(
           new SettlementConflict({ tenantId, invoiceId, sourceId: source.id }),
         )
       }
+
       if (amount > minor(document.openAmount)) {
         return yield* Effect.fail(
           new SettlementExceedsOpenAmount({
@@ -520,6 +558,7 @@ export const makeBillingService = Effect.gen(function* () {
           }),
         )
       }
+
       const openAmount = major(minor(document.openAmount) - amount)
       yield* database.transaction(async (tx) => {
         await tx.insert(invoiceSettlements).values({
@@ -535,28 +574,34 @@ export const makeBillingService = Effect.gen(function* () {
           .set({ openAmount })
           .where(and(eq(invoices.tenantId, tenantId), eq(invoices.id, invoiceId)))
       }, "billing.settlement.apply")
+
       return { ...document, openAmount }
     })
 
   const invoiceSalesOrder = Effect.fn("BillingService.invoiceSalesOrder")(function* (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof InvoiceSalesOrderInput>,
   ) {
     const decoded = yield* authorized(
       InvoiceSalesOrderInput,
       BillingCapabilities.customerInvoiceCreate,
     )(input)
+
     return yield* database.withTransaction(
       Effect.gen(function* () {
         if (decoded.invoiceId !== undefined) {
           const posted = yield* existing(decoded.tenantId, decoded.invoiceId)
+
           if (posted !== undefined) return posted
         }
+
         yield* lockSource(decoded.tenantId, "sales.order", decoded.orderId)
+
         const order = yield* sales.getFulfillment({
           principal: decoded.principal,
           tenantId: decoded.tenantId,
           orderId: decoded.orderId,
         })
+
         if (order.status !== "confirmed") {
           return yield* Effect.fail(
             new SalesOrderInvalidState({
@@ -566,28 +611,35 @@ export const makeBillingService = Effect.gen(function* () {
             }),
           )
         }
+
         const invoiced = yield* billedQuantities(
           decoded.tenantId,
           "customer_invoice",
           order.lines.map((line) => line.orderLineId),
         )
+
         // Invoice policy: bill what was delivered and not yet invoiced.
         const billable = order.lines.flatMap((line) => {
           const quantity = BigInt(line.delivered) - (invoiced.get(line.orderLineId) ?? 0n)
+
           return quantity > 0n ? [{ line, quantity }] : []
         })
+
         if (billable.length === 0) {
           return yield* Effect.fail(
             new NothingToInvoice({ tenantId: decoded.tenantId, sourceId: decoded.orderId }),
           )
         }
+
         const lines: DraftLine[] = []
+
         for (const { line, quantity } of billable) {
           const product = yield* products.getProduct({
             principal: decoded.principal,
             tenantId: decoded.tenantId,
             productId: line.productId,
           })
+
           lines.push({
             productId: line.productId,
             description: `${product.code} ${product.name}`,
@@ -597,6 +649,7 @@ export const makeBillingService = Effect.gen(function* () {
             sourceLineId: line.orderLineId,
           })
         }
+
         return yield* post({
           principal: decoded.principal,
           tenantId: decoded.tenantId,
@@ -624,6 +677,7 @@ export const makeBillingService = Effect.gen(function* () {
   /** Supplier-credited quantity per purchase order line, through the bill lines it credits. */
   const creditedPurchaseQuantities = (tenantId: string, purchaseOrderLineIds: string[]) => {
     const billLines = alias(invoiceLines, "bill_lines")
+
     return purchaseOrderLineIds.length === 0
       ? Effect.succeed(new Map<string, bigint>())
       : database
@@ -671,13 +725,16 @@ export const makeBillingService = Effect.gen(function* () {
   ) =>
     Effect.gen(function* () {
       if (match.excess.length === 0) return
+
       const approval = yield* approvals.getForSubject({
         ...scope,
         subjectType: BillVarianceSubject,
         subjectId: billId,
       })
+
       if (approval?.status === "approved" && minor(approval.amount) >= match.excessValue) return
       const first = match.excess[0]!
+
       return yield* Effect.fail(
         new BillExceedsReceipt({
           tenantId: scope.tenantId,
@@ -689,26 +746,31 @@ export const makeBillingService = Effect.gen(function* () {
     })
 
   const billPurchaseOrder = Effect.fn("BillingService.billPurchaseOrder")(function* (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof BillPurchaseOrderInput>,
   ) {
     const decoded = yield* authorized(
       BillPurchaseOrderInput,
       BillingCapabilities.supplierBillCreate,
     )(input)
+
     const scope = { principal: decoded.principal, tenantId: decoded.tenantId }
+
     return yield* database.withTransaction(
       Effect.gen(function* () {
         const posted =
           decoded.billId === undefined
             ? undefined
             : yield* existing(decoded.tenantId, decoded.billId)
+
         if (posted !== undefined) return posted
         const billId = decoded.billId ?? uuidv7()
         yield* lockSource(decoded.tenantId, "procurement.purchase_order", decoded.purchaseOrderId)
+
         const matching = yield* purchasing.getMatching({
           ...scope,
           purchaseOrderId: decoded.purchaseOrderId,
         })
+
         if (matching.status !== "confirmed") {
           return yield* Effect.fail(
             new PurchaseOrderInvalidState({
@@ -718,13 +780,16 @@ export const makeBillingService = Effect.gen(function* () {
             }),
           )
         }
+
         const lineIds = matching.lines.map((line) => line.purchaseOrderLineId)
+
         const match = matchBill(
           decoded.lines,
           matching.lines,
           yield* billedQuantities(decoded.tenantId, "supplier_bill", lineIds),
           yield* creditedPurchaseQuantities(decoded.tenantId, lineIds),
         )
+
         if ("unknownLineId" in match) {
           return yield* Effect.fail(
             new BillExceedsReceipt({
@@ -735,8 +800,10 @@ export const makeBillingService = Effect.gen(function* () {
             }),
           )
         }
+
         yield* requireVariance(scope, billId, match)
         const lines: DraftLine[] = []
+
         for (const { line, requested, matchedValue } of match.matched) {
           const product = yield* products.getProduct({ ...scope, productId: line.productId })
           lines.push({
@@ -749,6 +816,7 @@ export const makeBillingService = Effect.gen(function* () {
             matchedValue: major(matchedValue),
           })
         }
+
         return yield* post({
           principal: decoded.principal,
           tenantId: decoded.tenantId,
@@ -776,11 +844,14 @@ export const makeBillingService = Effect.gen(function* () {
         minor(invoice.openAmount) < minor(creditNote.total)
           ? minor(invoice.openAmount)
           : minor(creditNote.total)
+
       if (applied === 0n) return creditNote
       // The applied amount never exceeds either open amount, so settlement cannot fail here.
-      const impossible = (error: unknown) => Effect.die(error)
+      const impossible = (error: Parameters<typeof Effect.die>[0]) => Effect.die(error)
+
       const guarded = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
         effect.pipe(Effect.catch(impossible))
+
       yield* guarded(
         settle(
           invoice.tenantId,
@@ -790,6 +861,7 @@ export const makeBillingService = Effect.gen(function* () {
           creditNote.invoiceDate,
         ),
       )
+
       return yield* guarded(
         settle(
           invoice.tenantId,
@@ -801,19 +873,24 @@ export const makeBillingService = Effect.gen(function* () {
       )
     })
 
-  const creditInvoice = Effect.fn("BillingService.creditInvoice")(function* (input: unknown) {
+  const creditInvoice = Effect.fn("BillingService.creditInvoice")(function* (
+    input: Schema.Codec.Encoded<typeof CreditInvoiceInput>,
+  ) {
     const decoded = yield* authorized(
       CreditInvoiceInput,
       BillingCapabilities.creditNoteCreate,
     )(input)
+
     return yield* database.withTransaction(
       Effect.gen(function* () {
         const posted =
           decoded.creditNoteId === undefined
             ? undefined
             : yield* existing(decoded.tenantId, decoded.creditNoteId)
+
         if (posted !== undefined) return posted
         const invoice = yield* loadDocument(decoded.tenantId, decoded.invoiceId, true)
+
         if (isCreditNote(invoice.kind)) {
           return yield* Effect.fail(
             new BillingDocumentNotFound({
@@ -822,19 +899,24 @@ export const makeBillingService = Effect.gen(function* () {
             }),
           )
         }
+
         const receivable = invoice.kind === "customer_invoice"
         const creditKind: InvoiceKind = receivable ? "customer_credit_note" : "supplier_credit_note"
+
         const credited = yield* billedQuantities(
           decoded.tenantId,
           creditKind,
           invoice.lines.map((line) => line.id),
         )
+
         const creditedMatched = yield* billedMatchedValues(
           decoded.tenantId,
           creditKind,
           invoice.lines.map((line) => line.id),
         )
+
         const built = creditLinesFor(invoice, decoded.lines, credited, creditedMatched)
+
         if (!("lines" in built)) {
           return yield* Effect.fail(
             new CreditExceedsInvoice({
@@ -844,6 +926,7 @@ export const makeBillingService = Effect.gen(function* () {
             }),
           )
         }
+
         const creditNote = yield* post({
           principal: decoded.principal,
           tenantId: decoded.tenantId,
@@ -859,17 +942,21 @@ export const makeBillingService = Effect.gen(function* () {
           lines: built.lines,
           journal: creditJournal(receivable),
         })
+
         return yield* applyCredit(invoice, creditNote)
       }),
       "billing.credit_note.atomic",
     )
   })
 
-  const applySettlement = Effect.fn("BillingService.applySettlement")(function* (input: unknown) {
+  const applySettlement = Effect.fn("BillingService.applySettlement")(function* (
+    input: Schema.Codec.Encoded<typeof ApplySettlementInput>,
+  ) {
     const decoded = yield* authorized(
       ApplySettlementInput,
       BillingCapabilities.settlementApply,
     )(input)
+
     return yield* database.withTransaction(
       settle(
         decoded.tenantId,
@@ -882,19 +969,25 @@ export const makeBillingService = Effect.gen(function* () {
     )
   })
 
-  const getDocument = Effect.fn("BillingService.getDocument")(function* (input: unknown) {
+  const getDocument = Effect.fn("BillingService.getDocument")(function* (
+    input: Schema.Codec.Encoded<typeof GetBillingDocumentInput>,
+  ) {
     const decoded = yield* authorized(
       GetBillingDocumentInput,
       BillingCapabilities.documentRead,
     )(input)
+
     return yield* loadDocument(decoded.tenantId, decoded.invoiceId)
   })
 
-  const listDocuments = Effect.fn("BillingService.listDocuments")(function* (input: unknown) {
+  const listDocuments = Effect.fn("BillingService.listDocuments")(function* (
+    input: Schema.Codec.Encoded<typeof ListBillingDocumentsInput>,
+  ) {
     const decoded = yield* authorized(
       ListBillingDocumentsInput,
       BillingCapabilities.documentRead,
     )(input)
+
     const rows = yield* database.query(
       (db) =>
         db
@@ -915,13 +1008,17 @@ export const makeBillingService = Effect.gen(function* () {
           .limit(500),
       "billing.document.list",
     )
+
     return yield* Effect.forEach(rows, (row) => loadDocument(decoded.tenantId, row.id)).pipe(
       Effect.catchTag("BillingDocumentNotFound", (error) => Effect.die(error)),
     )
   })
 
-  const listOpenItems = Effect.fn("BillingService.listOpenItems")(function* (input: unknown) {
+  const listOpenItems = Effect.fn("BillingService.listOpenItems")(function* (
+    input: Schema.Codec.Encoded<typeof ListOpenItemsInput>,
+  ) {
     const decoded = yield* authorized(ListOpenItemsInput, BillingCapabilities.documentRead)(input)
+
     // The open amount on the as-of date: the total less what was settled by then.
     const openAsOf = sql<string>`${invoices.total} - coalesce((
       select sum(${invoiceSettlements.amount}) from ${invoiceSettlements}
@@ -929,6 +1026,7 @@ export const makeBillingService = Effect.gen(function* () {
         and ${invoiceSettlements.invoiceId} = ${invoices.id}
         and ${invoiceSettlements.settledOn} <= ${decoded.asOf}
     ), 0)`
+
     const rows = yield* database.query(
       (db) =>
         db
@@ -955,6 +1053,7 @@ export const makeBillingService = Effect.gen(function* () {
           .orderBy(asc(invoices.invoiceDate), asc(invoices.number)),
       "billing.open_items",
     )
+
     return rows.map((row) => ({
       ...row,
       total: normalize(row.total),

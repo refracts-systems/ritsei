@@ -3,6 +3,7 @@ import * as Clock from "effect/Clock"
 import * as Effect from "effect/Effect"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
+import * as Data from "effect/Data"
 
 import { jobFenceScopes, processJobs, workflowRuns } from "../../../../db/schema/process.ts"
 import {
@@ -14,6 +15,7 @@ import {
   isDatabaseConstraint,
   requireExactMajorToMinor,
   uuidv7,
+  canonicalize,
 } from "../../../../framework/foundation/mod.ts"
 import {
   AccountingCapabilities,
@@ -153,27 +155,33 @@ const cancellationWorkflowType = ProcessWorkflowTypes.cancellation
 const fulfillmentWorkflowType = ProcessWorkflowTypes.fulfillment
 
 const withProcessOperationNames = (service: ProcessService): ProcessService => ({
-  confirmOrder: Effect.fn("ProcessService.confirmOrder")((input: unknown) =>
-    service.confirmOrder(input),
+  confirmOrder: Effect.fn("ProcessService.confirmOrder")(
+    (input: Parameters<typeof service.confirmOrder>[0]) => service.confirmOrder(input),
   ),
-  cancelOrder: Effect.fn("ProcessService.cancelOrder")((input: unknown) =>
-    service.cancelOrder(input),
+  cancelOrder: Effect.fn("ProcessService.cancelOrder")(
+    (input: Parameters<typeof service.cancelOrder>[0]) => service.cancelOrder(input),
   ),
-  fulfillOrder: Effect.fn("ProcessService.fulfillOrder")((input: unknown) =>
-    service.fulfillOrder(input),
+  fulfillOrder: Effect.fn("ProcessService.fulfillOrder")(
+    (input: Parameters<typeof service.fulfillOrder>[0]) => service.fulfillOrder(input),
   ),
-  recoverOrder: Effect.fn("ProcessService.recoverOrder")((input: unknown) =>
-    service.recoverOrder(input),
+  recoverOrder: Effect.fn("ProcessService.recoverOrder")(
+    (input: Parameters<typeof service.recoverOrder>[0]) => service.recoverOrder(input),
   ),
-  markManualRecovery: Effect.fn("ProcessService.markManualRecovery")((input: unknown) =>
-    service.markManualRecovery(input),
+  markManualRecovery: Effect.fn("ProcessService.markManualRecovery")(
+    (input: Parameters<typeof service.markManualRecovery>[0]) => service.markManualRecovery(input),
   ),
-  claimJob: Effect.fn("ProcessService.claimJob")((input: unknown) => service.claimJob(input)),
-  renewJob: Effect.fn("ProcessService.renewJob")((input: unknown) => service.renewJob(input)),
-  completeJob: Effect.fn("ProcessService.completeJob")((input: unknown) =>
-    service.completeJob(input),
+  claimJob: Effect.fn("ProcessService.claimJob")((input: Parameters<typeof service.claimJob>[0]) =>
+    service.claimJob(input),
   ),
-  failJob: Effect.fn("ProcessService.failJob")((input: unknown) => service.failJob(input)),
+  renewJob: Effect.fn("ProcessService.renewJob")((input: Parameters<typeof service.renewJob>[0]) =>
+    service.renewJob(input),
+  ),
+  completeJob: Effect.fn("ProcessService.completeJob")(
+    (input: Parameters<typeof service.completeJob>[0]) => service.completeJob(input),
+  ),
+  failJob: Effect.fn("ProcessService.failJob")((input: Parameters<typeof service.failJob>[0]) =>
+    service.failJob(input),
+  ),
 })
 
 const defaultFenceScope = (tenantId: string, jobType: string, idempotencyKey: string) =>
@@ -181,14 +189,17 @@ const defaultFenceScope = (tenantId: string, jobType: string, idempotencyKey: st
 
 export const makeProcessJobEnqueuer = Effect.gen(function* () {
   const database = yield* Database
+
   return {
     enqueue: (input) =>
       Effect.gen(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(DurableJobInput)(input)
         const payload = yield* Schema.decodeUnknownEffect(Schema.Json)(decoded.payload)
         const jobType = yield* Schema.decodeUnknownEffect(ProcessJobType)(decoded.jobType)
+
         const fenceScope =
           decoded.fenceScope ?? defaultFenceScope(decoded.tenantId, jobType, decoded.idempotencyKey)
+
         const existingRows = yield* database.query(
           (db) =>
             db
@@ -213,7 +224,9 @@ export const makeProcessJobEnqueuer = Effect.gen(function* () {
               .for("update"),
           "process.job.enqueue.lookup",
         )
+
         const existing = existingRows[0]
+
         if (existing !== undefined) {
           if (decoded.fenceScope !== null && existing.fenceScope !== fenceScope) {
             return yield* Effect.fail(
@@ -223,7 +236,9 @@ export const makeProcessJobEnqueuer = Effect.gen(function* () {
               }),
             )
           }
+
           const existingPayload = yield* Schema.decodeUnknownEffect(Schema.Json)(existing.payload)
+
           return {
             jobId: existing.id,
             tenantId: existing.tenantId,
@@ -235,6 +250,7 @@ export const makeProcessJobEnqueuer = Effect.gen(function* () {
             correlationId: existing.correlationId,
           } satisfies DurableJob
         }
+
         const [row] = yield* database.query(
           (db) =>
             db
@@ -260,7 +276,9 @@ export const makeProcessJobEnqueuer = Effect.gen(function* () {
               }),
           "process.job.enqueue",
         )
+
         const rowPayload = yield* Schema.decodeUnknownEffect(Schema.Json)(row!.payload)
+
         return {
           jobId: row!.id,
           tenantId: row!.tenantId,
@@ -307,13 +325,14 @@ const toProcessJob = (row: {
   readonly leaseOwner: string | null
   readonly leaseToken: string | null
   readonly attempts: number
-  readonly payload: unknown
+  readonly payload: Schema.Json
   readonly correlationId: string
 }) => ({
   jobId: row.id,
   tenantId: row.tenantId,
   fenceScope: row.fenceScope,
   leaseGeneration: row.leaseGeneration,
+  // SAFETY: job types are written only by ProcessService from ProcessJob["jobType"].
   jobType: row.jobType as ProcessJob["jobType"],
   idempotencyKey: row.idempotencyKey,
   priority: row.priority,
@@ -347,8 +366,8 @@ type WorkflowRunRow = {
   readonly idempotencyKey: string
   readonly aggregateId: string
   readonly status: WorkflowRun["status"]
-  readonly payload: unknown
-  readonly result: unknown
+  readonly payload: Schema.Json
+  readonly result: Schema.Json | null
   readonly recoveryReason: string | null
   readonly completedAt: Date | null
 }
@@ -374,19 +393,7 @@ const businessPayload = (input: Schema.Schema.Type<typeof ConfirmOrderConfirmati
   idempotencyKey: input.idempotencyKey,
 })
 
-const canonicalize = (value: unknown): unknown => {
-  if (Array.isArray(value)) return value.map(canonicalize)
-  if (typeof value === "object" && value !== null) {
-    return Object.fromEntries(
-      Object.entries(value)
-        .toSorted(([a], [b]) => a.localeCompare(b))
-        .map(([key, entry]) => [key, canonicalize(entry)]),
-    )
-  }
-  return value
-}
-
-const payloadMatches = (stored: unknown, current: unknown) =>
+const payloadMatches = (stored: Schema.Json, current: Schema.Json) =>
   JSON.stringify(canonicalize(stored)) === JSON.stringify(canonicalize(current))
 
 const lifecyclePayload = (
@@ -410,9 +417,11 @@ const journalLinesAreInverse = (source: JournalEntry, reversal: JournalEntry) =>
   const reversalLines = reversal.lines
     .map((line) => `${line.accountId}:${moneyToMinor(line.debit)}:${moneyToMinor(line.credit)}`)
     .toSorted()
+
   const expectedReversalLines = source.lines
     .map((line) => `${line.accountId}:${moneyToMinor(line.credit)}:${moneyToMinor(line.debit)}`)
     .toSorted()
+
   return (
     source.lines.length === reversalLines.length &&
     JSON.stringify(reversalLines) === JSON.stringify(expectedReversalLines)
@@ -426,14 +435,18 @@ const confirmationResultMatches = (
   const expectedLines = result.order.lines
     .map((line) => `${line.itemId}:${line.quantity}`)
     .toSorted()
+
   const actualLines = result.reservations
     .map((reservation) => `${reservation.itemId}:${reservation.quantity}`)
     .toSorted()
+
   const reservationIds = new Set(result.reservations.map(({ id }) => id))
+
   const orderTotal = result.order.lines.reduce(
     (total, line) => total + BigInt(line.quantity) * moneyToMinor(line.unitPrice),
     0n,
   )
+
   return (
     result.order.status === "confirmed" &&
     result.order.confirmedAt !== null &&
@@ -472,6 +485,92 @@ const orderFactsMatch = (expected: SalesOrder, actual: SalesOrder) =>
   expected.total === actual.total &&
   JSON.stringify(canonicalize(expected.lines)) === JSON.stringify(canonicalize(actual.lines))
 
+export type FailJobOutcome = Data.TaggedEnum<{
+  NotFound: {}
+  LeaseLost: {}
+  Failed: {
+    readonly row: {
+      id: string
+      tenantId: string
+      fenceScope: string
+      leaseGeneration: string
+      jobType: string
+      idempotencyKey: string
+      priority: number
+      status: "manual_recovery" | "completed" | "failed" | "pending" | "leased"
+      scheduledAt: Date
+      leaseUntil: Date | null
+      leaseOwner: string | null
+      leaseToken: string | null
+      attempts: number
+      payload: Schema.Json
+      correlationId: string
+    }
+  }
+}>
+
+export const FailJobOutcome = Data.taggedEnum<FailJobOutcome>()
+
+export type CompleteJobOutcome = Data.TaggedEnum<{
+  NotFound: {}
+  LeaseLost: {}
+  Completed: {
+    readonly row: {
+      id: string
+      tenantId: string
+      fenceScope: string
+      leaseGeneration: string
+      jobType: string
+      idempotencyKey: string
+      priority: number
+      status: "manual_recovery" | "completed" | "failed" | "pending" | "leased"
+      scheduledAt: Date
+      leaseUntil: Date | null
+      leaseOwner: string | null
+      leaseToken: string | null
+      attempts: number
+      payload: Schema.Json
+      correlationId: string
+    }
+  }
+}>
+
+export const CompleteJobOutcome = Data.taggedEnum<CompleteJobOutcome>()
+
+export type RenewJobOutcome = Data.TaggedEnum<{
+  NotFound: {}
+  LeaseLost: {}
+  Updated: {
+    readonly row: {
+      id: string
+      tenantId: string
+      fenceScope: string
+      leaseGeneration: string
+      jobType: string
+      idempotencyKey: string
+      priority: number
+      status: "manual_recovery" | "completed" | "failed" | "pending" | "leased"
+      scheduledAt: Date
+      leaseUntil: Date | null
+      leaseOwner: string | null
+      leaseToken: string | null
+      attempts: number
+      payload: Schema.Json
+      correlationId: string
+    }
+  }
+}>
+
+export const RenewJobOutcome = Data.taggedEnum<RenewJobOutcome>()
+
+export type MarkManualRecoveryOutcome = Data.TaggedEnum<{
+  NotFound: {}
+  Completed: {}
+  Updated: { readonly run: ReturnType<typeof toWorkflowRun> }
+}>
+
+export const MarkManualRecoveryOutcome = Data.taggedEnum<MarkManualRecoveryOutcome>()
+
 export const makeProcessService = Effect.gen(function* () {
   const database = yield* Database
   const authorization = yield* AuthorizationService
@@ -481,6 +580,7 @@ export const makeProcessService = Effect.gen(function* () {
   const messaging = yield* MessagingService
   const clock = yield* Clock.Clock
   const now = () => new Date(clock.currentTimeMillisUnsafe())
+
   const processJobMatches = (
     result: {
       readonly eventId: string
@@ -512,6 +612,7 @@ export const makeProcessService = Effect.gen(function* () {
             .where(and(eq(processJobs.id, result.jobId), eq(processJobs.tenantId, input.tenantId))),
         "process.workflow.job.replay.lookup",
       )
+
       if (
         job === undefined ||
         job.tenantId !== input.tenantId ||
@@ -521,6 +622,7 @@ export const makeProcessService = Effect.gen(function* () {
         job.correlationId !== input.correlationId
       )
         return false
+
       const jobPayload = yield* Schema.decodeUnknownEffect(ProcessPostCommitJobPayload)(
         job.payload,
       ).pipe(
@@ -532,6 +634,7 @@ export const makeProcessService = Effect.gen(function* () {
             }),
         ),
       )
+
       return (
         jobPayload.eventId === result.eventId &&
         jobPayload.workflowRunId === result.workflowRunId &&
@@ -557,7 +660,7 @@ export const makeProcessService = Effect.gen(function* () {
       readonly eventVersion: number
       readonly aggregateType: string
       readonly aggregateId: string
-      readonly payload: (result: A) => unknown
+      readonly payload: (result: A) => Schema.Json
     },
   ) =>
     Effect.gen(function* () {
@@ -565,6 +668,7 @@ export const makeProcessService = Effect.gen(function* () {
         tenantId: input.tenantId,
         eventId: result.eventId,
       })
+
       return (
         event !== undefined &&
         event.eventType === expected.eventType &&
@@ -585,7 +689,7 @@ export const makeProcessService = Effect.gen(function* () {
   const resolveExisting = (
     row: WorkflowRunRow,
     input: Schema.Schema.Type<typeof ConfirmOrderConfirmationInput>,
-    payload: unknown,
+    payload: Schema.Json,
   ): Effect.Effect<OrderConfirmationResult, OrderConfirmationFailure> =>
     Effect.gen(function* () {
       yield* authorization.authorize({
@@ -608,6 +712,7 @@ export const makeProcessService = Effect.gen(function* () {
         tenantId: input.tenantId,
         capability: AccountingCapabilities.revenuePost,
       })
+
       if (!payloadMatches(row.payload, payload)) {
         return yield* Effect.fail(
           new WorkflowIdempotencyConflict({
@@ -616,6 +721,7 @@ export const makeProcessService = Effect.gen(function* () {
           }),
         )
       }
+
       if (row.status === "manual_recovery") {
         return yield* Effect.fail(
           new WorkflowManualRecoveryRequired({
@@ -625,6 +731,7 @@ export const makeProcessService = Effect.gen(function* () {
           }),
         )
       }
+
       if (row.status !== "succeeded" || row.result === null) {
         return yield* Effect.fail(
           new WorkflowAlreadyInProgress({
@@ -633,6 +740,7 @@ export const makeProcessService = Effect.gen(function* () {
           }),
         )
       }
+
       const result = yield* Schema.decodeUnknownEffect(OrderConfirmationResult)(row.result).pipe(
         Effect.mapError(
           () =>
@@ -642,6 +750,7 @@ export const makeProcessService = Effect.gen(function* () {
             }),
         ),
       )
+
       if (result.workflowRunId !== row.id) {
         return yield* Effect.fail(
           new WorkflowResultCorrupt({
@@ -650,11 +759,13 @@ export const makeProcessService = Effect.gen(function* () {
           }),
         )
       }
+
       const jobMatches = yield* processJobMatches(
         result,
         input,
         ProcessPostCommitJobTypes.confirmation,
       )
+
       const eventMatches = yield* processEventMatches(result, input, {
         eventType: ProcessOrderConfirmationCompletedEvent.id,
         eventVersion: ProcessOrderConfirmationCompletedEvent.version,
@@ -667,6 +778,7 @@ export const makeProcessService = Effect.gen(function* () {
           journalId: confirmed.journal.id,
         }),
       })
+
       if (
         row.tenantId !== input.tenantId ||
         row.aggregateId !== input.orderId ||
@@ -684,12 +796,13 @@ export const makeProcessService = Effect.gen(function* () {
           }),
         )
       }
+
       return result
     })
 
   const loadExistingAfterConflict = (
     input: Schema.Schema.Type<typeof ConfirmOrderConfirmationInput>,
-    payload: unknown,
+    payload: Schema.Json,
   ) =>
     Effect.gen(function* () {
       const rows = yield* database.query(
@@ -706,7 +819,9 @@ export const makeProcessService = Effect.gen(function* () {
             ),
         "process.workflow.run.lookup",
       )
+
       const row = rows[0]
+
       if (row === undefined) {
         return yield* Effect.fail(
           new WorkflowAlreadyInProgress({
@@ -715,6 +830,7 @@ export const makeProcessService = Effect.gen(function* () {
           }),
         )
       }
+
       return yield* resolveExisting(row, input, payload)
     })
 
@@ -736,19 +852,25 @@ export const makeProcessService = Effect.gen(function* () {
             .for("update"),
         "process.order-confirmation.lock",
       )
+
       if (rows.length === 0) {
         return yield* Effect.fail(new OrderConfirmationNotFound({ tenantId, orderId }))
       }
+
       if (rows.length !== 1) {
         return yield* Effect.fail(new OrderConfirmationCorrupt({ tenantId, orderId }))
       }
+
       const row = rows[0]!
+
       const payload = yield* Schema.decodeUnknownEffect(OrderConfirmationPayload)(row.payload).pipe(
         Effect.mapError(() => new OrderConfirmationCorrupt({ tenantId, orderId })),
       )
+
       const result = yield* Schema.decodeUnknownEffect(OrderConfirmationResult)(row.result).pipe(
         Effect.mapError(() => new OrderConfirmationCorrupt({ tenantId, orderId })),
       )
+
       if (
         row.tenantId !== tenantId ||
         row.aggregateId !== orderId ||
@@ -767,6 +889,7 @@ export const makeProcessService = Effect.gen(function* () {
       ) {
         return yield* Effect.fail(new OrderConfirmationCorrupt({ tenantId, orderId }))
       }
+
       const confirmationInput = {
         tenantId,
         commandId: payload.commandId,
@@ -774,11 +897,13 @@ export const makeProcessService = Effect.gen(function* () {
         causationId: payload.causationId,
         idempotencyKey: payload.idempotencyKey,
       }
+
       const jobMatches = yield* processJobMatches(
         result,
         confirmationInput,
         ProcessPostCommitJobTypes.confirmation,
       )
+
       const eventMatches = yield* processEventMatches(result, confirmationInput, {
         eventType: ProcessOrderConfirmationCompletedEvent.id,
         eventVersion: ProcessOrderConfirmationCompletedEvent.version,
@@ -791,9 +916,11 @@ export const makeProcessService = Effect.gen(function* () {
           journalId: confirmed.journal.id,
         }),
       })
+
       if (!jobMatches || !eventMatches) {
         return yield* Effect.fail(new OrderConfirmationCorrupt({ tenantId, orderId }))
       }
+
       return { payload, result }
     })
 
@@ -805,12 +932,14 @@ export const makeProcessService = Effect.gen(function* () {
     const expectedById = new Map(expected.map((reservation) => [reservation.id, reservation]))
     const expectedIds = new Set(expectedById.keys())
     const actualIds = new Set(actual.map((reservation) => reservation.id))
+
     return (
       actual.length === expected.length &&
       actualIds.size === expectedIds.size &&
       [...expectedIds].every((id) => actualIds.has(id)) &&
       actual.every((reservation) => {
         const source = expectedById.get(reservation.id)
+
         return (
           source !== undefined &&
           reservation.tenantId === source.tenantId &&
@@ -834,14 +963,14 @@ export const makeProcessService = Effect.gen(function* () {
   >(
     rows: ReadonlyArray<WorkflowRunRow>,
     input: Schema.Schema.Type<typeof CancelOrderInput>,
-    payload: unknown,
-    decodeResult: (value: unknown) => Effect.Effect<A, Schema.SchemaError>,
+    payload: Schema.Json,
+    decodeResult: (value: Schema.Json) => Effect.Effect<A, Schema.SchemaError>,
     jobType: string,
     event: {
       readonly eventType: string
       readonly eventVersion: number
       readonly aggregateType: string
-      readonly payload: (result: A) => unknown
+      readonly payload: (result: A) => Schema.Json
     },
     resultMatches: (result: A) => boolean,
   ): Effect.Effect<
@@ -854,9 +983,11 @@ export const makeProcessService = Effect.gen(function* () {
   > =>
     Effect.gen(function* () {
       if (rows.length === 0) return undefined
+
       const exact = rows.filter(
         (row) => row.aggregateId === input.orderId && row.idempotencyKey === input.idempotencyKey,
       )
+
       if (rows.length !== 1 || exact.length !== 1 || !payloadMatches(exact[0]!.payload, payload)) {
         return yield* Effect.fail(
           new WorkflowIdempotencyConflict({
@@ -865,7 +996,9 @@ export const makeProcessService = Effect.gen(function* () {
           }),
         )
       }
+
       const row = exact[0]!
+
       if (row.status === "running") {
         return yield* Effect.fail(
           new WorkflowAlreadyInProgress({
@@ -874,6 +1007,7 @@ export const makeProcessService = Effect.gen(function* () {
           }),
         )
       }
+
       if (row.status !== "succeeded" || row.result === null) {
         return yield* Effect.fail(
           new WorkflowResultCorrupt({
@@ -882,6 +1016,7 @@ export const makeProcessService = Effect.gen(function* () {
           }),
         )
       }
+
       const result = yield* decodeResult(row.result).pipe(
         Effect.mapError(
           () =>
@@ -891,11 +1026,14 @@ export const makeProcessService = Effect.gen(function* () {
             }),
         ),
       )
+
       const jobMatches = yield* processJobMatches(result, input, jobType)
+
       const eventMatches = yield* processEventMatches(result, input, {
         ...event,
         aggregateId: input.orderId,
       })
+
       if (
         result.workflowRunId !== row.id ||
         result.order.id !== input.orderId ||
@@ -911,13 +1049,15 @@ export const makeProcessService = Effect.gen(function* () {
           }),
         )
       }
+
       return result
     })
 
-  const execute = (input: unknown) =>
+  const execute = (input: Schema.Codec.Encoded<typeof ConfirmOrderConfirmationInput>) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ConfirmOrderConfirmationInput)(input)
       const payload = businessPayload(decoded)
+
       const result = yield* database
         .withTransaction(
           Effect.gen(function* () {
@@ -935,6 +1075,7 @@ export const makeProcessService = Effect.gen(function* () {
                   ),
               "process.workflow.run.lookup",
             )
+
             if (existing[0] !== undefined) {
               return yield* resolveExisting(existing[0], decoded, payload)
             }
@@ -971,6 +1112,7 @@ export const makeProcessService = Effect.gen(function* () {
               causationId: decoded.causationId,
               idempotencyKey: decoded.idempotencyKey,
             })
+
             const reservations = yield* Effect.forEach(order.lines, (line, index) =>
               inventory.reserveStock({
                 principal: decoded.principal,
@@ -982,6 +1124,7 @@ export const makeProcessService = Effect.gen(function* () {
                 idempotencyKey: `${decoded.idempotencyKey}:line:${index}`,
               }),
             )
+
             const journal = yield* accounting.postRevenueForOrder({
               principal: decoded.principal,
               tenantId: decoded.tenantId,
@@ -991,6 +1134,7 @@ export const makeProcessService = Effect.gen(function* () {
               correlationId: decoded.correlationId,
               causationId: decoded.causationId,
             })
+
             const eventPayload = yield* Schema.decodeUnknownEffect(
               OrderConfirmationCompletedEventPayload,
             )({
@@ -1024,6 +1168,7 @@ export const makeProcessService = Effect.gen(function* () {
               causationId: decoded.causationId,
               idempotencyKey: decoded.idempotencyKey,
             })
+
             const job = (yield* database.query(
               (db) =>
                 db
@@ -1049,6 +1194,7 @@ export const makeProcessService = Effect.gen(function* () {
               eventId: event.eventId,
               jobId: job.id,
             }
+
             yield* database.query(
               (db) =>
                 db
@@ -1062,6 +1208,7 @@ export const makeProcessService = Effect.gen(function* () {
                   .where(eq(workflowRuns.id, run[0]!.id)),
               "process.workflow.run.complete",
             )
+
             return result
           }),
           "process.sales.order.confirmation",
@@ -1072,6 +1219,7 @@ export const makeProcessService = Effect.gen(function* () {
         if (result.failure instanceof WorkflowRunAlreadyExists) {
           return yield* loadExistingAfterConflict(decoded, payload)
         }
+
         if (result.failure instanceof DatabaseFailure) {
           return yield* Effect.fail(
             new WorkflowOutcomeUnknown({
@@ -1080,13 +1228,15 @@ export const makeProcessService = Effect.gen(function* () {
             }),
           )
         }
+
         return yield* Effect.fail(result.failure)
       }
+
       return result.success
     })
 
   const cancelOrder = (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CancelOrderInput>,
     retry = false,
   ): Effect.Effect<OrderCancellationResult, OrderLifecycleFailure> =>
     Effect.gen(function* () {
@@ -1107,10 +1257,12 @@ export const makeProcessService = Effect.gen(function* () {
         capability: AccountingCapabilities.revenueReverse,
       })
       const payload = lifecyclePayload(decoded)
+
       const outcome = yield* database
         .withTransaction(
           Effect.gen(function* () {
             const confirmation = yield* loadConfirmation(decoded.tenantId, decoded.orderId)
+
             const existingRows = yield* database.query(
               (db) =>
                 db
@@ -1128,6 +1280,7 @@ export const makeProcessService = Effect.gen(function* () {
                   ),
               "process.order-cancellation.lookup",
             )
+
             const existing = yield* resolveLifecycleExisting(
               existingRows,
               decoded,
@@ -1165,6 +1318,7 @@ export const makeProcessService = Effect.gen(function* () {
                 result.reversalJournal.reversesEntryId === confirmation.result.journal.id &&
                 journalLinesAreInverse(confirmation.result.journal, result.reversalJournal),
             )
+
             if (existing !== undefined) {
               return existing
             }
@@ -1200,6 +1354,7 @@ export const makeProcessService = Effect.gen(function* () {
               tenantId: decoded.tenantId,
               orderId: decoded.orderId,
             })
+
             const releasedReservations = yield* Effect.forEach(
               confirmation.result.reservations.toSorted((a, b) => a.id.localeCompare(b.id)),
               (reservation) =>
@@ -1209,12 +1364,14 @@ export const makeProcessService = Effect.gen(function* () {
                   reservationId: reservation.id,
                 }),
             )
+
             const reversalJournal = yield* accounting.reverseRevenueForOrder({
               principal: decoded.principal,
               tenantId: decoded.tenantId,
               legalEntityId: confirmation.payload.legalEntityId,
               orderId: decoded.orderId,
             })
+
             const eventPayload = yield* Schema.decodeUnknownEffect(
               OrderCancellationCompletedEventPayload,
             )({
@@ -1224,6 +1381,7 @@ export const makeProcessService = Effect.gen(function* () {
               reservationIds: releasedReservations.map(({ id }) => id),
               reversalJournalId: reversalJournal.id,
             })
+
             const event = yield* messaging.append({
               eventId: uuidv7(),
               eventType: ProcessOrderCancellationCompletedEvent.id,
@@ -1239,6 +1397,7 @@ export const makeProcessService = Effect.gen(function* () {
               occurredAt: now().toISOString(),
               payload: eventPayload,
             })
+
             const jobPayload = yield* Schema.decodeUnknownEffect(ProcessPostCommitJobPayload)({
               eventId: event.eventId,
               workflowRunId: run!.id,
@@ -1247,6 +1406,7 @@ export const makeProcessService = Effect.gen(function* () {
               causationId: decoded.causationId,
               idempotencyKey: decoded.idempotencyKey,
             })
+
             const [job] = yield* database.query(
               (db) =>
                 db
@@ -1263,6 +1423,7 @@ export const makeProcessService = Effect.gen(function* () {
                   .returning({ id: processJobs.id }),
               "process.order-cancellation.job.enqueue",
             )
+
             const result: OrderCancellationResult = {
               workflowRunId: run!.id,
               order,
@@ -1271,6 +1432,7 @@ export const makeProcessService = Effect.gen(function* () {
               eventId: event.eventId,
               jobId: job!.id,
             }
+
             yield* database.query(
               (db) =>
                 db
@@ -1284,6 +1446,7 @@ export const makeProcessService = Effect.gen(function* () {
                   .where(eq(workflowRuns.id, run!.id)),
               "process.order-cancellation.complete",
             )
+
             return result
           }),
           "process.sales.order.cancellation",
@@ -1294,6 +1457,7 @@ export const makeProcessService = Effect.gen(function* () {
         if (outcome.failure instanceof WorkflowIdempotencyConflict && !retry) {
           return yield* cancelOrder(decoded, true)
         }
+
         if (outcome.failure instanceof DatabaseFailure) {
           return yield* Effect.fail(
             new WorkflowOutcomeUnknown({
@@ -1302,13 +1466,15 @@ export const makeProcessService = Effect.gen(function* () {
             }),
           )
         }
+
         return yield* Effect.fail(outcome.failure)
       }
+
       return outcome.success
     })
 
   const fulfillOrder = (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof FulfillOrderInput>,
     retry = false,
   ): Effect.Effect<OrderFulfillmentResult, OrderLifecycleFailure> =>
     Effect.gen(function* () {
@@ -1319,10 +1485,12 @@ export const makeProcessService = Effect.gen(function* () {
         capability: InventoryCapabilities.stockFulfill,
       })
       const payload = lifecyclePayload(decoded)
+
       const outcome = yield* database
         .withTransaction(
           Effect.gen(function* () {
             const confirmation = yield* loadConfirmation(decoded.tenantId, decoded.orderId)
+
             const existingRows = yield* database.query(
               (db) =>
                 db
@@ -1340,6 +1508,7 @@ export const makeProcessService = Effect.gen(function* () {
                   ),
               "process.order-fulfillment.lookup",
             )
+
             const existing = yield* resolveLifecycleExisting(
               existingRows,
               decoded,
@@ -1369,6 +1538,7 @@ export const makeProcessService = Effect.gen(function* () {
                   (reservation) => reservation.tenantId === decoded.tenantId,
                 ),
             )
+
             if (existing !== undefined) {
               return existing
             }
@@ -1408,6 +1578,7 @@ export const makeProcessService = Effect.gen(function* () {
                   reservationId: reservation.id,
                 }),
             )
+
             const eventPayload = yield* Schema.decodeUnknownEffect(
               OrderFulfillmentCompletedEventPayload,
             )({
@@ -1416,6 +1587,7 @@ export const makeProcessService = Effect.gen(function* () {
               orderId: decoded.orderId,
               reservationIds: fulfilledReservations.map(({ id }) => id),
             })
+
             const event = yield* messaging.append({
               eventId: uuidv7(),
               eventType: ProcessOrderFulfillmentCompletedEvent.id,
@@ -1431,6 +1603,7 @@ export const makeProcessService = Effect.gen(function* () {
               occurredAt: now().toISOString(),
               payload: eventPayload,
             })
+
             const jobPayload = yield* Schema.decodeUnknownEffect(ProcessPostCommitJobPayload)({
               eventId: event.eventId,
               workflowRunId: run!.id,
@@ -1439,6 +1612,7 @@ export const makeProcessService = Effect.gen(function* () {
               causationId: decoded.causationId,
               idempotencyKey: decoded.idempotencyKey,
             })
+
             const [job] = yield* database.query(
               (db) =>
                 db
@@ -1455,6 +1629,7 @@ export const makeProcessService = Effect.gen(function* () {
                   .returning({ id: processJobs.id }),
               "process.order-fulfillment.job.enqueue",
             )
+
             const result: OrderFulfillmentResult = {
               workflowRunId: run!.id,
               order: confirmation.result.order,
@@ -1462,6 +1637,7 @@ export const makeProcessService = Effect.gen(function* () {
               eventId: event.eventId,
               jobId: job!.id,
             }
+
             yield* database.query(
               (db) =>
                 db
@@ -1475,6 +1651,7 @@ export const makeProcessService = Effect.gen(function* () {
                   .where(eq(workflowRuns.id, run!.id)),
               "process.order-fulfillment.complete",
             )
+
             return result
           }),
           "process.sales.order.fulfillment",
@@ -1485,6 +1662,7 @@ export const makeProcessService = Effect.gen(function* () {
         if (outcome.failure instanceof WorkflowIdempotencyConflict && !retry) {
           return yield* fulfillOrder(decoded, true)
         }
+
         if (outcome.failure instanceof DatabaseFailure) {
           return yield* Effect.fail(
             new WorkflowOutcomeUnknown({
@@ -1493,12 +1671,14 @@ export const makeProcessService = Effect.gen(function* () {
             }),
           )
         }
+
         return yield* Effect.fail(outcome.failure)
       }
+
       return outcome.success
     })
 
-  const markManualRecovery = (input: unknown) =>
+  const markManualRecovery = (input: Schema.Codec.Encoded<typeof ManualRecoveryInput>) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ManualRecoveryInput)(input)
       yield* authorization.authorize({
@@ -1506,6 +1686,7 @@ export const makeProcessService = Effect.gen(function* () {
         tenantId: decoded.tenantId,
         capability: ProcessCapabilities.orderConfirmationManualRecovery,
       })
+
       const result = yield* database.transaction(async (tx) => {
         const rows = await tx
           .select(workflowRunSelection)
@@ -1518,17 +1699,23 @@ export const makeProcessService = Effect.gen(function* () {
             ),
           )
           .for("update")
+
         const row = rows[0]
-        if (row === undefined) return { _tag: "not-found" as const }
-        if (row.status === "succeeded") return { _tag: "completed" as const }
+
+        if (row === undefined) return MarkManualRecoveryOutcome.NotFound()
+
+        if (row.status === "succeeded") return MarkManualRecoveryOutcome.Completed()
+
         const [updated] = await tx
           .update(workflowRuns)
           .set({ status: "manual_recovery", recoveryReason: decoded.reason, updatedAt: now() })
           .where(eq(workflowRuns.id, row.id))
           .returning(workflowRunSelection)
-        return { _tag: "updated" as const, run: toWorkflowRun(updated!) }
+
+        return MarkManualRecoveryOutcome.Updated({ run: toWorkflowRun(updated!) })
       }, "process.workflow.run.manual-recovery")
-      if (result._tag === "not-found") {
+
+      if (MarkManualRecoveryOutcome.$is("NotFound")(result)) {
         return yield* Effect.fail(
           new WorkflowRunNotFound({
             tenantId: decoded.tenantId,
@@ -1536,7 +1723,8 @@ export const makeProcessService = Effect.gen(function* () {
           }),
         )
       }
-      if (result._tag === "completed") {
+
+      if (MarkManualRecoveryOutcome.$is("Completed")(result)) {
         return yield* Effect.fail(
           new WorkflowAlreadyCompleted({
             tenantId: decoded.tenantId,
@@ -1544,21 +1732,24 @@ export const makeProcessService = Effect.gen(function* () {
           }),
         )
       }
+
       return result.run
     })
 
-  const decodeJob = (row: unknown, tenantId: string, jobId: string) =>
+  const decodeJob = (row: ReturnType<typeof toProcessJob>, tenantId: string, jobId: string) =>
     Schema.decodeUnknownEffect(ProcessJob)(row).pipe(
       Effect.mapError(() => new ProcessJobCorrupt({ tenantId, jobId })),
     )
 
   const leaseDurationMs = 5 * 60_000
 
-  const claimJob = (input: unknown) =>
+  const claimJob = (input: Schema.Codec.Encoded<typeof ProcessJobClaimInput>) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ProcessJobClaimInput)(input)
+
       const claimed = yield* database.transaction(async (tx) => {
         const nowDate = now()
+
         const rows = await tx
           .select(processJobSelection)
           .from(processJobs)
@@ -1578,7 +1769,9 @@ export const makeProcessService = Effect.gen(function* () {
           .orderBy(desc(processJobs.priority), asc(processJobs.scheduledAt), asc(processJobs.id))
           .limit(1)
           .for("update", { skipLocked: true })
+
         const row = rows[0]
+
         if (row === undefined) return null
         await tx
           .insert(jobFenceScopes)
@@ -1587,6 +1780,7 @@ export const makeProcessService = Effect.gen(function* () {
             fenceScope: row.fenceScope,
           })
           .onConflictDoNothing()
+
         const [generation] = await tx
           .update(jobFenceScopes)
           .set({
@@ -1600,9 +1794,11 @@ export const makeProcessService = Effect.gen(function* () {
             ),
           )
           .returning({ generation: jobFenceScopes.generation })
+
         if (generation === undefined) return null
         // UUIDv4 is intentional: this is an opaque lease capability, not a fencing generation.
         const leaseToken = crypto.randomUUID()
+
         const [updated] = await tx
           .update(processJobs)
           .set({
@@ -1616,16 +1812,19 @@ export const makeProcessService = Effect.gen(function* () {
           })
           .where(eq(processJobs.id, row.id))
           .returning(processJobSelection)
+
         return updated ?? null
       }, "process.job.claim")
+
       return claimed === null
         ? null
         : yield* decodeJob(toProcessJob(claimed), decoded.tenantId, claimed.id)
     })
 
-  const renewJob = (input: unknown) =>
+  const renewJob = (input: Schema.Codec.Encoded<typeof ProcessJobRenewInput>) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ProcessJobRenewInput)(input)
+
       const result = yield* database.transaction(async (tx) => {
         const [current] = await tx
           .select({
@@ -1639,8 +1838,10 @@ export const makeProcessService = Effect.gen(function* () {
           .from(processJobs)
           .where(and(eq(processJobs.id, decoded.jobId), eq(processJobs.tenantId, decoded.tenantId)))
           .for("update")
-        if (current === undefined) return { _tag: "not-found" as const }
+
+        if (current === undefined) return RenewJobOutcome.NotFound()
         const nowDate = now()
+
         if (
           current.status !== "leased" ||
           current.leaseUntil === null ||
@@ -1649,7 +1850,8 @@ export const makeProcessService = Effect.gen(function* () {
           current.leaseToken !== decoded.leaseToken ||
           current.leaseGeneration !== decoded.leaseGeneration
         )
-          return { _tag: "lease-lost" as const }
+          return RenewJobOutcome.LeaseLost()
+
         const [updated] = await tx
           .update(processJobs)
           .set({
@@ -1668,26 +1870,31 @@ export const makeProcessService = Effect.gen(function* () {
             ),
           )
           .returning(processJobSelection)
+
         return updated === undefined
-          ? { _tag: "lease-lost" as const }
-          : { _tag: "updated" as const, row: updated }
+          ? RenewJobOutcome.LeaseLost()
+          : RenewJobOutcome.Updated({ row: updated })
       }, "process.job.renew")
-      if (result._tag === "not-found") {
+
+      if (RenewJobOutcome.$is("NotFound")(result)) {
         return yield* Effect.fail(
           new ProcessJobNotFound({ tenantId: decoded.tenantId, jobId: decoded.jobId }),
         )
       }
-      if (result._tag === "lease-lost") {
+
+      if (RenewJobOutcome.$is("LeaseLost")(result)) {
         return yield* Effect.fail(
           new ProcessJobLeaseLost({ tenantId: decoded.tenantId, jobId: decoded.jobId }),
         )
       }
+
       return yield* decodeJob(toProcessJob(result.row), decoded.tenantId, decoded.jobId)
     })
 
-  const completeJob = (input: unknown) =>
+  const completeJob = (input: Schema.Codec.Encoded<typeof ProcessJobCompleteInput>) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ProcessJobCompleteInput)(input)
+
       const result = yield* database.transaction(async (tx) => {
         const [current] = await tx
           .select({
@@ -1701,8 +1908,10 @@ export const makeProcessService = Effect.gen(function* () {
           .from(processJobs)
           .where(and(eq(processJobs.id, decoded.jobId), eq(processJobs.tenantId, decoded.tenantId)))
           .for("update")
-        if (current === undefined) return { _tag: "not-found" as const }
+
+        if (current === undefined) return CompleteJobOutcome.NotFound()
         const completedAt = now()
+
         if (
           current.status !== "leased" ||
           current.leaseUntil === null ||
@@ -1711,7 +1920,8 @@ export const makeProcessService = Effect.gen(function* () {
           current.leaseToken !== decoded.leaseToken ||
           current.leaseGeneration !== decoded.leaseGeneration
         )
-          return { _tag: "lease-lost" as const }
+          return CompleteJobOutcome.LeaseLost()
+
         const [completed] = await tx
           .update(processJobs)
           .set({
@@ -1734,26 +1944,31 @@ export const makeProcessService = Effect.gen(function* () {
             ),
           )
           .returning(processJobSelection)
+
         return completed === undefined
-          ? { _tag: "lease-lost" as const }
-          : { _tag: "completed" as const, row: completed }
+          ? CompleteJobOutcome.LeaseLost()
+          : CompleteJobOutcome.Completed({ row: completed })
       }, "process.job.complete")
-      if (result._tag === "not-found") {
+
+      if (CompleteJobOutcome.$is("NotFound")(result)) {
         return yield* Effect.fail(
           new ProcessJobNotFound({ tenantId: decoded.tenantId, jobId: decoded.jobId }),
         )
       }
-      if (result._tag === "lease-lost") {
+
+      if (CompleteJobOutcome.$is("LeaseLost")(result)) {
         return yield* Effect.fail(
           new ProcessJobLeaseLost({ tenantId: decoded.tenantId, jobId: decoded.jobId }),
         )
       }
+
       return yield* decodeJob(toProcessJob(result.row), decoded.tenantId, decoded.jobId)
     })
 
-  const failJob = (input: unknown) =>
+  const failJob = (input: Schema.Codec.Encoded<typeof ProcessJobFailInput>) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ProcessJobFailInput)(input)
+
       const result = yield* database.transaction(async (tx) => {
         const [current] = await tx
           .select({
@@ -1768,8 +1983,10 @@ export const makeProcessService = Effect.gen(function* () {
           .from(processJobs)
           .where(and(eq(processJobs.id, decoded.jobId), eq(processJobs.tenantId, decoded.tenantId)))
           .for("update")
-        if (current === undefined) return { _tag: "not-found" as const }
+
+        if (current === undefined) return FailJobOutcome.NotFound()
         const nowDate = now()
+
         if (
           current.status !== "leased" ||
           current.leaseUntil === null ||
@@ -1778,9 +1995,10 @@ export const makeProcessService = Effect.gen(function* () {
           current.leaseToken !== decoded.leaseToken ||
           current.leaseGeneration !== decoded.leaseGeneration
         )
-          return { _tag: "lease-lost" as const }
+          return FailJobOutcome.LeaseLost()
         const exhausted = current.attempts >= ProcessJobMaxAttempts
         const retry = !exhausted && decoded.retryAt !== null
+
         const [failed] = await tx
           .update(processJobs)
           .set({
@@ -1805,20 +2023,24 @@ export const makeProcessService = Effect.gen(function* () {
             ),
           )
           .returning(processJobSelection)
+
         return failed === undefined
-          ? { _tag: "lease-lost" as const }
-          : { _tag: "failed" as const, row: failed }
+          ? FailJobOutcome.LeaseLost()
+          : FailJobOutcome.Failed({ row: failed })
       }, "process.job.fail")
-      if (result._tag === "not-found") {
+
+      if (FailJobOutcome.$is("NotFound")(result)) {
         return yield* Effect.fail(
           new ProcessJobNotFound({ tenantId: decoded.tenantId, jobId: decoded.jobId }),
         )
       }
-      if (result._tag === "lease-lost") {
+
+      if (FailJobOutcome.$is("LeaseLost")(result)) {
         return yield* Effect.fail(
           new ProcessJobLeaseLost({ tenantId: decoded.tenantId, jobId: decoded.jobId }),
         )
       }
+
       return yield* decodeJob(toProcessJob(result.row), decoded.tenantId, decoded.jobId)
     })
 
@@ -1826,7 +2048,7 @@ export const makeProcessService = Effect.gen(function* () {
     confirmOrder: execute,
     cancelOrder,
     fulfillOrder,
-    recoverOrder: (input: unknown) =>
+    recoverOrder: (input: Schema.Codec.Encoded<typeof RecoverOrderConfirmationInput>) =>
       Effect.gen(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(RecoverOrderConfirmationInput)(input)
         yield* authorization.authorize({
@@ -1834,6 +2056,7 @@ export const makeProcessService = Effect.gen(function* () {
           tenantId: decoded.tenantId,
           capability: ProcessCapabilities.orderConfirmationRecover,
         })
+
         return yield* execute(decoded)
       }),
     markManualRecovery,
@@ -1842,5 +2065,6 @@ export const makeProcessService = Effect.gen(function* () {
     completeJob,
     failJob,
   }
+
   return withProcessOperationNames(service)
 })

@@ -55,7 +55,7 @@ const paymentSettled = defineExternalEvent({
   occurredAtSemantics: "provider_time",
 })
 
-const envelope = (id: string, data: unknown) => ({
+const envelope = (id: string, data: Schema.Json) => ({
   specversion: "1.0",
   type: paymentSettled.id,
   source: paymentSettled.source,
@@ -68,11 +68,13 @@ const envelope = (id: string, data: unknown) => ({
 it.effect("uses bounded retry and idempotent action receipts", () =>
   Effect.gen(function* () {
     let calls = 0
+
     const runtime = makeExternalConnectorRuntime({
       store: makeMemoryExternalConnectorStore(),
       authorizeScope: () => Effect.succeed(undefined),
       invoke: (input) => {
         calls += 1
+
         return calls === 1
           ? Effect.fail(
               new ExternalProviderFailure({
@@ -93,6 +95,7 @@ it.effect("uses bounded retry and idempotent action receipts", () =>
       idempotencyKey: "payment-1",
       input: { amount: "10.00" },
     })
+
     const replay = yield* runtime.invokeAction({
       tenantId,
       action: createPayment,
@@ -110,13 +113,16 @@ it.effect("enforces the catalog timeout across bounded retries", () =>
     Effect.gen(function* () {
       let calls = 0
       const timedAction = { ...createPayment, timeoutPolicy: { timeoutMs: 1 } }
+
       const runtime = makeExternalConnectorRuntime({
         authorizeScope: () => Effect.succeed(undefined),
         invoke: () => {
           calls += 1
+
           return Effect.never
         },
       })
+
       const failure = yield* Effect.flip(
         runtime.invokeAction({
           tenantId,
@@ -136,10 +142,12 @@ it.effect("enforces the catalog timeout across bounded retries", () =>
 it.effect("keeps an unknown outcome in manual recovery", () =>
   Effect.gen(function* () {
     let calls = 0
+
     const runtime = makeExternalConnectorRuntime({
       authorizeScope: () => Effect.succeed(undefined),
       invoke: (input) => {
         calls += 1
+
         return Effect.fail(
           new ExternalUnknownOutcome({
             tenantId: input.tenantId,
@@ -149,6 +157,7 @@ it.effect("keeps an unknown outcome in manual recovery", () =>
         )
       },
     })
+
     const input = {
       tenantId,
       action: createPayment,
@@ -171,6 +180,7 @@ it.effect("deduplicates WebhookIngestion by provider event identity", () =>
       authorizeScope: () => Effect.succeed(undefined),
       invoke: () => Effect.succeed(undefined),
     })
+
     const input = {
       tenantId,
       event: paymentSettled,
@@ -179,12 +189,14 @@ it.effect("deduplicates WebhookIngestion by provider event identity", () =>
 
     const first = yield* runtime.ingestEvent(input)
     const duplicate = yield* runtime.ingestEvent(input)
+
     const invalid = yield* Effect.flip(
       runtime.ingestEvent({
         ...input,
         envelope: envelope("evt-2", { providerPaymentId: 3 }),
       }),
     )
+
     const wrongSource = yield* Effect.flip(
       runtime.ingestEvent({
         ...input,

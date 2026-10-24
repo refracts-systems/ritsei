@@ -1,5 +1,6 @@
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import * as Predicate from "effect/Predicate"
 
 import { validateExternalEventDefinition } from "./contract.ts"
 import { type ExternalDeliveryStore, makeMemoryExternalDeliveryStore } from "./delivery-store.ts"
@@ -35,12 +36,13 @@ export const HttpsWebhookLimits = {
 } as const
 
 const eventIdentifier = (event: { readonly id?: unknown } | null | undefined): string => {
-  const id = typeof event?.id === "string" && event.id.trim() !== "" ? event.id : undefined
+  const id = Predicate.isString(event?.id) && event.id.trim() !== "" ? event.id : undefined
+
   return id === undefined ? "external-event" : id.slice(0, 256)
 }
 
 const isBoundedNonEmptyString = (value: unknown, maxBytes: number): value is string =>
-  typeof value === "string" && Schema.is(NonEmptyString)(value) && byteLength(value) <= maxBytes
+  Predicate.isString(value) && Schema.is(NonEmptyString)(value) && byteLength(value) <= maxBytes
 
 const decodeWebhookBody = (body: string, identifier: string) =>
   Effect.try({
@@ -116,6 +118,7 @@ export const makeHttpsConnectorRuntime = (options: {
   readonly verifySignature: HttpsSignatureVerifier
 }): HttpsConnectorRuntime => {
   const deliveryStore = options.deliveryStore ?? makeMemoryExternalDeliveryStore()
+
   const runtime: ExternalConnectorRuntime = makeExternalConnectorRuntime({
     store: options.store,
     authorizeScope: options.authorizeScope,
@@ -125,6 +128,7 @@ export const makeHttpsConnectorRuntime = (options: {
   const ingestWebhook = (input: HttpsWebhookInput) =>
     Effect.gen(function* () {
       const identifier = eventIdentifier(input.event)
+
       if (!isValidWebhookInput(input)) {
         return yield* Effect.fail(
           new ExternalPayloadInvalid({
@@ -133,6 +137,7 @@ export const makeHttpsConnectorRuntime = (options: {
           }),
         )
       }
+
       // verify signature on the raw body before parsing; deduplicate only after verification.
       const verified = yield* Effect.timeoutOrElse(
         options.verifySignature({
@@ -151,6 +156,7 @@ export const makeHttpsConnectorRuntime = (options: {
             ),
         },
       )
+
       if (!verified) {
         return yield* Effect.fail(
           new ExternalPayloadInvalid({
@@ -159,7 +165,9 @@ export const makeHttpsConnectorRuntime = (options: {
           }),
         )
       }
+
       const envelope = yield* decodeWebhookBody(input.body, identifier)
+
       const suppliedEnvelope = yield* Schema.decodeUnknownEffect(WebhookIngestion)(
         input.envelope,
       ).pipe(
@@ -171,6 +179,7 @@ export const makeHttpsConnectorRuntime = (options: {
             }),
         ),
       )
+
       if (!sameWebhookEnvelope(envelope, suppliedEnvelope)) {
         return yield* Effect.fail(
           new ExternalPayloadInvalid({
@@ -179,11 +188,13 @@ export const makeHttpsConnectorRuntime = (options: {
           }),
         )
       }
+
       const result = yield* runtime.ingestEvent({
         tenantId: input.tenantId,
         event: input.event,
         envelope,
       })
+
       yield* deliveryStore.put({
         tenantId: input.tenantId,
         connectorId: input.event.connectorId,
@@ -192,6 +203,7 @@ export const makeHttpsConnectorRuntime = (options: {
         status: result.duplicate ? "duplicate" : "accepted",
         correlationId: input.correlationId,
       })
+
       return result
     })
 

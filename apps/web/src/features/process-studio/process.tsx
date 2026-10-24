@@ -1,3 +1,5 @@
+import * as Predicate from "effect/Predicate"
+import * as Match from "effect/Match"
 import type { JSX } from "@solidjs/web"
 import { createEffect, createSignal, For, onSettled, Show, useContext } from "solid-js"
 import { failureMessage } from "../../shared/api.ts"
@@ -10,7 +12,7 @@ import type {
   ProcessStaticValidation,
   ProcessWorkflowRun,
 } from "../../shared/contracts/generated/process.ts"
-import { CommandFeedback, QueryBoundary } from "../../shared/request-feedback.tsx"
+import { CommandFeedback, QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
 import { ApiRuntime, type ApiScope } from "../../shared/runtime.ts"
 import { layout } from "../../ui/foundations/layout.ts"
 import { DataTable } from "../../ui/patterns/data-table.tsx"
@@ -58,15 +60,18 @@ const statusTone = (status: string): "neutral" | "success" | "warning" | "danger
     } as const
   )[status] ?? "warning"
 
-const actionLabel = (action: OperateRuntimeInput["action"]): string =>
-  action === "manual_recovery"
-    ? "Mark manual recovery"
-    : action === "compensate"
-      ? "Start compensation"
-      : "Retry runtime"
+const actionLabel = (action: OperateRuntimeInput["action"] | "none"): string =>
+  Match.value(action).pipe(
+    Match.when("none", () => "No action required"),
+    Match.when("manual_recovery", () => "Mark manual recovery"),
+    Match.when("compensate", () => "Start compensation"),
+    Match.when("retry", () => "Retry runtime"),
+    Match.exhaustive,
+  )
 
 const formatTime = (value: string): string => {
   const date = new Date(value)
+
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString()
 }
 
@@ -163,7 +168,7 @@ function RuntimeTable(props: { instances: readonly ProcessRuntimeInstance[] }) {
             <>
               <Badge tone={statusTone(instance.status)}>{instance.status}</Badge>
               <Show when={instance.requiredAction !== "none"}>
-                <div>{actionLabel(instance.requiredAction as OperateRuntimeInput["action"])}</div>
+                <div>{actionLabel(instance.requiredAction)}</div>
               </Show>
             </>
           ),
@@ -318,14 +323,16 @@ function OperatorControlTable(props: { controls: readonly ProcessOperatorControl
 function RuntimeActionDialog(props: {
   instance: ProcessRuntimeInstance
   scope: ApiScope
-  reload: () => Promise<unknown>
+  reload: () => Promise<void>
 }) {
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
+
   const mutation = createProcessOperatorMutation(props.scope, () => {
     setOpen(false)
     void props.reload()
   })
+
   const action = () =>
     props.instance.requiredAction === "none" ? "manual_recovery" : props.instance.requiredAction
 
@@ -345,13 +352,19 @@ function RuntimeActionDialog(props: {
           // fallow-ignore-next-line complexity
           (value) => {
             if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
-            const idempotencyKey =
-              typeof value.idempotencyKey === "string" ? value.idempotencyKey.trim() : ""
-            const reason = typeof value.reason === "string" ? value.reason.trim() : ""
+
+            const idempotencyKey = Predicate.isString(value.idempotencyKey)
+              ? value.idempotencyKey.trim()
+              : ""
+
+            const reason = Predicate.isString(value.reason) ? value.reason.trim() : ""
+
             if (!/\S/.test(idempotencyKey) || !/\S/.test(reason)) {
               setInvalid(true)
+
               return
             }
+
             setInvalid(false)
             mutation.mutate({
               instanceId: props.instance.instanceId,
@@ -402,8 +415,10 @@ function DesignPanel(props: {
   let designer: ProcessDesignerMount | undefined
   const [mountedDesigner, setMountedDesigner] = createSignal<ProcessDesignerMount>()
   const [feedback, setFeedback] = createSignal("")
+
   const mountDesigner = (host: HTMLDivElement) => {
     if (designer !== undefined) return
+
     const next = mountProcessDesigner(host, {
       catalog: [],
       onValidate: (model: DesignerModel, issues: ReturnType<typeof validateDesignerModel>) => {
@@ -413,11 +428,14 @@ function DesignPanel(props: {
               issues.length === 1 ? "" : "s"
             } before backend validation.`,
           )
+
           return
         }
+
         const references = model.nodes.flatMap((node) =>
           node.capability === undefined ? [] : [node.capability],
         )
+
         setFeedback("Checking the draft against the active backend catalog…")
         props.validation.mutate({
           definitionId: model.definitionId,
@@ -427,9 +445,11 @@ function DesignPanel(props: {
         })
       },
     })
+
     designer = next
     setMountedDesigner(next)
   }
+
   createEffect(
     () => ({ designer: mountedDesigner(), catalog: props.catalog.data ?? [] }),
     ({ designer: next, catalog }) => {
@@ -437,6 +457,7 @@ function DesignPanel(props: {
     },
   )
   onSettled(() => () => designer?.dispose())
+
   return (
     <div class={layout.stack}>
       <section class={[surface(), layout.stack]} aria-labelledby="process-catalog-heading">
@@ -450,7 +471,11 @@ function DesignPanel(props: {
           </div>
           <Badge tone="info">{(props.catalog.data ?? []).length} entries</Badge>
         </div>
-        <QueryBoundary variant="retry" label="catalog" retry={() => props.catalog.refetch()}>
+        <QueryBoundary
+          variant="retry"
+          label="catalog"
+          retry={() => reloaded(props.catalog.refetch())}
+        >
           <Show
             when={(props.catalog.data ?? []).length > 0}
             fallback={<p role="status">No public catalog entries are available for this tenant.</p>}
@@ -509,16 +534,20 @@ export function ProcessStudio() {
   const inbox = createProcessInboxQuery(scope, { limit: 200 })
   const controls = createProcessControlsQuery(scope, { limit: 200 })
   const validation = createProcessValidationMutation(scope)
+
   const reload = () =>
-    Promise.all([
-      catalog.refetch(),
-      runtime.refetch(),
-      workflowRuns.refetch(),
-      inbox.refetch(),
-      controls.refetch(),
-    ])
+    reloaded(
+      Promise.all([
+        catalog.refetch(),
+        runtime.refetch(),
+        workflowRuns.refetch(),
+        inbox.refetch(),
+        controls.refetch(),
+      ]),
+    )
 
   const design = <DesignPanel catalog={catalog} validation={validation} />
+
   const monitor = (
     <div class={layout.stack}>
       <section class={[surface(), layout.stack]} aria-labelledby="process-runtime-heading">
@@ -532,7 +561,11 @@ export function ProcessStudio() {
           </div>
           <Badge tone="info">{(runtime.data ?? []).length} instances</Badge>
         </div>
-        <QueryBoundary variant="retry" label="runtime instances" retry={() => runtime.refetch()}>
+        <QueryBoundary
+          variant="retry"
+          label="runtime instances"
+          retry={() => reloaded(runtime.refetch())}
+        >
           <Show
             when={(runtime.data ?? []).length > 0}
             fallback={<EmptyState>No runtime instances are visible for this tenant.</EmptyState>}
@@ -546,7 +579,7 @@ export function ProcessStudio() {
         <QueryBoundary
           variant="retry"
           label="workflow history"
-          retry={() => workflowRuns.refetch()}
+          retry={() => reloaded(workflowRuns.refetch())}
         >
           <Show
             when={(workflowRuns.data ?? []).length > 0}
@@ -560,6 +593,7 @@ export function ProcessStudio() {
       </section>
     </div>
   )
+
   const inboxView = (
     <div class={layout.stack}>
       <section class={[surface(), layout.stack]} aria-labelledby="process-inbox-heading">
@@ -572,7 +606,11 @@ export function ProcessStudio() {
           </div>
           <Badge tone="warning">Action required</Badge>
         </div>
-        <QueryBoundary variant="retry" label="operator inbox" retry={() => inbox.refetch()}>
+        <QueryBoundary
+          variant="retry"
+          label="operator inbox"
+          retry={() => reloaded(inbox.refetch())}
+        >
           <Show
             when={(inbox.data?.runtimeInstances.length ?? 0) > 0}
             fallback={<EmptyState>No runtime recovery actions are waiting.</EmptyState>}
@@ -603,6 +641,7 @@ export function ProcessStudio() {
       </section>
     </div>
   )
+
   const history = (
     <section class={[surface(), layout.stack]} aria-labelledby="process-history-heading">
       <div class={layout.row}>
@@ -612,7 +651,11 @@ export function ProcessStudio() {
         </div>
         <Badge tone="info">{(controls.data ?? []).length} records</Badge>
       </div>
-      <QueryBoundary variant="retry" label="operator history" retry={() => controls.refetch()}>
+      <QueryBoundary
+        variant="retry"
+        label="operator history"
+        retry={() => reloaded(controls.refetch())}
+      >
         <Show
           when={(controls.data ?? []).length > 0}
           fallback={<EmptyState>No operator controls have been recorded.</EmptyState>}

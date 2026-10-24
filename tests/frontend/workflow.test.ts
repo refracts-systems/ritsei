@@ -2,7 +2,7 @@ import { AxeBuilder } from "@axe-core/playwright"
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import type { Page, Route } from "playwright"
-import { builtApp, connectToTenant } from "./browser.ts"
+import { builtApp, connectToTenant, forbiddenBody } from "./browser.ts"
 
 const tenantId = "01900000-0000-7000-8000-000000000010"
 const accountId = "01900000-0000-7000-8000-000000000001"
@@ -17,7 +17,7 @@ const account = (email: string, status: "active" | "disabled" = "active", id = a
   status,
 })
 
-const fulfillJson = (route: Route, status: number, body: unknown) =>
+const fulfillJson = <Body>(route: Route, status: number, body: Body) =>
   route.fulfill({
     status,
     contentType: "application/json",
@@ -38,10 +38,12 @@ it.effect(
       let patchBody: unknown
       let requestHeaders: Record<string, string> | undefined
       let listCount = 0
+
       const records = () => [
         account(currentEmail, currentStatus),
         account(createdEmail, "active", createdAccountId),
       ]
+
       let created = false
 
       yield* Effect.promise(async () => {
@@ -55,20 +57,26 @@ it.effect(
             if (method === "POST") {
               createBody = request.postDataJSON()
               created = true
+
               return fulfillJson(route, 201, account(createdEmail, "active", createdAccountId))
             }
+
             listCount += 1
+
             return fulfillJson(
               route,
               200,
               created ? records() : [account(currentEmail, currentStatus)],
             )
           }
+
           if (method === "PATCH") {
             patchBody = request.postDataJSON()
             currentEmail = updatedEmail
+
             return fulfillJson(route, 200, account(currentEmail, currentStatus))
           }
+
           return fulfillJson(route, 200, account(currentEmail, currentStatus))
         })
 
@@ -95,12 +103,15 @@ it.effect(
           name: "Create account",
           exact: true,
         })
+
         await createTrigger.click()
         const createDialog = page.getByRole("dialog")
         await createDialog.getByRole("heading", { name: "Create user account" }).waitFor()
+
         const dialogAccessibility = await new AxeBuilder({ page })
           .withTags(["wcag2a", "wcag2aa"])
           .analyze()
+
         assert.deepEqual(dialogAccessibility.violations, [])
         await page.keyboard.press("Escape")
         await createDialog.waitFor({ state: "hidden" })
@@ -149,9 +160,11 @@ it.effect(
           0,
         )
         assert.isTrue(listCount >= 3)
+
         const accessibility = await new AxeBuilder({ page })
           .withTags(["wcag2a", "wcag2aa"])
           .analyze()
+
         assert.deepEqual(accessibility.violations, [])
         assert.deepEqual(errors, [])
       })
@@ -170,21 +183,23 @@ it.effect(
         await page.route("**/api/user-accounts**", (route) => {
           const request = route.request()
           const path = new URL(request.url()).pathname.replace(/^\/api/, "")
+
           if (path === "/user-accounts") {
             if (mode === "forbidden-list") {
-              return fulfillJson(route, 403, {
-                _tag: "ApiForbidden",
-                code: "forbidden",
-              })
+              return fulfillJson(route, 403, forbiddenBody())
             }
+
             if (mode === "malformed-list") {
               return fulfillJson(route, 200, { account: "not-an-array" })
             }
+
             return fulfillJson(route, 200, [account(originalEmail)])
           }
+
           if (request.method() === "PATCH" && mode === "update-unknown") {
             return route.abort("connectionreset")
           }
+
           return fulfillJson(route, 200, account(originalEmail))
         })
 

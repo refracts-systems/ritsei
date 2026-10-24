@@ -7,6 +7,7 @@ import {
   ExternalPayloadInvalid,
   validateOpenApiImport,
 } from "../mod.ts"
+import { partial } from "../../../../tests/support/partial.ts"
 
 const baseInput = {
   tenantId: "018f3f77-0c5a-7cc0-8b62-6a163d214123",
@@ -47,12 +48,14 @@ it.effect("rejects an unallowlisted operation and missing side-effect idempotenc
         allowlisted: false,
       }),
     )
+
     const missingIdempotency = yield* Effect.flip(
       validateOpenApiImport({
         ...baseInput,
         operation: { ...baseInput.operation, idempotencyKeyRequired: false },
       }),
     )
+
     assert.instanceOf(unallowlisted, ExternalActionNotAllowlisted)
     assert.instanceOf(missingIdempotency, ExternalPayloadInvalid)
   }),
@@ -73,6 +76,7 @@ it.effect("rejects an operation that is absent from the imported document", () =
         operation: { ...baseInput.operation, operationId: "missingPayment" },
       }),
     )
+
     assert.isTrue(Result.isFailure(result))
   }),
 )
@@ -89,6 +93,7 @@ it.effect("rejects paths containing whitespace", () =>
         operation: { ...baseInput.operation, path: "/payments " },
       }),
     )
+
     assert.isTrue(Result.isFailure(result))
   }),
 )
@@ -96,11 +101,14 @@ it.effect("rejects paths containing whitespace", () =>
 it.effect("rejects an oversized document section", () =>
   Effect.gen(function* () {
     const result = yield* Effect.result(
-      validateOpenApiImport({
-        ...baseInput,
-        document: { ...baseInput.document, paths: "x".repeat(512 * 1024 + 1) },
-      }),
+      validateOpenApiImport(
+        partial<Parameters<typeof validateOpenApiImport>[0]>()({
+          ...baseInput,
+          document: { ...baseInput.document, paths: "x".repeat(512 * 1024 + 1) },
+        }),
+      ),
     )
+
     assert.isTrue(Result.isFailure(result))
   }),
 )

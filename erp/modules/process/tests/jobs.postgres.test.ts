@@ -31,19 +31,24 @@ const makeProcess = (client: Sql) =>
   Effect.gen(function* () {
     const database = makePostgresDatabase(client)
     const authorization = yield* AuthorizationService
+
     const requirements = Layer.merge(
       Layer.succeed(Database, database),
       Layer.succeed(AuthorizationService, authorization),
     )
+
     const messaging = yield* makeMessagingService.pipe(Effect.provideService(Database, database))
+
     const sales = yield* Effect.provide(
       makeSalesService,
       Layer.merge(requirements, Layer.succeed(MessagingService, messaging)),
     )
+
     const inventory = yield* Effect.provide(
       makeInventoryService,
       Layer.merge(requirements, Layer.succeed(MessagingService, messaging)),
     )
+
     const accounting = yield* Effect.provide(
       makeAccountingService,
       Layer.mergeAll(
@@ -52,6 +57,7 @@ const makeProcess = (client: Sql) =>
         Layer.succeed(SalesService, sales),
       ),
     )
+
     return yield* Effect.provide(
       makeProcessService,
       Layer.mergeAll(
@@ -72,14 +78,17 @@ it.effect.skipIf(databaseUrl === undefined)(
       TestClock.withLive(
         Effect.gen(function* () {
           yield* runMigrations(client)
+
           const [tenant] = yield* Effect.promise(
             () =>
               client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
           `,
           )
+
           const authorizationLayer = makeAuthorizationTestLayer([])
           const process = yield* makeProcess(client).pipe(Effect.provide(authorizationLayer))
+
           const [job] = yield* Effect.promise(
             () =>
               client<{ id: string }[]>`
@@ -97,6 +106,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             tenantId: tenant!.id,
             workerId: "worker-a",
           })
+
           assert.isNotNull(first)
           assert.strictEqual(first!.jobId, job!.id)
           assert.strictEqual(first!.status, "leased")
@@ -131,10 +141,12 @@ it.effect.skipIf(databaseUrl === undefined)(
             ),
             ProcessJobLeaseLost,
           )
+
           const second = yield* process.claimJob({
             tenantId: tenant!.id,
             workerId: "worker-b",
           })
+
           assert.isNotNull(second)
           assert.strictEqual(second!.leaseOwner, "worker-b")
           assert.notStrictEqual(second!.leaseToken, first!.leaseToken)
@@ -181,6 +193,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           )
 
           const retryAt = new Date(Date.now() - 1_000).toISOString()
+
           const pending = yield* process.failJob({
             tenantId: tenant!.id,
             workerId: "worker-b",
@@ -190,6 +203,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             error: "retryable worker failure",
             retryAt,
           })
+
           assert.strictEqual(pending.status, "pending")
           assert.isNull(pending.leaseOwner)
           assert.isNull(pending.leaseToken)
@@ -198,9 +212,11 @@ it.effect.skipIf(databaseUrl === undefined)(
             tenantId: tenant!.id,
             workerId: "worker-c",
           })
+
           assert.isNotNull(third)
           assert.strictEqual(third!.attempts, ProcessJobMaxAttempts)
           assert.strictEqual(third!.leaseGeneration, "3")
+
           const recovered = yield* process.failJob({
             tenantId: tenant!.id,
             workerId: "worker-c",
@@ -210,6 +226,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             error: "retry exhausted",
             retryAt,
           })
+
           assert.strictEqual(recovered.status, "manual_recovery")
           assert.isNull(recovered.leaseOwner)
           assert.isNull(recovered.leaseToken)
@@ -250,12 +267,14 @@ it.effect.skipIf(databaseUrl === undefined)(
       TestClock.withLive(
         Effect.gen(function* () {
           yield* runMigrations(client)
+
           const [tenant] = yield* Effect.promise(
             () =>
               client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
           `,
           )
+
           const fenceScope = `test.fence:${tenant!.id}:${uuidv7()}`
           yield* Effect.promise(
             () =>
@@ -269,9 +288,11 @@ it.effect.skipIf(databaseUrl === undefined)(
                now() - interval '1 second', '{}'::jsonb, 'claim-b')
           `,
           )
+
           const process = yield* makeProcess(client).pipe(
             Effect.provide(makeAuthorizationTestLayer([])),
           )
+
           const claimed = yield* Effect.all(
             [
               process.claimJob({ tenantId: tenant!.id, workerId: "worker-a" }),
@@ -279,9 +300,11 @@ it.effect.skipIf(databaseUrl === undefined)(
             ],
             { concurrency: "unbounded" },
           )
+
           const generations = claimed
             .map((job) => job?.leaseGeneration)
             .filter((generation): generation is string => generation !== undefined)
+
           assert.strictEqual(generations.length, 2)
           assert.strictEqual(new Set(generations).size, 2)
           assert.deepStrictEqual(new Set(generations), new Set(["1", "2"]))
@@ -297,13 +320,16 @@ it.effect.skipIf(databaseUrl === undefined)(
       TestClock.withLive(
         Effect.gen(function* () {
           yield* runMigrations(client)
+
           const [tenant] = yield* Effect.promise(
             () =>
               client<{ id: string }[]>`
               insert into auth.tenants (slug) values (${uuidv7()}) returning id
             `,
           )
+
           const fenceScope = `test.termination:${tenant!.id}:${uuidv7()}`
+
           const [job] = yield* Effect.promise(
             () =>
               client<{ id: string }[]>`
@@ -315,16 +341,20 @@ it.effect.skipIf(databaseUrl === undefined)(
               returning id
             `,
           )
+
           const workerA = yield* makeProcess(client).pipe(
             Effect.provide(makeAuthorizationTestLayer([])),
           )
+
           const workerB = yield* makeProcess(client).pipe(
             Effect.provide(makeAuthorizationTestLayer([])),
           )
+
           const first = yield* workerA.claimJob({
             tenantId: tenant!.id,
             workerId: "worker-a",
           })
+
           assert.isNotNull(first)
           assert.strictEqual(first!.leaseGeneration, "1")
 
@@ -342,6 +372,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             tenantId: tenant!.id,
             workerId: "worker-b",
           })
+
           assert.isNotNull(second)
           assert.strictEqual(second!.fenceScope, first!.fenceScope)
           assert.strictEqual(second!.leaseGeneration, "2")
@@ -356,6 +387,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               leaseGeneration: first!.leaseGeneration,
             }),
           )
+
           assert.instanceOf(staleCompletion, ProcessJobLeaseLost)
 
           const completed = yield* workerB.completeJob({
@@ -365,6 +397,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             leaseToken: second!.leaseToken!,
             leaseGeneration: second!.leaseGeneration,
           })
+
           assert.strictEqual(completed.status, "completed")
           assert.strictEqual(completed.leaseGeneration, "2")
         }),

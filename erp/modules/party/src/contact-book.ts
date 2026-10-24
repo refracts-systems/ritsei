@@ -1,3 +1,4 @@
+import type { CapabilityType } from "../../../../framework/modules/authorization/mod.ts"
 import { and, asc, eq } from "drizzle-orm"
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
@@ -20,11 +21,13 @@ import { PartyCapabilities } from "./capabilities.ts"
 import { PartyBankAccountAlreadyExists, PartyNotFound } from "./errors.ts"
 
 const Uuid = Schema.String.check(Schema.isUUID())
+
 const Text = Schema.String.check(
   Schema.makeFilter((value) => /\S/.test(value) && value === value.trim() && value.length <= 256, {
     expected: "a trimmed nonblank text of at most 256 characters",
   }),
 )
+
 const Email = Schema.String.check(
   Schema.makeFilter((value) => /^[^\s@]+@[^\s@]+$/.test(value) && value === value.toLowerCase(), {
     expected: "a lowercase email address",
@@ -46,6 +49,7 @@ export const PartyAddress = Schema.Struct({
   countryCode: Schema.String.check(Schema.isPattern(/^[A-Z]{2}$/)),
   primary: Schema.Boolean,
 })
+
 export type PartyAddress = Schema.Schema.Type<typeof PartyAddress>
 
 export const PartyContact = Schema.Struct({
@@ -57,6 +61,7 @@ export const PartyContact = Schema.Struct({
   email: Schema.NullOr(Email),
   phone: Schema.NullOr(Text),
 })
+
 export type PartyContact = Schema.Schema.Type<typeof PartyContact>
 
 export const PartyBankAccount = Schema.Struct({
@@ -70,6 +75,7 @@ export const PartyBankAccount = Schema.Struct({
   accountHolder: Text,
   currency: Schema.String.check(Schema.isPattern(/^[A-Z]{3}$/)),
 })
+
 export type PartyBankAccount = Schema.Schema.Type<typeof PartyBankAccount>
 
 export const PartyContactBook = Schema.Struct({
@@ -78,6 +84,7 @@ export const PartyContactBook = Schema.Struct({
   contacts: Schema.Array(PartyContact),
   bankAccounts: Schema.Array(PartyBankAccount),
 })
+
 export type PartyContactBook = Schema.Schema.Type<typeof PartyContactBook>
 
 const PartyScope = { principal: Principal, tenantId: Uuid, partyId: Uuid }
@@ -94,6 +101,7 @@ export const AddPartyAddressInput = Schema.Struct({
   /** A primary address replaces the previous primary address for the same purpose. */
   primary: Schema.optionalKey(Schema.Boolean),
 })
+
 export const AddPartyContactInput = Schema.Struct({
   ...PartyScope,
   name: Text,
@@ -101,6 +109,7 @@ export const AddPartyContactInput = Schema.Struct({
   email: Schema.optionalKey(Email),
   phone: Schema.optionalKey(Text),
 })
+
 export const AddPartyBankAccountInput = Schema.Struct({
   ...PartyScope,
   bankName: Text,
@@ -108,10 +117,13 @@ export const AddPartyBankAccountInput = Schema.Struct({
   accountHolder: Text,
   currency: PartyBankAccount.fields.currency,
 })
+
 export const GetPartyContactBookInput = Schema.Struct(PartyScope)
 
 type AddAddressCommand = Omit<Schema.Schema.Type<typeof AddPartyAddressInput>, "principal">
+
 type AddContactCommand = Omit<Schema.Schema.Type<typeof AddPartyContactInput>, "principal">
+
 type AddBankAccountCommand = Omit<Schema.Schema.Type<typeof AddPartyBankAccountInput>, "principal">
 
 type CommonFailure = AuthorizationDenied | DatabaseFailure | Schema.SchemaError
@@ -119,19 +131,22 @@ type CommonFailure = AuthorizationDenied | DatabaseFailure | Schema.SchemaError
 /** Addresses, contact persons, and bank accounts of a party (parity plan Phase 4). */
 export interface PartyContactService {
   readonly addAddress: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof AddPartyAddressInput>,
   ) => Effect.Effect<PartyAddress, PartyNotFound | CommonFailure>
   readonly addContact: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof AddPartyContactInput>,
   ) => Effect.Effect<PartyContact, PartyNotFound | CommonFailure>
   readonly addBankAccount: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof AddPartyBankAccountInput>,
   ) => Effect.Effect<
     PartyBankAccount,
     PartyNotFound | PartyBankAccountAlreadyExists | CommonFailure
   >
-  readonly getContactBook: (input: unknown) => Effect.Effect<PartyContactBook, CommonFailure>
+  readonly getContactBook: (
+    input: Schema.Codec.Encoded<typeof GetPartyContactBookInput>,
+  ) => Effect.Effect<PartyContactBook, CommonFailure>
 }
+
 export const PartyContactService = Context.Service<PartyContactService>(
   "RITSEI/PartyContactService",
 )
@@ -167,6 +182,7 @@ const addressValues = (command: AddAddressCommand) => ({
   countryCode: command.countryCode,
   primary: command.primary ?? false,
 })
+
 const contactValues = (command: AddContactCommand) => ({
   tenantId: command.tenantId,
   partyId: command.partyId,
@@ -175,6 +191,7 @@ const contactValues = (command: AddContactCommand) => ({
   email: command.email ?? null,
   phone: command.phone ?? null,
 })
+
 const bankAccountValues = (command: AddBankAccountCommand) => ({
   tenantId: command.tenantId,
   partyId: command.partyId,
@@ -186,11 +203,13 @@ const bankAccountValues = (command: AddBankAccountCommand) => ({
 
 const makePostgresContactBookStore = Effect.gen(function* () {
   const database = yield* Database
+
   const partyMissing =
     (tenantId: string, partyId: string, constraint: string) => (error: DatabaseFailure) =>
       isDatabaseConstraint(error, constraint, "23503")
         ? new PartyNotFound({ tenantId, partyId })
         : error
+
   return {
     addAddress: (command) =>
       database
@@ -208,8 +227,10 @@ const makePostgresContactBookStore = Effect.gen(function* () {
                 ),
               )
           }
+
           const rows = await tx.insert(partyAddresses).values(addressValues(command)).returning()
           const row = rows[0]!
+
           return {
             id: row.id,
             ...addressValues(command),
@@ -270,21 +291,25 @@ const makePostgresContactBookStore = Effect.gen(function* () {
         >(
           table: T,
         ) => and(eq(table.tenantId, tenantId), eq(table.partyId, partyId))
+
         const addresses = await tx
           .select()
           .from(partyAddresses)
           .where(scope(partyAddresses))
           .orderBy(asc(partyAddresses.purpose), asc(partyAddresses.id))
+
         const contacts = await tx
           .select()
           .from(partyContacts)
           .where(scope(partyContacts))
           .orderBy(asc(partyContacts.id))
+
         const bankAccounts = await tx
           .select()
           .from(partyBankAccounts)
           .where(scope(partyBankAccounts))
           .orderBy(asc(partyBankAccounts.id))
+
         return {
           partyId,
           addresses: addresses.map(({ createdAt: _c, updatedAt: _u, ...row }) => row),
@@ -300,10 +325,12 @@ const makeMemoryContactBookStore = (knownParty: (tenantId: string, partyId: stri
   const addresses: PartyAddress[] = []
   const contacts: PartyContact[] = []
   const bankAccounts: PartyBankAccount[] = []
+
   const requireParty = (tenantId: string, partyId: string) =>
     knownParty(tenantId, partyId)
       ? Effect.void
       : Effect.fail(new PartyNotFound({ tenantId, partyId }))
+
   return {
     addAddress: (command) =>
       Effect.map(requireParty(command.tenantId, command.partyId), () => {
@@ -318,14 +345,17 @@ const makeMemoryContactBookStore = (knownParty: (tenantId: string, partyId: stri
             }
           }
         }
+
         const address = { id: uuidv7(), ...addressValues(command) }
         addresses.push(address)
+
         return address
       }),
     addContact: (command) =>
       Effect.map(requireParty(command.tenantId, command.partyId), () => {
         const contact = { id: uuidv7(), ...contactValues(command) }
         contacts.push(contact)
+
         return contact
       }),
     addBankAccount: (command) =>
@@ -337,6 +367,7 @@ const makeMemoryContactBookStore = (knownParty: (tenantId: string, partyId: stri
             account.bankName === command.bankName &&
             account.accountNumber === command.accountNumber,
         )
+
         if (duplicate) {
           return Effect.fail(
             new PartyBankAccountAlreadyExists({
@@ -347,14 +378,17 @@ const makeMemoryContactBookStore = (knownParty: (tenantId: string, partyId: stri
             }),
           )
         }
+
         const account = { id: uuidv7(), ...bankAccountValues(command) }
         bankAccounts.push(account)
+
         return Effect.succeed(account)
       }),
     getContactBook: (tenantId, partyId) =>
       Effect.sync(() => {
         const owned = <T extends { tenantId: string; partyId: string }>(rows: T[]) =>
           rows.filter((row) => row.tenantId === tenantId && row.partyId === partyId)
+
         return {
           partyId,
           addresses: owned(addresses).toSorted((left, right) =>
@@ -371,13 +405,14 @@ const makeContactServiceFromStore = <R>(storeEffect: Effect.Effect<ContactBookSt
   Effect.gen(function* () {
     const store = yield* storeEffect
     const authorization = yield* AuthorizationService
+
     const command = <
       A extends { principal: Schema.Schema.Type<typeof Principal>; tenantId: string },
     >(
       schema: Schema.Codec<A, unknown>,
-      capability: string,
+      capability: CapabilityType,
     ) =>
-      Effect.fn(function* (input: unknown) {
+      Effect.fn(function* (input: Schema.Codec.Encoded<typeof schema>) {
         const decoded = yield* Schema.decodeUnknownEffect(schema)(input)
         yield* authorization.authorize({
           principal: decoded.principal,
@@ -385,24 +420,36 @@ const makeContactServiceFromStore = <R>(storeEffect: Effect.Effect<ContactBookSt
           capability,
         })
         const { principal: _principal, ...rest } = decoded
+
         return rest
       })
+
     const addAddress = command(AddPartyAddressInput, PartyCapabilities.partyAddressAdd)
     const addContact = command(AddPartyContactInput, PartyCapabilities.partyContactAdd)
     const addBankAccount = command(AddPartyBankAccountInput, PartyCapabilities.partyBankAccountAdd)
     const read = command(GetPartyContactBookInput, PartyCapabilities.partyRead)
+
     return {
-      addAddress: Effect.fn("PartyContactService.addAddress")(function* (input: unknown) {
+      addAddress: Effect.fn("PartyContactService.addAddress")(function* (
+        input: Schema.Codec.Encoded<typeof AddPartyAddressInput>,
+      ) {
         return yield* store.addAddress(yield* addAddress(input))
       }),
-      addContact: Effect.fn("PartyContactService.addContact")(function* (input: unknown) {
+      addContact: Effect.fn("PartyContactService.addContact")(function* (
+        input: Schema.Codec.Encoded<typeof AddPartyContactInput>,
+      ) {
         return yield* store.addContact(yield* addContact(input))
       }),
-      addBankAccount: Effect.fn("PartyContactService.addBankAccount")(function* (input: unknown) {
+      addBankAccount: Effect.fn("PartyContactService.addBankAccount")(function* (
+        input: Schema.Codec.Encoded<typeof AddPartyBankAccountInput>,
+      ) {
         return yield* store.addBankAccount(yield* addBankAccount(input))
       }),
-      getContactBook: Effect.fn("PartyContactService.getContactBook")(function* (input: unknown) {
+      getContactBook: Effect.fn("PartyContactService.getContactBook")(function* (
+        input: Schema.Codec.Encoded<typeof GetPartyContactBookInput>,
+      ) {
         const decoded = yield* read(input)
+
         return yield* store.getContactBook(decoded.tenantId, decoded.partyId)
       }),
     } satisfies PartyContactService
@@ -412,6 +459,7 @@ export const PartyContactsLive = Layer.effect(
   PartyContactService,
   makeContactServiceFromStore(makePostgresContactBookStore),
 )
+
 export const makePartyContactsTestLayer = (
   knownParty: (tenantId: string, partyId: string) => boolean = () => true,
 ) =>

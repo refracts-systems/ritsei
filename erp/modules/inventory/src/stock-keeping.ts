@@ -1,4 +1,5 @@
 import { and, asc, eq, or, gt, sql } from "drizzle-orm"
+import * as Data from "effect/Data"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
@@ -17,11 +18,12 @@ import {
   formatSignedMinor,
   requireExactMajorToMinor,
   requireSignedMajorToMinor,
+  omitUndefined,
 } from "../../../../framework/foundation/mod.ts"
 import type { Principal as PrincipalSchema } from "../../../../framework/modules/auth/mod.ts"
 import {
   AuthorizationService,
-  makeScopedCommand,
+  scopedCommand,
 } from "../../../../framework/modules/authorization/mod.ts"
 import { GeneralLedgerService, type PostingRoleType } from "../../accounting/mod.ts"
 import { ProductService } from "../../product/mod.ts"
@@ -78,30 +80,42 @@ type Plan = {
 }
 
 type ValuedLine = { readonly itemId: string; readonly quantity: bigint; readonly value: bigint }
+
 type Balance = { readonly onHand: bigint; readonly reserved: bigint }
+
 type Valuation = { readonly quantity: bigint; readonly value: bigint }
+
 type LockedStock = {
   readonly units: Map<string, string>
   readonly balances: Map<string, Balance>
   readonly valuations: Map<string, Valuation>
 }
-type LineValue =
-  | { readonly _tag: "valued"; readonly line: ValuedLine }
-  | { readonly _tag: "unavailable" }
-  | { readonly _tag: "unvalued" }
+
+type LineValue = Data.TaggedEnum<{
+  Valued: { readonly line: ValuedLine }
+  Unavailable: {}
+  Unvalued: {}
+}>
+
+const LineValue = Data.taggedEnum<LineValue>()
 
 /** An issue removes the moving-average cost, or its stated cost, from valued stock. */
 const valueIssue = (line: PlannedLine, balance: Balance, valuation: Valuation): LineValue => {
   const quantity = -line.quantity
-  if (balance.onHand - balance.reserved < quantity) return { _tag: "unavailable" }
-  if (valuation.quantity < quantity) return { _tag: "unvalued" }
+
+  if (balance.onHand - balance.reserved < quantity) return LineValue.Unavailable()
+
+  if (valuation.quantity < quantity) return LineValue.Unvalued()
+
   // The last units take the remaining value, so rounding or a stated cost never strands value.
   const cost =
     quantity === valuation.quantity
       ? valuation.value
       : (line.issueValue ?? divideHalfUp(valuation.value * quantity, valuation.quantity))
-  if (cost > valuation.value) return { _tag: "unvalued" }
-  return { _tag: "valued", line: { itemId: line.itemId, quantity: line.quantity, value: -cost } }
+
+  if (cost > valuation.value) return LineValue.Unvalued()
+
+  return LineValue.Valued({ line: { itemId: line.itemId, quantity: line.quantity, value: -cost } })
 }
 
 /** A receipt adds its value; a gain without one takes the average or the fallback cost. */
@@ -113,9 +127,10 @@ const valueReceipt = (line: PlannedLine, valuation: Valuation): LineValue => {
       : line.fallbackUnitCost === undefined
         ? undefined
         : line.fallbackUnitCost * line.quantity)
+
   return value === undefined
-    ? { _tag: "unvalued" }
-    : { _tag: "valued", line: { itemId: line.itemId, quantity: line.quantity, value } }
+    ? LineValue.Unvalued()
+    : LineValue.Valued({ line: { itemId: line.itemId, quantity: line.quantity, value } })
 }
 
 const valueLine = (line: PlannedLine, balance: Balance, valuation: Valuation) =>
@@ -129,6 +144,7 @@ const journalFor = (
 ) => {
   const gains = valued.reduce((sum, line) => (line.value > 0n ? sum + line.value : sum), 0n)
   const losses = valued.reduce((sum, line) => (line.value < 0n ? sum - line.value : sum), 0n)
+
   return [
     ...(gains > 0n
       ? [
@@ -154,6 +170,7 @@ const lineFailure = (
 ) => {
   const requested = (line.quantity < 0n ? -line.quantity : line.quantity).toString()
   const scope = { tenantId: plan.tenantId, itemId: line.itemId, requested }
+
   return reason === "unavailable"
     ? new StockUnavailable({ ...scope, warehouseId: plan.warehouseId })
     : new StockValuationUnavailable({ ...scope, legalEntityId })
@@ -162,7 +179,7 @@ const lineFailure = (
 export const makeStockKeepingService = Effect.gen(function* () {
   const database = yield* Database
   const authorization = yield* AuthorizationService
-  const authorized = makeScopedCommand(authorization)
+  const authorized = scopedCommand(authorization)
   const ledger = yield* GeneralLedgerService
   const productService = yield* ProductService
 
@@ -211,6 +228,7 @@ export const makeStockKeepingService = Effect.gen(function* () {
   const lockStock = (plan: Plan, legalEntityId: string) =>
     database.transaction(async (tx) => {
       const state: LockedStock = { units: new Map(), balances: new Map(), valuations: new Map() }
+
       for (const itemId of [...new Set(plan.itemIds)].toSorted()) {
         const item = (
           await tx
@@ -218,8 +236,10 @@ export const makeStockKeepingService = Effect.gen(function* () {
             .from(items)
             .where(and(eq(items.tenantId, plan.tenantId), eq(items.id, itemId)))
         )[0]
+
         if (item === undefined) return { missingItemId: itemId }
         state.units.set(itemId, item.unitOfMeasure)
+
         const balance = (
           await tx
             .select({ onHand: stockBalances.onHand, reserved: stockBalances.reserved })
@@ -233,6 +253,7 @@ export const makeStockKeepingService = Effect.gen(function* () {
             )
             .for("update")
         )[0]
+
         state.balances.set(itemId, {
           onHand: BigInt(balance?.onHand ?? "0"),
           reserved: BigInt(balance?.reserved ?? "0"),
@@ -241,6 +262,7 @@ export const makeStockKeepingService = Effect.gen(function* () {
           .insert(itemValuations)
           .values({ tenantId: plan.tenantId, legalEntityId, itemId })
           .onConflictDoNothing()
+
         const valuation = (
           await tx
             .select({ quantity: itemValuations.quantity, value: itemValuations.value })
@@ -254,11 +276,13 @@ export const makeStockKeepingService = Effect.gen(function* () {
             )
             .for("update")
         )[0]!
+
         state.valuations.set(itemId, {
           quantity: BigInt(valuation.quantity),
           value: requireExactMajorToMinor(valuation.value, 2),
         })
       }
+
       return { state }
     }, "inventory.valuation.lock")
 
@@ -272,6 +296,7 @@ export const makeStockKeepingService = Effect.gen(function* () {
     journalEntryId: string | null,
   ) => {
     const delta = sql`${stockBalances.onHand} + ${line.quantity.toString()}`
+
     if (line.quantity > 0n) {
       await tx
         .insert(stockBalances)
@@ -298,6 +323,7 @@ export const makeStockKeepingService = Effect.gen(function* () {
           ),
         )
     }
+
     const movement = (
       await tx
         .insert(movements)
@@ -314,6 +340,7 @@ export const makeStockKeepingService = Effect.gen(function* () {
         })
         .returning({ id: movements.id })
     )[0]!
+
     await tx
       .update(itemValuations)
       .set({
@@ -339,6 +366,7 @@ export const makeStockKeepingService = Effect.gen(function* () {
       sourceId: plan.source.id,
       journalEntryId,
     })
+
     return {
       itemId: line.itemId,
       movementId: movement.id,
@@ -358,6 +386,7 @@ export const makeStockKeepingService = Effect.gen(function* () {
             .for("share"),
         "inventory.valuation.warehouse",
       ))[0]
+
       if (warehouse === undefined) {
         return yield* Effect.fail(
           new InventoryReferenceNotFound({
@@ -367,6 +396,7 @@ export const makeStockKeepingService = Effect.gen(function* () {
           }),
         )
       }
+
       return warehouse.legalEntityId
     })
 
@@ -376,17 +406,29 @@ export const makeStockKeepingService = Effect.gen(function* () {
       const onHand = new Map(
         [...state.balances].map(([itemId, balance]) => [itemId, balance.onHand]),
       )
+
       const valued: ValuedLine[] = []
+
       for (const line of plan.resolve(onHand).filter((candidate) => candidate.quantity !== 0n)) {
         const outcome = valueLine(
           line,
           state.balances.get(line.itemId)!,
           state.valuations.get(line.itemId)!,
         )
-        if (outcome._tag !== "valued")
-          return yield* Effect.fail(lineFailure(outcome._tag, plan, legalEntityId, line))
-        valued.push(outcome.line)
+
+        const failure = LineValue.$match(outcome, {
+          Valued: (value) => {
+            valued.push(value.line)
+
+            return undefined
+          },
+          Unavailable: () => lineFailure("unavailable", plan, legalEntityId, line),
+          Unvalued: () => lineFailure("unvalued", plan, legalEntityId, line),
+        })
+
+        if (failure !== undefined) return yield* Effect.fail(failure)
       }
+
       return valued
     })
 
@@ -395,8 +437,10 @@ export const makeStockKeepingService = Effect.gen(function* () {
       Effect.gen(function* () {
         const legalEntityId = yield* loadWarehouseLegalEntity(plan)
         const replayed = yield* replay(plan.tenantId, plan.source, legalEntityId)
+
         if (replayed !== undefined) return replayed
         const locked = yield* lockStock(plan, legalEntityId)
+
         if (locked.missingItemId !== undefined) {
           return yield* Effect.fail(
             new InventoryReferenceNotFound({
@@ -406,9 +450,11 @@ export const makeStockKeepingService = Effect.gen(function* () {
             }),
           )
         }
+
         const state = locked.state!
         const valued = yield* valueAll(plan, legalEntityId, state)
         const journalLines = journalFor(valued, plan.gainRole, plan.lossRole)
+
         const journal =
           journalLines.length === 0
             ? null
@@ -422,16 +468,20 @@ export const makeStockKeepingService = Effect.gen(function* () {
                 source: plan.source,
                 lines: journalLines,
               })
+
         const written = yield* database.transaction(async (tx) => {
           const result: Array<ValuedStockMovement["lines"][number]> = []
+
           for (const line of valued.toSorted((left, right) =>
             left.itemId.localeCompare(right.itemId),
           )) {
             const unit = state.units.get(line.itemId)!
             result.push(await writeLine(tx, plan, legalEntityId, line, unit, journal?.id ?? null))
           }
+
           return result
         }, "inventory.valuation.write")
+
         return {
           legalEntityId,
           source: plan.source,
@@ -443,18 +493,21 @@ export const makeStockKeepingService = Effect.gen(function* () {
     )
 
   const registerProductItem = Effect.fn("StockKeepingService.registerProductItem")(function* (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof RegisterProductItemInput>,
   ) {
     const decoded = yield* authorized(
       RegisterProductItemInput,
       InventoryCapabilities.itemCreate,
     )(input)
+
     const product = yield* productService.getProduct(decoded)
+
     if (product.type !== "stockable") {
       return yield* Effect.fail(
         new StockNotStockable({ tenantId: decoded.tenantId, productId: decoded.productId }),
       )
     }
+
     const rows = yield* database.query(
       (db) =>
         db
@@ -470,6 +523,7 @@ export const makeStockKeepingService = Effect.gen(function* () {
           .returning(),
       "inventory.item.register_product",
     )
+
     const row =
       rows[0] ??
       (yield* database.query(
@@ -480,6 +534,7 @@ export const makeStockKeepingService = Effect.gen(function* () {
             .where(and(eq(items.tenantId, decoded.tenantId), eq(items.id, product.id))),
         "inventory.item.get",
       ))[0]!
+
     return {
       id: row.id,
       tenantId: row.tenantId,
@@ -489,11 +544,14 @@ export const makeStockKeepingService = Effect.gen(function* () {
     }
   })
 
-  const receiveValued = Effect.fn("StockKeepingService.receiveValued")(function* (input: unknown) {
+  const receiveValued = Effect.fn("StockKeepingService.receiveValued")(function* (
+    input: Schema.Codec.Encoded<typeof ReceiveValuedStockInput>,
+  ) {
     const decoded = yield* authorized(
       ReceiveValuedStockInput,
       InventoryCapabilities.stockReceive,
     )(input)
+
     return yield* move({
       ...decoded,
       reason: `receipt ${decoded.source.type}`,
@@ -509,11 +567,14 @@ export const makeStockKeepingService = Effect.gen(function* () {
     })
   })
 
-  const issueValued = Effect.fn("StockKeepingService.issueValued")(function* (input: unknown) {
+  const issueValued = Effect.fn("StockKeepingService.issueValued")(function* (
+    input: Schema.Codec.Encoded<typeof IssueValuedStockInput>,
+  ) {
     const decoded = yield* authorized(
       IssueValuedStockInput,
       InventoryCapabilities.stockIssue,
     )(input)
+
     return yield* move({
       ...decoded,
       reason: `issue ${decoded.source.type}`,
@@ -524,15 +585,21 @@ export const makeStockKeepingService = Effect.gen(function* () {
         decoded.lines.map((line) => ({
           itemId: line.itemId,
           quantity: -BigInt(line.quantity),
-          ...(line.unitCost === undefined
-            ? {}
-            : { issueValue: minor(line.unitCost) * BigInt(line.quantity) }),
+          ...omitUndefined({
+            issueValue:
+              line.unitCost === undefined
+                ? undefined
+                : minor(line.unitCost) * BigInt(line.quantity),
+          }),
         })),
     })
   })
 
-  const countStock = Effect.fn("StockKeepingService.countStock")(function* (input: unknown) {
+  const countStock = Effect.fn("StockKeepingService.countStock")(function* (
+    input: Schema.Codec.Encoded<typeof CountStockInput>,
+  ) {
     const decoded = yield* authorized(CountStockInput, InventoryCapabilities.stockCount)(input)
+
     return yield* move({
       principal: decoded.principal,
       tenantId: decoded.tenantId,
@@ -547,16 +614,21 @@ export const makeStockKeepingService = Effect.gen(function* () {
         decoded.lines.map((line) => ({
           itemId: line.itemId,
           quantity: BigInt(line.countedQuantity) - (onHand.get(line.itemId) ?? 0n),
-          ...(line.unitCost === undefined ? {} : { fallbackUnitCost: minor(line.unitCost) }),
+          ...omitUndefined({
+            fallbackUnitCost: line.unitCost === undefined ? undefined : minor(line.unitCost),
+          }),
         })),
     })
   })
 
-  const valuation = Effect.fn("StockKeepingService.valuation")(function* (input: unknown) {
+  const valuation = Effect.fn("StockKeepingService.valuation")(function* (
+    input: Schema.Codec.Encoded<typeof ValuationReportInput>,
+  ) {
     const decoded = yield* authorized(
       ValuationReportInput,
       InventoryCapabilities.valuationRead,
     )(input)
+
     const rows = yield* database.query(
       (db) =>
         db
@@ -576,11 +648,13 @@ export const makeStockKeepingService = Effect.gen(function* () {
           .orderBy(asc(itemValuations.itemId)),
       "inventory.valuation.report",
     )
+
     const normalized = rows.map((row) => ({
       itemId: row.itemId,
       quantity: row.quantity,
       value: major(requireExactMajorToMinor(row.value, 2)),
     }))
+
     return {
       legalEntityId: decoded.legalEntityId,
       rows: normalized,

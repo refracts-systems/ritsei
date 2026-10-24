@@ -3,6 +3,7 @@ import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
+import * as Data from "effect/Data"
 
 import { financialStagingEvidence } from "../../../../db/schema/accounting.ts"
 import { Database, DatabaseFailure } from "../../../../framework/foundation/mod.ts"
@@ -15,9 +16,11 @@ import {
 } from "./financial-store-contract.ts"
 
 const Uuid = Schema.String.check(Schema.isUUID())
+
 const Uuidv7 = Schema.String.check(
   Schema.isPattern(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i),
 )
+
 const Hash = Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/))
 const NonEmptyString = Schema.String.check(Schema.isPattern(/\S/))
 const LookupLimit = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 1_000 }))
@@ -58,6 +61,7 @@ type FinancialStagingEvidenceStoreError =
   | FinancialStagingEvidenceConflict
   | FinancialStagingEvidenceInvalid
   | Schema.SchemaError
+
 type FinancialStagingEvidenceListError =
   | DatabaseFailure
   | FinancialStagingEvidenceInvalid
@@ -69,7 +73,7 @@ type FinancialStagingEvidenceListError =
  */
 export interface FinancialStagingEvidenceStoreService {
   readonly append: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof StoreAppendFinancialStagingEvidenceInput>,
   ) => Effect.Effect<FinancialStagingEvidenceAppendResult, FinancialStagingEvidenceStoreError>
   readonly get: (
     tenantId: string,
@@ -79,7 +83,7 @@ export interface FinancialStagingEvidenceStoreService {
     FinancialStagingEvidenceInvalid | DatabaseFailure
   >
   readonly list: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof StoreFinancialStagingEvidenceLookupInput>,
   ) => Effect.Effect<
     readonly FinancialStagingEvidenceRecordType[],
     FinancialStagingEvidenceListError
@@ -96,11 +100,12 @@ const invalid = (
   reason: ConstructorParameters<typeof FinancialStagingEvidenceInvalid>[0]["reason"],
 ) => new FinancialStagingEvidenceInvalid({ tenantId, recordId, reason })
 
-const prepare = (input: unknown) =>
+const prepare = (input: Schema.Codec.Encoded<typeof StoreAppendFinancialStagingEvidenceInput>) =>
   Effect.gen(function* () {
     const decoded = yield* Schema.decodeUnknownEffect(StoreAppendFinancialStagingEvidenceInput)(
       input,
     )
+
     if (
       decoded.evidence.tenantId !== decoded.tenantId ||
       decoded.evidence.legalEntityId !== decoded.evidence.cohort.legalEntityId ||
@@ -110,12 +115,15 @@ const prepare = (input: unknown) =>
         invalid(decoded.tenantId, decoded.evidence.recordId, "scope_mismatch"),
       )
     }
+
     const computedHash = yield* hashFinancialStagingEvidence(decoded.evidence)
+
     if (computedHash !== decoded.evidenceHash) {
       return yield* Effect.fail(
         invalid(decoded.tenantId, decoded.evidence.recordId, "hash_mismatch"),
       )
     }
+
     return yield* Schema.decodeUnknownEffect(FinancialStagingEvidenceRecord)({
       recordId: decoded.evidence.recordId,
       tenantId: decoded.tenantId,
@@ -141,6 +149,7 @@ export const verifyFinancialStagingEvidenceRecord = (
         invalid(record.tenantId, record.recordId, "canonicalization_version"),
       )
     }
+
     if (
       ![
         record.recordId === record.evidence.recordId,
@@ -154,10 +163,13 @@ export const verifyFinancialStagingEvidenceRecord = (
     ) {
       return yield* Effect.fail(invalid(record.tenantId, record.recordId, "scope_mismatch"))
     }
+
     const computedHash = yield* hashFinancialStagingEvidence(record.evidence)
+
     if (computedHash !== record.evidenceHash) {
       return yield* Effect.fail(invalid(record.tenantId, record.recordId, "hash_mismatch"))
     }
+
     return record
   })
 
@@ -213,6 +225,7 @@ const validateStoredRow = (row: {
       evidence: row.evidence,
       persistedAt: row.createdAt.toISOString(),
     }).pipe(Effect.mapError(() => invalid(row.tenantId, row.recordId, "stored_payload_invalid")))
+
     if (
       ![
         row.operatorPrincipalId === record.evidence.operatorPrincipalId,
@@ -226,6 +239,7 @@ const validateStoredRow = (row: {
     ) {
       return yield* Effect.fail(invalid(row.tenantId, row.recordId, "stored_payload_invalid"))
     }
+
     return yield* verifyFinancialStagingEvidenceRecord(record)
   })
 
@@ -253,15 +267,19 @@ const key = (tenantId: string, recordId: string) => `${tenantId}:${recordId}`
 
 export const makeMemoryFinancialStagingEvidenceStore = (): FinancialStagingEvidenceStoreService => {
   const records = new Map<string, FinancialStagingEvidenceRecordType>()
+
   return {
     append: (input) =>
       Effect.gen(function* () {
         const candidate = yield* prepare(input)
         const existing = records.get(key(candidate.tenantId, candidate.recordId))
+
         if (existing === undefined) {
           records.set(key(candidate.tenantId, candidate.recordId), candidate)
+
           return { record: candidate, duplicate: false }
         }
+
         if (!sameEvidence(existing, candidate)) {
           return yield* Effect.fail(
             new FinancialStagingEvidenceConflict({
@@ -271,12 +289,14 @@ export const makeMemoryFinancialStagingEvidenceStore = (): FinancialStagingEvide
             }),
           )
         }
+
         return { record: yield* verifyFinancialStagingEvidenceRecord(existing), duplicate: true }
       }),
     get: (tenantId, recordId) =>
       Effect.gen(function* () {
         yield* validateGet(tenantId, recordId)
         const record = records.get(key(tenantId, recordId))
+
         return record === undefined
           ? undefined
           : yield* verifyFinancialStagingEvidenceRecord(record)
@@ -286,6 +306,7 @@ export const makeMemoryFinancialStagingEvidenceStore = (): FinancialStagingEvide
         const decoded = yield* Schema.decodeUnknownEffect(StoreFinancialStagingEvidenceLookupInput)(
           input,
         )
+
         const values = [...records.values()]
           .filter(
             (record) =>
@@ -303,24 +324,79 @@ export const makeMemoryFinancialStagingEvidenceStore = (): FinancialStagingEvide
               right.recordId.localeCompare(left.recordId),
           )
           .slice(0, decoded.limit)
+
         return yield* Effect.forEach(values, verifyFinancialStagingEvidenceRecord)
       }),
   }
 }
 
+export type AppendOutcome = Data.TaggedEnum<{
+  Inserted: {
+    readonly row: {
+      tenantId: string
+      recordId: string
+      legalEntityId: string
+      gateId: string
+      cohortId: string
+      deploymentRevision: string
+      schemaVersion: number
+      canonicalizationVersion: number
+      evidenceHash: string
+      evidence: unknown
+      operatorPrincipalId: string
+      providerIdentityRef: string
+      result: string
+      mismatchCount: number
+      orphanCount: number
+      startedAt: Date
+      completedAt: Date
+      createdAt: Date
+    }
+  }
+  Missing: {}
+  Existing: {
+    readonly row: {
+      recordId: string
+      tenantId: string
+      legalEntityId: string
+      gateId: string
+      cohortId: string
+      deploymentRevision: string
+      schemaVersion: number
+      canonicalizationVersion: number
+      evidenceHash: string
+      evidence: unknown
+      operatorPrincipalId: string
+      providerIdentityRef: string
+      result: string
+      mismatchCount: number
+      orphanCount: number
+      startedAt: Date
+      completedAt: Date
+      createdAt: Date
+    }
+  }
+}>
+
+export const AppendOutcome = Data.taggedEnum<AppendOutcome>()
+
 export const makePostgresFinancialStagingEvidenceStore = Effect.gen(function* () {
   const database = yield* Database
+
   return {
-    append: (input: unknown) =>
+    append: (input: Schema.Codec.Encoded<typeof StoreAppendFinancialStagingEvidenceInput>) =>
       Effect.gen(function* () {
         const candidate = yield* prepare(input)
+
         const result = yield* database.transaction(async (transaction) => {
           const [inserted] = await transaction
             .insert(financialStagingEvidence)
             .values(dbValues(candidate))
             .onConflictDoNothing()
             .returning()
-          if (inserted !== undefined) return { _tag: "inserted" as const, row: inserted }
+
+          if (inserted !== undefined) return AppendOutcome.Inserted({ row: inserted })
+
           const [existing] = await transaction
             .select()
             .from(financialStagingEvidence)
@@ -331,11 +407,13 @@ export const makePostgresFinancialStagingEvidenceStore = Effect.gen(function* ()
               ),
             )
             .for("update")
+
           return existing === undefined
-            ? { _tag: "missing" as const }
-            : { _tag: "existing" as const, row: existing }
+            ? AppendOutcome.Missing()
+            : AppendOutcome.Existing({ row: existing })
         }, "accounting.financial_staging_evidence.append")
-        if (result._tag === "missing") {
+
+        if (AppendOutcome.$is("Missing")(result)) {
           return yield* Effect.fail(
             new DatabaseFailure({
               operation: "accounting.financial_staging_evidence.append",
@@ -343,8 +421,11 @@ export const makePostgresFinancialStagingEvidenceStore = Effect.gen(function* ()
             }),
           )
         }
+
         const record = yield* validateStoredRow(result.row)
-        if (result._tag === "inserted") return { record, duplicate: false }
+
+        if (AppendOutcome.$is("Inserted")(result)) return { record, duplicate: false }
+
         if (!sameEvidence(record, candidate)) {
           return yield* Effect.fail(
             new FinancialStagingEvidenceConflict({
@@ -354,11 +435,13 @@ export const makePostgresFinancialStagingEvidenceStore = Effect.gen(function* ()
             }),
           )
         }
+
         return { record, duplicate: true }
       }),
     get: (tenantId: string, recordId: string) =>
       Effect.gen(function* () {
         yield* validateGet(tenantId, recordId)
+
         const rows = yield* database.query(
           (db) =>
             db
@@ -373,29 +456,37 @@ export const makePostgresFinancialStagingEvidenceStore = Effect.gen(function* ()
               .limit(1),
           "accounting.financial_staging_evidence.get",
         )
+
         const row = rows[0]
+
         return row === undefined ? undefined : yield* validateStoredRow(row)
       }),
-    list: (input: unknown) =>
+    list: (input: Schema.Codec.Encoded<typeof StoreFinancialStagingEvidenceLookupInput>) =>
       Effect.gen(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(StoreFinancialStagingEvidenceLookupInput)(
           input,
         )
+
         const conditions = [eq(financialStagingEvidence.tenantId, decoded.tenantId)]
+
         if (decoded.legalEntityId !== undefined) {
           conditions.push(eq(financialStagingEvidence.legalEntityId, decoded.legalEntityId))
         }
+
         if (decoded.gateId !== undefined) {
           conditions.push(eq(financialStagingEvidence.gateId, decoded.gateId))
         }
+
         if (decoded.cohortId !== undefined) {
           conditions.push(eq(financialStagingEvidence.cohortId, decoded.cohortId))
         }
+
         if (decoded.deploymentRevision !== undefined) {
           conditions.push(
             eq(financialStagingEvidence.deploymentRevision, decoded.deploymentRevision),
           )
         }
+
         const rows = yield* database.query(
           (db) =>
             db
@@ -409,6 +500,7 @@ export const makePostgresFinancialStagingEvidenceStore = Effect.gen(function* ()
               .limit(decoded.limit),
           "accounting.financial_staging_evidence.list",
         )
+
         return yield* Effect.forEach(rows, validateStoredRow)
       }),
   } satisfies FinancialStagingEvidenceStoreService

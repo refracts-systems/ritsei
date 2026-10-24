@@ -33,7 +33,14 @@ import {
   SalesOrderConfirmationIdempotencyConflict,
 } from "./errors.ts"
 import type { SalesStore } from "./store.ts"
-import { deriveTotal, toSalesOrder } from "./store.ts"
+import {
+  CancellationMutation,
+  ConfirmationMutation,
+  ConfirmedTotalLookup,
+  deriveTotal,
+  OrderCreation,
+  toSalesOrder,
+} from "./store.ts"
 
 const customerSelection = {
   id: customers.id,
@@ -41,6 +48,7 @@ const customerSelection = {
   name: customers.name,
   email: customers.email,
 }
+
 const quotationSelection = {
   id: quotations.id,
   tenantId: quotations.tenantId,
@@ -48,6 +56,7 @@ const quotationSelection = {
   status: quotations.status,
   total: quotations.total,
 }
+
 const orderSelection = {
   id: orders.id,
   tenantId: orders.tenantId,
@@ -57,6 +66,7 @@ const orderSelection = {
   confirmedAt: orders.confirmedAt,
   total: orders.total,
 }
+
 const orderLineSelection = {
   id: orderLines.id,
   orderId: orderLines.orderId,
@@ -64,6 +74,7 @@ const orderLineSelection = {
   quantity: orderLines.quantity,
   unitPrice: orderLines.unitPrice,
 }
+
 type SalesOrderLineRow = {
   readonly id: string
   readonly orderId: string
@@ -76,13 +87,16 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
   const database = yield* Database
   const clock = yield* Clock.Clock
   const now = () => new Date(clock.currentTimeMillisUnsafe())
+
   const escapeLikePattern = (value: string): string =>
     value.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_")
+
   const listCustomers = Effect.fn("SalesStore.listCustomers")(function* (
     decoded: ListCustomersCommand,
   ) {
     const search =
       decoded.search === undefined ? undefined : `%${escapeLikePattern(decoded.search)}%`
+
     return yield* database.query(
       (db) =>
         db
@@ -101,6 +115,7 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
       "sales.customer.list",
     )
   })
+
   const getCustomer = Effect.fn("SalesStore.getCustomer")(function* (decoded: GetCustomerCommand) {
     const rows = yield* database.query(
       (db) =>
@@ -113,8 +128,10 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
           .limit(1),
       "sales.customer.get",
     )
+
     return rows[0]
   })
+
   const listQuotations = Effect.fn("SalesStore.listQuotations")(function* (
     decoded: ListQuotationsCommand,
   ) {
@@ -137,6 +154,7 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
       "sales.quotation.list",
     )
   })
+
   const getQuotation = Effect.fn("SalesStore.getQuotation")(function* (
     decoded: GetQuotationCommand,
   ) {
@@ -151,8 +169,10 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
           .limit(1),
       "sales.quotation.get",
     )
+
     return rows[0]
   })
+
   const listOrders = Effect.fn("SalesStore.listOrders")(function* (decoded: ListOrdersCommand) {
     const rows = yield* database.query(
       (db) =>
@@ -172,7 +192,9 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
           .limit(decoded.limit ?? 200),
       "sales.order.list",
     )
+
     if (rows.length === 0) return []
+
     const lines = yield* database.query(
       (db) =>
         db
@@ -190,14 +212,18 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
           .orderBy(asc(orderLines.orderId), asc(orderLines.id)),
       "sales.order.lines.list",
     )
+
     const linesByOrder = new Map<string, Array<SalesOrderLineRow>>()
+
     for (const line of lines) {
       const orderLinesForOrder = linesByOrder.get(line.orderId) ?? []
       orderLinesForOrder.push(line)
       linesByOrder.set(line.orderId, orderLinesForOrder)
     }
+
     return rows.map((row) => toSalesOrder(row, linesByOrder.get(row.id) ?? []))
   })
+
   const getOrder = Effect.fn("SalesStore.getOrder")(function* (decoded: GetOrderCommand) {
     const rows = yield* database.query(
       (db) =>
@@ -208,8 +234,11 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
           .limit(1),
       "sales.order.get",
     )
+
     const row = rows[0]
+
     if (row === undefined) return undefined
+
     const lines = yield* database.query(
       (db) =>
         db
@@ -221,12 +250,15 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
           .orderBy(asc(orderLines.id)),
       "sales.order.lines.get",
     )
+
     return toSalesOrder(row, lines)
   })
+
   const createCustomer = Effect.fn("SalesStore.createCustomer")(function* (
     decoded: CreateCustomerCommand,
   ) {
     const email = decoded.email.trim().toLowerCase()
+
     const rows = yield* database
       .query(
         (db) =>
@@ -247,8 +279,10 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
             : error,
         ),
       )
+
     return rows[0]!
   })
+
   const createQuotation = Effect.fn("SalesStore.createQuotation")(function* (
     decoded: CreateQuotationCommand,
   ) {
@@ -272,8 +306,10 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
             : error,
         ),
       )
+
     return rows[0]!
   })
+
   const createOrder = Effect.fn("SalesStore.createOrder")(function* (decoded: CreateOrderCommand) {
     const result = yield* database
       .transaction(async (tx) => {
@@ -288,10 +324,12 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
               ),
             )
             .for("update")
+
           if (quotation !== undefined && quotation.customerId !== decoded.customerId) {
-            return { _tag: "quotation-customer-mismatch" as const }
+            return OrderCreation.QuotationCustomerMismatch()
           }
         }
+
         const [order] = await tx
           .insert(orders)
           .values({
@@ -301,6 +339,7 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
             total: deriveTotal(decoded.lines),
           })
           .returning(orderSelection)
+
         const lines = await tx
           .insert(orderLines)
           .values(
@@ -313,7 +352,8 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
             })),
           )
           .returning(orderLineSelection)
-        return { _tag: "created" as const, order: toSalesOrder(order!, lines) }
+
+        return OrderCreation.Created({ order: toSalesOrder(order!, lines) })
       }, "sales.order.create")
       .pipe(
         Effect.mapError((error) => {
@@ -323,6 +363,7 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
               customerId: decoded.customerId,
             })
           }
+
           if (
             decoded.quotationId !== undefined &&
             isDatabaseConstraint(error, "orders_tenant_quotation_fkey", "23503")
@@ -332,6 +373,7 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
               quotationId: decoded.quotationId,
             })
           }
+
           if (
             decoded.quotationId !== undefined &&
             isDatabaseConstraint(error, "orders_tenant_quotation_customer_fkey", "23503")
@@ -342,20 +384,24 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
               customerId: decoded.customerId,
             })
           }
+
           return error
         }),
       )
-    if (result._tag === "quotation-customer-mismatch") {
-      return yield* Effect.fail(
-        new QuotationCustomerMismatch({
-          tenantId: decoded.tenantId,
-          quotationId: decoded.quotationId!,
-          customerId: decoded.customerId,
-        }),
-      )
-    }
-    return result.order
+
+    return yield* OrderCreation.$match(result, {
+      QuotationCustomerMismatch: () =>
+        Effect.fail(
+          new QuotationCustomerMismatch({
+            tenantId: decoded.tenantId,
+            quotationId: decoded.quotationId!,
+            customerId: decoded.customerId,
+          }),
+        ),
+      Created: ({ order }) => Effect.succeed(order),
+    })
   })
+
   const confirmOrder = Effect.fn("SalesStore.confirmOrder")(function* (
     decoded: ConfirmOrderCommand,
     append: (
@@ -374,21 +420,28 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
               .from(orders)
               .where(and(eq(orders.tenantId, decoded.tenantId), eq(orders.id, decoded.orderId)))
               .for("update")
-            if (row === undefined) return { _tag: "not-found" as const }
+
+            if (row === undefined) return ConfirmationMutation.NotFound()
+
             const lines = await tx
               .select(orderLineSelection)
               .from(orderLines)
               .where(and(eq(orderLines.tenantId, decoded.tenantId), eq(orderLines.orderId, row.id)))
+
             const current = toSalesOrder(row, lines)
+
             if (row.status === "confirmed") {
               return row.confirmationIdempotencyKey === decoded.idempotencyKey
-                ? { _tag: "existing" as const, order: current }
-                : { _tag: "idempotency-conflict" as const }
+                ? ConfirmationMutation.Existing({ order: current })
+                : ConfirmationMutation.IdempotencyConflict()
             }
+
             if (row.status !== "draft") {
-              return { _tag: "invalid-state" as const, status: row.status }
+              return ConfirmationMutation.InvalidState({ status: row.status })
             }
+
             const confirmedAt = now()
+
             const [confirmed] = await tx
               .update(orders)
               .set({
@@ -405,9 +458,12 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
                 ),
               )
               .returning(orderSelection)
-            return { _tag: "confirmed" as const, order: toSalesOrder(confirmed!, lines) }
+
+            return ConfirmationMutation.Confirmed({ order: toSalesOrder(confirmed!, lines) })
           }, "sales.order.confirm")
-          if (mutation._tag === "confirmed") yield* append(mutation.order)
+
+          if (ConfirmationMutation.$is("Confirmed")(mutation)) yield* append(mutation.order)
+
           return mutation
         }),
         "sales.order.confirm.atomic",
@@ -424,6 +480,7 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
         ),
       )
   })
+
   const cancelConfirmedOrder = Effect.fn("SalesStore.cancelConfirmedOrder")(function* (
     decoded: CancelConfirmedOrderCommand,
   ) {
@@ -433,15 +490,22 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
         .from(orders)
         .where(and(eq(orders.tenantId, decoded.tenantId), eq(orders.id, decoded.orderId)))
         .for("update")
-      if (row === undefined) return { _tag: "not-found" as const }
+
+      if (row === undefined) return CancellationMutation.NotFound()
+
       const lines = await tx
         .select(orderLineSelection)
         .from(orderLines)
         .where(and(eq(orderLines.tenantId, decoded.tenantId), eq(orderLines.orderId, row.id)))
-      if (row.status === "cancelled") return toSalesOrder(row, lines)
-      if (row.status !== "confirmed") {
-        return { _tag: "invalid-state" as const, status: row.status }
+
+      if (row.status === "cancelled") {
+        return CancellationMutation.Cancelled({ order: toSalesOrder(row, lines) })
       }
+
+      if (row.status !== "confirmed") {
+        return CancellationMutation.InvalidState({ status: row.status })
+      }
+
       const [cancelled] = await tx
         .update(orders)
         .set({ status: "cancelled", updatedAt: now() })
@@ -453,9 +517,11 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
           ),
         )
         .returning(orderSelection)
-      return toSalesOrder(cancelled!, lines)
+
+      return CancellationMutation.Cancelled({ order: toSalesOrder(cancelled!, lines) })
     }, "sales.order.cancel")
   })
+
   const getConfirmedOrderTotal = Effect.fn("SalesStore.getConfirmedOrderTotal")(function* (
     decoded: GetConfirmedOrderTotalCommand,
   ) {
@@ -468,16 +534,18 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
           .for("update"),
       "sales.order.confirmed_total.lookup",
     )
+
     const row = rows[0]
+
     return row === undefined
-      ? { _tag: "not-found" as const }
-      : {
-          _tag: "found" as const,
+      ? ConfirmedTotalLookup.NotFound()
+      : ConfirmedTotalLookup.Found({
           total: row.total,
           status: row.status,
           confirmedAt: row.confirmedAt?.toISOString() ?? null,
-        }
+        })
   })
+
   return {
     listCustomers,
     getCustomer,

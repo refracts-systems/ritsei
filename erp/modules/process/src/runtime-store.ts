@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm"
 import * as Context from "effect/Context"
+import * as Data from "effect/Data"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 
@@ -62,7 +63,7 @@ const decodeRow = (row: {
     | null
   readonly currentNodeId: string
   readonly revision: number
-  readonly state: unknown
+  readonly state: Schema.Json
   readonly correlationId: string
   readonly executionPrincipal: string
 }) =>
@@ -85,13 +86,12 @@ const decodeRow = (row: {
     ),
   )
 
-type SaveResult =
-  | { readonly _tag: "Saved" }
-  | {
-      readonly _tag: "Conflict"
-      readonly expectedRevision: number
-      readonly actualRevision: number
-    }
+type SaveResult = Data.TaggedEnum<{
+  Saved: {}
+  Conflict: { readonly expectedRevision: number; readonly actualRevision: number }
+}>
+
+const SaveResult = Data.taggedEnum<SaveResult>()
 
 const saveRow = async (
   transaction: DrizzleTransaction,
@@ -110,12 +110,14 @@ const saveRow = async (
       ),
     )
     .for("update")
+
   const current = currentRows[0]
 
   if (current === undefined) {
     if (checkpoint.revision !== 0) {
-      return { _tag: "Conflict", expectedRevision: 0, actualRevision: checkpoint.revision }
+      return SaveResult.Conflict({ expectedRevision: 0, actualRevision: checkpoint.revision })
     }
+
     await transaction.insert(processRuntimeCheckpoints).values({
       id: checkpoint.instanceId,
       tenantId: checkpoint.tenantId,
@@ -131,16 +133,14 @@ const saveRow = async (
       correlationId: checkpoint.correlationId,
       executionPrincipal: checkpoint.executionPrincipal,
     })
-    return { _tag: "Saved" }
+
+    return SaveResult.Saved()
   }
 
   const expectedRevision = current.revision + 1
+
   if (checkpoint.revision !== expectedRevision) {
-    return {
-      _tag: "Conflict",
-      expectedRevision,
-      actualRevision: checkpoint.revision,
-    }
+    return SaveResult.Conflict({ expectedRevision, actualRevision: checkpoint.revision })
   }
 
   const updated = await transaction
@@ -169,22 +169,20 @@ const saveRow = async (
     .returning({ id: processRuntimeCheckpoints.id })
 
   return updated.length === 1
-    ? { _tag: "Saved" }
-    : {
-        _tag: "Conflict",
-        expectedRevision,
-        actualRevision: checkpoint.revision,
-      }
+    ? SaveResult.Saved()
+    : SaveResult.Conflict({ expectedRevision, actualRevision: checkpoint.revision })
 }
 
 export const makePostgresProcessCheckpointStore = Effect.gen(function* () {
   const database = yield* Database
+
   return {
     load: (tenantId: string, instanceId: string) =>
       Effect.gen(function* () {
         if (!Schema.is(Uuid)(tenantId) || !Schema.is(Uuid)(instanceId)) {
           return yield* Effect.fail(invalid("checkpoint identity is not a UUID"))
         }
+
         const rows = yield* database.query(
           (db) =>
             db
@@ -198,7 +196,9 @@ export const makePostgresProcessCheckpointStore = Effect.gen(function* () {
               ),
           "process.runtime.checkpoint.load",
         )
+
         const row = rows[0]
+
         return row === undefined ? undefined : yield* decodeRow(row)
       }),
     save: (checkpoint: ProcessCheckpointType) =>
@@ -207,7 +207,8 @@ export const makePostgresProcessCheckpointStore = Effect.gen(function* () {
           (transaction) => saveRow(transaction, checkpoint),
           "process.runtime.checkpoint.save",
         )
-        if (result._tag === "Conflict") {
+
+        if (SaveResult.$is("Conflict")(result)) {
           return yield* Effect.fail(
             new ProcessCheckpointRevisionConflict({
               instanceId: checkpoint.instanceId,
@@ -216,6 +217,7 @@ export const makePostgresProcessCheckpointStore = Effect.gen(function* () {
             }),
           )
         }
+
         return checkpoint
       }),
   } satisfies ProcessCheckpointStore
@@ -224,11 +226,13 @@ export const makePostgresProcessCheckpointStore = Effect.gen(function* () {
 export const makeMemoryProcessCheckpointStore = (): ProcessCheckpointStore => {
   const checkpoints = new Map<string, ProcessCheckpointType>()
   const key = (tenantId: string, instanceId: string) => `${tenantId}:${instanceId}`
+
   return {
     load: (tenantId, instanceId) => Effect.succeed(checkpoints.get(key(tenantId, instanceId))),
     save: (checkpoint) => {
       const checkpointKey = key(checkpoint.tenantId, checkpoint.instanceId)
       const current = checkpoints.get(checkpointKey)
+
       if (current === undefined && checkpoint.revision !== 0) {
         return Effect.fail(
           new ProcessCheckpointRevisionConflict({
@@ -238,6 +242,7 @@ export const makeMemoryProcessCheckpointStore = (): ProcessCheckpointStore => {
           }),
         )
       }
+
       if (current !== undefined && checkpoint.revision !== current.revision + 1) {
         return Effect.fail(
           new ProcessCheckpointRevisionConflict({
@@ -247,7 +252,9 @@ export const makeMemoryProcessCheckpointStore = (): ProcessCheckpointStore => {
           }),
         )
       }
+
       checkpoints.set(checkpointKey, checkpoint)
+
       return Effect.succeed(checkpoint)
     },
   }

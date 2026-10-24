@@ -17,10 +17,12 @@ export function createProductsQuery(scope: ApiScope) {
 
 export function createProductMutation(scope: ApiScope, afterSuccess?: () => void) {
   const client = useQueryClient()
-  return useMutation<Product, RequestFailure, { code: string; name: string; type: string }>(() => ({
+
+  return useMutation<Product, RequestFailure, Parameters<typeof createProduct>[0]>(() => ({
     mutationFn: (input) => runRequest(scope, createProduct(input)),
     onSuccess: () => {
       afterSuccess?.()
+
       return client.invalidateQueries({ queryKey: serverQueryKey(scope.tenantId, productsKey) })
     },
   }))

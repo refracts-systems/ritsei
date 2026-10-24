@@ -10,6 +10,7 @@ export const IdentityPrincipal = Schema.Struct({
   userAccountId: NonEmptyString,
   sessionId: NonEmptyString,
 })
+
 export type IdentityPrincipal = Schema.Schema.Type<typeof IdentityPrincipal>
 
 export const UserAccountCreatedEventPayload = Schema.Struct({

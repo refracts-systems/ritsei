@@ -7,10 +7,13 @@ const pascal = (snake: string) =>
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join("")
+
 const camel = (snake: string) => pascal(snake).charAt(0).toLowerCase() + pascal(snake).slice(1)
 const kebab = (snake: string) => snake.replaceAll("_", "-")
+
 const human = (snake: string) => {
   const words = snake.replaceAll("_", " ")
+
   return words.charAt(0).toUpperCase() + words.slice(1)
 }
 
@@ -30,10 +33,12 @@ export const entityNames = (module: string, entity: string) => ({
   entitiesPath: kebab(`${entity}s`),
   entitiesLabel: human(`${entity}s`).toLowerCase(),
 })
+
 export type EntityNames = ReturnType<typeof entityNames>
 
 const backendFiles = (n: EntityNames): readonly GeneratedFile[] => {
   const root = `erp/modules/${n.module}`
+
   return [
     {
       path: `${root}/manifest.ts`,
@@ -311,8 +316,8 @@ import {
   BaseApiErrorPolicy,
   BearerAuth,
   CurrentPrincipal,
-  makeApiErrorMapping,
-  makeModuleApi,
+  apiErrorMapping,
+  moduleApi,
   ReadLimit,
   ShortString,
   TenantHeaders,
@@ -334,9 +339,9 @@ export const ${n.Module}HttpGroup = HttpApiGroup.make("${n.Module}").add(
   }).middleware(BearerAuth),
 )
 
-const ${n.Module}HttpApi = makeModuleApi(${n.Module}HttpGroup)
+const ${n.Module}HttpApi = moduleApi(${n.Module}HttpGroup)
 
-export const ${n.Module}HttpErrors = makeApiErrorMapping({
+export const ${n.Module}HttpErrors = apiErrorMapping({
   ...BaseApiErrorPolicy,
   ${n.Entity}AlreadyExists: "conflict",
 })
@@ -383,7 +388,7 @@ import {
   AuthorizationDenied,
   makeAuthorizationTestLayer,
 } from "../../../../framework/modules/authorization/mod.ts"
-import { BearerAuth, CurrentPrincipal, makeModuleApi } from "../../../../framework/modules/http/mod.ts"
+import { BearerAuth, CurrentPrincipal, moduleApi } from "../../../../framework/modules/http/mod.ts"
 import { validateModuleRegistry } from "../../../../framework/modules/module/mod.ts"
 import { ${n.Module}HttpGroup, ${n.Module}HttpHandlers } from "../http.ts"
 import {
@@ -444,7 +449,7 @@ it.layer(TestHttpServices)("${n.module} HTTP endpoint", (it) => {
         next(HttpClientRequest.bearerToken(request, "${n.module}-token")),
       )
       const handlers = ${n.Module}HttpHandlers.pipe(Layer.provide(bearer), Layer.provide(granted))
-      const client = yield* HttpApiTest.groups(makeModuleApi(${n.Module}HttpGroup), ["${n.Module}"]).pipe(
+      const client = yield* HttpApiTest.groups(moduleApi(${n.Module}HttpGroup), ["${n.Module}"]).pipe(
         Effect.provide(Layer.mergeAll(handlers, bearerClient, bearer)),
       )
       const headers = { "x-tenant-id": tenantId }

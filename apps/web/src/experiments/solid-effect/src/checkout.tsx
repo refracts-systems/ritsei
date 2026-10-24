@@ -79,6 +79,7 @@ export function Checkout() {
     let reservation: Reservation | undefined
     let charge: Charge | undefined
     setNotice(null)
+
     try {
       setPhase("reserving")
       reservation = yield reserveInventory(items)
@@ -94,13 +95,16 @@ export function Checkout() {
         text: `Order ${order.id} confirmed — $${order.total.toFixed(2)}`,
       })
       refresh(orders)
+
       return order
     } catch (e) {
       // Saga compensation, in reverse order of what committed. Mid-step
       // cleanup (voiding a half-done authorization) already ran via the
       // interrupted step's own finalizers.
       if (charge) yield refundCharge(charge)
+
       if (reservation) yield releaseReservation(reservation)
+
       if (e instanceof CardDeclinedError) {
         setNotice({
           kind: "error",
@@ -114,14 +118,17 @@ export function Checkout() {
           text: "Checkout cancelled — compensations ran, cart untouched",
         })
       }
+
       throw e // reject the action → optimistic phase reverts to "idle"
     }
   })
 
   let placeOrderButton: HTMLButtonElement | undefined
+
   const restorePlaceOrderFocus = () => {
     requestAnimationFrame(() => placeOrderButton?.focus())
   }
+
   const submitOrder = () => {
     placeOrder(
       cart.map((item) => ({ ...item })),
@@ -132,11 +139,14 @@ export function Checkout() {
   }
 
   const inFlight = () => phase() !== "idle"
+
   const stepState = (step: Phase) => {
     const order: Phase[] = ["reserving", "charging", "finalizing"]
     const current = order.indexOf(phase())
     const target = order.indexOf(step)
+
     if (current === -1) return ""
+
     return target < current ? "done" : target === current ? "active" : ""
   }
 

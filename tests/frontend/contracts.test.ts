@@ -1,6 +1,7 @@
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import * as Result from "effect/Result"
 import { readFileSync } from "node:fs"
 
 import {
@@ -81,6 +82,7 @@ import {
 } from "../../tooling/frontend/contracts.ts"
 
 const id = "01900000-0000-7000-8000-000000000001"
+
 const emails = [
   "user@example.com",
   "élève@example.com",
@@ -101,6 +103,7 @@ const emails = [
   "Σ@example.com",
   "İ@example.com",
 ]
+
 const unknownInputs: readonly unknown[] = [
   undefined,
   null,
@@ -308,17 +311,20 @@ it.effect("preserves canonical whitespace, Unicode and case validation in browse
       const input = { id, email, status: "active" }
       const account = yield* Effect.result(Schema.decodeUnknownEffect(UserAccount)(input))
       assert.equal(
-        account._tag === "Success",
+        Result.isSuccess(account),
         /\S/.test(email) && email === email.trim() && email === email.toLowerCase(),
         JSON.stringify(email),
       )
       const update = yield* Effect.result(Schema.decodeUnknownEffect(UpdateUserAccountInput)(input))
-      assert.equal(update._tag === "Success", /\S/.test(email), JSON.stringify(email))
+      assert.equal(Result.isSuccess(update), /\S/.test(email), JSON.stringify(email))
+
       const create = yield* Effect.result(
         Schema.decodeUnknownEffect(CreateUserAccountInput)({ email }),
       )
-      assert.equal(create._tag === "Success", /\S/.test(email), JSON.stringify(email))
+
+      assert.equal(Result.isSuccess(create), /\S/.test(email), JSON.stringify(email))
     }
+
     for (const [canonical, browser] of [
       [UserAccount, BrowserUserAccount],
       [UpdateUserAccountInput, BrowserUpdateUserAccountInput],
@@ -330,20 +336,25 @@ it.effect("preserves canonical whitespace, Unicode and case validation in browse
         const expected = yield* Effect.result(Schema.decodeUnknownEffect(canonical)(input))
         const actual = yield* Effect.result(Schema.decodeUnknownEffect(browser)(input))
         assert.equal(actual._tag, expected._tag)
-        if (actual._tag === "Success" && expected._tag === "Success") {
+
+        if (Result.isSuccess(actual) && Result.isSuccess(expected)) {
           assert.deepEqual(actual.success, expected.success)
         }
       }
     }
+
     for (const input of [...unknownInputs, ...emails.map((email) => ({ email }))]) {
       const expected = yield* Effect.result(
         Schema.decodeUnknownEffect(CreateUserAccountInput)(input),
       )
+
       const actual = yield* Effect.result(
         Schema.decodeUnknownEffect(BrowserCreateUserAccountInput)(input),
       )
+
       assert.equal(actual._tag, expected._tag)
-      if (actual._tag === "Success" && expected._tag === "Success") {
+
+      if (Result.isSuccess(actual) && Result.isSuccess(expected)) {
         assert.deepEqual(actual.success, expected.success)
       }
     }
@@ -358,7 +369,9 @@ it.effect("preserves Party projection validation in browser decoders", () =>
       kind: "organization",
       name: "Northwind Holdings",
     }
+
     const directory = { party, legalEntityId: null }
+
     const detail = {
       party,
       roles: ["supplier"],
@@ -368,6 +381,7 @@ it.effect("preserves Party projection validation in browser decoders", () =>
       relationships: [],
       representations: [],
     }
+
     for (const [canonical, browser, value] of [
       [Party, BrowserParty, party],
       [PartyDirectoryEntry, BrowserPartyDirectoryEntry, directory],
@@ -378,6 +392,7 @@ it.effect("preserves Party projection validation in browser decoders", () =>
         yield* Schema.decodeUnknownEffect(canonical)(value),
       )
     }
+
     assert.deepEqual(
       yield* Schema.decodeUnknownEffect(BrowserListPartiesInput)({
         search: "Northwind",
@@ -387,12 +402,14 @@ it.effect("preserves Party projection validation in browser decoders", () =>
       { search: "Northwind", kind: "organization", limit: 200 },
     )
     assert.isTrue(
-      (yield* Effect.result(
-        Schema.decodeUnknownEffect(BrowserPartyDetail)({
-          ...detail,
-          roles: ["unknown"],
-        }),
-      ))._tag === "Failure",
+      Result.isFailure(
+        yield* Effect.result(
+          Schema.decodeUnknownEffect(BrowserPartyDetail)({
+            ...detail,
+            roles: ["unknown"],
+          }),
+        ),
+      ),
     )
   }),
 )
@@ -400,6 +417,7 @@ it.effect("preserves Party projection validation in browser decoders", () =>
 it.effect("preserves Inventory projection validation and tenant-shaped values", () =>
   Effect.gen(function* () {
     const tenantId = "01900000-0000-7000-8000-000000000002"
+
     const warehouse = {
       id,
       tenantId,
@@ -407,6 +425,7 @@ it.effect("preserves Inventory projection validation and tenant-shaped values", 
       primaryBranchId: null,
       name: "Main warehouse",
     }
+
     const item = {
       id: "01900000-0000-7000-8000-000000000004",
       tenantId,
@@ -414,6 +433,7 @@ it.effect("preserves Inventory projection validation and tenant-shaped values", 
       name: "Widget",
       unitOfMeasure: "EA",
     }
+
     const balance = {
       tenantId,
       warehouseId: warehouse.id,
@@ -422,6 +442,7 @@ it.effect("preserves Inventory projection validation and tenant-shaped values", 
       reserved: "2",
       unitOfMeasure: "EA",
     }
+
     assert.deepEqual(
       yield* Schema.decodeUnknownEffect(BrowserInventoryWarehouse)(warehouse),
       warehouse,
@@ -432,9 +453,11 @@ it.effect("preserves Inventory projection validation and tenant-shaped values", 
       balance,
     )
     assert.isTrue(
-      (yield* Effect.result(
-        Schema.decodeUnknownEffect(BrowserInventoryStockBalance)({ ...balance, onHand: "02" }),
-      ))._tag === "Failure",
+      Result.isFailure(
+        yield* Effect.result(
+          Schema.decodeUnknownEffect(BrowserInventoryStockBalance)({ ...balance, onHand: "02" }),
+        ),
+      ),
     )
   }),
 )
@@ -443,6 +466,7 @@ it.effect("preserves Sales projection validation and tenant-shaped values", () =
   Effect.gen(function* () {
     const tenantId = "01900000-0000-7000-8000-000000000002"
     const customer = { id, tenantId, name: "Sales Customer", email: "sales@example.test" }
+
     const order = {
       id: "01900000-0000-7000-8000-000000000004",
       tenantId,
@@ -459,15 +483,18 @@ it.effect("preserves Sales projection validation and tenant-shaped values", () =
         },
       ],
     }
+
     assert.deepStrictEqual(
       yield* Schema.decodeUnknownEffect(BrowserSalesCustomer)(customer),
       customer,
     )
     assert.deepStrictEqual(yield* Schema.decodeUnknownEffect(BrowserSalesOrder)(order), order)
     assert.isTrue(
-      (yield* Effect.result(
-        Schema.decodeUnknownEffect(BrowserSalesOrder)({ ...order, status: "unknown" }),
-      ))._tag === "Failure",
+      Result.isFailure(
+        yield* Effect.result(
+          Schema.decodeUnknownEffect(BrowserSalesOrder)({ ...order, status: "unknown" }),
+        ),
+      ),
     )
   }),
 )
@@ -477,6 +504,7 @@ it.effect("preserves Accounting projection and exact-money validation", () =>
     const tenantId = "01900000-0000-7000-8000-000000000002"
     const legalEntityId = "01900000-0000-7000-8000-000000000003"
     const accountId = "01900000-0000-7000-8000-000000000004"
+
     const configuration = {
       tenantId,
       legalEntityId,
@@ -486,6 +514,7 @@ it.effect("preserves Accounting projection and exact-money validation", () =>
       postingEnabled: true,
       financialEngine: "postgresql" as const,
     }
+
     const account = {
       id: accountId,
       tenantId,
@@ -493,6 +522,7 @@ it.effect("preserves Accounting projection and exact-money validation", () =>
       name: "Cash",
       type: "asset" as const,
     }
+
     const journal = {
       id: "01900000-0000-7000-8000-000000000005",
       tenantId,
@@ -508,6 +538,7 @@ it.effect("preserves Accounting projection and exact-money validation", () =>
         },
       ],
     }
+
     assert.deepStrictEqual(
       yield* Schema.decodeUnknownEffect(BrowserAccountingConfiguration)(configuration),
       configuration,
@@ -521,12 +552,14 @@ it.effect("preserves Accounting projection and exact-money validation", () =>
       journal,
     )
     assert.isTrue(
-      (yield* Effect.result(
-        Schema.decodeUnknownEffect(BrowserAccountingJournalEntry)({
-          ...journal,
-          lines: [{ ...journal.lines[0], debit: "125.000" }, journal.lines[1]],
-        }),
-      ))._tag === "Failure",
+      Result.isFailure(
+        yield* Effect.result(
+          Schema.decodeUnknownEffect(BrowserAccountingJournalEntry)({
+            ...journal,
+            lines: [{ ...journal.lines[0], debit: "125.000" }, journal.lines[1]],
+          }),
+        ),
+      ),
     )
   }),
 )
@@ -535,12 +568,14 @@ it.effect("preserves Authorization membership, grant, and catalog validation", (
   Effect.gen(function* () {
     const tenantId = "01900000-0000-7000-8000-000000000002"
     const membership = { userAccountId: id, tenantId, status: "active" }
+
     const grant = {
       userAccountId: id,
       tenantId,
       capability: "authorization.tenant_membership.read",
       scope: "tenant",
     }
+
     for (const [canonical, browser, value] of [
       [TenantMembership, BrowserTenantMembership, membership],
       [DirectCapabilityGrant, BrowserDirectCapabilityGrant, grant],
@@ -550,6 +585,7 @@ it.effect("preserves Authorization membership, grant, and catalog validation", (
         yield* Schema.decodeUnknownEffect(canonical)(value),
       )
     }
+
     const catalog = CapabilityDefinitions.slice(0, 2)
     assert.deepEqual(
       yield* Schema.decodeUnknownEffect(Schema.Array(BrowserCapabilityDefinition))(catalog),
@@ -588,20 +624,26 @@ it.effect("generates the canonical HTTP error wire union without backend error c
       ApiConflict,
       ApiServiceUnavailable,
     ])
+
     for (const input of [
-      { _tag: "ApiUnauthorized", code: "unauthorized" },
-      { _tag: "ApiForbidden", code: "forbidden" },
-      { _tag: "ApiNotFound", code: "user_account_not_found" },
-      { _tag: "ApiConflict", code: "user_account_already_exists" },
-      { _tag: "ApiServiceUnavailable", code: "service_unavailable" },
-      { _tag: "ApiUnauthorized", code: "wrong" },
-      { _tag: "Unknown", code: "unknown" },
+      Schema.encodeSync(canonical)(new ApiUnauthorized({ code: "unauthorized" })),
+      Schema.encodeSync(canonical)(new ApiForbidden({ code: "forbidden" })),
+      Schema.encodeSync(canonical)(new ApiNotFound({ code: "user_account_not_found" })),
+      Schema.encodeSync(canonical)(new ApiConflict({ code: "user_account_already_exists" })),
+      Schema.encodeSync(canonical)(new ApiServiceUnavailable({ code: "service_unavailable" })),
+      // Invalid wire bodies: a valid body with one field overridden.
+      {
+        ...Schema.encodeSync(canonical)(new ApiUnauthorized({ code: "unauthorized" })),
+        code: "wrong",
+      },
+      Schema.TaggedStruct("Unknown", { code: Schema.String }).make({ code: "unknown" }),
       ...unknownInputs,
     ]) {
       const expected = yield* Effect.result(Schema.decodeUnknownEffect(canonical)(input))
       const actual = yield* Effect.result(Schema.decodeUnknownEffect(ApiError)(input))
       assert.equal(actual._tag, expected._tag)
-      if (actual._tag === "Success" && expected._tag === "Success") {
+
+      if (Result.isSuccess(actual) && Result.isSuccess(expected)) {
         assert.equal(actual.success._tag, expected.success._tag)
         assert.equal(actual.success.code, expected.success.code)
       }

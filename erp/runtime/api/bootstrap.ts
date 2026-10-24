@@ -64,6 +64,7 @@ export const BootstrapTenantResult = Schema.Struct({
 })
 
 export type BootstrapTenantInput = Schema.Schema.Type<typeof BootstrapTenantInput>
+
 export type BootstrapTenantResult = Schema.Schema.Type<typeof BootstrapTenantResult>
 
 export const bootstrapCapabilities = [
@@ -84,7 +85,7 @@ export const bootstrapCapabilities = [
   InventoryCapabilities.warehouseCreate,
 ] as const satisfies readonly Capability[]
 
-export const bootstrapTenant = (input: unknown) =>
+export const bootstrapTenant = (input: Schema.Codec.Encoded<typeof BootstrapTenantInput>) =>
   Effect.gen(function* () {
     const decoded = yield* Schema.decodeUnknownEffect(BootstrapTenantInput)(input)
     const auth = yield* AuthService
@@ -118,11 +119,13 @@ export const bootstrapTenant = (input: unknown) =>
       kind: "organization",
       name: decoded.organizationName,
     } satisfies Schema.Schema.Type<typeof CreatePartyInput>)
+
     const legalEntity = yield* party.createLegalEntity({
       principal: decoded.principal,
       tenantId: tenant.id,
       organizationId: organization.id,
     } satisfies Schema.Schema.Type<typeof CreateLegalEntityInput>)
+
     const branch = yield* party.createBranch({
       principal: decoded.principal,
       tenantId: tenant.id,
@@ -132,6 +135,7 @@ export const bootstrapTenant = (input: unknown) =>
       localTaxRegistration: decoded.localTaxRegistration,
       dedicatedJournalCode: decoded.dedicatedJournalCode,
     } satisfies Schema.Schema.Type<typeof CreateBranchInput>)
+
     const accountingConfiguration = yield* accounting.configureLegalEntity({
       principal: decoded.principal,
       tenantId: tenant.id,
@@ -141,6 +145,7 @@ export const bootstrapTenant = (input: unknown) =>
       fiscalYearStartMonth: decoded.fiscalYearStartMonth,
       postingEnabled: decoded.postingEnabled,
     } satisfies Schema.Schema.Type<typeof ConfigureLegalEntityInput>)
+
     const warehouse = yield* inventory.createWarehouse({
       principal: decoded.principal,
       tenantId: tenant.id,

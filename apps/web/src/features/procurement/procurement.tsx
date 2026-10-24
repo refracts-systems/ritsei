@@ -1,3 +1,5 @@
+import * as Predicate from "effect/Predicate"
+import * as Match from "effect/Match"
 import { useNavigate } from "@solidjs/router"
 import { createSignal, For, Show, untrack, useContext } from "solid-js"
 import type {
@@ -6,7 +8,7 @@ import type {
   PurchaseOrderStatus,
   SupplierAccount,
 } from "../../shared/contracts/generated/procurement.ts"
-import { CommandFeedback, QueryBoundary } from "../../shared/request-feedback.tsx"
+import { CommandFeedback, QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
 import { ApiRuntime } from "../../shared/runtime.ts"
 import { formatDecimal } from "../../ui/foundations/format.ts"
 import { layout } from "../../ui/foundations/layout.ts"
@@ -31,35 +33,45 @@ import {
   createSupplierAccountMutation,
   createSupplierAccountsQuery,
 } from "./queries.ts"
+import { definedFields } from "../../shared/api.ts"
 
 const statusOptions = [
   { value: "draft", label: "Draft" },
   { value: "confirmed", label: "Confirmed" },
   { value: "cancelled", label: "Cancelled" },
 ] as const
+
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const quantityPattern = /^[1-9]\d*$/
 const moneyPattern = /^\d+\.\d{2}$/
 
 const requiredText = (value: FormDataEntryValue | null | undefined): string | null =>
-  typeof value === "string" && /\S/.test(value) ? value.trim() : null
+  Predicate.isString(value) && /\S/.test(value) ? value.trim() : null
 
 // Fallow: procurement statuses intentionally use the same small UI mapping as Inventory.
 // fallow-ignore-next-line code-duplication
-const statusTone = (status: PurchaseOrderStatus): "neutral" | "success" | "warning" =>
-  status === "confirmed" ? "success" : status === "cancelled" ? "warning" : "neutral"
+const statusTone = (status: PurchaseOrderStatus) =>
+  Match.value(status).pipe(
+    Match.when("draft", () => "neutral" as const),
+    Match.when("confirmed", () => "success" as const),
+    Match.when("cancelled", () => "warning" as const),
+    Match.exhaustive,
+  )
 
 // Fallow: this dialog intentionally combines supplier validation and guarded procurement commands.
 // fallow-ignore-next-line complexity
-function CreateSupplierAccountDialog(props: { reload: () => Promise<unknown> }) {
+function CreateSupplierAccountDialog(props: { reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
+
   const mutation = createSupplierAccountMutation(scope, () => {
     setOpen(false)
     void props.reload()
   })
+
   let relationshipInput: HTMLInputElement | undefined
+
   return (
     <Dialog
       open={open()}
@@ -76,11 +88,14 @@ function CreateSupplierAccountDialog(props: { reload: () => Promise<unknown> }) 
           (value) => {
             if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
             const supplierRelationshipId = requiredText(value.supplierRelationshipId)
+
             if (supplierRelationshipId === null || !uuidPattern.test(supplierRelationshipId)) {
               setInvalid(true)
               relationshipInput?.focus()
+
               return
             }
+
             setInvalid(false)
             mutation.mutate({ supplierRelationshipId })
           }
@@ -135,17 +150,19 @@ function CreateSupplierAccountDialog(props: { reload: () => Promise<unknown> }) 
 
 function CreatePurchaseOrderDialog(props: {
   supplierAccounts: () => readonly SupplierAccount[]
-  reload: () => Promise<unknown>
+  reload: () => Promise<void>
 }) {
   const scope = useContext(ApiRuntime)
   const navigate = useNavigate()
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
   const [lineIndexes, setLineIndexes] = createSignal([0])
+
   const mutation = createPurchaseOrderMutation(scope, (order) => {
     setOpen(false)
     navigate(`/procurement/${encodeURIComponent(order.id)}`)
   })
+
   return (
     <Dialog
       open={open()}
@@ -171,17 +188,20 @@ function CreatePurchaseOrderDialog(props: {
           onSubmit={
             // Fallow: this form intentionally keeps purchase-order line validation at the UI boundary.
             // fallow-ignore-next-line complexity
-            (value, event) => {
+            (value, _event, form) => {
               if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
               const supplierAccountId = requiredText(value.supplierAccountId)
-              const form = new FormData(event.currentTarget as HTMLFormElement)
+
               const lines = lineIndexes().flatMap((index) => {
                 const itemId = requiredText(form.get(`itemId-${index}`))
                 const quantity = requiredText(form.get(`quantity-${index}`))
                 const unitPrice = requiredText(form.get(`unitPrice-${index}`))
+
                 if (itemId === null && quantity === null && unitPrice === null) return []
+
                 return [{ itemId, quantity, unitPrice }]
               })
+
               // Fallow: purchase-order line validation intentionally remains adjacent to submission.
               const validLines = lines.every(
                 // fallow-ignore-next-line complexity
@@ -193,6 +213,7 @@ function CreatePurchaseOrderDialog(props: {
                   line.unitPrice !== null &&
                   moneyPattern.test(line.unitPrice),
               )
+
               if (
                 supplierAccountId === null ||
                 !uuidPattern.test(supplierAccountId) ||
@@ -200,8 +221,10 @@ function CreatePurchaseOrderDialog(props: {
                 !validLines
               ) {
                 setInvalid(true)
+
                 return
               }
+
               setInvalid(false)
               mutation.mutate({
                 supplierAccountId,
@@ -332,14 +355,12 @@ function CreatePurchaseOrderDialog(props: {
   )
 }
 
-function ConfirmPurchaseOrderDialog(props: {
-  order: PurchaseOrder
-  reload: () => Promise<unknown>
-}) {
+function ConfirmPurchaseOrderDialog(props: { order: PurchaseOrder; reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
   const mutation = createConfirmPurchaseOrderMutation(scope, () => setOpen(false))
   const [invalid, setInvalid] = createSignal(false)
+
   return (
     <Dialog
       open={open()}
@@ -357,10 +378,13 @@ function ConfirmPurchaseOrderDialog(props: {
           (value) => {
             if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
             const idempotencyKey = requiredText(value.idempotencyKey)
+
             if (idempotencyKey === null) {
               setInvalid(true)
+
               return
             }
+
             setInvalid(false)
             mutation.mutate({ id: props.order.id, idempotencyKey })
           }
@@ -404,13 +428,11 @@ function ConfirmPurchaseOrderDialog(props: {
   )
 }
 
-function CancelPurchaseOrderDialog(props: {
-  order: PurchaseOrder
-  reload: () => Promise<unknown>
-}) {
+function CancelPurchaseOrderDialog(props: { order: PurchaseOrder; reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
   const mutation = createCancelPurchaseOrderMutation(scope, () => setOpen(false))
+
   return (
     <Dialog
       open={open()}
@@ -444,14 +466,12 @@ function CancelPurchaseOrderDialog(props: {
   )
 }
 
-function ReceivePurchaseOrderDialog(props: {
-  order: PurchaseOrder
-  reload: () => Promise<unknown>
-}) {
+function ReceivePurchaseOrderDialog(props: { order: PurchaseOrder; reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
   const mutation = createReceivePurchaseOrderMutation(scope, () => setOpen(false))
+
   return (
     <Dialog
       open={open()}
@@ -466,25 +486,30 @@ function ReceivePurchaseOrderDialog(props: {
         onSubmit={
           // Fallow: this form intentionally keeps receipt evidence validation at the UI boundary.
           // fallow-ignore-next-line complexity
-          (value, event) => {
+          (value, _event, form) => {
             if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
             const warehouseId = requiredText(value.warehouseId)
             const idempotencyKey = requiredText(value.idempotencyKey)
-            const form = new FormData(event.currentTarget as HTMLFormElement)
+
             const lines = props.order.lines.flatMap((line) => {
               const quantity = requiredText(form.get(`receipt-quantity-${line.id}`))
+
               return quantity === null ? [] : [{ purchaseOrderLineId: line.id, quantity }]
             })
+
             const valid =
               warehouseId !== null &&
               uuidPattern.test(warehouseId) &&
               idempotencyKey !== null &&
               lines.length > 0 &&
               lines.every((line) => quantityPattern.test(line.quantity))
+
             if (!valid) {
               setInvalid(true)
+
               return
             }
+
             setInvalid(false)
             mutation.mutate({
               id: props.order.id,
@@ -666,6 +691,7 @@ function ProcurementFilters(props: {
   status?: PurchaseOrderStatus
 }) {
   const navigate = useNavigate()
+
   return (
     <Form
       class={layout.row}
@@ -677,10 +703,13 @@ function ProcurementFilters(props: {
           const query = new URLSearchParams()
           const supplierAccountId = requiredText(value.supplierAccountId)
           const status = value.status
+
           if (supplierAccountId !== null) query.set("supplierAccountId", supplierAccountId)
+
           if (status === "draft" || status === "confirmed" || status === "cancelled") {
             query.set("status", status)
           }
+
           navigate(query.size === 0 ? "/procurement" : `/procurement?${query}`)
         }
       }
@@ -816,7 +845,8 @@ function PurchaseOrderDetail(props: { id: string }) {
   const id = untrack(() => props.id)
   const query = createPurchaseOrderQuery(scope, id)
   const receipts = createPurchaseReceiptsQuery(scope, id, { limit: 200 })
-  const reload = () => Promise.all([query.refetch(), receipts.refetch()])
+  const reload = () => reloaded(Promise.all([query.refetch(), receipts.refetch()]))
+
   return (
     <section class={layout.stack} aria-labelledby="purchase-order-detail-heading">
       <div class={layout.row}>
@@ -825,7 +855,7 @@ function PurchaseOrderDetail(props: { id: string }) {
           Reload detail
         </Button>
       </div>
-      <QueryBoundary label="purchase order" retry={() => query.refetch()}>
+      <QueryBoundary label="purchase order" retry={() => reloaded(query.refetch())}>
         <Show when={query.data} keyed>
           {(order) => (
             <div class={layout.stack}>
@@ -849,7 +879,7 @@ function PurchaseOrderDetail(props: { id: string }) {
                   </Show>
                 </div>
               </section>
-              <QueryBoundary label="receipt evidence" retry={() => receipts.refetch()}>
+              <QueryBoundary label="receipt evidence" retry={() => reloaded(receipts.refetch())}>
                 <ReceiptTable receipts={receipts.data} />
               </QueryBoundary>
             </div>
@@ -862,7 +892,7 @@ function PurchaseOrderDetail(props: { id: string }) {
 
 function SupplierAccountsSection(props: {
   accounts: readonly SupplierAccount[]
-  reload: () => Promise<unknown>
+  reload: () => Promise<void>
 }) {
   return (
     <section class={[surface(), layout.stack]} aria-labelledby="supplier-accounts-heading">
@@ -892,13 +922,13 @@ export function Procurement(props: {
 }) {
   const scope = useContext(ApiRuntime)
   const supplierAccounts = createSupplierAccountsQuery(scope, { limit: 200 })
+
   const orders = createPurchaseOrdersQuery(scope, {
-    ...(props.supplierAccountId === undefined
-      ? {}
-      : { supplierAccountId: props.supplierAccountId }),
-    ...(props.status === undefined ? {} : { status: props.status }),
+    ...definedFields({ supplierAccountId: props.supplierAccountId }),
+    ...definedFields({ status: props.status }),
     limit: 200,
   })
+
   return (
     <EntityWorkspace
       title="Procurement"
@@ -910,10 +940,10 @@ export function Procurement(props: {
       }
       headerActions={
         <div class={layout.row}>
-          <CreateSupplierAccountDialog reload={() => supplierAccounts.refetch()} />
+          <CreateSupplierAccountDialog reload={() => reloaded(supplierAccounts.refetch())} />
           <CreatePurchaseOrderDialog
             supplierAccounts={() => supplierAccounts.data}
-            reload={() => orders.refetch()}
+            reload={() => reloaded(orders.refetch())}
           />
           <Button type="button" onClick={() => void orders.refetch()}>
             Reload orders
@@ -933,10 +963,10 @@ export function Procurement(props: {
         ) : undefined
       }
     >
-      <QueryBoundary label="procurement" retry={() => orders.refetch()}>
+      <QueryBoundary label="procurement" retry={() => reloaded(orders.refetch())}>
         <SupplierAccountsSection
           accounts={supplierAccounts.data}
-          reload={() => supplierAccounts.refetch()}
+          reload={() => reloaded(supplierAccounts.refetch())}
         />
         <Show
           when={orders.data.length > 0}

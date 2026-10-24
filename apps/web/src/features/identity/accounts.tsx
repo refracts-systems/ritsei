@@ -1,7 +1,8 @@
+import * as Predicate from "effect/Predicate"
 import { createMemo, createSignal, onSettled, Show, untrack, useContext } from "solid-js"
 import { failureMessage } from "../../shared/api.ts"
 import type { UserAccount } from "../../shared/contracts/generated/identity.ts"
-import { CommandFeedback, QueryBoundary } from "../../shared/request-feedback.tsx"
+import { CommandFeedback, QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
 import { ApiRuntime } from "../../shared/runtime.ts"
 import { layout } from "../../ui/foundations/layout.ts"
 import { DataTable } from "../../ui/patterns/data-table.tsx"
@@ -83,17 +84,19 @@ function AccountTable(props: { accounts: readonly UserAccount[] }) {
 
 // Fallow: this dialog intentionally combines identity input validation and unknown-outcome recovery.
 // fallow-ignore-next-line complexity
-function CreateAccountDialog(props: { reload: () => Promise<unknown> }) {
+function CreateAccountDialog(props: { reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
   let formElement: HTMLFormElement | undefined
   let emailInput: HTMLInputElement | undefined
+
   const mutation = createAccountMutation(scope, () => {
     formElement?.reset()
     setInvalid(false)
     setOpen(false)
   })
+
   return (
     <Dialog
       open={open()}
@@ -111,11 +114,14 @@ function CreateAccountDialog(props: { reload: () => Promise<unknown> }) {
         onSubmit={(value) => {
           if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
           const email = value.email
-          if (typeof email !== "string" || !/\S/.test(email)) {
+
+          if (!Predicate.isString(email) || !/\S/.test(email)) {
             setInvalid(true)
             emailInput?.focus()
+
             return
           }
+
           setInvalid(false)
           mutation.mutate({ email })
         }}
@@ -170,7 +176,7 @@ function CreateAccountDialog(props: { reload: () => Promise<unknown> }) {
 function EmailEditor(props: {
   account: UserAccount
   close: () => void
-  reload: () => Promise<unknown>
+  reload: () => Promise<void>
   saved: () => void
 }) {
   const scope = useContext(ApiRuntime)
@@ -179,6 +185,7 @@ function EmailEditor(props: {
   const mutation = createAccountEmailMutation(scope, props.saved)
   let emailInput: HTMLInputElement | undefined
   onSettled(() => emailInput?.focus())
+
   return (
     <section class={layout.documentSection} aria-labelledby="edit-heading">
       <Form
@@ -186,11 +193,14 @@ function EmailEditor(props: {
         onSubmit={(value) => {
           if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
           const email = value.email
-          if (typeof email !== "string" || !/\S/.test(email)) {
+
+          if (!Predicate.isString(email) || !/\S/.test(email)) {
             setInvalid(true)
             emailInput?.focus()
+
             return
           }
+
           setInvalid(false)
           mutation.mutate({ id: account.id, email })
         }}
@@ -270,10 +280,12 @@ function AccountDetail(props: { id: string }) {
   const [editing, setEditing] = createSignal(false)
   const [saved, setSaved] = createSignal(false)
   let editTrigger: HTMLButtonElement | undefined
+
   const closeEditor = () => {
     setEditing(false)
     queueMicrotask(() => editTrigger?.focus())
   }
+
   return (
     <section class={layout.stack} aria-label="User account">
       <a class={layout.quietLink} href="/user-accounts">
@@ -320,7 +332,7 @@ function AccountDetail(props: { id: string }) {
           Email saved.
         </p>
       </Show>
-      <QueryBoundary label="account detail" retry={() => query.refetch()}>
+      <QueryBoundary label="account detail" retry={() => reloaded(query.refetch())}>
         <Show when={query.data} keyed>
           {(account) => (
             <div class={layout.documentGrid}>
@@ -344,7 +356,7 @@ function AccountDetail(props: { id: string }) {
                       closeEditor()
                       setSaved(true)
                     }}
-                    reload={() => query.refetch()}
+                    reload={() => reloaded(query.refetch())}
                   />
                 </Show>
               </section>
@@ -374,8 +386,10 @@ function AccountCollection() {
   const query = createAccountsQuery(scope)
   const [search, setSearch] = createSignal("")
   const [status, setStatus] = createSignal("all")
+
   const filtered = createMemo(() => {
     const term = search().trim().toLocaleLowerCase()
+
     return (query.data ?? []).filter(
       (account) =>
         (status() === "all" || account.status === status()) &&
@@ -383,6 +397,7 @@ function AccountCollection() {
           account.id.toLocaleLowerCase().includes(term)),
     )
   })
+
   return (
     <section class={layout.stack} aria-label="User accounts">
       <header class={layout.workspaceHeading}>
@@ -392,12 +407,12 @@ function AccountCollection() {
             Global accounts linked to this tenant. Manage membership and permissions in Access.
           </p>
         </div>
-        <CreateAccountDialog reload={() => query.refetch()} />
+        <CreateAccountDialog reload={() => reloaded(query.refetch())} />
       </header>
       <QueryBoundary
         label="user accounts"
         retryLabel="Try loading again"
-        retry={() => query.refetch()}
+        retry={() => reloaded(query.refetch())}
       >
         <div class={layout.collectionToolbar}>
           <p class={layout.resultCount} role="status">

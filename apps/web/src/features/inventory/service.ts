@@ -54,12 +54,13 @@ const belongsToWarehouse = (
   destinationWarehouseId === warehouseId
 
 export const listWarehouses = Effect.fn("Frontend.Inventory.listWarehouses")(function* (
-  input: unknown = {},
+  input: Schema.Codec.Encoded<typeof ListWarehousesInput> = {},
 ) {
   const decoded = yield* decodeInput(ListWarehousesInput, input)
   const body = yield* requestJson(`${inventoryRoutes.listWarehouses}${querySuffix(decoded)}`)
   const warehouses = yield* decodeResponse(WarehouseList, body, "invalid-response")
   const connection = yield* connectionTenant
+
   if (
     !responseListMatches(warehouses, {
       tenantId: connection.tenantId,
@@ -68,27 +69,33 @@ export const listWarehouses = Effect.fn("Frontend.Inventory.listWarehouses")(fun
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "invalid-response" }))
   }
+
   return warehouses
 })
 
-export const listItems = Effect.fn("Frontend.Inventory.listItems")(function* (input: unknown = {}) {
+export const listItems = Effect.fn("Frontend.Inventory.listItems")(function* (
+  input: Schema.Codec.Encoded<typeof ListItemsInput> = {},
+) {
   const decoded = yield* decodeInput(ListItemsInput, input)
   const body = yield* requestJson(`${inventoryRoutes.listItems}${querySuffix(decoded)}`)
   const items = yield* decodeResponse(ItemList, body, "invalid-response")
   const connection = yield* connectionTenant
+
   if (!responseListMatches(items, { tenantId: connection.tenantId })) {
     return yield* Effect.fail(new RequestFailure({ kind: "invalid-response" }))
   }
+
   return items
 })
 
 export const listStockBalances = Effect.fn("Frontend.Inventory.listStockBalances")(function* (
-  input: unknown = {},
+  input: Schema.Codec.Encoded<typeof ListStockBalancesInput> = {},
 ) {
   const decoded = yield* decodeInput(ListStockBalancesInput, input)
   const body = yield* requestJson(`${inventoryRoutes.listStockBalances}${querySuffix(decoded)}`)
   const balances = yield* decodeResponse(BalanceList, body, "invalid-response")
   const connection = yield* connectionTenant
+
   if (
     !responseListMatches(balances, {
       tenantId: connection.tenantId,
@@ -97,17 +104,21 @@ export const listStockBalances = Effect.fn("Frontend.Inventory.listStockBalances
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "invalid-response" }))
   }
+
   return balances
 })
 
 export const listStockReservations = Effect.fn("Frontend.Inventory.listStockReservations")(
-  function* (input: unknown = {}) {
+  function* (input: Schema.Codec.Encoded<typeof ListStockReservationsInput> = {}) {
     const decoded = yield* decodeInput(ListStockReservationsInput, input)
+
     const body = yield* requestJson(
       `${inventoryRoutes.listStockReservations}${querySuffix(decoded)}`,
     )
+
     const reservations = yield* decodeResponse(ReservationList, body, "invalid-response")
     const connection = yield* connectionTenant
+
     if (
       !responseListMatches(reservations, {
         tenantId: connection.tenantId,
@@ -120,17 +131,19 @@ export const listStockReservations = Effect.fn("Frontend.Inventory.listStockRese
     ) {
       return yield* Effect.fail(new RequestFailure({ kind: "invalid-response" }))
     }
+
     return reservations
   },
 )
 
 export const listStockTransfers = Effect.fn("Frontend.Inventory.listStockTransfers")(function* (
-  input: unknown = {},
+  input: Schema.Codec.Encoded<typeof ListStockTransfersInput> = {},
 ) {
   const decoded = yield* decodeInput(ListStockTransfersInput, input)
   const body = yield* requestJson(`${inventoryRoutes.listStockTransfers}${querySuffix(decoded)}`)
   const transfers = yield* decodeResponse(TransferList, body, "invalid-response")
   const connection = yield* connectionTenant
+
   if (
     !responseListMatches(transfers, {
       tenantId: connection.tenantId,
@@ -146,16 +159,18 @@ export const listStockTransfers = Effect.fn("Frontend.Inventory.listStockTransfe
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "invalid-response" }))
   }
+
   return transfers
 })
 
 export const listStockMovements = Effect.fn("Frontend.Inventory.listStockMovements")(function* (
-  input: unknown = {},
+  input: Schema.Codec.Encoded<typeof ListStockMovementsInput> = {},
 ) {
   const decoded = yield* decodeInput(ListStockMovementsInput, input)
   const body = yield* requestJson(`${inventoryRoutes.listStockMovements}${querySuffix(decoded)}`)
   const movements = yield* decodeResponse(MovementList, body, "invalid-response")
   const connection = yield* connectionTenant
+
   if (
     !responseListMatches(movements, {
       tenantId: connection.tenantId,
@@ -168,16 +183,18 @@ export const listStockMovements = Effect.fn("Frontend.Inventory.listStockMovemen
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "invalid-response" }))
   }
+
   return movements
 })
 
 export const createWarehouse = Effect.fn("Frontend.Inventory.createWarehouse")(function* (
-  input: unknown,
+  input: Schema.Codec.Encoded<typeof CreateWarehouseInput>,
 ) {
   const decoded = yield* decodeInput(CreateWarehouseInput, input)
   const connection = yield* connectionTenant
   const body = yield* mutationRequest(inventoryRoutes.createWarehouse, decoded)
   const warehouse = yield* decodeResponse(Warehouse, body, "unknown-outcome")
+
   if (
     !responseMatches(warehouse, {
       tenantId: connection.tenantId,
@@ -187,14 +204,18 @@ export const createWarehouse = Effect.fn("Frontend.Inventory.createWarehouse")(f
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
   }
+
   return warehouse
 })
 
-export const createItem = Effect.fn("Frontend.Inventory.createItem")(function* (input: unknown) {
+export const createItem = Effect.fn("Frontend.Inventory.createItem")(function* (
+  input: Schema.Codec.Encoded<typeof CreateItemInput>,
+) {
   const decoded = yield* decodeInput(CreateItemInput, input)
   const connection = yield* connectionTenant
   const body = yield* mutationRequest(inventoryRoutes.createItem, decoded)
   const item = yield* decodeResponse(Item, body, "unknown-outcome")
+
   if (
     !responseMatches(item, {
       tenantId: connection.tenantId,
@@ -207,14 +228,18 @@ export const createItem = Effect.fn("Frontend.Inventory.createItem")(function* (
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
   }
+
   return item
 })
 
-export const adjustStock = Effect.fn("Frontend.Inventory.adjustStock")(function* (input: unknown) {
+export const adjustStock = Effect.fn("Frontend.Inventory.adjustStock")(function* (
+  input: Schema.Codec.Encoded<typeof AdjustStockInput>,
+) {
   const decoded = yield* decodeInput(AdjustStockInput, input)
   const connection = yield* connectionTenant
   const body = yield* mutationRequest(inventoryRoutes.adjustStock, decoded)
   const correction = yield* decodeResponse(StockCorrection, body, "unknown-outcome")
+
   if (
     !responseMatches(correction, {
       tenantId: connection.tenantId,
@@ -226,16 +251,18 @@ export const adjustStock = Effect.fn("Frontend.Inventory.adjustStock")(function*
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
   }
+
   return correction
 })
 
 export const receiveStock = Effect.fn("Frontend.Inventory.receiveStock")(function* (
-  input: unknown,
+  input: Schema.Codec.Encoded<typeof ReceiveStockInput>,
 ) {
   const decoded = yield* decodeInput(ReceiveStockInput, input)
   const connection = yield* connectionTenant
   const body = yield* mutationRequest(inventoryRoutes.receiveStock, decoded)
   const balance = yield* decodeResponse(StockBalance, body, "unknown-outcome")
+
   if (
     !responseMatches(balance, {
       tenantId: connection.tenantId,
@@ -245,16 +272,18 @@ export const receiveStock = Effect.fn("Frontend.Inventory.receiveStock")(functio
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
   }
+
   return balance
 })
 
 export const reserveStock = Effect.fn("Frontend.Inventory.reserveStock")(function* (
-  input: unknown,
+  input: Schema.Codec.Encoded<typeof ReserveStockInput>,
 ) {
   const decoded = yield* decodeInput(ReserveStockInput, input)
   const connection = yield* connectionTenant
   const body = yield* mutationRequest(inventoryRoutes.reserveStock, decoded)
   const reservation = yield* decodeResponse(StockReservation, body, "unknown-outcome")
+
   if (
     !responseMatches(reservation, {
       tenantId: connection.tenantId,
@@ -266,6 +295,7 @@ export const reserveStock = Effect.fn("Frontend.Inventory.reserveStock")(functio
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
   }
+
   return reservation
 })
 
@@ -276,11 +306,12 @@ const reservationCommand = (
   route: string,
   expectedStatus: "released" | "fulfilled",
 ) =>
-  Effect.fn(`Frontend.Inventory.${name}`)(function* (id: unknown) {
+  Effect.fn(`Frontend.Inventory.${name}`)(function* (id: Schema.Codec.Encoded<typeof Uuid>) {
     const decodedId = yield* decodeInput(Uuid, id)
     const connection = yield* connectionTenant
     const body = yield* mutationRequest(routeWithId(route, decodedId))
     const reservation = yield* decodeResponse(StockReservation, body, "unknown-outcome")
+
     if (
       !responseMatches(reservation, {
         id: decodedId,
@@ -290,6 +321,7 @@ const reservationCommand = (
     ) {
       return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
     }
+
     return reservation
   })
 
@@ -298,6 +330,7 @@ export const releaseReservation = reservationCommand(
   inventoryRoutes.releaseReservation,
   "released",
 )
+
 export const fulfillReservation = reservationCommand(
   "fulfillReservation",
   inventoryRoutes.fulfillReservation,
@@ -305,12 +338,13 @@ export const fulfillReservation = reservationCommand(
 )
 
 export const createTransfer = Effect.fn("Frontend.Inventory.createTransfer")(function* (
-  input: unknown,
+  input: Schema.Codec.Encoded<typeof CreateStockTransferInput>,
 ) {
   const decoded = yield* decodeInput(CreateStockTransferInput, input)
   const connection = yield* connectionTenant
   const body = yield* mutationRequest(inventoryRoutes.createTransfer, decoded)
   const transfer = yield* decodeResponse(StockTransfer, body, "unknown-outcome")
+
   if (
     !responseMatches(transfer, {
       tenantId: connection.tenantId,
@@ -321,6 +355,7 @@ export const createTransfer = Effect.fn("Frontend.Inventory.createTransfer")(fun
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
   }
+
   return transfer
 })
 
@@ -331,11 +366,12 @@ const transferCommand = (
   route: string,
   expectedStatus: "confirmed" | "completed",
 ) =>
-  Effect.fn(`Frontend.Inventory.${name}`)(function* (id: unknown) {
+  Effect.fn(`Frontend.Inventory.${name}`)(function* (id: Schema.Codec.Encoded<typeof Uuid>) {
     const decodedId = yield* decodeInput(Uuid, id)
     const connection = yield* connectionTenant
     const body = yield* mutationRequest(routeWithId(route, decodedId))
     const transfer = yield* decodeResponse(StockTransfer, body, "unknown-outcome")
+
     if (
       !responseMatches(transfer, {
         id: decodedId,
@@ -345,6 +381,7 @@ const transferCommand = (
     ) {
       return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
     }
+
     return transfer
   })
 
@@ -353,6 +390,7 @@ export const confirmTransfer = transferCommand(
   inventoryRoutes.confirmTransfer,
   "confirmed",
 )
+
 export const completeTransfer = transferCommand(
   "completeTransfer",
   inventoryRoutes.completeTransfer,

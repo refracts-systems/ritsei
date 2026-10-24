@@ -22,13 +22,16 @@ export const validateLines = (lines: readonly JournalLine[]) => {
   if (lines.length < 2) return new UnbalancedJournal({ debit: "0", credit: "0" })
   let debit = 0n
   let credit = 0n
+
   for (const [index, line] of lines.entries()) {
     const lineDebit = toMinor(line.debit)
     const lineCredit = toMinor(line.credit)
+
     if (lineDebit > 0n === lineCredit > 0n) return new InvalidJournalLine({ index })
     debit += lineDebit
     credit += lineCredit
   }
+
   return debit === credit
     ? undefined
     : new UnbalancedJournal({ debit: String(debit), credit: String(credit) })

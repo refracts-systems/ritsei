@@ -1,6 +1,7 @@
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import * as Match from "effect/Match"
 
 import { DatabaseFailure, LeaseGeneration } from "../../../../framework/foundation/mod.ts"
 import {
@@ -47,43 +48,53 @@ import {
 } from "./errors.ts"
 
 const NonEmptyString = Schema.String.check(Schema.isPattern(/\S/))
+
 const PostgresInt = Schema.Int.check(
   Schema.isGreaterThanOrEqualTo(-2_147_483_648),
   Schema.isLessThanOrEqualTo(2_147_483_647),
 )
+
 const NonNegativeInt = PostgresInt.check(Schema.isGreaterThanOrEqualTo(0))
 const Uuid = EventEnvelope.fields.eventId
 const InstantString = EventEnvelope.fields.occurredAt
+
 export const ProcessWorkflowTypes = {
   confirmation: "sales.order.confirmation",
   cancellation: "sales.order.cancellation",
   fulfillment: "sales.order.fulfillment",
 } as const
+
 export const ProcessWorkflowType = Schema.Literals([
   ProcessWorkflowTypes.confirmation,
   ProcessWorkflowTypes.cancellation,
   ProcessWorkflowTypes.fulfillment,
 ])
+
 export const ProcessLifecycleJobPriority = 100
 export const ProcessJobMaxAttempts = 3
+
 export const ProcessPostCommitJobTypes = {
   confirmation: "process.order_confirmation.post_commit",
   cancellation: "process.order_cancellation.post_commit",
   fulfillment: "process.order_fulfillment.post_commit",
 } as const
+
 export const ProcessPostCommitJobType = Schema.Literals([
   ProcessPostCommitJobTypes.confirmation,
   ProcessPostCommitJobTypes.cancellation,
   ProcessPostCommitJobTypes.fulfillment,
 ])
+
 export const ProcessFinancialJobTypes = {
   submit: "accounting.financial_operation.submit",
   reconcile: "accounting.financial_operation.reconcile",
 } as const
+
 export const ProcessFinancialJobType = Schema.Literals([
   ProcessFinancialJobTypes.submit,
   ProcessFinancialJobTypes.reconcile,
 ])
+
 export const ProcessJobType = Schema.Literals([
   ProcessPostCommitJobTypes.confirmation,
   ProcessPostCommitJobTypes.cancellation,
@@ -113,6 +124,7 @@ export const ConfirmOrderConfirmationInput = Schema.Struct({
   ...ScopedInput,
   ...OrderConfirmationPayload.fields,
 })
+
 export const RecoverOrderConfirmationInput = ConfirmOrderConfirmationInput
 
 const OrderLifecyclePayloadFields = {
@@ -126,15 +138,19 @@ const OrderLifecyclePayloadFields = {
 }
 
 export const OrderCancellationPayload = Schema.Struct(OrderLifecyclePayloadFields)
+
 export const CancelOrderInput = Schema.Struct({
   ...ScopedInput,
   ...OrderCancellationPayload.fields,
 })
+
 export const OrderFulfillmentPayload = Schema.Struct(OrderLifecyclePayloadFields)
+
 export const FulfillOrderInput = Schema.Struct({
   ...ScopedInput,
   ...OrderFulfillmentPayload.fields,
 })
+
 export const ManualRecoveryInput = Schema.Struct({
   ...ScopedInput,
   idempotencyKey: NonEmptyString,
@@ -142,6 +158,7 @@ export const ManualRecoveryInput = Schema.Struct({
 })
 
 export const DomainEventEnvelope = EventEnvelope
+
 export const ProcessPostCommitJobPayload = Schema.Struct({
   eventId: Uuid,
   workflowRunId: Uuid,
@@ -158,6 +175,7 @@ export const ProcessJobStatus = Schema.Literals([
   "failed",
   "manual_recovery",
 ])
+
 export const ProcessJob = Schema.Struct({
   jobId: Uuid,
   tenantId: Uuid,
@@ -191,6 +209,7 @@ export const ProcessJobClaimInput = Schema.Struct({
   workerId: NonEmptyString,
   jobType: Schema.NullOr(ProcessJobType).pipe(Schema.withDecodingDefaultKey(Effect.succeed(null))),
 })
+
 export const ProcessJobRenewInput = Schema.Struct({
   tenantId: Uuid,
   workerId: NonEmptyString,
@@ -198,7 +217,9 @@ export const ProcessJobRenewInput = Schema.Struct({
   leaseToken: Uuid,
   leaseGeneration: LeaseGeneration,
 })
+
 export const ProcessJobCompleteInput = ProcessJobRenewInput
+
 export const ProcessJobFailInput = Schema.Struct({
   tenantId: Uuid,
   workerId: NonEmptyString,
@@ -221,11 +242,11 @@ export const WorkflowRun = Schema.Struct({
 }).check(
   Schema.makeFilter(
     (run) =>
-      run.status === "running"
-        ? run.completedAt === null && run.recoveryReason === null
-        : run.status === "succeeded"
-          ? run.completedAt !== null && run.recoveryReason === null
-          : run.completedAt === null && run.recoveryReason !== null,
+      Match.value(run.status).pipe(
+        Match.when("running", () => run.completedAt === null && run.recoveryReason === null),
+        Match.when("succeeded", () => run.completedAt !== null && run.recoveryReason === null),
+        Match.orElse(() => run.completedAt === null && run.recoveryReason !== null),
+      ),
     { expected: "workflow status metadata consistent with its durable state" },
   ),
 )
@@ -238,6 +259,7 @@ export const OrderConfirmationResult = Schema.Struct({
   eventId: Uuid,
   jobId: Uuid,
 })
+
 export const OrderCancellationResult = Schema.Struct({
   workflowRunId: Uuid,
   order: SalesOrder,
@@ -246,6 +268,7 @@ export const OrderCancellationResult = Schema.Struct({
   eventId: Uuid,
   jobId: Uuid,
 })
+
 export const OrderFulfillmentResult = Schema.Struct({
   workflowRunId: Uuid,
   order: SalesOrder,
@@ -255,9 +278,13 @@ export const OrderFulfillmentResult = Schema.Struct({
 })
 
 export type ProcessJob = Schema.Schema.Type<typeof ProcessJob>
+
 export type WorkflowRun = Schema.Schema.Type<typeof WorkflowRun>
+
 export type OrderConfirmationResult = Schema.Schema.Type<typeof OrderConfirmationResult>
+
 export type OrderCancellationResult = Schema.Schema.Type<typeof OrderCancellationResult>
+
 export type OrderFulfillmentResult = Schema.Schema.Type<typeof OrderFulfillmentResult>
 
 type OrderConfirmationFailure =
@@ -307,19 +334,19 @@ type OrderLifecycleFailure =
 
 export interface ProcessService {
   readonly confirmOrder: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ConfirmOrderConfirmationInput>,
   ) => Effect.Effect<OrderConfirmationResult, OrderConfirmationFailure>
   readonly cancelOrder: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CancelOrderInput>,
   ) => Effect.Effect<OrderCancellationResult, OrderLifecycleFailure>
   readonly fulfillOrder: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof FulfillOrderInput>,
   ) => Effect.Effect<OrderFulfillmentResult, OrderLifecycleFailure>
   readonly recoverOrder: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof RecoverOrderConfirmationInput>,
   ) => Effect.Effect<OrderConfirmationResult, OrderConfirmationFailure>
   readonly markManualRecovery: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ManualRecoveryInput>,
   ) => Effect.Effect<
     WorkflowRun,
     | AuthorizationDenied
@@ -329,10 +356,10 @@ export interface ProcessService {
     | WorkflowRunNotFound
   >
   readonly claimJob: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ProcessJobClaimInput>,
   ) => Effect.Effect<ProcessJob | null, DatabaseFailure | Schema.SchemaError | ProcessJobCorrupt>
   readonly renewJob: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ProcessJobRenewInput>,
   ) => Effect.Effect<
     ProcessJob,
     | DatabaseFailure
@@ -342,7 +369,7 @@ export interface ProcessService {
     | ProcessJobLeaseLost
   >
   readonly completeJob: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ProcessJobCompleteInput>,
   ) => Effect.Effect<
     ProcessJob,
     | DatabaseFailure
@@ -352,7 +379,7 @@ export interface ProcessService {
     | ProcessJobLeaseLost
   >
   readonly failJob: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ProcessJobFailInput>,
   ) => Effect.Effect<
     ProcessJob,
     | DatabaseFailure

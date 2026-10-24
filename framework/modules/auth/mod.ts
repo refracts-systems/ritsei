@@ -8,10 +8,11 @@ export {
   Session,
   Tenant,
 } from "./src/contract.ts"
+
 export type {
-  AuthService as AuthServiceShape,
+  AuthService as AuthServiceContract,
   ExternalIdentity as ExternalIdentityType,
-  IdentityProvider as IdentityProviderShape,
+  IdentityProvider as IdentityProviderContract,
   IssuedSession,
   Principal as PrincipalType,
   Session as SessionType,
@@ -28,4 +29,5 @@ export {
 } from "./src/errors.ts"
 
 export { AuthLive, makeAuthTestLayer } from "./src/layers.ts"
+
 export { makeAuthService } from "./src/service.ts"

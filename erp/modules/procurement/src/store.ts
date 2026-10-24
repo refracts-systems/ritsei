@@ -22,6 +22,7 @@ import type {
 import { SupplierRelationshipNotEligible } from "./errors.ts"
 
 export type ProcurementStore = import("./contract.ts").ProcurementService
+
 type CreateSupplierAccount = Schema.Schema.Type<typeof CreateSupplierAccountInput>
 
 export const loadSupplierRelationship = (party: PartyService, input: CreateSupplierAccount) =>
@@ -145,13 +146,16 @@ export const sameReceiptLines = (
   right: ReadonlyArray<GoodsReceiptLine>,
 ) => {
   const orderedLeft = canonicalReceiptLines(left)
+
   const orderedRight = [...right].sort((a, b) =>
     a.purchaseOrderLineId.localeCompare(b.purchaseOrderLineId),
   )
+
   return (
     orderedLeft.length === orderedRight.length &&
     orderedLeft.every((line, index) => {
       const existing = orderedRight[index]!
+
       return (
         line.purchaseOrderLineId === existing.purchaseOrderLineId &&
         line.quantity === existing.quantity
@@ -185,35 +189,43 @@ export const deriveTotal = (lines: ReadonlyArray<PurchaseOrderLine>): string => 
     (total, line) => total + BigInt(line.quantity) * requireExactMajorToMinor(line.unitPrice, 2),
     0n,
   )
+
   return `${minor / 100n}.${(minor % 100n).toString().padStart(2, "0")}`
 }
 
 export const withProcurementOperationNames = (service: ProcurementStore): ProcurementStore => ({
-  createSupplierAccount: Effect.fn("ProcurementService.createSupplierAccount")((input: unknown) =>
-    service.createSupplierAccount(input),
+  createSupplierAccount: Effect.fn("ProcurementService.createSupplierAccount")(
+    (input: Parameters<typeof service.createSupplierAccount>[0]) =>
+      service.createSupplierAccount(input),
   ),
-  listSupplierAccounts: Effect.fn("ProcurementService.listSupplierAccounts")((input: unknown) =>
-    service.listSupplierAccounts(input),
+  listSupplierAccounts: Effect.fn("ProcurementService.listSupplierAccounts")(
+    (input: Parameters<typeof service.listSupplierAccounts>[0]) =>
+      service.listSupplierAccounts(input),
   ),
-  createPurchaseOrder: Effect.fn("ProcurementService.createPurchaseOrder")((input: unknown) =>
-    service.createPurchaseOrder(input),
+  createPurchaseOrder: Effect.fn("ProcurementService.createPurchaseOrder")(
+    (input: Parameters<typeof service.createPurchaseOrder>[0]) =>
+      service.createPurchaseOrder(input),
   ),
-  getPurchaseOrder: Effect.fn("ProcurementService.getPurchaseOrder")((input: unknown) =>
-    service.getPurchaseOrder(input),
+  getPurchaseOrder: Effect.fn("ProcurementService.getPurchaseOrder")(
+    (input: Parameters<typeof service.getPurchaseOrder>[0]) => service.getPurchaseOrder(input),
   ),
-  listPurchaseOrders: Effect.fn("ProcurementService.listPurchaseOrders")((input: unknown) =>
-    service.listPurchaseOrders(input),
+  listPurchaseOrders: Effect.fn("ProcurementService.listPurchaseOrders")(
+    (input: Parameters<typeof service.listPurchaseOrders>[0]) => service.listPurchaseOrders(input),
   ),
-  listPurchaseReceipts: Effect.fn("ProcurementService.listPurchaseReceipts")((input: unknown) =>
-    service.listPurchaseReceipts(input),
+  listPurchaseReceipts: Effect.fn("ProcurementService.listPurchaseReceipts")(
+    (input: Parameters<typeof service.listPurchaseReceipts>[0]) =>
+      service.listPurchaseReceipts(input),
   ),
-  confirmPurchaseOrder: Effect.fn("ProcurementService.confirmPurchaseOrder")((input: unknown) =>
-    service.confirmPurchaseOrder(input),
+  confirmPurchaseOrder: Effect.fn("ProcurementService.confirmPurchaseOrder")(
+    (input: Parameters<typeof service.confirmPurchaseOrder>[0]) =>
+      service.confirmPurchaseOrder(input),
   ),
-  cancelPurchaseOrder: Effect.fn("ProcurementService.cancelPurchaseOrder")((input: unknown) =>
-    service.cancelPurchaseOrder(input),
+  cancelPurchaseOrder: Effect.fn("ProcurementService.cancelPurchaseOrder")(
+    (input: Parameters<typeof service.cancelPurchaseOrder>[0]) =>
+      service.cancelPurchaseOrder(input),
   ),
-  receivePurchaseOrder: Effect.fn("ProcurementService.receivePurchaseOrder")((input: unknown) =>
-    service.receivePurchaseOrder(input),
+  receivePurchaseOrder: Effect.fn("ProcurementService.receivePurchaseOrder")(
+    (input: Parameters<typeof service.receivePurchaseOrder>[0]) =>
+      service.receivePurchaseOrder(input),
   ),
 })

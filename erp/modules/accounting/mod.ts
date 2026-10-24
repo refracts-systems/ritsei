@@ -1,4 +1,5 @@
 export { AccountingCapabilities } from "./src/capabilities.ts"
+
 export {
   AccountingFinancialOperationPostAction,
   AccountingFinancialOperationReconciledEvent,
@@ -8,7 +9,9 @@ export {
   AccountingTypedEventCatalog,
   RevenuePostedEventPayload,
 } from "./src/catalog.ts"
+
 export * from "./src/financial-store-contract.ts"
+
 export type {
   FinancialBackupRestoreEvidence as FinancialBackupRestoreEvidenceType,
   FinancialStagingAlert as FinancialStagingAlertType,
@@ -24,6 +27,7 @@ export type {
   FinancialStoreTransferObservation as FinancialStoreTransferObservationType,
   FinancialStoreWatermark as FinancialStoreWatermarkType,
 } from "./src/financial-store-contract.ts"
+
 export * from "./src/verification-contract.ts"
 
 export {
@@ -64,6 +68,7 @@ export {
   RebuildFinancialProjectionInput,
   ReconcileFinancialCheckpointInput,
 } from "./src/financial-operations.ts"
+
 export {
   buildFinancialVerificationEvidence,
   canonicalizeFinancialVerificationEvidence,
@@ -81,6 +86,7 @@ export {
   hashFinancialVerificationEvidence,
   verifyOpeningBalances,
 } from "./src/financial-readiness.ts"
+
 export type {
   FinancialBalanceFact as FinancialBalanceFactType,
   FinancialFactMismatch,
@@ -104,19 +110,31 @@ export type {
   FinancialOperation as FinancialOperationType,
   FinancialOperationCommandInput as FinancialOperationCommandInputType,
   FinancialOperationFailpointName as FinancialOperationFailpointNameType,
-  FinancialOperationFailpointService as FinancialOperationFailpointServiceShape,
+  FinancialOperationFailpointService as FinancialOperationFailpointServiceContract,
   FinancialOperationJobPayload as FinancialOperationJobPayloadType,
-  FinancialOperationService as FinancialOperationServiceShape,
+  FinancialOperationService as FinancialOperationServiceContract,
   FinancialReconciliationCheckpoint as FinancialReconciliationCheckpointType,
   ReconcileFinancialCheckpointInput as ReconcileFinancialCheckpointInputType,
 } from "./src/financial-operations.ts"
 
 export {
   CreateExecutionAccountInput,
+  ExecutionAccountAccepted,
+  ExecutionAccountManualRecovery,
   ExecutionAccountOutcome,
+  ExecutionAccountRejected,
+  ExecutionAccountUnknown,
   FinancialAccountConstraint,
+  FinancialBalanceAvailable,
+  FinancialBalanceManualRecovery,
+  FinancialBalanceNotFound,
   FinancialBalanceOutcome,
+  FinancialBalanceUnknown,
+  FinancialExecutionAccepted,
+  FinancialExecutionManualRecovery,
   FinancialExecutionOutcome,
+  FinancialExecutionRejected,
+  FinancialExecutionUnknown,
   FinancialJournalLine,
   FinancialLedgerAuthority,
   FinancialLedgerPort,
@@ -126,21 +144,25 @@ export {
   makeFinancialLedgerTestLayer,
   PostFinancialJournalInput,
 } from "./src/financial-ledger.ts"
+
 export {
-  makePostgresqlFinancialStoreObservation,
+  postgresqlFinancialStoreObservation,
   makePostgresqlFinancialStoreObservationLayer,
 } from "./src/financial-observation.ts"
+
 export {
   AccountingLive,
   AccountingPostgresLive,
+  AccountingServiceLive,
   FinancialOperationsLive,
   FinancialOperationsPostgresLive,
   makeAccountingTestLive,
   makeFinancialOperationsTestLive,
 } from "./src/layers.ts"
+
 export {
   makePostgresqlFinancialLedger,
-  makePostgresqlFinancialLedgerLayer,
+  postgresqlFinancialLedgerLayer,
 } from "./src/postgresql-ledger.ts"
 
 export {
@@ -193,17 +215,19 @@ export {
   ReverseRevenueForOrderInput,
   UnbalancedJournal,
 } from "./src/service.ts"
+
 export type {
   Account as AccountType,
   AccountingConfiguration as AccountingConfigurationType,
   AccountingPeriod as AccountingPeriodType,
-  AccountingService as AccountingServiceShape,
+  AccountingService as AccountingServiceContract,
   FinancialStagingEvidenceRecord as FinancialStagingEvidenceRecordType,
   FinancialVerificationArtifact as FinancialVerificationArtifactType,
   JournalEntry as JournalEntryType,
   JournalLine as JournalLineType,
   RevenuePostingProfile as RevenuePostingProfileType,
 } from "./src/service.ts"
+
 export {
   ChartTemplateId,
   GeneralLedger,
@@ -216,16 +240,21 @@ export {
   RoleBalance,
   TrialBalance,
 } from "./src/general-ledger-contract.ts"
+
 export type {
   GeneralLedger as GeneralLedgerType,
-  GeneralLedgerService as GeneralLedgerServiceShape,
+  GeneralLedgerService as GeneralLedgerServiceContract,
   LedgerAccount as LedgerAccountType,
   LedgerEntry as LedgerEntryType,
   PostEntryFailure,
   PostingRole as PostingRoleType,
   TrialBalance as TrialBalanceType,
 } from "./src/general-ledger-contract.ts"
+
 export { InvalidParentAccount, PostingRuleNotFound } from "./src/errors.ts"
+
 export { AccountingFiscalCalendarLive } from "./src/fiscal-calendar.ts"
+
 export { GeneralLedgerLive, makeGeneralLedgerService } from "./src/layers.ts"
+
 export { AccountingModule } from "./manifest.ts"

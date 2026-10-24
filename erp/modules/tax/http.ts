@@ -11,8 +11,8 @@ import {
   BaseApiErrorPolicy,
   BearerAuth,
   CurrentPrincipal,
-  makeApiErrorMapping,
-  makeModuleApi,
+  apiErrorMapping,
+  moduleApi,
   ReadLimit,
   ShortString,
   TenantHeaders,
@@ -47,9 +47,9 @@ export const TaxHttpGroup = HttpApiGroup.make("Tax").add(
   }).middleware(BearerAuth),
 )
 
-const TaxHttpApi = makeModuleApi(TaxHttpGroup)
+const TaxHttpApi = moduleApi(TaxHttpGroup)
 
-export const TaxHttpErrors = makeApiErrorMapping({
+export const TaxHttpErrors = apiErrorMapping({
   ...BaseApiErrorPolicy,
   TaxCodeAlreadyExists: "conflict",
   TaxCodeNotFound: "not_found",
@@ -59,11 +59,13 @@ export const TaxHttpErrors = makeApiErrorMapping({
 export const TaxHttpHandlers = HttpApiBuilder.group(TaxHttpApi, "Tax", (handlers) =>
   Effect.gen(function* () {
     const service = yield* TaxService
+
     return handlers
       .handle(
         "listTaxCodes",
         Effect.fn("Http.Tax.listTaxCodes")(function* ({ headers, query }) {
           const principal = yield* CurrentPrincipal
+
           return yield* TaxHttpErrors.apiEffect(
             service.listTaxCodes({ principal, tenantId: headers["x-tenant-id"], ...query }),
           )
@@ -73,6 +75,7 @@ export const TaxHttpHandlers = HttpApiBuilder.group(TaxHttpApi, "Tax", (handlers
         "createTaxCode",
         Effect.fn("Http.Tax.createTaxCode")(function* ({ headers, payload }) {
           const principal = yield* CurrentPrincipal
+
           return yield* TaxHttpErrors.apiEffect(
             service.createTaxCode({ principal, tenantId: headers["x-tenant-id"], ...payload }),
           )
@@ -82,6 +85,7 @@ export const TaxHttpHandlers = HttpApiBuilder.group(TaxHttpApi, "Tax", (handlers
         "setProductTaxDefault",
         Effect.fn("Http.Tax.setProductTaxDefault")(function* ({ headers, params, payload }) {
           const principal = yield* CurrentPrincipal
+
           return yield* TaxHttpErrors.apiEffect(
             service.setProductTaxDefault({
               principal,

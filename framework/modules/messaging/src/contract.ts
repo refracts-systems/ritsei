@@ -1,15 +1,18 @@
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import * as Predicate from "effect/Predicate"
 
 import { InstantString } from "../../../foundation/mod.ts"
 
 const NonEmptyString = Schema.String.check(Schema.isPattern(/\S/))
 const Uuid = Schema.String.check(Schema.isUUID())
+
 const PositiveInt = Schema.Int.check(
   Schema.isGreaterThan(0),
   Schema.isLessThanOrEqualTo(2_147_483_647),
 )
+
 const NonNegativeInt = Schema.Int.check(
   Schema.isGreaterThanOrEqualTo(0),
   Schema.isLessThanOrEqualTo(2_147_483_647),
@@ -23,18 +26,20 @@ const MaxPayloadBytes = 256 * 1024
 const isBoundedJson = (value: Schema.Schema.Type<typeof Schema.Json>): boolean => {
   const visit = (current: Schema.Schema.Type<typeof Schema.Json>, depth: number): boolean => {
     if (depth > MaxPayloadDepth) return false
-    if (typeof current === "string") return current.length <= MaxPayloadStringLength
+
+    if (Predicate.isString(current)) return current.length <= MaxPayloadStringLength
+
     if (Array.isArray(current)) {
       return (
         current.length <= MaxPayloadArrayLength && current.every((item) => visit(item, depth + 1))
       )
     }
-    if (typeof current === "object" && current !== null) {
-      return Object.entries(current).every(
-        ([key, item]) => key.length <= MaxPayloadStringLength && visit(item, depth + 1),
-      )
-    }
-    return true
+
+    if (current === null || Predicate.isNumber(current) || Predicate.isBoolean(current)) return true
+
+    return Object.entries(current).every(
+      ([key, item]) => key.length <= MaxPayloadStringLength && visit(item, depth + 1),
+    )
   }
 
   return (
@@ -85,9 +90,13 @@ export const ConsumerReceipt = Schema.Struct({
 })
 
 export type AppendEventInput = Schema.Schema.Type<typeof AppendEventInput>
+
 export type EventEnvelope = Schema.Schema.Type<typeof EventEnvelope>
+
 export type GetEventInput = Schema.Schema.Type<typeof GetEventInput>
+
 export type ConsumeOnceInput = Schema.Schema.Type<typeof ConsumeOnceInput>
+
 export type ConsumerReceipt = Schema.Schema.Type<typeof ConsumerReceipt>
 
 export type ConsumeOnceResult<A> =
@@ -96,7 +105,7 @@ export type ConsumeOnceResult<A> =
 
 export interface MessagingService {
   readonly append: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof AppendEventInput>,
   ) => Effect.Effect<
     EventEnvelope,
     | import("./errors.ts").EventIdempotencyConflict
@@ -104,14 +113,14 @@ export interface MessagingService {
     | Schema.SchemaError
   >
   readonly getEvent: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof GetEventInput>,
   ) => Effect.Effect<
     EventEnvelope | undefined,
     import("../../../foundation/mod.ts").DatabaseFailure | Schema.SchemaError
   >
   /** The effect must be PostgreSQL-local so it and the completed receipt share one transaction. */
   readonly consumeOnce: <A, E, R>(
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ConsumeOnceInput>,
     effect: Effect.Effect<A, E, R>,
   ) => Effect.Effect<
     ConsumeOnceResult<A>,

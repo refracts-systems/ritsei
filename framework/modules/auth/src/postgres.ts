@@ -2,7 +2,7 @@ import { and, eq, gt, isNull } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 
 import { sessions, tenants } from "../../../../db/schema/auth.ts"
-import { Database, isDatabaseConstraint } from "../../../foundation/mod.ts"
+import { Database, type DatabaseFailure, isDatabaseConstraint } from "../../../foundation/mod.ts"
 import { SessionUserAccountNotFound, TenantAlreadyExists } from "./errors.ts"
 import type { AuthStore, StoredSession } from "./store.ts"
 
@@ -28,11 +28,12 @@ const toStoredSession = (row: {
   expiresAt: row.expiresAt,
 })
 
-const isMissingUserAccount = (error: unknown) =>
+const isMissingUserAccount = (error: DatabaseFailure) =>
   isDatabaseConstraint(error, "sessions_user_account_id_fkey", "23503")
 
 export const makePostgresAuthStore = Effect.gen(function* () {
   const database = yield* Database
+
   const findTenantBySlug: AuthStore["findTenantBySlug"] = (slug) =>
     database
       .query(

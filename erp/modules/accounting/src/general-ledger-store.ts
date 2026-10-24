@@ -1,3 +1,4 @@
+import * as Data from "effect/Data"
 import type * as Effect from "effect/Effect"
 
 import type { DatabaseFailure } from "../../../../framework/foundation/mod.ts"
@@ -30,14 +31,17 @@ export type PostEntryCommand = {
   readonly lines: ReadonlyArray<ResolvedLine>
 }
 
-export type PostEntryOutcome =
-  | { readonly _tag: "posted"; readonly entry: LedgerEntry }
-  | { readonly _tag: "not-configured" }
-  | { readonly _tag: "engine-activated" }
-  | { readonly _tag: "period-not-open" }
-  | { readonly _tag: "rule-missing"; readonly role: PostingRole }
-  | { readonly _tag: "account-missing" }
-  | { readonly _tag: "idempotency-conflict" }
+export type PostEntryOutcome = Data.TaggedEnum<{
+  Posted: { readonly entry: LedgerEntry }
+  NotConfigured: {}
+  EngineActivated: {}
+  PeriodNotOpen: {}
+  RuleMissing: { readonly role: PostingRole }
+  AccountMissing: {}
+  IdempotencyConflict: {}
+}>
+
+export const PostEntryOutcome = Data.taggedEnum<PostEntryOutcome>()
 
 export type AccountActivity = {
   readonly accountId: string

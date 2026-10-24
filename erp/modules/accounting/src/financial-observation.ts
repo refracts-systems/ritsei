@@ -31,6 +31,7 @@ import {
 
 const minor = (value: string | number | null) => {
   const result = majorToMinor(String(value ?? "0"), 2)
+
   return result.ok ? BigInt(result.value) : undefined
 }
 
@@ -52,6 +53,7 @@ const parseLegalEntityScope = (scope: string) => {
     /^tenant:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/legal-entity:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.exec(
       scope,
     )
+
   return match === null ? undefined : { tenantId: match[1]!, legalEntityId: match[2]! }
 }
 
@@ -94,6 +96,7 @@ const validateObservationRows = (
   ) {
     return Effect.fail(observationFailure(scope, "incomplete"))
   }
+
   if (
     operationRows.some((row) => !/^[A-Z]{3}$/.test(row.currency) || row.mappingVersion < 1) ||
     transferRows.some(
@@ -107,6 +110,7 @@ const validateObservationRows = (
   ) {
     return Effect.fail(observationFailure(scope, "invalid_fact"))
   }
+
   return Effect.void
 }
 
@@ -116,10 +120,12 @@ const buildTransferObservations = (
 ): Effect.Effect<readonly FinancialStoreTransferObservation[], FinancialStoreObservationFailure> =>
   Effect.gen(function* () {
     const transfers: FinancialStoreTransferObservation[] = []
+
     for (const row of rows) {
       if (row.transferId === null || row.observedTimestamp === null) {
         return yield* Effect.fail(observationFailure(scope, "incomplete"))
       }
+
       transfers.push({
         transferRef: row.transferId,
         debitAccountRef: row.debitAccountId,
@@ -131,6 +137,7 @@ const buildTransferObservations = (
         observedAt: row.observedTimestamp,
       })
     }
+
     return transfers
   })
 
@@ -140,18 +147,23 @@ const aggregateBalanceObservations = (
 ): Effect.Effect<readonly FinancialStoreAccountObservation[], FinancialStoreObservationFailure> =>
   Effect.gen(function* () {
     const balances = new Map<string, FinancialStoreAccountObservation>()
+
     for (const row of rows) {
       if (row.observedAt === null) {
         return yield* Effect.fail(observationFailure(scope, "incomplete"))
       }
+
       const currency = row.currency.toUpperCase()
       const debitMinor = minor(row.debit)
       const creditMinor = minor(row.credit)
+
       if (debitMinor === undefined || creditMinor === undefined) {
         return yield* Effect.fail(observationFailure(scope, "incomplete"))
       }
+
       const observedAt = row.observedAt.toISOString()
       const key = `${row.accountId}:${currency}:${row.mappingVersion}`
+
       const current = balances.get(key) ?? {
         accountRef: row.accountId,
         currency,
@@ -162,6 +174,7 @@ const aggregateBalanceObservations = (
         creditsPostedMinor: "0",
         observedAt,
       }
+
       balances.set(key, {
         ...current,
         debitsPostedMinor: (BigInt(current.debitsPostedMinor) + debitMinor).toString(),
@@ -169,6 +182,7 @@ const aggregateBalanceObservations = (
         observedAt: current.observedAt > observedAt ? current.observedAt : observedAt,
       })
     }
+
     return [...balances.values()].sort((left, right) =>
       `${left.accountRef}:${left.currency}:${left.mappingVersion}`.localeCompare(
         `${right.accountRef}:${right.currency}:${right.mappingVersion}`,
@@ -185,8 +199,10 @@ const buildPostgresqlInventory = (
 ) =>
   Effect.gen(function* () {
     const hash = yield* hashFinancialStoreFacts({ accounts, transfers })
+
     const latestOperation =
       operationRows.at(-1)?.updatedAt?.toISOString() ?? new Date(0).toISOString()
+
     const watermark: FinancialStoreWatermark = {
       authority: "postgresql",
       scope,
@@ -195,6 +211,7 @@ const buildPostgresqlInventory = (
       consistency: "bounded",
       capturedAt: now().toISOString(),
     }
+
     return {
       watermark,
       inventory: {
@@ -210,6 +227,7 @@ const buildPostgresqlInventory = (
 const makePostgresqlInventoryServices = (now: () => Date) =>
   Effect.gen(function* () {
     const database = yield* Database
+
     const read = <A>(
       scope: string,
       operationName: string,
@@ -223,13 +241,16 @@ const makePostgresqlInventoryServices = (now: () => Date) =>
       Effect.gen(function* () {
         const limit = maxRecords + 1
         const scopeIds = parseLegalEntityScope(scope)
+
         if (scopeIds === undefined) {
           return yield* Effect.fail(observationFailure(scope, "unsupported"))
         }
+
         const operationScope = and(
           eq(financialOperations.tenantId, scopeIds.tenantId),
           eq(financialOperations.legalEntityId, scopeIds.legalEntityId),
         )
+
         const operationRows = yield* read(
           scope,
           "accounting.financial_observation.operations",
@@ -255,6 +276,7 @@ const makePostgresqlInventoryServices = (now: () => Date) =>
               .orderBy(asc(financialOperations.updatedAt), asc(financialOperations.id))
               .limit(limit),
         )
+
         const transferRows = yield* read(
           scope,
           "accounting.financial_observation.transfers",
@@ -293,6 +315,7 @@ const makePostgresqlInventoryServices = (now: () => Date) =>
               )
               .limit(limit),
         )
+
         const balanceRows = yield* read(scope, "accounting.financial_observation.balances", (db) =>
           db
             .select({
@@ -333,6 +356,7 @@ const makePostgresqlInventoryServices = (now: () => Date) =>
         yield* validateObservationRows(scope, maxRecords, operationRows, transferRows, balanceRows)
         const transfers = yield* buildTransferObservations(scope, transferRows)
         const accounts = yield* aggregateBalanceObservations(scope, balanceRows)
+
         return yield* buildPostgresqlInventory(scope, operationRows, accounts, transfers, now)
       })
 
@@ -340,17 +364,22 @@ const makePostgresqlInventoryServices = (now: () => Date) =>
       collect: (input) =>
         Effect.gen(function* () {
           const decoded = yield* Schema.decodeUnknownEffect(FinancialStoreWatermarkInput)(input)
+
           return (yield* scan(decoded.scope, decoded.maxRecords)).watermark
         }),
     }
+
     const scanner: FinancialStoreInventoryScannerService = {
       scan: (input) =>
         Effect.gen(function* () {
           const decoded = yield* Schema.decodeUnknownEffect(FinancialStoreInventoryRequest)(input)
+
           if (decoded.watermark.authority !== "postgresql") {
             return yield* Effect.fail(observationFailure(decoded.scope, "invalid_watermark"))
           }
+
           const observed = yield* scan(decoded.scope, decoded.maxRecords)
+
           if (
             observed.watermark.value !== decoded.watermark.value ||
             observed.watermark.snapshotRef !== decoded.watermark.snapshotRef ||
@@ -358,22 +387,24 @@ const makePostgresqlInventoryServices = (now: () => Date) =>
           ) {
             return yield* Effect.fail(observationFailure(decoded.scope, "invalid_watermark"))
           }
+
           return observed.inventory
         }),
     }
+
     return { collector, scanner }
   })
 
-export const makePostgresqlFinancialStoreObservation = (now: () => Date = () => new Date()) =>
+export const postgresqlFinancialStoreObservation = (now: () => Date = () => new Date()) =>
   makePostgresqlInventoryServices(now)
 
 export const makePostgresqlFinancialStoreObservationLayer = Layer.mergeAll(
   Layer.effect(
     FinancialStoreWatermarkCollector,
-    makePostgresqlFinancialStoreObservation().pipe(Effect.map(({ collector }) => collector)),
+    postgresqlFinancialStoreObservation().pipe(Effect.map(({ collector }) => collector)),
   ),
   Layer.effect(
     FinancialStoreInventoryScanner,
-    makePostgresqlFinancialStoreObservation().pipe(Effect.map(({ scanner }) => scanner)),
+    postgresqlFinancialStoreObservation().pipe(Effect.map(({ scanner }) => scanner)),
   ),
 )

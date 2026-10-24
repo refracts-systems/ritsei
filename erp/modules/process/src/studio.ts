@@ -1,9 +1,11 @@
+import type { CapabilityType } from "../../../../framework/modules/authorization/mod.ts"
 import { and, asc, desc, eq, inArray } from "drizzle-orm"
 import * as Clock from "effect/Clock"
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
+import * as Match from "effect/Match"
 
 import {
   processJobs,
@@ -84,10 +86,12 @@ const CatalogStability = Schema.Literals([
   "DEPRECATED",
   "RETIRED",
 ])
+
 const CatalogCompatibilityRange = Schema.Struct({
   minimumVersion: PositiveInt,
   maximumVersion: PositiveInt,
 })
+
 const CatalogCompensation = Schema.Union([
   Schema.Struct({
     kind: Schema.Literal("action"),
@@ -141,6 +145,7 @@ export const ProcessCatalogEvent = Schema.Struct({
 })
 
 export const ProcessCatalogDescriptor = Schema.Union([ProcessCatalogAction, ProcessCatalogEvent])
+
 export type ProcessCatalogDescriptor = Schema.Schema.Type<typeof ProcessCatalogDescriptor>
 
 export const ListProcessCatalogInput = Schema.Struct({
@@ -160,6 +165,7 @@ export const ValidateProcessDefinitionInput = Schema.Struct({
 })
 
 export const ProcessStaticValidation = ProcessReleaseValidation
+
 export type ProcessStaticValidation = Schema.Schema.Type<typeof ProcessStaticValidation>
 
 export const ListProcessRuntimeInstancesInput = Schema.Struct({
@@ -199,15 +205,18 @@ export const ProcessRuntimeInstance = Schema.Struct({
   createdAt: Timestamp,
   updatedAt: Timestamp,
 })
+
 export type ProcessRuntimeInstance = Schema.Schema.Type<typeof ProcessRuntimeInstance>
 
 export const ProcessRuntimeDetail = Schema.Struct({
   instance: ProcessRuntimeInstance,
   checkpoint: ProcessCheckpoint,
 })
+
 export type ProcessRuntimeDetail = Schema.Schema.Type<typeof ProcessRuntimeDetail>
 
 const ProcessWorkflowRunStatus = Schema.Literals(["running", "succeeded", "manual_recovery"])
+
 export const ListProcessWorkflowRunsInput = Schema.Struct({
   principal: Principal,
   tenantId: Uuid,
@@ -228,6 +237,7 @@ export const ProcessWorkflowRun = Schema.Struct({
   createdAt: Timestamp,
   updatedAt: Timestamp,
 })
+
 export type ProcessWorkflowRun = Schema.Schema.Type<typeof ProcessWorkflowRun>
 
 export const ProcessJobInboxItem = Schema.Struct({
@@ -244,12 +254,14 @@ export const ProcessJobInboxItem = Schema.Struct({
   createdAt: Timestamp,
   updatedAt: Timestamp,
 })
+
 export type ProcessJobInboxItem = Schema.Schema.Type<typeof ProcessJobInboxItem>
 
 export const ProcessOperatorInbox = Schema.Struct({
   runtimeInstances: Schema.Array(ProcessRuntimeInstance),
   jobs: Schema.Array(ProcessJobInboxItem),
 })
+
 export type ProcessOperatorInbox = Schema.Schema.Type<typeof ProcessOperatorInbox>
 
 export const ListProcessOperatorInboxInput = Schema.Struct({
@@ -280,31 +292,35 @@ export const ProcessStudioService = Context.Service<ProcessStudioService>(
 
 export interface ProcessStudioService {
   readonly listCatalog: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ListProcessCatalogInput>,
   ) => Effect.Effect<
     ReadonlyArray<ProcessCatalogDescriptor>,
     Schema.SchemaError | AuthorizationDenied | DatabaseFailure
   >
   readonly validateDefinition: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ValidateProcessDefinitionInput>,
   ) => Effect.Effect<
     ProcessStaticValidation,
     Schema.SchemaError | AuthorizationDenied | DatabaseFailure | ProcessReleaseValidationFailed
   >
   readonly listRuntimeInstances: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ListProcessRuntimeInstancesInput>,
   ) => Effect.Effect<ReadonlyArray<ProcessRuntimeInstance>, StudioFailure>
   readonly getRuntimeInstance: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof GetProcessRuntimeInstanceInput>,
   ) => Effect.Effect<ProcessRuntimeDetail, StudioFailure>
   readonly listWorkflowRuns: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ListProcessWorkflowRunsInput>,
   ) => Effect.Effect<ReadonlyArray<ProcessWorkflowRun>, StudioFailure>
-  readonly listOperatorInbox: (input: unknown) => Effect.Effect<ProcessOperatorInbox, StudioFailure>
+  readonly listOperatorInbox: (
+    input: Schema.Codec.Encoded<typeof ListProcessOperatorInboxInput>,
+  ) => Effect.Effect<ProcessOperatorInbox, StudioFailure>
   readonly listOperatorControls: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ListProcessOperatorControlsInput>,
   ) => Effect.Effect<ReadonlyArray<ProcessOperatorControl>, StudioFailure>
-  readonly operateRuntime: (input: unknown) => Effect.Effect<ProcessRuntimeInstance, StudioFailure>
+  readonly operateRuntime: (
+    input: Schema.Codec.Encoded<typeof ProcessRuntimeOperatorInput>,
+  ) => Effect.Effect<ProcessRuntimeInstance, StudioFailure>
 }
 
 export class ProcessRuntimeInstanceNotFound extends Schema.TaggedError<ProcessRuntimeInstanceNotFound>()(
@@ -405,11 +421,12 @@ const catalogDescriptors = allCatalogEntries
   )
 
 const operatorCapability = (action: Schema.Schema.Type<typeof ProcessOperatorAction>) =>
-  action === "retry"
-    ? ProcessCapabilities.runtimeRetry
-    : action === "compensate"
-      ? ProcessCapabilities.runtimeCompensate
-      : ProcessCapabilities.runtimeManualRecovery
+  Match.value(action).pipe(
+    Match.when("retry", () => ProcessCapabilities.runtimeRetry),
+    Match.when("compensate", () => ProcessCapabilities.runtimeCompensate),
+    Match.when("manual_recovery", () => ProcessCapabilities.runtimeManualRecovery),
+    Match.exhaustive,
+  )
 
 const iso = (value: Date | null): string | null => value?.toISOString() ?? null
 
@@ -449,7 +466,7 @@ const decodeCheckpointRow = (row: {
     | null
   readonly currentNodeId: string
   readonly revision: number
-  readonly state: unknown
+  readonly state: Schema.Json
   readonly correlationId: string
   readonly executionPrincipal: string
 }) =>
@@ -484,6 +501,7 @@ const toRuntimeInstance = (
   updatedAt: Date,
 ): ProcessRuntimeInstance => {
   const snapshot = makeProcessOperatorService().inspect(checkpoint)
+
   return {
     instanceId: checkpoint.instanceId,
     tenantId: checkpoint.tenantId,
@@ -600,6 +618,7 @@ const processRuntimeCheckpointSelection = {
 }
 
 type RuntimeSelectionStatus = "running" | "waiting" | "completed" | "failed" | "manual_recovery"
+
 type RuntimeSelectionEnvironment = "DEV" | "TEST" | "PROD"
 
 const selectRuntimeCheckpointRows = (
@@ -665,24 +684,27 @@ export const makeProcessStudioService = Effect.gen(function* () {
   const authorize = (
     principal: Schema.Schema.Type<typeof Principal>,
     tenantId: string,
-    capability: string,
+    capability: CapabilityType,
   ) => authorization.authorize({ principal, tenantId, capability })
 
-  const listCatalog = (input: unknown) =>
+  const listCatalog = (input: Schema.Codec.Encoded<typeof ListProcessCatalogInput>) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ListProcessCatalogInput)(input)
       yield* authorize(decoded.principal, decoded.tenantId, ProcessCapabilities.catalogRead)
+
       const entries =
         decoded.kind === undefined
           ? catalogDescriptors
           : catalogDescriptors.filter((entry) => entry.kind === decoded.kind)
+
       return entries.slice(0, decoded.limit ?? 200)
     })
 
-  const validateDefinition = (input: unknown) =>
+  const validateDefinition = (input: Schema.Codec.Encoded<typeof ValidateProcessDefinitionInput>) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ValidateProcessDefinitionInput)(input)
       yield* authorize(decoded.principal, decoded.tenantId, ProcessCapabilities.definitionValidate)
+
       return yield* validateProcessRelease(registry, {
         definitionId: decoded.definitionId,
         definitionVersion: decoded.definitionVersion,
@@ -691,14 +713,18 @@ export const makeProcessStudioService = Effect.gen(function* () {
       })
     })
 
-  const listRuntimeInstances = (input: unknown) =>
+  const listRuntimeInstances = (
+    input: Schema.Codec.Encoded<typeof ListProcessRuntimeInstancesInput>,
+  ) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ListProcessRuntimeInstancesInput)(input)
       yield* authorize(decoded.principal, decoded.tenantId, ProcessCapabilities.monitorRead)
+
       const rows = yield* database.query(
         (db) => selectRuntimeCheckpointRows(db, decoded),
         "process.studio.runtime.list",
       )
+
       return yield* Effect.forEach(rows, (row) =>
         decodeCheckpointRow(row).pipe(
           Effect.map((checkpoint) => toRuntimeInstance(checkpoint, row.createdAt, row.updatedAt)),
@@ -706,15 +732,18 @@ export const makeProcessStudioService = Effect.gen(function* () {
       )
     })
 
-  const getRuntimeInstance = (input: unknown) =>
+  const getRuntimeInstance = (input: Schema.Codec.Encoded<typeof GetProcessRuntimeInstanceInput>) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(GetProcessRuntimeInstanceInput)(input)
       yield* authorize(decoded.principal, decoded.tenantId, ProcessCapabilities.monitorRead)
+
       const rows = yield* database.query(
         (db) => selectRuntimeCheckpointRows(db, decoded),
         "process.studio.runtime.get",
       )
+
       const row = rows[0]
+
       if (row === undefined) {
         return yield* Effect.fail(
           new ProcessRuntimeInstanceNotFound({
@@ -723,17 +752,20 @@ export const makeProcessStudioService = Effect.gen(function* () {
           }),
         )
       }
+
       const checkpoint = yield* decodeCheckpointRow(row)
+
       return {
         instance: toRuntimeInstance(checkpoint, row.createdAt, row.updatedAt),
         checkpoint,
       }
     })
 
-  const listWorkflowRuns = (input: unknown) =>
+  const listWorkflowRuns = (input: Schema.Codec.Encoded<typeof ListProcessWorkflowRunsInput>) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ListProcessWorkflowRunsInput)(input)
       yield* authorize(decoded.principal, decoded.tenantId, ProcessCapabilities.monitorRead)
+
       const rows = yield* database.query(
         (db) =>
           db
@@ -763,14 +795,16 @@ export const makeProcessStudioService = Effect.gen(function* () {
             .limit(decoded.limit ?? 200),
         "process.studio.workflow-runs.list",
       )
+
       return yield* Effect.forEach(rows, toWorkflowRun)
     })
 
-  const listOperatorInbox = (input: unknown) =>
+  const listOperatorInbox = (input: Schema.Codec.Encoded<typeof ListProcessOperatorInboxInput>) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ListProcessOperatorInboxInput)(input)
       yield* authorize(decoded.principal, decoded.tenantId, ProcessCapabilities.inboxRead)
       const limit = decoded.limit ?? 200
+
       const [checkpointRows, jobRows] = yield* Effect.all([
         database.query(
           (db) =>
@@ -828,10 +862,12 @@ export const makeProcessStudioService = Effect.gen(function* () {
           "process.studio.inbox.jobs.list",
         ),
       ])
+
       const runtimeInstances = yield* Effect.forEach(checkpointRows, (row) =>
         decodeCheckpointRow(row).pipe(
           Effect.flatMap((checkpoint) => {
             const instance = toRuntimeInstance(checkpoint, row.createdAt, row.updatedAt)
+
             return instance.requiredAction === "none"
               ? Effect.succeed(null)
               : Effect.succeed(instance)
@@ -842,14 +878,19 @@ export const makeProcessStudioService = Effect.gen(function* () {
           items.filter((item): item is ProcessRuntimeInstance => item !== null),
         ),
       )
+
       const jobs = yield* Effect.forEach(jobRows, toJobInboxItem)
+
       return { runtimeInstances, jobs }
     })
 
-  const listOperatorControls = (input: unknown) =>
+  const listOperatorControls = (
+    input: Schema.Codec.Encoded<typeof ListProcessOperatorControlsInput>,
+  ) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ListProcessOperatorControlsInput)(input)
       yield* authorize(decoded.principal, decoded.tenantId, ProcessCapabilities.historyRead)
+
       const rows = yield* database.query(
         (db) =>
           db
@@ -876,6 +917,7 @@ export const makeProcessStudioService = Effect.gen(function* () {
             .limit(decoded.limit ?? 200),
         "process.studio.operator-controls.list",
       )
+
       return yield* Effect.forEach(rows, (row) =>
         Schema.decodeUnknownEffect(ProcessOperatorControl)(toOperatorControl(row)).pipe(
           Effect.mapError(
@@ -902,16 +944,18 @@ export const makeProcessStudioService = Effect.gen(function* () {
               eq(processRuntimeCheckpoints.id, instanceId),
             ),
           )
+
         return forUpdate ? query.for("update") : query
       },
       forUpdate ? "process.studio.runtime.lock" : "process.studio.runtime.load",
     )
 
-  const operateRuntime = (input: unknown) =>
+  const operateRuntime = (input: Schema.Codec.Encoded<typeof ProcessRuntimeOperatorInput>) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ProcessRuntimeOperatorInput)(input)
       yield* authorize(decoded.principal, decoded.tenantId, operatorCapability(decoded.action))
       const actorPrincipalId = decoded.principal.userAccountId
+
       const operation = database.withTransaction(
         Effect.gen(function* () {
           const existingRows = yield* database.query(
@@ -936,7 +980,9 @@ export const makeProcessStudioService = Effect.gen(function* () {
                 .for("update"),
             "process.studio.operator-control.idempotency.lookup",
           )
+
           const existing = existingRows[0]
+
           if (existing !== undefined) {
             if (
               !sameOperatorControl(existing, {
@@ -955,8 +1001,10 @@ export const makeProcessStudioService = Effect.gen(function* () {
                 }),
               )
             }
+
             const replayRows = yield* loadRuntimeRow(decoded.tenantId, decoded.instanceId, true)
             const replayRow = replayRows[0]
+
             if (replayRow === undefined) {
               return yield* Effect.fail(
                 new ProcessRuntimeInstanceNotFound({
@@ -965,12 +1013,15 @@ export const makeProcessStudioService = Effect.gen(function* () {
                 }),
               )
             }
+
             const replayCheckpoint = yield* decodeCheckpointRow(replayRow)
+
             return toRuntimeInstance(replayCheckpoint, replayRow.createdAt, replayRow.updatedAt)
           }
 
           const rows = yield* loadRuntimeRow(decoded.tenantId, decoded.instanceId, true)
           const row = rows[0]
+
           if (row === undefined) {
             return yield* Effect.fail(
               new ProcessRuntimeInstanceNotFound({
@@ -979,14 +1030,18 @@ export const makeProcessStudioService = Effect.gen(function* () {
               }),
             )
           }
+
           const checkpoint = yield* decodeCheckpointRow(row)
-          const updatedCheckpoint =
-            decoded.action === "retry"
-              ? yield* operator.retry(checkpoint)
-              : decoded.action === "compensate"
-                ? yield* operator.startCompensation(checkpoint)
-                : yield* operator.requireManualRecovery(checkpoint)
+
+          const updatedCheckpoint = yield* Match.value(decoded.action).pipe(
+            Match.when("retry", () => operator.retry(checkpoint)),
+            Match.when("compensate", () => operator.startCompensation(checkpoint)),
+            Match.when("manual_recovery", () => operator.requireManualRecovery(checkpoint)),
+            Match.exhaustive,
+          )
+
           const updatedAt = now()
+
           const updatedRows = yield* database.query(
             (db) =>
               db
@@ -1009,6 +1064,7 @@ export const makeProcessStudioService = Effect.gen(function* () {
                 .returning({ id: processRuntimeCheckpoints.id }),
             "process.studio.runtime.operator-update",
           )
+
           if (updatedRows.length !== 1) {
             return yield* Effect.fail(
               new ProcessCheckpointRevisionConflict({
@@ -1018,6 +1074,7 @@ export const makeProcessStudioService = Effect.gen(function* () {
               }),
             )
           }
+
           yield* database.query(
             (db) =>
               db.insert(processOperatorControls).values({
@@ -1031,12 +1088,16 @@ export const makeProcessStudioService = Effect.gen(function* () {
               }),
             "process.studio.operator-control.record",
           )
+
           return toRuntimeInstance(updatedCheckpoint, row.createdAt, updatedAt)
         }),
         "process.studio.runtime.operator-control",
       )
+
       const outcome = yield* operation.pipe(Effect.result)
+
       if (Result.isSuccess(outcome)) return outcome.success
+
       if (
         outcome.failure instanceof DatabaseFailure &&
         isDatabaseConstraint(outcome.failure, "operator_controls_tenant_id_key")
@@ -1060,7 +1121,9 @@ export const makeProcessStudioService = Effect.gen(function* () {
               ),
           "process.studio.operator-control.replay.lookup",
         )
+
         const existing = rows[0]
+
         if (
           existing !== undefined &&
           sameOperatorControl(existing, {
@@ -1076,8 +1139,10 @@ export const makeProcessStudioService = Effect.gen(function* () {
             tenantId: decoded.tenantId,
             instanceId: decoded.instanceId,
           })
+
           return replay.instance
         }
+
         return yield* Effect.fail(
           new ProcessOperatorConflict({
             tenantId: decoded.tenantId,
@@ -1086,6 +1151,7 @@ export const makeProcessStudioService = Effect.gen(function* () {
           }),
         )
       }
+
       return yield* Effect.fail(outcome.failure)
     })
 

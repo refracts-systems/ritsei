@@ -19,14 +19,19 @@ export const makePostgresNumberingService = Effect.fn("Numbering.makePostgresSer
     const database = yield* Database
     const calendar = yield* Effect.serviceOption(FiscalCalendar)
 
-    const allocate = Effect.fn("NumberingService.allocate")(function* (input: unknown) {
+    const allocate = Effect.fn("NumberingService.allocate")(function* (
+      input: Schema.Codec.Encoded<typeof AllocateNumberInput>,
+    ) {
       const decoded = yield* Schema.decodeUnknownEffect(AllocateNumberInput)(input)
+
       const startMonth =
         decoded.fiscalYearStartMonth ??
         (Option.isSome(calendar)
           ? yield* calendar.value.fiscalYearStartMonth(decoded.tenantId, decoded.scopeId)
           : 1)
+
       const periodKey = fiscalPeriodKey(decoded.documentDate, startMonth)
+
       return yield* database.transaction(async (tx) => {
         await tx
           .insert(numberSeries)
@@ -46,6 +51,7 @@ export const makePostgresNumberingService = Effect.fn("Numbering.makePostgresSer
               numberSeries.periodKey,
             ],
           })
+
         // Locking the series row serializes allocation until commit, which keeps the series gapless.
         const series = (
           await tx
@@ -61,6 +67,7 @@ export const makePostgresNumberingService = Effect.fn("Numbering.makePostgresSer
             )
             .for("update")
         )[0]!
+
         const existing = (
           await tx
             .select({ value: issuedNumbers.value, number: issuedNumbers.number })
@@ -72,6 +79,7 @@ export const makePostgresNumberingService = Effect.fn("Numbering.makePostgresSer
               ),
             )
         )[0]
+
         if (existing !== undefined) {
           return {
             seriesId: series.id,
@@ -80,6 +88,7 @@ export const makePostgresNumberingService = Effect.fn("Numbering.makePostgresSer
             number: existing.number,
           }
         }
+
         const value = Number(series.nextValue)
         const number = formatNumber(series.prefix, periodKey, value, series.padding)
         await tx
@@ -93,6 +102,7 @@ export const makePostgresNumberingService = Effect.fn("Numbering.makePostgresSer
           number,
           documentId: decoded.documentId,
         })
+
         return { seriesId: series.id, periodKey, value, number }
       }, "numbering.allocate")
     })

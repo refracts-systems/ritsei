@@ -6,7 +6,7 @@ import { Database, type DatabaseService } from "../../../../framework/foundation
 import {
   AuthorizationDenied,
   AuthorizationService,
-  type AuthorizationService as AuthorizationServiceShape,
+  type AuthorizationService as AuthorizationServiceContract,
   type CapabilityType,
 } from "../../../../framework/modules/authorization/mod.ts"
 import { makeProcessStudioService, ProcessCapabilities } from "../mod.ts"
@@ -32,19 +32,23 @@ const database: DatabaseService = {
 
 const unused = () => Effect.die(new Error("unused authorization operation in Process Studio test"))
 
-const makeAuthorization = (allow: boolean): AuthorizationServiceShape => ({
+const makeAuthorization = (allow: boolean): AuthorizationServiceContract => ({
   authorize: (input) => {
+    // SAFETY: the test calls this double only with inputs of the shape it reads.
     const request = input as { readonly tenantId: string; readonly capability: string }
+
     return allow
       ? Effect.succeed({
           allowed: true as const,
           tenantId: request.tenantId,
+          // SAFETY: the capabilities in this test come from its own list.
           capability: request.capability as CapabilityType,
           grant: "membership" as const,
         })
       : Effect.fail(
           new AuthorizationDenied({
             tenantId: request.tenantId,
+            // SAFETY: the capabilities in this test come from its own list.
             capability: request.capability as CapabilityType,
           }),
         )
@@ -71,11 +75,13 @@ describe("Process Studio service", () => {
   it.effect("discovers public catalog entries and validates exact references", () =>
     Effect.gen(function* () {
       const service = yield* provideStudio(true)
+
       const catalog = yield* service.listCatalog({
         principal,
         tenantId,
         limit: 200,
       })
+
       assert.isTrue(catalog.length > 0)
       assert.isTrue(catalog.every((entry) => entry.stability === "PUBLIC"))
       assert.isTrue(catalog.some((entry) => entry.id === "sales.order.confirm"))
@@ -88,6 +94,7 @@ describe("Process Studio service", () => {
         catalogVersion: 1,
         references: [{ kind: "DomainAction", id: "sales.order.confirm", version: 1 }],
       })
+
       assert.strictEqual(validation.status, "VALIDATED")
       assert.deepStrictEqual(validation.references, [
         { kind: "DomainAction", id: "sales.order.confirm", version: 1 },
@@ -98,6 +105,7 @@ describe("Process Studio service", () => {
   it.effect("denies Process Studio reads before touching persistence", () =>
     Effect.gen(function* () {
       const service = yield* provideStudio(false)
+
       const error = yield* Effect.flip(
         service.listCatalog({
           principal,
@@ -105,6 +113,7 @@ describe("Process Studio service", () => {
           limit: 1,
         }),
       )
+
       assert.instanceOf(error, AuthorizationDenied)
       assert.strictEqual(error.capability, ProcessCapabilities.catalogRead)
     }),

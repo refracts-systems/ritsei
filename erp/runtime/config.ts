@@ -1,10 +1,13 @@
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import { omitUndefined } from "../../framework/foundation/mod.ts"
 
 export const DeploymentProfile = Schema.Literals(["entry", "standard", "scale", "enterprise"])
+
 export type DeploymentProfile = Schema.Schema.Type<typeof DeploymentProfile>
 
 const AuthenticationProfile = Schema.Literals(["transitional-local", "oidc"])
+
 type AuthenticationProfile = Schema.Schema.Type<typeof AuthenticationProfile>
 
 export type TransitionalLocalAuthenticationConfiguration = {
@@ -64,6 +67,7 @@ export interface RuntimeEnvironment {
 
 const NonEmptyString = Schema.String.check(Schema.isPattern(/\S/))
 const BoundedOidcString = NonEmptyString.pipe(Schema.check(Schema.isMaxLength(4_096)))
+
 const RawRuntimeConfiguration = Schema.Struct({
   deploymentProfile: DeploymentProfile,
   authenticationProfile: Schema.optionalKey(AuthenticationProfile),
@@ -93,18 +97,21 @@ type RawRuntimeConfiguration = Schema.Schema.Type<typeof RawRuntimeConfiguration
 const invalid = (reason: RuntimeConfigurationFailure["reason"]) =>
   new RuntimeConfigurationFailure({ reason })
 
-const withoutUndefined = (values: Readonly<Record<string, unknown>>) =>
-  Object.fromEntries(Object.entries(values).filter(([, value]) => value !== undefined))
+const withoutUndefined = <Fields extends { readonly [Key in keyof Fields]: unknown }>(
+  values: Fields,
+) => Object.fromEntries(Object.entries(values).filter(([, value]) => value !== undefined))
 
 const parseUrl = (value: string): string | undefined => {
   try {
     const url = new URL(value)
     const normalized = value.trim()
+
     const loopback =
       url.hostname === "127.0.0.1" ||
       url.hostname === "localhost" ||
       url.hostname === "[::1]" ||
       url.hostname === "::1"
+
     return url.username === "" &&
       url.password === "" &&
       url.hash === "" &&
@@ -119,6 +126,7 @@ const parseUrl = (value: string): string | undefined => {
 const parseSafeInteger = (value: string) => {
   if (!/^\d+$/.test(value)) return undefined
   const parsed = Number(value)
+
   return Number.isSafeInteger(parsed) ? parsed : undefined
 }
 
@@ -128,8 +136,10 @@ const parsePostgresReadYourWritesConfiguration = (
   if (raw === undefined) {
     return Effect.fail(invalid("missing_postgres_read_your_writes_configuration"))
   }
+
   const maxWaitMs = parseSafeInteger(raw.maxWaitMs)
   const tokenTtlMs = parseSafeInteger(raw.tokenTtlMs)
+
   if (
     raw.replicaUrl.trim().length === 0 ||
     raw.placementId.trim().length === 0 ||
@@ -143,6 +153,7 @@ const parsePostgresReadYourWritesConfiguration = (
   ) {
     return Effect.fail(invalid("invalid_postgres_read_your_writes_configuration"))
   }
+
   return Effect.succeed({
     replicaUrl: raw.replicaUrl,
     placementId: raw.placementId,
@@ -159,7 +170,9 @@ const readPostgresReadYourWritesValues = (
   const replicaUrl = environment.get("POSTGRES_REPLICA_URL")
   const placementId = environment.get("RITSEI_POSTGRES_PLACEMENT_ID")
   const secret = environment.get("RITSEI_POSTGRES_CONSISTENCY_SECRET")
+
   if (replicaUrl === undefined || placementId === undefined || secret === undefined) return {}
+
   return {
     postgresReadYourWrites: {
       replicaUrl,
@@ -190,26 +203,28 @@ export const parseRuntimeConfiguration = (environment: RuntimeEnvironment) =>
       }),
       ...readPostgresReadYourWritesValues(environment),
     }
+
     const decoded = yield* Schema.decodeUnknownEffect(RawRuntimeConfiguration)(raw).pipe(
       Effect.mapError(() => invalid("invalid_configuration")),
     )
+
     const postgresReadYourWrites =
       environment.get("RITSEI_POSTGRES_RYW_ENABLED") === "true"
         ? yield* parsePostgresReadYourWritesConfiguration(decoded.postgresReadYourWrites)
         : undefined
+
     if (decoded.authenticationProfile === undefined) {
       return yield* Effect.fail(invalid("missing_authentication_configuration"))
     }
+
     const authentication: AuthenticationConfiguration =
       decoded.authenticationProfile === "transitional-local"
         ? {
             profile: "transitional-local",
-            ...(decoded.transitionalUserAccountId === undefined
-              ? {}
-              : { userAccountId: decoded.transitionalUserAccountId }),
-            ...(decoded.transitionalUserAccountEmail === undefined
-              ? {}
-              : { userAccountEmail: decoded.transitionalUserAccountEmail.trim().toLowerCase() }),
+            ...omitUndefined({ userAccountId: decoded.transitionalUserAccountId }),
+            ...omitUndefined({
+              userAccountEmail: decoded.transitionalUserAccountEmail?.trim().toLowerCase(),
+            }),
           }
         : yield* Effect.gen(function* () {
             const values = [
@@ -221,9 +236,11 @@ export const parseRuntimeConfiguration = (environment: RuntimeEnvironment) =>
               decoded.oidcJwksUri,
               decoded.oidcRedirectUri,
             ]
+
             if (values.some((value) => value === undefined)) {
               return yield* Effect.fail(invalid("missing_oidc_configuration"))
             }
+
             const urls = [
               decoded.oidcIssuerUrl,
               decoded.oidcAuthorizationEndpoint,
@@ -231,15 +248,19 @@ export const parseRuntimeConfiguration = (environment: RuntimeEnvironment) =>
               decoded.oidcJwksUri,
               decoded.oidcRedirectUri,
             ].map((value) => parseUrl(value!))
+
             if (urls.some((value) => value === undefined)) {
               return yield* Effect.fail(invalid("invalid_oidc_configuration"))
             }
+
             const scopes = (decoded.oidcScopes ?? "openid profile email")
               .split(/\s+/)
               .filter((scope) => scope.length > 0)
+
             if (scopes.length === 0 || !scopes.includes("openid")) {
               return yield* Effect.fail(invalid("invalid_oidc_configuration"))
             }
+
             return {
               profile: "oidc" as const,
               issuerUrl: urls[0]!,
@@ -252,10 +273,11 @@ export const parseRuntimeConfiguration = (environment: RuntimeEnvironment) =>
               scopes,
             }
           })
+
     return {
       deploymentProfile: decoded.deploymentProfile,
       authentication,
-      ...(postgresReadYourWrites === undefined ? {} : { postgresReadYourWrites }),
+      ...omitUndefined({ postgresReadYourWrites }),
     } satisfies RitseiRuntimeConfiguration
   })
 

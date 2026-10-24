@@ -1,9 +1,11 @@
 export { IdentityCapabilities } from "./src/capabilities.ts"
+
 export {
   IdentityCreateUserAccountAction,
   IdentityTypedActionCatalog,
   IdentityTypedEventCatalog,
 } from "./src/catalog.ts"
+
 export {
   IdentityAccountAuthorizer,
   IdentityEventPublisher,
@@ -23,7 +25,9 @@ export {
   UserAccountService,
   UserAccountStatus,
 } from "./src/contract.ts"
-export type { UserAccountService as UserAccountServiceShape } from "./src/contract.ts"
+
+export type { UserAccountService as UserAccountServiceContract } from "./src/contract.ts"
+
 export {
   ExternalSubjectAlreadyBound,
   ExternalSubjectNotFound,
@@ -31,6 +35,7 @@ export {
   UserAccountAlreadyExists,
   UserAccountNotFound,
 } from "./src/errors.ts"
+
 export {
   IdentityEventPublisherLive,
   IdentityLive,

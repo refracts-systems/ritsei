@@ -14,9 +14,12 @@ import {
   UserAccountCreatedEvent,
   UserAccountNotFound,
 } from "../mod.ts"
+import { postgresCode, postgresConstraint } from "../../../../tests/support/postgres-error.ts"
+import { partial } from "../../../../tests/support/partial.ts"
 
 const databaseUrl = process.env["DATABASE_URL"]
-const postgresFailure = (effect: () => Promise<unknown>) =>
+
+const postgresFailure = <A>(effect: () => Promise<A>) =>
   Effect.tryPromise({ try: effect, catch: (cause) => cause }).pipe(Effect.flip)
 
 const makeDatabaseService = (client: Parameters<typeof makePostgresDatabase>[0]) =>
@@ -33,6 +36,7 @@ it.effect.skipIf(databaseUrl === undefined)(
 
         assert.strictEqual(created.email, "user@example.com")
         assert.strictEqual(created.status, "active")
+
         const persisted = yield* Effect.promise(
           () =>
             client<{ email: string }[]>`
@@ -41,6 +45,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             where id = ${created.id}
           `,
         )
+
         assert.deepStrictEqual(persisted, [{ email: "user@example.com" }])
 
         assert.strictEqual((yield* service.getById(created.id)).id, created.id)
@@ -50,6 +55,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           (yield* service.update({ id: created.id, email: "after@example.com" })).email,
           "after@example.com",
         )
+
         const invalidEmail = yield* postgresFailure(
           () =>
             client`
@@ -58,20 +64,23 @@ it.effect.skipIf(databaseUrl === undefined)(
             where id = ${created.id}
           `,
         )
-        assert.strictEqual((invalidEmail as { code?: string }).code, "23514")
+
+        assert.strictEqual(postgresCode(invalidEmail), "23514")
         assert.strictEqual(
-          (invalidEmail as { constraint_name?: string }).constraint_name,
+          postgresConstraint(invalidEmail),
           "user_accounts_email_normalization_check",
         )
+
         const blankEmail = yield* postgresFailure(
           () =>
             client`
             insert into identity.user_accounts (email) values ('   ')
           `,
         )
-        assert.strictEqual((blankEmail as { code?: string }).code, "23514")
+
+        assert.strictEqual(postgresCode(blankEmail), "23514")
         assert.strictEqual(
-          (blankEmail as { constraint_name?: string }).constraint_name,
+          postgresConstraint(blankEmail),
           "user_accounts_email_normalization_check",
         )
 
@@ -89,16 +98,20 @@ it.effect.skipIf(databaseUrl === undefined)(
       Effect.gen(function* () {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
+
         const [tenant] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
           `,
         )
+
         const principal = { userAccountId: "identity-test", sessionId: "identity-session" }
+
         const messaging = yield* makeMessagingService.pipe(
           Effect.provideService(Database, database),
         )
+
         const service = yield* Effect.provide(
           makeUserAccountService,
           Layer.mergeAll(
@@ -109,11 +122,13 @@ it.effect.skipIf(databaseUrl === undefined)(
             Layer.succeed(IdentityEventPublisher, { append: messaging.append }),
           ),
         )
+
         const created = yield* service.createForTenant({
           principal,
           tenantId: tenant!.id,
           email: "identity-event@example.com",
         })
+
         const [event] = yield* Effect.promise(
           () =>
             client<
@@ -132,6 +147,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               and aggregate_id = ${created.id}
           `,
         )
+
         assert.deepStrictEqual(event, {
           event_type: UserAccountCreatedEvent.id,
           event_version: UserAccountCreatedEvent.version,
@@ -157,13 +173,18 @@ it.effect.skipIf(databaseUrl === undefined)(
         assert.strictEqual(duplicate.email, "duplicate@example.com")
 
         const updateTarget = yield* service.create({ email: "update@example.com" })
+
         const updateDuplicate = yield* Effect.flip(
           service.update({ id: updateTarget.id, email: " DUPLICATE@example.com " }),
         )
+
         assert.instanceOf(updateDuplicate, UserAccountAlreadyExists)
         assert.strictEqual(updateDuplicate.email, "duplicate@example.com")
 
-        const invalid = yield* Effect.flip(service.create({ email: 42 }))
+        const invalid = yield* Effect.flip(
+          service.create(partial<Parameters<typeof service.create>[0]>()({ email: 42 })),
+        )
+
         assert.instanceOf(invalid, Error)
         assert.match(invalid.message, /email/)
         const blank = yield* Effect.flip(service.create({ email: "   " }))
@@ -181,6 +202,7 @@ it.effect.skipIf(databaseUrl === undefined)(
         yield* runMigrations(client)
         const service = yield* makeDatabaseService(client)
         const created = yield* service.create({ email: "status@example.test" })
+
         const activeWithDisabledAt = yield* postgresFailure(
           () =>
             client`
@@ -188,9 +210,10 @@ it.effect.skipIf(databaseUrl === undefined)(
             where id = ${created.id}
           `,
         )
-        assert.strictEqual((activeWithDisabledAt as { code?: string }).code, "23514")
+
+        assert.strictEqual(postgresCode(activeWithDisabledAt), "23514")
         assert.strictEqual(
-          (activeWithDisabledAt as { constraint_name?: string }).constraint_name,
+          postgresConstraint(activeWithDisabledAt),
           "user_accounts_status_disabled_at_check",
         )
         assert.strictEqual(
@@ -202,6 +225,7 @@ it.effect.skipIf(databaseUrl === undefined)(
         const disabledState = yield* service.getAuthenticationState(created.id)
         assert.strictEqual(disabledState.status, "disabled")
         assert.ok(disabledState.sessionInvalidatedAt !== null)
+
         const disabledWithoutTimestamp = yield* postgresFailure(
           () =>
             client`
@@ -209,9 +233,10 @@ it.effect.skipIf(databaseUrl === undefined)(
             where id = ${created.id}
           `,
         )
-        assert.strictEqual((disabledWithoutTimestamp as { code?: string }).code, "23514")
+
+        assert.strictEqual(postgresCode(disabledWithoutTimestamp), "23514")
         assert.strictEqual(
-          (disabledWithoutTimestamp as { constraint_name?: string }).constraint_name,
+          postgresConstraint(disabledWithoutTimestamp),
           "user_accounts_status_disabled_at_check",
         )
         assert.strictEqual((yield* service.enable(created.id)).status, "active")

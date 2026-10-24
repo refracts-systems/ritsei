@@ -8,8 +8,10 @@ import {
   DocumentNode,
   DocumentSnapshot,
   DocumentSnapshotInput,
-  makeDocumentAst,
-  makeDocumentSnapshot,
+  DocumentTableNode,
+  DocumentTextNode,
+  createDocumentAst,
+  createDocumentSnapshot,
 } from "../../../../framework/foundation/mod.ts"
 import { PurchaseOrder, PurchaseOrderLineSnapshot } from "./contract.ts"
 import { PurchaseOrderInvalidState } from "./errors.ts"
@@ -24,12 +26,14 @@ export const PurchaseOrderDocumentPayload = Schema.Struct({
   total: PurchaseOrder.fields.total,
   lines: Schema.Array(PurchaseOrderLineSnapshot).check(Schema.isMinLength(1)),
 })
+
 export type PurchaseOrderDocumentPayload = Schema.Schema.Type<typeof PurchaseOrderDocumentPayload>
 
 export const PurchaseOrderDocumentSnapshotInput = Schema.Struct({
   snapshotId: Schema.optionalKey(Uuid),
   capturedAt: DocumentSnapshotInput.fields.capturedAt,
 })
+
 export type PurchaseOrderDocumentSnapshotInput = Schema.Schema.Type<
   typeof PurchaseOrderDocumentSnapshotInput
 >
@@ -43,14 +47,20 @@ export const PurchaseOrderDocumentSnapshot = Schema.Struct({
   }),
   payload: PurchaseOrderDocumentPayload,
 })
+
 export type PurchaseOrderDocumentSnapshot = Schema.Schema.Type<typeof PurchaseOrderDocumentSnapshot>
 
-export const makePurchaseOrderDocumentSnapshot = (order: unknown, input: unknown) =>
+export const makePurchaseOrderDocumentSnapshot = (
+  order: Schema.Codec.Encoded<typeof PurchaseOrder>,
+  input: Schema.Codec.Encoded<typeof PurchaseOrderDocumentSnapshotInput>,
+) =>
   Effect.gen(function* () {
     const decodedOrder = yield* Schema.decodeUnknownEffect(PurchaseOrder)(order)
+
     const decodedInput = yield* Schema.decodeUnknownEffect(PurchaseOrderDocumentSnapshotInput)(
       input,
     )
+
     if (decodedOrder.status !== "confirmed" || decodedOrder.confirmedAt === null) {
       return yield* Effect.fail(
         new PurchaseOrderInvalidState({
@@ -60,6 +70,7 @@ export const makePurchaseOrderDocumentSnapshot = (order: unknown, input: unknown
         }),
       )
     }
+
     const payload = yield* Schema.decodeUnknownEffect(PurchaseOrderDocumentPayload)({
       documentType: "purchase_order",
       status: "confirmed",
@@ -68,7 +79,8 @@ export const makePurchaseOrderDocumentSnapshot = (order: unknown, input: unknown
       total: decodedOrder.total,
       lines: decodedOrder.lines,
     })
-    return yield* makeDocumentSnapshot({
+
+    return yield* createDocumentSnapshot({
       snapshotId: decodedInput.snapshotId,
       tenantId: decodedOrder.tenantId,
       source: {
@@ -82,33 +94,40 @@ export const makePurchaseOrderDocumentSnapshot = (order: unknown, input: unknown
     })
   })
 
-export const makePurchaseOrderDocumentContext = (snapshot: unknown) =>
+export const makePurchaseOrderDocumentContext = (
+  snapshot: Schema.Codec.Encoded<typeof DocumentSnapshot>,
+) =>
   Effect.gen(function* () {
     const decoded = yield* Schema.decodeUnknownEffect(PurchaseOrderDocumentSnapshot)(snapshot)
+
     return documentContextFromSnapshot(decoded)
   })
 
-export const makePurchaseOrderDocumentAst = (snapshot: unknown) =>
+export const makePurchaseOrderDocumentAst = (
+  snapshot: Schema.Codec.Encoded<typeof DocumentSnapshot>,
+) =>
   Effect.gen(function* () {
     const decodedSnapshot = yield* Schema.decodeUnknownEffect(PurchaseOrderDocumentSnapshot)(
       snapshot,
     )
+
     const payload = yield* Schema.decodeUnknownEffect(PurchaseOrderDocumentPayload)(
       decodedSnapshot.payload,
     )
+
     const nodes: DocumentNode[] = [
-      { _tag: "text", value: "PURCHASE ORDER" },
-      { _tag: "text", value: `Order ${decodedSnapshot.source.id}` },
-      { _tag: "text", value: `Supplier account ${payload.supplierAccountId}` },
-      { _tag: "text", value: `Confirmed ${payload.confirmedAt}` },
-      {
-        _tag: "table",
+      DocumentTextNode.make({ value: "PURCHASE ORDER" }),
+      DocumentTextNode.make({ value: `Order ${decodedSnapshot.source.id}` }),
+      DocumentTextNode.make({ value: `Supplier account ${payload.supplierAccountId}` }),
+      DocumentTextNode.make({ value: `Confirmed ${payload.confirmedAt}` }),
+      DocumentTableNode.make({
         headers: ["Item", "Quantity", "Unit Price"],
         rows: payload.lines.map((line) => [line.itemId, line.quantity, line.unitPrice]),
-      },
-      { _tag: "text", value: `Total ${payload.total}` },
+      }),
+      DocumentTextNode.make({ value: `Total ${payload.total}` }),
     ]
-    return yield* makeDocumentAst({
+
+    return yield* createDocumentAst({
       snapshotId: decodedSnapshot.snapshotId,
       documentType: "purchase_order",
       astVersion: 1,
@@ -117,4 +136,5 @@ export const makePurchaseOrderDocumentAst = (snapshot: unknown) =>
   })
 
 export type PurchaseOrderDocumentAst = DocumentAst
+
 export type PurchaseOrderDocumentContext = DocumentContext

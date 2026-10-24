@@ -3,12 +3,13 @@ import * as Effect from "effect/Effect"
 
 import { uuidv7 } from "../../../foundation/mod.ts"
 import { fiscalPeriodKey, makeNumberingTestLayer, NumberingService } from "../mod.ts"
+import type { Overrides } from "../../../../tests/support/overrides.ts"
 
 const tenantId = "018f2000-0000-7000-8000-0000000000a1"
 const scopeId = "018f2000-0000-7000-8000-0000000000b1"
 const otherScopeId = "018f2000-0000-7000-8000-0000000000b2"
 
-const request = (overrides: Record<string, unknown> = {}) => ({
+const requestFields = () => ({
   tenantId,
   scopeId,
   documentType: "billing.customer_invoice",
@@ -16,6 +17,10 @@ const request = (overrides: Record<string, unknown> = {}) => ({
   documentDate: "2026-10-20",
   fiscalYearStartMonth: 1,
   prefix: "INV/",
+})
+
+const request = (overrides: Overrides<ReturnType<typeof requestFields>> = {}) => ({
+  ...requestFields(),
   ...overrides,
 })
 
@@ -32,9 +37,11 @@ describe("numbering", () => {
       const first = yield* numbering.allocate(request())
       const second = yield* numbering.allocate(request())
       const otherScope = yield* numbering.allocate(request({ scopeId: otherScopeId }))
+
       const otherType = yield* numbering.allocate(
         request({ documentType: "accounting.journal", prefix: "JE/" }),
       )
+
       const nextYear = yield* numbering.allocate(request({ documentDate: "2027-01-02" }))
       assert.deepStrictEqual(
         [first.number, second.number, otherScope.number, otherType.number, nextYear.number],
@@ -59,9 +66,11 @@ describe("numbering", () => {
     Effect.gen(function* () {
       const numbering = yield* NumberingService
       const badType = yield* Effect.flip(numbering.allocate(request({ documentType: "Invoice" })))
+
       const badDate = yield* Effect.flip(
         numbering.allocate(request({ documentDate: "2026-02-30" })),
       )
+
       assert.strictEqual(badType._tag, "SchemaError")
       assert.strictEqual(badDate._tag, "SchemaError")
     }).pipe(Effect.provide(makeNumberingTestLayer())),

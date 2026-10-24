@@ -28,13 +28,16 @@ export type ExternalDeliveryStore = {
 // The delivery log preserves duplicate, unknown outcome, and manual recovery states.
 export const makeMemoryExternalDeliveryStore = (): ExternalDeliveryStore => {
   const entries = new Map<string, ExternalDeliveryLog>()
+
   const key = (tenantId: string, source: string, providerEventId: string) =>
     `${tenantId}:${source}:${providerEventId}`
+
   return {
     get: (tenantId, source, providerEventId) =>
       Effect.succeed(entries.get(key(tenantId, source, providerEventId))),
     put: (entry) => {
       entries.set(key(entry.tenantId, entry.source, entry.providerEventId), entry)
+
       return Effect.succeed(undefined)
     },
   }

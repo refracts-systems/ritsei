@@ -1,5 +1,7 @@
 import * as Effect from "effect/Effect"
+import * as Match from "effect/Match"
 import * as Schema from "effect/Schema"
+import * as Predicate from "effect/Predicate"
 import {
   buildDocumentPDFBytes,
   detectFallbackLangs,
@@ -33,20 +35,16 @@ import {
 } from "../../foundation/mod.ts"
 
 const fontLoader =
-  (load: () => Promise<unknown>): FontLoader =>
+  (load: () => Promise<object>): FontLoader =>
   async () => {
     const module = await load()
-    const font =
-      typeof module === "object" && module !== null && "default" in module ? module.default : module
-    if (
-      typeof font !== "object" ||
-      font === null ||
-      !("fontName" in font) ||
-      !("ttfBase64" in font)
-    ) {
+    const font = Predicate.isObjectOrArray(module) && "default" in module ? module.default : module
+
+    if (!Predicate.isObjectKeyword(font) || !("fontName" in font) || !("ttfBase64" in font)) {
       throw new TypeError("pdfnative font module did not expose FontData")
     }
-    // pdfnative's generated font declarations describe module fields loosely; the runtime object is
+
+    // SAFETY: pdfnative's generated font declarations describe module fields loosely; the runtime object is
     // the FontData shape documented by its FontLoader contract.
     return font as FontData
   }
@@ -92,8 +90,11 @@ const rendererFailure = (operation: string, reason: string, cause: unknown) =>
 const textValues = (nodes: ReadonlyArray<DocumentNode>) =>
   nodes.flatMap((node) => {
     if ("value" in node) return [node.value]
+
     if ("headers" in node) return [...node.headers, ...node.rows.flat()]
+
     if ("label" in node) return [node.label]
+
     return []
   })
 
@@ -101,12 +102,15 @@ const loadFontEntries = (texts: ReadonlyArray<string>) =>
   Effect.tryPromise({
     try: async () => {
       const languages = new Set(["latin", ...detectFallbackLangs([...texts], "latin")])
+
       const loaded = await Promise.all(
         [...languages].map(async (language) => {
           const fontData = await loadFontData(language)
+
           return fontData === null ? undefined : { fontData, lang: language }
         }),
       )
+
       return loaded
         .filter((entry): entry is { fontData: FontData; lang: string } => entry !== undefined)
         .map(({ fontData, lang }, index) => ({
@@ -121,6 +125,7 @@ const loadFontEntries = (texts: ReadonlyArray<string>) =>
 const loadAsset = (assetId: string, resolveAsset: PdfNativeAssetResolver | undefined) =>
   Effect.gen(function* () {
     const bytes = resolveAsset === undefined ? undefined : yield* resolveAsset(assetId)
+
     if (bytes === undefined) {
       return yield* Effect.fail(
         new DocumentAssetUnavailable({
@@ -129,49 +134,53 @@ const loadAsset = (assetId: string, resolveAsset: PdfNativeAssetResolver | undef
         }),
       )
     }
+
     if (detectImageFormat(bytes) === null) {
       return yield* Effect.fail(
         rendererFailure("asset-loading", "asset is not a supported PNG or JPEG image", { assetId }),
       )
     }
+
     return bytes
   })
 
 type StaticDocumentNode = Exclude<DocumentNode, { _tag: "image" | "signature" }>
 
-const toStaticPdfBlock = (node: StaticDocumentNode): PdfDocumentBlock => {
-  switch (node._tag) {
-    case "text":
-      return { type: "paragraph", text: node.value }
-    case "table":
-      return {
-        type: "table",
-        headers: node.headers,
-        rows: node.rows.map((cells) => ({ cells, type: "default", pointed: false })),
-        repeatHeader: true,
-        wrap: "auto",
-      }
-    case "divider":
-      return {
-        type: "svg",
-        data: "M 0 0 L 460 0",
-        width: 460,
-        height: 1,
-        fill: "none",
-        stroke: "#CBD5E1",
-        strokeWidth: 0.5,
-        alt: "divider",
-      }
-    case "spacer":
-      return { type: "spacer", height: node.heightPx }
-    case "page_break":
-      return { type: "pageBreak" }
-    case "barcode":
-      return { type: "barcode", format: "code128", data: node.value, align: "center" }
-    case "qr_code":
-      return { type: "barcode", format: "qr", data: node.value, align: "center" }
-  }
-}
+const toStaticPdfBlock = (node: StaticDocumentNode): PdfDocumentBlock =>
+  Match.valueTags(node, {
+    text: (node): PdfDocumentBlock => ({ type: "paragraph", text: node.value }),
+    table: (node): PdfDocumentBlock => ({
+      type: "table",
+      headers: node.headers,
+      rows: node.rows.map((cells) => ({ cells, type: "default", pointed: false })),
+      repeatHeader: true,
+      wrap: "auto",
+    }),
+    divider: (): PdfDocumentBlock => ({
+      type: "svg",
+      data: "M 0 0 L 460 0",
+      width: 460,
+      height: 1,
+      fill: "none",
+      stroke: "#CBD5E1",
+      strokeWidth: 0.5,
+      alt: "divider",
+    }),
+    spacer: (node): PdfDocumentBlock => ({ type: "spacer", height: node.heightPx }),
+    page_break: (): PdfDocumentBlock => ({ type: "pageBreak" }),
+    barcode: (node): PdfDocumentBlock => ({
+      type: "barcode",
+      format: "code128",
+      data: node.value,
+      align: "center",
+    }),
+    qr_code: (node): PdfDocumentBlock => ({
+      type: "barcode",
+      format: "qr",
+      data: node.value,
+      align: "center",
+    }),
+  })
 
 const toImageBlocks = (
   node: Extract<DocumentNode, { _tag: "image" }>,
@@ -179,6 +188,7 @@ const toImageBlocks = (
 ) =>
   Effect.gen(function* () {
     const bytes = yield* loadAsset(node.assetId, resolveAsset)
+
     const blocks: PdfDocumentBlock[] = [
       {
         type: "image",
@@ -187,6 +197,7 @@ const toImageBlocks = (
         align: "center",
       },
     ]
+
     return { blocks, assetBytes: bytes.byteLength }
   })
 
@@ -196,10 +207,12 @@ const toSignatureBlocks = (
 ) =>
   Effect.gen(function* () {
     const bytes = yield* loadAsset(node.assetId, resolveAsset)
+
     const blocks: PdfDocumentBlock[] = [
       { type: "paragraph", text: node.label },
       { type: "image", data: bytes, alt: node.label, align: "center" },
     ]
+
     return { blocks, assetBytes: bytes.byteLength }
   })
 
@@ -209,22 +222,24 @@ const toPdfBlocks = (
 ) =>
   Effect.gen(function* () {
     const blockResults = yield* Effect.all(
-      nodes.map((node) => {
-        switch (node._tag) {
-          case "image":
-            return toImageBlocks(node, resolveAsset)
-          case "signature":
-            return toSignatureBlocks(node, resolveAsset)
-          default:
-            return Effect.succeed({ blocks: [toStaticPdfBlock(node)], assetBytes: 0 })
-        }
-      }),
+      nodes.map((node) =>
+        Match.value(node).pipe(
+          Match.tag("image", (image) => toImageBlocks(image, resolveAsset)),
+          Match.tag("signature", (signature) => toSignatureBlocks(signature, resolveAsset)),
+          Match.orElse((rest) =>
+            Effect.succeed({ blocks: [toStaticPdfBlock(rest)], assetBytes: 0 }),
+          ),
+        ),
+      ),
     )
-    const result = { blocks: [] as PdfDocumentBlock[], assetBytes: 0 }
+
+    const result = { blocks: new Array<PdfDocumentBlock>(), assetBytes: 0 }
+
     for (const blockResult of blockResults) {
       result.blocks.push(...blockResult.blocks)
       result.assetBytes += blockResult.assetBytes
     }
+
     return result
   })
 
@@ -233,6 +248,7 @@ const decodeInput = (input: DocumentRenderInput) =>
     const context = yield* Schema.decodeUnknownEffect(DocumentContext)(input.context)
     const ast = yield* Schema.decodeUnknownEffect(DocumentAst)(input.ast)
     const request = yield* Schema.decodeUnknownEffect(DocumentRenderRequest)(input.request)
+
     return { context, ast, request }
   })
 
@@ -254,6 +270,7 @@ const validateInputReferences = (
       ),
     )
   }
+
   if (ast.snapshotId !== request.snapshotId || ast.checksum !== request.astChecksum) {
     return Effect.fail(
       rendererFailure(
@@ -263,6 +280,7 @@ const validateInputReferences = (
       ),
     )
   }
+
   return Effect.succeed(undefined)
 }
 
@@ -296,6 +314,7 @@ const makePdfLayout = (
   policy: DocumentRenderPolicy,
 ): Partial<PdfLayoutOptions> => {
   const provided = options.layout ?? {}
+
   return {
     ...provided,
     // PDF metadata must not introduce wall-clock or snapshot-capture variance into artifact bytes.
@@ -328,6 +347,7 @@ const makeDocumentArtifact = (
 ) =>
   Effect.gen(function* () {
     const contentHash = yield* sha256Hex(bytes)
+
     const metadata = yield* Schema.decodeUnknownEffect(DocumentArtifact)({
       artifactId: uuidv7(),
       tenantId: request.tenantId,
@@ -347,6 +367,7 @@ const makeDocumentArtifact = (
       status: "ready" satisfies DocumentArtifactStatus,
       createdAt: new Date().toISOString(),
     })
+
     return { metadata, bytes }
   })
 
@@ -363,16 +384,19 @@ const renderPdfNativeDocument = (
     const { blocks, assetBytes } = yield* toPdfBlocks(ast.nodes, options.resolveAsset)
     yield* validateAssetBytes(assetBytes, policy)
     const fontEntries = yield* loadFontEntries(textValues(ast.nodes))
+
     const params: PdfDocumentParams = {
       title: `${context.source.type} ${context.source.id}`,
       blocks,
       fontEntries,
       metadata: { author: "RITSEI" },
     }
+
     const layout = makePdfLayout(options, policy)
     const inspection = yield* inspectPdfLayout(params, layout)
     yield* validatePageCount(inspection.totalPages, policy)
     const bytes = yield* generatePdfBytes(params, layout)
+
     return yield* makeDocumentArtifact(request, bytes, inspection.totalPages)
   })
 
@@ -380,6 +404,7 @@ export const makePdfNativeDocumentRenderer = (
   options: PdfNativeRendererOptions = {},
 ): DocumentRenderer => {
   const policy = options.policy ?? defaultPolicy
+
   const render = Effect.fn("DocumentRenderer.pdfnative.render")((input: DocumentRenderInput) =>
     renderPdfNativeDocument(input, options, policy),
   )

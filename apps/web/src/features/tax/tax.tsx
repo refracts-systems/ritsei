@@ -1,12 +1,13 @@
+import * as Predicate from "effect/Predicate"
 import { createSignal, Show, useContext } from "solid-js"
-import { CommandFeedback, QueryBoundary } from "../../shared/request-feedback.tsx"
+import { CommandFeedback, QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
 import { ApiRuntime } from "../../shared/runtime.ts"
 import { layout } from "../../ui/foundations/layout.ts"
 import { DataTable } from "../../ui/patterns/data-table.tsx"
 import { Button } from "../../ui/primitives/button.tsx"
 import { createDialogOpenChange, Dialog } from "../../ui/primitives/dialog.tsx"
 import { FormField } from "../../ui/primitives/form-field.tsx"
-import { Form } from "../../ui/primitives/form.tsx"
+import { Form, type FormValue } from "../../ui/primitives/form.tsx"
 import { Input } from "../../ui/primitives/input.tsx"
 import { Select } from "../../ui/primitives/select.tsx"
 import { createTaxCodeMutation, createTaxCodesQuery } from "./queries.ts"
@@ -17,21 +18,24 @@ const directionOptions = [
   { value: "purchase", label: "Purchases" },
 ]
 
-const text = (value: unknown) => (typeof value === "string" ? value.trim() : "")
+const text = (value: FormValue[string] | undefined) =>
+  Predicate.isString(value) ? value.trim() : ""
 
-const directionOf = (value: unknown) => (value === "purchase" ? "purchase" : "sales")
+const directionOf = (value: FormValue[string] | undefined) =>
+  value === "purchase" ? ("purchase" as const) : ("sales" as const)
 
 const isComplete = (payload: { code: string; name: string; rate: string }) =>
   payload.code !== "" && payload.name !== "" && /^\d{1,3}(\.\d{1,4})?$/.test(payload.rate)
 
 /** The create payload, or undefined when the code, name, or rate is missing or malformed. */
-const taxCodePayload = (value: Record<string, unknown>) => {
+const taxCodePayload = (value: FormValue) => {
   const payload = {
     code: text(value.code).toUpperCase(),
     name: text(value.name),
     rate: text(value.rate),
     direction: directionOf(value.direction),
   }
+
   return isComplete(payload) ? payload : undefined
 }
 
@@ -61,15 +65,17 @@ function TaxCodeTable(props: { records: readonly TaxCode[] }) {
   )
 }
 
-function CreateTaxCodeDialog(props: { reload: () => Promise<unknown> }) {
+function CreateTaxCodeDialog(props: { reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
   let formElement: HTMLFormElement | undefined
+
   const mutation = createTaxCodeMutation(scope, () => {
     formElement?.reset()
     setOpen(false)
   })
+
   return (
     <Dialog
       open={open()}
@@ -87,6 +93,7 @@ function CreateTaxCodeDialog(props: { reload: () => Promise<unknown> }) {
         onSubmit={(value) => {
           const payload = taxCodePayload(value)
           setInvalid(payload === undefined)
+
           if (payload !== undefined && !mutation.isPending) mutation.mutate(payload)
         }}
       >
@@ -159,6 +166,7 @@ function CreateTaxCodeDialog(props: { reload: () => Promise<unknown> }) {
 export function Tax() {
   const scope = useContext(ApiRuntime)
   const query = createTaxCodesQuery(scope)
+
   return (
     <section class={layout.stack} aria-label="Tax">
       <header class={layout.workspaceHeading}>
@@ -166,9 +174,9 @@ export function Tax() {
           <h1>Tax</h1>
           <p class={layout.workspaceDescription}>Tax codes recorded in this tenant.</p>
         </div>
-        <CreateTaxCodeDialog reload={() => query.refetch()} />
+        <CreateTaxCodeDialog reload={() => reloaded(query.refetch())} />
       </header>
-      <QueryBoundary label="tax codes" retry={() => query.refetch()}>
+      <QueryBoundary label="tax codes" retry={() => reloaded(query.refetch())}>
         <Show
           when={query.data.length > 0}
           fallback={

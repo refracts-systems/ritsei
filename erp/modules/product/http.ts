@@ -11,8 +11,8 @@ import {
   BaseApiErrorPolicy,
   BearerAuth,
   CurrentPrincipal,
-  makeApiErrorMapping,
-  makeModuleApi,
+  apiErrorMapping,
+  moduleApi,
   ReadLimit,
   ShortString,
   TenantHeaders,
@@ -51,9 +51,9 @@ export const ProductHttpGroup = HttpApiGroup.make("Product").add(
   }).middleware(BearerAuth),
 )
 
-const ProductHttpApi = makeModuleApi(ProductHttpGroup)
+const ProductHttpApi = moduleApi(ProductHttpGroup)
 
-export const ProductHttpErrors = makeApiErrorMapping({
+export const ProductHttpErrors = apiErrorMapping({
   ...BaseApiErrorPolicy,
   ProductAlreadyExists: "conflict",
   ProductNotFound: "not_found",
@@ -62,11 +62,13 @@ export const ProductHttpErrors = makeApiErrorMapping({
 export const ProductHttpHandlers = HttpApiBuilder.group(ProductHttpApi, "Product", (handlers) =>
   Effect.gen(function* () {
     const service = yield* ProductService
+
     return handlers
       .handle(
         "listProducts",
         Effect.fn("Http.Product.listProducts")(function* ({ headers, query }) {
           const principal = yield* CurrentPrincipal
+
           return yield* ProductHttpErrors.apiEffect(
             service.listProducts({ principal, tenantId: headers["x-tenant-id"], ...query }),
           )
@@ -76,6 +78,7 @@ export const ProductHttpHandlers = HttpApiBuilder.group(ProductHttpApi, "Product
         "getProduct",
         Effect.fn("Http.Product.getProduct")(function* ({ headers, params }) {
           const principal = yield* CurrentPrincipal
+
           return yield* ProductHttpErrors.apiEffect(
             service.getProduct({
               principal,
@@ -89,6 +92,7 @@ export const ProductHttpHandlers = HttpApiBuilder.group(ProductHttpApi, "Product
         "createProduct",
         Effect.fn("Http.Product.createProduct")(function* ({ headers, payload }) {
           const principal = yield* CurrentPrincipal
+
           return yield* ProductHttpErrors.apiEffect(
             service.createProduct({ principal, tenantId: headers["x-tenant-id"], ...payload }),
           )

@@ -1,3 +1,4 @@
+import * as Predicate from "effect/Predicate"
 import type { JSX } from "@solidjs/web"
 import { createUniqueId, untrack } from "solid-js"
 import { css } from "../generated/css/index.js"
@@ -25,21 +26,24 @@ export function FormField(props: FormFieldProps) {
   const children = untrack(() => props.children)
   const descriptionId = `${id}-help`
   const errorId = `${id}-error`
+
   const describedBy = () =>
     [props.helperText && descriptionId, props.error && errorId].filter(Boolean).join(" ") ||
     undefined
+
   const controlProps = () => ({
     id,
     "aria-describedby": describedBy(),
     "aria-invalid": props.error ? ("true" as const) : undefined,
   })
+
   return (
     <div class={styles.root}>
       <label class={styles.label} for={id}>
         {props.label}
         {props.required && <span aria-hidden="true">*</span>}
       </label>
-      {typeof children === "function" ? children(controlProps()) : children}
+      {Predicate.isFunction(children) ? children(controlProps()) : children}
       {props.helperText && (
         <div class={styles.help} id={descriptionId}>
           {props.helperText}

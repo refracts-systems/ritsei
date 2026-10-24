@@ -25,23 +25,30 @@ it.effect.skipIf(databaseUrl === undefined)(
       Effect.gen(function* () {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
+
         const userAccounts = yield* makeUserAccountService.pipe(
           Effect.provideService(Database, database),
         )
+
         const user = yield* userAccounts.create({ email: "membership@example.test" })
         const activeUser = yield* userAccounts.create({ email: "membership-active@example.test" })
+
         const suspendedUser = yield* userAccounts.create({
           email: "membership-suspended@example.test",
         })
+
         const auth = yield* makeAuthService.pipe(
           Effect.provideService(Database, database),
           Effect.provide(WebCryptoLive),
           Effect.provideService(UserAccountService, userAccounts),
         )
+
         const tenant = yield* auth.createTenant({ slug: `membership-${uuidv7()}` })
+
         const authorization = yield* makeAuthorizationService.pipe(
           Effect.provideService(Database, database),
         )
+
         const capability = IdentityCapabilities.userAccountRead
         const principal = { userAccountId: user.id, sessionId: "membership-session" }
 
@@ -202,18 +209,23 @@ it.effect.skipIf(databaseUrl === undefined)(
       Effect.gen(function* () {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
+
         const userAccounts = yield* makeUserAccountService.pipe(
           Effect.provideService(Database, database),
         )
+
         const auth = yield* makeAuthService.pipe(
           Effect.provideService(Database, database),
           Effect.provide(WebCryptoLive),
           Effect.provideService(UserAccountService, userAccounts),
         )
+
         const tenant = yield* auth.createTenant({ slug: `missing-member-${uuidv7()}` })
+
         const authorization = yield* makeAuthorizationService.pipe(
           Effect.provideService(Database, database),
         )
+
         const missingUser = "00000000-0000-0000-0000-000000000000"
         assert.instanceOf(
           yield* Effect.flip(

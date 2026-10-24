@@ -16,9 +16,12 @@ export const makeUserAccountMemoryStore = (): UserAccountStore => {
   const emails = new Set<string>()
   const externalSubjects = new Map<string, string>()
   const externalSubjectKey = (issuer: string, subject: string) => `${issuer}\u0000${subject}`
+
   const find = Effect.fn("UserAccountStore.memory.find")(function* (id: string) {
     const userAccount = stored.get(id)
+
     if (userAccount === undefined) return yield* Effect.fail(new UserAccountNotFound({ id }))
+
     return userAccount
   })
 
@@ -28,6 +31,7 @@ export const makeUserAccountMemoryStore = (): UserAccountStore => {
     emails.add(email)
     stored.set(userAccount.id, userAccount)
     sessionInvalidatedAt.set(userAccount.id, null)
+
     return userAccount
   })
 
@@ -35,6 +39,7 @@ export const makeUserAccountMemoryStore = (): UserAccountStore => {
     Effect.succeed(
       ids.flatMap((id) => {
         const userAccount = stored.get(id)
+
         return userAccount === undefined ? [] : [userAccount]
       }),
     ),
@@ -55,13 +60,16 @@ export const makeUserAccountMemoryStore = (): UserAccountStore => {
 
   const update = Effect.fn("UserAccountStore.memory.update")(function* (id: string, email: string) {
     const current = yield* find(id)
+
     if (email !== current.email && emails.has(email)) {
       return yield* Effect.fail(new UserAccountAlreadyExists({ email }))
     }
+
     emails.delete(current.email)
     emails.add(email)
     const userAccount = { ...current, email }
     stored.set(userAccount.id, userAccount)
+
     return userAccount
   })
 
@@ -70,6 +78,7 @@ export const makeUserAccountMemoryStore = (): UserAccountStore => {
     const userAccount = { ...current, status: "disabled" as const }
     stored.set(id, userAccount)
     sessionInvalidatedAt.set(id, new Date().toISOString())
+
     return userAccount
   })
 
@@ -77,15 +86,18 @@ export const makeUserAccountMemoryStore = (): UserAccountStore => {
     const current = yield* find(id)
     const userAccount = { ...current, status: "active" as const }
     stored.set(id, userAccount)
+
     return userAccount
   })
 
   const resolveExternalSubject = Effect.fn("UserAccountStore.memory.resolveExternalSubject")(
     function* (issuer: string, subject: string) {
       const userAccountId = externalSubjects.get(externalSubjectKey(issuer, subject))
+
       if (userAccountId === undefined) {
         return yield* Effect.fail(new ExternalSubjectNotFound({ issuer, subject }))
       }
+
       return yield* find(userAccountId).pipe(
         Effect.mapError(() => new ExternalSubjectNotFound({ issuer, subject })),
       )
@@ -100,10 +112,13 @@ export const makeUserAccountMemoryStore = (): UserAccountStore => {
     const userAccount = yield* find(userAccountId)
     const key = externalSubjectKey(issuer, subject)
     const existing = externalSubjects.get(key)
+
     if (existing !== undefined && existing !== userAccountId) {
       return yield* Effect.fail(new ExternalSubjectAlreadyBound({ issuer, subject, userAccountId }))
     }
+
     externalSubjects.set(key, userAccountId)
+
     return userAccount
   })
 
@@ -112,6 +127,7 @@ export const makeUserAccountMemoryStore = (): UserAccountStore => {
     stored.delete(id)
     sessionInvalidatedAt.delete(id)
     emails.delete(userAccount.email)
+
     for (const [key, userAccountId] of externalSubjects) {
       if (userAccountId === id) externalSubjects.delete(key)
     }

@@ -31,8 +31,10 @@ function run(withProvider) {
           effect: (value) => resolve({ ok: true, count: value.length }),
           error: (err) => resolve({ ok: false, error: String(err) }),
         })
+
         return null
       }
+
       if (withProvider) {
         const out = createComponent(RuntimeContext, {
           value: createRuntime(SearchConfigLive),
@@ -40,12 +42,15 @@ function run(withProvider) {
             return body()
           },
         })
+
         // The provider's children resolve lazily and are only kept alive
         // while observed — hold them in a render effect like a renderer does.
         createRenderEffect(
           () => {
             let o = out
-            while (typeof o === "function") o = o()
+
+            while (o instanceof Function) o = o()
+
             return o
           },
           () => {},
@@ -57,9 +62,11 @@ function run(withProvider) {
 }
 
 const withProvider = await Promise.race([run(true), sleep(8000).then(() => "timeout")])
+
 console.log("with provider   :", JSON.stringify(withProvider))
 
 const withoutProvider = await Promise.race([run(false), sleep(8000).then(() => "timeout")])
+
 console.log("without provider:", JSON.stringify(withoutProvider))
 
 const pass =
@@ -67,5 +74,7 @@ const pass =
   withProvider.count > 0 &&
   withoutProvider.ok === false &&
   /MissingRuntimeContext|RuntimeContext/.test(withoutProvider.error)
+
 console.log(pass ? "PASS" : "FAIL")
+
 process.exit(pass ? 0 : 1)

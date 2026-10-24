@@ -6,10 +6,13 @@ export {
   fiscalPeriodKey,
   NumberingService,
 } from "./src/contract.ts"
+
 export type {
   AllocatedNumber as AllocatedNumberType,
-  FiscalCalendar as FiscalCalendarShape,
-  NumberingService as NumberingServiceShape,
+  FiscalCalendar as FiscalCalendarContract,
+  NumberingService as NumberingServiceContract,
 } from "./src/contract.ts"
+
 export { makeNumberingTestLayer, NumberingLive } from "./src/layers.ts"
+
 export { makePostgresNumberingService as makeNumberingService } from "./src/postgres.ts"

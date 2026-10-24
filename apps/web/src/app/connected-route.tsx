@@ -45,6 +45,7 @@ export function ConnectedSessionRoute(props: {
   children: () => JSX.Element
 }) {
   const session = useContext(SessionContext)
+
   return (
     <Show
       when={session.current()}
@@ -67,6 +68,7 @@ function SessionRouteBoundary(props: { session: Session; children: () => JSX.Ele
   const session = untrack(() => props.session)
   const runtime = createRuntime(Layer.succeed(BrowserConnection, session))
   const lifetime = new AbortController()
+
   const client = new QueryClient({
     defaultOptions: {
       queries: {
@@ -79,16 +81,19 @@ function SessionRouteBoundary(props: { session: Session; children: () => JSX.Ele
       mutations: { retry: false, networkMode: "always" },
     },
   })
+
   const clearSessionState = () => {
     lifetime.abort()
     void client.cancelQueries()
     client.clear()
   }
+
   globalThis.addEventListener("ritsei:unauthorized", clearSessionState)
   onCleanup(() => {
     globalThis.removeEventListener("ritsei:unauthorized", clearSessionState)
     clearSessionState()
   })
+
   return (
     <ApiRuntime value={{ runtime, lifetime: lifetime.signal, tenantId: session.tenantId }}>
       <RuntimeContext value={runtime}>

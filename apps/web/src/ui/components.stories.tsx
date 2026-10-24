@@ -34,6 +34,7 @@ const rows = [
 
 function ComponentsStory() {
   const [lines, setLines] = createSignal(["First field"])
+
   return (
     <main class={layout.main}>
       <div class={layout.stack}>
@@ -278,6 +279,7 @@ const meta = {
 } satisfies Meta<typeof ComponentsStory>
 
 export default meta
+
 type Story = StoryObj<typeof meta>
 
 export const Overview: Story = {}

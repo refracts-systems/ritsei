@@ -18,7 +18,9 @@ const ScopedInput = { principal: Principal, tenantId: Uuid }
 
 /** Stockable products keep stock in Inventory; consumables and services never do. */
 export const ProductType = Schema.Literals(["stockable", "consumable", "service"])
+
 export type ProductType = Schema.Schema.Type<typeof ProductType>
+
 export const UnitOfMeasure = Schema.String.check(Schema.isPattern(/^[A-Z][A-Z0-9_-]*$/))
 
 export const Product = Schema.Struct({
@@ -31,6 +33,7 @@ export const Product = Schema.Struct({
   unitOfMeasure: UnitOfMeasure,
   active: Schema.Boolean,
 })
+
 export type Product = Schema.Schema.Type<typeof Product>
 
 export const ListProductsInput = Schema.Struct({
@@ -39,7 +42,9 @@ export const ListProductsInput = Schema.Struct({
   type: Schema.optionalKey(ProductType),
   limit: Schema.optionalKey(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 200 }))),
 })
+
 export const GetProductInput = Schema.Struct({ ...ScopedInput, productId: Uuid })
+
 export const CreateProductInput = Schema.Struct({
   ...ScopedInput,
   /** Upper-cased on input; unique per tenant. */
@@ -49,16 +54,22 @@ export const CreateProductInput = Schema.Struct({
   category: Schema.optionalKey(Name),
   unitOfMeasure: Schema.optionalKey(UnitOfMeasure),
 })
+
 export type ListProductsCommand = Schema.Schema.Type<typeof ListProductsInput>
+
 export type CreateProductCommand = Omit<Schema.Schema.Type<typeof CreateProductInput>, "principal">
 
 type CommonFailure = AuthorizationDenied | DatabaseFailure | Schema.SchemaError
 
 export interface ProductService {
-  readonly listProducts: (input: unknown) => Effect.Effect<ReadonlyArray<Product>, CommonFailure>
-  readonly getProduct: (input: unknown) => Effect.Effect<Product, ProductNotFound | CommonFailure>
+  readonly listProducts: (
+    input: Schema.Codec.Encoded<typeof ListProductsInput>,
+  ) => Effect.Effect<ReadonlyArray<Product>, CommonFailure>
+  readonly getProduct: (
+    input: Schema.Codec.Encoded<typeof GetProductInput>,
+  ) => Effect.Effect<Product, ProductNotFound | CommonFailure>
   readonly createProduct: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreateProductInput>,
   ) => Effect.Effect<Product, ProductAlreadyExists | CommonFailure>
 }
 

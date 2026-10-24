@@ -1,3 +1,4 @@
+import type * as Schema from "effect/Schema"
 import * as Effect from "effect/Effect"
 
 import {
@@ -60,7 +61,9 @@ export const toProcessExternalCatalogEntry = (
   entry: ExternalCatalogEntry,
 ): ProcessExternalCatalogEntry | undefined => {
   if (entry.stability !== "PUBLIC") return undefined
+
   if (entry.kind === "ExternalAction" && !entry.allowlisted) return undefined
+
   if (entry.kind === "ExternalAction") {
     return {
       kind: entry.kind,
@@ -78,6 +81,7 @@ export const toProcessExternalCatalogEntry = (
       allowlisted: entry.allowlisted,
     }
   }
+
   return {
     kind: entry.kind,
     id: entry.id,
@@ -96,7 +100,7 @@ export const toProcessExternalCatalogEntry = (
 
 export const makeExternalProcessActionMapping = (
   action: ExternalActionCatalogEntry,
-  input: unknown,
+  input: Schema.Json,
 ): ExternalProcessActionMapping => ({
   actionId: action.id,
   actionVersion: action.version,
@@ -113,6 +117,7 @@ export const simulateProcessExternalAction = (input: {
 > =>
   Effect.gen(function* () {
     const catalog = toProcessExternalCatalogEntry(input.action)
+
     if (catalog === undefined || catalog.kind !== "ExternalAction") {
       return yield* Effect.fail(
         new ExternalActionNotAllowlisted({
@@ -121,6 +126,8 @@ export const simulateProcessExternalAction = (input: {
         }),
       )
     }
+
     const result = yield* simulateWithoutSideEffect(input)
+
     return { ...result, catalog }
   })

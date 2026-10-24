@@ -42,6 +42,7 @@ const partySelection = {
   kind: parties.kind,
   name: parties.name,
 }
+
 const identifierSelection = {
   id: partyIdentifiers.id,
   tenantId: partyIdentifiers.tenantId,
@@ -52,11 +53,13 @@ const identifierSelection = {
   legalEntityId: partyIdentifiers.legalEntityId,
   value: partyIdentifiers.value,
 }
+
 const legalEntitySelection = {
   id: legalEntities.id,
   tenantId: legalEntities.tenantId,
   organizationId: legalEntities.organizationPartyId,
 }
+
 const branchSelection = {
   id: branches.id,
   tenantId: branches.tenantId,
@@ -66,6 +69,7 @@ const branchSelection = {
   localTaxRegistration: branches.localTaxRegistration,
   dedicatedJournalCode: branches.dedicatedJournalCode,
 }
+
 const partyRepresentationSelection = {
   id: partyRepresentations.id,
   tenantId: partyRepresentations.tenantId,
@@ -74,6 +78,7 @@ const partyRepresentationSelection = {
   kind: partyRepresentations.kind,
   active: partyRepresentations.active,
 }
+
 const relationshipSelection = {
   id: partyRelationships.id,
   tenantId: partyRelationships.tenantId,
@@ -82,6 +87,7 @@ const relationshipSelection = {
   kind: partyRelationships.kind,
   active: partyRelationships.active,
 }
+
 const relatedPartyPathSelection = {
   tenantId: relatedPartyPaths.tenantId,
   sourcePartyId: relatedPartyPaths.sourcePartyId,
@@ -94,6 +100,7 @@ const relatedPartyPathSelection = {
 
 export const makePartyPostgresStore = Effect.gen(function* () {
   const database = yield* Database
+
   const list = Effect.fn("PartyStore.list")(function* (
     tenantId: string,
     search: string | null,
@@ -123,8 +130,10 @@ export const makePartyPostgresStore = Effect.gen(function* () {
           .limit(limit),
       "party.list",
     )
+
     return rows.map(({ legalEntityId, ...party }) => ({ party, legalEntityId }))
   })
+
   const getDetail = Effect.fn("PartyStore.getDetail")(function* (
     tenantId: string,
     partyId: string,
@@ -149,11 +158,15 @@ export const makePartyPostgresStore = Effect.gen(function* () {
           .where(and(eq(parties.tenantId, tenantId), eq(parties.id, partyId))),
       "party.detail.get",
     )
+
     const row = rows[0]
+
     if (row === undefined) {
       return yield* Effect.fail(new PartyNotFound({ tenantId, partyId }))
     }
+
     const { legalEntityId, legalEntityTenantId, legalEntityOrganizationId, ...party } = row
+
     const roles = yield* database.query(
       (db) =>
         db
@@ -163,6 +176,7 @@ export const makePartyPostgresStore = Effect.gen(function* () {
           .orderBy(asc(partyRoles.role)),
       "party.detail.roles",
     )
+
     const identifiers = yield* database.query(
       (db) =>
         db
@@ -180,6 +194,7 @@ export const makePartyPostgresStore = Effect.gen(function* () {
           ),
       "party.detail.identifiers",
     )
+
     const legalEntity =
       legalEntityId === null
         ? null
@@ -188,6 +203,7 @@ export const makePartyPostgresStore = Effect.gen(function* () {
             tenantId: legalEntityTenantId!,
             organizationId: legalEntityOrganizationId!,
           }
+
     const partyBranches =
       legalEntity === null
         ? []
@@ -202,6 +218,7 @@ export const makePartyPostgresStore = Effect.gen(function* () {
                 .orderBy(asc(branches.name), asc(branches.id)),
             "party.detail.branches",
           )
+
     const relationships = yield* database.query(
       (db) =>
         db
@@ -217,6 +234,7 @@ export const makePartyPostgresStore = Effect.gen(function* () {
           ),
       "party.detail.relationships",
     )
+
     const representations = yield* database.query(
       (db) =>
         db
@@ -235,6 +253,7 @@ export const makePartyPostgresStore = Effect.gen(function* () {
           ),
       "party.detail.representations",
     )
+
     return {
       party,
       roles: roles.map(({ role }) => role),
@@ -245,6 +264,7 @@ export const makePartyPostgresStore = Effect.gen(function* () {
       representations,
     } satisfies PartyDetail
   })
+
   const create = Effect.fn("PartyStore.create")(function* (
     tenantId: string,
     kind: PartyKind,
@@ -254,8 +274,10 @@ export const makePartyPostgresStore = Effect.gen(function* () {
       (db) => db.insert(parties).values({ tenantId, kind, name }).returning(partySelection),
       "party.create",
     )
+
     return rows[0]!
   })
+
   const createLegalEntity = Effect.fn("PartyStore.createLegalEntity")(function* (
     tenantId: string,
     organizationId: string,
@@ -268,13 +290,17 @@ export const makePartyPostgresStore = Effect.gen(function* () {
           .where(and(eq(parties.tenantId, tenantId), eq(parties.id, organizationId))),
       "party.legal_entity.party.get",
     )
+
     const party = rows[0]
+
     if (party === undefined) {
       return yield* Effect.fail(new PartyNotFound({ tenantId, partyId: organizationId }))
     }
+
     if (party.kind !== "organization") {
       return yield* Effect.fail(new OrganizationRequired({ tenantId, partyId: organizationId }))
     }
+
     const result = yield* database
       .query(
         (db) =>
@@ -291,8 +317,10 @@ export const makePartyPostgresStore = Effect.gen(function* () {
             : error,
         ),
       )
+
     return result[0]!
   })
+
   const createBranch = Effect.fn("PartyStore.createBranch")(function* (
     tenantId: string,
     legalEntityId: string,
@@ -309,9 +337,11 @@ export const makePartyPostgresStore = Effect.gen(function* () {
           .where(and(eq(legalEntities.tenantId, tenantId), eq(legalEntities.id, legalEntityId))),
       "party.branch.legal_entity.get",
     )
+
     if (exists[0] === undefined) {
       return yield* Effect.fail(new LegalEntityNotFound({ tenantId, legalEntityId }))
     }
+
     const rows = yield* database
       .query(
         (db) =>
@@ -335,8 +365,10 @@ export const makePartyPostgresStore = Effect.gen(function* () {
             : error,
         ),
       )
+
     return rows[0]!
   })
+
   const createPartyRepresentation = Effect.fn("PartyStore.createPartyRepresentation")(function* (
     tenantId: string,
     userAccountId: string,
@@ -363,9 +395,11 @@ export const makePartyPostgresStore = Effect.gen(function* () {
           if (isDatabaseConstraint(error, "party_representations_user_account_fkey", "23503")) {
             return new PartyRepresentationUserAccountNotFound({ tenantId, userAccountId })
           }
+
           if (isDatabaseConstraint(error, "party_representations_party_fkey", "23503")) {
             return new PartyNotFound({ tenantId, partyId })
           }
+
           if (
             isDatabaseConstraint(error, "party_representations_tenant_user_account_party_kind_key")
           ) {
@@ -376,11 +410,14 @@ export const makePartyPostgresStore = Effect.gen(function* () {
               kind,
             })
           }
+
           return error
         }),
       )
+
     return rows[0]!
   })
+
   const setPartyRepresentationActive = Effect.fn("PartyStore.setPartyRepresentationActive")(
     function* (tenantId: string, representationId: string, active: boolean) {
       const rows = yield* database.query(
@@ -397,13 +434,17 @@ export const makePartyPostgresStore = Effect.gen(function* () {
             .returning(partyRepresentationSelection),
         "party.representation.set-active",
       )
+
       const representation = rows[0]
+
       if (representation === undefined) {
         return yield* Effect.fail(new PartyRepresentationNotFound({ tenantId, representationId }))
       }
+
       return representation
     },
   )
+
   const assignRole = Effect.fn("PartyStore.assignRole")(function* (
     tenantId: string,
     partyId: string,
@@ -421,6 +462,7 @@ export const makePartyPostgresStore = Effect.gen(function* () {
         ),
       )
   })
+
   const createRelationship = Effect.fn("PartyStore.createRelationship")(function* (
     tenantId: string,
     partyId: string,
@@ -447,20 +489,26 @@ export const makePartyPostgresStore = Effect.gen(function* () {
           if (isDatabaseConstraint(error, "party_relationships_tenant_party_fkey", "23503")) {
             return new PartyNotFound({ tenantId, partyId })
           }
+
           if (
             isDatabaseConstraint(error, "party_relationships_tenant_legal_entity_fkey", "23503")
           ) {
             return new LegalEntityNotFound({ tenantId, legalEntityId })
           }
+
           if (isDatabaseConstraint(error, "party_relationships_tenant_party_role_fkey", "23503"))
             return new PartyRelationshipRoleNotAssigned({ tenantId, partyId, kind })
+
           if (isDatabaseConstraint(error, "party_relationships_tenant_party_legal_entity_kind_key"))
             return new PartyRelationshipAlreadyExists({ tenantId, partyId, legalEntityId, kind })
+
           return error
         }),
       )
+
     return rows[0]!
   })
+
   const getRelationship = Effect.fn("PartyStore.getRelationship")(function* (
     tenantId: string,
     relationshipId: string,
@@ -478,12 +526,16 @@ export const makePartyPostgresStore = Effect.gen(function* () {
           ),
       "party.relationship.get",
     )
+
     const relationship = rows[0]
+
     if (relationship === undefined) {
       return yield* Effect.fail(new PartyRelationshipNotFound({ tenantId, relationshipId }))
     }
+
     return relationship
   })
+
   const findRelatedPartyPaths = Effect.fn("PartyStore.findRelatedPartyPaths")(function* (
     tenantId: string,
     sourcePartyId: string,
@@ -509,8 +561,10 @@ export const makePartyPostgresStore = Effect.gen(function* () {
           .limit(limit),
       "party.related-party-paths.find",
     )
+
     return rows.map((row) => ({ ...row, depth: 2 as const }))
   })
+
   const attachIdentifier = Effect.fn("PartyStore.attachIdentifier")(function* (
     tenantId: string,
     partyId: string,
@@ -542,12 +596,14 @@ export const makePartyPostgresStore = Effect.gen(function* () {
           if (isDatabaseConstraint(error, "party_identifiers_tenant_party_fkey", "23503")) {
             return new PartyNotFound({ tenantId, partyId })
           }
+
           if (
             legalEntityId !== null &&
             isDatabaseConstraint(error, "party_identifiers_tenant_legal_entity_fkey", "23503")
           ) {
             return new LegalEntityNotFound({ tenantId, legalEntityId })
           }
+
           if (
             isDatabaseConstraint(error, "party_identifiers_tenant_provider_scope_value_uq") ||
             isDatabaseConstraint(error, "party_identifiers_tenant_provider_entity_scope_value_uq")
@@ -561,11 +617,14 @@ export const makePartyPostgresStore = Effect.gen(function* () {
               value,
             })
           }
+
           return error
         }),
       )
+
     return rows[0]!
   })
+
   return {
     list,
     getDetail,

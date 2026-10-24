@@ -1,6 +1,7 @@
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import * as Predicate from "effect/Predicate"
 
 import { FencingContext, LeaseGeneration } from "../concurrency/mod.ts"
 import { uuidv7 } from "../ids/mod.ts"
@@ -8,15 +9,19 @@ import { InstantString } from "../time/mod.ts"
 
 const Uuid = Schema.String.check(Schema.isUUID())
 const NonEmptyString = Schema.String.check(Schema.isPattern(/\S/))
+
 const Slug = Schema.String.check(
   Schema.makeFilter((value) => /^[a-z][a-z0-9._-]*$/.test(value), {
     expected: "a lowercase document slug",
   }),
 )
+
 const PositiveInteger = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 2_147_483_647 }))
+
 const NonNegativeInteger = Schema.Int.check(
   Schema.isBetween({ minimum: 0, maximum: 2_147_483_647 }),
 )
+
 const Sha256 = Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/))
 
 export const DocumentRendererFamily = Schema.Literals([
@@ -25,6 +30,7 @@ export const DocumentRendererFamily = Schema.Literals([
   "static-html",
   "browser-html",
 ])
+
 export type DocumentRendererFamily = Schema.Schema.Type<typeof DocumentRendererFamily>
 
 export const DocumentCapability = Schema.Literals([
@@ -36,6 +42,7 @@ export const DocumentCapability = Schema.Literals([
   "svg",
   "remote-assets",
 ])
+
 export type DocumentCapability = Schema.Schema.Type<typeof DocumentCapability>
 
 export const DocumentSourceRef = Schema.Struct({
@@ -43,6 +50,7 @@ export const DocumentSourceRef = Schema.Struct({
   type: Slug,
   id: Uuid,
 })
+
 export type DocumentSourceRef = Schema.Schema.Type<typeof DocumentSourceRef>
 
 export const DocumentSnapshotInput = Schema.Struct({
@@ -53,6 +61,7 @@ export const DocumentSnapshotInput = Schema.Struct({
   schemaVersion: PositiveInteger,
   payload: Schema.Json,
 })
+
 export type DocumentSnapshotInput = Schema.Schema.Type<typeof DocumentSnapshotInput>
 
 export const DocumentSnapshot = Schema.Struct({
@@ -64,6 +73,7 @@ export const DocumentSnapshot = Schema.Struct({
   payload: Schema.Json,
   checksum: Sha256,
 })
+
 export type DocumentSnapshot = Schema.Schema.Type<typeof DocumentSnapshot>
 
 export const DocumentContext = Schema.Struct({
@@ -75,19 +85,19 @@ export const DocumentContext = Schema.Struct({
   data: Schema.Json,
   snapshotChecksum: Sha256,
 })
+
 export type DocumentContext = Schema.Schema.Type<typeof DocumentContext>
 
-const DocumentTextNode = Schema.Struct({
-  _tag: Schema.Literal("text"),
+export const DocumentTextNode = Schema.TaggedStruct("text", {
   value: NonEmptyString,
 })
-const DocumentImageNode = Schema.Struct({
-  _tag: Schema.Literal("image"),
+
+export const DocumentImageNode = Schema.TaggedStruct("image", {
   assetId: NonEmptyString,
   alt: NonEmptyString,
 })
-const DocumentTableNode = Schema.Struct({
-  _tag: Schema.Literal("table"),
+
+export const DocumentTableNode = Schema.TaggedStruct("table", {
   headers: Schema.Array(NonEmptyString).check(Schema.isMinLength(1)),
   rows: Schema.Array(Schema.Array(NonEmptyString)),
 }).check(
@@ -95,22 +105,24 @@ const DocumentTableNode = Schema.Struct({
     expected: "document table rows must match the header width",
   }),
 )
-const DocumentDividerNode = Schema.Struct({ _tag: Schema.Literal("divider") })
-const DocumentSpacerNode = Schema.Struct({
-  _tag: Schema.Literal("spacer"),
+
+export const DocumentDividerNode = Schema.TaggedStruct("divider", {})
+
+export const DocumentSpacerNode = Schema.TaggedStruct("spacer", {
   heightPx: NonNegativeInteger,
 })
-const DocumentPageBreakNode = Schema.Struct({ _tag: Schema.Literal("page_break") })
-const DocumentBarcodeNode = Schema.Struct({
-  _tag: Schema.Literal("barcode"),
+
+export const DocumentPageBreakNode = Schema.TaggedStruct("page_break", {})
+
+export const DocumentBarcodeNode = Schema.TaggedStruct("barcode", {
   value: NonEmptyString,
 })
-const DocumentQrCodeNode = Schema.Struct({
-  _tag: Schema.Literal("qr_code"),
+
+export const DocumentQrCodeNode = Schema.TaggedStruct("qr_code", {
   value: NonEmptyString,
 })
-const DocumentSignatureNode = Schema.Struct({
-  _tag: Schema.Literal("signature"),
+
+export const DocumentSignatureNode = Schema.TaggedStruct("signature", {
   assetId: NonEmptyString,
   label: NonEmptyString,
 })
@@ -125,7 +137,8 @@ export const DocumentNode = Schema.Union([
   DocumentBarcodeNode,
   DocumentQrCodeNode,
   DocumentSignatureNode,
-])
+]).pipe(Schema.toTaggedUnion("_tag"))
+
 export type DocumentNode = Schema.Schema.Type<typeof DocumentNode>
 
 export const DocumentAstInput = Schema.Struct({
@@ -135,6 +148,7 @@ export const DocumentAstInput = Schema.Struct({
   astVersion: PositiveInteger,
   nodes: Schema.Array(DocumentNode).check(Schema.isMinLength(1)),
 })
+
 export type DocumentAstInput = Schema.Schema.Type<typeof DocumentAstInput>
 
 export const DocumentAst = Schema.Struct({
@@ -145,6 +159,7 @@ export const DocumentAst = Schema.Struct({
   nodes: Schema.Array(DocumentNode).check(Schema.isMinLength(1)),
   checksum: Sha256,
 })
+
 export type DocumentAst = Schema.Schema.Type<typeof DocumentAst>
 
 export const DocumentRenderRequestInput = Schema.Struct({
@@ -165,6 +180,7 @@ export const DocumentRenderRequestInput = Schema.Struct({
   assetBytes: NonNegativeInteger,
   correlationId: NonEmptyString,
 })
+
 export type DocumentRenderRequestInput = Schema.Schema.Type<typeof DocumentRenderRequestInput>
 
 export const DocumentRenderRequest = Schema.Struct({
@@ -172,6 +188,7 @@ export const DocumentRenderRequest = Schema.Struct({
   renderFingerprint: Sha256,
   fenceScope: NonEmptyString,
 })
+
 export type DocumentRenderRequest = Schema.Schema.Type<typeof DocumentRenderRequest>
 
 export const DocumentRenderJobPayload = Schema.Struct({
@@ -196,9 +213,11 @@ export const DocumentRenderJobPayload = Schema.Struct({
   correlationId: NonEmptyString,
   fenceScope: NonEmptyString,
 })
+
 export type DocumentRenderJobPayload = Schema.Schema.Type<typeof DocumentRenderJobPayload>
 
 export const DocumentArtifactStatus = Schema.Literals(["ready", "failed", "manual_recovery"])
+
 export type DocumentArtifactStatus = Schema.Schema.Type<typeof DocumentArtifactStatus>
 
 export const DocumentArtifact = Schema.Struct({
@@ -220,12 +239,14 @@ export const DocumentArtifact = Schema.Struct({
   status: DocumentArtifactStatus,
   createdAt: InstantString,
 })
+
 export type DocumentArtifact = Schema.Schema.Type<typeof DocumentArtifact>
 
 export const DocumentArtifactLookup = Schema.Struct({
   tenantId: Uuid,
   renderFingerprint: Sha256,
 })
+
 export type DocumentArtifactLookup = Schema.Schema.Type<typeof DocumentArtifactLookup>
 
 export type DocumentArtifactWrite = {
@@ -352,15 +373,25 @@ export const DocumentRenderPolicy = Schema.Struct({
   maxPages: PositiveInteger,
   maxAssetBytes: NonNegativeInteger,
 })
+
 export type DocumentRenderPolicy = Schema.Schema.Type<typeof DocumentRenderPolicy>
 
 export const canonicalizeJson = (value: Schema.Schema.Type<typeof Schema.Json>): string => {
-  if (value === null || typeof value !== "object") {
+  if (Array.isArray(value)) return `[${value.map(canonicalizeJson).join(",")}]`
+
+  if (
+    value === null ||
+    Predicate.isString(value) ||
+    Predicate.isNumber(value) ||
+    Predicate.isBoolean(value)
+  ) {
     const encoded = JSON.stringify(value)
+
     return encoded === undefined ? "null" : encoded
   }
-  if (Array.isArray(value)) return `[${value.map(canonicalizeJson).join(",")}]`
+
   const entries = Object.entries(value).sort(([left], [right]) => left.localeCompare(right))
+
   return `{${entries
     .map(([key, entry]) => `${JSON.stringify(key)}:${canonicalizeJson(entry)}`)
     .join(",")}}`
@@ -369,30 +400,34 @@ export const canonicalizeJson = (value: Schema.Schema.Type<typeof Schema.Json>):
 export const sha256Hex = (input: string | Uint8Array) =>
   Effect.tryPromise({
     try: async () => {
-      const bytes = typeof input === "string" ? new TextEncoder().encode(input) : input
+      const bytes = Predicate.isString(input) ? new TextEncoder().encode(input) : input
       const buffer = new ArrayBuffer(bytes.byteLength)
       new Uint8Array(buffer).set(bytes)
       const digest = await crypto.subtle.digest("SHA-256", buffer)
+
       return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("")
     },
     catch: (cause) => new DocumentHashFailure({ cause }),
   })
 
-export const hashJson = (input: unknown) =>
+export const hashJson = (input: Schema.Codec.Encoded<typeof Schema.Json>) =>
   Effect.gen(function* () {
     const decoded = yield* Schema.decodeUnknownEffect(Schema.Json)(input)
+
     return yield* sha256Hex(canonicalizeJson(decoded))
   })
 
-export const makeDocumentSnapshot = (input: unknown) =>
+export const createDocumentSnapshot = (input: Schema.Codec.Encoded<typeof DocumentSnapshotInput>) =>
   Effect.gen(function* () {
     const decoded = yield* Schema.decodeUnknownEffect(DocumentSnapshotInput)(input)
+
     const checksum = yield* hashJson({
       tenantId: decoded.tenantId,
       source: decoded.source,
       schemaVersion: decoded.schemaVersion,
       payload: decoded.payload,
     })
+
     return {
       ...decoded,
       snapshotId: decoded.snapshotId ?? uuidv7(),
@@ -410,15 +445,17 @@ export const documentContextFromSnapshot = (snapshot: DocumentSnapshot): Documen
   snapshotChecksum: snapshot.checksum,
 })
 
-export const makeDocumentAst = (input: unknown) =>
+export const createDocumentAst = (input: Schema.Codec.Encoded<typeof DocumentAstInput>) =>
   Effect.gen(function* () {
     const decoded = yield* Schema.decodeUnknownEffect(DocumentAstInput)(input)
+
     const checksum = yield* hashJson({
       snapshotId: decoded.snapshotId,
       documentType: decoded.documentType,
       astVersion: decoded.astVersion,
       nodes: decoded.nodes,
     })
+
     return {
       ...decoded,
       astId: decoded.astId ?? uuidv7(),
@@ -426,9 +463,12 @@ export const makeDocumentAst = (input: unknown) =>
     } satisfies DocumentAst
   })
 
-export const makeDocumentRenderRequest = (input: unknown) =>
+export const createDocumentRenderRequest = (
+  input: Schema.Codec.Encoded<typeof DocumentRenderRequestInput>,
+) =>
   Effect.gen(function* () {
     const decoded = yield* Schema.decodeUnknownEffect(DocumentRenderRequestInput)(input)
+
     const renderFingerprint = yield* hashJson({
       tenantId: decoded.tenantId,
       snapshotId: decoded.snapshotId,
@@ -446,6 +486,7 @@ export const makeDocumentRenderRequest = (input: unknown) =>
       pageCount: decoded.pageCount,
       assetBytes: decoded.assetBytes,
     })
+
     return {
       ...decoded,
       renderFingerprint,
@@ -457,9 +498,12 @@ export const documentRenderIdempotencyKey = (
   request: Pick<DocumentRenderRequest, "tenantId" | "renderFingerprint">,
 ) => `document-render:${request.tenantId}:${request.renderFingerprint}`
 
-export const makeDocumentRenderJobPayload = (input: unknown) =>
+export const makeDocumentRenderJobPayload = (
+  input: Schema.Codec.Encoded<typeof DocumentRenderRequest>,
+) =>
   Effect.gen(function* () {
     const request = yield* Schema.decodeUnknownEffect(DocumentRenderRequest)(input)
+
     return {
       jobVersion: 1,
       tenantId: request.tenantId,
@@ -499,6 +543,7 @@ const validateRequiredCapabilities = (
   const unsupported = requirements.capabilities.find(
     (capability) => !policy.capabilities.includes(capability),
   )
+
   return unsupported === undefined
     ? Effect.succeed<void>(undefined)
     : Effect.fail(
@@ -519,6 +564,7 @@ const validatePolicyFlags = (
       : requirements.capabilities.includes("remote-assets") && !policy.allowNetwork
         ? ("network_disabled" as const)
         : undefined
+
   return reason === undefined
     ? Effect.succeed<void>(undefined)
     : Effect.fail(new DocumentRenderPolicyViolation({ reason }))
@@ -537,28 +583,35 @@ const validateRenderLimits = (
       maximum: policy.maxAssetBytes,
     },
   ]
+
   const exceeded = limits.find(({ actual, maximum }) => actual > maximum)
+
   return exceeded === undefined
     ? Effect.succeed<void>(undefined)
     : Effect.fail(new DocumentRenderLimitExceeded(exceeded))
 }
 
-export const validateDocumentRenderPolicy = (requirements: unknown, policy: unknown) =>
+export const validateDocumentRenderPolicy = (
+  requirements: Schema.Codec.Encoded<typeof DocumentRenderRequestInput>,
+  policy: Schema.Codec.Encoded<typeof DocumentRenderPolicy>,
+) =>
   Effect.gen(function* () {
     const decodedRequirements = yield* Schema.decodeUnknownEffect(DocumentRenderRequestInput)(
       requirements,
     )
+
     const decodedPolicy = yield* Schema.decodeUnknownEffect(DocumentRenderPolicy)(policy)
     yield* validateRendererFamily(decodedRequirements, decodedPolicy)
     yield* validateRequiredCapabilities(decodedRequirements, decodedPolicy)
     yield* validatePolicyFlags(decodedRequirements, decodedPolicy)
     yield* validateRenderLimits(decodedRequirements, decodedPolicy)
+
     return decodedPolicy
   })
 
 export interface DocumentArtifactStore {
   readonly put: (
-    input: unknown,
+    input: DocumentArtifactWrite,
   ) => Effect.Effect<
     DocumentArtifact,
     | DocumentArtifactConflict
@@ -568,7 +621,7 @@ export interface DocumentArtifactStore {
     | Schema.SchemaError
   >
   readonly get: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof DocumentArtifactLookup>,
   ) => Effect.Effect<DocumentArtifactRecord | undefined, Schema.SchemaError>
 }
 

@@ -14,12 +14,15 @@ import { runEffect } from "./solid-effect"
 
 function formatDownloads(n: number) {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M"
+
   if (n >= 1_000) return Math.round(n / 1_000) + "k"
+
   return String(n)
 }
 
 function Results(props: { results: () => Package[]; query: string }) {
   const list = () => latest(props.results)
+
   return (
     <div class={{ results: true, stale: isPending(props.results) }}>
       <Show
@@ -56,7 +59,9 @@ export function Typeahead() {
   // there, invisible here.
   const results = createMemo<Package[]>(() => {
     const q = query().trim()
+
     if (!q) return []
+
     return runEffect(searchPackages(q))
   })
 

@@ -2,13 +2,18 @@ import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
+import * as Predicate from "effect/Predicate"
+
+import { canonicalize } from "../../../../framework/foundation/mod.ts"
 
 const NonEmptyString = Schema.String.check(Schema.isPattern(/\S/))
+
 const TrimmedNonEmptyString = Schema.String.check(
   Schema.makeFilter((value) => /\S/.test(value) && value === value.trim(), {
     expected: "a trimmed nonblank string",
   }),
 )
+
 const InstantString = Schema.String.check(
   Schema.makeFilter(
     (value) =>
@@ -17,25 +22,30 @@ const InstantString = Schema.String.check(
     { expected: "an ISO-8601 UTC instant" },
   ),
 )
+
 const PositiveInt = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 0x7fffffff }))
 const ScanLimit = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 8188 }))
 const NonNegativeInt = Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: 0x7fffffff }))
+
 const MinorAmount = Schema.String.check(
   Schema.makeFilter(
     (value) => /^(0|[1-9][0-9]*)$/.test(value) && BigInt(value) <= (1n << 128n) - 1n,
     { expected: "a non-negative unsigned 128-bit minor amount" },
   ),
 )
+
 const PositiveMinorAmount = Schema.String.check(
   Schema.makeFilter((value) => /^[1-9][0-9]*$/.test(value) && BigInt(value) <= (1n << 128n) - 1n, {
     expected: "a positive unsigned 128-bit minor amount",
   }),
 )
+
 const Uuidv7 = Schema.String.check(
   Schema.isPattern(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i),
 )
 
 export const FinancialStoreAuthority = Schema.Literals(["postgresql", "tigerbeetle"])
+
 export type FinancialStoreAuthority = Schema.Schema.Type<typeof FinancialStoreAuthority>
 
 export const FINANCIAL_STAGING_EVIDENCE_CANONICALIZATION_VERSION = 1 as const
@@ -49,12 +59,14 @@ export const FinancialStoreWatermark = Schema.Struct({
   consistency: Schema.Literals(["bounded", "snapshot"]),
   capturedAt: InstantString,
 })
+
 export type FinancialStoreWatermark = Schema.Schema.Type<typeof FinancialStoreWatermark>
 
 export const FinancialStoreWatermarkInput = Schema.Struct({
   scope: TrimmedNonEmptyString,
   maxRecords: ScanLimit,
 })
+
 export type FinancialStoreWatermarkInput = Schema.Schema.Type<typeof FinancialStoreWatermarkInput>
 
 export class FinancialStoreObservationFailure extends Schema.TaggedError<FinancialStoreObservationFailure>()(
@@ -73,7 +85,7 @@ export class FinancialStoreObservationFailure extends Schema.TaggedError<Financi
 
 export interface FinancialStoreWatermarkCollectorService {
   readonly collect: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof FinancialStoreWatermarkInput>,
   ) => Effect.Effect<FinancialStoreWatermark, FinancialStoreObservationFailure | Schema.SchemaError>
 }
 
@@ -91,6 +103,7 @@ export const FinancialStoreInventoryRequest = Schema.Struct({
     expected: "inventory scope must match the watermark scope",
   }),
 )
+
 export type FinancialStoreInventoryRequest = Schema.Schema.Type<
   typeof FinancialStoreInventoryRequest
 >
@@ -105,6 +118,7 @@ export const FinancialStoreAccountObservation = Schema.Struct({
   creditsPostedMinor: MinorAmount,
   observedAt: NonEmptyString,
 })
+
 export type FinancialStoreAccountObservation = Schema.Schema.Type<
   typeof FinancialStoreAccountObservation
 >
@@ -123,6 +137,7 @@ export const FinancialStoreTransferObservation = Schema.Struct({
     expected: "financial store transfer accounts must be distinct",
   }),
 )
+
 export type FinancialStoreTransferObservation = Schema.Schema.Type<
   typeof FinancialStoreTransferObservation
 >
@@ -141,11 +156,12 @@ export const FinancialStoreInventory = Schema.Struct({
     { expected: "inventory authority and scope must match its watermark" },
   ),
 )
+
 export type FinancialStoreInventory = Schema.Schema.Type<typeof FinancialStoreInventory>
 
 export interface FinancialStoreInventoryScannerService {
   readonly scan: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof FinancialStoreInventoryRequest>,
   ) => Effect.Effect<FinancialStoreInventory, FinancialStoreObservationFailure | Schema.SchemaError>
 }
 
@@ -161,11 +177,11 @@ export type FinancialStoreObservationProvider = Readonly<{
 export interface FinancialStoreObservationRegistryService {
   readonly collect: (
     authority: FinancialStoreAuthority,
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof FinancialStoreWatermarkInput>,
   ) => Effect.Effect<FinancialStoreWatermark, FinancialStoreObservationFailure | Schema.SchemaError>
   readonly scan: (
     authority: FinancialStoreAuthority,
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof FinancialStoreInventoryRequest>,
   ) => Effect.Effect<FinancialStoreInventory, FinancialStoreObservationFailure | Schema.SchemaError>
 }
 
@@ -174,18 +190,24 @@ export const FinancialStoreObservationRegistry =
     "RITSEI/FinancialStoreObservationRegistry",
   )
 
-const observationScope = (input: unknown) =>
-  typeof input === "object" && input !== null && "scope" in input && typeof input.scope === "string"
+const observationScope = (
+  input:
+    | Schema.Codec.Encoded<typeof FinancialStoreWatermarkInput>
+    | Schema.Codec.Encoded<typeof FinancialStoreInventoryRequest>,
+) =>
+  Predicate.isObjectOrArray(input) && "scope" in input && Predicate.isString(input.scope)
     ? input.scope
     : "observation-registry"
 
-export const makeFinancialStoreObservationRegistry = (
+export const financialStoreObservationRegistry = (
   providers: readonly FinancialStoreObservationProvider[],
 ): FinancialStoreObservationRegistryService => {
   const byAuthority = new Map(providers.map((provider) => [provider.authority, provider]))
+
   return {
     collect: (authority, input) => {
       const provider = byAuthority.get(authority)
+
       return provider === undefined
         ? Effect.fail(
             new FinancialStoreObservationFailure({
@@ -197,6 +219,7 @@ export const makeFinancialStoreObservationRegistry = (
     },
     scan: (authority, input) => {
       const provider = byAuthority.get(authority)
+
       return provider === undefined
         ? Effect.fail(
             new FinancialStoreObservationFailure({
@@ -211,8 +234,7 @@ export const makeFinancialStoreObservationRegistry = (
 
 export const makeFinancialStoreObservationRegistryLayer = (
   providers: readonly FinancialStoreObservationProvider[],
-) =>
-  Layer.succeed(FinancialStoreObservationRegistry, makeFinancialStoreObservationRegistry(providers))
+) => Layer.succeed(FinancialStoreObservationRegistry, financialStoreObservationRegistry(providers))
 
 export type FinancialStoreInventoryMismatch = Readonly<{
   readonly kind:
@@ -238,7 +260,9 @@ export type FinancialStoreInventoryComparison = Readonly<{
 
 const duplicateKeys = <A>(values: readonly A[], key: (value: A) => string) => {
   const counts = new Map<string, number>()
+
   for (const value of values) counts.set(key(value), (counts.get(key(value)) ?? 0) + 1)
+
   return new Set(
     counts
       .entries()
@@ -276,21 +300,11 @@ const accountKey = (account: FinancialStoreAccountObservation) =>
 
 const transferKey = (transfer: FinancialStoreTransferObservation) => transfer.transferRef
 
-const canonicalValue = (value: unknown): unknown => {
-  if (Array.isArray(value)) return value.map(canonicalValue)
-  if (typeof value !== "object" || value === null) return value
-  return Object.fromEntries(
-    Object.entries(value)
-      .toSorted(([left], [right]) => left.localeCompare(right))
-      .map(([key, child]) => [key, canonicalValue(child)]),
-  )
-}
-
-const canonicalJson = (value: unknown) => JSON.stringify(canonicalValue(value)) ?? ""
+const canonicalJson = <A>(value: A) => JSON.stringify(canonicalize(value)) ?? ""
 
 const canonicalArray = (values: readonly unknown[]) =>
   [...values]
-    .map(canonicalValue)
+    .map(canonicalize)
     .sort((left, right) => canonicalJson(left).localeCompare(canonicalJson(right)))
 
 /** Canonical provider facts for hashes and exact same-boundary comparisons. */
@@ -312,6 +326,7 @@ export const hashFinancialStoreFacts = (
         new TextEncoder().encode(canonicalizeFinancialStoreFacts(input)),
       ),
     )
+
     return [...digest].map((byte) => byte.toString(16).padStart(2, "0")).join("")
   })
 
@@ -343,6 +358,7 @@ export const hashFinancialStoreWatermarks = (
         ),
       ),
     )
+
     return [...digest].map((byte) => byte.toString(16).padStart(2, "0")).join("")
   })
 
@@ -358,6 +374,7 @@ const appendInventoryBoundaryMismatches = (
       detail: `${expected.authority}:${observed.authority}`,
     })
   }
+
   if (expected.scope !== observed.scope) {
     mismatches.push({
       kind: "scope_mismatch",
@@ -365,6 +382,7 @@ const appendInventoryBoundaryMismatches = (
       detail: `${expected.scope}:${observed.scope}`,
     })
   }
+
   if (
     expected.watermark.value !== observed.watermark.value ||
     expected.watermark.snapshotRef !== observed.watermark.snapshotRef ||
@@ -385,14 +403,18 @@ const appendAccountMismatches = (
 ) => {
   const expectedDuplicates = duplicateKeys(expected, accountKey)
   const observedDuplicates = duplicateKeys(observed, accountKey)
+
   for (const key of [...new Set([...expectedDuplicates, ...observedDuplicates])].sort()) {
     mismatches.push({ kind: "duplicate_account", key, detail: "duplicate account reference" })
   }
+
   const expectedAccounts = new Map(expected.map((account) => [accountKey(account), account]))
   const observedAccounts = new Map(observed.map((account) => [accountKey(account), account]))
+
   for (const key of [...new Set([...expectedAccounts.keys(), ...observedAccounts.keys()])].sort()) {
     const expectedAccount = expectedAccounts.get(key)
     const observedAccount = observedAccounts.get(key)
+
     if (expectedAccount === undefined) {
       mismatches.push({ kind: "unexpected_account", key, detail: "observed only" })
     } else if (observedAccount === undefined) {
@@ -410,16 +432,20 @@ const appendTransferMismatches = (
 ) => {
   const expectedDuplicates = duplicateKeys(expected, transferKey)
   const observedDuplicates = duplicateKeys(observed, transferKey)
+
   for (const key of [...new Set([...expectedDuplicates, ...observedDuplicates])].sort()) {
     mismatches.push({ kind: "duplicate_transfer", key, detail: "duplicate transfer reference" })
   }
+
   const expectedTransfers = new Map(expected.map((transfer) => [transfer.transferRef, transfer]))
   const observedTransfers = new Map(observed.map((transfer) => [transfer.transferRef, transfer]))
+
   for (const key of [
     ...new Set([...expectedTransfers.keys(), ...observedTransfers.keys()]),
   ].sort()) {
     const expectedTransfer = expectedTransfers.get(key)
     const observedTransfer = observedTransfers.get(key)
+
     if (expectedTransfer === undefined) {
       mismatches.push({ kind: "unexpected_transfer", key, detail: "observed only" })
     } else if (observedTransfer === undefined) {
@@ -442,6 +468,7 @@ export const compareFinancialStoreInventories = (
   appendInventoryBoundaryMismatches(mismatches, expected, observed)
   appendAccountMismatches(mismatches, expected.accounts, observed.accounts)
   appendTransferMismatches(mismatches, expected.transfers, observed.transfers)
+
   return { ok: mismatches.length === 0, mismatches }
 }
 
@@ -450,6 +477,7 @@ export const FinancialStagingMetric = Schema.Struct({
   value: Schema.Number.check(Schema.isFinite()),
   unit: NonEmptyString,
 })
+
 export type FinancialStagingMetric = Schema.Schema.Type<typeof FinancialStagingMetric>
 
 export const FinancialStagingAlert = Schema.Struct({
@@ -462,6 +490,7 @@ export const FinancialStagingAlert = Schema.Struct({
   acknowledged: Schema.Boolean,
   ownerRef: Schema.NullOr(NonEmptyString),
 })
+
 export type FinancialStagingAlert = Schema.Schema.Type<typeof FinancialStagingAlert>
 
 export const FinancialStagingCohort = Schema.Struct({
@@ -475,6 +504,7 @@ export const FinancialStagingCohort = Schema.Struct({
   plannedScenarioIds: Schema.Array(NonEmptyString),
   maxOperationCount: PositiveInt,
 })
+
 export type FinancialStagingCohort = Schema.Schema.Type<typeof FinancialStagingCohort>
 
 /** Provider-neutral backup/restore result; backup commands and restore targets stay behind adapters. */
@@ -504,6 +534,7 @@ export const FinancialBackupRestoreEvidence = Schema.Struct({
       { expected: "backup restore completedAt at or after startedAt" },
     ),
   )
+
 export type FinancialBackupRestoreEvidence = Schema.Schema.Type<
   typeof FinancialBackupRestoreEvidence
 >
@@ -515,6 +546,7 @@ export const FinancialStagingTelemetryInput = Schema.Struct({
   gateId: NonEmptyString,
   deploymentRevision: NonEmptyString,
 })
+
 export type FinancialStagingTelemetryInput = Schema.Schema.Type<
   typeof FinancialStagingTelemetryInput
 >
@@ -523,6 +555,7 @@ export const FinancialStagingTelemetrySnapshot = Schema.Struct({
   metrics: Schema.Array(FinancialStagingMetric),
   alerts: Schema.Array(FinancialStagingAlert),
 })
+
 export type FinancialStagingTelemetrySnapshot = Schema.Schema.Type<
   typeof FinancialStagingTelemetrySnapshot
 >
@@ -537,7 +570,7 @@ export class FinancialStagingTelemetryFailure extends Schema.TaggedError<Financi
 
 export interface FinancialStagingTelemetryService {
   readonly collect: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof FinancialStagingTelemetryInput>,
   ) => Effect.Effect<
     FinancialStagingTelemetrySnapshot,
     FinancialStagingTelemetryFailure | Schema.SchemaError
@@ -606,6 +639,7 @@ export const FinancialStagingEvidence = Schema.Struct({
       { expected: "passing staging evidence must have zero mismatches and orphans" },
     ),
   )
+
 export type FinancialStagingEvidence = Schema.Schema.Type<typeof FinancialStagingEvidence>
 
 const evidenceKeys = [
@@ -651,9 +685,10 @@ export const canonicalizeFinancialStagingEvidence = (evidence: FinancialStagingE
   JSON.stringify(
     evidenceKeys.map((key) => [
       key,
+      // SAFETY: the keys in unorderedEvidenceKeys name array-valued evidence fields.
       unorderedEvidenceKeys.has(key)
         ? canonicalArray(evidence[key] as readonly unknown[])
-        : canonicalValue(evidence[key]),
+        : canonicalize(evidence[key]),
     ]),
   )
 
@@ -665,5 +700,6 @@ export const hashFinancialStagingEvidence = (evidence: FinancialStagingEvidence)
         new TextEncoder().encode(canonicalizeFinancialStagingEvidence(evidence)),
       ),
     )
+
     return [...digest].map((byte) => byte.toString(16).padStart(2, "0")).join("")
   })

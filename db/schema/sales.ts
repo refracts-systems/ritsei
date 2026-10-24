@@ -21,6 +21,7 @@ import { products } from "./product.ts"
 import { taxCodes } from "./tax.ts"
 
 export const salesSchema = pgSchema("sales")
+
 export const quotationStatus = salesSchema.enum("quotation_status", [
   "draft",
   "sent",
@@ -28,6 +29,7 @@ export const quotationStatus = salesSchema.enum("quotation_status", [
   "rejected",
   "expired",
 ])
+
 export const orderStatus = salesSchema.enum("order_status", ["draft", "confirmed", "cancelled"])
 
 export const customers = salesSchema.table(

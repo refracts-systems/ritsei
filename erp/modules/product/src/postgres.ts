@@ -21,10 +21,12 @@ const escapeLike = (value: string) => value.replace(/[\\%_]/g, (match) => `\\${m
 
 export const makeProductPostgresStore = Effect.fn("Product.makePostgresStore")(function* () {
   const database = yield* Database
+
   return {
     listProducts: (command) =>
       database.query((db) => {
         const pattern = command.search === undefined ? undefined : `%${escapeLike(command.search)}%`
+
         return db
           .select(selection)
           .from(products)

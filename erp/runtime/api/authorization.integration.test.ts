@@ -12,7 +12,7 @@ import {
   AuthorizationCapabilities,
   AuthorizationDenied,
   AuthorizationService,
-  type AuthorizationServiceShape,
+  type AuthorizationServiceContract,
   CapabilityDefinitions,
   type CapabilityType,
 } from "../../../framework/modules/authorization/mod.ts"
@@ -37,22 +37,28 @@ it.layer(TestHttpServices)("Authorization API", (it) => {
         AuthorizationCapabilities.tenantMembershipRead,
         AuthorizationCapabilities.capabilityGrant,
       ])
+
       const observed: Array<{ tenantId: string; capability: CapabilityType }> = []
       const listInputs: unknown[] = []
       const membership = { userAccountId, tenantId, status: "suspended" as const }
+
       const directGrant = {
         userAccountId,
         tenantId,
         capability: IdentityCapabilities.userAccountRead,
         scope: "tenant" as const,
       }
-      const authorization: AuthorizationServiceShape = {
+
+      const authorization: AuthorizationServiceContract = {
         authorize: (input) => {
+          // SAFETY: the test calls this double only with inputs of the shape it reads.
           const request = input as {
             readonly tenantId: string
             readonly capability: CapabilityType
           }
+
           observed.push(request)
+
           return request.tenantId === tenantId && allowed.has(request.capability)
             ? Effect.succeed({
                 allowed: true as const,
@@ -68,6 +74,7 @@ it.layer(TestHttpServices)("Authorization API", (it) => {
         listAccessibleTenants: () => Effect.succeed([membership]),
         listMembers: (input) => {
           listInputs.push(input)
+
           return Effect.succeed([membership])
         },
         suspendMember: unused,
@@ -75,16 +82,20 @@ it.layer(TestHttpServices)("Authorization API", (it) => {
         removeMember: unused,
         grant: unused,
       }
+
       const bearer = Layer.succeed(BearerAuth, {
         bearer: (effect) => Effect.provideService(effect, CurrentPrincipal, principal),
       })
+
       const bearerClient = HttpApiMiddleware.layerClient(BearerAuth, ({ request, next }) =>
         next(HttpClientRequest.bearerToken(request, "test-token")),
       )
+
       const handlers = AuthorizationHandlers.pipe(
         Layer.provide(bearer),
         Layer.provide(Layer.succeed(AuthorizationService, authorization)),
       )
+
       const client = yield* HttpApiTest.groups(RitseiApi, ["Authorization"]).pipe(
         Effect.provide(Layer.mergeAll(handlers, bearerClient, bearer)),
       )
@@ -140,39 +151,47 @@ it.layer(TestHttpServices)("Authorization API", (it) => {
       )
 
       allowed.delete(AuthorizationCapabilities.capabilityGrant)
+
       const missingGrant = yield* Effect.flip(
         client.Authorization.listDirectGrants({
           params: { userAccountId },
           headers: { "x-tenant-id": tenantId },
         }),
       )
+
       assert.strictEqual(missingGrant._tag, "ApiForbidden")
 
       allowed.clear()
       allowed.add(AuthorizationCapabilities.capabilityGrant)
+
       const missingRead = yield* Effect.flip(
         client.Authorization.listDirectGrants({
           params: { userAccountId },
           headers: { "x-tenant-id": tenantId },
         }),
       )
+
       assert.strictEqual(missingRead._tag, "ApiForbidden")
 
       allowed.clear()
+
       const defaultDenied = yield* Effect.flip(
         client.Authorization.listCapabilityDefinitions({
           headers: { "x-tenant-id": tenantId },
         }),
       )
+
       assert.strictEqual(defaultDenied._tag, "ApiForbidden")
 
       allowed.add(AuthorizationCapabilities.tenantMembershipRead)
+
       const crossTenant = yield* Effect.flip(
         client.Authorization.getMember({
           params: { userAccountId },
           headers: { "x-tenant-id": otherTenantId },
         }),
       )
+
       assert.strictEqual(crossTenant._tag, "ApiForbidden")
     }),
   )

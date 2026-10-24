@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm"
 import * as Context from "effect/Context"
+import * as Data from "effect/Data"
 import * as Effect from "effect/Effect"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
@@ -31,13 +32,14 @@ export const ProcessOperatorControl = Schema.Struct({
   reason: NonEmptyString,
   createdAt: NonEmptyString,
 })
+
 export type ProcessOperatorControl = Schema.Schema.Type<typeof ProcessOperatorControl>
 
 // ProcessOperatorStore is the durable audit boundary for authorized operator controls.
 // authorized operator commands cover retry, manual recovery, and compensation.
 export interface ProcessOperatorStore {
   readonly record: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ProcessOperatorControlInput>,
   ) => Effect.Effect<
     ProcessOperatorControl,
     ProcessOperatorConflict | DatabaseFailure | Schema.SchemaError
@@ -73,9 +75,12 @@ const sameControl = (
   control.idempotencyKey === input.idempotencyKey &&
   control.reason === input.reason
 
-type RecordResult =
-  | { readonly _tag: "Recorded"; readonly control: ProcessOperatorControl }
-  | { readonly _tag: "Conflict" }
+type RecordResult = Data.TaggedEnum<{
+  Recorded: { readonly control: ProcessOperatorControl }
+  Conflict: {}
+}>
+
+const RecordResult = Data.taggedEnum<RecordResult>()
 
 const recordRow = async (
   transaction: DrizzleTransaction,
@@ -91,10 +96,15 @@ const recordRow = async (
       ),
     )
     .for("update")
+
   const existing = existingRows[0]
+
   if (existing !== undefined) {
     const control = toControl(existing)
-    return sameControl(control, input) ? { _tag: "Recorded", control } : { _tag: "Conflict" }
+
+    return sameControl(control, input)
+      ? RecordResult.Recorded({ control })
+      : RecordResult.Conflict()
   }
 
   const rows = await transaction
@@ -109,23 +119,27 @@ const recordRow = async (
       reason: input.reason,
     })
     .returning()
-  return { _tag: "Recorded", control: toControl(rows[0]!) }
+
+  return RecordResult.Recorded({ control: toControl(rows[0]!) })
 }
 
 export const makePostgresProcessOperatorStore = Effect.gen(function* () {
   const database = yield* Database
+
   return {
-    record: (input: unknown) =>
+    record: (input: Schema.Codec.Encoded<typeof ProcessOperatorControlInput>) =>
       Effect.gen(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(ProcessOperatorControlInput)(input)
+
         const result = yield* database
           .transaction(
             (transaction) => recordRow(transaction, decoded),
             "process.operator_control.record",
           )
           .pipe(Effect.result)
+
         if (Result.isSuccess(result)) {
-          return result.success._tag === "Recorded"
+          return RecordResult.$is("Recorded")(result.success)
             ? result.success.control
             : yield* Effect.fail(
                 new ProcessOperatorConflict({
@@ -135,6 +149,7 @@ export const makePostgresProcessOperatorStore = Effect.gen(function* () {
                 }),
               )
         }
+
         if (isDatabaseConstraint(result.failure, "operator_controls_tenant_id_key")) {
           const rows = yield* database.query(
             (db) =>
@@ -149,11 +164,15 @@ export const makePostgresProcessOperatorStore = Effect.gen(function* () {
                 ),
             "process.operator_control.replay",
           )
+
           const existing = rows[0]
+
           if (existing !== undefined) {
             const control = toControl(existing)
+
             if (sameControl(control, decoded)) return control
           }
+
           return yield* Effect.fail(
             new ProcessOperatorConflict({
               tenantId: decoded.tenantId,
@@ -162,6 +181,7 @@ export const makePostgresProcessOperatorStore = Effect.gen(function* () {
             }),
           )
         }
+
         return yield* Effect.fail(result.failure)
       }),
   } satisfies ProcessOperatorStore
@@ -169,14 +189,17 @@ export const makePostgresProcessOperatorStore = Effect.gen(function* () {
 
 export const makeMemoryProcessOperatorStore = (): ProcessOperatorStore => {
   const controls = new Map<string, ProcessOperatorControl>()
+
   return {
     record: (input) =>
       Effect.gen(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(ProcessOperatorControlInput)(input)
         const key = `${decoded.tenantId}:${decoded.idempotencyKey}`
         const existing = controls.get(key)
+
         if (existing !== undefined) {
           if (sameControl(existing, decoded)) return existing
+
           return yield* Effect.fail(
             new ProcessOperatorConflict({
               tenantId: decoded.tenantId,
@@ -185,12 +208,15 @@ export const makeMemoryProcessOperatorStore = (): ProcessOperatorStore => {
             }),
           )
         }
+
         const control: ProcessOperatorControl = {
           id: uuidv7(),
           ...decoded,
           createdAt: new Date().toISOString(),
         }
+
         controls.set(key, control)
+
         return control
       }),
   }

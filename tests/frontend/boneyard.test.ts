@@ -10,7 +10,7 @@ it("validates the framework-neutral Boneyard core API", () => {
   assert.equal(result.boneCount, 1)
   assert.isTrue(result.rendered)
   assert.equal(result.normalizedWidth, 10)
-  assert.equal(result.snapshotType, "function")
+  assert.isTrue(result.snapshotIsFunction)
 })
 
 it.effect(
@@ -20,6 +20,7 @@ it.effect(
       const result = yield* Effect.promise(probeBoneyardCoreCompatibility)
 
       assert.equal(result.build, "passed")
+
       if (result.build === "passed") assert.equal(result.productionBundle, "safe")
     }),
   { timeout: 60_000 },

@@ -60,15 +60,18 @@ export function ActionMenu(props: ActionMenuProps) {
   // opens keeps focus instead of the menu pulling it back to its trigger.
   let pending: (() => void) | undefined
   let nextId = 0
+
   const registry: ActionMenuRegistry = {
     register: (entry) => {
       const id = nextId++
       setEntries((current) => [...current, { ...entry, id }])
+
       return () => setEntries((current) => current.filter((candidate) => candidate.id !== id))
     },
     restoreFocus: () =>
       queueMicrotask(() => root?.querySelector<HTMLElement>("[aria-haspopup]")?.focus()),
   }
+
   return (
     <ActionMenuContext value={registry}>
       <span ref={(element) => (root = element)} class={styles.root}>
@@ -81,6 +84,7 @@ export function ActionMenu(props: ActionMenuProps) {
             class={styles.content}
             onCloseAutoFocus={(event: Event) => {
               const action = pending
+
               if (action === undefined) return
               pending = undefined
               event.preventDefault()

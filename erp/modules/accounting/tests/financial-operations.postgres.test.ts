@@ -40,6 +40,7 @@ import {
   makeFinancialLedgerTestLayer,
   makeFinancialOperationFailpointLayer,
   makeFinancialOperationService,
+  FinancialExecutionOutcome,
 } from "../mod.ts"
 import {
   type FinancialStoreInventoryType,
@@ -48,18 +49,25 @@ import {
   type FinancialStoreWatermarkType,
   hashFinancialStoreWatermarks,
 } from "../mod.ts"
+import { partial } from "../../../../tests/support/partial.ts"
+import { postgresConstraint } from "../../../../tests/support/postgres-error.ts"
 
 const databaseUrl = process.env["DATABASE_URL"]
-const postgresFailure = (effect: () => Promise<unknown>) =>
+
+const postgresFailure = <A>(effect: () => Promise<A>) =>
   Effect.tryPromise({ try: effect, catch: (cause) => cause }).pipe(Effect.flip)
 
 const failDatabaseOnceAt = (database: DatabaseService, operationName: string): DatabaseService => {
   let failed = false
   const shouldFail = (name: string | undefined) => !failed && name === operationName
+
   const failure = (name: string | undefined) => {
     failed = true
+
     return Effect.fail(new DatabaseFailure({ operation: name ?? operationName, cause: "injected" }))
   }
+
+  // SAFETY: the double implements the database members this test calls.
   return {
     query: (operation, name) =>
       shouldFail(name) ? failure(name) : database.query(operation, name),
@@ -77,12 +85,14 @@ it.effect.skipIf(databaseUrl === undefined)(
       Effect.gen(function* () {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
+
         const [tenant] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
               insert into auth.tenants (slug) values (${uuidv7()}) returning id
             `,
         )
+
         const [organization] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -92,6 +102,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               }, 'organization', 'Financial Operation Organization') returning id
             `,
         )
+
         const [legalEntity] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -99,6 +110,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${tenant!.id}, ${organization!.id}) returning id
             `,
         )
+
         yield* Effect.promise(
           () =>
             client`
@@ -116,6 +128,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and legal_entity_id = ${legalEntity!.id}
             `,
         )
+
         const [evidenceArtifact] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -138,6 +151,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               ) returning id
             `,
         )
+
         const blankApproval = yield* Effect.flip(
           Effect.tryPromise({
             try: () =>
@@ -153,8 +167,9 @@ it.effect.skipIf(databaseUrl === undefined)(
             catch: (cause) => cause,
           }),
         )
+
         assert.strictEqual(
-          (blankApproval as { constraint_name?: string }).constraint_name,
+          postgresConstraint(blankApproval),
           "financial_cutover_controls_approval_check",
         )
         yield* Effect.promise(
@@ -185,6 +200,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and legal_entity_id = ${legalEntity!.id}
             `,
         )
+
         const blankActivation = yield* Effect.flip(
           Effect.tryPromise({
             try: () =>
@@ -196,8 +212,9 @@ it.effect.skipIf(databaseUrl === undefined)(
             catch: (cause) => cause,
           }),
         )
+
         assert.strictEqual(
-          (blankActivation as { constraint_name?: string }).constraint_name,
+          postgresConstraint(blankActivation),
           "financial_cutover_controls_activation_check",
         )
         yield* Effect.promise(
@@ -216,6 +233,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${tenant!.id}, ${legalEntity!.id}, '1900-01-01', '2100-12-31', 'open')
             `,
         )
+
         const [debitAccount] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -223,6 +241,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${tenant!.id}, '1000', 'Cash', 'asset') returning id
             `,
         )
+
         const [creditAccount] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -239,10 +258,12 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${tenant!.id}, ${legalEntity!.id}, ${debitAccount!.id}, ${creditAccount!.id})
             `,
         )
+
         const principal = {
           userAccountId: uuidv7(),
           sessionId: uuidv7(),
         }
+
         const authorization = makeAuthorizationTestLayer([
           {
             userAccountId: principal.userAccountId,
@@ -270,18 +291,24 @@ it.effect.skipIf(databaseUrl === undefined)(
             capability: AccountingCapabilities.financialReconciliationCheckpoint,
           },
         ])
+
         const messaging = yield* makeMessagingService.pipe(
           Effect.provideService(Database, database),
         )
+
         const jobs = yield* makeProcessJobEnqueuer.pipe(Effect.provideService(Database, database))
+
         const ledger = yield* Effect.provide(
           Effect.service(FinancialLedgerPort),
           makeFinancialLedgerTestLayer(),
         )
-        const sales = {
+
+        const sales = partial<SalesService>()({
           getConfirmedOrderTotal: () => Effect.succeed(LARGE_FINANCIAL_MAJOR),
-        } as unknown as SalesService
+        })
+
         const observationScope = `tenant:${tenant!.id}/legal-entity:${legalEntity!.id}`
+
         const observedSourceWatermark = {
           authority: "postgresql" as const,
           scope: observationScope,
@@ -290,6 +317,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           consistency: "bounded" as const,
           capturedAt: "2026-08-30T00:00:00.000Z",
         } satisfies FinancialStoreWatermarkType
+
         const observedTargetWatermark = {
           authority: "tigerbeetle" as const,
           scope: "provider:tigerbeetle",
@@ -298,10 +326,12 @@ it.effect.skipIf(databaseUrl === undefined)(
           consistency: "bounded" as const,
           capturedAt: "2026-08-30T00:00:00.000Z",
         } satisfies FinancialStoreWatermarkType
+
         const observationRecoveryWatermark = `observation:${yield* hashFinancialStoreWatermarks(
           observedSourceWatermark,
           observedTargetWatermark,
         )}`
+
         const makeObservationRegistry = (
           sourceWatermark: FinancialStoreWatermarkType,
           targetWatermark: FinancialStoreWatermarkType,
@@ -310,10 +340,12 @@ it.effect.skipIf(databaseUrl === undefined)(
             collect: (authority) =>
               Effect.succeed(authority === "postgresql" ? sourceWatermark : targetWatermark),
             scan: (authority, input) => {
+              // SAFETY: the test calls this double only with inputs of the shape it reads.
               const request = input as {
                 readonly scope: string
                 readonly watermark: FinancialStoreWatermarkType
               }
+
               return Effect.succeed({
                 authority,
                 scope: request.scope,
@@ -323,10 +355,12 @@ it.effect.skipIf(databaseUrl === undefined)(
               } satisfies FinancialStoreInventoryType)
             },
           })
+
         const observationRegistry = makeObservationRegistry(
           observedSourceWatermark,
           observedTargetWatermark,
         )
+
         const service = yield* Effect.provide(
           makeFinancialOperationService,
           Layer.mergeAll(
@@ -339,6 +373,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             observationRegistry,
           ),
         )
+
         const unobservedService = yield* Effect.provide(
           makeFinancialOperationService,
           Layer.mergeAll(
@@ -350,6 +385,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             Layer.succeed(FinancialLedgerPort, ledger),
           ),
         )
+
         const unobservedFailure = yield* Effect.flip(
           unobservedService.reconcileFinancialCheckpoint({
             principal,
@@ -363,6 +399,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             evidenceArtifactId: null,
           }),
         )
+
         assert.instanceOf(unobservedFailure, FinancialStoreObservationFailure)
         assert.strictEqual(unobservedFailure.reason, "unavailable")
 
@@ -379,6 +416,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             amount: "6.50",
           }),
         )
+
         assert.strictEqual(revenueMismatch._tag, "FinancialRevenueAmountMismatch")
 
         const revenue = yield* service.createRevenueIntent({
@@ -391,6 +429,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           currency: "USD",
           mappingVersion: 1,
         })
+
         assert.strictEqual(revenue.status, "intent")
         yield* Effect.promise(
           () =>
@@ -400,6 +439,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and operation_id = ${revenue.operationId}
             `,
         )
+
         const staleFence = yield* Effect.flip(
           service
             .submitFinancialOperation({
@@ -413,13 +453,16 @@ it.effect.skipIf(databaseUrl === undefined)(
               }),
             ),
         )
+
         assert.instanceOf(staleFence, FinancialOperationFenceRejected)
 
         const postedRevenue = yield* service.submitFinancialOperation({
           tenantId: tenant!.id,
           operationId: revenue.operationId,
         })
+
         assert.strictEqual(postedRevenue.status, "reconciled")
+
         const [reconciledEvent] = yield* Effect.promise(
           () =>
             client<
@@ -446,10 +489,13 @@ it.effect.skipIf(databaseUrl === undefined)(
               where e.tenant_id = ${tenant!.id} and f.id = ${revenue.id}
             `,
         )
+
         assert.isDefined(reconciledEvent)
+
         const eventPayload = yield* Schema.decodeUnknownEffect(
           AccountingFinancialOperationReconciledEvent.payloadSchema,
         )(reconciledEvent!.payload)
+
         assert.strictEqual(eventPayload.operationId, reconciledEvent!.operation_id)
         assert.strictEqual(eventPayload.journalId, reconciledEvent!.journal_id)
         assert.strictEqual(eventPayload.mappingVersion, reconciledEvent!.mapping_version)
@@ -479,13 +525,16 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and id = ${reconciledEventId}
             `,
         )
+
         const rebuiltProjection = yield* service.rebuildFinancialProjections({
           principal,
           tenantId: tenant!.id,
           legalEntityId: legalEntity!.id,
         })
+
         assert.isAtLeast(rebuiltProjection.checkedOperations, 1)
         assert.isAtLeast(rebuiltProjection.rebuiltOperations, 1)
+
         const rebuiltRevenueTransfers = yield* Effect.promise(
           () =>
             client<{ status: string; engine_transfer_id: string | null }[]>`
@@ -494,9 +543,11 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and operation_id = ${revenue.id}
             `,
         )
+
         assert.strictEqual(rebuiltRevenueTransfers.length, 1)
         assert.strictEqual(rebuiltRevenueTransfers[0]!.status, "accepted")
         assert.isNotNull(rebuiltRevenueTransfers[0]!.engine_transfer_id)
+
         const [rebuiltReconciledEvent] = yield* Effect.promise(
           () =>
             client<{ id: string; aggregate_id: string }[]>`
@@ -505,9 +556,11 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and id = ${reconciledEventId}
             `,
         )
+
         assert.isDefined(rebuiltReconciledEvent)
         assert.strictEqual(rebuiltReconciledEvent!.id, reconciledEventId)
         assert.strictEqual(rebuiltReconciledEvent!.aggregate_id, revenue.id)
+
         const [beforeFailedRebuild] = yield* Effect.promise(
           () =>
             client<
@@ -522,6 +575,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and id = ${revenue.id}
             `,
         )
+
         yield* Effect.promise(
           () =>
             client`
@@ -536,9 +590,11 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and id = ${reconciledEventId}
             `,
         )
+
+        // SAFETY: the double keeps the real messaging members and replaces only append.
         const failingRebuildMessaging = {
           ...messaging,
-          append: (_event: unknown) =>
+          append: (_event: Parameters<typeof messaging.append>[0]) =>
             Effect.fail(
               new DatabaseFailure({
                 operation: "financial-operation.test.rebuild-append",
@@ -546,6 +602,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               }),
             ),
         } as typeof messaging
+
         const failingRebuildService = yield* Effect.provide(
           makeFinancialOperationService,
           Layer.mergeAll(
@@ -557,6 +614,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             Layer.succeed(FinancialLedgerPort, ledger),
           ),
         )
+
         const failedRebuild = yield* Effect.flip(
           failingRebuildService.rebuildFinancialProjections({
             principal,
@@ -564,7 +622,9 @@ it.effect.skipIf(databaseUrl === undefined)(
             legalEntityId: legalEntity!.id,
           }),
         )
+
         assert.instanceOf(failedRebuild, DatabaseFailure)
+
         const [afterFailedRebuild] = yield* Effect.promise(
           () =>
             client<
@@ -579,7 +639,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and id = ${revenue.id}
             `,
         )
+
         assert.deepStrictEqual(afterFailedRebuild, beforeFailedRebuild)
+
         const [failedTransfers] = yield* Effect.promise(
           () =>
             client<{ count: number }[]>`
@@ -588,7 +650,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and operation_id = ${revenue.id}
             `,
         )
+
         assert.strictEqual(failedTransfers!.count, 0)
+
         const [failedEvents] = yield* Effect.promise(
           () =>
             client<{ count: number }[]>`
@@ -597,13 +661,17 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and id = ${reconciledEventId}
             `,
         )
+
         assert.strictEqual(failedEvents!.count, 0)
+
         const retriedRebuild = yield* service.rebuildFinancialProjections({
           principal,
           tenantId: tenant!.id,
           legalEntityId: legalEntity!.id,
         })
+
         assert.strictEqual(retriedRebuild.rebuiltOperations, 1)
+
         const [retriedTransfer] = yield* Effect.promise(
           () =>
             client<{ count: number }[]>`
@@ -612,7 +680,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and operation_id = ${revenue.id}
             `,
         )
+
         assert.strictEqual(retriedTransfer!.count, 1)
+
         const [retriedEvent] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -621,6 +691,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and id = ${reconciledEventId}
             `,
         )
+
         assert.strictEqual(retriedEvent!.id, reconciledEventId)
 
         yield* Effect.promise(
@@ -631,13 +702,16 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and id = ${reconciledEventId}
             `,
         )
+
         const quarantinedProjection = yield* service.rebuildFinancialProjections({
           principal,
           tenantId: tenant!.id,
           legalEntityId: legalEntity!.id,
         })
+
         assert.strictEqual(quarantinedProjection.rebuiltOperations, 0)
         assert.strictEqual(quarantinedProjection.quarantinedOperations, 1)
+
         const [quarantinedOperation] = yield* Effect.promise(
           () =>
             client<
@@ -648,9 +722,11 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and id = ${revenue.id}
             `,
         )
+
         assert.strictEqual(quarantinedOperation!.status, "manual_recovery")
         assert.strictEqual(quarantinedOperation!.recovery_reason, "mapping_mismatch")
         assert.isNull(quarantinedOperation!.reconciled_at)
+
         const [corruptReconciledEvent] = yield* Effect.promise(
           () =>
             client<{ id: string; payload: unknown }[]>`
@@ -659,13 +735,17 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and id = ${reconciledEventId}
             `,
         )
+
         assert.strictEqual(corruptReconciledEvent!.id, reconciledEventId)
+
         const corruptPayload = yield* Schema.decodeUnknownEffect(
           AccountingFinancialOperationReconciledEvent.payloadSchema,
         )(corruptReconciledEvent!.payload)
+
         assert.strictEqual(corruptPayload.mappingVersion, 2)
 
         const submissionIdentityOperationId = `submission-identity-${uuidv7()}`
+
         const submissionIdentityIntent = yield* service.createJournalIntent({
           principal,
           tenantId: tenant!.id,
@@ -680,20 +760,22 @@ it.effect.skipIf(databaseUrl === undefined)(
           ],
           correlationId: `submission-identity-correlation-${uuidv7()}`,
         })
+
         const submissionIdentityLedger = {
           ...ledger,
-          postJournal: (input: unknown) =>
+          postJournal: (input: Parameters<typeof ledger.postJournal>[0]) =>
             ledger
               .postJournal(input)
               .pipe(
                 Effect.map((outcome) =>
-                  outcome._tag === "accepted" &&
+                  FinancialExecutionOutcome.guards.accepted(outcome) &&
                   outcome.operationId === submissionIdentityOperationId
                     ? { ...outcome, operationId: `foreign-${uuidv7()}` }
                     : outcome,
                 ),
               ),
         }
+
         const submissionIdentityService = yield* Effect.provide(
           makeFinancialOperationService,
           Layer.mergeAll(
@@ -705,11 +787,14 @@ it.effect.skipIf(databaseUrl === undefined)(
             Layer.succeed(FinancialLedgerPort, submissionIdentityLedger),
           ),
         )
+
         const submissionIdentityPosted = yield* submissionIdentityService.submitFinancialOperation({
           tenantId: tenant!.id,
           operationId: submissionIdentityIntent.operationId,
         })
+
         assert.strictEqual(submissionIdentityPosted.status, "manual_recovery")
+
         const [submissionIdentityTransfer] = yield* Effect.promise(
           () =>
             client<{ status: string }[]>`
@@ -718,7 +803,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and operation_id = ${submissionIdentityPosted.id}
             `,
         )
+
         assert.strictEqual(submissionIdentityTransfer!.status, "manual_recovery")
+
         const [submissionIdentityEvents] = yield* Effect.promise(
           () =>
             client<{ events: number }[]>`
@@ -729,9 +816,11 @@ it.effect.skipIf(databaseUrl === undefined)(
                 and payload ->> 'operationId' = ${submissionIdentityOperationId}
             `,
         )
+
         assert.strictEqual(submissionIdentityEvents!.events, 0)
 
         const corruptMappingVersionOperationId = `mapping-version-${uuidv7()}`
+
         const mappingMismatchIntent = yield* service.createJournalIntent({
           principal,
           tenantId: tenant!.id,
@@ -746,12 +835,15 @@ it.effect.skipIf(databaseUrl === undefined)(
           ],
           correlationId: `mapping-version-correlation-${uuidv7()}`,
         })
+
         const mappingMismatchPosted = yield* service.submitFinancialOperation({
           tenantId: tenant!.id,
           operationId: mappingMismatchIntent.operationId,
         })
+
         assert.strictEqual(mappingMismatchPosted.status, "reconciled")
         const rebuildIdentityOperationId = `rebuild-identity-${uuidv7()}`
+
         const rebuildIdentityIntent = yield* service.createJournalIntent({
           principal,
           tenantId: tenant!.id,
@@ -766,27 +858,34 @@ it.effect.skipIf(databaseUrl === undefined)(
           ],
           correlationId: `rebuild-identity-correlation-${uuidv7()}`,
         })
+
         const rebuildIdentityPosted = yield* service.submitFinancialOperation({
           tenantId: tenant!.id,
           operationId: rebuildIdentityIntent.operationId,
         })
+
         assert.strictEqual(rebuildIdentityPosted.status, "reconciled")
+
         const mappingMismatchLedger = {
           ...ledger,
-          reconcileJournal: (input: unknown) =>
+          reconcileJournal: (input: Parameters<typeof ledger.reconcileJournal>[0]) =>
             ledger.reconcileJournal(input).pipe(
               Effect.map((outcome) => {
-                if (outcome._tag !== "accepted") return outcome
+                if (!FinancialExecutionOutcome.guards.accepted(outcome)) return outcome
+
                 if (outcome.operationId === corruptMappingVersionOperationId) {
                   return { ...outcome, mappingVersion: outcome.mappingVersion + 1 }
                 }
+
                 if (outcome.operationId === rebuildIdentityOperationId) {
                   return { ...outcome, operationId: `foreign-${uuidv7()}` }
                 }
+
                 return outcome
               }),
             ),
         }
+
         const mappingMismatchService = yield* Effect.provide(
           makeFinancialOperationService,
           Layer.mergeAll(
@@ -798,6 +897,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             Layer.succeed(FinancialLedgerPort, mappingMismatchLedger),
           ),
         )
+
         const mappingMismatchProjection = yield* mappingMismatchService.rebuildFinancialProjections(
           {
             principal,
@@ -805,8 +905,10 @@ it.effect.skipIf(databaseUrl === undefined)(
             legalEntityId: legalEntity!.id,
           },
         )
+
         assert.strictEqual(mappingMismatchProjection.rebuiltOperations, 0)
         assert.strictEqual(mappingMismatchProjection.quarantinedOperations, 2)
+
         const [mappingMismatchOperation] = yield* Effect.promise(
           () =>
             client<{ status: string; recovery_reason: string | null }[]>`
@@ -815,8 +917,10 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and operation_id = ${corruptMappingVersionOperationId}
             `,
         )
+
         assert.strictEqual(mappingMismatchOperation!.status, "manual_recovery")
         assert.strictEqual(mappingMismatchOperation!.recovery_reason, "mapping_mismatch")
+
         const [rebuildIdentityOperation] = yield* Effect.promise(
           () =>
             client<{ status: string; recovery_reason: string | null }[]>`
@@ -825,8 +929,10 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and operation_id = ${rebuildIdentityOperationId}
             `,
         )
+
         assert.strictEqual(rebuildIdentityOperation!.status, "manual_recovery")
         assert.strictEqual(rebuildIdentityOperation!.recovery_reason, "mapping_mismatch")
+
         const [mappingMismatchEvents] = yield* Effect.promise(
           () =>
             client<{ events: number }[]>`
@@ -837,7 +943,9 @@ it.effect.skipIf(databaseUrl === undefined)(
                 and payload ->> 'operationId' = ${corruptMappingVersionOperationId}
             `,
         )
+
         assert.strictEqual(mappingMismatchEvents!.events, 1)
+
         const [rebuildIdentityEvents] = yield* Effect.promise(
           () =>
             client<{ events: number }[]>`
@@ -848,12 +956,14 @@ it.effect.skipIf(databaseUrl === undefined)(
                 and payload ->> 'operationId' = ${rebuildIdentityOperationId}
             `,
         )
+
         assert.strictEqual(rebuildIdentityEvents!.events, 1)
 
         const revenuePrincipal = {
           userAccountId: uuidv7(),
           sessionId: uuidv7(),
         }
+
         const revenueOnlyService = yield* Effect.provide(
           makeFinancialOperationService,
           Layer.mergeAll(
@@ -871,6 +981,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             Layer.succeed(FinancialLedgerPort, ledger),
           ),
         )
+
         const revenueOnlyIntent = yield* revenueOnlyService.createRevenueIntent({
           principal: revenuePrincipal,
           tenantId: tenant!.id,
@@ -881,13 +992,16 @@ it.effect.skipIf(databaseUrl === undefined)(
           currency: "USD",
           mappingVersion: 1,
         })
+
         const revenueOnlyPosted = yield* revenueOnlyService.submitFinancialOperation({
           tenantId: tenant!.id,
           operationId: revenueOnlyIntent.operationId,
         })
+
         assert.strictEqual(revenueOnlyPosted.status, "reconciled")
 
         const lostLedger = makeFinancialLedgerTestLayer({ loseResponseFor: "lost-operation" })
+
         const lostService = yield* Effect.provide(
           makeFinancialOperationService,
           Layer.mergeAll(
@@ -914,15 +1028,18 @@ it.effect.skipIf(databaseUrl === undefined)(
           ],
           correlationId: ` correlation-${uuidv7()} `,
         }
+
         const concurrentInput = {
           ...input,
           operationId: `concurrent-${uuidv7()}`,
           reference: `concurrent-${uuidv7()}`,
         }
+
         const paddedInput = {
           ...input,
           operationId: ` ${input.operationId} `,
         }
+
         const concurrentIntents = yield* Effect.all(
           [
             service.createJournalIntent(concurrentInput),
@@ -930,11 +1047,14 @@ it.effect.skipIf(databaseUrl === undefined)(
           ],
           { concurrency: "unbounded" },
         )
+
         assert.strictEqual(concurrentIntents[0]!.id, concurrentIntents[1]!.id)
+
         const concurrentPosted = yield* service.submitFinancialOperation({
           tenantId: tenant!.id,
           operationId: concurrentInput.operationId,
         })
+
         assert.strictEqual(concurrentPosted.status, "reconciled")
 
         const intent = yield* service.createJournalIntent(paddedInput)
@@ -950,6 +1070,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               } and idempotency_key = ${paddedInput.operationId.trim()}
             `,
         )
+
         assert.strictEqual(queued!.job_type, "accounting.financial_operation.submit")
         assert.strictEqual(queued!.idempotency_key, input.operationId)
         assert.strictEqual(queued!.correlation_id, input.correlationId.trim())
@@ -958,7 +1079,9 @@ it.effect.skipIf(databaseUrl === undefined)(
           tenantId: tenant!.id,
           operationId: paddedInput.operationId,
         })
+
         assert.strictEqual(posted.status, "reconciled")
+
         const projectedTransfers = yield* Effect.promise(
           () =>
             client<{ position: number; engine_transfer_id: string | null; status: string }[]>`
@@ -969,6 +1092,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               order by position
             `,
         )
+
         assert.strictEqual(projectedTransfers.length, 1)
         assert.isNotNull(projectedTransfers[0]!.engine_transfer_id)
         assert.strictEqual(projectedTransfers[0]!.status, "accepted")
@@ -981,10 +1105,12 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and id = ${posted.id}
             `,
         )
+
         assert.strictEqual(
-          (immutableOperation as { constraint_name?: string }).constraint_name,
+          postgresConstraint(immutableOperation),
           "financial_operations_immutable_fields_check",
         )
+
         const immutableReconciledEventId = yield* postgresFailure(
           () =>
             client`
@@ -993,10 +1119,12 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and id = ${posted.id}
             `,
         )
+
         assert.strictEqual(
-          (immutableReconciledEventId as { constraint_name?: string }).constraint_name,
+          postgresConstraint(immutableReconciledEventId),
           "financial_operations_immutable_fields_check",
         )
+
         const [postedEventIdentity] = yield* Effect.promise(
           () =>
             client<{ reconciled_event_id: string }[]>`
@@ -1005,6 +1133,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and id = ${posted.id}
             `,
         )
+
         const [duplicateJournal] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -1013,6 +1142,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               returning id
             `,
         )
+
         const blankOperationId = yield* postgresFailure(
           () =>
             client`
@@ -1035,10 +1165,12 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and id = ${posted.id}
             `,
         )
+
         assert.strictEqual(
-          (blankOperationId as { constraint_name?: string }).constraint_name,
+          postgresConstraint(blankOperationId),
           "financial_operations_operation_id_check",
         )
+
         const insertBlankMetadataOperation = (input: {
           readonly operationId: string
           readonly status: "intent" | "accepted" | "rejected" | "manual_recovery"
@@ -1076,6 +1208,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                 where f.tenant_id = ${tenant!.id} and f.id = ${posted.id}
               `,
           )
+
         for (const invalid of [
           {
             operationId: `blank-engine-accepted-${uuidv7()}`,
@@ -1115,11 +1248,9 @@ it.effect.skipIf(databaseUrl === undefined)(
           },
         ] as const) {
           const failure = yield* insertBlankMetadataOperation(invalid)
-          assert.strictEqual(
-            (failure as { constraint_name?: string }).constraint_name,
-            invalid.constraint,
-          )
+          assert.strictEqual(postgresConstraint(failure), invalid.constraint)
         }
+
         const duplicateReconciledEvent = yield* postgresFailure(
           () =>
             client`
@@ -1142,10 +1273,12 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and id = ${posted.id}
             `,
         )
+
         assert.strictEqual(
-          (duplicateReconciledEvent as { constraint_name?: string }).constraint_name,
+          postgresConstraint(duplicateReconciledEvent),
           "financial_operations_tenant_reconciled_event_key",
         )
+
         const immutableTransfer = yield* postgresFailure(
           () =>
             client`
@@ -1154,12 +1287,14 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and operation_id = ${posted.id}
             `,
         )
+
         assert.strictEqual(
-          (immutableTransfer as { constraint_name?: string }).constraint_name,
+          postgresConstraint(immutableTransfer),
           "financial_operation_transfers_immutable_fields_check",
         )
 
         const corruptOperationId = `corrupt-${uuidv7()}`
+
         const corruptService = yield* Effect.provide(
           makeFinancialOperationService,
           Layer.mergeAll(
@@ -1171,21 +1306,26 @@ it.effect.skipIf(databaseUrl === undefined)(
             makeFinancialLedgerTestLayer({ corruptTransferIdsFor: corruptOperationId }),
           ),
         )
+
         yield* corruptService.createJournalIntent({
           ...input,
           operationId: corruptOperationId,
           reference: `corrupt-${uuidv7()}`,
         })
+
         const corruptResult = yield* corruptService.submitFinancialOperation({
           tenantId: tenant!.id,
           operationId: corruptOperationId,
         })
+
         assert.strictEqual(corruptResult.status, "manual_recovery")
 
         let failReceipt = true
+
+        // SAFETY: the double keeps the real messaging members and replaces only append.
         const failingMessaging = {
           ...messaging,
-          append: (event: unknown) =>
+          append: (event: Parameters<typeof messaging.append>[0]) =>
             failReceipt
               ? Effect.fail(
                   new DatabaseFailure({
@@ -1195,6 +1335,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                 )
               : messaging.append(event),
         } as typeof messaging
+
         const failingService = yield* Effect.provide(
           makeFinancialOperationService,
           Layer.mergeAll(
@@ -1206,19 +1347,24 @@ it.effect.skipIf(databaseUrl === undefined)(
             makeFinancialLedgerTestLayer(),
           ),
         )
+
         const failedInput = {
           ...input,
           operationId: "postgres-receipt-failure",
           reference: `receipt-failure-${uuidv7()}`,
         }
+
         yield* failingService.createJournalIntent(failedInput)
+
         const receiptFailure = yield* Effect.flip(
           failingService.submitFinancialOperation({
             tenantId: tenant!.id,
             operationId: failedInput.operationId,
           }),
         )
+
         assert.instanceOf(receiptFailure, DatabaseFailure)
+
         const [failedOperation] = yield* Effect.promise(
           () =>
             client<
@@ -1239,11 +1385,13 @@ it.effect.skipIf(databaseUrl === undefined)(
                 ${failedInput.operationId}
             `,
         )
+
         assert.deepStrictEqual(failedOperation, {
           status: "accepted",
           journal_status: "draft",
           transfer_status: "unresolved",
         })
+
         const accounting = yield* Effect.provide(
           makeAccountingService,
           Layer.mergeAll(
@@ -1253,6 +1401,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             Layer.succeed(SalesService, sales),
           ),
         )
+
         const closeFailure = yield* Effect.flip(
           accounting.closePeriod({
             principal,
@@ -1261,12 +1410,15 @@ it.effect.skipIf(databaseUrl === undefined)(
             periodId: intent.periodId,
           }),
         )
+
         assert.instanceOf(closeFailure, FinancialOperationsPending)
         failReceipt = false
+
         const recovered = yield* failingService.submitFinancialOperation({
           tenantId: tenant!.id,
           operationId: failedInput.operationId,
         })
+
         assert.strictEqual(recovered.status, "reconciled")
 
         const lostInput = {
@@ -1274,12 +1426,16 @@ it.effect.skipIf(databaseUrl === undefined)(
           operationId: "lost-operation",
           reference: `lost-${uuidv7()}`,
         }
+
         yield* lostService.createJournalIntent(lostInput)
+
         const unknown = yield* lostService.submitFinancialOperation({
           tenantId: tenant!.id,
           operationId: lostInput.operationId,
         })
+
         assert.strictEqual(unknown.status, "unknown")
+
         const [reconcileJob] = yield* Effect.promise(
           () =>
             client<{ job_type: string }[]>`
@@ -1288,16 +1444,21 @@ it.effect.skipIf(databaseUrl === undefined)(
                 and idempotency_key = ${`${lostInput.operationId}:reconcile`}
             `,
         )
+
         assert.strictEqual(reconcileJob!.job_type, "accounting.financial_operation.reconcile")
+
         const reconciled = yield* lostService.reconcileFinancialOperation({
           tenantId: tenant!.id,
           operationId: lostInput.operationId,
         })
+
         assert.strictEqual(reconciled.status, "reconciled")
+
         const reconciledAgain = yield* lostService.reconcileFinancialOperation({
           tenantId: tenant!.id,
           operationId: lostInput.operationId,
         })
+
         assert.strictEqual(reconciledAgain.status, "reconciled")
 
         const checkpoint = yield* service.reconcileFinancialCheckpoint({
@@ -1311,11 +1472,13 @@ it.effect.skipIf(databaseUrl === undefined)(
           targetSnapshotRef: observedTargetWatermark.snapshotRef,
           evidenceArtifactId: null,
         })
+
         assert.include(["verified", "blocked"], checkpoint.status)
         assert.strictEqual(checkpoint.sourceWatermark, "postgres:test-watermark")
         assert.strictEqual(checkpoint.targetWatermark, "tigerbeetle:test-watermark")
         assert.strictEqual(checkpoint.sourceSnapshotRef, "postgres:test-snapshot")
         assert.strictEqual(checkpoint.targetSnapshotRef, "tigerbeetle:test-snapshot")
+
         const checkpointReplay = yield* service.reconcileFinancialCheckpoint({
           principal,
           tenantId: tenant!.id,
@@ -1327,6 +1490,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           targetSnapshotRef: observedTargetWatermark.snapshotRef,
           evidenceArtifactId: null,
         })
+
         assert.deepStrictEqual(checkpointReplay, checkpoint)
 
         const invalidWatermark = yield* Effect.flip(
@@ -1342,6 +1506,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             evidenceArtifactId: null,
           }),
         )
+
         assert.instanceOf(invalidWatermark, FinancialStoreObservationFailure)
         assert.strictEqual(invalidWatermark.reason, "invalid_watermark")
 
@@ -1350,15 +1515,18 @@ it.effect.skipIf(databaseUrl === undefined)(
           value: "postgres:concurrent-checkpoint",
           snapshotRef: "postgres:concurrent-source-snapshot",
         }
+
         const concurrentTargetWatermark = {
           ...observedTargetWatermark,
           value: "tigerbeetle:concurrent-checkpoint",
           snapshotRef: "tigerbeetle:concurrent-target-snapshot",
         }
+
         const concurrentRecoveryWatermark = `observation:${yield* hashFinancialStoreWatermarks(
           concurrentSourceWatermark,
           concurrentTargetWatermark,
         )}`
+
         const concurrentService = yield* Effect.provide(
           makeFinancialOperationService,
           Layer.mergeAll(
@@ -1371,6 +1539,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             makeObservationRegistry(concurrentSourceWatermark, concurrentTargetWatermark),
           ),
         )
+
         const [concurrentCheckpoint, concurrentCheckpointReplay] = yield* Effect.all(
           [
             concurrentService.reconcileFinancialCheckpoint({
@@ -1398,7 +1567,9 @@ it.effect.skipIf(databaseUrl === undefined)(
           ],
           { concurrency: "unbounded" },
         )
+
         assert.deepStrictEqual(concurrentCheckpointReplay, concurrentCheckpoint)
+
         const [concurrentRows] = yield* Effect.promise(
           () =>
             client<{ count: string }[]>`
@@ -1408,6 +1579,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                 and recovery_watermark = ${concurrentRecoveryWatermark}
             `,
         )
+
         assert.strictEqual(concurrentRows!.count, "1")
 
         const [conflictArtifact] = yield* Effect.promise(
@@ -1432,6 +1604,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               ) returning id
             `,
         )
+
         const checkpointConflict = yield* Effect.flip(
           service.reconcileFinancialCheckpoint({
             principal,
@@ -1445,14 +1618,18 @@ it.effect.skipIf(databaseUrl === undefined)(
             evidenceArtifactId: conflictArtifact!.id,
           }),
         )
+
         assert.instanceOf(checkpointConflict, FinancialReconciliationCheckpointConflict)
+
         const checkpointMismatchLedger = {
           ...ledger,
-          reconcileJournal: (journalInput: unknown) =>
+          reconcileJournal: (journalInput: Parameters<typeof ledger.reconcileJournal>[0]) =>
             ledger.reconcileJournal(journalInput).pipe(
               Effect.map((outcome) => {
-                if (outcome._tag !== "accepted") return outcome
+                if (!FinancialExecutionOutcome.guards.accepted(outcome)) return outcome
+                // SAFETY: the test calls this double only with inputs of the shape it reads.
                 const operationId = (journalInput as { readonly operationId?: string }).operationId
+
                 return operationId === input.operationId
                   ? {
                       ...outcome,
@@ -1464,24 +1641,29 @@ it.effect.skipIf(databaseUrl === undefined)(
               }),
             ),
         }
+
         const mismatchSourceWatermark = {
           ...observedSourceWatermark,
           value: "postgres:mismatch-watermark",
           snapshotRef: "postgres:mismatch-snapshot",
         }
+
         const mismatchTargetWatermark = {
           ...observedTargetWatermark,
           value: "tigerbeetle:mismatch-watermark",
           snapshotRef: "tigerbeetle:mismatch-snapshot",
         }
+
         const mismatchRecoveryWatermark = `observation:${yield* hashFinancialStoreWatermarks(
           mismatchSourceWatermark,
           mismatchTargetWatermark,
         )}`
+
         const mismatchObservationRegistry = makeObservationRegistry(
           mismatchSourceWatermark,
           mismatchTargetWatermark,
         )
+
         const checkpointMismatchService = yield* Effect.provide(
           makeFinancialOperationService,
           Layer.mergeAll(
@@ -1494,6 +1676,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             mismatchObservationRegistry,
           ),
         )
+
         const mismatchedCheckpoint = yield* checkpointMismatchService.reconcileFinancialCheckpoint({
           principal,
           tenantId: tenant!.id,
@@ -1505,9 +1688,11 @@ it.effect.skipIf(databaseUrl === undefined)(
           targetSnapshotRef: mismatchTargetWatermark.snapshotRef,
           evidenceArtifactId: null,
         })
+
         assert.strictEqual(mismatchedCheckpoint.status, "blocked")
         assert.isAbove(mismatchedCheckpoint.mismatchCount, 0)
         assert.strictEqual(mismatchedCheckpoint.orphanCount, 1)
+
         const mismatchedCheckpointReplay =
           yield* checkpointMismatchService.reconcileFinancialCheckpoint({
             principal,
@@ -1520,6 +1705,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             targetSnapshotRef: mismatchTargetWatermark.snapshotRef,
             evidenceArtifactId: null,
           })
+
         assert.deepStrictEqual(mismatchedCheckpointReplay, mismatchedCheckpoint)
 
         const checkpointMutation = yield* postgresFailure(
@@ -1530,10 +1716,12 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and id = ${checkpoint.id}
             `,
         )
+
         assert.strictEqual(
-          (checkpointMutation as { constraint_name?: string }).constraint_name,
+          postgresConstraint(checkpointMutation),
           "financial_reconciliation_checkpoints_immutable",
         )
+
         const invalidVerifiedCounts = yield* postgresFailure(
           () =>
             client`
@@ -1552,14 +1740,16 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and id = ${checkpoint.id}
             `,
         )
+
         assert.strictEqual(
-          (invalidVerifiedCounts as { constraint_name?: string }).constraint_name,
+          postgresConstraint(invalidVerifiedCounts),
           "financial_reconciliation_checkpoints_verified_counts_check",
         )
 
         const makeMatrixService = (
           databaseLayer: Layer.Layer<DatabaseService> = Layer.succeed(Database, database),
           ledgerLayer = makeFinancialLedgerTestLayer(),
+          // SAFETY: the failpoint starts unset and is assigned by the test.
           failpoint = undefined as FinancialOperationFailpointNameType | undefined,
         ) =>
           Effect.provide(
@@ -1574,6 +1764,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               makeFinancialOperationFailpointLayer(failpoint === undefined ? [] : [failpoint]),
             ),
           )
+
         const failureCases = [
           ["A_before_intent_commit", "before_intent_commit"],
           ["B_after_intent_before_submission", "after_intent_commit"],
@@ -1585,13 +1776,16 @@ it.effect.skipIf(databaseUrl === undefined)(
           ["H_after_finalization", "after_finalization"],
           ["B_before_provider_submission", "before_provider_submission"],
         ] as const
+
         for (const [point, failpoint] of failureCases) {
           const matrixInput = {
             ...input,
             operationId: `matrix-${point}-${uuidv7()}`,
             reference: `matrix-${point}-${uuidv7()}`,
           }
+
           const matrixService = yield* makeMatrixService(undefined, undefined, failpoint)
+
           if (point === "A_before_intent_commit" || point === "B_after_intent_before_submission") {
             const failed = yield* Effect.flip(matrixService.createJournalIntent(matrixInput))
             assert.instanceOf(failed, FinancialOperationInjectedFailure)
@@ -1601,26 +1795,33 @@ it.effect.skipIf(databaseUrl === undefined)(
           } else {
             const intentBeforeFailure = yield* matrixService.createJournalIntent(matrixInput)
             assert.strictEqual(intentBeforeFailure.status, "intent")
+
             const failed = yield* Effect.flip(
               matrixService.submitFinancialOperation({
                 tenantId: tenant!.id,
                 operationId: intentBeforeFailure.operationId,
               }),
             )
+
             assert.instanceOf(failed, FinancialOperationInjectedFailure)
             assert.strictEqual(failed.point, failpoint)
           }
+
           const recovered = yield* matrixService.submitFinancialOperation({
             tenantId: tenant!.id,
             operationId: matrixInput.operationId,
           })
+
           assert.strictEqual(recovered.status, "reconciled")
+
           if (point === "E_process_dies_after_acceptance_before_receipt") {
             const replayed = yield* matrixService.submitFinancialOperation({
               tenantId: tenant!.id,
               operationId: matrixInput.operationId,
             })
+
             assert.strictEqual(replayed.status, "reconciled")
+
             const [transferSummary] = yield* Effect.promise(
               () =>
                 client<{ total: string; accepted: string; transfer_id: string | null }[]>`
@@ -1632,6 +1833,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                     and operation_id = ${replayed.id}
                 `,
             )
+
             assert.strictEqual(transferSummary!.total, "1")
             assert.strictEqual(transferSummary!.accepted, "1")
             assert.isNotNull(transferSummary!.transfer_id)
@@ -1643,25 +1845,32 @@ it.effect.skipIf(databaseUrl === undefined)(
           ["D_response_lost_after_acceptance", "loseResponseFor"],
           ["L_tigerbeetle_unavailable", "unavailableFor"],
         ] as const
+
         for (const [point, option] of providerCases) {
           const operationId = `matrix-${point}-${uuidv7()}`
           const providerLedger = makeFinancialLedgerTestLayer({ [option]: operationId })
           const providerService = yield* makeMatrixService(undefined, providerLedger)
+
           const providerInput = {
             ...input,
             operationId,
             reference: `matrix-${point}-${uuidv7()}`,
           }
+
           yield* providerService.createJournalIntent(providerInput)
+
           const unknownProviderOutcome = yield* providerService.submitFinancialOperation({
             tenantId: tenant!.id,
             operationId,
           })
+
           assert.strictEqual(unknownProviderOutcome.status, "unknown")
+
           const providerRecovery = yield* providerService.reconcileFinancialOperation({
             tenantId: tenant!.id,
             operationId,
           })
+
           assert.strictEqual(
             providerRecovery.status,
             point === "L_tigerbeetle_unavailable" ? "unknown" : "reconciled",
@@ -1669,32 +1878,39 @@ it.effect.skipIf(databaseUrl === undefined)(
         }
 
         const postgresUnavailableOperation = `matrix-M-${uuidv7()}`
+
         const postgresUnavailableService = yield* makeMatrixService(
           Layer.succeed(
             Database,
             failDatabaseOnceAt(database, "accounting.financial_operation.receipt"),
           ),
         )
+
         yield* postgresUnavailableService.createJournalIntent({
           ...input,
           operationId: postgresUnavailableOperation,
           reference: `matrix-M-${uuidv7()}`,
         })
+
         const postgresFailureResult = yield* Effect.flip(
           postgresUnavailableService.submitFinancialOperation({
             tenantId: tenant!.id,
             operationId: postgresUnavailableOperation,
           }),
         )
+
         assert.instanceOf(postgresFailureResult, DatabaseFailure)
+
         const postgresRecovered = yield* postgresUnavailableService.submitFinancialOperation({
           tenantId: tenant!.id,
           operationId: postgresUnavailableOperation,
         })
+
         assert.strictEqual(postgresRecovered.status, "reconciled")
 
         const replay = yield* service.createJournalIntent(input)
         assert.strictEqual(replay.id, intent.id)
+
         const [{ count }] = yield* Effect.promise(
           () =>
             client<{ count: string }[]>`
@@ -1702,6 +1918,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and idempotency_key = ${input.operationId}
             `,
         )
+
         assert.strictEqual(count, "1")
 
         const [projection] = yield* Effect.promise(
@@ -1710,6 +1927,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               select status from accounting.journal_entries where id = ${posted.journalId}
             `,
         )
+
         assert.strictEqual(projection!.status, "posted")
 
         const reversalIntent = yield* service.createReversalIntent({
@@ -1723,12 +1941,16 @@ it.effect.skipIf(databaseUrl === undefined)(
           mappingVersion: 1,
           correlationId: `reversal-correlation-${uuidv7()}`,
         })
+
         assert.strictEqual(reversalIntent.operationType, "journal_reverse")
+
         const reversed = yield* service.submitFinancialOperation({
           tenantId: tenant!.id,
           operationId: reversalIntent.operationId,
         })
+
         assert.strictEqual(reversed.status, "reconciled")
+
         const [reversalProjection] = yield* Effect.promise(
           () =>
             client<{ status: string; reverses_entry_id: string | null }[]>`
@@ -1736,10 +1958,12 @@ it.effect.skipIf(databaseUrl === undefined)(
               from accounting.journal_entries where id = ${reversed.journalId}
             `,
         )
+
         assert.deepStrictEqual(reversalProjection, {
           status: "reversed",
           reverses_entry_id: posted.journalId,
         })
+
         const duplicateReversal = yield* Effect.flip(
           service.createReversalIntent({
             principal,
@@ -1753,6 +1977,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             correlationId: `duplicate-reversal-correlation-${uuidv7()}`,
           }),
         )
+
         assert.instanceOf(duplicateReversal, FinancialReversalAlreadyExists)
 
         const blockedRevenue = yield* service.createRevenueIntent({
@@ -1765,16 +1990,20 @@ it.effect.skipIf(databaseUrl === undefined)(
           currency: "USD",
           mappingVersion: 1,
         })
+
         const providerEntered = yield* Deferred.make<void>()
         const providerRelease = yield* Deferred.make<void>()
         let providerCalls = 0
+
         const blockingLedger = {
           ...ledger,
-          postJournal: (input: unknown) => {
+          postJournal: (input: Parameters<typeof ledger.postJournal>[0]) => {
             providerCalls += 1
+
             return ledger.postJournal(input)
           },
         }
+
         const blockedService = yield* Effect.provide(
           makeFinancialOperationService,
           Layer.mergeAll(
@@ -1794,6 +2023,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             }),
           ),
         )
+
         const blockedFiber = yield* blockedService
           .submitFinancialOperation({
             tenantId: tenant!.id,
@@ -1806,6 +2036,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             }),
             Effect.forkChild,
           )
+
         yield* Deferred.await(providerEntered)
         yield* Effect.promise(
           () =>
@@ -1819,6 +2050,7 @@ it.effect.skipIf(databaseUrl === undefined)(
         const blockedError = yield* Effect.flip(Fiber.join(blockedFiber))
         assert.instanceOf(blockedError, FinancialOperationFenceRejected)
         assert.strictEqual(providerCalls, 0)
+
         const unblockedRevenue = yield* blockedService
           .submitFinancialOperation({
             tenantId: tenant!.id,
@@ -1830,6 +2062,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               generation: "2",
             }),
           )
+
         assert.strictEqual(unblockedRevenue.status, "reconciled")
         assert.strictEqual(providerCalls, 1)
 
@@ -1841,15 +2074,18 @@ it.effect.skipIf(databaseUrl === undefined)(
         const manualRecoveryOperationDbId = reversed.id
         const manualRecoveryOperationId = reversed.operationId
         const eventConflictOperationDbId = posted.id
+
         const unknownIntent = yield* service.createJournalIntent({
           ...input,
           operationId: `rebuild-unknown-${uuidv7()}`,
           reference: `rebuild-unknown-${uuidv7()}`,
         })
+
         const unknownPosted = yield* service.submitFinancialOperation({
           tenantId: tenant!.id,
           operationId: unknownIntent.operationId,
         })
+
         const unknownOperationDbId = unknownPosted.id
         const unknownOperationId = unknownPosted.operationId
         yield* Effect.promise(
@@ -1864,6 +2100,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               )
             `,
         )
+
         type RebuildLedgerBehavior = Readonly<{
           readonly identityOperationId?: string
           readonly rejectedOperationId?: string
@@ -1871,12 +2108,17 @@ it.effect.skipIf(databaseUrl === undefined)(
           readonly unknownOperationId?: string
           readonly unknownReason?: "unavailable" | "not_found"
         }>
+
         const makeRebuildLedger = (behavior: RebuildLedgerBehavior = {}) => {
-          const acceptedOutcome = (journalInput: unknown) => {
+          const acceptedOutcome = (
+            journalInput: Parameters<typeof ledger.expectedTransferIds>[0],
+          ) => {
+            // SAFETY: the test calls this double only with inputs of the shape it reads.
             const request = journalInput as {
               readonly operationId: string
               readonly mappingVersion: number
             }
+
             return ledger.expectedTransferIds(journalInput).pipe(
               Effect.map((transferIds) => ({
                 _tag: "accepted" as const,
@@ -1888,16 +2130,13 @@ it.effect.skipIf(databaseUrl === undefined)(
               })),
             )
           }
+
           return {
             authority: "tigerbeetle" as const,
             createExecutionAccount: ledger.createExecutionAccount,
             postJournal: ledger.postJournal,
             expectedTransferIds: ledger.expectedTransferIds,
-            getBalance: (balanceInput: unknown) => {
-              const target = balanceInput as {
-                readonly accountId: string
-                readonly mappingVersion: number
-              }
+            getBalance: (target: Parameters<FinancialLedgerPort["getBalance"]>[0]) => {
               return Effect.succeed({
                 _tag: "available" as const,
                 accountId: target.accountId,
@@ -1908,8 +2147,11 @@ it.effect.skipIf(databaseUrl === undefined)(
                 creditsPostedMinor: "0",
               })
             },
-            reconcileJournal: (journalInput: unknown) => {
-              const operationId = (journalInput as { readonly operationId: string }).operationId
+            reconcileJournal: (
+              journalInput: Parameters<FinancialLedgerPort["reconcileJournal"]>[0],
+            ) => {
+              const operationId = journalInput.operationId
+
               if (operationId === behavior.identityOperationId) {
                 return acceptedOutcome(journalInput).pipe(
                   Effect.map((outcome) => ({
@@ -1918,6 +2160,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                   })),
                 )
               }
+
               if (operationId === behavior.rejectedOperationId) {
                 return Effect.succeed({
                   _tag: "rejected" as const,
@@ -1925,6 +2168,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                   reason: "invalid_amount" as const,
                 })
               }
+
               if (operationId === behavior.manualRecoveryOperationId) {
                 return Effect.succeed({
                   _tag: "manual_recovery" as const,
@@ -1932,6 +2176,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                   reason: "reconciliation_required" as const,
                 })
               }
+
               if (
                 operationId === behavior.unknownOperationId &&
                 behavior.unknownReason !== undefined
@@ -1942,18 +2187,23 @@ it.effect.skipIf(databaseUrl === undefined)(
                   reason: behavior.unknownReason,
                 })
               }
+
               return acceptedOutcome(journalInput)
             },
           } satisfies FinancialLedgerPort
         }
+
         const rebuildVariantsLedger = makeRebuildLedger({
           identityOperationId,
           rejectedOperationId,
           manualRecoveryOperationId,
         })
+
+        // SAFETY: the double keeps the real messaging members and replaces only append.
         const eventConflictMessaging = {
           ...messaging,
-          append: (event: unknown) => {
+          append: (event: Parameters<typeof messaging.append>[0]) => {
+            // SAFETY: the test calls this double only with inputs of the shape it reads.
             const candidate = event as {
               readonly aggregateId: string
               readonly eventId: string
@@ -1962,9 +2212,11 @@ it.effect.skipIf(databaseUrl === undefined)(
               readonly tenantId: string
               readonly idempotencyKey: string
             }
+
             if (candidate.aggregateId !== eventConflictOperationDbId) {
               return messaging.append(event)
             }
+
             return Effect.fail(
               new EventIdempotencyConflict({
                 tenantId: candidate.tenantId,
@@ -1976,6 +2228,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             )
           },
         } as typeof messaging
+
         const makeRebuildService = (
           rebuildLedger: FinancialLedgerPort,
           rebuildMessaging: typeof messaging = messaging,
@@ -1991,17 +2244,21 @@ it.effect.skipIf(databaseUrl === undefined)(
               Layer.succeed(FinancialLedgerPort, rebuildLedger),
             ),
           )
+
         const rebuildVariantsService = yield* makeRebuildService(
           rebuildVariantsLedger,
           eventConflictMessaging,
         )
+
         const variantsRebuild = yield* rebuildVariantsService.rebuildFinancialProjections({
           principal,
           tenantId: tenant!.id,
           legalEntityId: legalEntity!.id,
         })
+
         assert.isAtLeast(variantsRebuild.rebuiltOperations, 1)
         assert.isAtLeast(variantsRebuild.quarantinedOperations, 5)
+
         const readOperationStatus = (operationId: string) =>
           Effect.promise(
             () =>
@@ -2011,6 +2268,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                 where tenant_id = ${tenant!.id} and id = ${operationId}
               `,
           )
+
         for (const operationId of [
           unexpectedOperationDbId,
           identityOperationDbId,
@@ -2021,6 +2279,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           const [operation] = yield* readOperationStatus(operationId)
           assert.strictEqual(operation!.status, "manual_recovery")
         }
+
         const [unknownAfterVariants] = yield* readOperationStatus(unknownOperationDbId)
         assert.strictEqual(unknownAfterVariants!.status, "reconciled")
 
@@ -2030,6 +2289,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             unknownReason: "not_found",
           }),
         )
+
         const notFoundRebuild = yield* Effect.flip(
           notFoundService.rebuildFinancialProjections({
             principal,
@@ -2037,14 +2297,17 @@ it.effect.skipIf(databaseUrl === undefined)(
             legalEntityId: legalEntity!.id,
           }),
         )
+
         assert.instanceOf(notFoundRebuild, FinancialProjectionRebuildBlocked)
         assert.strictEqual(notFoundRebuild.reason, "not_found")
+
         const unavailableService = yield* makeRebuildService(
           makeRebuildLedger({
             unknownOperationId,
             unknownReason: "unavailable",
           }),
         )
+
         const unavailableRebuild = yield* Effect.flip(
           unavailableService.rebuildFinancialProjections({
             principal,
@@ -2052,20 +2315,24 @@ it.effect.skipIf(databaseUrl === undefined)(
             legalEntityId: legalEntity!.id,
           }),
         )
+
         assert.instanceOf(unavailableRebuild, FinancialProjectionRebuildBlocked)
         assert.strictEqual(unavailableRebuild.reason, "unavailable")
 
         const stableRebuildService = yield* makeRebuildService(makeRebuildLedger())
+
         const firstRerun = yield* stableRebuildService.rebuildFinancialProjections({
           principal,
           tenantId: tenant!.id,
           legalEntityId: legalEntity!.id,
         })
+
         const secondRerun = yield* stableRebuildService.rebuildFinancialProjections({
           principal,
           tenantId: tenant!.id,
           legalEntityId: legalEntity!.id,
         })
+
         assert.strictEqual(firstRerun.reportSnapshotHash, secondRerun.reportSnapshotHash)
         assert.strictEqual(firstRerun.checkedOperations, secondRerun.checkedOperations)
       }),

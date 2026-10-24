@@ -4,12 +4,19 @@ import { extractText, validatePdfUA } from "pdfnative"
 
 import {
   DocumentAssetUnavailable,
+  DocumentBarcodeNode,
   documentContextFromSnapshot,
+  DocumentDividerNode,
+  DocumentImageNode,
+  DocumentQrCodeNode,
   DocumentRenderInput,
   type DocumentRenderPolicy,
-  makeDocumentAst,
-  makeDocumentRenderRequest,
-  makeDocumentSnapshot,
+  DocumentSignatureNode,
+  DocumentTableNode,
+  DocumentTextNode,
+  createDocumentAst,
+  createDocumentRenderRequest,
+  createDocumentSnapshot,
   UnsupportedDocumentCapability,
 } from "../../../foundation/mod.ts"
 import { makePdfNativeDocumentRenderer } from "../mod.ts"
@@ -39,7 +46,7 @@ const policy: DocumentRenderPolicy = {
 
 const renderInput = () =>
   Effect.gen(function* () {
-    const snapshot = yield* makeDocumentSnapshot({
+    const snapshot = yield* createDocumentSnapshot({
       snapshotId,
       tenantId,
       source: { owner: "procurement", type: "purchase_order", id: sourceId },
@@ -47,28 +54,30 @@ const renderInput = () =>
       schemaVersion: 1,
       payload: { status: "confirmed", total: "25.00" },
     })
+
     const context = documentContextFromSnapshot(snapshot)
-    const ast = yield* makeDocumentAst({
+
+    const ast = yield* createDocumentAst({
       astId,
       snapshotId,
       documentType: "purchase_order",
       astVersion: 1,
       nodes: [
-        { _tag: "text", value: "PURCHASE ORDER" },
-        { _tag: "text", value: "فاتورة شراء / 仕入注文 / 구매 주문" },
-        {
-          _tag: "table",
+        DocumentTextNode.make({ value: "PURCHASE ORDER" }),
+        DocumentTextNode.make({ value: "فاتورة شراء / 仕入注文 / 구매 주문" }),
+        DocumentTableNode.make({
           headers: ["Item", "Quantity", "Unit Price"],
           rows: Array.from({ length: 80 }, (_, index) => [`ITEM-${index + 1}`, "2", "12.50"]),
-        },
-        { _tag: "divider" },
-        { _tag: "image", assetId: "logo-v1", alt: "Company logo" },
-        { _tag: "barcode", value: "PO-2026-0001" },
-        { _tag: "qr_code", value: "https://example.invalid/po/0001" },
-        { _tag: "signature", assetId: "signature-v1", label: "Approved by" },
+        }),
+        DocumentDividerNode.make({}),
+        DocumentImageNode.make({ assetId: "logo-v1", alt: "Company logo" }),
+        DocumentBarcodeNode.make({ value: "PO-2026-0001" }),
+        DocumentQrCodeNode.make({ value: "https://example.invalid/po/0001" }),
+        DocumentSignatureNode.make({ assetId: "signature-v1", label: "Approved by" }),
       ],
     })
-    const request = yield* makeDocumentRenderRequest({
+
+    const request = yield* createDocumentRenderRequest({
       tenantId,
       snapshotId,
       snapshotChecksum: snapshot.checksum,
@@ -86,6 +95,7 @@ const renderInput = () =>
       assetBytes: pngBytes.byteLength * 2,
       correlationId: "pdfnative-conformance",
     })
+
     return { context, ast, request } satisfies DocumentRenderInput
   })
 
@@ -114,6 +124,7 @@ describe("pdfnative document renderer", () => {
       const text = extractText(first.bytes)
         .map((page) => page.text)
         .join("\n")
+
       assert.include(text, "PURCHASE ORDER")
       assert.isTrue(validatePdfUA(first.bytes).valid)
     }),
@@ -122,12 +133,14 @@ describe("pdfnative document renderer", () => {
   it.effect("fails closed when the native policy does not support a capability", () =>
     Effect.gen(function* () {
       const input = yield* renderInput()
+
       const unsupported = yield* Effect.flip(
         renderer.render({
           ...input,
           request: { ...input.request, capabilities: ["paged-media"] },
         }),
       )
+
       assert.instanceOf(unsupported, UnsupportedDocumentCapability)
     }),
   )
@@ -135,10 +148,12 @@ describe("pdfnative document renderer", () => {
   it.effect("reports a missing asset as a typed failure", () =>
     Effect.gen(function* () {
       const input = yield* renderInput()
+
       const missingAssetRenderer = makePdfNativeDocumentRenderer({
         policy,
         resolveAsset: () => Effect.succeed(undefined),
       })
+
       const missing = yield* Effect.flip(missingAssetRenderer.render(input))
       assert.instanceOf(missing, DocumentAssetUnavailable)
     }),

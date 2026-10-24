@@ -24,11 +24,14 @@ import {
   SalesOrderConfirmedEvent,
   SalesOrderNotFound,
 } from "../mod.ts"
+import { postgresCode, postgresConstraint } from "../../../../tests/support/postgres-error.ts"
 
 const databaseUrl = process.env["DATABASE_URL"]
 const principal = { userAccountId: "sales-postgres", sessionId: "session" }
-const postgresFailure = (effect: () => Promise<unknown>) =>
+
+const postgresFailure = <A>(effect: () => Promise<A>) =>
   Effect.tryPromise({ try: effect, catch: (cause) => cause }).pipe(Effect.flip)
+
 const capabilities = [
   SalesCapabilities.customerCreate,
   SalesCapabilities.customerRead,
@@ -47,18 +50,21 @@ it.effect.skipIf(databaseUrl === undefined)(
       Effect.gen(function* () {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
+
         const [tenant] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
           `,
         )
+
         const [otherTenant] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
           `,
         )
+
         const authorizationLayer = makeAuthorizationTestLayer(
           [tenant!.id, otherTenant!.id].flatMap((tenantId) =>
             capabilities.map((capability) => ({
@@ -71,33 +77,40 @@ it.effect.skipIf(databaseUrl === undefined)(
 
         yield* Effect.gen(function* () {
           const authorization = yield* AuthorizationService
+
           const messaging = yield* makeMessagingService.pipe(
             Effect.provideService(Database, database),
           )
+
           const requirements = Layer.mergeAll(
             Layer.succeed(Database, database),
             Layer.succeed(AuthorizationService, authorization),
             Layer.succeed(MessagingService, messaging),
           )
+
           const sales = yield* Effect.provide(makeSalesService, requirements)
+
           const customer = yield* sales.createCustomer({
             principal,
             tenantId: tenant!.id,
             name: "Sales Customer",
             email: "sales-postgres@example.test",
           })
+
           const mismatchedCustomer = yield* sales.createCustomer({
             principal,
             tenantId: tenant!.id,
             name: "Mismatched Sales Customer",
             email: "mismatched-sales@example.test",
           })
+
           const quotation = yield* sales.createQuotation({
             principal,
             tenantId: tenant!.id,
             customerId: customer.id,
             total: "10.00",
           })
+
           const mismatch = yield* Effect.flip(
             sales.createOrder({
               principal,
@@ -107,7 +120,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               lines: [{ itemId: uuidv7(), quantity: "1", unitPrice: "10.00" }],
             }),
           )
+
           assert.instanceOf(mismatch, QuotationCustomerMismatch)
+
           const order = yield* sales.createOrder({
             principal,
             tenantId: tenant!.id,
@@ -120,6 +135,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               },
             ],
           })
+
           const invalidDraftTotal = yield* postgresFailure(() =>
             client.begin(async (transaction) => {
               await transaction`
@@ -129,11 +145,13 @@ it.effect.skipIf(databaseUrl === undefined)(
               `
             }),
           )
-          assert.strictEqual((invalidDraftTotal as { code?: string }).code, "23514")
+
+          assert.strictEqual(postgresCode(invalidDraftTotal), "23514")
           assert.strictEqual(
-            (invalidDraftTotal as { constraint_name?: string }).constraint_name,
+            postgresConstraint(invalidDraftTotal),
             "sales_draft_order_total_consistent",
           )
+
           const aggregateOverflow = yield* Effect.flip(
             sales.createOrder({
               principal,
@@ -148,6 +166,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               ],
             }),
           )
+
           assert.instanceOf(aggregateOverflow, Schema.SchemaError)
 
           const otherCustomer = yield* sales.createCustomer({
@@ -156,13 +175,16 @@ it.effect.skipIf(databaseUrl === undefined)(
             name: "Other Sales Customer",
             email: "other-sales-postgres@example.test",
           })
+
           const otherOrder = yield* sales.createOrder({
             principal,
             tenantId: otherTenant!.id,
             customerId: otherCustomer.id,
             lines: [{ itemId: uuidv7(), quantity: "1", unitPrice: "100.00" }],
           })
+
           const sameKeyDifferentTenant = "same-key-different-tenant"
+
           const input = {
             principal,
             tenantId: tenant!.id,
@@ -172,6 +194,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             causationId: null,
             idempotencyKey: sameKeyDifferentTenant,
           }
+
           assert.instanceOf(
             yield* Effect.flip(
               sales.confirmOrder({
@@ -195,6 +218,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             ),
             SalesOrderNotFound,
           )
+
           const confirmedTotal = yield* database.withTransaction(
             sales.getConfirmedOrderTotal({
               principal,
@@ -202,7 +226,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               orderId: confirmed.id,
             }),
           )
+
           assert.strictEqual(confirmedTotal, LARGE_FINANCIAL_MAJOR)
+
           const otherConfirmed = yield* sales.confirmOrder({
             principal,
             tenantId: otherTenant!.id,
@@ -212,6 +238,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             causationId: null,
             idempotencyKey: sameKeyDifferentTenant,
           })
+
           const repeated = yield* sales.confirmOrder(input)
 
           assert.strictEqual(confirmed.status, "confirmed")
@@ -219,6 +246,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           assert.strictEqual(confirmed.id, repeated.id)
           assert.notStrictEqual(confirmed.id, otherConfirmed.id)
           assert.strictEqual(otherConfirmed.tenantId, otherTenant!.id)
+
           const rows = yield* Effect.promise(
             () =>
               client<{ status: string; confirmation_idempotency_key: string }[]>`
@@ -227,8 +255,10 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and id = ${order.id}
             `,
           )
+
           assert.strictEqual(rows[0]?.status, "confirmed")
           assert.strictEqual(rows[0]?.confirmation_idempotency_key, input.idempotencyKey)
+
           const events = yield* Effect.promise(
             () =>
               client<
@@ -250,7 +280,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and event_type = ${SalesOrderConfirmedEvent.id}
             `,
           )
+
           assert.strictEqual(events.length, 1)
+
           const sameKeyEvents = yield* Effect.promise(
             () =>
               client<{ tenant_id: string; count: number }[]>`
@@ -262,6 +294,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               order by tenant_id
             `,
           )
+
           assert.deepStrictEqual(
             sameKeyEvents.map((row) => row.count),
             [1, 1],
@@ -288,6 +321,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             customerId: customer.id,
             lines: [{ itemId: uuidv7(), quantity: "1", unitPrice: "25.00" }],
           })
+
           assert.instanceOf(
             yield* Effect.flip(
               sales.confirmOrder({
@@ -299,6 +333,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             ),
             SalesOrderConfirmationIdempotencyConflict,
           )
+
           const failingSales = yield* Effect.provide(
             makeSalesService,
             Layer.mergeAll(
@@ -313,6 +348,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               }),
             ),
           )
+
           assert.instanceOf(
             yield* Effect.flip(
               failingSales.confirmOrder({
@@ -325,6 +361,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             ),
             DatabaseFailure,
           )
+
           const rollbackRows = yield* Effect.promise(
             () =>
               client<
@@ -345,6 +382,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               where o.tenant_id = ${tenant!.id} and o.id = ${rollbackOrder.id}
             `,
           )
+
           assert.strictEqual(rollbackRows[0]?.status, "draft")
           assert.isNull(rollbackRows[0]?.confirmed_at)
           assert.isNull(rollbackRows[0]?.confirmation_idempotency_key)
@@ -357,7 +395,9 @@ it.effect.skipIf(databaseUrl === undefined)(
             correlationId: "sales-confirm-retry-correlation",
             idempotencyKey: "sales-confirm-rollback",
           })
+
           assert.strictEqual(retried.status, "confirmed")
+
           const retryEvents = yield* Effect.promise(
             () =>
               client<{ count: number }[]>`
@@ -369,6 +409,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                 and event_type = 'sales.order.confirmed'
             `,
           )
+
           assert.strictEqual(retryEvents[0]?.count, 1)
 
           assert.instanceOf(
@@ -396,12 +437,14 @@ it.effect.skipIf(databaseUrl === undefined)(
     withTemporaryDatabase(databaseUrl!, (client) =>
       Effect.gen(function* () {
         yield* runMigrations(client)
+
         const [tenant] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
           `,
         )
+
         const [customer] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -410,6 +453,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             returning id
           `,
         )
+
         const draftKey = yield* postgresFailure(
           () =>
             client`
@@ -418,6 +462,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             values (${tenant!.id}, ${customer!.id}, 'draft', 'orphaned-key', 10)
           `,
         )
+
         const confirmedKey = yield* postgresFailure(
           () =>
             client`
@@ -426,12 +471,10 @@ it.effect.skipIf(databaseUrl === undefined)(
             values (${tenant!.id}, ${customer!.id}, 'confirmed', now(), 10)
           `,
         )
+
         for (const failure of [draftKey, confirmedKey]) {
-          assert.strictEqual((failure as { code?: string }).code, "23514")
-          assert.strictEqual(
-            (failure as { constraint_name?: string }).constraint_name,
-            "orders_confirmation_metadata_check",
-          )
+          assert.strictEqual(postgresCode(failure), "23514")
+          assert.strictEqual(postgresConstraint(failure), "orders_confirmation_metadata_check")
         }
       }),
     ),
@@ -443,12 +486,14 @@ it.effect.skipIf(databaseUrl === undefined)(
     withTemporaryDatabase(databaseUrl!, (client) =>
       Effect.gen(function* () {
         yield* runMigrations(client)
+
         const [tenant] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
           `,
         )
+
         for (const email of ["   ", "Alice@EXAMPLE.COM", " alice@example.com "]) {
           const failure = yield* postgresFailure(
             () =>
@@ -457,11 +502,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${tenant!.id}, 'Invalid Email Customer', ${email})
             `,
           )
-          assert.strictEqual((failure as { code?: string }).code, "23514")
-          assert.strictEqual(
-            (failure as { constraint_name?: string }).constraint_name,
-            "customers_email_normalization_check",
-          )
+
+          assert.strictEqual(postgresCode(failure), "23514")
+          assert.strictEqual(postgresConstraint(failure), "customers_email_normalization_check")
         }
       }),
     ),
@@ -474,6 +517,7 @@ it.effect.skipIf(databaseUrl === undefined)(
       Effect.gen(function* () {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
+
         const [tenantA, tenantB] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -482,6 +526,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             returning id
           `,
         )
+
         const authorizationLayer = makeAuthorizationTestLayer(
           [tenantA!.id, tenantB!.id].flatMap((tenantId) =>
             capabilities.map((capability) => ({
@@ -494,9 +539,11 @@ it.effect.skipIf(databaseUrl === undefined)(
 
         yield* Effect.gen(function* () {
           const authorization = yield* AuthorizationService
+
           const messaging = yield* makeMessagingService.pipe(
             Effect.provideService(Database, database),
           )
+
           const sales = yield* Effect.provide(
             makeSalesService,
             Layer.mergeAll(
@@ -505,12 +552,14 @@ it.effect.skipIf(databaseUrl === undefined)(
               Layer.succeed(MessagingService, messaging),
             ),
           )
+
           const customer = yield* sales.createCustomer({
             principal,
             tenantId: tenantA!.id,
             name: "Tenant A Customer",
             email: "tenant-a@example.test",
           })
+
           assert.instanceOf(
             yield* Effect.flip(
               sales.createOrder({
@@ -533,12 +582,14 @@ it.effect.skipIf(databaseUrl === undefined)(
     withTemporaryDatabase(databaseUrl!, (client) =>
       Effect.gen(function* () {
         yield* runMigrations(client)
+
         const [tenant] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
           `,
         )
+
         const [customer] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -547,6 +598,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             returning id
           `,
         )
+
         const nonDraftInsert = yield* postgresFailure(
           () =>
             client`
@@ -556,11 +608,10 @@ it.effect.skipIf(databaseUrl === undefined)(
               (${tenant!.id}, ${customer!.id}, 'confirmed', 'invalid-initial-state', now(), 0)
           `,
         )
-        assert.strictEqual((nonDraftInsert as { code?: string }).code, "23514")
-        assert.strictEqual(
-          (nonDraftInsert as { constraint_name?: string }).constraint_name,
-          "sales_order_state_transition_check",
-        )
+
+        assert.strictEqual(postgresCode(nonDraftInsert), "23514")
+        assert.strictEqual(postgresConstraint(nonDraftInsert), "sales_order_state_transition_check")
+
         const [order] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -569,6 +620,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             returning id
           `,
         )
+
         yield* Effect.promise(
           () =>
             client`
@@ -576,15 +628,17 @@ it.effect.skipIf(databaseUrl === undefined)(
             values (${tenant!.id}, ${order!.id}, ${uuidv7()}, 1, 10.00)
           `,
         )
+
         const invalidTransition = yield* postgresFailure(
           () =>
             client`
             update sales.orders set status = 'cancelled' where id = ${order!.id}
           `,
         )
-        assert.strictEqual((invalidTransition as { code?: string }).code, "23514")
+
+        assert.strictEqual(postgresCode(invalidTransition), "23514")
         assert.strictEqual(
-          (invalidTransition as { constraint_name?: string }).constraint_name,
+          postgresConstraint(invalidTransition),
           "sales_order_state_transition_check",
         )
         yield* Effect.promise(
@@ -608,7 +662,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           () => client`update sales.orders set total = 11.00 where id = ${order!.id}`,
         ]) {
           const failure = yield* postgresFailure(mutation)
-          assert.strictEqual((failure as { code?: string }).code, "23514")
+          assert.strictEqual(postgresCode(failure), "23514")
         }
 
         const [badOrder] = yield* Effect.promise(
@@ -619,6 +673,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             returning id
           `,
         )
+
         yield* Effect.promise(
           () =>
             client`
@@ -626,6 +681,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             values (${tenant!.id}, ${badOrder!.id}, ${uuidv7()}, 1, 11.00)
           `,
         )
+
         const inconsistent = yield* postgresFailure(() =>
           client.begin(async (transaction) => {
             await transaction`
@@ -642,9 +698,10 @@ it.effect.skipIf(databaseUrl === undefined)(
             await transaction`set constraints all immediate`
           }),
         )
-        assert.strictEqual((inconsistent as { code?: string }).code, "23514")
+
+        assert.strictEqual(postgresCode(inconsistent), "23514")
         assert.strictEqual(
-          (inconsistent as { constraint_name?: string }).constraint_name,
+          postgresConstraint(inconsistent),
           "sales_terminal_order_total_consistent",
         )
       }),

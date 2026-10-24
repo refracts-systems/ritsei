@@ -12,6 +12,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   () => {
     const role = `ritsei_pg19_probe_${uuidv7().replaceAll("-", "")}`
     const quotedRole = `"${role}"`
+
     return withTemporaryDatabase(databaseUrl!, (admin, temporaryDatabaseUrl) =>
       Effect.acquireUseRelease(
         Effect.promise(async () => {
@@ -20,6 +21,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           const roleUrl = new URL(temporaryDatabaseUrl)
           roleUrl.username = role
           roleUrl.password = password
+
           return postgres(roleUrl.toString(), { max: 1 })
         }),
         (client) =>
@@ -43,9 +45,11 @@ it.effect.skipIf(databaseUrl === undefined)(
                   (pg_control_system()).system_identifier::text as system_identifier,
                   (pg_control_checkpoint()).timeline_id as timeline_id
               `
+
               const [wait] = await client.unsafe<{ status: string }[]>(
                 "WAIT FOR LSN '0/0' WITH (MODE 'standby_replay', TIMEOUT '10ms', NO_THROW)",
               )
+
               return { identity, wait }
             },
             catch: (cause) => cause,

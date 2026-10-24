@@ -98,6 +98,7 @@ export function createConfigureLegalEntityMutation(
   afterSuccess?: (configuration: AccountingConfiguration) => void,
 ) {
   const client = useQueryClient()
+
   return useMutation<
     AccountingConfiguration,
     RequestFailure,
@@ -107,6 +108,7 @@ export function createConfigureLegalEntityMutation(
       runRequest(scope, configureLegalEntity(legalEntityId, input)),
     onSuccess: (configuration) => {
       afterSuccess?.(configuration)
+
       return invalidate(client, scope.tenantId)
     },
   }))
@@ -117,10 +119,12 @@ export function createConfigureRevenuePostingMutation(
   afterSuccess?: (profile: RevenuePostingProfile) => void,
 ) {
   const client = useQueryClient()
+
   return useMutation<RevenuePostingProfile, RequestFailure, ConfigureRevenuePostingInput>(() => ({
     mutationFn: (input) => runRequest(scope, configureRevenuePosting(input)),
     onSuccess: (profile) => {
       afterSuccess?.(profile)
+
       return invalidate(client, scope.tenantId)
     },
   }))
@@ -131,10 +135,12 @@ export function createOpenPeriodMutation(
   afterSuccess?: (period: AccountingPeriod) => void,
 ) {
   const client = useQueryClient()
+
   return useMutation<AccountingPeriod, RequestFailure, OpenPeriodInput>(() => ({
     mutationFn: (input) => runRequest(scope, openPeriod(input)),
     onSuccess: (period) => {
       afterSuccess?.(period)
+
       return invalidate(client, scope.tenantId)
     },
   }))
@@ -146,10 +152,12 @@ export function createClosePeriodMutation(
   afterSuccess?: (period: AccountingPeriod) => void,
 ) {
   const client = useQueryClient()
+
   return useMutation<AccountingPeriod, RequestFailure, ClosePeriodInput>(() => ({
     mutationFn: (input) => runRequest(scope, closePeriod(periodId, input)),
     onSuccess: (period) => {
       afterSuccess?.(period)
+
       return invalidate(client, scope.tenantId)
     },
   }))
@@ -157,10 +165,12 @@ export function createClosePeriodMutation(
 
 export function createAccountMutation(scope: ApiScope, afterSuccess?: (account: Account) => void) {
   const client = useQueryClient()
+
   return useMutation<Account, RequestFailure, CreateAccountInput>(() => ({
     mutationFn: (input) => runRequest(scope, createAccount(input)),
     onSuccess: (account) => {
       afterSuccess?.(account)
+
       return invalidate(client, scope.tenantId)
     },
   }))
@@ -171,10 +181,12 @@ export function createPostJournalMutation(
   afterSuccess?: (journal: JournalEntry) => void,
 ) {
   const client = useQueryClient()
+
   return useMutation<JournalEntry, RequestFailure, PostJournalInput>(() => ({
     mutationFn: (input) => runRequest(scope, postJournal(input)),
     onSuccess: (journal) => {
       afterSuccess?.(journal)
+
       return invalidate(client, scope.tenantId)
     },
   }))

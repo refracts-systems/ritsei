@@ -12,6 +12,7 @@ export const FINANCIAL_LEDGER_MAX_MINOR = (1n << 128n) - 1n
 
 /** Exact, non-negative major-unit amounts used by ERP/API contracts. */
 export const FinancialMajorAmount = Schema.String.check(Schema.isPattern(/^\d{1,18}(\.\d{1,2})?$/))
+
 export type FinancialMajorAmount = Schema.Schema.Type<typeof FinancialMajorAmount>
 
 export type FinancialAmountFailureReason =
@@ -40,14 +41,17 @@ export const majorToMinor = (value: string, exponent: number): FinancialAmountRe
   if (!validExponent(exponent)) return invalid("invalid_exponent")
 
   const match = decimalPattern.exec(value)
+
   if (match === null) return invalid("invalid_format")
 
   const whole = match[1]!
   const fraction = (match[2] ?? "").replace(/0+$/, "")
+
   if (fraction.length > exponent) return invalid("fractional_precision")
 
   const scale = 10n ** BigInt(exponent)
   const minor = BigInt(whole) * scale + BigInt(fraction.padEnd(exponent, "0") || "0")
+
   if (minor > FINANCIAL_LEDGER_MAX_MINOR) return invalid("overflow")
 
   return { ok: true, value: minor.toString() }
@@ -56,21 +60,27 @@ export const majorToMinor = (value: string, exponent: number): FinancialAmountRe
 /** Convert a schema-validated major amount to bigint at an invariant boundary. */
 export const requireExactMajorToMinor = (value: string, exponent: number): bigint => {
   const result = majorToMinor(value, exponent)
+
   if (!result.ok) throw new RangeError(`financial amount conversion failed: ${result.reason}`)
+
   return BigInt(result.value)
 }
 
 /** Convert an exact U128-compatible minor amount to a fixed-scale major string. */
 export const minorToMajor = (value: string, exponent: number): FinancialAmountResult<string> => {
   if (!validExponent(exponent)) return invalid("invalid_exponent")
+
   if (!minorPattern.test(value)) return invalid("invalid_format")
 
   const minor = BigInt(value)
+
   if (minor > FINANCIAL_LEDGER_MAX_MINOR) return invalid("overflow")
+
   if (exponent === 0) return { ok: true, value: minor.toString() }
 
   const digits = minor.toString().padStart(exponent + 1, "0")
   const point = digits.length - exponent
+
   return {
     ok: true,
     value: `${digits.slice(0, point)}.${digits.slice(point)}`,
@@ -81,7 +91,9 @@ export const minorToMajor = (value: string, exponent: number): FinancialAmountRe
 export const formatSignedMinor = (value: bigint, exponent: number): string => {
   const magnitude = value < 0n ? -value : value
   const result = minorToMajor(magnitude.toString(), exponent)
+
   if (!result.ok) throw new RangeError(`financial amount formatting failed: ${result.reason}`)
+
   return value < 0n ? `-${result.value}` : result.value
 }
 

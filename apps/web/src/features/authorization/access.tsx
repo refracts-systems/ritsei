@@ -1,6 +1,7 @@
+import * as Predicate from "effect/Predicate"
 import { useNavigate } from "@solidjs/router"
 import { createMemo, createSignal, Show, untrack, useContext } from "solid-js"
-import { failureMessage, type RequestFailure } from "../../shared/api.ts"
+import { failureMessage, type RequestFailure, definedFields } from "../../shared/api.ts"
 import type {
   Capability,
   CapabilityDefinition,
@@ -8,7 +9,7 @@ import type {
   TenantMembership,
   TenantMembershipStatus,
 } from "../../shared/contracts/generated/authorization.ts"
-import { QueryBoundary } from "../../shared/request-feedback.tsx"
+import { QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
 import { ApiRuntime } from "../../shared/runtime.ts"
 import { layout } from "../../ui/foundations/layout.ts"
 import { DataTable } from "../../ui/patterns/data-table.tsx"
@@ -37,10 +38,11 @@ const statusOptions = [
   { value: "active", label: "Active" },
   { value: "suspended", label: "Suspended" },
 ] as const
+
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 const requiredText = (value: FormValue[string]): string | null =>
-  typeof value === "string" && /\S/.test(value) ? value.trim() : null
+  Predicate.isString(value) && /\S/.test(value) ? value.trim() : null
 
 const capabilityLabel = (definition: CapabilityDefinition): string =>
   `${definition.owner} · ${definition.resource.replaceAll("_", " ")} · ${definition.verb.replaceAll(
@@ -68,6 +70,7 @@ function MutationFeedback(props: {
 
 function MembershipFilters(props: { search?: string; status?: TenantMembershipStatus }) {
   const navigate = useNavigate()
+
   return (
     <Form
       class={layout.row}
@@ -79,7 +82,9 @@ function MembershipFilters(props: { search?: string; status?: TenantMembershipSt
           const query = new URLSearchParams()
           const search = requiredText(value.search)
           const status = value.status
+
           if (search !== null) query.set("search", search)
+
           if (status === "active" || status === "suspended") query.set("status", status)
           navigate(query.size === 0 ? "/access" : `/access?${query}`)
         }
@@ -168,16 +173,19 @@ function MembershipTable(props: {
 
 // Fallow: this dialog intentionally combines scoped membership validation and command feedback.
 // fallow-ignore-next-line complexity
-function AddMembershipDialog(props: { reload: () => Promise<unknown> }) {
+function AddMembershipDialog(props: { reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const navigate = useNavigate()
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
+
   const mutation = createAddTenantMembershipMutation(scope, (membership) => {
     setOpen(false)
     navigate(`/access/${encodeURIComponent(membership.userAccountId)}`)
   })
+
   let accountInput: HTMLInputElement | undefined
+
   return (
     <Dialog
       open={open()}
@@ -195,11 +203,14 @@ function AddMembershipDialog(props: { reload: () => Promise<unknown> }) {
           (value) => {
             if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
             const userAccountId = requiredText(value.userAccountId)
+
             if (userAccountId === null || !uuidPattern.test(userAccountId)) {
               setInvalid(true)
               accountInput?.focus()
+
               return
             }
+
             setInvalid(false)
             mutation.mutate({ userAccountId })
           }
@@ -272,11 +283,12 @@ function ImpactDialog(props: {
   success: boolean
   error?: RequestFailure | null
   onConfirm: () => void
-  reload: () => Promise<unknown>
+  reload: () => Promise<void>
   reset: () => void
 }) {
   const [open, setOpen] = createSignal(false)
   const [acknowledged, setAcknowledged] = createSignal(false)
+
   return (
     <Dialog
       open={open()}
@@ -336,14 +348,15 @@ function ImpactDialog(props: {
 
 function MembershipLifecycle(props: {
   membership: TenantMembership
-  reloadDetail: () => Promise<unknown>
-  reloadAfterRemoval: () => Promise<unknown>
+  reloadDetail: () => Promise<void>
+  reloadAfterRemoval: () => Promise<void>
 }) {
   const scope = useContext(ApiRuntime)
   const navigate = useNavigate()
   const suspend = createSuspendTenantMembershipMutation(scope)
   const activate = createActivateTenantMembershipMutation(scope)
   const remove = createRemoveTenantMembershipMutation(scope, () => navigate("/access"))
+
   return (
     <section class={[surface(), layout.stack]} aria-labelledby="membership-commands-heading">
       <h3 id="membership-commands-heading">Membership commands</h3>
@@ -409,6 +422,7 @@ function CapabilityGrantTable(props: {
   membershipStatus: TenantMembershipStatus
 }) {
   const definitions = createMemo(() => new Map(props.definitions.map((item) => [item.id, item])))
+
   return (
     <Show
       when={props.grants.length > 0}
@@ -429,6 +443,7 @@ function CapabilityGrantTable(props: {
             header: "Business action",
             cell: (grant) => {
               const definition = definitions().get(grant.capability)
+
               return definition ? capabilityLabel(definition) : "Catalog unavailable"
             },
           },
@@ -454,7 +469,7 @@ function GrantCapabilityDialog(props: {
   membership: TenantMembership
   grants: readonly DirectCapabilityGrant[]
   definitions: readonly CapabilityDefinition[]
-  reload: () => Promise<unknown>
+  reload: () => Promise<void>
 }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
@@ -462,12 +477,15 @@ function GrantCapabilityDialog(props: {
   const [acknowledged, setAcknowledged] = createSignal(false)
   const mutation = createGrantCapabilityMutation(scope, () => setOpen(false))
   const granted = createMemo(() => new Set(props.grants.map((grant) => grant.capability)))
+
   const publicDefinitions = createMemo(() =>
     props.definitions.filter((definition) => definition.stability === "PUBLIC"),
   )
+
   const selected = createMemo(() =>
     publicDefinitions().find((definition) => definition.id === capability()),
   )
+
   const options = createMemo(() =>
     publicDefinitions().map((definition) => ({
       value: definition.id,
@@ -477,6 +495,7 @@ function GrantCapabilityDialog(props: {
       disabled: granted().has(definition.id),
     })),
   )
+
   return (
     <Dialog
       open={open()}
@@ -498,6 +517,7 @@ function GrantCapabilityDialog(props: {
               placeholder="Choose capability"
               value={capability()}
               disabled={mutation.isPending}
+              // SAFETY: the select offers only capabilities and the empty choice.
               onChange={(event) => setCapability(event.currentTarget.value as Capability | "")}
             />
           )}
@@ -562,6 +582,7 @@ function GrantCapabilityDialog(props: {
           }
           onClick={() => {
             const selectedCapability = capability()
+
             if (selectedCapability === "") return
             mutation.mutate({
               userAccountId: props.membership.userAccountId,
@@ -578,15 +599,16 @@ function GrantCapabilityDialog(props: {
 
 function MembershipDetail(props: {
   userAccountId: string
-  reloadMemberships: () => Promise<unknown>
+  reloadMemberships: () => Promise<void>
 }) {
   const scope = useContext(ApiRuntime)
   const id = untrack(() => props.userAccountId)
   const membership = createTenantMembershipQuery(scope, id)
   const grants = createDirectCapabilityGrantsQuery(scope, id)
   const definitions = createCapabilityDefinitionsQuery(scope)
-  const reloadDetail = () => Promise.all([membership.refetch(), grants.refetch()])
+  const reloadDetail = () => reloaded(Promise.all([membership.refetch(), grants.refetch()]))
   const reloadAfterRemoval = () => props.reloadMemberships().then(() => undefined)
+
   return (
     <section class={layout.stack} aria-labelledby="access-detail-heading">
       <div class={layout.row}>
@@ -595,7 +617,7 @@ function MembershipDetail(props: {
           Reload access
         </Button>
       </div>
-      <QueryBoundary label="membership" retry={() => membership.refetch()}>
+      <QueryBoundary label="membership" retry={() => reloaded(membership.refetch())}>
         <Show when={membership.data} keyed>
           {(member) => (
             <div class={layout.stack}>
@@ -644,7 +666,7 @@ function MembershipDetail(props: {
                 </div>
                 <QueryBoundary
                   label="permissions"
-                  retry={() => Promise.all([grants.refetch(), definitions.refetch()])}
+                  retry={() => reloaded(Promise.all([grants.refetch(), definitions.refetch()]))}
                 >
                   <CapabilityGrantTable
                     grants={grants.data}
@@ -659,7 +681,7 @@ function MembershipDetail(props: {
                       membership={member}
                       grants={grants.data}
                       definitions={definitions.data}
-                      reload={() => Promise.all([grants.refetch(), membership.refetch()])}
+                      reload={() => reloaded(Promise.all([grants.refetch(), membership.refetch()]))}
                     />
                   </Show>
                 </QueryBoundary>
@@ -695,11 +717,13 @@ export function Access(props: {
   const selectedUserAccountId = untrack(() => props.selectedUserAccountId)
   const search = untrack(() => props.search)
   const status = untrack(() => props.status)
+
   const query = createTenantMembershipsQuery(scope, {
-    ...(search === undefined ? {} : { search }),
-    ...(status === undefined ? {} : { status }),
+    ...definedFields({ search }),
+    ...definedFields({ status }),
     limit: 200,
   })
+
   return (
     <EntityWorkspace
       title="Access"
@@ -711,7 +735,7 @@ export function Access(props: {
       }
       headerActions={
         <div class={layout.row}>
-          <AddMembershipDialog reload={() => query.refetch()} />
+          <AddMembershipDialog reload={() => reloaded(query.refetch())} />
           <Button type="button" onClick={() => void query.refetch()}>
             Reload memberships
           </Button>
@@ -722,12 +746,12 @@ export function Access(props: {
         selectedUserAccountId ? (
           <MembershipDetail
             userAccountId={selectedUserAccountId}
-            reloadMemberships={() => query.refetch()}
+            reloadMemberships={() => reloaded(query.refetch())}
           />
         ) : undefined
       }
     >
-      <QueryBoundary label="memberships" retry={() => query.refetch()}>
+      <QueryBoundary label="memberships" retry={() => reloaded(query.refetch())}>
         <Show
           when={query.data.length > 0}
           fallback={<p role="status">No tenant memberships match this search or status.</p>}

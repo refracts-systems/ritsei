@@ -43,6 +43,7 @@ function MotionDemo() {
 
 function ButtonStateDemo() {
   const [active, setActive] = createSignal(false)
+
   return (
     <div class={layout.stack}>
       <Button
@@ -155,6 +156,7 @@ const meta = {
 } satisfies Meta<typeof FoundationsStory>
 
 export default meta
+
 type Story = StoryObj<typeof meta>
 
 export const Overview: Story = {}

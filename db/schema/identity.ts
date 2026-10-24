@@ -10,7 +10,9 @@ export const userAccounts = identitySchema.table(
   {
     id: id(),
     email: text("email").notNull(),
-    status: text("status").notNull().default("active"),
+    status: text("status", { enum: ["active", "disabled"] })
+      .notNull()
+      .default("active"),
     disabledAt: timestamp("disabled_at", { withTimezone: true }),
     sessionInvalidatedAt: timestamp("session_invalidated_at", { withTimezone: true }),
     createdAt: createdAt(),

@@ -9,6 +9,7 @@ import {
   WorkloadAdmissionConfigurationInvalid,
   WorkloadAdmissionRejected,
 } from "../mod.ts"
+import { partial } from "../../../../tests/support/partial.ts"
 
 const command = {
   workloadClass: "command" as const,
@@ -43,7 +44,7 @@ const asyncWork = {
   admissionScope: "route" as const,
 }
 
-const rejectionReason = (error: unknown) =>
+const rejectionReason = <E>(error: E) =>
   error instanceof WorkloadAdmissionRejected ? error.reason : undefined
 
 describe("workload classification", () => {
@@ -64,7 +65,10 @@ describe("workload classification", () => {
         { ...command, workloadClass: "workload-cell" },
         { ...query, pool: "command" },
       ]) {
-        const result = yield* Effect.result(classifyWorkload(invalid))
+        const result = yield* Effect.result(
+          classifyWorkload(partial<Parameters<typeof classifyWorkload>[0]>()(invalid)),
+        )
+
         assert.strictEqual(result._tag, "Failure")
       }
     }),
@@ -112,12 +116,15 @@ describe("workload admission", () => {
   it.effect("rejects costs above each pool's hard ceiling", () =>
     Effect.gen(function* () {
       const admission = yield* makeWorkloadAdmission({ commandReserve: 2, competingHardLimit: 2 })
+
       const oversizedCommand = yield* Effect.flip(
         Effect.scoped(admission.admit({ ...command, estimatedCost: 3 })),
       )
+
       const oversizedQuery = yield* Effect.flip(
         Effect.scoped(admission.admit({ ...query, estimatedCost: 3 })),
       )
+
       assert.strictEqual(rejectionReason(oversizedCommand), "cost_above_hard_limit")
       assert.strictEqual(rejectionReason(oversizedQuery), "cost_above_hard_limit")
       assert.deepStrictEqual(yield* admission.available, {
@@ -130,9 +137,11 @@ describe("workload admission", () => {
   it.effect("returns capacity when the holding fiber is interrupted", () =>
     Effect.gen(function* () {
       const admission = yield* makeWorkloadAdmission({ commandReserve: 1, competingHardLimit: 1 })
+
       const holder = yield* Effect.forkChild(
         Effect.scoped(Effect.andThen(admission.admit(command), Effect.never)),
       )
+
       yield* Effect.yieldNow
       assert.strictEqual((yield* admission.available).commandReserve, 0)
 

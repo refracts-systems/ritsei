@@ -97,10 +97,12 @@ export function createSupplierAccountMutation(
   afterSuccess?: (account: SupplierAccount) => void,
 ) {
   const client = useQueryClient()
+
   return useMutation<SupplierAccount, RequestFailure, CreateSupplierAccountInput>(() => ({
     mutationFn: (input) => runRequest(scope, createSupplierAccount(input)),
     onSuccess: (account) => {
       afterSuccess?.(account)
+
       return invalidateSupplierAccounts(client, scope.tenantId)
     },
   }))
@@ -111,10 +113,12 @@ export function createPurchaseOrderMutation(
   afterSuccess?: (order: PurchaseOrder) => void,
 ) {
   const client = useQueryClient()
+
   return useMutation<PurchaseOrder, RequestFailure, CreatePurchaseOrderInput>(() => ({
     mutationFn: (input) => runRequest(scope, createPurchaseOrder(input)),
     onSuccess: (order) => {
       afterSuccess?.(order)
+
       return Promise.all([
         invalidatePurchaseOrders(client, scope.tenantId),
         invalidateSupplierAccounts(client, scope.tenantId),
@@ -128,11 +132,13 @@ export function createConfirmPurchaseOrderMutation(
   afterSuccess?: (order: PurchaseOrder) => void,
 ) {
   const client = useQueryClient()
+
   return useMutation<PurchaseOrder, RequestFailure, { id: string; idempotencyKey: string }>(() => ({
     mutationFn: ({ id, idempotencyKey }) =>
       runRequest(scope, confirmPurchaseOrder(id, { idempotencyKey })),
     onSuccess: (order) => {
       afterSuccess?.(order)
+
       return Promise.all([
         invalidatePurchaseOrders(client, scope.tenantId),
         invalidatePurchaseOrder(client, scope.tenantId, order.id),
@@ -146,10 +152,12 @@ export function createCancelPurchaseOrderMutation(
   afterSuccess?: (order: PurchaseOrder) => void,
 ) {
   const client = useQueryClient()
+
   return useMutation<PurchaseOrder, RequestFailure, { id: string }>(() => ({
     mutationFn: ({ id }) => runRequest(scope, cancelPurchaseOrder(id)),
     onSuccess: (order) => {
       afterSuccess?.(order)
+
       return Promise.all([
         invalidatePurchaseOrders(client, scope.tenantId),
         invalidatePurchaseOrder(client, scope.tenantId, order.id),
@@ -163,11 +171,13 @@ export function createReceivePurchaseOrderMutation(
   afterSuccess?: (receipt: GoodsReceipt) => void,
 ) {
   const client = useQueryClient()
+
   return useMutation<GoodsReceipt, RequestFailure, { id: string } & ReceivePurchaseOrderInput>(
     () => ({
       mutationFn: ({ id, ...input }) => runRequest(scope, receivePurchaseOrder(id, input)),
       onSuccess: (receipt) => {
         afterSuccess?.(receipt)
+
         return Promise.all([
           invalidatePurchaseReceipts(client, scope.tenantId, receipt.purchaseOrderId),
           invalidatePurchaseOrder(client, scope.tenantId, receipt.purchaseOrderId),

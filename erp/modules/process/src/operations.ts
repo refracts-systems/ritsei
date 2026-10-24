@@ -1,5 +1,6 @@
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import * as Match from "effect/Match"
 
 import type { ProcessCheckpoint, ProcessStepExecution } from "./runtime.ts"
 
@@ -7,6 +8,7 @@ const Uuid = Schema.String.check(Schema.isUUID())
 const NonEmptyString = Schema.String.check(Schema.isPattern(/\S/))
 
 export const ProcessOperatorAction = Schema.Literals(["retry", "compensate", "manual_recovery"])
+
 export const ProcessCompensationStatus = Schema.Literals([
   "not_started",
   "in_progress",
@@ -73,20 +75,21 @@ const lastStep = (checkpoint: ProcessCheckpoint): ProcessStepExecution | undefin
 const compensationStatus = (
   step: ProcessStepExecution | undefined,
 ): Schema.Schema.Type<typeof ProcessCompensationStatus> =>
-  step?.status === "compensation_started"
-    ? "in_progress"
-    : step?.status === "compensation_succeeded"
-      ? "succeeded"
-      : step?.status === "manual_recovery_required"
-        ? "manual_recovery"
-        : "not_started"
+  Match.value(step?.status).pipe(
+    Match.when("compensation_started", () => "in_progress" as const),
+    Match.when("compensation_succeeded", () => "succeeded" as const),
+    Match.when("manual_recovery_required", () => "manual_recovery" as const),
+    Match.orElse(() => "not_started" as const),
+  )
 
 const replaceLastStep = (
   checkpoint: ProcessCheckpoint,
   status: ProcessStepExecution["status"],
 ): ProcessCheckpoint => {
   const current = lastStep(checkpoint)
+
   if (current === undefined) return checkpoint
+
   return {
     ...checkpoint,
     revision: checkpoint.revision + 1,
@@ -99,6 +102,7 @@ export const makeProcessOperatorService = (): ProcessOperatorService => ({
     const step = lastStep(checkpoint)
     const retryable = step?.status === "retry_scheduled"
     const compensation = compensationStatus(step)
+
     return {
       instanceId: checkpoint.instanceId,
       status: checkpoint.status,
@@ -120,6 +124,7 @@ export const makeProcessOperatorService = (): ProcessOperatorService => ({
 
   retry: (checkpoint) => {
     const step = lastStep(checkpoint)
+
     return step?.status === "retry_scheduled"
       ? Effect.succeed({ ...replaceLastStep(checkpoint, "command_requested"), status: "running" })
       : Effect.fail(
@@ -132,6 +137,7 @@ export const makeProcessOperatorService = (): ProcessOperatorService => ({
 
   startCompensation: (checkpoint) => {
     const step = lastStep(checkpoint)
+
     return step?.status === "command_succeeded"
       ? Effect.succeed({
           ...replaceLastStep(checkpoint, "compensation_started"),
@@ -147,6 +153,7 @@ export const makeProcessOperatorService = (): ProcessOperatorService => ({
 
   requireManualRecovery: (checkpoint) => {
     const step = lastStep(checkpoint)
+
     return step === undefined
       ? Effect.fail(
           new ProcessOperatorActionUnavailable({

@@ -8,5 +8,6 @@ import { makeProductServiceFromStore } from "./service.ts"
 
 export const makeProductService = makeProductServiceFromStore(makeProductPostgresStore())
 export const ProductLive = Layer.effect(ProductService, makeProductService)
+
 export const makeProductTestLayer = () =>
   Layer.effect(ProductService, makeProductServiceFromStore(Effect.sync(makeProductMemoryStore)))

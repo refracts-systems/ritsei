@@ -9,7 +9,7 @@ import type {
   ProcessRuntimeInstance,
   ProcessWorkflowRun,
 } from "../../apps/web/src/shared/contracts/generated/process.ts"
-import { builtApp, connectToTenant } from "./browser.ts"
+import { builtApp, connectToTenant, notFoundBody } from "./browser.ts"
 
 const tenantId = "01930000-0000-7000-8000-000000000001"
 const definitionId = "018f3f77-0c5a-7cc0-8b62-6a163d214123"
@@ -18,7 +18,7 @@ const workflowId = "01930000-0000-7000-8000-000000000012"
 const controlId = "01930000-0000-7000-8000-000000000013"
 const jobId = "01930000-0000-7000-8000-000000000014"
 
-const fulfillJson = (route: Route, status: number, body: unknown) =>
+const fulfillJson = <Body>(route: Route, status: number, body: Body) =>
   route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) })
 
 const connectAndOpenProcessStudio = async (page: Page, url: string) => {
@@ -110,6 +110,7 @@ it.effect(
       let runtime = makeRuntime()
       let inboxRuntime: ProcessRuntimeInstance[] = [runtime]
       let controls: ProcessOperatorControl[] = []
+
       const requests: Array<{
         path: string
         method: string
@@ -129,21 +130,27 @@ it.effect(
           requests.push({ path, method, headers: request.headers(), body })
 
           if (path === "/user-accounts" && method === "GET") return fulfillJson(route, 200, [])
+
           if (path === "/process/catalog" && method === "GET") {
             return fulfillJson(route, 200, [catalog])
           }
+
           if (path === "/process/runtime" && method === "GET") {
             return fulfillJson(route, 200, [runtime])
           }
+
           if (path === "/process/workflow-runs" && method === "GET") {
             return fulfillJson(route, 200, [workflow])
           }
+
           if (path === "/process/inbox" && method === "GET") {
             return fulfillJson(route, 200, { runtimeInstances: inboxRuntime, jobs: [job] })
           }
+
           if (path === "/process/operator-controls" && method === "GET") {
             return fulfillJson(route, 200, controls)
           }
+
           if (path === "/process/definitions/validate" && method === "POST") {
             return fulfillJson(route, 200, {
               status: "VALIDATED",
@@ -153,6 +160,7 @@ it.effect(
               references: body.references,
             })
           }
+
           if (path === `/process/runtime/${instanceId}/operator-controls` && method === "POST") {
             runtime = makeRuntime({
               status: "running",
@@ -175,9 +183,11 @@ it.effect(
                 createdAt: "2026-09-13T12:03:00.000Z",
               },
             ]
+
             return fulfillJson(route, 200, runtime)
           }
-          return fulfillJson(route, 404, { _tag: "ApiNotFound", code: "not_found" })
+
+          return fulfillJson(route, 404, notFoundBody())
         })
 
         await connectAndOpenProcessStudio(page, url)

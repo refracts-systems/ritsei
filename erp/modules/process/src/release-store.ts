@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm"
 import * as Context from "effect/Context"
+import * as Data from "effect/Data"
 import * as Effect from "effect/Effect"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
@@ -31,6 +32,7 @@ export const ProcessReleaseInput = Schema.Struct({
   approvalReason: NonEmptyString,
   releasedBy: NonEmptyString,
 })
+
 export type ProcessReleaseInput = Schema.Schema.Type<typeof ProcessReleaseInput>
 
 export const ProcessDeploymentInput = Schema.Struct({
@@ -40,6 +42,7 @@ export const ProcessDeploymentInput = Schema.Struct({
   deployedBy: NonEmptyString,
   promotionReason: NonEmptyString,
 })
+
 export type ProcessDeploymentInput = Schema.Schema.Type<typeof ProcessDeploymentInput>
 
 export const ProcessReleaseArtifact = Schema.Struct({
@@ -55,6 +58,7 @@ export const ProcessReleaseArtifact = Schema.Struct({
   approvalReason: NonEmptyString,
   createdAt: NonEmptyString,
 })
+
 export type ProcessReleaseArtifact = Schema.Schema.Type<typeof ProcessReleaseArtifact>
 
 export const ProcessDeployment = Schema.Struct({
@@ -66,6 +70,7 @@ export const ProcessDeployment = Schema.Struct({
   promotionReason: NonEmptyString,
   createdAt: NonEmptyString,
 })
+
 export type ProcessDeployment = Schema.Schema.Type<typeof ProcessDeployment>
 
 export class ProcessReleaseConflict extends Schema.TaggedError<ProcessReleaseConflict>()(
@@ -95,13 +100,13 @@ export class ProcessReleaseNotFound extends Schema.TaggedError<ProcessReleaseNot
 // deployment binding is a separate append-only record so DEV, TEST, and PROD promotion stay explicit.
 export interface ProcessReleaseStore {
   readonly release: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ProcessReleaseInput>,
   ) => Effect.Effect<
     ProcessReleaseArtifact,
     ProcessReleaseConflict | DatabaseFailure | Schema.SchemaError
   >
   readonly deploy: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ProcessDeploymentInput>,
   ) => Effect.Effect<
     ProcessDeployment,
     ProcessDeploymentConflict | ProcessReleaseNotFound | DatabaseFailure | Schema.SchemaError
@@ -157,9 +162,12 @@ const sameRelease = (release: ProcessReleaseArtifact, input: ProcessReleaseInput
   release.approvalReason === input.approvalReason &&
   release.releasedBy === input.releasedBy
 
-type ReleaseRecord =
-  | { readonly _tag: "Recorded"; readonly release: ProcessReleaseArtifact }
-  | { readonly _tag: "Conflict" }
+type ReleaseRecord = Data.TaggedEnum<{
+  Recorded: { readonly release: ProcessReleaseArtifact }
+  Conflict: {}
+}>
+
+const ReleaseRecord = Data.taggedEnum<ReleaseRecord>()
 
 const recordRelease = async (
   transaction: DrizzleTransaction,
@@ -176,10 +184,15 @@ const recordRelease = async (
       ),
     )
     .for("update")
+
   const existing = existingRows[0]
+
   if (existing !== undefined) {
     const release = toRelease(existing)
-    return sameRelease(release, input) ? { _tag: "Recorded", release } : { _tag: "Conflict" }
+
+    return sameRelease(release, input)
+      ? ReleaseRecord.Recorded({ release })
+      : ReleaseRecord.Conflict()
   }
 
   const rows = await transaction
@@ -197,6 +210,7 @@ const recordRelease = async (
       releasedBy: input.releasedBy,
     })
     .returning()
+
   const release = toRelease(rows[0]!)
   await transaction.insert(processReleaseAudits).values([
     {
@@ -218,13 +232,17 @@ const recordRelease = async (
       reason: "immutable release artifact created",
     },
   ])
-  return { _tag: "Recorded", release }
+
+  return ReleaseRecord.Recorded({ release })
 }
 
-type DeploymentRecord =
-  | { readonly _tag: "Recorded"; readonly deployment: ProcessDeployment }
-  | { readonly _tag: "Conflict" }
-  | { readonly _tag: "MissingRelease" }
+type DeploymentRecord = Data.TaggedEnum<{
+  Recorded: { readonly deployment: ProcessDeployment }
+  Conflict: {}
+  MissingRelease: {}
+}>
+
+const DeploymentRecord = Data.taggedEnum<DeploymentRecord>()
 
 const recordDeployment = async (
   transaction: DrizzleTransaction,
@@ -237,7 +255,8 @@ const recordDeployment = async (
       and(eq(processReleases.tenantId, input.tenantId), eq(processReleases.id, input.releaseId)),
     )
     .for("update")
-  if (releaseRows[0] === undefined) return { _tag: "MissingRelease" }
+
+  if (releaseRows[0] === undefined) return DeploymentRecord.MissingRelease()
 
   const existingRows = await transaction
     .select()
@@ -250,13 +269,16 @@ const recordDeployment = async (
       ),
     )
     .for("update")
+
   const existing = existingRows[0]
+
   if (existing !== undefined) {
     const deployment = toDeployment(existing)
+
     return deployment.deployedBy === input.deployedBy &&
       deployment.promotionReason === input.promotionReason
-      ? { _tag: "Recorded", deployment }
-      : { _tag: "Conflict" }
+      ? DeploymentRecord.Recorded({ deployment })
+      : DeploymentRecord.Conflict()
   }
 
   const rows = await transaction
@@ -270,6 +292,7 @@ const recordDeployment = async (
       promotionReason: input.promotionReason,
     })
     .returning()
+
   const deployment = toDeployment(rows[0]!)
   await transaction.insert(processReleaseAudits).values({
     id: uuidv7(),
@@ -280,23 +303,27 @@ const recordDeployment = async (
     environment: input.environment,
     reason: input.promotionReason,
   })
-  return { _tag: "Recorded", deployment }
+
+  return DeploymentRecord.Recorded({ deployment })
 }
 
 export const makePostgresProcessReleaseStore = Effect.gen(function* () {
   const database = yield* Database
+
   return {
-    release: (input: unknown) =>
+    release: (input: Schema.Codec.Encoded<typeof ProcessReleaseInput>) =>
       Effect.gen(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(ProcessReleaseInput)(input)
+
         const result = yield* database
           .transaction(
             (transaction) => recordRelease(transaction, decoded),
             "process.release.create",
           )
           .pipe(Effect.result)
+
         if (Result.isSuccess(result)) {
-          return result.success._tag === "Recorded"
+          return ReleaseRecord.$is("Recorded")(result.success)
             ? result.success.release
             : yield* Effect.fail(
                 new ProcessReleaseConflict({
@@ -306,6 +333,7 @@ export const makePostgresProcessReleaseStore = Effect.gen(function* () {
                 }),
               )
         }
+
         if (isDatabaseConstraint(result.failure, "process_releases_tenant_definition_key")) {
           return yield* Effect.fail(
             new ProcessReleaseConflict({
@@ -315,20 +343,24 @@ export const makePostgresProcessReleaseStore = Effect.gen(function* () {
             }),
           )
         }
+
         return yield* Effect.fail(result.failure)
       }),
-    deploy: (input: unknown) =>
+    deploy: (input: Schema.Codec.Encoded<typeof ProcessDeploymentInput>) =>
       Effect.gen(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(ProcessDeploymentInput)(input)
+
         const result = yield* database
           .transaction(
             (transaction) => recordDeployment(transaction, decoded),
             "process.release.deploy",
           )
           .pipe(Effect.result)
+
         if (Result.isSuccess(result)) {
-          if (result.success._tag === "Recorded") return result.success.deployment
-          if (result.success._tag === "MissingRelease") {
+          if (DeploymentRecord.$is("Recorded")(result.success)) return result.success.deployment
+
+          if (DeploymentRecord.$is("MissingRelease")(result.success)) {
             return yield* Effect.fail(
               new ProcessReleaseNotFound({
                 tenantId: decoded.tenantId,
@@ -336,6 +368,7 @@ export const makePostgresProcessReleaseStore = Effect.gen(function* () {
               }),
             )
           }
+
           return yield* Effect.fail(
             new ProcessDeploymentConflict({
               tenantId: decoded.tenantId,
@@ -344,6 +377,7 @@ export const makePostgresProcessReleaseStore = Effect.gen(function* () {
             }),
           )
         }
+
         if (
           isDatabaseConstraint(result.failure, "process_deployments_tenant_release_environment_key")
         ) {
@@ -355,6 +389,7 @@ export const makePostgresProcessReleaseStore = Effect.gen(function* () {
             }),
           )
         }
+
         return yield* Effect.fail(result.failure)
       }),
   } satisfies ProcessReleaseStore
@@ -363,14 +398,17 @@ export const makePostgresProcessReleaseStore = Effect.gen(function* () {
 export const makeMemoryProcessReleaseStore = (): ProcessReleaseStore => {
   const releases = new Map<string, ProcessReleaseArtifact>()
   const deployments = new Map<string, ProcessDeployment>()
+
   return {
     release: (input) =>
       Effect.gen(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(ProcessReleaseInput)(input)
         const key = `${decoded.tenantId}:${decoded.validation.definitionId}:${decoded.validation.definitionVersion}`
         const existing = releases.get(key)
+
         if (existing !== undefined) {
           if (sameRelease(existing, decoded)) return existing
+
           return yield* Effect.fail(
             new ProcessReleaseConflict({
               tenantId: decoded.tenantId,
@@ -379,6 +417,7 @@ export const makeMemoryProcessReleaseStore = (): ProcessReleaseStore => {
             }),
           )
         }
+
         const release: ProcessReleaseArtifact = {
           id: uuidv7(),
           tenantId: decoded.tenantId,
@@ -392,16 +431,20 @@ export const makeMemoryProcessReleaseStore = (): ProcessReleaseStore => {
           approvalReason: decoded.approvalReason,
           createdAt: new Date().toISOString(),
         }
+
         releases.set(key, release)
+
         return release
       }),
     deploy: (input) =>
       Effect.gen(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(ProcessDeploymentInput)(input)
+
         const release = [...releases.values()].find(
           (candidate) =>
             candidate.id === decoded.releaseId && candidate.tenantId === decoded.tenantId,
         )
+
         if (release === undefined) {
           return yield* Effect.fail(
             new ProcessReleaseNotFound({
@@ -410,14 +453,17 @@ export const makeMemoryProcessReleaseStore = (): ProcessReleaseStore => {
             }),
           )
         }
+
         const key = `${decoded.tenantId}:${decoded.releaseId}:${decoded.environment}`
         const existing = deployments.get(key)
+
         if (existing !== undefined) {
           if (
             existing.deployedBy === decoded.deployedBy &&
             existing.promotionReason === decoded.promotionReason
           )
             return existing
+
           return yield* Effect.fail(
             new ProcessDeploymentConflict({
               tenantId: decoded.tenantId,
@@ -426,6 +472,7 @@ export const makeMemoryProcessReleaseStore = (): ProcessReleaseStore => {
             }),
           )
         }
+
         const deployment: ProcessDeployment = {
           id: uuidv7(),
           tenantId: decoded.tenantId,
@@ -435,7 +482,9 @@ export const makeMemoryProcessReleaseStore = (): ProcessReleaseStore => {
           promotionReason: decoded.promotionReason,
           createdAt: new Date().toISOString(),
         }
+
         deployments.set(key, deployment)
+
         return deployment
       }),
   }

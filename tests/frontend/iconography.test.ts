@@ -23,11 +23,13 @@ it.effect("keeps the committed icon sprite in sync with the registry", () =>
       "\r\n",
       "\n",
     )
+
     assert.deepEqual(
       yield* Effect.promise(readRegistryGlyphs),
       [...new Set(Object.values(iconRegistry))].toSorted(),
     )
     assert.equal(committed, yield* Effect.promise(buildSprite))
+
     for (const glyph of new Set(Object.values(iconRegistry))) {
       assert.include(committed, `id="ph-${glyph}"`)
       assert.include(committed, `id="ph-${glyph}-fill"`)

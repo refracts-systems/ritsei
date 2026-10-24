@@ -3,7 +3,7 @@ import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import type { Page, Route } from "playwright"
 import type { SalesOrder } from "../../apps/web/src/shared/contracts/generated/sales.ts"
-import { builtApp, connectToTenant } from "./browser.ts"
+import { builtApp, connectToTenant, notFoundBody } from "./browser.ts"
 
 const tenantId = "01910000-0000-7000-8000-000000000010"
 const customerId = "01910000-0000-7000-8000-000000000011"
@@ -17,6 +17,7 @@ const customer = {
   name: "Northwind Customer",
   email: "northwind@example.test",
 }
+
 const quotation = {
   id: quotationId,
   tenantId,
@@ -24,6 +25,7 @@ const quotation = {
   status: "draft" as const,
   total: "25.00",
 }
+
 const draftOrder: SalesOrder = {
   id: orderId,
   tenantId,
@@ -35,7 +37,7 @@ const draftOrder: SalesOrder = {
   lines: [{ itemId, quantity: "2", unitPrice: "12.50" }],
 }
 
-const fulfillJson = (route: Route, status: number, body: unknown) =>
+const fulfillJson = <Body>(route: Route, status: number, body: Body) =>
   route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) })
 
 const connectAndOpenSales = async (page: Page, url: string) => {
@@ -49,9 +51,10 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const { page, url, errors } = yield* builtApp
-      let customers = [] as (typeof customer)[]
-      let quotations = [] as (typeof quotation)[]
+      let customers = new Array<typeof customer>()
+      let quotations = new Array<typeof quotation>()
       let currentOrder: SalesOrder | undefined
+
       const requests: Array<{
         path: string
         method: string
@@ -71,8 +74,10 @@ it.effect(
           requests.push({ path, method, headers: request.headers(), body })
 
           if (path === "/user-accounts" && method === "GET") return fulfillJson(route, 200, [])
+
           if (path === "/sales/customers" && method === "GET") {
             const search = requestUrl.searchParams.get("search")?.toLowerCase()
+
             return fulfillJson(
               route,
               200,
@@ -84,6 +89,7 @@ it.effect(
               ),
             )
           }
+
           if (path === "/sales/customers" && method === "POST") {
             customers = [
               {
@@ -92,24 +98,32 @@ it.effect(
                 email: body.email.trim().toLowerCase(),
               },
             ]
+
             return fulfillJson(route, 201, customers[0])
           }
+
           if (path === `/sales/customers/${customerId}` && method === "GET") {
             return fulfillJson(route, 200, customer)
           }
+
           if (path === "/sales/quotations" && method === "GET") {
             return fulfillJson(route, 200, quotations)
           }
+
           if (path === "/sales/quotations" && method === "POST") {
             quotations = [{ ...quotation, customerId: body.customerId, total: body.total }]
+
             return fulfillJson(route, 201, quotations[0])
           }
+
           if (path === `/sales/quotations/${quotationId}` && method === "GET") {
             return fulfillJson(route, 200, quotation)
           }
+
           if (path === "/sales/orders" && method === "GET") {
             return fulfillJson(route, 200, currentOrder === undefined ? [] : [currentOrder])
           }
+
           if (path === "/sales/orders" && method === "POST") {
             currentOrder = {
               ...draftOrder,
@@ -118,24 +132,31 @@ it.effect(
               lines: body.lines,
               total: "25.00",
             }
+
             return fulfillJson(route, 201, currentOrder)
           }
+
           if (path === `/sales/orders/${orderId}` && method === "GET") {
             return fulfillJson(route, 200, currentOrder ?? draftOrder)
           }
+
           if (path === `/sales/orders/${orderId}/confirm` && method === "POST") {
             currentOrder = {
               ...(currentOrder ?? draftOrder),
               status: "confirmed",
               confirmedAt: "2026-09-13T12:00:00.000Z",
             }
+
             return fulfillJson(route, 200, currentOrder)
           }
+
           if (path === `/sales/orders/${orderId}/cancel` && method === "POST") {
             currentOrder = { ...(currentOrder ?? draftOrder), status: "cancelled" }
+
             return fulfillJson(route, 200, currentOrder)
           }
-          return fulfillJson(route, 404, { _tag: "ApiNotFound", code: "not_found" })
+
+          return fulfillJson(route, 404, notFoundBody())
         })
 
         await connectAndOpenSales(page, url)

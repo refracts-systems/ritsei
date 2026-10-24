@@ -4,4 +4,5 @@ import { makeMessagingTestLayer } from "./memory.ts"
 import { makePostgresMessagingService } from "./postgres.ts"
 
 export const MessagingLive = Layer.effect(MessagingService, makePostgresMessagingService)
+
 export { makeMessagingTestLayer }

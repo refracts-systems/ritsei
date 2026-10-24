@@ -12,7 +12,9 @@ export const tenantMemberships = authorizationSchema.table(
   {
     userAccountId: uuid("user_account_id").notNull(),
     tenantId: uuid("tenant_id").notNull(),
-    status: text("status").notNull().default("active"),
+    status: text("status", { enum: ["active", "suspended"] })
+      .notNull()
+      .default("active"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

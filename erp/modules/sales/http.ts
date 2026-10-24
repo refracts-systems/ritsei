@@ -17,8 +17,8 @@ import {
   ShortString,
   TenantHeaders as tenantHeaders,
   Uuid,
-  makeApiErrorMapping,
-  makeModuleApi,
+  apiErrorMapping,
+  moduleApi,
 } from "../../../framework/modules/http/mod.ts"
 import {
   Customer,
@@ -139,9 +139,9 @@ export const SalesHttpGroup = HttpApiGroup.make("Sales").add(
   }).middleware(BearerAuth),
 )
 
-const SalesHttpApi = makeModuleApi(SalesHttpGroup)
+const SalesHttpApi = moduleApi(SalesHttpGroup)
 
-export const SalesHttpErrors = makeApiErrorMapping({
+export const SalesHttpErrors = apiErrorMapping({
   ...BaseApiErrorPolicy,
   CustomerAlreadyExists: "conflict",
   CustomerNotFound: "not_found",
@@ -151,16 +151,19 @@ export const SalesHttpErrors = makeApiErrorMapping({
   SalesOrderInvalidState: "conflict",
   SalesOrderNotFound: "not_found",
 })
+
 const coreApiEffect = SalesHttpErrors.apiEffect
 
 export const SalesHttpHandlers = HttpApiBuilder.group(SalesHttpApi, "Sales", (handlers) =>
   Effect.gen(function* () {
     const sales = yield* SalesService
+
     return handlers
       .handle(
         "listCustomers",
         Effect.fn("Http.Sales.listCustomers")(function* ({ headers, query }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             sales.listCustomers({ principal, tenantId: headers["x-tenant-id"], ...query }),
           )
@@ -170,6 +173,7 @@ export const SalesHttpHandlers = HttpApiBuilder.group(SalesHttpApi, "Sales", (ha
         "getCustomer",
         Effect.fn("Http.Sales.getCustomer")(function* ({ headers, params }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             sales.getCustomer({
               principal,
@@ -183,6 +187,7 @@ export const SalesHttpHandlers = HttpApiBuilder.group(SalesHttpApi, "Sales", (ha
         "createCustomer",
         Effect.fn("Http.Sales.createCustomer")(function* ({ headers, payload }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             sales.createCustomer({ principal, tenantId: headers["x-tenant-id"], ...payload }),
           )
@@ -192,6 +197,7 @@ export const SalesHttpHandlers = HttpApiBuilder.group(SalesHttpApi, "Sales", (ha
         "listQuotations",
         Effect.fn("Http.Sales.listQuotations")(function* ({ headers, query }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             sales.listQuotations({ principal, tenantId: headers["x-tenant-id"], ...query }),
           )
@@ -201,6 +207,7 @@ export const SalesHttpHandlers = HttpApiBuilder.group(SalesHttpApi, "Sales", (ha
         "getQuotation",
         Effect.fn("Http.Sales.getQuotation")(function* ({ headers, params }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             sales.getQuotation({
               principal,
@@ -214,6 +221,7 @@ export const SalesHttpHandlers = HttpApiBuilder.group(SalesHttpApi, "Sales", (ha
         "createQuotation",
         Effect.fn("Http.Sales.createQuotation")(function* ({ headers, payload }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             sales.createQuotation({ principal, tenantId: headers["x-tenant-id"], ...payload }),
           )
@@ -223,6 +231,7 @@ export const SalesHttpHandlers = HttpApiBuilder.group(SalesHttpApi, "Sales", (ha
         "listOrders",
         Effect.fn("Http.Sales.listOrders")(function* ({ headers, query }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             sales.listOrders({ principal, tenantId: headers["x-tenant-id"], ...query }),
           )
@@ -232,6 +241,7 @@ export const SalesHttpHandlers = HttpApiBuilder.group(SalesHttpApi, "Sales", (ha
         "getOrder",
         Effect.fn("Http.Sales.getOrder")(function* ({ headers, params }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             sales.getOrder({
               principal,
@@ -245,6 +255,7 @@ export const SalesHttpHandlers = HttpApiBuilder.group(SalesHttpApi, "Sales", (ha
         "createOrder",
         Effect.fn("Http.Sales.createOrder")(function* ({ headers, payload }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             sales.createOrder({ principal, tenantId: headers["x-tenant-id"], ...payload }),
           )
@@ -254,6 +265,7 @@ export const SalesHttpHandlers = HttpApiBuilder.group(SalesHttpApi, "Sales", (ha
         "confirmOrder",
         Effect.fn("Http.Sales.confirmOrder")(function* ({ headers, params, payload }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             sales.confirmOrder({
               principal,
@@ -268,6 +280,7 @@ export const SalesHttpHandlers = HttpApiBuilder.group(SalesHttpApi, "Sales", (ha
         "cancelOrder",
         Effect.fn("Http.Sales.cancelOrder")(function* ({ headers, params }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             sales.cancelConfirmedOrder({
               principal,

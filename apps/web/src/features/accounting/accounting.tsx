@@ -1,3 +1,4 @@
+import * as Predicate from "effect/Predicate"
 import { useNavigate } from "@solidjs/router"
 import type { JSX } from "@solidjs/web"
 import { createSignal, For, Show, useContext } from "solid-js"
@@ -11,7 +12,7 @@ import type {
   JournalStatus,
   RevenuePostingProfile,
 } from "../../shared/contracts/generated/accounting.ts"
-import { CommandFeedback, QueryBoundary } from "../../shared/request-feedback.tsx"
+import { CommandFeedback, QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
 import { ApiRuntime } from "../../shared/runtime.ts"
 import { formatDecimal } from "../../ui/foundations/format.ts"
 import { layout } from "../../ui/foundations/layout.ts"
@@ -40,6 +41,7 @@ import {
   createPostJournalMutation,
   createRevenuePostingProfilesQuery,
 } from "./queries.ts"
+import { definedFields } from "../../shared/api.ts"
 
 const accountTypeOptions = [
   { value: "asset", label: "Asset" },
@@ -48,18 +50,22 @@ const accountTypeOptions = [
   { value: "revenue", label: "Revenue" },
   { value: "expense", label: "Expense" },
 ] as const
+
 const periodStatusOptions = [
   { value: "open", label: "Open" },
   { value: "closed", label: "Closed" },
 ] as const
+
 const journalStatusOptions = [
   { value: "posted", label: "Posted" },
   { value: "reversed", label: "Reversed" },
 ] as const
+
 const postingOptions = [
   { value: "true", label: "Posting enabled" },
   { value: "false", label: "Posting disabled" },
 ] as const
+
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const currencyPattern = /^[A-Z]{3}$/
 const accountCodePattern = /^\S+$/
@@ -67,37 +73,43 @@ const moneyPattern = /^\d{1,18}\.\d{2}$/
 const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/
 
 const requiredText = (value: FormDataEntryValue | null | undefined): string | null =>
-  typeof value === "string" && /\S/.test(value) ? value.trim() : null
+  Predicate.isString(value) && /\S/.test(value) ? value.trim() : null
 
 const isIsoDate = (value: string): boolean => {
   if (!isoDatePattern.test(value)) return false
   const date = new Date(`${value}T00:00:00.000Z`)
+
   return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
 }
 
 const toMinor = (value: string): bigint => {
   const [whole, fraction] = value.split(".")
+
   return BigInt(whole!) * 100n + BigInt(fraction!)
 }
 
 const configurationTone = (
   configuration: AccountingConfiguration,
 ): "neutral" | "success" | "warning" => (configuration.postingEnabled ? "success" : "warning")
+
 const periodTone = (status: AccountingPeriodStatus): "neutral" | "success" | "warning" =>
   status === "open" ? "success" : "neutral"
+
 const journalTone = (status: JournalStatus): "neutral" | "success" | "warning" =>
   status === "posted" ? "success" : "warning"
 
 // Fallow: this dialog intentionally owns the complete guarded Accounting setup flow.
 // fallow-ignore-next-line complexity
-function ConfigureLegalEntityDialog(props: { reload: () => Promise<unknown> }) {
+function ConfigureLegalEntityDialog(props: { reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
+
   const mutation = createConfigureLegalEntityMutation(scope, () => {
     setOpen(false)
     void props.reload()
   })
+
   let legalEntityInput: HTMLInputElement | undefined
 
   return (
@@ -122,6 +134,7 @@ function ConfigureLegalEntityDialog(props: { reload: () => Promise<unknown> }) {
             const baseCurrency = requiredText(value.baseCurrency)?.toUpperCase() ?? null
             const fiscalYearStartMonth = Number(requiredText(value.fiscalYearStartMonth))
             const postingEnabled = value.postingEnabled
+
             if (
               legalEntityId === null ||
               !uuidPattern.test(legalEntityId) ||
@@ -134,8 +147,10 @@ function ConfigureLegalEntityDialog(props: { reload: () => Promise<unknown> }) {
             ) {
               setInvalid(true)
               legalEntityInput?.focus()
+
               return
             }
+
             setInvalid(false)
             mutation.mutate({
               legalEntityId,
@@ -237,14 +252,16 @@ function ConfigureLegalEntityDialog(props: { reload: () => Promise<unknown> }) {
 
 // Fallow: this dialog intentionally owns the complete guarded Accounting setup flow.
 // fallow-ignore-next-line complexity
-function CreateAccountDialog(props: { reload: () => Promise<unknown> }) {
+function CreateAccountDialog(props: { reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
+
   const mutation = createAccountMutation(scope, () => {
     setOpen(false)
     void props.reload()
   })
+
   let codeInput: HTMLInputElement | undefined
 
   return (
@@ -265,22 +282,28 @@ function CreateAccountDialog(props: { reload: () => Promise<unknown> }) {
             if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
             const code = requiredText(value.code)
             const name = requiredText(value.name)
-            const type = requiredText(value.type)
+
+            const type = accountTypeOptions.find(
+              (option) => option.value === requiredText(value.type),
+            )?.value
+
             if (
               code === null ||
               !accountCodePattern.test(code) ||
               name === null ||
-              !accountTypeOptions.some((option) => option.value === type)
+              type === undefined
             ) {
               setInvalid(true)
               codeInput?.focus()
+
               return
             }
+
             setInvalid(false)
             mutation.mutate({
               code,
               name,
-              type: type as AccountType,
+              type,
             })
           }
         }
@@ -355,15 +378,17 @@ function CreateAccountDialog(props: { reload: () => Promise<unknown> }) {
 // fallow-ignore-next-line complexity
 function ConfigureRevenuePostingDialog(props: {
   accounts: () => readonly Account[]
-  reload: () => Promise<unknown>
+  reload: () => Promise<void>
 }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
+
   const mutation = createConfigureRevenuePostingMutation(scope, () => {
     setOpen(false)
     void props.reload()
   })
+
   let legalEntityInput: HTMLInputElement | undefined
 
   return (
@@ -387,6 +412,7 @@ function ConfigureRevenuePostingDialog(props: {
             const legalEntityId = requiredText(value.legalEntityId)
             const receivableAccountId = requiredText(value.receivableAccountId)
             const revenueAccountId = requiredText(value.revenueAccountId)
+
             if (
               legalEntityId === null ||
               !uuidPattern.test(legalEntityId) ||
@@ -398,8 +424,10 @@ function ConfigureRevenuePostingDialog(props: {
             ) {
               setInvalid(true)
               legalEntityInput?.focus()
+
               return
             }
+
             setInvalid(false)
             mutation.mutate({ legalEntityId, receivableAccountId, revenueAccountId })
           }
@@ -486,14 +514,16 @@ function ConfigureRevenuePostingDialog(props: {
 
 // Fallow: this dialog intentionally owns the complete guarded Accounting setup flow.
 // fallow-ignore-next-line complexity
-function OpenPeriodDialog(props: { reload: () => Promise<unknown> }) {
+function OpenPeriodDialog(props: { reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
+
   const mutation = createOpenPeriodMutation(scope, () => {
     setOpen(false)
     void props.reload()
   })
+
   let legalEntityInput: HTMLInputElement | undefined
 
   return (
@@ -517,6 +547,7 @@ function OpenPeriodDialog(props: { reload: () => Promise<unknown> }) {
             const legalEntityId = requiredText(value.legalEntityId)
             const startsOn = requiredText(value.startsOn)
             const endsOn = requiredText(value.endsOn)
+
             if (
               legalEntityId === null ||
               !uuidPattern.test(legalEntityId) ||
@@ -528,8 +559,10 @@ function OpenPeriodDialog(props: { reload: () => Promise<unknown> }) {
             ) {
               setInvalid(true)
               legalEntityInput?.focus()
+
               return
             }
+
             setInvalid(false)
             mutation.mutate({ legalEntityId, startsOn, endsOn })
           }
@@ -600,9 +633,10 @@ function OpenPeriodDialog(props: { reload: () => Promise<unknown> }) {
   )
 }
 
-function ClosePeriodDialog(props: { period: AccountingPeriod; reload: () => Promise<unknown> }) {
+function ClosePeriodDialog(props: { period: AccountingPeriod; reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
+
   const mutation = createClosePeriodMutation(scope, props.period.id, () => {
     setOpen(false)
     void props.reload()
@@ -654,16 +688,18 @@ function ClosePeriodDialog(props: { period: AccountingPeriod; reload: () => Prom
 // fallow-ignore-next-line complexity
 function PostJournalDialog(props: {
   accounts: () => readonly Account[]
-  reload: () => Promise<unknown>
+  reload: () => Promise<void>
 }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
   const [lineIndexes, setLineIndexes] = createSignal([0, 1])
+
   const mutation = createPostJournalMutation(scope, () => {
     setOpen(false)
     void props.reload()
   })
+
   let referenceInput: HTMLInputElement | undefined
 
   return (
@@ -691,17 +727,20 @@ function PostJournalDialog(props: {
           onSubmit={
             // Fallow: this form intentionally keeps balanced journal validation at the UI boundary.
             // fallow-ignore-next-line complexity
-            (value, event) => {
+            (value, _event, form) => {
               if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
               const reference = requiredText(value.reference)
-              const form = new FormData(event.currentTarget as HTMLFormElement)
+
               const lines = lineIndexes().flatMap((index) => {
                 const accountId = requiredText(form.get(`accountId-${index}`))
                 const debit = requiredText(form.get(`debit-${index}`))
                 const credit = requiredText(form.get(`credit-${index}`))
+
                 if (accountId === null && debit === null && credit === null) return []
+
                 return [{ accountId, debit, credit }]
               })
+
               // Fallow: exact-line validation intentionally remains adjacent to journal submission.
               const validLines =
                 lines.length >= 2 &&
@@ -719,9 +758,11 @@ function PostJournalDialog(props: {
                       return false
                     const debit = toMinor(line.debit)
                     const credit = toMinor(line.credit)
+
                     return debit > 0n !== credit > 0n
                   },
                 )
+
               const balanced =
                 validLines &&
                 lines.reduce(
@@ -731,6 +772,7 @@ function PostJournalDialog(props: {
                   }),
                   { debit: 0n, credit: 0n },
                 )
+
               if (
                 reference === null ||
                 !validLines ||
@@ -739,8 +781,10 @@ function PostJournalDialog(props: {
               ) {
                 setInvalid(true)
                 referenceInput?.focus()
+
                 return
               }
+
               setInvalid(false)
               mutation.mutate({
                 reference,
@@ -890,6 +934,7 @@ function AccountingFilters(props: {
   journalStatus?: JournalStatus
 }) {
   const navigate = useNavigate()
+
   return (
     <Form
       class={layout.row}
@@ -903,27 +948,32 @@ function AccountingFilters(props: {
           const accountType = requiredText(value.accountType)
           const periodStatus = requiredText(value.periodStatus)
           const journalStatus = requiredText(value.journalStatus)
+
           if (legalEntityId !== null && uuidPattern.test(legalEntityId)) {
             query.set("legalEntityId", legalEntityId)
           }
+
           if (
             accountType !== null &&
             accountTypeOptions.some((option) => option.value === accountType)
           ) {
             query.set("accountType", accountType)
           }
+
           if (
             periodStatus !== null &&
             periodStatusOptions.some((option) => option.value === periodStatus)
           ) {
             query.set("periodStatus", periodStatus)
           }
+
           if (
             journalStatus !== null &&
             journalStatusOptions.some((option) => option.value === journalStatus)
           ) {
             query.set("journalStatus", journalStatus)
           }
+
           navigate(query.size === 0 ? "/accounting" : `/accounting?${query}`)
         }
       }
@@ -1049,10 +1099,7 @@ function AccountTable(props: { accounts: readonly Account[] }) {
   )
 }
 
-function PeriodTable(props: {
-  periods: readonly AccountingPeriod[]
-  reload: () => Promise<unknown>
-}) {
+function PeriodTable(props: { periods: readonly AccountingPeriod[]; reload: () => Promise<void> }) {
   return (
     <DataTable
       surface={false}
@@ -1171,9 +1218,12 @@ function JournalDetail(props: {
 }) {
   const accountLabel = (id: string) => {
     const account = props.accounts.find((candidate) => candidate.id === id)
+
     return account === undefined ? undefined : `${account.code} · ${account.name}`
   }
+
   const journal = () => props.journals.find((candidate) => candidate.id === props.id)
+
   return (
     <section class={layout.stack} aria-labelledby="journal-detail-heading">
       <div class={layout.row}>
@@ -1270,35 +1320,43 @@ export function Accounting(props: {
   journalStatus?: JournalStatus
 }) {
   const scope = useContext(ApiRuntime)
+
   const configurations = createAccountingConfigurationsQuery(scope, {
-    ...(props.legalEntityId === undefined ? {} : { legalEntityId: props.legalEntityId }),
+    ...definedFields({ legalEntityId: props.legalEntityId }),
     limit: 200,
   })
+
   const accounts = createAccountsQuery(scope, {
-    ...(props.accountType === undefined ? {} : { type: props.accountType }),
+    ...definedFields({ type: props.accountType }),
     limit: 200,
   })
+
   const periods = createAccountingPeriodsQuery(scope, {
-    ...(props.legalEntityId === undefined ? {} : { legalEntityId: props.legalEntityId }),
-    ...(props.periodStatus === undefined ? {} : { status: props.periodStatus }),
+    ...definedFields({ legalEntityId: props.legalEntityId }),
+    ...definedFields({ status: props.periodStatus }),
     limit: 200,
   })
+
   const profiles = createRevenuePostingProfilesQuery(scope, {
-    ...(props.legalEntityId === undefined ? {} : { legalEntityId: props.legalEntityId }),
+    ...definedFields({ legalEntityId: props.legalEntityId }),
     limit: 200,
   })
+
   const journals = createJournalsQuery(scope, {
-    ...(props.journalStatus === undefined ? {} : { status: props.journalStatus }),
+    ...definedFields({ status: props.journalStatus }),
     limit: 200,
   })
+
   const reload = () =>
-    Promise.all([
-      configurations.refetch(),
-      accounts.refetch(),
-      periods.refetch(),
-      profiles.refetch(),
-      journals.refetch(),
-    ])
+    reloaded(
+      Promise.all([
+        configurations.refetch(),
+        accounts.refetch(),
+        periods.refetch(),
+        profiles.refetch(),
+        journals.refetch(),
+      ]),
+    )
 
   return (
     <EntityWorkspace
@@ -1355,7 +1413,7 @@ export function Accounting(props: {
             </p>
           </div>
         </div>
-        <QueryBoundary label="configurations" retry={() => configurations.refetch()}>
+        <QueryBoundary label="configurations" retry={() => reloaded(configurations.refetch())}>
           <Show
             when={(configurations.data ?? []).length > 0}
             fallback={
@@ -1373,7 +1431,7 @@ export function Accounting(props: {
             <p>Account records are tenant-scoped and normalized by the Accounting service.</p>
           </div>
         </div>
-        <QueryBoundary label="accounts" retry={() => accounts.refetch()}>
+        <QueryBoundary label="accounts" retry={() => reloaded(accounts.refetch())}>
           <Show
             when={(accounts.data ?? []).length > 0}
             fallback={<EmptyState>No accounts match the current filter.</EmptyState>}
@@ -1384,7 +1442,7 @@ export function Accounting(props: {
       </section>
       <section class={[surface(), layout.stack]} aria-labelledby="accounting-periods-heading">
         <h2 id="accounting-periods-heading">Accounting periods</h2>
-        <QueryBoundary label="periods" retry={() => periods.refetch()}>
+        <QueryBoundary label="periods" retry={() => reloaded(periods.refetch())}>
           <Show
             when={(periods.data ?? []).length > 0}
             fallback={<EmptyState>No accounting periods match the current filter.</EmptyState>}
@@ -1399,7 +1457,7 @@ export function Accounting(props: {
           Profiles identify the owner-controlled receivable and revenue accounts for each legal
           entity.
         </p>
-        <QueryBoundary label="revenue posting profiles" retry={() => profiles.refetch()}>
+        <QueryBoundary label="revenue posting profiles" retry={() => reloaded(profiles.refetch())}>
           <Show
             when={(profiles.data ?? []).length > 0}
             fallback={
@@ -1419,7 +1477,7 @@ export function Accounting(props: {
             </p>
           </div>
         </div>
-        <QueryBoundary label="journal history" retry={() => journals.refetch()}>
+        <QueryBoundary label="journal history" retry={() => reloaded(journals.refetch())}>
           <Show
             when={(journals.data ?? []).length > 0}
             fallback={

@@ -113,6 +113,7 @@ export const CapabilityIds = [
 ] as const
 
 export const Capability = Schema.Literals(CapabilityIds)
+
 type Capability = Schema.Schema.Type<typeof Capability>
 
 export const LegacyCapabilityIds = [
@@ -130,16 +131,17 @@ export const LegacyCapabilityIds = [
 ] as const
 
 const forbiddenVerbs = new Set(["manage", "write", "admin", "full_access", "execute"])
-const capabilityIdShape = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*){1,2}$/
+const capabilityIdPattern = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*){1,2}$/
 
-export const isCapabilityIdShape = (value: string): boolean => {
-  if (!capabilityIdShape.test(value)) return false
+export const isCapabilityIdFormat = (value: string): boolean => {
+  if (!capabilityIdPattern.test(value)) return false
   const verb = value.slice(value.lastIndexOf(".") + 1)
+
   return !forbiddenVerbs.has(verb)
 }
 
 export const CapabilityId = Schema.String.check(
-  Schema.makeFilter((value) => isCapabilityIdShape(value), {
+  Schema.makeFilter((value) => isCapabilityIdFormat(value), {
     expected: "a canonical capability identifier",
   }),
 )
@@ -161,6 +163,7 @@ export const CapabilityOwner = Schema.Literals([
   "settlement",
   "approvals",
 ])
+
 export type CapabilityOwner = Schema.Schema.Type<typeof CapabilityOwner>
 
 export const CapabilityScope = Schema.Literals([
@@ -173,6 +176,7 @@ export const CapabilityScope = Schema.Literals([
   "record",
   "hierarchy",
 ])
+
 export type CapabilityScope = Schema.Schema.Type<typeof CapabilityScope>
 
 export const CapabilityStability = Schema.Literals([
@@ -182,6 +186,7 @@ export const CapabilityStability = Schema.Literals([
   "DEPRECATED",
   "RETIRED",
 ])
+
 export type CapabilityStability = Schema.Schema.Type<typeof CapabilityStability>
 
 export const CapabilityDefinition = Schema.Struct({
@@ -193,7 +198,9 @@ export const CapabilityDefinition = Schema.Struct({
   stability: CapabilityStability,
   scope: Schema.Array(CapabilityScope),
 })
+
 export type CapabilityDefinition = Schema.Schema.Type<typeof CapabilityDefinition>
+
 export const CapabilityCatalog = Schema.Array(CapabilityDefinition)
 
 const definition = (

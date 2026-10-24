@@ -4,13 +4,18 @@ import { layout } from "../ui/foundations/layout.ts"
 import { Button } from "../ui/primitives/button.tsx"
 import { failureMessage, type RequestFailure } from "./api.ts"
 
+/** Waits for a refetch, discarding its result: reload callbacks only signal completion. */
+export function reloaded<A>(request: Promise<A>): Promise<void> {
+  return request.then(() => undefined)
+}
+
 export interface CommandFeedbackProps {
   readonly area?: string
   readonly error?: RequestFailure | null
   readonly pending: boolean
   readonly success: boolean
   readonly successMessage: string
-  readonly reload: () => Promise<unknown>
+  readonly reload: () => Promise<void>
   readonly reset: () => void
 }
 
@@ -39,7 +44,7 @@ export function CommandFeedback(props: CommandFeedbackProps) {
 
 export interface QueryBoundaryProps {
   readonly label: string
-  readonly retry: () => Promise<unknown>
+  readonly retry: () => Promise<void>
   readonly retryLabel?: string
   readonly children: JSX.Element
   readonly errorPrefix?: string
@@ -54,6 +59,7 @@ export function QueryBoundary(props: QueryBoundaryProps) {
       : props.errorPrefix === undefined
         ? ""
         : `${props.errorPrefix} `
+
   const retryLabel = () =>
     props.retryLabel ??
     (props.variant === "retry"
@@ -61,6 +67,7 @@ export function QueryBoundary(props: QueryBoundaryProps) {
       : props.retryPrefix === undefined
         ? `Try loading ${props.label} again`
         : `${props.retryPrefix} ${props.label}`)
+
   return (
     <Errored
       fallback={(error, reset) => (

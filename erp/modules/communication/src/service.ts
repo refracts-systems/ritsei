@@ -10,9 +10,12 @@ import {
   CommunicationRecipientResolver,
   DeliveryAttempt,
   DeliveryReceipt,
+  EmailHeadingNode,
+  EmailKeyValueNode,
   EmailMessage,
   EmailRenderer,
   EmailRenderInput,
+  EmailTextNode,
   EmailTransport,
   PreparedEmail,
   RecipientSnapshot,
@@ -37,6 +40,7 @@ type PurchaseOrderConfirmedPayload = Schema.Schema.Type<typeof PurchaseOrderConf
 
 const purchaseOrderConsumerId = "communication.purchase-order-confirmed.v1"
 const purchaseOrderContextType = "purchase-order-confirmed-context"
+
 const purchaseOrderTemplate = {
   templateId: "purchase-order-confirmed-default",
   templateVersion: 1,
@@ -64,19 +68,17 @@ const makeEmailMessage = (
   subject: `Purchase order ${event.aggregateId} confirmed`,
   preheader: "Your purchase order has been confirmed.",
   nodes: [
-    { _tag: "heading", level: 1, text: "Purchase order confirmed" },
-    {
-      _tag: "text",
+    EmailHeadingNode.make({ level: 1, text: "Purchase order confirmed" }),
+    EmailTextNode.make({
       text: `Purchase order ${event.aggregateId} was confirmed for ${payload.total}.`,
-    },
-    {
-      _tag: "key_value",
+    }),
+    EmailKeyValueNode.make({
       entries: [
         { label: "Purchase order", value: event.aggregateId },
         { label: "Supplier", value: payload.supplierAccountId },
         { label: "Total", value: payload.total },
       ],
-    },
+    }),
   ],
   attachments: [],
 })
@@ -136,30 +138,37 @@ export const makeCommunicationService = Effect.gen(function* () {
   const processEvent = (event: EventEnvelope) =>
     Effect.gen(function* () {
       const intent = yield* policy.derivePurchaseOrderConfirmed(event)
+
       const payload = yield* Schema.decodeUnknownEffect(PurchaseOrderConfirmedEventPayload)(
         event.payload,
       )
+
       const intentKey = communicationIdempotencyKey(intent)
       const existingId = byIdempotency.get(intentKey)
+
       if (existingId !== undefined) {
         const existing = byCommunicationId.get(existingId)
+
         if (existing === undefined) {
           return yield* Effect.fail(
             new CommunicationStateFailure({ reason: "idempotency record has no communication" }),
           )
         }
+
         return { ...existing.result, duplicate: true }
       }
 
       const recipients = yield* recipientResolver.resolve(intent)
       const context = yield* contextBuilder.build({ intent, data: payload })
       const message = makeEmailMessage(event, payload)
+
       const artifact = yield* renderer.render({
         intent,
         context,
         template: purchaseOrderTemplate,
         message,
       } satisfies EmailRenderInput)
+
       const communication: Communication = {
         communicationId: intent.communicationId,
         tenantId: intent.tenantId,
@@ -173,7 +182,9 @@ export const makeCommunicationService = Effect.gen(function* () {
         artifactId: artifact.artifactId,
         createdAt: intent.requestedAt,
       }
+
       const preparedEmail = makePreparedEmail(configuration.sender, artifact, recipients)
+
       const result: CommunicationProcessingResult = {
         duplicate: false,
         intent,
@@ -182,6 +193,7 @@ export const makeCommunicationService = Effect.gen(function* () {
         attempt: null,
         receipt: null,
       }
+
       const stored: StoredCommunication = {
         intent,
         artifact,
@@ -190,17 +202,20 @@ export const makeCommunicationService = Effect.gen(function* () {
         result,
         attempts: [],
       }
+
       byEvent.set(eventKey(event), intent.communicationId)
       byIdempotency.set(intentKey, intent.communicationId)
       byCommunicationId.set(intent.communicationId, stored)
+
       return result
     })
 
   const processPurchaseOrderConfirmed = Effect.fn(
     "CommunicationService.processPurchaseOrderConfirmed",
-  )(function* (input: unknown) {
+  )(function* (input: Schema.Codec.Encoded<typeof ProcessPurchaseOrderConfirmedInput>) {
     const decoded = yield* Schema.decodeUnknownEffect(ProcessPurchaseOrderConfirmedInput)(input)
     const event = decoded.event
+
     const consumed = yield* messaging.consumeOnce(
       {
         tenantId: event.tenantId,
@@ -209,30 +224,37 @@ export const makeCommunicationService = Effect.gen(function* () {
       },
       processEvent(event),
     )
+
     if (!consumed.duplicate) return consumed.value
 
     const communicationId = byEvent.get(eventKey(event))
+
     const stored =
       communicationId === undefined ? undefined : byCommunicationId.get(communicationId)
+
     if (stored === undefined) {
       return yield* Effect.fail(
         new CommunicationStateFailure({ reason: "consumer receipt has no communication" }),
       )
     }
+
     return { ...stored.result, duplicate: true }
   })
 
   const send = (communicationId: string, retry: boolean) =>
     Effect.gen(function* () {
       const stored = byCommunicationId.get(communicationId)
+
       if (stored === undefined) {
         return yield* Effect.fail(new CommunicationNotFound({ communicationId }))
       }
+
       if (!retry && stored.attempts.length !== 0) {
         return yield* Effect.fail(
           new CommunicationStateFailure({ reason: "communication already has a delivery attempt" }),
         )
       }
+
       if (retry && stored.attempts.length === 0) {
         return yield* Effect.fail(
           new CommunicationStateFailure({ reason: "communication has no attempt to retry" }),
@@ -241,10 +263,12 @@ export const makeCommunicationService = Effect.gen(function* () {
 
       const receipt = yield* transport.send(stored.preparedEmail)
       const attempt = makeAttempt(stored.communication, receipt, stored.attempts.length + 1)
+
       const communication = {
         ...stored.communication,
         status: communicationStatusFor(receipt.status),
       } satisfies Communication
+
       const result: CommunicationProcessingResult = {
         ...stored.result,
         duplicate: false,
@@ -252,19 +276,27 @@ export const makeCommunicationService = Effect.gen(function* () {
         attempt,
         receipt,
       }
+
       stored.communication = communication
       stored.result = result
       stored.attempts.push(attempt)
+
       return result
     })
 
-  const deliver = Effect.fn("CommunicationService.deliver")(function* (input: unknown) {
+  const deliver = Effect.fn("CommunicationService.deliver")(function* (
+    input: Schema.Codec.Encoded<typeof RetryCommunicationInput>,
+  ) {
     const decoded = yield* Schema.decodeUnknownEffect(RetryCommunicationInput)(input)
+
     return yield* send(decoded.communicationId, false)
   })
 
-  const retry = Effect.fn("CommunicationService.retry")(function* (input: unknown) {
+  const retry = Effect.fn("CommunicationService.retry")(function* (
+    input: Schema.Codec.Encoded<typeof RetryCommunicationInput>,
+  ) {
     const decoded = yield* Schema.decodeUnknownEffect(RetryCommunicationInput)(input)
+
     return yield* send(decoded.communicationId, true)
   })
 
@@ -273,5 +305,6 @@ export const makeCommunicationService = Effect.gen(function* () {
     deliver,
     retry,
   }
+
   return service
 })

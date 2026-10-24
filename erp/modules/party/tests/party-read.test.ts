@@ -47,23 +47,27 @@ const PartyTest = makePartyTestLayer().pipe(
 it.effect("lists and composes tenant-scoped Party administration facts", () =>
   Effect.gen(function* () {
     const service = yield* PartyService
+
     const organization = yield* service.create({
       principal,
       tenantId,
       kind: "organization",
       name: "Northwind Holdings",
     })
+
     const person = yield* service.create({
       principal,
       tenantId,
       kind: "person",
       name: "Ada Lovelace",
     })
+
     const legalEntity = yield* service.createLegalEntity({
       principal,
       tenantId,
       organizationId: organization.id,
     })
+
     const branch = yield* service.createBranch({
       principal,
       tenantId,
@@ -71,12 +75,14 @@ it.effect("lists and composes tenant-scoped Party administration facts", () =>
       name: "London",
       timezone: "Europe/London",
     })
+
     yield* service.assignRole({
       principal,
       tenantId,
       partyId: person.id,
       role: "customer",
     })
+
     const identifier = yield* service.attachIdentifier({
       principal,
       tenantId,
@@ -86,6 +92,7 @@ it.effect("lists and composes tenant-scoped Party administration facts", () =>
       scope: "tenant",
       value: "C-001",
     })
+
     const relationship = yield* service.createRelationship({
       principal,
       tenantId,
@@ -93,6 +100,7 @@ it.effect("lists and composes tenant-scoped Party administration facts", () =>
       legalEntityId: legalEntity.id,
       kind: "customer",
     })
+
     const representation = yield* service.createPartyRepresentation({
       principal,
       tenantId,
@@ -131,6 +139,7 @@ it.effect("lists and composes tenant-scoped Party administration facts", () =>
       tenantId,
       partyId: organization.id,
     })
+
     assert.deepStrictEqual(organizationDetail.legalEntity, legalEntity)
     assert.deepStrictEqual(organizationDetail.branches, [branch])
 

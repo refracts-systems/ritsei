@@ -14,9 +14,9 @@ import {
   type ProcessOperatorControlType,
   type ProcessRuntimeInstanceType,
   ProcessService,
-  type ProcessServiceShape,
+  type ProcessServiceContract,
   ProcessStudioService,
-  type ProcessStudioServiceShape,
+  type ProcessStudioServiceContract,
   type ProcessWorkflowRunType,
 } from "../../modules/process/mod.ts"
 import { BearerAuth, CurrentPrincipal, RitseiApi } from "./api.ts"
@@ -114,7 +114,7 @@ const control: ProcessOperatorControlType = {
   createdAt: "2026-09-13T12:01:00.000Z",
 }
 
-const processService: ProcessServiceShape = {
+const processService: ProcessServiceContract = {
   confirmOrder: unused,
   cancelOrder: unused,
   fulfillOrder: unused,
@@ -134,13 +134,16 @@ it.layer(TestHttpServices)("Process API", (it) => {
   it.effect("forwards tenant-scoped typed requests through the Process Studio contract", () =>
     Effect.gen(function* () {
       const observed: unknown[] = []
-      const studio: ProcessStudioServiceShape = {
+
+      const studio: ProcessStudioServiceContract = {
         listCatalog: (input) => {
           observed.push(input)
+
           return Effect.succeed([catalog])
         },
         validateDefinition: (input) => {
           observed.push(input)
+
           return Effect.succeed({
             status: "VALIDATED" as const,
             definitionId,
@@ -151,37 +154,46 @@ it.layer(TestHttpServices)("Process API", (it) => {
         },
         listRuntimeInstances: (input) => {
           observed.push(input)
+
           return Effect.succeed([runtime])
         },
         getRuntimeInstance: unused,
         listWorkflowRuns: (input) => {
           observed.push(input)
+
           return Effect.succeed([workflow])
         },
         listOperatorInbox: (input) => {
           observed.push(input)
+
           return Effect.succeed({ runtimeInstances: [runtime], jobs: [job] })
         },
         listOperatorControls: (input) => {
           observed.push(input)
+
           return Effect.succeed([control])
         },
         operateRuntime: (input) => {
           observed.push(input)
+
           return Effect.succeed(runtime)
         },
       }
+
       const bearer = Layer.succeed(BearerAuth, {
         bearer: (effect) => Effect.provideService(effect, CurrentPrincipal, principal),
       })
+
       const bearerClient = HttpApiMiddleware.layerClient(BearerAuth, ({ request, next }) =>
         next(HttpClientRequest.bearerToken(request, "test-token")),
       )
+
       const handlers = ProcessHandlers.pipe(
         Layer.provide(bearer),
         Layer.provide(Layer.succeed(ProcessService, processService)),
         Layer.provide(Layer.succeed(ProcessStudioService, studio)),
       )
+
       const client = yield* HttpApiTest.groups(RitseiApi, ["Process"]).pipe(
         Effect.provide(Layer.mergeAll(handlers, bearerClient, bearer)),
       )
@@ -253,10 +265,14 @@ it.layer(TestHttpServices)("Process API", (it) => {
       )
 
       assert.strictEqual(observed.length, 7)
+
       for (const input of observed) {
+        // SAFETY: the test calls this double only with inputs of the shape it reads.
         assert.deepStrictEqual((input as { principal: unknown }).principal, principal)
+        // SAFETY: the test calls this double only with inputs of the shape it reads.
         assert.strictEqual((input as { tenantId: string }).tenantId, tenantId)
       }
+
       assert.deepStrictEqual(observed[0], {
         principal,
         tenantId,

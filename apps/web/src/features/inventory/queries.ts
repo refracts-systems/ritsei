@@ -125,10 +125,12 @@ export function createWarehouseMutation(
   afterSuccess?: (warehouse: Warehouse) => void,
 ) {
   const client = useQueryClient()
+
   return useMutation<Warehouse, RequestFailure, CreateWarehouseInput>(() => ({
     mutationFn: (input) => runRequest(scope, createWarehouse(input)),
     onSuccess: (warehouse) => {
       afterSuccess?.(warehouse)
+
       return invalidate(client, scope.tenantId, warehousesKey)
     },
   }))
@@ -136,10 +138,12 @@ export function createWarehouseMutation(
 
 export function createItemMutation(scope: ApiScope, afterSuccess?: (item: Item) => void) {
   const client = useQueryClient()
+
   return useMutation<Item, RequestFailure, CreateItemInput>(() => ({
     mutationFn: (input) => runRequest(scope, createItem(input)),
     onSuccess: (item) => {
       afterSuccess?.(item)
+
       return invalidate(client, scope.tenantId, itemsKey)
     },
   }))
@@ -150,10 +154,12 @@ export function createReceiveStockMutation(
   afterSuccess?: (balance: StockBalance) => void,
 ) {
   const client = useQueryClient()
+
   return useMutation<StockBalance, RequestFailure, ReceiveStockInput>(() => ({
     mutationFn: (input) => runRequest(scope, receiveStock(input)),
     onSuccess: (balance) => {
       afterSuccess?.(balance)
+
       return invalidateStock(client, scope.tenantId)
     },
   }))
@@ -164,10 +170,12 @@ export function createAdjustStockMutation(
   afterSuccess?: (correction: StockCorrection) => void,
 ) {
   const client = useQueryClient()
+
   return useMutation<StockCorrection, RequestFailure, AdjustStockInput>(() => ({
     mutationFn: (input) => runRequest(scope, adjustStock(input)),
     onSuccess: (correction) => {
       afterSuccess?.(correction)
+
       return invalidateStock(client, scope.tenantId)
     },
   }))
@@ -178,10 +186,12 @@ export function createReserveStockMutation(
   afterSuccess?: (reservation: StockReservation) => void,
 ) {
   const client = useQueryClient()
+
   return useMutation<StockReservation, RequestFailure, ReserveStockInput>(() => ({
     mutationFn: (input) => runRequest(scope, reserveStock(input)),
     onSuccess: (reservation) => {
       afterSuccess?.(reservation)
+
       return invalidateStock(client, scope.tenantId)
     },
   }))
@@ -192,10 +202,12 @@ export function createReleaseReservationMutation(
   afterSuccess?: (reservation: StockReservation) => void,
 ) {
   const client = useQueryClient()
+
   return useMutation<StockReservation, RequestFailure, { id: string }>(() => ({
     mutationFn: ({ id }) => runRequest(scope, releaseReservation(id)),
     onSuccess: (reservation) => {
       afterSuccess?.(reservation)
+
       return invalidateStock(client, scope.tenantId)
     },
   }))
@@ -206,10 +218,12 @@ export function createFulfillReservationMutation(
   afterSuccess?: (reservation: StockReservation) => void,
 ) {
   const client = useQueryClient()
+
   return useMutation<StockReservation, RequestFailure, { id: string }>(() => ({
     mutationFn: ({ id }) => runRequest(scope, fulfillReservation(id)),
     onSuccess: (reservation) => {
       afterSuccess?.(reservation)
+
       return invalidateStock(client, scope.tenantId)
     },
   }))
@@ -220,10 +234,12 @@ export function createTransferMutation(
   afterSuccess?: (transfer: StockTransfer) => void,
 ) {
   const client = useQueryClient()
+
   return useMutation<StockTransfer, RequestFailure, CreateStockTransferInput>(() => ({
     mutationFn: (input) => runRequest(scope, createTransfer(input)),
     onSuccess: (transfer) => {
       afterSuccess?.(transfer)
+
       return invalidate(client, scope.tenantId, transfersKey)
     },
   }))
@@ -234,10 +250,12 @@ export function createConfirmTransferMutation(
   afterSuccess?: (transfer: StockTransfer) => void,
 ) {
   const client = useQueryClient()
+
   return useMutation<StockTransfer, RequestFailure, { id: string }>(() => ({
     mutationFn: ({ id }) => runRequest(scope, confirmTransfer(id)),
     onSuccess: (transfer) => {
       afterSuccess?.(transfer)
+
       return Promise.all([
         invalidate(client, scope.tenantId, transfersKey),
         invalidate(client, scope.tenantId, balancesKey),
@@ -252,10 +270,12 @@ export function createCompleteTransferMutation(
   afterSuccess?: (transfer: StockTransfer) => void,
 ) {
   const client = useQueryClient()
+
   return useMutation<StockTransfer, RequestFailure, { id: string }>(() => ({
     mutationFn: ({ id }) => runRequest(scope, completeTransfer(id)),
     onSuccess: (transfer) => {
       afterSuccess?.(transfer)
+
       return Promise.all([
         invalidate(client, scope.tenantId, transfersKey),
         invalidateStock(client, scope.tenantId),

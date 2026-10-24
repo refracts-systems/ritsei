@@ -2,7 +2,7 @@ import { AxeBuilder } from "@axe-core/playwright"
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import type { Page, Route } from "playwright"
-import { builtApp, connectToTenant } from "./browser.ts"
+import { builtApp, connectToTenant, forbiddenBody, notFoundBody } from "./browser.ts"
 
 const tenantId = "01900000-0000-7000-8000-000000000010"
 const activeMemberId = "01900000-0000-7000-8000-000000000020"
@@ -54,7 +54,7 @@ type Membership = {
   status: "active" | "suspended"
 }
 
-const fulfillJson = (route: Route, status: number, body: unknown) =>
+const fulfillJson = <Body>(route: Route, status: number, body: Body) =>
   route.fulfill({
     status,
     contentType: "application/json",
@@ -72,14 +72,17 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const { page, url, errors } = yield* builtApp
+
       const memberships: Membership[] = [
         { userAccountId: activeMemberId, tenantId, status: "active" },
         { userAccountId: suspendedMemberId, tenantId, status: "suspended" },
       ]
+
       const grants = new Map<string, string[]>([
         [activeMemberId, ["identity.user_account.read"]],
         [suspendedMemberId, ["authorization.tenant_membership.read"]],
       ])
+
       let addBody: unknown
       let grantBody: unknown
       let accessHeaders: Record<string, string> | undefined
@@ -99,6 +102,7 @@ it.effect(
           if (path === "/tenant-memberships" && method === "GET") {
             const search = url.searchParams.get("search")?.toLocaleLowerCase()
             const status = url.searchParams.get("status")
+
             return fulfillJson(
               route,
               200,
@@ -111,43 +115,56 @@ it.effect(
               ),
             )
           }
+
           if (path === "/tenant-memberships" && method === "POST") {
             addBody = request.postDataJSON()
             const membership = { userAccountId: addedMemberId, tenantId, status: "active" as const }
             memberships.push(membership)
             grants.set(addedMemberId, [])
+
             return fulfillJson(route, 201, membership)
           }
+
           if (path === "/capability-definitions" && method === "GET") {
             return fulfillJson(route, 200, definitions)
           }
+
           if (path === "/capabilities" && method === "POST") {
             grantBody = request.postDataJSON()
+            // SAFETY: the test calls this double only with inputs of the shape it reads.
             const body = grantBody as { userAccountId: string; capability: string }
             grants.get(body.userAccountId)?.push(body.capability)
+
             return route.fulfill({ status: 204 })
           }
 
           const detail = path.match(/^\/tenant-memberships\/([^/]+)$/)
+
           if (detail) {
             const userAccountId = decodeURIComponent(detail[1]!)
             const membership = memberships.find((item) => item.userAccountId === userAccountId)
+
             if (method === "DELETE") {
               if (!membership) {
-                return fulfillJson(route, 404, { _tag: "ApiNotFound", code: "not_found" })
+                return fulfillJson(route, 404, notFoundBody())
               }
+
               memberships.splice(memberships.indexOf(membership), 1)
               grants.delete(userAccountId)
+
               return route.fulfill({ status: 204 })
             }
+
             return membership
               ? fulfillJson(route, 200, membership)
-              : fulfillJson(route, 404, { _tag: "ApiNotFound", code: "not_found" })
+              : fulfillJson(route, 404, notFoundBody())
           }
 
           const directGrants = path.match(/^\/tenant-memberships\/([^/]+)\/capabilities$/)
+
           if (directGrants && method === "GET") {
             const userAccountId = decodeURIComponent(directGrants[1]!)
+
             return fulfillJson(
               route,
               200,
@@ -161,17 +178,21 @@ it.effect(
           }
 
           const transition = path.match(/^\/tenant-memberships\/([^/]+)\/(suspend|activate)$/)
+
           if (transition && method === "POST") {
             const userAccountId = decodeURIComponent(transition[1]!)
             const membership = memberships.find((item) => item.userAccountId === userAccountId)
+
             if (!membership) {
-              return fulfillJson(route, 404, { _tag: "ApiNotFound", code: "not_found" })
+              return fulfillJson(route, 404, notFoundBody())
             }
+
             membership.status = transition[2] === "suspend" ? "suspended" : "active"
+
             return fulfillJson(route, 200, membership)
           }
 
-          return fulfillJson(route, 404, { _tag: "ApiNotFound", code: "not_found" })
+          return fulfillJson(route, 404, notFoundBody())
         })
 
         await connectAndOpenAccess(page, url)
@@ -210,10 +231,12 @@ it.effect(
         await grantDialog
           .getByRole("combobox", { name: "Capability", exact: true })
           .selectOption("party.read")
+
         const grantButton = grantDialog.getByRole("button", {
           name: "Grant capability",
           exact: true,
         })
+
         assert.isFalse(await grantButton.isEnabled())
         await grantDialog.getByRole("checkbox").check()
         assert.isTrue(await grantButton.isEnabled())
@@ -232,10 +255,12 @@ it.effect(
           (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()).violations,
           [],
         )
+
         const suspendButton = suspendDialog.getByRole("button", {
           name: "Suspend membership",
           exact: true,
         })
+
         assert.isFalse(await suspendButton.isEnabled())
         await suspendDialog.getByRole("checkbox").check()
         await suspendButton.click()
@@ -299,25 +324,34 @@ it.effect(
         await page.route("**/api/**", (route) => {
           const request = route.request()
           const path = new URL(request.url()).pathname.replace(/^\/api/, "")
+
           if (path === "/user-accounts") return fulfillJson(route, 200, [])
+
           if (path === "/tenant-memberships" && request.method() === "GET") {
             if (mode === "forbidden") {
-              return fulfillJson(route, 403, { _tag: "ApiForbidden", code: "forbidden" })
+              return fulfillJson(route, 403, forbiddenBody())
             }
+
             if (mode === "malformed") return fulfillJson(route, 200, { memberships: [] })
+
             return fulfillJson(route, 200, [membership])
           }
+
           if (path === `/tenant-memberships/${activeMemberId}`) {
             return fulfillJson(route, 200, membership)
           }
+
           if (path === `/tenant-memberships/${activeMemberId}/capabilities`) {
             return fulfillJson(route, 200, [])
           }
+
           if (path === "/capability-definitions") return fulfillJson(route, 200, definitions)
+
           if (path === "/capabilities" && mode === "unknown-grant") {
             return route.abort("connectionreset")
           }
-          return fulfillJson(route, 404, { _tag: "ApiNotFound", code: "not_found" })
+
+          return fulfillJson(route, 404, notFoundBody())
         })
 
         await connectAndOpenAccess(page, url)

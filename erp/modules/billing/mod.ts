@@ -1,4 +1,5 @@
 export { BillingCapabilities } from "./src/capabilities.ts"
+
 export {
   ApplySettlementInput,
   BillingDocument,
@@ -15,12 +16,14 @@ export {
   ListOpenItemsInput,
   OpenItem,
 } from "./src/contract.ts"
+
 export type {
   BillingDocument as BillingDocumentType,
-  BillingService as BillingServiceShape,
+  BillingService as BillingServiceContract,
   InvoiceFailure,
   OpenItem as OpenItemType,
 } from "./src/contract.ts"
+
 export {
   BillExceedsReceipt,
   BillingDocumentNotFound,
@@ -29,5 +32,7 @@ export {
   SettlementConflict,
   SettlementExceedsOpenAmount,
 } from "./src/errors.ts"
+
 export { BillingLive } from "./src/service.ts"
+
 export { BillingModule } from "./manifest.ts"

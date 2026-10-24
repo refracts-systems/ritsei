@@ -10,7 +10,7 @@ import {
   type DrizzleDatabase,
   type DrizzleTransaction,
 } from "../../../foundation/mod.ts"
-import type { EventEnvelopeShape } from "../../messaging/mod.ts"
+import type { EventEnvelopeContract } from "../../messaging/mod.ts"
 import {
   CreateUserAccountForTenantInput,
   ExternalSubjectAlreadyBound,
@@ -30,6 +30,7 @@ import {
 } from "../mod.ts"
 import { makeUserAccountMemoryStore } from "../src/memory.ts"
 import { makeUserAccountServiceFromStore } from "../src/service.ts"
+import { partial } from "../../../../tests/support/partial.ts"
 
 const identityTenantId = "00000000-0000-4000-8000-000000000001"
 const identityDeniedTenantId = "00000000-0000-4000-8000-000000000002"
@@ -41,7 +42,8 @@ const withUserAccount = <A, E>(program: Effect.Effect<A, E, UserAccountService>)
 describe("user account contract", () => {
   it.effect("authorizes tenant account creation and publishes its owner event", () =>
     Effect.gen(function* () {
-      const published: EventEnvelopeShape[] = []
+      const published: EventEnvelopeContract[] = []
+
       const service = yield* Effect.provide(
         makeUserAccountServiceFromStore(Effect.succeed(makeUserAccountMemoryStore())),
         Layer.mergeAll(
@@ -58,13 +60,18 @@ describe("user account contract", () => {
           }),
           Layer.succeed(IdentityEventPublisher, {
             append: (input) => {
-              published.push(input as EventEnvelopeShape)
-              return Effect.succeed(input as EventEnvelopeShape)
+              // SAFETY: the published event is an envelope, as the publisher contract requires.
+              published.push(input as EventEnvelopeContract)
+
+              // SAFETY: the published event is an envelope, as the publisher contract requires.
+              return Effect.succeed(input as EventEnvelopeContract)
             },
           }),
         ),
       )
+
       const principal = { userAccountId: "actor", sessionId: "session" }
+
       const invalidTenant = yield* Effect.flip(
         Schema.decodeUnknownEffect(CreateUserAccountForTenantInput)({
           principal,
@@ -72,7 +79,9 @@ describe("user account contract", () => {
           email: "invalid@example.com",
         }),
       )
+
       assert.strictEqual(invalidTenant._tag, "SchemaError")
+
       const created = yield* service.createForTenant({
         principal,
         tenantId: identityTenantId,
@@ -97,6 +106,7 @@ describe("user account contract", () => {
           email: "denied@example.com",
         }),
       )
+
       assert.instanceOf(denied, IdentityAuthorizationDenied)
       assert.strictEqual((yield* service.list()).length, 1)
     }),
@@ -162,6 +172,7 @@ describe("user account contract", () => {
         const create = UserAccountService.use((service) =>
           service.create({ email: "duplicate@example.com" }),
         )
+
         yield* create
         const error = yield* Effect.flip(create)
 
@@ -192,12 +203,14 @@ describe("user account contract", () => {
     withUserAccount(
       Effect.gen(function* () {
         const service = yield* UserAccountService
+
         const invalidId = yield* Effect.flip(
           Schema.decodeUnknownEffect(UpdateUserAccountInput)({
             id: "not-a-uuid",
             email: "invalid@example.com",
           }),
         )
+
         assert.strictEqual(invalidId._tag, "SchemaError")
         const first = yield* service.create({ email: "first@example.com" })
         const second = yield* service.create({ email: "second@example.com" })
@@ -230,6 +243,7 @@ describe("user account contract", () => {
       operation: "user-account.test",
       cause: new Error("database unavailable"),
     })
+
     const database: DatabaseService = {
       query: <A>(_operation: (database: DrizzleDatabase) => Promise<A>) =>
         Effect.fail(databaseFailure),
@@ -307,7 +321,9 @@ describe("user account contract", () => {
     withUserAccount(
       Effect.gen(function* () {
         const error = yield* Effect.flip(
-          UserAccountService.use((service) => service.create({ email: 42 })),
+          UserAccountService.use((service) =>
+            service.create(partial<Parameters<typeof service.create>[0]>()({ email: 42 })),
+          ),
         )
 
         assert.instanceOf(error, Error)

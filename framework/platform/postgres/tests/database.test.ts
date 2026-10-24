@@ -15,9 +15,11 @@ import {
   makePostgresReadYourWrites,
   validatePostgresVersion,
 } from "../mod.ts"
+import { partial } from "../../../../tests/support/partial.ts"
 
 const makeClient = (version = "190000") => {
   const queries: Array<{ sql: string; parameters: readonly unknown[] }> = []
+
   const client = {
     options: { parsers: {}, serializers: {} },
     unsafe: <Row extends Record<string, unknown>>(
@@ -25,18 +27,22 @@ const makeClient = (version = "190000") => {
       parameters: readonly unknown[] = [],
     ) => {
       queries.push({ sql: query, parameters })
+
       const rows =
         query === "show server_version_num"
           ? [{ server_version_num: version }]
           : [{ id: "018f0000-0000-7000-8000-000000000000", email: "typed@example.com" }]
-      const result = Promise.resolve(rows as unknown as readonly Row[])
+
+      const result = Promise.resolve(partial<readonly Row[]>()(rows))
+
       return Object.assign(result, {
         values: () => Promise.resolve(rows.map((row) => Object.values(row))),
       })
     },
-    begin: <A>(operation: (transaction: unknown) => Promise<A>) => operation(client),
+    begin: <A>(operation: (transaction: Sql) => Promise<A>) => operation(partial<Sql>()(client)),
   }
-  return { client: client as unknown as Sql, queries }
+
+  return { client: partial<Sql>()(client), queries }
 }
 
 const makeConsistencyClient = (
@@ -48,10 +54,12 @@ const makeConsistencyClient = (
   } = {},
 ) => {
   const queries: string[] = []
+
   const client = {
     options: { parsers: {}, serializers: {} },
     unsafe: <Row extends Record<string, unknown>>(query: string) => {
       queries.push(query)
+
       const rows = query.includes("pg_current_wal_insert_lsn")
         ? [{ lsn: options.lsn ?? "0/306EE20" }]
         : query.startsWith("WAIT FOR")
@@ -62,10 +70,12 @@ const makeConsistencyClient = (
                 timeline_id: options.timelineId ?? 1,
               },
             ]
-      return Promise.resolve(rows as unknown as readonly Row[])
+
+      return Promise.resolve(partial<readonly Row[]>()(rows))
     },
   }
-  return { client: client as unknown as Sql, queries }
+
+  return { client: partial<Sql>()(client), queries }
 }
 
 const consistencyConfig = {
@@ -95,6 +105,7 @@ describe("database service", () => {
   it.effect("unwraps Drizzle failures when mapping constraints", () =>
     Effect.sync(() => {
       const driverError = { code: "23505", constraint_name: "user_accounts_email_key" }
+
       const failure = new DatabaseFailure({
         operation: "user-account.create",
         cause: new Error("query failed", { cause: driverError }),
@@ -107,7 +118,7 @@ describe("database service", () => {
   it.effect("rejects PostgreSQL versions below 19", () =>
     Effect.gen(function* () {
       const { client } = makeClient("180000")
-      const error = yield* Effect.flip(validatePostgresVersion(client as unknown as PostgresClient))
+      const error = yield* Effect.flip(validatePostgresVersion(partial<PostgresClient>()(client)))
 
       assert.instanceOf(error, UnsupportedPostgresVersion)
     }),
@@ -117,11 +128,13 @@ describe("database service", () => {
     Effect.gen(function* () {
       const primary = makeConsistencyClient()
       const replica = makeConsistencyClient()
+
       const service = yield* makePostgresReadYourWrites(
         primary.client,
         replica.client,
         consistencyConfig,
       )
+
       const token = yield* service.capture(tenantId)
       yield* service.wait(tenantId, token)
 
@@ -141,13 +154,16 @@ describe("database service", () => {
     Effect.gen(function* () {
       const primary = makeConsistencyClient()
       const replica = makeConsistencyClient()
+
       const service = yield* makePostgresReadYourWrites(
         primary.client,
         replica.client,
         consistencyConfig,
       )
+
       const token = yield* service.capture(tenantId)
       const tampered = yield* Effect.flip(service.wait(tenantId, `${token}x`))
+
       const wrongTenant = yield* Effect.flip(
         service.wait("018f0000-0000-7000-8000-000000000002", token),
       )
@@ -163,12 +179,14 @@ describe("database service", () => {
       const { client: primary } = makeConsistencyClient()
       const { client: replica } = makeConsistencyClient()
       let now = 1_000
+
       const service = yield* makePostgresReadYourWrites(
         primary,
         replica,
         { ...consistencyConfig, tokenTtlMs: 1 },
         () => now,
       )
+
       const token = yield* service.capture(tenantId)
       now += 2_000
       const failure = yield* Effect.flip(service.wait(tenantId, token))
@@ -181,22 +199,26 @@ describe("database service", () => {
     Effect.gen(function* () {
       const primary = makeConsistencyClient()
       const promotedReplica = makeConsistencyClient({ systemIdentifier: "different-cluster" })
+
       const service = yield* makePostgresReadYourWrites(
         primary.client,
         promotedReplica.client,
         consistencyConfig,
       )
+
       const token = yield* service.capture(tenantId)
       const placementFailure = yield* Effect.flip(service.wait(tenantId, token))
 
       assert.strictEqual(placementFailure.reason, "placement_mismatch")
 
       const timelineReplica = makeConsistencyClient({ timelineId: 2 })
+
       const timelineService = yield* makePostgresReadYourWrites(
         primary.client,
         timelineReplica.client,
         consistencyConfig,
       )
+
       const timelineToken = yield* timelineService.capture(tenantId)
       const timelineFailure = yield* Effect.flip(timelineService.wait(tenantId, timelineToken))
 
@@ -208,21 +230,25 @@ describe("database service", () => {
     Effect.gen(function* () {
       const primary = makeConsistencyClient()
       const notInRecovery = makeConsistencyClient({ status: "not in recovery" })
+
       const service = yield* makePostgresReadYourWrites(
         primary.client,
         notInRecovery.client,
         consistencyConfig,
       )
+
       const token = yield* service.capture(tenantId)
       const failure = yield* Effect.flip(service.wait(tenantId, token))
       assert.strictEqual(failure.reason, "not_in_recovery")
 
       const unknownStatus = makeConsistencyClient({ status: "unexpected" })
+
       const unknownService = yield* makePostgresReadYourWrites(
         primary.client,
         unknownStatus.client,
         consistencyConfig,
       )
+
       const unknownToken = yield* unknownService.capture(tenantId)
       const unknownFailure = yield* Effect.flip(unknownService.wait(tenantId, unknownToken))
       assert.strictEqual(unknownFailure.reason, "wait_failed")
@@ -233,11 +259,13 @@ describe("database service", () => {
     Effect.gen(function* () {
       const primary = makeConsistencyClient()
       const replica = makeConsistencyClient({ status: "timeout" })
+
       const service = yield* makePostgresReadYourWrites(
         primary.client,
         replica.client,
         consistencyConfig,
       )
+
       const token = yield* service.capture(tenantId)
       const failure = yield* Effect.flip(service.wait(tenantId, token))
 

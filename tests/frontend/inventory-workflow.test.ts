@@ -8,7 +8,7 @@ import type {
   StockReservation,
   StockTransfer,
 } from "../../apps/web/src/shared/contracts/generated/inventory.ts"
-import { builtApp, connectToTenant, chooseMoreAction } from "./browser.ts"
+import { builtApp, connectToTenant, chooseMoreAction, notFoundBody } from "./browser.ts"
 
 const tenantId = "01900000-0000-7000-8000-000000000010"
 const legalEntityId = "01900000-0000-7000-8000-000000000011"
@@ -29,12 +29,15 @@ const warehouse = {
   primaryBranchId: null,
   name: "Main warehouse",
 }
+
 const destinationWarehouse = {
   ...warehouse,
   id: destinationWarehouseId,
   name: "Overflow warehouse",
 }
+
 const item = { id: itemId, tenantId, sku: "WIDGET-1", name: "Widget", unitOfMeasure: "EA" }
+
 const secondItem = {
   id: secondItemId,
   tenantId,
@@ -42,6 +45,7 @@ const secondItem = {
   name: "Second widget",
   unitOfMeasure: "EA",
 }
+
 const draftTransfer: StockTransfer = {
   id: transferId,
   tenantId,
@@ -53,7 +57,8 @@ const draftTransfer: StockTransfer = {
   completedAt: null,
   lines: [{ itemId, quantity: "2" }],
 }
-const fulfillJson = (route: Route, status: number, body: unknown) =>
+
+const fulfillJson = <Body>(route: Route, status: number, body: Body) =>
   route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) })
 
 const connectAndOpenInventory = async (page: Page, url: string) => {
@@ -67,6 +72,7 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const { page, url, errors } = yield* builtApp
+
       let balances: StockBalance[] = [
         {
           tenantId,
@@ -77,6 +83,7 @@ it.effect(
           unitOfMeasure: "EA",
         },
       ]
+
       let reservations: StockReservation[] = [
         {
           id: reservationId,
@@ -97,6 +104,7 @@ it.effect(
           status: "active",
         },
       ]
+
       let transfers: StockTransfer[] = [draftTransfer]
       let movements: StockMovement[] = []
       const requests: Array<{ path: string; method: string; body: unknown }> = []
@@ -119,9 +127,11 @@ it.effect(
           if (path === "/user-accounts" && method === "GET") {
             return fulfillJson(route, 200, [])
           }
+
           if (path === "/inventory/warehouses" && method === "GET") {
             return fulfillJson(route, 200, [warehouse, destinationWarehouse])
           }
+
           if (path === "/inventory/warehouses" && method === "POST") {
             return fulfillJson(route, 201, {
               ...warehouse,
@@ -130,8 +140,10 @@ it.effect(
               primaryBranchId: body.primaryBranchId ?? null,
             })
           }
+
           if (path === "/inventory/items" && method === "GET") {
             const search = requestUrl.searchParams.get("search")?.toLocaleLowerCase() ?? null
+
             return fulfillJson(
               route,
               200,
@@ -143,6 +155,7 @@ it.effect(
               ),
             )
           }
+
           if (path === "/inventory/items" && method === "POST") {
             return fulfillJson(route, 201, {
               ...item,
@@ -151,19 +164,24 @@ it.effect(
               unitOfMeasure: (body.unitOfMeasure ?? "EA").trim().toUpperCase(),
             })
           }
+
           if (path === "/inventory/stock-balances" && method === "GET") {
             return fulfillJson(route, 200, balances)
           }
+
           if (path === "/inventory/reservations" && method === "GET") {
             const status = requestUrl.searchParams.get("status")
+
             return fulfillJson(
               route,
               200,
               status === null ? reservations : reservations.filter((row) => row.status === status),
             )
           }
+
           if (path === "/inventory/reservations" && method === "POST") {
             reserveBody = body
+
             const created: StockReservation = {
               id: reservationId,
               tenantId,
@@ -173,20 +191,25 @@ it.effect(
               idempotencyKey: body.idempotencyKey ?? null,
               status: "active",
             }
+
             reservations = [created, ...reservations.filter((row) => row.id !== created.id)]
             balances = balances.map((row) => ({ ...row, reserved: "3" }))
+
             return fulfillJson(route, 201, created)
           }
+
           if (path === `/inventory/reservations/${reservationId}/release` && method === "POST") {
             reservations = reservations.map((row) =>
               row.id === reservationId ? { ...row, status: "released" } : row,
             )
+
             return fulfillJson(
               route,
               200,
               reservations.find((row) => row.id === reservationId),
             )
           }
+
           if (
             path === `/inventory/reservations/${secondReservationId}/fulfill` &&
             method === "POST"
@@ -194,29 +217,37 @@ it.effect(
             reservations = reservations.map((row) =>
               row.id === secondReservationId ? { ...row, status: "fulfilled" } : row,
             )
+
             return fulfillJson(
               route,
               200,
               reservations.find((row) => row.id === secondReservationId),
             )
           }
+
           if (path === "/inventory/transfers" && method === "GET") {
             return fulfillJson(route, 200, transfers)
           }
+
           if (path === "/inventory/transfers" && method === "POST") {
             transferBody = body
             transfers = [draftTransfer]
+
             return fulfillJson(route, 201, draftTransfer)
           }
+
           if (path === `/inventory/transfers/${transferId}/confirm` && method === "POST") {
             const confirmed: StockTransfer = {
               ...draftTransfer,
               status: "confirmed",
               confirmedAt: "2026-09-13T12:00:00.000Z",
             }
+
             transfers = [confirmed]
+
             return fulfillJson(route, 200, confirmed)
           }
+
           if (path === `/inventory/transfers/${transferId}/complete` && method === "POST") {
             const completed: StockTransfer = {
               ...draftTransfer,
@@ -224,12 +255,16 @@ it.effect(
               confirmedAt: "2026-09-13T12:00:00.000Z",
               completedAt: "2026-09-13T12:01:00.000Z",
             }
+
             transfers = [completed]
+
             return fulfillJson(route, 200, completed)
           }
+
           if (path === "/inventory/movements" && method === "GET") {
             return fulfillJson(route, 200, movements)
           }
+
           if (path === "/inventory/receipts" && method === "POST") {
             receiveBody = body
             balances = balances.map((row) => ({ ...row, onHand: "11" }))
@@ -248,8 +283,10 @@ it.effect(
                 idempotencyKey: null,
               },
             ]
+
             return fulfillJson(route, 200, receiptBalance)
           }
+
           if (path === "/inventory/adjustments" && method === "POST") {
             adjustmentBody = body
             movements = [
@@ -266,6 +303,7 @@ it.effect(
                 idempotencyKey: body.idempotencyKey,
               },
             ]
+
             return fulfillJson(route, 200, {
               id: correctionId,
               tenantId,
@@ -277,7 +315,8 @@ it.effect(
               idempotencyKey: body.idempotencyKey,
             })
           }
-          return fulfillJson(route, 404, { _tag: "ApiNotFound", code: "not_found" })
+
+          return fulfillJson(route, 404, notFoundBody())
         })
 
         await connectAndOpenInventory(page, url)
@@ -402,8 +441,11 @@ it.effect(
         await fulfillDialog.waitFor({ state: "hidden" })
 
         assert.deepEqual(receiveBody, { warehouseId, itemId, quantity: "1" })
+        // SAFETY: the workflow posts these bodies with string fields.
         assert.equal((adjustmentBody as Record<string, string>).adjustment, "-1")
+        // SAFETY: the workflow posts these bodies with string fields.
         assert.equal((adjustmentBody as Record<string, string>).reason, "Cycle count correction")
+        // SAFETY: the workflow posts these bodies with string fields.
         assert.equal((reserveBody as Record<string, string>).quantity, "1")
         assert.deepEqual(transferBody, {
           sourceWarehouseId: warehouseId,

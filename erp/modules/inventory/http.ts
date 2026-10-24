@@ -16,8 +16,8 @@ import {
   ShortString,
   TenantHeaders as tenantHeaders,
   Uuid,
-  makeApiErrorMapping,
-  makeModuleApi,
+  apiErrorMapping,
+  moduleApi,
 } from "../../../framework/modules/http/mod.ts"
 import { CalendarDate, FinancialMajorAmount } from "../../../framework/foundation/mod.ts"
 import {
@@ -259,9 +259,9 @@ export const InventoryHttpGroup = HttpApiGroup.make("Inventory").add(
   }).middleware(BearerAuth),
 )
 
-const InventoryHttpApi = makeModuleApi(InventoryHttpGroup)
+const InventoryHttpApi = moduleApi(InventoryHttpGroup)
 
-export const InventoryHttpErrors = makeApiErrorMapping({
+export const InventoryHttpErrors = apiErrorMapping({
   ...BaseApiErrorPolicy,
   InventoryReferenceNotFound: "not_found",
   InventoryUnitOfMeasureMismatch: "conflict",
@@ -295,6 +295,7 @@ export const InventoryHttpErrors = makeApiErrorMapping({
   WarehouseBranchNotFound: "not_found",
   WarehouseLegalEntityNotFound: "not_found",
 })
+
 const coreApiEffect = InventoryHttpErrors.apiEffect
 
 export const InventoryHttpHandlers = HttpApiBuilder.group(
@@ -304,11 +305,13 @@ export const InventoryHttpHandlers = HttpApiBuilder.group(
     Effect.gen(function* () {
       const inventory = yield* InventoryService
       const stockKeeping = yield* StockKeepingService
+
       return handlers
         .handle(
           "registerProductItem",
           Effect.fn("Http.Inventory.registerProductItem")(function* ({ headers, payload }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               stockKeeping.registerProductItem({
                 principal,
@@ -322,6 +325,7 @@ export const InventoryHttpHandlers = HttpApiBuilder.group(
           "countStock",
           Effect.fn("Http.Inventory.countStock")(function* ({ headers, params, payload }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               stockKeeping.countStock({
                 principal,
@@ -336,6 +340,7 @@ export const InventoryHttpHandlers = HttpApiBuilder.group(
           "stockValuation",
           Effect.fn("Http.Inventory.stockValuation")(function* ({ headers, params }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               stockKeeping.valuation({
                 principal,
@@ -349,6 +354,7 @@ export const InventoryHttpHandlers = HttpApiBuilder.group(
           "listWarehouses",
           Effect.fn("Http.Inventory.listWarehouses")(function* ({ headers, query }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               inventory.listWarehouses({ principal, tenantId: headers["x-tenant-id"], ...query }),
             )
@@ -358,6 +364,7 @@ export const InventoryHttpHandlers = HttpApiBuilder.group(
           "listItems",
           Effect.fn("Http.Inventory.listItems")(function* ({ headers, query }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               inventory.listItems({ principal, tenantId: headers["x-tenant-id"], ...query }),
             )
@@ -367,6 +374,7 @@ export const InventoryHttpHandlers = HttpApiBuilder.group(
           "listStockBalances",
           Effect.fn("Http.Inventory.listStockBalances")(function* ({ headers, query }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               inventory.listStockBalances({
                 principal,
@@ -380,6 +388,7 @@ export const InventoryHttpHandlers = HttpApiBuilder.group(
           "listStockReservations",
           Effect.fn("Http.Inventory.listStockReservations")(function* ({ headers, query }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               inventory.listStockReservations({
                 principal,
@@ -393,6 +402,7 @@ export const InventoryHttpHandlers = HttpApiBuilder.group(
           "listStockTransfers",
           Effect.fn("Http.Inventory.listStockTransfers")(function* ({ headers, query }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               inventory.listStockTransfers({
                 principal,
@@ -406,6 +416,7 @@ export const InventoryHttpHandlers = HttpApiBuilder.group(
           "listStockMovements",
           Effect.fn("Http.Inventory.listStockMovements")(function* ({ headers, query }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               inventory.listStockMovements({
                 principal,
@@ -419,6 +430,7 @@ export const InventoryHttpHandlers = HttpApiBuilder.group(
           "createWarehouse",
           Effect.fn("Http.Inventory.createWarehouse")(function* ({ headers, payload }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               inventory.createWarehouse({
                 principal,
@@ -432,6 +444,7 @@ export const InventoryHttpHandlers = HttpApiBuilder.group(
           "createItem",
           Effect.fn("Http.Inventory.createItem")(function* ({ headers, payload }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               inventory.createItem({ principal, tenantId: headers["x-tenant-id"], ...payload }),
             )
@@ -441,6 +454,7 @@ export const InventoryHttpHandlers = HttpApiBuilder.group(
           "adjustStock",
           Effect.fn("Http.Inventory.adjustStock")(function* ({ headers, payload }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               inventory.adjustStock({ principal, tenantId: headers["x-tenant-id"], ...payload }),
             )
@@ -450,6 +464,7 @@ export const InventoryHttpHandlers = HttpApiBuilder.group(
           "receiveStock",
           Effect.fn("Http.Inventory.receiveStock")(function* ({ headers, payload }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               inventory.receiveStock({ principal, tenantId: headers["x-tenant-id"], ...payload }),
             )
@@ -459,6 +474,7 @@ export const InventoryHttpHandlers = HttpApiBuilder.group(
           "reserveStock",
           Effect.fn("Http.Inventory.reserveStock")(function* ({ headers, payload }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               inventory.reserveStock({ principal, tenantId: headers["x-tenant-id"], ...payload }),
             )
@@ -468,6 +484,7 @@ export const InventoryHttpHandlers = HttpApiBuilder.group(
           "releaseReservation",
           Effect.fn("Http.Inventory.releaseReservation")(function* ({ headers, params }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               inventory.releaseReservation({
                 principal,
@@ -481,6 +498,7 @@ export const InventoryHttpHandlers = HttpApiBuilder.group(
           "fulfillReservation",
           Effect.fn("Http.Inventory.fulfillReservation")(function* ({ headers, params }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               inventory.fulfillReservation({
                 principal,
@@ -494,6 +512,7 @@ export const InventoryHttpHandlers = HttpApiBuilder.group(
           "createTransfer",
           Effect.fn("Http.Inventory.createTransfer")(function* ({ headers, payload }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               inventory.createTransfer({ principal, tenantId: headers["x-tenant-id"], ...payload }),
             )
@@ -503,6 +522,7 @@ export const InventoryHttpHandlers = HttpApiBuilder.group(
           "confirmTransfer",
           Effect.fn("Http.Inventory.confirmTransfer")(function* ({ headers, params }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               inventory.confirmTransfer({
                 principal,
@@ -516,6 +536,7 @@ export const InventoryHttpHandlers = HttpApiBuilder.group(
           "completeTransfer",
           Effect.fn("Http.Inventory.completeTransfer")(function* ({ headers, params }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               inventory.completeTransfer({
                 principal,

@@ -36,6 +36,7 @@ export type EventRow = Omit<EventEnvelope, "occurredAt" | "publishedAt" | "paylo
   readonly publishedAt: Date | null
   readonly payload: unknown
 }
+
 export type ReceiptRow = Omit<ConsumerReceipt, "completedAt"> & { readonly completedAt: Date }
 
 export const toEvent = (row: EventRow) => ({

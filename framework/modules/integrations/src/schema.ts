@@ -11,9 +11,13 @@ class InvalidExternalSchema extends Error {
 }
 
 /** Decode only schemas with no hidden decoding services. */
-export const decodeExternalSchema = (schema: ExternalSchema, input: unknown) =>
+export const decodeExternalSchema = (
+  schema: ExternalSchema,
+  input: Schema.Codec.Encoded<typeof schema>,
+) =>
   Effect.suspend(() => {
     if (!Schema.isSchema(schema)) return Effect.fail(new InvalidExternalSchema())
+
     try {
       return Schema.decodeUnknownEffect(schema)(input)
     } catch {

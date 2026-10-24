@@ -1,8 +1,10 @@
 import { spawnSync } from "node:child_process"
 import { readdir, stat } from "node:fs/promises"
+import { hasErrnoCode } from "./errno.ts"
 
 const testFilePattern = /\.(?:test|spec)\.(?:ts|tsx)$/
 const sourceFilePattern = /\.(?:ts|tsx|js|jsx)$/
+
 const broadTestTriggers = new Set([
   "package.json",
   "pnpm-lock.yaml",
@@ -10,7 +12,7 @@ const broadTestTriggers = new Set([
   "vitest.contract.config.ts",
 ])
 
-const notFound = (cause: unknown) => (cause as NodeJS.ErrnoException).code === "ENOENT"
+const notFound = (cause: unknown) => hasErrnoCode(cause, "ENOENT")
 
 const normalizePath = (path: string) => path.replaceAll("\\", "/")
 const isTestFile = (path: string) => testFilePattern.test(path)
@@ -34,6 +36,7 @@ const changedFiles = async (provided: readonly string[]): Promise<readonly strin
     gitFiles(["diff", "--name-only", "--diff-filter=ACDMRT", "HEAD", "--"]),
     gitFiles(["ls-files", "--others", "--exclude-standard"]),
   ])
+
   return [...new Set([...tracked, ...untracked])].toSorted()
 }
 
@@ -44,7 +47,9 @@ const collectTests = async (root: string): Promise<readonly string[]> => {
     try {
       for (const entry of await readdir(directory, { withFileTypes: true })) {
         const path = `${directory}/${entry.name}`
+
         if (isExperiment(path + "/")) continue
+
         if (entry.isDirectory()) await visit(path)
         else if (entry.isFile() && isTestFile(path)) result.push(path)
       }
@@ -54,11 +59,13 @@ const collectTests = async (root: string): Promise<readonly string[]> => {
   }
 
   await visit(root)
+
   return result.toSorted()
 }
 
 const run = (args: readonly string[], dryRun: boolean): void => {
   console.log(`$ ${args.join(" ")}`)
+
   if (dryRun) return
 
   // pnpm resolves through pnpm.cmd on Windows, so it needs a shell there;
@@ -107,12 +114,15 @@ for (const path of files) {
   }
 
   const match = path.match(/^((?:framework\/modules|erp\/modules|extensions)\/[^/]+)\//)
+
   if (match !== null) {
     if (isTestFile(path)) tests.add(path)
     else if (isSourceFile(path) || path.includes("/tests/")) {
       packageNames.add(match[1]!)
+
       if (path.endsWith("/mod.ts")) relatedSources.add(path)
     }
+
     continue
   }
 
@@ -128,6 +138,7 @@ for (const path of files) {
 
   if (path.startsWith("apps/web/")) {
     appNames.add("web")
+
     for (const test of await collectTests("tests/frontend")) tests.add(test)
     continue
   }
@@ -136,9 +147,11 @@ for (const path of files) {
     if (isTestFile(path)) tests.add(path)
     else if (isSourceFile(path)) {
       const match = path.match(/^apps\/([^/]+)\//)
+
       if (match === null) rootAppChanged = true
       else appNames.add(match[1]!)
     }
+
     continue
   }
 
@@ -148,6 +161,7 @@ for (const path of files) {
     else {
       for (const test of await collectTests("tests/architecture")) tests.add(test)
     }
+
     continue
   }
 
@@ -205,6 +219,7 @@ if (fullSuite) {
       packageNames.size > 1
         ? `cross-package (${[...packageNames].toSorted().join(", ")})`
         : "affected"
+
     console.log(`Running ${scope} tests (${tests.size} files).`)
     await run(["pnpm", "run", "test", ...[...tests].toSorted()], dryRun)
   } else if (relatedSources.size === 0) {

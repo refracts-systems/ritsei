@@ -12,8 +12,8 @@ export {
   CurrencyCode,
   CurrentPrincipal,
   Email,
-  makeApiErrorMapping,
-  makeModuleApi,
+  apiErrorMapping,
+  moduleApi,
   MaxApiCollectionItems,
   MaxApiIdentifierLength,
   MaxApiTextLength,
@@ -25,4 +25,5 @@ export {
   TenantHeaders,
   Uuid,
 } from "./src/contract.ts"
+
 export type { ApiErrorKind, ApiFailure } from "./src/contract.ts"

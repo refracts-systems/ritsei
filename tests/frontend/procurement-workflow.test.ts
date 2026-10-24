@@ -3,7 +3,7 @@ import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import type { Page, Route } from "playwright"
 import type { PurchaseOrder } from "../../apps/web/src/shared/contracts/generated/procurement.ts"
-import { builtApp, connectToTenant } from "./browser.ts"
+import { builtApp, connectToTenant, notFoundBody } from "./browser.ts"
 
 const tenantId = "01900000-0000-7000-8000-000000000010"
 const relationshipId = "01900000-0000-7000-8000-000000000020"
@@ -35,7 +35,7 @@ const draftOrder = {
   lines: [{ id: orderLineId, itemId, quantity: "2", unitPrice: "12.50" }],
 }
 
-const fulfillJson = (route: Route, status: number, body: unknown) =>
+const fulfillJson = <Body>(route: Route, status: number, body: Body) =>
   route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) })
 
 const connectAndOpenProcurement = async (page: Page, url: string) => {
@@ -69,41 +69,55 @@ it.effect(
           requests.push({ path, method, headers: request.headers() })
 
           if (path === "/user-accounts") return fulfillJson(route, 200, [])
+
           if (path === "/procurement/supplier-accounts" && method === "GET") {
             return fulfillJson(route, 200, accounts)
           }
+
           if (path === "/procurement/supplier-accounts" && method === "POST") {
             supplierAccountBody = request.postDataJSON()
+
             return fulfillJson(route, 201, supplierAccount)
           }
+
           if (path === "/procurement/purchase-orders" && method === "GET") {
             const status = requestUrl.searchParams.get("status")
             const supplier = requestUrl.searchParams.get("supplierAccountId")
+
             const matches = [order].filter(
               (candidate) =>
                 (status === null || candidate.status === status) &&
                 (supplier === null || candidate.supplierAccountId === supplier),
             )
+
             return fulfillJson(route, 200, matches)
           }
+
           if (path === "/procurement/purchase-orders" && method === "POST") {
             purchaseOrderBody = request.postDataJSON()
             order = draftOrder
+
             return fulfillJson(route, 201, order)
           }
+
           if (path === `/procurement/purchase-orders/${orderId}` && method === "GET") {
             return fulfillJson(route, 200, order)
           }
+
           if (path === `/procurement/purchase-orders/${orderId}/confirm` && method === "POST") {
             confirmBody = request.postDataJSON()
             order = { ...order, status: "confirmed", confirmedAt: "2026-09-13T12:00:00.000Z" }
+
             return fulfillJson(route, 200, order)
           }
+
           if (path === `/procurement/purchase-orders/${orderId}/receipts` && method === "GET") {
             return fulfillJson(route, 200, receipts)
           }
+
           if (path === `/procurement/purchase-orders/${orderId}/receipts` && method === "POST") {
             receiveBody = request.postDataJSON()
+
             const receipt = {
               id: receiptId,
               tenantId,
@@ -121,10 +135,13 @@ it.effect(
                 },
               ],
             }
+
             receipts = [receipt]
+
             return fulfillJson(route, 201, receipt)
           }
-          return fulfillJson(route, 404, { _tag: "ApiNotFound", code: "not_found" })
+
+          return fulfillJson(route, 404, notFoundBody())
         })
 
         await connectAndOpenProcurement(page, url)
@@ -137,9 +154,11 @@ it.effect(
               request.path === "/procurement/purchase-orders" && request.method === "GET",
           ),
         )
+
         const procurementRequest = requests.find((request) =>
           request.path.startsWith("/procurement"),
         )
+
         assert.equal(procurementRequest?.headers.authorization, "Bearer procurement-session")
         assert.equal(procurementRequest?.headers["x-tenant-id"], tenantId)
 
@@ -147,6 +166,7 @@ it.effect(
           name: "Create supplier account",
           exact: true,
         })
+
         await createAccount.click()
         const accountDialog = page.getByRole("dialog", { name: "Create supplier account" })
         await accountDialog.waitFor()

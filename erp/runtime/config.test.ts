@@ -42,7 +42,9 @@ describe("runtime configuration", () => {
           RITSEI_OIDC_REDIRECT_URI: "http://127.0.0.1:5173/auth/callback",
         }),
       )
+
       assert.strictEqual(configuration.authentication?.profile, "oidc")
+
       if (configuration.authentication?.profile !== "oidc") return
       assert.strictEqual(configuration.authentication.issuerUrl, "https://id.example.com")
       assert.deepStrictEqual(configuration.authentication.scopes, ["openid", "profile", "email"])
@@ -57,6 +59,7 @@ describe("runtime configuration", () => {
           RITSEI_OIDC_ISSUER_URL: "https://id.example.com",
         }),
       ).pipe(Effect.flip)
+
       assert.strictEqual(failure.reason, "missing_oidc_configuration")
     }),
   )
@@ -75,6 +78,7 @@ describe("runtime configuration", () => {
           RITSEI_OIDC_REDIRECT_URI: "http://127.0.0.1:5173/auth/callback",
         }),
       ).pipe(Effect.flip)
+
       assert.strictEqual(failure.reason, "invalid_oidc_configuration")
     }),
   )
@@ -84,6 +88,7 @@ describe("runtime configuration", () => {
       const configuration = yield* parseRuntimeConfiguration(
         environment({ RITSEI_DEPLOYMENT_PROFILE: "standard" }),
       )
+
       assert.strictEqual(configuration.deploymentProfile, "standard")
     }),
   )
@@ -95,6 +100,7 @@ describe("runtime configuration", () => {
           RITSEI_POSTGRES_RYW_ENABLED: "true",
         }),
       ).pipe(Effect.flip)
+
       assert.strictEqual(failure._tag, "RuntimeConfigurationFailure")
       assert.strictEqual(failure.reason, "missing_postgres_read_your_writes_configuration")
     }),
@@ -112,6 +118,7 @@ describe("runtime configuration", () => {
           RITSEI_POSTGRES_CONSISTENCY_TTL_MS: "120000",
         }),
       )
+
       assert.deepStrictEqual(configuration.postgresReadYourWrites, {
         replicaUrl: "postgresql://replica/ritsei",
         placementId: "local-cluster",
@@ -133,6 +140,7 @@ describe("runtime configuration", () => {
           RITSEI_POSTGRES_RYW_MAX_WAIT_MS: "0",
         }),
       ).pipe(Effect.flip)
+
       assert.strictEqual(failure._tag, "RuntimeConfigurationFailure")
       assert.strictEqual(failure.reason, "invalid_postgres_read_your_writes_configuration")
     }),

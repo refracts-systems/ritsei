@@ -5,10 +5,20 @@ import {
   assertFinancialLedgerConformance,
   LARGE_FINANCIAL_MINOR,
 } from "../../../../tests/support/financial-ledger-conformance.ts"
-import { FinancialLedgerPort, makeFinancialLedgerTestLayer } from "../mod.ts"
+import {
+  FinancialLedgerPort,
+  makeFinancialLedgerTestLayer,
+  FinancialExecutionManualRecovery,
+  FinancialExecutionUnknown,
+  FinancialExecutionRejected,
+  FinancialExecutionAccepted,
+  FinancialBalanceAvailable,
+  FinancialExecutionOutcome,
+} from "../mod.ts"
 
 const tenantId = "tenant-a"
 const legalEntityId = "legal-entity-a"
+
 const account = (accountId: string) => ({
   tenantId,
   legalEntityId,
@@ -16,6 +26,7 @@ const account = (accountId: string) => ({
   currency: "USD",
   mappingVersion: 1,
 })
+
 const journal = (operationId = "operation-1") => ({
   tenantId,
   legalEntityId,
@@ -68,6 +79,7 @@ describe("financial ledger contract", () => {
 
         const first = yield* ledger.postJournal(journal())
         const replay = yield* ledger.postJournal(journal())
+
         const conflict = yield* ledger.postJournal({
           ...journal(),
           lines: [
@@ -77,14 +89,17 @@ describe("financial ledger contract", () => {
         })
 
         assert.strictEqual(first._tag, "accepted")
-        if (first._tag !== "accepted") return
+
+        if (!FinancialExecutionOutcome.guards.accepted(first)) return
         assert.strictEqual(first.transferCount, 1)
         assert.deepStrictEqual(replay, first)
-        assert.deepStrictEqual(conflict, {
-          _tag: "manual_recovery",
-          operationId: "operation-1",
-          reason: "conflicting_replay",
-        })
+        assert.deepStrictEqual(
+          conflict,
+          FinancialExecutionManualRecovery.make({
+            operationId: "operation-1",
+            reason: "conflicting_replay",
+          }),
+        )
       }),
     ),
   )
@@ -99,11 +114,13 @@ describe("financial ledger contract", () => {
         const first = yield* ledger.postJournal(journal("lost-operation"))
         const resolved = yield* ledger.postJournal(journal("lost-operation"))
 
-        assert.deepStrictEqual(first, {
-          _tag: "unknown",
-          operationId: "lost-operation",
-          reason: "response_lost",
-        })
+        assert.deepStrictEqual(
+          first,
+          FinancialExecutionUnknown.make({
+            operationId: "lost-operation",
+            reason: "response_lost",
+          }),
+        )
         assert.strictEqual(resolved._tag, "accepted")
       }),
       { loseResponseFor: "lost-operation" },
@@ -114,6 +131,7 @@ describe("financial ledger contract", () => {
     withLedger(
       Effect.gen(function* () {
         const ledger = yield* FinancialLedgerPort
+
         const unbalanced = yield* ledger.postJournal({
           ...journal("unbalanced"),
           lines: [
@@ -121,18 +139,20 @@ describe("financial ledger contract", () => {
             { accountId: "revenue", debitMinor: "0", creditMinor: "12000" },
           ],
         })
-        assert.deepStrictEqual(unbalanced, {
-          _tag: "rejected",
-          operationId: "unbalanced",
-          reason: "unbalanced",
-        })
+
+        assert.deepStrictEqual(
+          unbalanced,
+          FinancialExecutionRejected.make({ operationId: "unbalanced", reason: "unbalanced" }),
+        )
 
         const missingAccount = yield* ledger.postJournal(journal("missing-account"))
-        assert.deepStrictEqual(missingAccount, {
-          _tag: "rejected",
-          operationId: "missing-account",
-          reason: "invalid_account",
-        })
+        assert.deepStrictEqual(
+          missingAccount,
+          FinancialExecutionRejected.make({
+            operationId: "missing-account",
+            reason: "invalid_account",
+          }),
+        )
 
         const invalidInput = yield* Effect.flip(
           ledger.postJournal({
@@ -140,6 +160,7 @@ describe("financial ledger contract", () => {
             lines: [{ accountId: "cash", debitMinor: "-1", creditMinor: "0" }],
           }),
         )
+
         assert.strictEqual(invalidInput._tag, "SchemaError")
       }),
     ),
@@ -157,14 +178,16 @@ describe("financial ledger contract", () => {
           ...account("revenue"),
           balanceConstraint: "debits_must_not_exceed_credits",
         })
-        assert.deepStrictEqual(yield* ledger.postJournal(journal("accepted-with-constraints")), {
-          _tag: "accepted",
-          operationId: "accepted-with-constraints",
-          mappingVersion: 1,
-          acceptedAt: "0",
-          transferCount: 1,
-          transferIds: ["transfer:tenant-a:legal-entity-a:accepted-with-constraints:0"],
-        })
+        assert.deepStrictEqual(
+          yield* ledger.postJournal(journal("accepted-with-constraints")),
+          FinancialExecutionAccepted.make({
+            operationId: "accepted-with-constraints",
+            mappingVersion: 1,
+            acceptedAt: "0",
+            transferCount: 1,
+            transferIds: ["transfer:tenant-a:legal-entity-a:accepted-with-constraints:0"],
+          }),
+        )
         assert.deepStrictEqual(
           yield* ledger.postJournal({
             ...journal("constraint-rejection"),
@@ -173,21 +196,22 @@ describe("financial ledger contract", () => {
               { accountId: "revenue", debitMinor: "12501", creditMinor: "0" },
             ],
           }),
-          {
-            _tag: "rejected",
+          FinancialExecutionRejected.make({
             operationId: "constraint-rejection",
             reason: "constraint_violation",
-          },
+          }),
         )
-        assert.deepStrictEqual(yield* ledger.getBalance({ ...account("cash") }), {
-          _tag: "available",
-          accountId: "cash",
-          mappingVersion: 1,
-          debitsPendingMinor: "0",
-          debitsPostedMinor: "12500",
-          creditsPendingMinor: "0",
-          creditsPostedMinor: "0",
-        })
+        assert.deepStrictEqual(
+          yield* ledger.getBalance({ ...account("cash") }),
+          FinancialBalanceAvailable.make({
+            accountId: "cash",
+            mappingVersion: 1,
+            debitsPendingMinor: "0",
+            debitsPostedMinor: "12500",
+            creditsPendingMinor: "0",
+            creditsPostedMinor: "0",
+          }),
+        )
       }),
     ),
   )
@@ -197,18 +221,22 @@ describe("financial ledger contract", () => {
       Effect.gen(function* () {
         const ledger = yield* FinancialLedgerPort
         yield* ledger.createExecutionAccount(account("cash"))
+
         const balance = yield* ledger.getBalance({
           ...account("cash"),
         })
-        assert.deepStrictEqual(balance, {
-          _tag: "available",
-          accountId: "cash",
-          mappingVersion: 1,
-          debitsPendingMinor: "0",
-          debitsPostedMinor: "0",
-          creditsPendingMinor: "0",
-          creditsPostedMinor: "0",
-        })
+
+        assert.deepStrictEqual(
+          balance,
+          FinancialBalanceAvailable.make({
+            accountId: "cash",
+            mappingVersion: 1,
+            debitsPendingMinor: "0",
+            debitsPostedMinor: "0",
+            creditsPendingMinor: "0",
+            creditsPostedMinor: "0",
+          }),
+        )
       }),
     ),
   )
@@ -219,11 +247,13 @@ describe("financial ledger contract", () => {
         const ledger = yield* FinancialLedgerPort
         yield* ledger.createExecutionAccount(account("cash"))
         yield* ledger.createExecutionAccount(account("revenue"))
-        assert.deepStrictEqual(yield* ledger.postJournal(journal("unavailable-operation")), {
-          _tag: "unknown",
-          operationId: "unavailable-operation",
-          reason: "unavailable",
-        })
+        assert.deepStrictEqual(
+          yield* ledger.postJournal(journal("unavailable-operation")),
+          FinancialExecutionUnknown.make({
+            operationId: "unavailable-operation",
+            reason: "unavailable",
+          }),
+        )
       }),
       { unavailableFor: "unavailable-operation" },
     ),
@@ -238,11 +268,10 @@ describe("financial ledger contract", () => {
         const first = yield* ledger.postJournal(journal("outage-recovery"))
         const recovered = yield* ledger.postJournal(journal("outage-recovery"))
         const replay = yield* ledger.postJournal(journal("outage-recovery"))
-        assert.deepStrictEqual(first, {
-          _tag: "unknown",
-          operationId: "outage-recovery",
-          reason: "unavailable",
-        })
+        assert.deepStrictEqual(
+          first,
+          FinancialExecutionUnknown.make({ operationId: "outage-recovery", reason: "unavailable" }),
+        )
         assert.strictEqual(recovered._tag, "accepted")
         assert.deepStrictEqual(replay, recovered)
       }),

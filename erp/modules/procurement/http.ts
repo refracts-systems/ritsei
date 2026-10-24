@@ -5,6 +5,7 @@ import * as HttpApiEndpoint from "effect/http-api/HttpApiEndpoint"
 import * as HttpApiGroup from "effect/http-api/HttpApiGroup"
 import * as HttpApiSchema from "effect/http-api/HttpApiSchema"
 import * as Schema from "effect/Schema"
+import * as Option from "effect/Option"
 
 import {
   ConsistencyToken,
@@ -21,8 +22,8 @@ import {
   ShortString,
   TenantHeaders as tenantHeaders,
   Uuid,
-  makeApiErrorMapping,
-  makeModuleApi,
+  apiErrorMapping,
+  moduleApi,
 } from "../../../framework/modules/http/mod.ts"
 import {
   GoodsReceipt,
@@ -35,10 +36,12 @@ import {
 } from "./mod.ts"
 
 const CreatedSupplierAccount = SupplierAccount.pipe(HttpApiSchema.status(201))
+
 const CreatedPurchaseOrder = HttpApiSchema.WithHeaders(
   PurchaseOrder.pipe(HttpApiSchema.status(201)),
   { "x-ritsei-consistency-token": Schema.optionalKey(ConsistencyToken) },
 )
+
 const CreatedGoodsReceipt = GoodsReceipt.pipe(HttpApiSchema.status(201))
 
 export const ProcurementHttpGroup = HttpApiGroup.make("Procurement").add(
@@ -131,9 +134,9 @@ export const ProcurementHttpGroup = HttpApiGroup.make("Procurement").add(
   }).middleware(BearerAuth),
 )
 
-const ProcurementHttpApi = makeModuleApi(ProcurementHttpGroup)
+const ProcurementHttpApi = moduleApi(ProcurementHttpGroup)
 
-export const ProcurementHttpErrors = makeApiErrorMapping({
+export const ProcurementHttpErrors = apiErrorMapping({
   ...BaseApiErrorPolicy,
   PurchaseOrderApprovalRequired: "conflict",
   PurchaseOrderConfirmationIdempotencyConflict: "conflict",
@@ -150,6 +153,7 @@ export const ProcurementHttpErrors = makeApiErrorMapping({
   SupplierAccountNotFound: "not_found",
   SupplierRelationshipNotEligible: "conflict",
 })
+
 const coreApiEffect = ProcurementHttpErrors.apiEffect
 
 export const ProcurementHttpHandlers = HttpApiBuilder.group(
@@ -159,11 +163,13 @@ export const ProcurementHttpHandlers = HttpApiBuilder.group(
     Effect.gen(function* () {
       const procurement = yield* ProcurementService
       const readYourWrites = yield* Effect.serviceOption(PostgresReadYourWrites)
+
       return handlers
         .handle(
           "listSupplierAccounts",
           Effect.fn("Http.Procurement.listSupplierAccounts")(function* ({ headers, query }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               procurement.listSupplierAccounts({
                 principal,
@@ -177,6 +183,7 @@ export const ProcurementHttpHandlers = HttpApiBuilder.group(
           "createSupplierAccount",
           Effect.fn("Http.Procurement.createSupplierAccount")(function* ({ headers, payload }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               procurement.createSupplierAccount({
                 principal,
@@ -190,6 +197,7 @@ export const ProcurementHttpHandlers = HttpApiBuilder.group(
           "listPurchaseOrders",
           Effect.fn("Http.Procurement.listPurchaseOrders")(function* ({ headers, query }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               procurement.listPurchaseOrders({
                 principal,
@@ -203,6 +211,7 @@ export const ProcurementHttpHandlers = HttpApiBuilder.group(
           "createPurchaseOrder",
           Effect.fn("Http.Procurement.createPurchaseOrder")(function* ({ headers, payload }) {
             const principal = yield* CurrentPrincipal
+
             const order = yield* coreApiEffect(
               procurement.createPurchaseOrder({
                 principal,
@@ -210,14 +219,15 @@ export const ProcurementHttpHandlers = HttpApiBuilder.group(
                 ...payload,
               }),
             )
+
             // ponytail: best-effort post-commit token capture; create has no idempotency key, so a
             // capture outage must not turn a committed success into a retryable failure.
-            const token =
-              readYourWrites._tag === "Some"
-                ? yield* readYourWrites.value
-                    .capture(headers["x-tenant-id"])
-                    .pipe(Effect.catch(() => Effect.succeed(undefined)))
-                : undefined
+            const token = Option.isSome(readYourWrites)
+              ? yield* readYourWrites.value
+                  .capture(headers["x-tenant-id"])
+                  .pipe(Effect.catch(() => Effect.succeed(undefined)))
+              : undefined
+
             return HttpApiSchema.withHeaders({
               body: order,
               headers: { "x-ritsei-consistency-token": token },
@@ -228,6 +238,7 @@ export const ProcurementHttpHandlers = HttpApiBuilder.group(
           "getPurchaseOrder",
           Effect.fn("Http.Procurement.getPurchaseOrder")(function* ({ headers, params }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               procurement.getPurchaseOrder({
                 principal,
@@ -247,6 +258,7 @@ export const ProcurementHttpHandlers = HttpApiBuilder.group(
             payload,
           }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               procurement.confirmPurchaseOrder({
                 principal,
@@ -261,6 +273,7 @@ export const ProcurementHttpHandlers = HttpApiBuilder.group(
           "cancelPurchaseOrder",
           Effect.fn("Http.Procurement.cancelPurchaseOrder")(function* ({ headers, params }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               procurement.cancelPurchaseOrder({
                 principal,
@@ -278,6 +291,7 @@ export const ProcurementHttpHandlers = HttpApiBuilder.group(
             query,
           }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               procurement.listPurchaseReceipts({
                 principal,
@@ -296,6 +310,7 @@ export const ProcurementHttpHandlers = HttpApiBuilder.group(
             payload,
           }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               procurement.receivePurchaseOrder({
                 principal,

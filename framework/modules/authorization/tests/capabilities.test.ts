@@ -8,7 +8,7 @@ import {
   CapabilityDefinitions,
   CapabilityId,
   CapabilityIds,
-  isCapabilityIdShape,
+  isCapabilityIdFormat,
   LegacyCapabilityIds,
 } from "../mod.ts"
 
@@ -23,6 +23,7 @@ describe("capability naming contract", () => {
       CapabilityDefinitions.map((definition) => definition.id),
       Array.from(CapabilityIds),
     )
+
     for (const definition of CapabilityDefinitions) {
       const segments = definition.id.split(".")
       assert.strictEqual(definition.owner, segments[0])
@@ -45,6 +46,7 @@ describe("capability naming contract", () => {
       "process.runtime.compensate",
       "process.runtime.manual_recovery",
     ] as const
+
     for (const capability of processCapabilities) {
       assert.isTrue(CapabilityIds.includes(capability))
       assert.isDefined(CapabilityDefinitions.find((definition) => definition.id === capability))
@@ -52,11 +54,11 @@ describe("capability naming contract", () => {
   })
 
   it("accepts canonical shapes and rejects broad or nested names", () => {
-    assert.isTrue(isCapabilityIdShape("party.create"))
-    assert.isTrue(isCapabilityIdShape("inventory.stock_transfer.confirm"))
-    assert.isFalse(isCapabilityIdShape("user_account.write"))
-    assert.isFalse(isCapabilityIdShape("inventory.stock.transfer.confirm"))
-    assert.isFalse(isCapabilityIdShape("Party.Create"))
+    assert.isTrue(isCapabilityIdFormat("party.create"))
+    assert.isTrue(isCapabilityIdFormat("inventory.stock_transfer.confirm"))
+    assert.isFalse(isCapabilityIdFormat("user_account.write"))
+    assert.isFalse(isCapabilityIdFormat("inventory.stock.transfer.confirm"))
+    assert.isFalse(isCapabilityIdFormat("Party.Create"))
   })
 
   it.effect("keeps legacy identifiers outside the assignable capability schema", () =>
@@ -67,6 +69,7 @@ describe("capability naming contract", () => {
           "SchemaError",
         )
       }
+
       assert.strictEqual(
         yield* Schema.decodeUnknownEffect(Capability)("identity.user_account.read"),
         "identity.user_account.read",
@@ -85,6 +88,7 @@ describe("capability naming contract", () => {
           ._tag,
         "SchemaError",
       )
+
       const definition = yield* Schema.decodeUnknownEffect(CapabilityDefinition)({
         id: "plugin_customer.submit",
         owner: "plugin_customer",
@@ -94,6 +98,7 @@ describe("capability naming contract", () => {
         stability: "EXPERIMENTAL",
         scope: ["tenant"],
       })
+
       assert.strictEqual(definition.owner, "plugin_customer")
       assert.strictEqual(definition.stability, "EXPERIMENTAL")
     }),

@@ -21,12 +21,14 @@ it.effect.skipIf(databaseUrl === undefined)(
       Effect.gen(function* () {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
+
         const [tenant] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${`staging-evidence-${uuidv7()}`}) returning id
           `,
         )
+
         const [party] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -34,6 +36,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             values (${tenant!.id}, 'organization', 'Staging Evidence Test') returning id
           `,
         )
+
         const [legalEntity] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -41,9 +44,11 @@ it.effect.skipIf(databaseUrl === undefined)(
             values (${tenant!.id}, ${party!.id}) returning id
           `,
         )
+
         const store = yield* makePostgresFinancialStagingEvidenceStore.pipe(
           Effect.provideService(Database, database),
         )
+
         const evidence = {
           recordId: uuidv7(),
           schemaVersion: 1,
@@ -79,13 +84,16 @@ it.effect.skipIf(databaseUrl === undefined)(
           mismatchCount: 0,
           orphanCount: 0,
         }
+
         const evidenceHash = yield* hashFinancialStagingEvidence(evidence)
+
         const appended = yield* store.append({
           tenantId: tenant!.id,
           evidence,
           canonicalizationVersion: FINANCIAL_STAGING_EVIDENCE_CANONICALIZATION_VERSION,
           evidenceHash,
         })
+
         assert.deepStrictEqual(yield* store.get(tenant!.id, evidence.recordId), appended.record)
 
         const mutationFailure = yield* Effect.tryPromise({
@@ -97,6 +105,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             `,
           catch: (cause) => cause,
         }).pipe(Effect.flip)
+
         assert.ok(mutationFailure)
 
         const corruptRecordId = uuidv7()
@@ -121,7 +130,7 @@ it.effect.skipIf(databaseUrl === undefined)(
         )
         const corrupt = yield* Effect.flip(store.get(tenant!.id, corruptRecordId))
         assert.instanceOf(corrupt, FinancialStagingEvidenceInvalid)
-        assert.strictEqual((corrupt as FinancialStagingEvidenceInvalid).reason, "hash_mismatch")
+        assert.strictEqual(corrupt.reason, "hash_mismatch")
       }),
     ),
 )

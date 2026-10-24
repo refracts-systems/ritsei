@@ -35,6 +35,7 @@ const cachePolicy: Record<
 export function createServerQuery<TData, TError = unknown>(options: ServerQueryOptions<TData>) {
   const queryKey = serverQueryKey(options.tenantId, options.key)
   const policy = cachePolicy[options.cache ?? "collection"]
+
   return useQuery<TData, TError>(() => ({
     queryKey,
     queryFn: ({ signal }) => options.load({ signal, tenantId: options.tenantId }),

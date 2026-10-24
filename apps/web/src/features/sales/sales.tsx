@@ -1,3 +1,5 @@
+import * as Predicate from "effect/Predicate"
+import * as Match from "effect/Match"
 import { useNavigate } from "@solidjs/router"
 import { createSignal, For, Show, untrack, useContext } from "solid-js"
 import type {
@@ -7,7 +9,7 @@ import type {
   SalesOrder,
   SalesOrderStatus,
 } from "../../shared/contracts/generated/sales.ts"
-import { CommandFeedback, QueryBoundary } from "../../shared/request-feedback.tsx"
+import { CommandFeedback, QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
 import { ApiRuntime } from "../../shared/runtime.ts"
 import { formatDecimal } from "../../ui/foundations/format.ts"
 import { layout } from "../../ui/foundations/layout.ts"
@@ -34,6 +36,7 @@ import {
   createQuotationQuery,
   createQuotationsQuery,
 } from "./queries.ts"
+import { presentFields, definedFields } from "../../shared/api.ts"
 
 const quotationStatusOptions = [
   { value: "draft", label: "Draft" },
@@ -42,18 +45,20 @@ const quotationStatusOptions = [
   { value: "rejected", label: "Rejected" },
   { value: "expired", label: "Expired" },
 ] as const
+
 const orderStatusOptions = [
   { value: "draft", label: "Draft" },
   { value: "confirmed", label: "Confirmed" },
   { value: "cancelled", label: "Cancelled" },
 ] as const
+
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const moneyPattern = /^\d+\.\d{2}$/
 const quantityPattern = /^[1-9]\d*$/
 const emailPattern = /^[^\s@]+@[^\s@]+$/
 
 const requiredText = (value: FormDataEntryValue | null | undefined): string | null =>
-  typeof value === "string" && /\S/.test(value) ? value.trim() : null
+  Predicate.isString(value) && /\S/.test(value) ? value.trim() : null
 
 const quotationTone = (status: QuotationStatus): "neutral" | "success" | "warning" =>
   status === "accepted"
@@ -61,17 +66,25 @@ const quotationTone = (status: QuotationStatus): "neutral" | "success" | "warnin
     : status === "rejected" || status === "expired"
       ? "warning"
       : "neutral"
-const orderTone = (status: SalesOrderStatus): "neutral" | "success" | "warning" =>
-  status === "confirmed" ? "success" : status === "cancelled" ? "warning" : "neutral"
 
-function CreateCustomerDialog(props: { reload: () => Promise<unknown> }) {
+const orderTone = (status: SalesOrderStatus) =>
+  Match.value(status).pipe(
+    Match.when("draft", () => "neutral" as const),
+    Match.when("confirmed", () => "success" as const),
+    Match.when("cancelled", () => "warning" as const),
+    Match.exhaustive,
+  )
+
+function CreateCustomerDialog(props: { reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
+
   const mutation = createCustomerMutation(scope, () => {
     setOpen(false)
     void props.reload()
   })
+
   return (
     <Dialog
       open={open()}
@@ -89,10 +102,13 @@ function CreateCustomerDialog(props: { reload: () => Promise<unknown> }) {
             if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
             const name = requiredText(value.name)
             const email = requiredText(value.email)
+
             if (name === null || email === null || !emailPattern.test(email)) {
               setInvalid(true)
+
               return
             }
+
             setInvalid(false)
             mutation.mutate({ name, email })
           }
@@ -150,16 +166,18 @@ function CreateCustomerDialog(props: { reload: () => Promise<unknown> }) {
 // fallow-ignore-next-line code-duplication
 function CreateQuotationDialog(props: {
   customers: () => readonly Customer[]
-  reload: () => Promise<unknown>
+  reload: () => Promise<void>
 }) {
   const scope = useContext(ApiRuntime)
   const navigate = useNavigate()
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
+
   const mutation = createQuotationMutation(scope, (quotation) => {
     setOpen(false)
     navigate(`/sales/quotations/${encodeURIComponent(quotation.id)}`)
   })
+
   return (
     <Dialog
       open={open()}
@@ -181,6 +199,7 @@ function CreateQuotationDialog(props: {
               if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
               const customerId = requiredText(value.customerId)
               const total = requiredText(value.total)
+
               if (
                 customerId === null ||
                 !uuidPattern.test(customerId) ||
@@ -188,8 +207,10 @@ function CreateQuotationDialog(props: {
                 !moneyPattern.test(total)
               ) {
                 setInvalid(true)
+
                 return
               }
+
               setInvalid(false)
               mutation.mutate({ customerId, total })
             }
@@ -256,16 +277,18 @@ function CreateQuotationDialog(props: {
 // fallow-ignore-next-line code-duplication
 function CreateOrderDialog(props: {
   customers: () => readonly Customer[]
-  reload: () => Promise<unknown>
+  reload: () => Promise<void>
 }) {
   const scope = useContext(ApiRuntime)
   const navigate = useNavigate()
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
+
   const mutation = createOrderMutation(scope, (order) => {
     setOpen(false)
     navigate(`/sales/orders/${encodeURIComponent(order.id)}`)
   })
+
   return (
     <Dialog
       open={open()}
@@ -284,14 +307,14 @@ function CreateOrderDialog(props: {
           onSubmit={
             // Fallow: this form intentionally keeps sales-order line validation at the UI boundary.
             // fallow-ignore-next-line complexity
-            (value, event) => {
+            (value, _event, form) => {
               if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
               const customerId = requiredText(value.customerId)
               const quotationId = requiredText(value.quotationId)
-              const form = new FormData(event.currentTarget as HTMLFormElement)
               const itemId = requiredText(form.get("itemId"))
               const quantity = requiredText(form.get("quantity"))
               const unitPrice = requiredText(form.get("unitPrice"))
+
               const valid =
                 customerId !== null &&
                 uuidPattern.test(customerId) &&
@@ -302,14 +325,17 @@ function CreateOrderDialog(props: {
                 quantityPattern.test(quantity) &&
                 unitPrice !== null &&
                 moneyPattern.test(unitPrice)
+
               if (!valid) {
                 setInvalid(true)
+
                 return
               }
+
               setInvalid(false)
               mutation.mutate({
                 customerId,
-                ...(quotationId === null ? {} : { quotationId }),
+                ...presentFields({ quotationId }),
                 lines: [{ itemId, quantity, unitPrice }],
               })
             }
@@ -412,14 +438,17 @@ function CreateOrderDialog(props: {
   )
 }
 
-function ConfirmOrderDialog(props: { order: SalesOrder; reload: () => Promise<unknown> }) {
+function ConfirmOrderDialog(props: { order: SalesOrder; reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
+
   const mutation = createConfirmOrderMutation(scope, () => {
     setOpen(false)
     void props.reload()
   })
+
   const key = () => `sales-confirm:${props.order.id}`
+
   return (
     <Dialog
       open={open()}
@@ -466,13 +495,15 @@ function ConfirmOrderDialog(props: { order: SalesOrder; reload: () => Promise<un
   )
 }
 
-function CancelOrderDialog(props: { order: SalesOrder; reload: () => Promise<unknown> }) {
+function CancelOrderDialog(props: { order: SalesOrder; reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
+
   const mutation = createCancelOrderMutation(scope, () => {
     setOpen(false)
     void props.reload()
   })
+
   return (
     <Dialog
       open={open()}
@@ -640,6 +671,7 @@ function CustomerDetail(props: { id: string }) {
   const scope = useContext(ApiRuntime)
   const id = untrack(() => props.id)
   const query = createCustomerQuery(scope, id)
+
   return (
     <section class={layout.stack} aria-labelledby="sales-customer-detail-heading">
       <div class={layout.row}>
@@ -648,7 +680,7 @@ function CustomerDetail(props: { id: string }) {
           Reload customer
         </Button>
       </div>
-      <QueryBoundary label="customer" retry={() => query.refetch()}>
+      <QueryBoundary label="customer" retry={() => reloaded(query.refetch())}>
         <Show when={query.data} keyed>
           {(customer) => (
             <dl class={layout.detailList}>
@@ -684,6 +716,7 @@ function QuotationDetail(props: { id: string }) {
   const scope = useContext(ApiRuntime)
   const id = untrack(() => props.id)
   const query = createQuotationQuery(scope, id)
+
   return (
     <section class={layout.stack} aria-labelledby="sales-quotation-detail-heading">
       <div class={layout.row}>
@@ -692,7 +725,7 @@ function QuotationDetail(props: { id: string }) {
           Reload quotation
         </Button>
       </div>
-      <QueryBoundary label="quotation" retry={() => query.refetch()}>
+      <QueryBoundary label="quotation" retry={() => reloaded(query.refetch())}>
         <Show when={query.data} keyed>
           {(quotation) => (
             <dl class={layout.detailList}>
@@ -728,11 +761,12 @@ function QuotationDetail(props: { id: string }) {
   )
 }
 
-function OrderDetail(props: { id: string; reloadLists: () => Promise<unknown> }) {
+function OrderDetail(props: { id: string; reloadLists: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const id = untrack(() => props.id)
   const query = createOrderQuery(scope, id)
-  const reload = () => Promise.all([query.refetch(), props.reloadLists()])
+  const reload = () => reloaded(Promise.all([query.refetch(), props.reloadLists()]))
+
   return (
     <section class={layout.stack} aria-labelledby="sales-order-detail-heading">
       <div class={layout.row}>
@@ -741,7 +775,7 @@ function OrderDetail(props: { id: string; reloadLists: () => Promise<unknown> })
           Reload order
         </Button>
       </div>
-      <QueryBoundary label="sales order" retry={() => query.refetch()}>
+      <QueryBoundary label="sales order" retry={() => reloaded(query.refetch())}>
         <Show when={query.data} keyed>
           {(order) => (
             <div class={layout.stack}>
@@ -842,6 +876,7 @@ function SalesFilters(props: {
   search?: string
 }) {
   const navigate = useNavigate()
+
   return (
     <Form
       class={layout.row}
@@ -855,16 +890,21 @@ function SalesFilters(props: {
           const search = requiredText(value.search)
           const quotationStatus = value.quotationStatus
           const orderStatus = value.orderStatus
+
           if (customerId !== null && uuidPattern.test(customerId)) {
             query.set("customerId", customerId)
           }
+
           if (search !== null) query.set("search", search)
+
           if (quotationStatusOptions.some((option) => option.value === quotationStatus)) {
             query.set("quotationStatus", String(quotationStatus))
           }
+
           if (orderStatusOptions.some((option) => option.value === orderStatus)) {
             query.set("orderStatus", String(orderStatus))
           }
+
           navigate(query.size === 0 ? "/sales" : `/sales?${query}`)
         }
       }
@@ -928,24 +968,31 @@ export function Sales(props: {
   search?: string
 }) {
   const scope = useContext(ApiRuntime)
+
   const customers = createCustomersQuery(scope, {
-    ...(props.search === undefined ? {} : { search: props.search }),
+    ...definedFields({ search: props.search }),
     limit: 200,
   })
+
   const quotations = createQuotationsQuery(scope, {
-    ...(props.customerId === undefined ? {} : { customerId: props.customerId }),
-    ...(props.quotationStatus === undefined ? {} : { status: props.quotationStatus }),
+    ...definedFields({ customerId: props.customerId }),
+    ...definedFields({ status: props.quotationStatus }),
     limit: 200,
   })
+
   const orders = createOrdersQuery(scope, {
-    ...(props.customerId === undefined ? {} : { customerId: props.customerId }),
-    ...(props.orderStatus === undefined ? {} : { status: props.orderStatus }),
+    ...definedFields({ customerId: props.customerId }),
+    ...definedFields({ status: props.orderStatus }),
     limit: 200,
   })
+
   const customerData = () => customers.data ?? []
   const quotationData = () => quotations.data ?? []
   const orderData = () => orders.data ?? []
-  const reload = () => Promise.all([customers.refetch(), quotations.refetch(), orders.refetch()])
+
+  const reload = () =>
+    reloaded(Promise.all([customers.refetch(), quotations.refetch(), orders.refetch()]))
+
   return (
     <EntityWorkspace
       title="Sales"
@@ -957,9 +1004,12 @@ export function Sales(props: {
       }
       headerActions={
         <div class={layout.row}>
-          <CreateCustomerDialog reload={() => customers.refetch()} />
-          <CreateQuotationDialog customers={customerData} reload={() => quotations.refetch()} />
-          <CreateOrderDialog customers={customerData} reload={() => orders.refetch()} />
+          <CreateCustomerDialog reload={() => reloaded(customers.refetch())} />
+          <CreateQuotationDialog
+            customers={customerData}
+            reload={() => reloaded(quotations.refetch())}
+          />
+          <CreateOrderDialog customers={customerData} reload={() => reloaded(orders.refetch())} />
           <Button type="button" onClick={() => void reload()}>
             Reload Sales
           </Button>

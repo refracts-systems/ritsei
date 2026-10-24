@@ -3,7 +3,7 @@ import type { TenantMembership, TenantMembershipStatus } from "./contract.ts"
 export type MembershipRow = {
   readonly userAccountId: string
   readonly tenantId: string
-  readonly status: string
+  readonly status: TenantMembershipStatus
 }
 
 export const membershipKey = (userAccountId: string, tenantId: string) =>
@@ -12,5 +12,5 @@ export const membershipKey = (userAccountId: string, tenantId: string) =>
 export const toTenantMembership = (row: MembershipRow): TenantMembership => ({
   userAccountId: row.userAccountId,
   tenantId: row.tenantId,
-  status: row.status as TenantMembershipStatus,
+  status: row.status,
 })

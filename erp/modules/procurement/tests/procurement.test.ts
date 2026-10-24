@@ -3,6 +3,8 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
 
+import { partial } from "../../../../tests/support/partial.ts"
+
 import {
   CurrentConsistencyToken,
   Database,
@@ -22,7 +24,7 @@ import {
   makeInventoryTestLayer,
 } from "../../inventory/mod.ts"
 import {
-  EventEnvelopeShape,
+  EventEnvelopeContract,
   makeMessagingTestLayer,
   MessagingService,
 } from "../../../../framework/modules/messaging/mod.ts"
@@ -50,6 +52,7 @@ import {
 const principal = { userAccountId: "procurement-admin", sessionId: "session" }
 const tenantId = "00000000-0000-4000-8000-000000000001"
 const otherTenantId = "00000000-0000-4000-8000-000000000002"
+
 const capabilities = [
   PartyCapabilities.partyCreate,
   PartyCapabilities.legalEntityCreate,
@@ -70,7 +73,7 @@ const capabilities = [
 const withProcurement = <A, E>(
   program: Effect.Effect<A, E, PartyService | ProcurementService | InventoryService>,
   granted: ReadonlyArray<(typeof capabilities)[number]> = capabilities,
-  onPublished?: (event: EventEnvelopeShape) => void,
+  onPublished?: (event: EventEnvelopeContract) => void,
 ) => {
   const authorization = makeAuthorizationTestLayer(
     [tenantId, otherTenantId].flatMap((tenantId) =>
@@ -81,54 +84,66 @@ const withProcurement = <A, E>(
       })),
     ),
   )
+
   const party = makePartyTestLayer().pipe(Layer.provide(authorization))
+
   const messaging = Layer.effect(
     MessagingService,
     Effect.gen(function* () {
       const base = yield* MessagingService
+
       if (onPublished === undefined) return base
+
       return {
         ...base,
-        append: (input: unknown) =>
+        append: (input: Parameters<typeof base.append>[0]) =>
           base.append(input).pipe(Effect.tap((event) => Effect.sync(() => onPublished(event)))),
       }
     }),
   ).pipe(Layer.provide(makeMessagingTestLayer()))
+
   const procurement = makeProcurementTestLayer().pipe(
     Layer.provide(Layer.mergeAll(authorization, party, messaging)),
   )
+
   const inventory = makeInventoryTestLayer().pipe(
     Layer.provide(Layer.merge(authorization, makeMessagingTestLayer())),
   )
+
   return Effect.provide(program, Layer.mergeAll(party, procurement, inventory))
 }
 
 const createRelationship = (kind: "supplier" | "customer") =>
   Effect.gen(function* () {
     const party = yield* PartyService
+
     const owner = yield* party.create({
       principal,
       tenantId,
       kind: "organization",
       name: "Buying Legal Entity",
     })
+
     const legalEntity = yield* party.createLegalEntity({
       principal,
       tenantId,
       organizationId: owner.id,
     })
+
     const counterparty = yield* party.create({
       principal,
       tenantId,
       kind: "organization",
       name: `${kind} counterparty`,
     })
+
     yield* party.assignRole({
       principal,
       tenantId,
       partyId: counterparty.id,
       role: kind,
     })
+
     return yield* party.createRelationship({
       principal,
       tenantId,
@@ -141,6 +156,7 @@ const createRelationship = (kind: "supplier" | "customer") =>
 const createSupplierAccount = Effect.gen(function* () {
   const procurement = yield* ProcurementService
   const relationship = yield* createRelationship("supplier")
+
   return yield* procurement.createSupplierAccount({
     principal,
     tenantId,
@@ -148,19 +164,25 @@ const createSupplierAccount = Effect.gen(function* () {
   })
 })
 
-const makeDatabaseStub = (
+const makeDatabaseStub = <Result>(
   name: string,
-  transactionResult?: unknown,
+  transactionResult?: Result,
   calls: string[] = [],
 ): DatabaseService => {
   const failure = new DatabaseFailure({ operation: `${name}.transaction`, cause: "test" })
+  const failing = (): Effect.Effect<never, DatabaseFailure> => Effect.fail(failure)
+
+  const succeeding = <A>(): Effect.Effect<A, DatabaseFailure> => {
+    // SAFETY: the test supplies a transaction result of the type its caller asks for.
+    return Effect.succeed(transactionResult as A)
+  }
+
   return {
-    query: <A>() => Effect.fail(failure) as Effect.Effect<A, DatabaseFailure>,
+    query: () => failing(),
     transaction: <A>() => {
       calls.push(name)
-      return transactionResult === undefined
-        ? (Effect.fail(failure) as Effect.Effect<A, DatabaseFailure>)
-        : Effect.succeed(transactionResult as A)
+
+      return transactionResult === undefined ? failing() : succeeding<A>()
     },
     withTransaction: <A, E, R>(operation: Effect.Effect<A, E, R>) => operation,
   }
@@ -177,11 +199,14 @@ const makeProcurementPostgresTestLayer = (
       capability: ProcurementCapabilities.purchaseOrderRead,
     },
   ])
+
   const messaging = makeMessagingTestLayer()
   const party = makePartyTestLayer().pipe(Layer.provide(authorization))
+
   const inventory = makeInventoryTestLayer().pipe(
     Layer.provide(Layer.merge(authorization, messaging)),
   )
+
   return ProcurementLive.pipe(
     Layer.provide(
       Layer.mergeAll(
@@ -216,6 +241,7 @@ const readFixtureOrder: PurchaseOrder = {
 const createPurchaseOrder = Effect.gen(function* () {
   const procurement = yield* ProcurementService
   const supplierAccount = yield* createSupplierAccount
+
   return yield* procurement.createPurchaseOrder({
     principal,
     tenantId,
@@ -232,17 +258,20 @@ const createPurchaseOrder = Effect.gen(function* () {
 
 describe("procurement contract", () => {
   it.effect("publishes one confirmation event across idempotent replay", () => {
-    const published: EventEnvelopeShape[] = []
+    const published: EventEnvelopeContract[] = []
+
     return withProcurement(
       Effect.gen(function* () {
         const procurement = yield* ProcurementService
         const order = yield* createPurchaseOrder
+
         const input = {
           principal,
           tenantId,
           purchaseOrderId: order.id,
           idempotencyKey: "confirm-event",
         }
+
         const confirmed = yield* procurement.confirmPurchaseOrder(input)
         assert.strictEqual(published.length, 1)
         assert.strictEqual(published[0].eventType, ProcurementPurchaseOrderConfirmedEvent.id)
@@ -266,11 +295,13 @@ describe("procurement contract", () => {
       Effect.gen(function* () {
         const procurement = yield* ProcurementService
         const relationship = yield* createRelationship("supplier")
+
         const input = {
           principal,
           tenantId,
           supplierRelationshipId: relationship.id,
         }
+
         const account = yield* procurement.createSupplierAccount(input)
 
         assert.strictEqual(account.tenantId, tenantId)
@@ -320,6 +351,7 @@ describe("procurement contract", () => {
       Effect.gen(function* () {
         const procurement = yield* ProcurementService
         const supplierAccount = yield* createSupplierAccount
+
         const lines = [
           {
             itemId: "00000000-0000-4000-8000-000000000010",
@@ -332,6 +364,7 @@ describe("procurement contract", () => {
             unitPrice: "0.01",
           },
         ]
+
         const order = yield* procurement.createPurchaseOrder({
           principal,
           tenantId,
@@ -352,9 +385,11 @@ describe("procurement contract", () => {
         )
         assert.strictEqual(order.status, "draft")
         assert.strictEqual(order.total, "37.04")
+
         for (const line of order.lines) {
           yield* Schema.decodeUnknownEffect(PurchaseOrderLineSnapshot)(line)
         }
+
         assert.deepStrictEqual(
           order.lines.map(({ id: _id, ...line }) => line),
           lines,
@@ -367,16 +402,20 @@ describe("procurement contract", () => {
     const primaryCalls: string[] = []
     const waitCalls: string[] = []
     const replica = makeDatabaseStub("replica", readFixtureOrder)
+
     const readYourWrites: PostgresReadYourWritesService = {
       capture: () => Effect.succeed("opaque.token"),
       wait: (requestedTenantId, token) =>
         Effect.sync(() => {
           waitCalls.push(`${requestedTenantId}:${token}`)
+
           return replica
         }),
     }
+
     const program = Effect.gen(function* () {
       const procurement = yield* ProcurementService
+
       const order = yield* procurement
         .getPurchaseOrder({
           principal,
@@ -389,6 +428,7 @@ describe("procurement contract", () => {
       assert.deepStrictEqual(waitCalls, [`${tenantId}:opaque.token`])
       assert.deepStrictEqual(primaryCalls, [])
     })
+
     return Effect.provide(
       program,
       makeProcurementPostgresTestLayer(
@@ -400,12 +440,15 @@ describe("procurement contract", () => {
 
   it.effect("fails closed on replica wait failure without reading primary", () => {
     const primaryCalls: string[] = []
+
     const readYourWrites: PostgresReadYourWritesService = {
       capture: () => Effect.succeed("opaque.token"),
       wait: () => Effect.fail(new ReplicaConsistencyFailure({ reason: "timeout" })),
     }
+
     const program = Effect.gen(function* () {
       const procurement = yield* ProcurementService
+
       const failure = yield* Effect.flip(
         procurement
           .getPurchaseOrder({
@@ -419,6 +462,7 @@ describe("procurement contract", () => {
       assert.instanceOf(failure, ReplicaConsistencyFailure)
       assert.deepStrictEqual(primaryCalls, [])
     })
+
     return Effect.provide(
       program,
       makeProcurementPostgresTestLayer(
@@ -433,11 +477,13 @@ describe("procurement contract", () => {
       Effect.gen(function* () {
         const procurement = yield* ProcurementService
         const draft = yield* createPurchaseOrder
+
         const readDraft = yield* procurement.getPurchaseOrder({
           principal,
           tenantId,
           purchaseOrderId: draft.id,
         })
+
         assert.strictEqual(readDraft.status, "draft")
         assert.isNull(readDraft.confirmedAt)
         assert.strictEqual(
@@ -478,11 +524,13 @@ describe("procurement contract", () => {
           purchaseOrderId: draft.id,
           idempotencyKey: "confirm-purchase-order",
         })
+
         const readConfirmed = yield* procurement.getPurchaseOrder({
           principal,
           tenantId,
           purchaseOrderId: draft.id,
         })
+
         assert.strictEqual(confirmed.status, "confirmed")
         assert.isNotNull(confirmed.confirmedAt)
         assert.deepStrictEqual(readConfirmed, confirmed)
@@ -495,17 +543,21 @@ describe("procurement contract", () => {
       Effect.gen(function* () {
         const procurement = yield* ProcurementService
         const order = yield* createPurchaseOrder
+
         const input = {
           principal,
           tenantId,
           purchaseOrderId: order.id,
           idempotencyKey: " confirm-same-key ",
         }
+
         const confirmed = yield* procurement.confirmPurchaseOrder(input)
+
         const replayed = yield* procurement.confirmPurchaseOrder({
           ...input,
           idempotencyKey: "confirm-same-key",
         })
+
         assert.deepStrictEqual(replayed, confirmed)
         assert.isFalse("confirmationIdempotencyKey" in confirmed)
         assert.instanceOf(
@@ -562,17 +614,21 @@ describe("procurement contract", () => {
           purchaseOrderId: draft.id,
           idempotencyKey: "confirm-before-cancellation",
         }
+
         const confirmed = yield* procurement.confirmPurchaseOrder(confirmationInput)
+
         const cancelled = yield* procurement.cancelPurchaseOrder({
           principal,
           tenantId,
           purchaseOrderId: draft.id,
         })
+
         const replayed = yield* procurement.cancelPurchaseOrder({
           principal,
           tenantId,
           purchaseOrderId: draft.id,
         })
+
         assert.strictEqual(cancelled.status, "cancelled")
         assert.strictEqual(cancelled.confirmedAt, confirmed.confirmedAt)
         assert.strictEqual(cancelled.supplierAccountId, confirmed.supplierAccountId)
@@ -613,6 +669,7 @@ describe("procurement contract", () => {
       Effect.gen(function* () {
         const procurement = yield* ProcurementService
         const order = yield* createPurchaseOrder
+
         for (const input of [
           { tenantId, purchaseOrderId: "00000000-0000-4000-8000-000000000099" },
           { tenantId: otherTenantId, purchaseOrderId: order.id },
@@ -743,13 +800,16 @@ describe("procurement contract", () => {
       Effect.gen(function* () {
         const procurement = yield* ProcurementService
         const supplierAccount = yield* createSupplierAccount
-        const create = (lines: ReadonlyArray<unknown>) =>
-          procurement.createPurchaseOrder({
-            principal,
-            tenantId,
-            supplierAccountId: supplierAccount.id,
-            lines,
-          })
+
+        const create = (lines: ReadonlyArray<Schema.Json>) =>
+          procurement.createPurchaseOrder(
+            partial<Parameters<typeof procurement.createPurchaseOrder>[0]>()({
+              principal,
+              tenantId,
+              supplierAccountId: supplierAccount.id,
+              lines,
+            }),
+          )
 
         for (const lines of [
           [],
@@ -787,6 +847,7 @@ describe("procurement contract", () => {
         }
 
         const callerLineId = "00000000-0000-4000-8000-000000000099"
+
         const order = yield* create([
           {
             id: callerLineId,
@@ -795,6 +856,7 @@ describe("procurement contract", () => {
             unitPrice: "1.00",
           },
         ])
+
         assert.notStrictEqual(order.lines[0]?.id, callerLineId)
       }),
     ),
@@ -881,31 +943,37 @@ describe("procurement contract", () => {
           const procurement = yield* ProcurementService
           const inventory = yield* InventoryService
           const supplierAccount = yield* createSupplierAccount
+
           const warehouse = yield* inventory.createWarehouse({
             principal,
             tenantId,
             legalEntityId: supplierAccount.legalEntityId,
             name: "Receiving Warehouse",
           })
+
           const item = yield* inventory.createItem({
             principal,
             tenantId,
             sku: "receipt-item",
             name: "Receipt Item",
           })
+
           const order = yield* procurement.createPurchaseOrder({
             principal,
             tenantId,
             supplierAccountId: supplierAccount.id,
             lines: [{ itemId: item.id, quantity: "3", unitPrice: "1.00" }],
           })
+
           const confirmed = yield* procurement.confirmPurchaseOrder({
             principal,
             tenantId,
             purchaseOrderId: order.id,
             idempotencyKey: "receipt-confirmation",
           })
+
           const lineId = confirmed.lines[0]!.id
+
           const firstInput = {
             principal,
             tenantId,
@@ -914,6 +982,7 @@ describe("procurement contract", () => {
             idempotencyKey: " receipt-1 ",
             lines: [{ purchaseOrderLineId: lineId, quantity: "1" }],
           }
+
           const duplicateReceiptLines = yield* Effect.flip(
             Schema.decodeUnknownEffect(ReceivePurchaseOrderInput)({
               ...firstInput,
@@ -923,6 +992,7 @@ describe("procurement contract", () => {
               ],
             }),
           )
+
           assert.strictEqual(duplicateReceiptLines._tag, "SchemaError")
           const first = yield* procurement.receivePurchaseOrder(firstInput)
           yield* Schema.decodeUnknownEffect(GoodsReceipt)(first)
@@ -979,10 +1049,12 @@ describe("procurement contract", () => {
             ))._tag,
             "SchemaError",
           )
+
           const replay = yield* procurement.receivePurchaseOrder({
             ...firstInput,
             idempotencyKey: "receipt-1",
           })
+
           assert.strictEqual(replay.id, first.id)
           assert.strictEqual(replay.lines[0]?.quantity, "1")
 
@@ -991,6 +1063,7 @@ describe("procurement contract", () => {
             idempotencyKey: "receipt-2",
             lines: [{ purchaseOrderLineId: lineId, quantity: "2" }],
           })
+
           assert.strictEqual(second.lines[0]?.quantity, "2")
           assert.instanceOf(
             yield* Effect.flip(

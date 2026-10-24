@@ -5,9 +5,9 @@ import { isMain } from "../entrypoint.ts"
 import {
   documentContextFromSnapshot,
   type DocumentRenderPolicy,
-  makeDocumentAst,
-  makeDocumentRenderRequest,
-  makeDocumentSnapshot,
+  createDocumentAst,
+  createDocumentRenderRequest,
+  createDocumentSnapshot,
 } from "../../framework/foundation/mod.ts"
 import { makePdfNativeDocumentRenderer } from "../../framework/platform/mod.ts"
 import { documentBenchmarkCorpus } from "./corpus.ts"
@@ -17,13 +17,16 @@ const snapshotId = "018f0000-0000-7000-8000-000000000014"
 const astId = "018f0000-0000-7000-8000-000000000015"
 const sourceId = "018f0000-0000-7000-8000-000000000016"
 const timestamp = "2026-09-06T00:00:00.000Z"
+
 const samplePng = Uint8Array.from(
   atob(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR42mNk+M/wHwAF/gL+U5gAAAAASUVORK5CYII=",
   ),
   (character) => character.charCodeAt(0),
 )
+
 const parsedIterations = Number(process.argv.slice(2)[0] ?? "10")
+
 const iterations =
   Number.isInteger(parsedIterations) && parsedIterations > 0 ? parsedIterations : 10
 
@@ -53,7 +56,7 @@ const benchmarkFixture = (fixture: BenchmarkFixture) =>
         reason: "publishing capability is outside the pdfnative transactional adapter",
       })
     : Effect.gen(function* () {
-        const snapshot = yield* makeDocumentSnapshot({
+        const snapshot = yield* createDocumentSnapshot({
           snapshotId,
           tenantId,
           source: { owner: "benchmark", type: "document_fixture", id: sourceId },
@@ -61,6 +64,7 @@ const benchmarkFixture = (fixture: BenchmarkFixture) =>
           schemaVersion: 1,
           payload: { fixture: fixture.name, version: 1 },
         })
+
         const context = documentContextFromSnapshot(snapshot)
         const startedAt = performance.now()
         let lastBytes = 0
@@ -68,14 +72,15 @@ const benchmarkFixture = (fixture: BenchmarkFixture) =>
         let lastFingerprint = ""
 
         for (let index = 0; index < iterations; index += 1) {
-          const ast = yield* makeDocumentAst({
+          const ast = yield* createDocumentAst({
             astId,
             snapshotId,
             documentType: fixture.name,
             astVersion: 1,
             nodes: fixture.nodes,
           })
-          const request = yield* makeDocumentRenderRequest({
+
+          const request = yield* createDocumentRenderRequest({
             tenantId,
             snapshotId,
             snapshotChecksum: snapshot.checksum,
@@ -93,6 +98,7 @@ const benchmarkFixture = (fixture: BenchmarkFixture) =>
             assetBytes: fixture.assetBytes,
             correlationId: `document-benchmark:${fixture.name}:${index}`,
           })
+
           const output = yield* renderer.render({ context, ast, request })
           lastBytes = output.bytes.byteLength
           lastPages = output.metadata.pageCount
@@ -100,6 +106,7 @@ const benchmarkFixture = (fixture: BenchmarkFixture) =>
         }
 
         const elapsedMs = Number((performance.now() - startedAt).toFixed(3))
+
         return {
           name: fixture.name,
           iterations,

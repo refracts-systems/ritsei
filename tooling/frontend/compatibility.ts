@@ -14,6 +14,7 @@ const probeSolidPackage = async (entry: string) => {
         lib: { entry, formats: ["es"] },
       },
     })
+
     return { build: "passed" as const, behavior: "unreviewed" as const }
   } catch (cause) {
     return { build: "blocked" as const, diagnostic: String(cause) }
@@ -26,17 +27,11 @@ export const probeKobalteCompatibility = () =>
 export const probeDndCompatibility = () =>
   probeSolidPackage("apps/web/src/ui/compatibility/dnd.tsx")
 
-const extractBundleCode = (result: unknown): string => {
-  const outputs = (Array.isArray(result) ? result : [result]).filter(
-    (value): value is { output: readonly { type: string; code?: string }[] } =>
-      typeof value === "object" && value !== null && "output" in value,
-  )
-
-  return outputs
-    .flatMap(({ output }) => output)
-    .flatMap((asset) => (asset.type === "chunk" && asset.code !== undefined ? [asset.code] : []))
+const extractBundleCode = (result: Awaited<ReturnType<typeof build>>): string =>
+  (Array.isArray(result) ? result : [result])
+    .flatMap((value) => ("output" in value ? value.output : []))
+    .flatMap((asset) => (asset.type === "chunk" ? [asset.code] : []))
     .join("\n")
-}
 
 export const probeBoneyardCoreCompatibility = async () => {
   try {
@@ -51,6 +46,7 @@ export const probeBoneyardCoreCompatibility = async () => {
         },
       },
     })
+
     const code = extractBundleCode(result)
     const forbidden = code.match(/\b(?:react|react-dom|playwright)\b/i)
 
@@ -74,6 +70,7 @@ export const probeBoneyardCoreCompatibility = async () => {
 if (isMain(import.meta.url)) {
   const result = await probeKobalteCompatibility()
   console.log(JSON.stringify(result, null, 2))
+
   // A successful bundle still needs the dialog's browser/accessibility evidence.
   if (result.build === "blocked") process.exit(1)
 }

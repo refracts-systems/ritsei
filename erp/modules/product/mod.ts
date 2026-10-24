@@ -1,4 +1,5 @@
 export { ProductCapabilities } from "./src/capabilities.ts"
+
 export {
   CreateProductInput,
   GetProductInput,
@@ -8,11 +9,15 @@ export {
   ProductType,
   UnitOfMeasure,
 } from "./src/contract.ts"
+
 export type {
   Product as ProductRecord,
-  ProductService as ProductServiceShape,
+  ProductService as ProductServiceContract,
   ProductType as ProductTypeValue,
 } from "./src/contract.ts"
+
 export { ProductAlreadyExists, ProductNotFound } from "./src/errors.ts"
+
 export { makeProductService, makeProductTestLayer, ProductLive } from "./src/layers.ts"
+
 export { ProductModule } from "./manifest.ts"

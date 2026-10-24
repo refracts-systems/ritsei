@@ -32,13 +32,17 @@ export const StockSource = Schema.Struct({ type: SourceType, id: Uuid })
 
 const uniqueItems = <T extends { readonly itemId: string }>(lines: ReadonlyArray<T>) =>
   new Set(lines.map((line) => line.itemId)).size === lines.length
+
 const DocumentLines = <S extends Schema.Top>(line: S) =>
   Schema.Array(line)
     .check(Schema.isMinLength(1))
     .check(
       Schema.makeFilter(
+        // SAFETY: every caller passes a line schema that declares itemId, which `uniqueItems` reads.
         (lines) => uniqueItems(lines as ReadonlyArray<{ readonly itemId: string }>),
-        { expected: "each item appears once per stock document" },
+        {
+          expected: "each item appears once per stock document",
+        },
       ),
     )
 
@@ -103,12 +107,14 @@ export const ValuedStockLine = Schema.Struct({
   /** Signed value the movement added to or removed from stock. */
   value: Schema.String,
 })
+
 export const ValuedStockMovement = Schema.Struct({
   legalEntityId: Uuid,
   source: StockSource,
   lines: Schema.Array(ValuedStockLine),
   journalEntryId: Schema.NullOr(Uuid),
 })
+
 export type ValuedStockMovement = Schema.Schema.Type<typeof ValuedStockMovement>
 
 export const StockValuation = Schema.Struct({
@@ -118,9 +124,11 @@ export const StockValuation = Schema.Struct({
   ),
   totalValue: FinancialMajorAmount,
 })
+
 export type StockValuation = Schema.Schema.Type<typeof StockValuation>
 
 type CommonFailure = AuthorizationDenied | DatabaseFailure | Schema.SchemaError
+
 type MovementFailure =
   | InventoryReferenceNotFound
   | StockUnavailable
@@ -134,12 +142,20 @@ type MovementFailure =
  */
 export interface StockKeepingService {
   readonly registerProductItem: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof RegisterProductItemInput>,
   ) => Effect.Effect<Item, ProductNotFound | StockNotStockable | CommonFailure>
-  readonly receiveValued: (input: unknown) => Effect.Effect<ValuedStockMovement, MovementFailure>
-  readonly issueValued: (input: unknown) => Effect.Effect<ValuedStockMovement, MovementFailure>
-  readonly countStock: (input: unknown) => Effect.Effect<ValuedStockMovement, MovementFailure>
-  readonly valuation: (input: unknown) => Effect.Effect<StockValuation, CommonFailure>
+  readonly receiveValued: (
+    input: Schema.Codec.Encoded<typeof ReceiveValuedStockInput>,
+  ) => Effect.Effect<ValuedStockMovement, MovementFailure>
+  readonly issueValued: (
+    input: Schema.Codec.Encoded<typeof IssueValuedStockInput>,
+  ) => Effect.Effect<ValuedStockMovement, MovementFailure>
+  readonly countStock: (
+    input: Schema.Codec.Encoded<typeof CountStockInput>,
+  ) => Effect.Effect<ValuedStockMovement, MovementFailure>
+  readonly valuation: (
+    input: Schema.Codec.Encoded<typeof ValuationReportInput>,
+  ) => Effect.Effect<StockValuation, CommonFailure>
 }
 
 export const StockKeepingService = Context.Service<StockKeepingService>(

@@ -19,13 +19,16 @@ it.effect.skipIf(databaseUrl === undefined)(
     withTemporaryDatabase(databaseUrl!, (client: Sql) =>
       Effect.gen(function* () {
         yield* runMigrations(client)
+
         const [tenant] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
           `,
         )
+
         const database = makePostgresDatabase(client)
+
         const input = {
           tenantId: tenant!.id,
           validation: {
@@ -40,20 +43,26 @@ it.effect.skipIf(databaseUrl === undefined)(
           approvalReason: "reviewed by process owner",
           releasedBy: "publisher-1",
         }
+
         const store = yield* makePostgresProcessReleaseStore.pipe(
           Effect.provideService(Database, database),
         )
+
         const release = yield* store.release(input)
+
         const restartedStore = yield* makePostgresProcessReleaseStore.pipe(
           Effect.provideService(Database, database),
         )
+
         const replay = yield* restartedStore.release(input)
+
         const conflict = yield* Effect.flip(
           restartedStore.release({
             ...input,
             checksum: "different-ir-checksum",
           }),
         )
+
         const deploymentInput = {
           tenantId: tenant!.id,
           releaseId: release.id,
@@ -61,14 +70,17 @@ it.effect.skipIf(databaseUrl === undefined)(
           deployedBy: "operator-1",
           promotionReason: "promote the reviewed release to test",
         }
+
         const deployment = yield* restartedStore.deploy(deploymentInput)
         const deploymentReplay = yield* store.deploy(deploymentInput)
+
         const deploymentConflict = yield* Effect.flip(
           store.deploy({
             ...deploymentInput,
             promotionReason: "different promotion",
           }),
         )
+
         const mutationFailure = yield* Effect.tryPromise({
           try: () =>
             client`
@@ -76,6 +88,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             `,
           catch: (cause) => cause,
         }).pipe(Effect.flip)
+
         const audits = yield* Effect.promise(
           () =>
             client<{ event: string; environment: string | null }[]>`

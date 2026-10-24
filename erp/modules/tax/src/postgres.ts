@@ -16,6 +16,7 @@ const selection = {
   direction: taxCodes.direction,
   active: taxCodes.active,
 }
+
 const normalized = <T extends { rate: string }>(row: T) => ({
   ...row,
   rate: normalizeRate(row.rate),
@@ -23,6 +24,7 @@ const normalized = <T extends { rate: string }>(row: T) => ({
 
 export const makeTaxPostgresStore = Effect.fn("Tax.makePostgresStore")(function* () {
   const database = yield* Database
+
   return {
     listTaxCodes: (tenantId, direction, limit) =>
       database
@@ -105,9 +107,11 @@ export const makeTaxPostgresStore = Effect.fn("Tax.makePostgresStore")(function*
                 productId: value.productId,
               })
             }
+
             if (isDatabaseConstraint(error, "product_tax_defaults_tax_code_fkey", "23503")) {
               return new TaxCodeNotFound({ tenantId: value.tenantId, taxCodeId: value.taxCodeId })
             }
+
             return error
           }),
         ),

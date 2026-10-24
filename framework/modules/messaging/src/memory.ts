@@ -23,37 +23,52 @@ export const makeMessagingTestLayer = () => {
   const consumeSemaphore = Semaphore.makeUnsafe(1)
   let clock = 0
   const eventKey = (tenantId: string, eventId: string) => `${tenantId}:${eventId}`
+
   const dedupeKey = (input: AppendEventInput) =>
     `${input.tenantId}:${input.eventType}:${input.eventVersion}:${input.idempotencyKey}`
 
-  const append = Effect.fn("MessagingService.append")(function* (input: unknown) {
+  const append = Effect.fn("MessagingService.append")(function* (
+    input: Schema.Codec.Encoded<typeof AppendEventInput>,
+  ) {
     const decoded = yield* Schema.decodeUnknownEffect(AppendEventInput)(input)
     const byId = eventsById.get(eventKey(decoded.tenantId, decoded.eventId))
     const dedupedId = eventIdsByDedupe.get(dedupeKey(decoded))
+
     const byDedupe =
       dedupedId === undefined ? undefined : eventsById.get(eventKey(decoded.tenantId, dedupedId))
+
     const existing = byId ?? byDedupe
+
     if (existing !== undefined && byId === byDedupe && envelopeMatches(decoded, existing)) {
       return existing
     }
+
     if (existing !== undefined) return yield* Effect.fail(conflict(decoded))
     const event: EventEnvelope = { ...decoded, publishedAt: null, attempts: 0 }
     eventsById.set(eventKey(decoded.tenantId, decoded.eventId), event)
     eventIdsByDedupe.set(dedupeKey(decoded), decoded.eventId)
+
     return event
   })
 
-  const getEvent = Effect.fn("MessagingService.getEvent")(function* (input: unknown) {
+  const getEvent = Effect.fn("MessagingService.getEvent")(function* (
+    input: Schema.Codec.Encoded<typeof GetEventInput>,
+  ) {
     const decoded = yield* Schema.decodeUnknownEffect(GetEventInput)(input)
+
     return eventsById.get(eventKey(decoded.tenantId, decoded.eventId))
   })
 
-  const consumeOnce = <A, E, R>(input: unknown, effect: Effect.Effect<A, E, R>) =>
+  const consumeOnce = <A, E, R>(
+    input: Schema.Codec.Encoded<typeof ConsumeOnceInput>,
+    effect: Effect.Effect<A, E, R>,
+  ) =>
     Semaphore.withPermit(
       consumeSemaphore,
       Effect.fn("MessagingService.consumeOnce")(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(ConsumeOnceInput)(input)
         const source = eventsById.get(eventKey(decoded.tenantId, decoded.eventId))
+
         if (source === undefined) {
           return yield* Effect.fail(
             new DatabaseFailure({
@@ -62,8 +77,10 @@ export const makeMessagingTestLayer = () => {
             }),
           )
         }
+
         const key = receiptKey(decoded)
         const existing = receipts.get(key)
+
         if (existing !== undefined) {
           if (!receiptMatchesEvent(existing, source)) {
             return yield* Effect.fail(
@@ -73,24 +90,34 @@ export const makeMessagingTestLayer = () => {
               }),
             )
           }
+
           return { duplicate: true as const, receipt: existing }
         }
+
         const eventSnapshot = new Map(eventsById)
         const dedupeSnapshot = new Map(eventIdsByDedupe)
         const receiptSnapshot = new Map(receipts)
+
         const rollback = () => {
           eventsById.clear()
           eventIdsByDedupe.clear()
           receipts.clear()
+
           for (const [key, value] of eventSnapshot) eventsById.set(key, value)
+
           for (const [key, value] of dedupeSnapshot) eventIdsByDedupe.set(key, value)
+
           for (const [key, value] of receiptSnapshot) receipts.set(key, value)
         }
+
         const result = yield* Effect.result(effect)
+
         if (Result.isFailure(result)) {
           rollback()
+
           return yield* Effect.fail(result.failure)
         }
+
         const receipt: ConsumerReceipt = {
           ...decoded,
           eventType: source.eventType,
@@ -98,11 +125,14 @@ export const makeMessagingTestLayer = () => {
           idempotencyKey: source.idempotencyKey,
           completedAt: new Date(clock++).toISOString(),
         }
+
         receipts.set(key, receipt)
+
         return { duplicate: false as const, value: result.success, receipt }
       })(),
     )
 
   const service: MessagingService = { append, getEvent, consumeOnce }
+
   return Layer.succeed(MessagingServiceTag, service)
 }

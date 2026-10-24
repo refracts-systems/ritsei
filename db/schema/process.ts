@@ -4,7 +4,6 @@ import {
   check,
   foreignKey,
   integer,
-  jsonb,
   pgSchema,
   primaryKey,
   text,
@@ -14,14 +13,16 @@ import {
 } from "drizzle-orm/pg-core"
 
 import { tenants } from "./auth.ts"
-import { createdAt, id, updatedAt } from "./common.ts"
+import { createdAt, id, json, updatedAt } from "./common.ts"
 
 export const processSchema = pgSchema("process")
+
 export const workflowRunStatus = processSchema.enum("workflow_run_status", [
   "running",
   "succeeded",
   "manual_recovery",
 ])
+
 export const processJobStatus = processSchema.enum("process_job_status", [
   "pending",
   "leased",
@@ -29,6 +30,7 @@ export const processJobStatus = processSchema.enum("process_job_status", [
   "failed",
   "manual_recovery",
 ])
+
 export const processRuntimeStatus = processSchema.enum("process_runtime_status", [
   "running",
   "waiting",
@@ -36,22 +38,26 @@ export const processRuntimeStatus = processSchema.enum("process_runtime_status",
   "failed",
   "manual_recovery",
 ])
+
 export const processRuntimeFailureKind = processSchema.enum("process_runtime_failure_kind", [
   "business_failure",
   "technical_retry",
   "unknown_external_outcome",
   "compensation_failure",
 ])
+
 export const processRuntimeEnvironment = processSchema.enum("process_runtime_environment", [
   "DEV",
   "TEST",
   "PROD",
 ])
+
 export const processOperatorAction = processSchema.enum("process_operator_action", [
   "retry",
   "compensate",
   "manual_recovery",
 ])
+
 export const processReleaseAuditEvent = processSchema.enum("process_release_audit_event", [
   "approval",
   "release",
@@ -93,7 +99,7 @@ export const processRuntimeCheckpoints = processSchema.table(
     failureKind: processRuntimeFailureKind("failure_kind"),
     currentNodeId: text("current_node_id").notNull(),
     revision: bigint("revision", { mode: "number" }).notNull().default(0),
-    state: jsonb("state").notNull(),
+    state: json("state").notNull(),
     correlationId: text("correlation_id").notNull(),
     executionPrincipal: text("execution_principal").notNull(),
     createdAt: createdAt(),
@@ -157,7 +163,7 @@ export const processReleases = processSchema.table(
     definitionVersion: integer("definition_version").notNull(),
     catalogVersion: integer("catalog_version").notNull(),
     checksum: text("checksum").notNull(),
-    references: jsonb("references").notNull(),
+    references: json("references").notNull(),
     approvedBy: text("approved_by").notNull(),
     approvalReason: text("approval_reason").notNull(),
     releasedBy: text("released_by").notNull(),
@@ -253,8 +259,8 @@ export const workflowRuns = processSchema.table(
     idempotencyKey: text("idempotency_key").notNull(),
     aggregateId: uuid("aggregate_id").notNull(),
     status: workflowRunStatus("status").notNull().default("running"),
-    payload: jsonb("payload").notNull(),
-    result: jsonb("result"),
+    payload: json("payload").notNull(),
+    result: json("result"),
     recoveryReason: text("recovery_reason"),
     completedAt: timestamp("completed_at", { withTimezone: true }),
     createdAt: createdAt(),
@@ -303,7 +309,7 @@ export const processJobs = processSchema.table(
     leaseOwner: text("lease_owner"),
     leaseToken: uuid("lease_token"),
     attempts: integer("attempts").notNull().default(0),
-    payload: jsonb("payload").notNull(),
+    payload: json("payload").notNull(),
     lastError: text("last_error"),
     correlationId: text("correlation_id").notNull(),
     completedAt: timestamp("completed_at", { withTimezone: true }),

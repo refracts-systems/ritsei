@@ -21,6 +21,7 @@ import { products } from "./product.ts"
 import { taxCodes } from "./tax.ts"
 
 export const procurementSchema = pgSchema("procurement")
+
 export const purchaseOrderStatus = procurementSchema.enum("purchase_order_status", [
   "draft",
   "confirmed",

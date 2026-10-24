@@ -8,10 +8,12 @@ import type { ProductStore } from "./store.ts"
 /** Deterministic test store with the same tenant-scoped unique-code invariant. */
 export const makeProductMemoryStore = (): ProductStore => {
   const records: Product[] = []
+
   return {
     listProducts: (command) =>
       Effect.sync(() => {
         const search = command.search?.toLowerCase()
+
         return records
           .filter(
             (record) =>
@@ -33,11 +35,13 @@ export const makeProductMemoryStore = (): ProductStore => {
         const duplicate = records.some(
           (record) => record.tenantId === command.tenantId && record.code === command.code,
         )
+
         if (duplicate) {
           return Effect.fail(
             new ProductAlreadyExists({ tenantId: command.tenantId, code: command.code }),
           )
         }
+
         const record: Product = {
           id: uuidv7(),
           tenantId: command.tenantId,
@@ -48,7 +52,9 @@ export const makeProductMemoryStore = (): ProductStore => {
           unitOfMeasure: command.unitOfMeasure ?? "EA",
           active: true,
         }
+
         records.push(record)
+
         return Effect.succeed(record)
       }),
   }

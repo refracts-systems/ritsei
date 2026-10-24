@@ -1,7 +1,9 @@
 import { and, desc, eq } from "drizzle-orm"
+import * as Data from "effect/Data"
 import * as Effect from "effect/Effect"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
+import * as Predicate from "effect/Predicate"
 
 import { externalReliabilityRecords } from "../../../../db/schema/integration.ts"
 import { Database, DatabaseFailure, uuidv7 } from "../../../foundation/mod.ts"
@@ -19,18 +21,23 @@ import {
 } from "./reliability.ts"
 
 const Uuid = Schema.String.check(Schema.isUUID())
+
 const NonEmptyString = Schema.String.check(
   Schema.isPattern(/\S/),
   Schema.isMaxLength(ExternalCatalogLimits.maxIdentifierLength),
 )
+
 const PositiveInt = Schema.Int.check(Schema.isGreaterThan(0))
 const NonNegativeInt = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))
+
 const AttemptCount = Schema.Int.check(
   Schema.isBetween({ minimum: 0, maximum: ExternalCatalogLimits.maxAttempts }),
 )
+
 const MaxPayloadBytes = Schema.Int.check(
   Schema.isBetween({ minimum: 1, maximum: ExternalCatalogLimits.maxPayloadBytes }),
 )
+
 const InstantString = Schema.String.check(
   Schema.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/),
 )
@@ -61,6 +68,7 @@ export const ExternalReliabilityRecordInput = Schema.Struct({
   correlationId: NonEmptyString,
   reliability: ReliabilityInput,
 })
+
 export type ExternalReliabilityRecordInput = Schema.Schema.Type<
   typeof ExternalReliabilityRecordInput
 >
@@ -84,6 +92,7 @@ export const ExternalReliabilityRecord = Schema.Struct({
   createdAt: InstantString,
   updatedAt: InstantString,
 })
+
 export type ExternalReliabilityRecord = Schema.Schema.Type<typeof ExternalReliabilityRecord>
 
 export const ExternalReliabilityHealth = Schema.Struct({
@@ -97,6 +106,7 @@ export const ExternalReliabilityHealth = Schema.Struct({
   maxLagMs: NonNegativeInt,
   averageLagMs: NonNegativeInt,
 })
+
 export type ExternalReliabilityHealth = Schema.Schema.Type<typeof ExternalReliabilityHealth>
 
 // Durable integration evidence: dead letter handling, replay protection, provider status,
@@ -116,7 +126,7 @@ type ExternalReliabilityStoreError =
 
 export interface ExternalReliabilityStore {
   readonly record: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ExternalReliabilityRecordInput>,
   ) => Effect.Effect<ExternalReliabilityRecordResult, ExternalReliabilityStoreError>
   readonly get: (
     tenantId: string,
@@ -141,29 +151,34 @@ const dateFromMilliseconds = (
   identifier: string,
 ): Effect.Effect<Date, ExternalPayloadInvalid> => {
   const date = new Date(value)
+
   return Number.isFinite(date.getTime())
     ? Effect.succeed(date)
     : Effect.fail(invalid(boundary, identifier))
 }
 
-const payloadBytes = (payload: unknown): number =>
+const payloadBytes = (payload: Schema.Json): number =>
   new TextEncoder().encode(JSON.stringify(payload)!).byteLength
 
-const prepare = (input: unknown) =>
+const prepare = (input: Schema.Codec.Encoded<typeof ExternalReliabilityRecordInput>) =>
   Effect.gen(function* () {
     const decoded = yield* Schema.decodeUnknownEffect(ExternalReliabilityRecordInput)(input)
     const decision = yield* assessExternalDelivery(decoded.reliability)
+
     const sentAt = yield* dateFromMilliseconds(
       decoded.reliability.sentAtMs,
       "integration.reliability.sent-at",
       decoded.replayKey,
     )
+
     const observedAt = yield* dateFromMilliseconds(
       decoded.reliability.observedAtMs,
       "integration.reliability.observed-at",
       decoded.replayKey,
     )
+
     const now = new Date().toISOString()
+
     return yield* Schema.decodeUnknownEffect(ExternalReliabilityRecord)({
       id: uuidv7(),
       tenantId: decoded.tenantId,
@@ -185,9 +200,9 @@ const prepare = (input: unknown) =>
     })
   })
 
-const canonicalJson = (value: unknown): string =>
+const canonicalJson = <A>(value: A): string =>
   JSON.stringify(value, (_key, child) =>
-    typeof child === "object" && child !== null && !Array.isArray(child)
+    Predicate.isObjectOrArray(child) && !Array.isArray(child)
       ? Object.fromEntries(
           Object.entries(child).toSorted(([left], [right]) => left.localeCompare(right)),
         )
@@ -220,12 +235,17 @@ const merge = (
   candidate: ExternalReliabilityRecord,
 ): ExternalReliabilityRecordResult | "conflict" => {
   if (replayFingerprint(existing) !== replayFingerprint(candidate)) return "conflict"
+
   if (recordFingerprint(existing) === recordFingerprint(candidate)) {
     return { record: existing, duplicate: true }
   }
+
   if (existing.state !== "retry") return "conflict"
+
   if (candidate.attempts < existing.attempts) return { record: existing, duplicate: true }
+
   if (candidate.attempts === existing.attempts && candidate.state === "retry") return "conflict"
+
   return {
     record: {
       ...candidate,
@@ -277,6 +297,7 @@ const rowToRecord = (row: ReliabilityRow): ExternalReliabilityRecord | undefined
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     })
+
     return Result.isSuccess(result) ? result.success : undefined
   } catch {
     return undefined
@@ -320,7 +341,9 @@ const makeHealth = (
   const lags = records.map((record) =>
     Math.max(0, new Date(record.observedAt).getTime() - new Date(record.sentAt).getTime()),
   )
+
   const totalLag = lags.reduce((total, lag) => total + lag, 0)
+
   return {
     tenantId,
     connectorId,
@@ -361,11 +384,15 @@ export const makeMemoryExternalReliabilityStore = (): ExternalReliabilityStore =
         const candidate = yield* prepare(input)
         const recordKey = key(candidate.tenantId, candidate.replayKey)
         const existing = records.get(recordKey)
+
         if (existing === undefined) {
           records.set(recordKey, candidate)
+
           return { record: candidate, duplicate: false }
         }
+
         const merged = merge(existing, candidate)
+
         if (merged === "conflict") {
           return yield* Effect.fail(
             new ExternalIdempotencyConflict({
@@ -374,7 +401,9 @@ export const makeMemoryExternalReliabilityStore = (): ExternalReliabilityStore =
             }),
           )
         }
+
         records.set(recordKey, merged.record)
+
         return merged
       }),
     get: (tenantId, replayKey) =>
@@ -385,31 +414,34 @@ export const makeMemoryExternalReliabilityStore = (): ExternalReliabilityStore =
       Effect.gen(function* () {
         yield* validateLookup(tenantId, connectorId, "integration.reliability.health")
         const limit = yield* validateSampleLimit(sampleLimit, connectorId)
+
         const values = [...records.values()]
           .filter((record) => record.tenantId === tenantId && record.connectorId === connectorId)
           .toSorted((left, right) => right.observedAt.localeCompare(left.observedAt))
           .slice(0, limit)
+
         return makeHealth(tenantId, connectorId, values)
       }),
   }
 }
 
-type PersistedRecordResult =
-  | {
-      readonly _tag: "result"
-      readonly record: ExternalReliabilityRecord
-      readonly duplicate: boolean
-    }
-  | { readonly _tag: "missing" }
-  | { readonly _tag: "conflict" }
-  | { readonly _tag: "invalid" }
+type PersistedRecordResult = Data.TaggedEnum<{
+  Result: { readonly record: ExternalReliabilityRecord; readonly duplicate: boolean }
+  Missing: {}
+  Conflict: {}
+  Invalid: {}
+}>
+
+const PersistedRecordResult = Data.taggedEnum<PersistedRecordResult>()
 
 export const makePostgresExternalReliabilityStore = Effect.gen(function* () {
   const database = yield* Database
+
   return {
-    record: (input: unknown) =>
+    record: (input: Schema.Codec.Encoded<typeof ExternalReliabilityRecordInput>) =>
       Effect.gen(function* () {
         const candidate = yield* prepare(input)
+
         const result = yield* database.transaction(
           async (transaction): Promise<PersistedRecordResult> => {
             const [inserted] = await transaction
@@ -417,11 +449,13 @@ export const makePostgresExternalReliabilityStore = Effect.gen(function* () {
               .values(dbValues(candidate))
               .onConflictDoNothing()
               .returning()
+
             if (inserted !== undefined) {
               const record = rowToRecord(inserted)
+
               return record === undefined
-                ? { _tag: "invalid" }
-                : { _tag: "result", record, duplicate: false }
+                ? PersistedRecordResult.Invalid()
+                : PersistedRecordResult.Result({ record, duplicate: false })
             }
 
             const [existingRow] = await transaction
@@ -434,15 +468,20 @@ export const makePostgresExternalReliabilityStore = Effect.gen(function* () {
                 ),
               )
               .for("update")
-            if (existingRow === undefined) return { _tag: "missing" }
+
+            if (existingRow === undefined) return PersistedRecordResult.Missing()
 
             const existing = rowToRecord(existingRow)
-            if (existing === undefined) return { _tag: "invalid" }
+
+            if (existing === undefined) return PersistedRecordResult.Invalid()
             const merged = merge(existing, candidate)
-            if (merged === "conflict") return { _tag: "conflict" }
+
+            if (merged === "conflict") return PersistedRecordResult.Conflict()
+
             if (merged.duplicate) {
-              return { _tag: "result", record: merged.record, duplicate: true }
+              return PersistedRecordResult.Result({ record: merged.record, duplicate: true })
             }
+
             const [updated] = await transaction
               .update(externalReliabilityRecords)
               .set(dbUpdate(merged.record))
@@ -453,43 +492,46 @@ export const makePostgresExternalReliabilityStore = Effect.gen(function* () {
                 ),
               )
               .returning()
-            if (updated === undefined) return { _tag: "missing" }
+
+            if (updated === undefined) return PersistedRecordResult.Missing()
             const record = rowToRecord(updated)
+
             return record === undefined
-              ? { _tag: "invalid" }
-              : { _tag: "result", record, duplicate: false }
+              ? PersistedRecordResult.Invalid()
+              : PersistedRecordResult.Result({ record, duplicate: false })
           },
           "integration.reliability.record",
         )
-        if (result._tag === "conflict") {
-          return yield* Effect.fail(
-            new ExternalIdempotencyConflict({
-              tenantId: candidate.tenantId,
-              idempotencyKey: candidate.replayKey,
-            }),
-          )
-        }
-        if (result._tag === "missing") {
-          return yield* Effect.fail(
-            new DatabaseFailure({
-              operation: "integration.reliability.record",
-              cause: "replay record disappeared during persistence",
-            }),
-          )
-        }
-        if (result._tag === "invalid") {
-          return yield* Effect.fail(
-            new DatabaseFailure({
-              operation: "integration.reliability.record",
-              cause: "persisted reliability record failed validation",
-            }),
-          )
-        }
-        return { record: result.record, duplicate: result.duplicate }
+
+        return yield* PersistedRecordResult.$match(result, {
+          Conflict: () =>
+            Effect.fail(
+              new ExternalIdempotencyConflict({
+                tenantId: candidate.tenantId,
+                idempotencyKey: candidate.replayKey,
+              }),
+            ),
+          Missing: () =>
+            Effect.fail(
+              new DatabaseFailure({
+                operation: "integration.reliability.record",
+                cause: "replay record disappeared during persistence",
+              }),
+            ),
+          Invalid: () =>
+            Effect.fail(
+              new DatabaseFailure({
+                operation: "integration.reliability.record",
+                cause: "persisted reliability record failed validation",
+              }),
+            ),
+          Result: ({ record, duplicate }) => Effect.succeed({ record, duplicate }),
+        })
       }),
     get: (tenantId: string, replayKey: string) =>
       Effect.gen(function* () {
         yield* validateLookup(tenantId, replayKey, "integration.reliability.get")
+
         const rows = yield* database.query(
           (db) =>
             db
@@ -504,9 +546,12 @@ export const makePostgresExternalReliabilityStore = Effect.gen(function* () {
               .limit(1),
           "integration.reliability.get",
         )
+
         const row = rows[0]
+
         if (row === undefined) return undefined
         const record = rowToRecord(row)
+
         return record === undefined
           ? yield* Effect.fail(
               new DatabaseFailure({
@@ -520,6 +565,7 @@ export const makePostgresExternalReliabilityStore = Effect.gen(function* () {
       Effect.gen(function* () {
         yield* validateLookup(tenantId, connectorId, "integration.reliability.health")
         const limit = yield* validateSampleLimit(sampleLimit, connectorId)
+
         const rows = yield* database.query(
           (db) =>
             db
@@ -535,9 +581,12 @@ export const makePostgresExternalReliabilityStore = Effect.gen(function* () {
               .limit(limit),
           "integration.reliability.health",
         )
+
         const records: ExternalReliabilityRecord[] = []
+
         for (const row of rows) {
           const record = rowToRecord(row)
+
           if (record === undefined) {
             return yield* Effect.fail(
               new DatabaseFailure({
@@ -546,8 +595,10 @@ export const makePostgresExternalReliabilityStore = Effect.gen(function* () {
               }),
             )
           }
+
           records.push(record)
         }
+
         return makeHealth(tenantId, connectorId, records)
       }),
   } satisfies ExternalReliabilityStore

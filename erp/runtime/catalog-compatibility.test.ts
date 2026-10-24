@@ -36,6 +36,7 @@ import {
   InventoryTypedEventCatalog,
   StockCorrectedEventPayload,
   StockCorrection,
+  StockCorrectionIdempotencyConflict,
 } from "../modules/inventory/mod.ts"
 import {
   CreatePartyInput,
@@ -86,6 +87,7 @@ const actions: ReadonlyArray<DomainActionCatalogEntry> = [
   ...SalesTypedActionCatalog,
   ...ProcurementTypedActionCatalog,
 ]
+
 const events: ReadonlyArray<DomainEventCatalogEntry> = [
   ...InventoryTypedEventCatalog,
   ...IdentityTypedEventCatalog,
@@ -107,9 +109,9 @@ const assertCompatibleVersion = (entry: DomainActionCatalogEntry | DomainEventCa
   assert.ok(entry.compatibilityRange.maximumVersion <= 2_147_483_647)
 }
 
-const assertPayloadFields = (
+const assertPayloadFields = <Fields extends { readonly [Key in keyof Fields]: unknown }>(
   event: DomainEventCatalogEntry,
-  payloadFields: Readonly<Record<string, unknown>>,
+  payloadFields: Fields,
 ) => {
   for (const field of event.filterableFields) {
     assert.ok(field in payloadFields)
@@ -144,9 +146,11 @@ describe("catalog compatibility", () => {
         assert.ok(action.errorSchemas.length > 0)
         assert.strictEqual(new Set(action.errorSchemas).size, action.errorSchemas.length)
         assert.ok(action.preconditions.includes("authorized"))
+
         if (action.idempotency === "required") {
           assert.ok(action.preconditions.includes("idempotency_key_stable"))
         }
+
         assert.ok(isKnownCapability(action.requiredCapability))
         const capability = getCapabilityDefinition(action.requiredCapability)
         assert.ok(capability)
@@ -163,9 +167,11 @@ describe("catalog compatibility", () => {
         assert.ok(event.correlationFields.length > 0)
         assert.strictEqual(new Set(event.correlationFields).size, event.correlationFields.length)
         assert.strictEqual(new Set(event.filterableFields).size, event.filterableFields.length)
+
         for (const field of event.correlationFields) {
           assert.ok(event.filterableFields.includes(field))
         }
+
         assert.strictEqual(event.deliveryExpectation, "at_least_once")
         assert.strictEqual(event.sensitivity, "business_internal_minimized")
       }
@@ -182,6 +188,7 @@ describe("catalog compatibility", () => {
       assert.strictEqual(AccountingRevenuePostAction.outputSchema, JournalEntry)
       assert.strictEqual(AccountingRevenuePostAction.idempotency, "inherent")
       assert.isFalse(
+        // SAFETY: preconditions are declared as strings.
         (AccountingRevenuePostAction.preconditions as readonly string[]).includes(
           "idempotency_key_stable",
         ),
@@ -275,11 +282,14 @@ describe("catalog compatibility", () => {
         reason: "cycle count",
         idempotencyKey: "correction-1",
       })
-      yield* Schema.decodeUnknownEffect(InventoryAdjustStockAction.errorSchemas[2]!)({
-        _tag: "StockCorrectionIdempotencyConflict",
-        tenantId: "00000000-0000-4000-8000-000000000001",
-        idempotencyKey: "correction-1",
-      })
+      yield* Schema.decodeUnknownEffect(InventoryAdjustStockAction.errorSchemas[2]!)(
+        Schema.encodeSync(StockCorrectionIdempotencyConflict)(
+          new StockCorrectionIdempotencyConflict({
+            tenantId: "00000000-0000-4000-8000-000000000001",
+            idempotencyKey: "correction-1",
+          }),
+        ),
+      )
 
       yield* Schema.decodeUnknownEffect(SalesConfirmOrderAction.inputSchema)({
         principal,
@@ -322,6 +332,7 @@ describe("catalog compatibility", () => {
         journalId: "00000000-0000-4000-8000-000000000004",
         mappingVersion: 1,
       })
+
       const invalidFinancialEvent = yield* Effect.flip(
         Schema.decodeUnknownEffect(AccountingFinancialOperationReconciledEvent.payloadSchema)({
           operationId: "financial-operation-1",
@@ -329,7 +340,9 @@ describe("catalog compatibility", () => {
           mappingVersion: 0,
         }),
       )
+
       assert.strictEqual(invalidFinancialEvent._tag, "SchemaError")
+
       const overflowingFinancialEvent = yield* Effect.flip(
         Schema.decodeUnknownEffect(AccountingFinancialOperationReconciledEvent.payloadSchema)({
           operationId: "financial-operation-1",
@@ -337,6 +350,7 @@ describe("catalog compatibility", () => {
           mappingVersion: 2_147_483_648,
         }),
       )
+
       assert.strictEqual(overflowingFinancialEvent._tag, "SchemaError")
       yield* Schema.decodeUnknownEffect(SalesOrderConfirmedEvent.payloadSchema)({
         orderId: "00000000-0000-4000-8000-000000000006",

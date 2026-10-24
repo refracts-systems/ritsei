@@ -35,14 +35,17 @@ export const InvoiceKind = Schema.Literals([
   "supplier_bill",
   "supplier_credit_note",
 ])
+
 export type InvoiceKind = Schema.Schema.Type<typeof InvoiceKind>
 
 /** Receivable documents raise what customers owe; payable documents what is owed to suppliers. */
 export const BillingSide = Schema.Literals(["receivable", "payable"])
+
 export type BillingSide = Schema.Schema.Type<typeof BillingSide>
 
 export const sideOf = (kind: InvoiceKind): BillingSide =>
   kind === "customer_invoice" || kind === "customer_credit_note" ? "receivable" : "payable"
+
 export const isCreditNote = (kind: InvoiceKind) =>
   kind === "customer_credit_note" || kind === "supplier_credit_note"
 
@@ -79,6 +82,7 @@ export const BillingDocument = Schema.Struct({
   journalEntryId: Uuid,
   lines: Schema.Array(BillingDocumentLine),
 })
+
 export type BillingDocument = Schema.Schema.Type<typeof BillingDocument>
 
 /** An open document; credit notes carry a negative open amount. */
@@ -91,6 +95,7 @@ export const OpenItem = Schema.Struct({
   total: FinancialMajorAmount,
   openAmount: SignedAmount,
 })
+
 export type OpenItem = Schema.Schema.Type<typeof OpenItem>
 
 export const InvoiceSalesOrderInput = Schema.Struct({
@@ -100,6 +105,7 @@ export const InvoiceSalesOrderInput = Schema.Struct({
   /** Client-chosen id that makes a retried command return the posted invoice. */
   invoiceId: Schema.optionalKey(Uuid),
 })
+
 /** A supplier bill matched against a purchase order and its receipts (three-way match). */
 export const BillPurchaseOrderInput = Schema.Struct({
   ...ScopedInput,
@@ -129,6 +135,7 @@ export const CreditInvoiceInput = Schema.Struct({
     Schema.isMinLength(1),
   ),
 })
+
 export const ApplySettlementInput = Schema.Struct({
   ...ScopedInput,
   invoiceId: Uuid,
@@ -137,7 +144,9 @@ export const ApplySettlementInput = Schema.Struct({
   /** The business date the amount is applied, which open items as of a date respect. */
   settledOn: CalendarDate,
 })
+
 export const GetBillingDocumentInput = Schema.Struct({ ...ScopedInput, invoiceId: Uuid })
+
 export const ListOpenItemsInput = Schema.Struct({
   ...ScopedInput,
   legalEntityId: Uuid,
@@ -145,6 +154,7 @@ export const ListOpenItemsInput = Schema.Struct({
   partyId: Schema.optionalKey(Uuid),
   asOf: CalendarDate,
 })
+
 export const ListBillingDocumentsInput = Schema.Struct({
   ...ScopedInput,
   legalEntityId: Uuid,
@@ -168,10 +178,12 @@ export type InvoiceFailure =
 /** Posted invoices, credit notes, and supplier bills with their open amounts (ADR-0102). */
 export interface BillingService {
   /** Invoices the delivered, not yet invoiced quantities of a confirmed sales order. */
-  readonly invoiceSalesOrder: (input: unknown) => Effect.Effect<BillingDocument, InvoiceFailure>
+  readonly invoiceSalesOrder: (
+    input: Schema.Codec.Encoded<typeof InvoiceSalesOrderInput>,
+  ) => Effect.Effect<BillingDocument, InvoiceFailure>
   /** Bills received purchase order quantities; the price difference posts as variance. */
   readonly billPurchaseOrder: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof BillPurchaseOrderInput>,
   ) => Effect.Effect<
     BillingDocument,
     | BillingErrors.BillExceedsReceipt
@@ -186,7 +198,7 @@ export interface BillingService {
   >
   /** Credits invoice lines and applies the credit to the invoice's open amount. */
   readonly creditInvoice: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreditInvoiceInput>,
   ) => Effect.Effect<
     BillingDocument,
     | BillingErrors.BillingDocumentNotFound
@@ -197,7 +209,7 @@ export interface BillingService {
   >
   /** Reduces a document's open amount for a payment or other settlement source. */
   readonly applySettlement: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ApplySettlementInput>,
   ) => Effect.Effect<
     BillingDocument,
     | BillingErrors.BillingDocumentNotFound
@@ -206,12 +218,14 @@ export interface BillingService {
     | CommonFailure
   >
   readonly getDocument: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof GetBillingDocumentInput>,
   ) => Effect.Effect<BillingDocument, BillingErrors.BillingDocumentNotFound | CommonFailure>
   readonly listDocuments: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ListBillingDocumentsInput>,
   ) => Effect.Effect<ReadonlyArray<BillingDocument>, CommonFailure>
-  readonly listOpenItems: (input: unknown) => Effect.Effect<ReadonlyArray<OpenItem>, CommonFailure>
+  readonly listOpenItems: (
+    input: Schema.Codec.Encoded<typeof ListOpenItemsInput>,
+  ) => Effect.Effect<ReadonlyArray<OpenItem>, CommonFailure>
 }
 
 export const BillingService = Context.Service<BillingService>("RITSEI/BillingService")

@@ -5,7 +5,7 @@ import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 
-import { uuidv7 } from "../../../../framework/foundation/mod.ts"
+import { uuidv7, omitUndefined } from "../../../../framework/foundation/mod.ts"
 import { AuthorizationService } from "../../../../framework/modules/authorization/mod.ts"
 import { MessagingService } from "../../../../framework/modules/messaging/mod.ts"
 import { SalesService } from "../../sales/mod.ts"
@@ -85,6 +85,7 @@ const decodeFinancialVerificationSignature = (
         new FinancialVerificationArtifactInvalid({ tenantId, legalEntityId, reason: "unsigned" }),
     ),
   )
+
 export const makeAccountingTestLayer = () =>
   Layer.effect(
     AccountingService,
@@ -104,12 +105,15 @@ export const makeAccountingTestLayer = () =>
       const verificationArtifacts = new Map<string, FinancialVerificationArtifact>()
       const stagingEvidenceStore = makeMemoryFinancialStagingEvidenceStore()
       const nextId = uuidv7
+
       // Fallow: memory and PostgreSQL adapters intentionally mirror the guarded service shape.
       // fallow-ignore-next-line code-duplication
       const testControl = (tenantId: string, legalEntityId: string) => {
         const key = `${tenantId}:${legalEntityId}`
         const existing = controls.get(key)
+
         if (existing !== undefined) return existing
+
         const created: FinancialCutoverControl = {
           tenantId,
           legalEntityId,
@@ -130,20 +134,25 @@ export const makeAccountingTestLayer = () =>
           activatedAt: null,
           lastError: null,
         }
+
         controls.set(key, created)
+
         return created
       }
+
       const service: AccountingService = {
         listAccountingConfigurations: (input) =>
           Effect.gen(function* () {
             const decoded = yield* Schema.decodeUnknownEffect(ListAccountingConfigurationsInput)(
               input,
             )
+
             yield* authorization.authorize({
               principal: decoded.principal,
               tenantId: decoded.tenantId,
               capability: AccountingCapabilities.legalEntityRead,
             })
+
             return [...configurations.values()]
               .filter(
                 (configuration) =>
@@ -164,6 +173,7 @@ export const makeAccountingTestLayer = () =>
               tenantId: decoded.tenantId,
               capability: AccountingCapabilities.accountRead,
             })
+
             return [...storedAccounts.values()]
               .filter(
                 (account) =>
@@ -183,6 +193,7 @@ export const makeAccountingTestLayer = () =>
               tenantId: decoded.tenantId,
               capability: AccountingCapabilities.periodRead,
             })
+
             return [...periods.values()]
               .filter(
                 (period) =>
@@ -199,11 +210,13 @@ export const makeAccountingTestLayer = () =>
             const decoded = yield* Schema.decodeUnknownEffect(ListRevenuePostingProfilesInput)(
               input,
             )
+
             yield* authorization.authorize({
               principal: decoded.principal,
               tenantId: decoded.tenantId,
               capability: AccountingCapabilities.revenueRead,
             })
+
             return [...profiles.values()]
               .filter(
                 (profile) =>
@@ -224,6 +237,7 @@ export const makeAccountingTestLayer = () =>
               tenantId: decoded.tenantId,
               capability: AccountingCapabilities.journalRead,
             })
+
             return [...storedJournals.values()]
               .filter(
                 (journal) =>
@@ -238,11 +252,13 @@ export const makeAccountingTestLayer = () =>
             const decoded = yield* Schema.decodeUnknownEffect(RecordFinancialStagingEvidenceInput)(
               input,
             )
+
             yield* authorization.authorize({
               principal: decoded.principal,
               tenantId: decoded.tenantId,
               capability: AccountingCapabilities.financialEvidenceRecord,
             })
+
             if (decoded.evidence.tenantId !== decoded.tenantId) {
               return yield* Effect.fail(
                 new FinancialStagingEvidenceInvalid({
@@ -252,6 +268,7 @@ export const makeAccountingTestLayer = () =>
                 }),
               )
             }
+
             if (decoded.evidence.operatorPrincipalId !== decoded.principal.userAccountId) {
               return yield* Effect.fail(
                 new FinancialStagingEvidenceInvalid({
@@ -261,6 +278,7 @@ export const makeAccountingTestLayer = () =>
                 }),
               )
             }
+
             if (!configurations.has(`${decoded.tenantId}:${decoded.evidence.legalEntityId}`)) {
               return yield* Effect.fail(
                 new AccountingLegalEntityNotFound({
@@ -269,12 +287,14 @@ export const makeAccountingTestLayer = () =>
                 }),
               )
             }
+
             const result = yield* stagingEvidenceStore.append({
               tenantId: decoded.tenantId,
               evidence: decoded.evidence,
               canonicalizationVersion: decoded.canonicalizationVersion,
               evidenceHash: decoded.evidenceHash,
             })
+
             return result.record
           }),
         listFinancialStagingEvidence: (input) =>
@@ -282,21 +302,19 @@ export const makeAccountingTestLayer = () =>
             const decoded = yield* Schema.decodeUnknownEffect(ListFinancialStagingEvidenceInput)(
               input,
             )
+
             yield* authorization.authorize({
               principal: decoded.principal,
               tenantId: decoded.tenantId,
               capability: AccountingCapabilities.financialEvidenceRead,
             })
+
             return yield* stagingEvidenceStore.list({
               tenantId: decoded.tenantId,
-              ...(decoded.legalEntityId === undefined
-                ? {}
-                : { legalEntityId: decoded.legalEntityId }),
-              ...(decoded.gateId === undefined ? {} : { gateId: decoded.gateId }),
-              ...(decoded.cohortId === undefined ? {} : { cohortId: decoded.cohortId }),
-              ...(decoded.deploymentRevision === undefined
-                ? {}
-                : { deploymentRevision: decoded.deploymentRevision }),
+              ...omitUndefined({ legalEntityId: decoded.legalEntityId }),
+              ...omitUndefined({ gateId: decoded.gateId }),
+              ...omitUndefined({ cohortId: decoded.cohortId }),
+              ...omitUndefined({ deploymentRevision: decoded.deploymentRevision }),
               limit: decoded.limit,
             })
           }),
@@ -305,11 +323,13 @@ export const makeAccountingTestLayer = () =>
             const decoded = yield* Schema.decodeUnknownEffect(
               RecordFinancialVerificationArtifactInput,
             )(input)
+
             yield* authorization.authorize({
               principal: decoded.principal,
               tenantId: decoded.tenantId,
               capability: AccountingCapabilities.financialEvidenceRecord,
             })
+
             if (decoded.evidence.tenantId !== decoded.tenantId) {
               return yield* Effect.fail(
                 new FinancialVerificationArtifactInvalid({
@@ -319,9 +339,11 @@ export const makeAccountingTestLayer = () =>
                 }),
               )
             }
+
             const configuration = configurations.get(
               `${decoded.tenantId}:${decoded.evidence.legalEntityId}`,
             )
+
             if (configuration?.baseCurrency !== decoded.evidence.currency) {
               return yield* Effect.fail(
                 new FinancialVerificationArtifactInvalid({
@@ -331,6 +353,7 @@ export const makeAccountingTestLayer = () =>
                 }),
               )
             }
+
             if (Option.isNone(signerOption)) {
               return yield* Effect.fail(
                 new FinancialVerificationArtifactInvalid({
@@ -340,7 +363,9 @@ export const makeAccountingTestLayer = () =>
                 }),
               )
             }
+
             const artifactHash = yield* hashFinancialVerificationEvidence(decoded.evidence)
+
             const signatureBytes = yield* signerOption.value
               .sign(new TextEncoder().encode(artifactHash))
               .pipe(
@@ -353,7 +378,9 @@ export const makeAccountingTestLayer = () =>
                     }),
                 ),
               )
+
             const signature = Base64Url.encode(signatureBytes)
+
             const artifact: FinancialVerificationArtifact = {
               id: nextId(),
               tenantId: decoded.tenantId,
@@ -367,7 +394,9 @@ export const makeAccountingTestLayer = () =>
               producerPrincipalId: decoded.principal.userAccountId,
               createdAt: new Date(clock.currentTimeMillisUnsafe()).toISOString(),
             }
+
             verificationArtifacts.set(artifact.id, artifact)
+
             return artifact
           }),
         prepareTigerBeetleCutover: (input) =>
@@ -379,6 +408,7 @@ export const makeAccountingTestLayer = () =>
               capability: AccountingCapabilities.financialEngineActivate,
             })
             const key = `${decoded.tenantId}:${decoded.legalEntityId}`
+
             if (!configurations.has(key)) {
               return yield* Effect.fail(
                 new AccountingLegalEntityNotFound({
@@ -387,7 +417,9 @@ export const makeAccountingTestLayer = () =>
                 }),
               )
             }
+
             const current = testControl(decoded.tenantId, decoded.legalEntityId)
+
             if (current.status === "tigerbeetle") {
               return yield* Effect.fail(
                 new FinancialEngineActivated({
@@ -396,11 +428,14 @@ export const makeAccountingTestLayer = () =>
                 }),
               )
             }
+
             if (current.status === "postgresql") {
               const prepared = { ...current, status: "preparing_tigerbeetle" as const }
               controls.set(key, prepared)
+
               return prepared
             }
+
             return current
           }),
         approveTigerBeetleCutover: (input) =>
@@ -413,6 +448,7 @@ export const makeAccountingTestLayer = () =>
             })
             const key = `${decoded.tenantId}:${decoded.legalEntityId}`
             const current = controls.get(key)
+
             if (current === undefined || current.status === "postgresql") {
               return yield* Effect.fail(
                 new FinancialEngineCutoverBlocked({
@@ -422,9 +458,12 @@ export const makeAccountingTestLayer = () =>
                 }),
               )
             }
+
             if (current.status === "tigerbeetle") return current
+
             if (current.status === "approved") {
               if (current.evidenceArtifactId === decoded.evidenceArtifactId) return current
+
               return yield* Effect.fail(
                 new FinancialEngineCutoverBlocked({
                   tenantId: decoded.tenantId,
@@ -433,8 +472,10 @@ export const makeAccountingTestLayer = () =>
                 }),
               )
             }
+
             const artifact = verificationArtifacts.get(decoded.evidenceArtifactId)
             const configuration = configurations.get(key)
+
             if (artifact === undefined) {
               return yield* Effect.fail(
                 new FinancialVerificationArtifactNotFound({
@@ -443,6 +484,7 @@ export const makeAccountingTestLayer = () =>
                 }),
               )
             }
+
             if (
               artifact.legalEntityId !== decoded.legalEntityId ||
               artifact.evidence.currency !== configuration?.baseCurrency ||
@@ -464,6 +506,7 @@ export const makeAccountingTestLayer = () =>
                 }),
               )
             }
+
             if (
               Option.isNone(keyringOption) &&
               (Option.isNone(signerOption) || artifact.signingKeyId !== signerOption.value.keyId)
@@ -476,7 +519,9 @@ export const makeAccountingTestLayer = () =>
                 }),
               )
             }
+
             const computedArtifactHash = yield* hashFinancialVerificationEvidence(artifact.evidence)
+
             if (computedArtifactHash !== artifact.artifactHash) {
               return yield* Effect.fail(
                 new FinancialVerificationArtifactInvalid({
@@ -486,12 +531,15 @@ export const makeAccountingTestLayer = () =>
                 }),
               )
             }
+
             const signatureBytes = yield* decodeFinancialVerificationSignature(
               artifact.signature,
               decoded.tenantId,
               decoded.legalEntityId,
             )
+
             const signaturePayload = new TextEncoder().encode(artifact.artifactHash)
+
             const signatureValid = yield* Option.isSome(keyringOption)
               ? keyringOption.value
                   .verify(artifact.signingKeyId, signaturePayload, signatureBytes)
@@ -517,6 +565,7 @@ export const makeAccountingTestLayer = () =>
                         }),
                     ),
                   )
+
             if (!signatureValid) {
               return yield* Effect.fail(
                 new FinancialVerificationArtifactInvalid({
@@ -526,6 +575,7 @@ export const makeAccountingTestLayer = () =>
                 }),
               )
             }
+
             const approved = {
               ...current,
               status: "approved" as const,
@@ -539,7 +589,9 @@ export const makeAccountingTestLayer = () =>
               approvedBy: decoded.principal.userAccountId,
               approvedAt: new Date(clock.currentTimeMillisUnsafe()).toISOString(),
             }
+
             controls.set(key, approved)
+
             return approved
           }),
         activateTigerBeetleCutover: (input) =>
@@ -547,13 +599,16 @@ export const makeAccountingTestLayer = () =>
             const decoded = yield* Schema.decodeUnknownEffect(ActivateTigerBeetleCutoverInput)(
               input,
             )
+
             yield* authorization.authorize({
               principal: decoded.principal,
               tenantId: decoded.tenantId,
               capability: AccountingCapabilities.financialEngineActivate,
             })
             const current = controls.get(`${decoded.tenantId}:${decoded.legalEntityId}`)
+
             if (current?.status === "tigerbeetle") return current
+
             return yield* Effect.fail(
               new FinancialEngineCutoverBlocked({
                 tenantId: decoded.tenantId,
@@ -570,6 +625,7 @@ export const makeAccountingTestLayer = () =>
               tenantId: decoded.tenantId,
               capability: AccountingCapabilities.legalEntityConfigure,
             })
+
             if (decoded.financialEngine === "tigerbeetle") {
               return yield* Effect.fail(
                 new FinancialEngineCutoverBlocked({
@@ -579,7 +635,9 @@ export const makeAccountingTestLayer = () =>
                 }),
               )
             }
+
             const key = `${decoded.tenantId}:${decoded.legalEntityId}`
+
             if (configurations.has(key)) {
               return yield* Effect.fail(
                 new AccountingConfigurationAlreadyExists({
@@ -588,6 +646,7 @@ export const makeAccountingTestLayer = () =>
                 }),
               )
             }
+
             const configuration: AccountingConfiguration = {
               tenantId: decoded.tenantId,
               legalEntityId: decoded.legalEntityId,
@@ -597,8 +656,10 @@ export const makeAccountingTestLayer = () =>
               postingEnabled: decoded.postingEnabled,
               financialEngine: decoded.financialEngine ?? "postgresql",
             }
+
             configurations.set(key, configuration)
             testControl(decoded.tenantId, decoded.legalEntityId)
+
             return configuration
           }),
         createAccount: (input) =>
@@ -610,6 +671,7 @@ export const makeAccountingTestLayer = () =>
               capability: AccountingCapabilities.accountCreate,
             })
             const code = decoded.code.trim().toUpperCase()
+
             if (
               [...storedAccounts.values()].some(
                 (account) => account.tenantId === decoded.tenantId && account.code === code,
@@ -619,6 +681,7 @@ export const makeAccountingTestLayer = () =>
                 new AccountAlreadyExists({ tenantId: decoded.tenantId, code }),
               )
             }
+
             const account = {
               id: nextId(),
               tenantId: decoded.tenantId,
@@ -626,7 +689,9 @@ export const makeAccountingTestLayer = () =>
               name: decoded.name.trim(),
               type: decoded.type,
             }
+
             storedAccounts.set(account.id, account)
+
             return account
           }),
         configureRevenuePosting: (input) =>
@@ -639,12 +704,14 @@ export const makeAccountingTestLayer = () =>
             })
             const receivable = storedAccounts.get(decoded.receivableAccountId)
             const revenue = storedAccounts.get(decoded.revenueAccountId)
+
             if (
               receivable?.tenantId !== decoded.tenantId ||
               revenue?.tenantId !== decoded.tenantId
             ) {
               return yield* Effect.fail(new AccountNotFound({ tenantId: decoded.tenantId }))
             }
+
             if (receivable.type !== "asset" || revenue.type !== "revenue") {
               return yield* Effect.fail(
                 new InvalidRevenuePostingProfile({
@@ -653,7 +720,9 @@ export const makeAccountingTestLayer = () =>
                 }),
               )
             }
+
             const key = `${decoded.tenantId}:${decoded.legalEntityId}`
+
             if (profiles.has(key)) {
               return yield* Effect.fail(
                 new RevenuePostingProfileAlreadyExists({
@@ -662,13 +731,16 @@ export const makeAccountingTestLayer = () =>
                 }),
               )
             }
+
             const profile: RevenuePostingProfile = {
               tenantId: decoded.tenantId,
               legalEntityId: decoded.legalEntityId,
               receivableAccountId: decoded.receivableAccountId,
               revenueAccountId: decoded.revenueAccountId,
             }
+
             profiles.set(key, profile)
+
             return profile
           }),
         openPeriod: (input) =>
@@ -679,6 +751,7 @@ export const makeAccountingTestLayer = () =>
               tenantId: decoded.tenantId,
               capability: AccountingCapabilities.periodOpen,
             })
+
             const overlap = [...periods.values()].some(
               (period) =>
                 period.tenantId === decoded.tenantId &&
@@ -686,6 +759,7 @@ export const makeAccountingTestLayer = () =>
                 period.startsOn <= decoded.endsOn &&
                 decoded.startsOn <= period.endsOn,
             )
+
             if (overlap) {
               return yield* Effect.fail(
                 new AccountingPeriodOverlap({
@@ -694,6 +768,7 @@ export const makeAccountingTestLayer = () =>
                 }),
               )
             }
+
             const period: AccountingPeriod = {
               id: nextId(),
               tenantId: decoded.tenantId,
@@ -702,7 +777,9 @@ export const makeAccountingTestLayer = () =>
               endsOn: decoded.endsOn,
               status: "open",
             }
+
             periods.set(period.id, period)
+
             return period
           }),
         closePeriod: (input) =>
@@ -714,6 +791,7 @@ export const makeAccountingTestLayer = () =>
               capability: AccountingCapabilities.periodClose,
             })
             const period = periods.get(decoded.periodId)
+
             if (
               period === undefined ||
               period.tenantId !== decoded.tenantId ||
@@ -727,8 +805,10 @@ export const makeAccountingTestLayer = () =>
                 }),
               )
             }
+
             const closed = { ...period, status: "closed" as const }
             periods.set(closed.id, closed)
+
             return closed
           }),
         postRevenueForOrder: (input) =>
@@ -739,26 +819,32 @@ export const makeAccountingTestLayer = () =>
               tenantId: decoded.tenantId,
               capability: AccountingCapabilities.revenuePost,
             })
+
             const amount = yield* sales.getConfirmedOrderTotal({
               principal: decoded.principal,
               tenantId: decoded.tenantId,
               orderId: decoded.orderId,
             })
+
             const reference = revenueReference(decoded.legalEntityId, decoded.orderId)
             const commandId = decoded.commandId.trim()
             const correlationId = decoded.correlationId.trim()
             const causationId = decoded.causationId?.trim() ?? null
             const existing = storedJournals.get(`${decoded.tenantId}:${reference}`)
+
             if (existing !== undefined) {
               if (existing.lines[0]?.debit !== amount) {
                 return yield* Effect.fail(
                   new JournalIdempotencyConflict({ tenantId: decoded.tenantId, reference }),
                 )
               }
+
               return existing
             }
+
             const key = `${decoded.tenantId}:${decoded.legalEntityId}`
             const profile = profiles.get(key)
+
             if (profile === undefined) {
               return yield* Effect.fail(
                 new RevenuePostingProfileNotFound({
@@ -767,7 +853,9 @@ export const makeAccountingTestLayer = () =>
                 }),
               )
             }
+
             const today = utcDate(clock)
+
             if (
               configurations.get(key)?.postingEnabled !== true ||
               ![...periods.values()].some(
@@ -786,6 +874,7 @@ export const makeAccountingTestLayer = () =>
                 }),
               )
             }
+
             const journal: JournalEntry = {
               id: uuidv7(),
               tenantId: decoded.tenantId,
@@ -797,6 +886,7 @@ export const makeAccountingTestLayer = () =>
                 { accountId: profile.revenueAccountId, debit: "0", credit: amount },
               ],
             }
+
             yield* messaging.append({
               eventId: uuidv7(),
               eventType: AccountingRevenuePostedEvent.id,
@@ -817,6 +907,7 @@ export const makeAccountingTestLayer = () =>
               },
             })
             storedJournals.set(`${decoded.tenantId}:${reference}`, journal)
+
             return journal
           }),
         reverseRevenueForOrder: (input) =>
@@ -829,8 +920,10 @@ export const makeAccountingTestLayer = () =>
             })
             const reference = reversalReference(decoded.legalEntityId, decoded.orderId)
             const existing = storedJournals.get(`${decoded.tenantId}:${reference}`)
+
             if (existing !== undefined) return existing
             const key = `${decoded.tenantId}:${decoded.legalEntityId}`
+
             if (!profiles.has(key)) {
               return yield* Effect.fail(
                 new RevenuePostingProfileNotFound({
@@ -839,7 +932,9 @@ export const makeAccountingTestLayer = () =>
                 }),
               )
             }
+
             const today = utcDate(clock)
+
             if (
               configurations.get(key)?.postingEnabled !== true ||
               ![...periods.values()].some(
@@ -858,9 +953,11 @@ export const makeAccountingTestLayer = () =>
                 }),
               )
             }
+
             const source = storedJournals.get(
               `${decoded.tenantId}:${revenueReference(decoded.legalEntityId, decoded.orderId)}`,
             )
+
             if (source === undefined) {
               return yield* Effect.fail(
                 new RevenueJournalNotFound({
@@ -870,6 +967,7 @@ export const makeAccountingTestLayer = () =>
                 }),
               )
             }
+
             const journal: JournalEntry = {
               id: nextId(),
               tenantId: decoded.tenantId,
@@ -883,7 +981,9 @@ export const makeAccountingTestLayer = () =>
                 credit: line.debit,
               })),
             }
+
             storedJournals.set(`${decoded.tenantId}:${reference}`, journal)
+
             return journal
           }),
         postJournal: (input) =>
@@ -895,7 +995,9 @@ export const makeAccountingTestLayer = () =>
               capability: AccountingCapabilities.journalPost,
             })
             const error = validateLines(decoded.lines)
+
             if (error !== undefined) return yield* Effect.fail(error)
+
             if (
               decoded.lines.some(
                 (line) => storedAccounts.get(line.accountId)?.tenantId !== decoded.tenantId,
@@ -903,9 +1005,11 @@ export const makeAccountingTestLayer = () =>
             ) {
               return yield* Effect.fail(new AccountNotFound({ tenantId: decoded.tenantId }))
             }
+
             const reference = decoded.reference.trim()
             const key = `${decoded.tenantId}:${reference}`
             const existing = storedJournals.get(key)
+
             if (existing !== undefined) {
               if (
                 JSON.stringify(normalizeLines(existing.lines)) !==
@@ -918,8 +1022,10 @@ export const makeAccountingTestLayer = () =>
                   }),
                 )
               }
+
               return existing
             }
+
             const journal: JournalEntry = {
               id: nextId(),
               tenantId: decoded.tenantId,
@@ -928,10 +1034,13 @@ export const makeAccountingTestLayer = () =>
               postedAt: new Date(clock.currentTimeMillisUnsafe()).toISOString(),
               lines: decoded.lines,
             }
+
             storedJournals.set(key, journal)
+
             return journal
           }),
       }
+
       return withAccountingOperationNames(service)
     }),
   )

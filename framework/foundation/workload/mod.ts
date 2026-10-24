@@ -11,6 +11,7 @@ const NonNegativeInt = Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: 
 const PositiveBoundedInt = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 1_000_000 }))
 
 const WorkloadClass = Schema.Literals(["command", "query", "async"])
+
 export type WorkloadClass = Schema.Schema.Type<typeof WorkloadClass>
 
 export const WorkloadMetadata = Schema.Struct({
@@ -25,6 +26,7 @@ export const WorkloadMetadata = Schema.Struct({
   maxResultItems: PositiveBoundedInt,
   admissionScope: Schema.Literals(["tenant", "principal", "route"]),
 })
+
 export type WorkloadMetadata = Schema.Schema.Type<typeof WorkloadMetadata>
 
 // The colocated entry profile keeps finite limits without claiming physical isolation.
@@ -36,8 +38,9 @@ export const EntryWorkloadLimits = {
   commandReserve: 8,
 } as const
 
-export const classifyWorkload = Effect.fn("Workload.classify")((input: unknown) =>
-  Schema.decodeUnknownEffect(WorkloadMetadata, { onExcessProperty: "error" })(input),
+export const classifyWorkload = Effect.fn("Workload.classify")(
+  (input: Schema.Codec.Encoded<typeof WorkloadMetadata>) =>
+    Schema.decodeUnknownEffect(WorkloadMetadata, { onExcessProperty: "error" })(input),
 )
 
 export class WorkloadAdmissionRejected extends Schema.TaggedError<WorkloadAdmissionRejected>()(
@@ -76,7 +79,7 @@ export type WorkloadLease = {
 export type WorkloadAdmission = {
   /** Admits or rejects immediately; the capacity returns when the surrounding scope closes. */
   readonly admit: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof WorkloadMetadata>,
   ) => Effect.Effect<WorkloadLease, WorkloadAdmissionRejected | Schema.SchemaError, Scope.Scope>
   readonly available: Effect.Effect<WorkloadCapacity>
 }
@@ -92,12 +95,15 @@ const validateConfig = (config: WorkloadAdmissionConfig) => {
       new WorkloadAdmissionConfigurationInvalid({ reason: "command reserve must be positive" }),
     )
   }
+
   if (!isNonNegativeCapacity(config.competingHardLimit)) {
     return Effect.fail(
       new WorkloadAdmissionConfigurationInvalid({ reason: "competing hard limit is invalid" }),
     )
   }
+
   const competingAdaptiveLimit = config.competingAdaptiveLimit ?? config.competingHardLimit
+
   if (
     !isNonNegativeCapacity(competingAdaptiveLimit) ||
     competingAdaptiveLimit > config.competingHardLimit
@@ -108,6 +114,7 @@ const validateConfig = (config: WorkloadAdmissionConfig) => {
       }),
     )
   }
+
   return Effect.succeed({ commandReserve: config.commandReserve, competingAdaptiveLimit })
 }
 
@@ -119,6 +126,7 @@ export const makeWorkloadAdmission = Effect.fn("WorkloadAdmission.make")(functio
   config: WorkloadAdmissionConfig,
 ) {
   const limits = yield* validateConfig(config)
+
   const capacity = yield* Ref.make<WorkloadCapacity>({
     commandReserve: limits.commandReserve,
     competingCapacity: limits.competingAdaptiveLimit,
@@ -126,10 +134,13 @@ export const makeWorkloadAdmission = Effect.fn("WorkloadAdmission.make")(functio
 
   const take = (workloadClass: WorkloadClass, cost: number) => {
     const pool: Pool = workloadClass === "command" ? "commandReserve" : "competingCapacity"
+
     const ceiling =
       workloadClass === "command" ? limits.commandReserve : limits.competingAdaptiveLimit
+
     return Ref.modify(capacity, (current) => {
       if (cost > ceiling) return ["cost_above_hard_limit" as const, current]
+
       if (cost > current[pool]) {
         return [
           workloadClass === "command"
@@ -138,12 +149,16 @@ export const makeWorkloadAdmission = Effect.fn("WorkloadAdmission.make")(functio
           current,
         ]
       }
+
       return [pool, { ...current, [pool]: current[pool] - cost }]
     })
   }
 
-  const admit = Effect.fn("WorkloadAdmission.admit")(function* (input: unknown) {
+  const admit = Effect.fn("WorkloadAdmission.admit")(function* (
+    input: Schema.Codec.Encoded<typeof WorkloadMetadata>,
+  ) {
     const { workloadClass, estimatedCost: cost } = yield* classifyWorkload(input)
+
     return yield* Effect.acquireRelease(
       Effect.flatMap(take(workloadClass, cost), (outcome) =>
         outcome === "commandReserve" || outcome === "competingCapacity"

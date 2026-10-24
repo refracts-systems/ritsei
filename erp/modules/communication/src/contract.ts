@@ -28,6 +28,7 @@ const Uuid = Schema.String.check(Schema.isUUID())
 export const ProcessPurchaseOrderConfirmedInput = Schema.Struct({
   event: EventEnvelope,
 })
+
 export type ProcessPurchaseOrderConfirmedInput = Schema.Schema.Type<
   typeof ProcessPurchaseOrderConfirmedInput
 >
@@ -35,6 +36,7 @@ export type ProcessPurchaseOrderConfirmedInput = Schema.Schema.Type<
 export const RetryCommunicationInput = Schema.Struct({
   communicationId: Uuid,
 })
+
 export type RetryCommunicationInput = Schema.Schema.Type<typeof RetryCommunicationInput>
 
 export const CommunicationProcessingResult = Schema.Struct({
@@ -45,6 +47,7 @@ export const CommunicationProcessingResult = Schema.Struct({
   attempt: Schema.NullOr(DeliveryAttempt),
   receipt: Schema.NullOr(DeliveryReceipt),
 })
+
 export type CommunicationProcessingResult = Schema.Schema.Type<typeof CommunicationProcessingResult>
 
 export interface CommunicationConfiguration {
@@ -57,7 +60,7 @@ export const CommunicationConfiguration = Context.Service<CommunicationConfigura
 
 export interface CommunicationPolicy {
   readonly derivePurchaseOrderConfirmed: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof EventEnvelope>,
   ) => Effect.Effect<CommunicationIntent, UnsupportedCommunicationEvent | Schema.SchemaError>
 }
 
@@ -67,7 +70,7 @@ export const CommunicationPolicy = Context.Service<CommunicationPolicy>(
 
 export interface CommunicationService {
   readonly processPurchaseOrderConfirmed: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ProcessPurchaseOrderConfirmedInput>,
   ) => Effect.Effect<
     CommunicationProcessingResult,
     | CommunicationNotFound
@@ -80,7 +83,7 @@ export interface CommunicationService {
     | Schema.SchemaError
   >
   readonly deliver: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof RetryCommunicationInput>,
   ) => Effect.Effect<
     CommunicationProcessingResult,
     | CommunicationNotFound
@@ -89,7 +92,7 @@ export interface CommunicationService {
     | Schema.SchemaError
   >
   readonly retry: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof RetryCommunicationInput>,
   ) => Effect.Effect<
     CommunicationProcessingResult,
     | CommunicationNotFound

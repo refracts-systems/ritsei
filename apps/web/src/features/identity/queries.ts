@@ -34,11 +34,13 @@ export function createAccountMutation(
   afterSuccess?: (account: UserAccount) => void,
 ) {
   const client = useQueryClient()
+
   return useMutation<UserAccount, RequestFailure, { email: string }>(() => ({
     mutationFn: (input) => runRequest(scope, createAccount(input)),
     onSuccess: (account) => {
       client.setQueryData(serverQueryKey(scope.tenantId, accountKey(account.id)), account)
       afterSuccess?.(account)
+
       return refreshAccountCollection(client, scope.tenantId)
     },
   }))
@@ -46,11 +48,13 @@ export function createAccountMutation(
 
 export function createAccountEmailMutation(scope: ApiScope, afterSuccess?: () => void) {
   const client = useQueryClient()
+
   return useMutation<UserAccount, RequestFailure, { id: string; email: string }>(() => ({
     mutationFn: (input) => runRequest(scope, updateAccount(input)),
     onSuccess: (account) => {
       client.setQueryData(serverQueryKey(scope.tenantId, accountKey(account.id)), account)
       afterSuccess?.()
+
       return refreshAccountCollection(client, scope.tenantId)
     },
   }))

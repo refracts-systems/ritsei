@@ -10,6 +10,7 @@ export const ProcessPackStability = Schema.Literals([
   "DEPRECATED",
   "RETIRED",
 ])
+
 export type ProcessPackStability = Schema.Schema.Type<typeof ProcessPackStability>
 
 export const ProcessPackCapabilityReference = Schema.Struct({
@@ -17,6 +18,7 @@ export const ProcessPackCapabilityReference = Schema.Struct({
   id: NonEmptyString,
   version: PositiveInt,
 })
+
 export type ProcessPackCapabilityReference = Schema.Schema.Type<
   typeof ProcessPackCapabilityReference
 >
@@ -27,6 +29,7 @@ export const ProcessPackAsset = Schema.Struct({
   title: NonEmptyString,
   description: NonEmptyString,
 })
+
 export type ProcessPackAsset = Schema.Schema.Type<typeof ProcessPackAsset>
 
 const Assets = Schema.Array(ProcessPackAsset)
@@ -48,6 +51,7 @@ export const ProcessPack = Schema.Struct({
   projections: Assets,
   documentation: Assets,
 })
+
 export type ProcessPack = Schema.Schema.Type<typeof ProcessPack>
 
 export const ProcessPackCapabilityResolution = Schema.Struct({
@@ -56,6 +60,7 @@ export const ProcessPackCapabilityResolution = Schema.Struct({
   status: Schema.Literals(["ready", "missing_required_capabilities"]),
   missingRequiredCapabilities: Schema.Array(ProcessPackCapabilityReference),
 })
+
 export type ProcessPackCapabilityResolution = Schema.Schema.Type<
   typeof ProcessPackCapabilityResolution
 >
@@ -72,6 +77,7 @@ export const resolveProcessPackCapabilities = (
   const missingRequiredCapabilities = pack.requiredCapabilities.filter(
     (required) => !available.some((candidate) => sameReference(required, candidate)),
   )
+
   return {
     packId: pack.id,
     packVersion: pack.version,

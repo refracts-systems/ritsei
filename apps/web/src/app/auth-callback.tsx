@@ -17,10 +17,13 @@ export function AuthCallback() {
         const token = await finishOidcLogin(configuration)
         const authenticated = await getAuthSession(token)
         const tenant = authenticated.activeTenant ?? authenticated.memberships[0]
+
         if (tenant === undefined) {
           setMessage("Sign-in succeeded, but this account has no active tenant membership.")
+
           return
         }
+
         session.replace({ token, tenantId: tenant.tenantId }, authenticated)
         navigate("/", { replace: true })
       } catch {

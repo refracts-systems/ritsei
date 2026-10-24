@@ -7,9 +7,11 @@ import { Principal } from "../../auth/mod.ts"
 import { Capability as CapabilitySchema } from "./capabilities.ts"
 
 export const Capability = CapabilitySchema
+
 export type Capability = Schema.Schema.Type<typeof Capability>
 
 export const TenantMembershipStatus = Schema.Literals(["active", "suspended"])
+
 export type TenantMembershipStatus = Schema.Schema.Type<typeof TenantMembershipStatus>
 
 export const TenantMembership = Schema.Struct({
@@ -45,6 +47,7 @@ export const TenantMembershipInput = Schema.Struct({
 export const ListAccessibleTenantsInput = Schema.Struct({
   userAccountId: Schema.String,
 })
+
 export type ListAccessibleTenantsInput = Schema.Schema.Type<typeof ListAccessibleTenantsInput>
 
 const TenantMembershipSearch = Schema.Trim.pipe(
@@ -58,6 +61,7 @@ export const ListTenantMembershipsInput = Schema.Struct({
   status: Schema.optionalKey(TenantMembershipStatus),
   limit: Schema.optionalKey(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 200 }))),
 })
+
 export type ListTenantMembershipsInput = Schema.Schema.Type<typeof ListTenantMembershipsInput>
 
 export const DirectCapabilityGrant = Schema.Struct({
@@ -66,6 +70,7 @@ export const DirectCapabilityGrant = Schema.Struct({
   capability: Capability,
   scope: Schema.Literal("tenant"),
 })
+
 export type DirectCapabilityGrant = Schema.Schema.Type<typeof DirectCapabilityGrant>
 
 export const AuthorizationDecision = Schema.Struct({
@@ -77,13 +82,13 @@ export const AuthorizationDecision = Schema.Struct({
 
 export interface AuthorizationService {
   readonly authorize: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof AuthorizationInput>,
   ) => Effect.Effect<
     Schema.Schema.Type<typeof AuthorizationDecision>,
     import("./errors.ts").AuthorizationDenied | DatabaseFailure | Schema.SchemaError
   >
   readonly addMember: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof AddTenantMembershipInput>,
   ) => Effect.Effect<
     TenantMembership,
     | import("./errors.ts").TenantMembershipAlreadyExists
@@ -92,43 +97,43 @@ export interface AuthorizationService {
     | Schema.SchemaError
   >
   readonly getMember: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof TenantMembershipInput>,
   ) => Effect.Effect<
     TenantMembership,
     import("./errors.ts").TenantMembershipNotFound | DatabaseFailure | Schema.SchemaError
   >
   readonly listMembers: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ListTenantMembershipsInput>,
   ) => Effect.Effect<readonly TenantMembership[], DatabaseFailure | Schema.SchemaError>
   readonly listAccessibleTenants: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ListAccessibleTenantsInput>,
   ) => Effect.Effect<readonly TenantMembership[], DatabaseFailure | Schema.SchemaError>
   readonly listDirectGrants: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof TenantMembershipInput>,
   ) => Effect.Effect<
     readonly DirectCapabilityGrant[],
     import("./errors.ts").TenantMembershipNotFound | DatabaseFailure | Schema.SchemaError
   >
   readonly suspendMember: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof TenantMembershipInput>,
   ) => Effect.Effect<
     TenantMembership,
     import("./errors.ts").TenantMembershipNotFound | DatabaseFailure | Schema.SchemaError
   >
   readonly activateMember: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof TenantMembershipInput>,
   ) => Effect.Effect<
     TenantMembership,
     import("./errors.ts").TenantMembershipNotFound | DatabaseFailure | Schema.SchemaError
   >
   readonly removeMember: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof TenantMembershipInput>,
   ) => Effect.Effect<
     void,
     import("./errors.ts").TenantMembershipNotFound | DatabaseFailure | Schema.SchemaError
   >
   readonly grant: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof GrantCapabilityInput>,
   ) => Effect.Effect<
     void,
     | import("./errors.ts").CapabilityAlreadyGranted

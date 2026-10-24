@@ -9,8 +9,10 @@ import {
   communicationIdempotencyKey,
   CommunicationIntent,
   DeliveryAttempt,
+  EmailButtonNode,
   EmailMessage,
-  makeCommunicationIntent,
+  EmailTableNode,
+  createCommunicationIntent,
   RecipientSnapshot,
 } from "../mod.ts"
 
@@ -48,13 +50,12 @@ const intent = {
   timezone: "Asia/Jakarta",
   idempotencyKey: "purchase-order-approved:1",
   correlationId: "po-approval-1",
-}
+} as const
 
 it.effect("creates a versioned intent without coupling it to a provider", () =>
   Effect.gen(function* () {
-    const created = yield* makeCommunicationIntent(
-      Object.fromEntries(Object.entries(intent).filter(([key]) => key !== "communicationId")),
-    )
+    const { communicationId: _communicationId, ...withoutId } = intent
+    const created = yield* createCommunicationIntent(withoutId)
     const decoded = yield* Schema.decodeUnknownEffect(CommunicationIntent)(created)
 
     assert.isString(decoded.communicationId)
@@ -89,14 +90,25 @@ it.effect("rejects unsafe email links and malformed table rows", () =>
     const unsafe = yield* Effect.flip(
       Schema.decodeUnknownEffect(EmailMessage)({
         subject: "Purchase order",
-        nodes: [{ _tag: "button", label: "Open", href: "javascript:alert(1)" }],
+        nodes: [
+          {
+            ...EmailButtonNode.make({ label: "Open", href: "https://example.test" }),
+            href: "javascript:alert(1)",
+          },
+        ],
         attachments: [],
       }),
     )
+
     const malformedTable = yield* Effect.flip(
       Schema.decodeUnknownEffect(EmailMessage)({
         subject: "Purchase order",
-        nodes: [{ _tag: "table", headers: ["Item", "Quantity"], rows: [["Widget"]] }],
+        nodes: [
+          {
+            ...EmailTableNode.make({ headers: ["Item", "Quantity"], rows: [["Widget", "1"]] }),
+            rows: [["Widget"]],
+          },
+        ],
         attachments: [],
       }),
     )
@@ -121,6 +133,7 @@ it.effect("keeps unknown provider outcomes on attempts while communication recon
       artifactId: null,
       createdAt: timestamp,
     })
+
     const attempt = yield* Schema.decodeUnknownEffect(DeliveryAttempt)({
       attemptId,
       communicationId,
@@ -152,6 +165,7 @@ it.effect("binds an email artifact to an existing document artifact reference", 
       timezone: "Asia/Jakarta",
       data: { purchaseOrder: { number: "PO-2026-0001" } },
     })
+
     const artifact = yield* Schema.decodeUnknownEffect(CommunicationArtifact)({
       artifactId,
       communicationId,

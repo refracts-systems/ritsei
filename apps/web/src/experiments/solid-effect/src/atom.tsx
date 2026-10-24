@@ -40,16 +40,22 @@ const RegistryContext = createContext<AtomRegistry.AtomRegistry>()
 
 function useRegistry() {
   const registry = useContext(RegistryContext)
+
   if (!registry) {
     throw new Error("Atom components must be rendered inside RegistryProvider")
   }
+
   return registry
 }
 
 function useAtomValue<A>(atom: () => Atom.Atom<A>): () => A {
   const registry = useRegistry()
   const current = createMemo(atom)
-  const [value, setValue] = createSignal<A>(untrack(() => registry.get(current())) as any)
+
+  // SAFETY: atoms in these examples hold values, never functions, so the initial value is not a compute function.
+  const [value, setValue] = createSignal<A>(
+    untrack(() => registry.get(current())) as Exclude<A, Function>,
+  )
 
   createEffect(
     () => current(),
@@ -59,45 +65,55 @@ function useAtomValue<A>(atom: () => Atom.Atom<A>): () => A {
       }),
   )
 
-  return value as () => A
+  return value
 }
 
 function useAtom<R, W>(atom: () => Atom.Writable<R, W>) {
   const registry = useRegistry()
   const current = createMemo(atom)
   const value = useAtomValue(current)
+
   return [value, (next: W) => registry.set(current(), next)] as const
 }
 
 function RegistryProvider(props: { children: JSX.Element }) {
   const registry = AtomRegistry.make()
   onCleanup(() => registry.dispose())
+
   return <RegistryContext value={registry}>{props.children}</RegistryContext>
 }
 
 function formatDownloads(n: number) {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M"
+
   if (n >= 1_000) return Math.round(n / 1_000) + "k"
+
   return String(n)
 }
 
 function AtomTypeahead() {
   const [query, setQuery] = createSignal("")
+
   const searchAtom = Atom.fn<string>()(
     (value) => searchPackages(value).pipe(Effect.provide(SearchConfigLive)),
     { concurrent: false },
   )
+
   const [searchResult, runSearch] = useAtom(() => searchAtom)
 
   const pending = () => {
     const result = searchResult()
+
     return result.waiting || AsyncResult.isInitial(result)
   }
+
   const failure = () => {
     const result = searchResult()
+
     return AsyncResult.isFailure(result) ? Cause.squash(result.cause) : undefined
   }
-  const results = () => AsyncResult.getOrElse(searchResult(), () => [] as Package[])
+
+  const results = () => AsyncResult.getOrElse(searchResult(), () => new Array<Package>())
 
   return (
     <section class="panel">
@@ -211,6 +227,7 @@ function AtomCheckout() {
       const compensate = () =>
         Effect.gen(function* () {
           if (charge) yield* refundCharge(charge)
+
           if (reservation) yield* releaseReservation(reservation)
         })
 
@@ -238,6 +255,7 @@ function AtomCheckout() {
           })
           get.registry.refresh(ordersAtom)
         })
+
         return order
       })
 
@@ -281,16 +299,21 @@ function AtomCheckout() {
 
   const total = () => cart().reduce((sum, item) => sum + item.price * item.quantity, 0)
   const inFlight = () => phase() !== "idle"
-  const orders = () => AsyncResult.getOrElse(ordersResult(), () => [] as Order[])
+  const orders = () => AsyncResult.getOrElse(ordersResult(), () => new Array<Order>())
+
   const ordersLoading = () => {
     const result = ordersResult()
+
     return result.waiting || AsyncResult.isInitial(result)
   }
+
   const stepState = (step: Phase) => {
     const order: Phase[] = ["reserving", "charging", "finalizing"]
     const current = order.indexOf(phase())
     const target = order.indexOf(step)
+
     if (current === -1) return ""
+
     return target < current ? "done" : target === current ? "active" : ""
   }
 

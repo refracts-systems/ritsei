@@ -49,6 +49,7 @@ export const reviewExternalConnector = (
       }),
     )
   }
+
   return Effect.succeed({
     ...connector,
     status: "reviewed",
@@ -89,6 +90,7 @@ export const validateExternalOperation = (
       }),
     )
   }
+
   if (connector.status !== "active") {
     return Effect.fail(
       new ExternalConnectorNotReviewed({
@@ -97,6 +99,7 @@ export const validateExternalOperation = (
       }),
     )
   }
+
   if (
     action.connectorId !== connector.connectorId ||
     action.version < connector.compatibilityRange.minimumVersion ||
@@ -110,6 +113,7 @@ export const validateExternalOperation = (
       }),
     )
   }
+
   return Effect.succeed(action)
 }
 
@@ -129,5 +133,6 @@ export const makeDeliveryControl = (
       }),
     )
   }
+
   return Effect.succeed(control)
 }

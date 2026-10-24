@@ -33,18 +33,22 @@ function source(label, ms) {
     [Symbol.asyncIterator]() {
       note(`open  ${label}`)
       let done = false
+
       return {
         async next() {
           if (done) return { done: true, value: undefined }
           await new Promise((r) => setTimeout(r, ms))
+
           if (done) return { done: true, value: undefined }
           done = true
           note(`land  ${label}`)
+
           return { done: false, value: label }
         },
         async return() {
           note(`close ${label}`)
           done = true
+
           return { done: true, value: undefined }
         },
       }
@@ -56,10 +60,13 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 const { setQ, mountReader } = createRoot(() => {
   const [q, set] = createSignal("")
+
   const m = createMemo(() => {
     const v = q()
+
     return v ? source(v, 400) : []
   })
+
   // Mimics <Show> flipping on AFTER the flight-triggering write: the memo's
   // first pull of the in-flight compute comes from a freshly created reader.
   const mount = () =>
@@ -71,6 +78,7 @@ const { setQ, mountReader } = createRoot(() => {
           try {
             // Comment out this isPending read → closes become eager again.
             const pending = isPending(() => m())
+
             return { pending, value: latest(() => m()) }
           } catch {
             return undefined
@@ -78,14 +86,18 @@ const { setQ, mountReader } = createRoot(() => {
         },
         () => "loading-fallback",
       )
+
       createEffect(
         () => view(),
         () => {},
       )
     })
+
   return { setQ: set, mountReader: mount }
 })
+
 flush()
+
 ;(async () => {
   note("-- fresh-reader case: write 'a', THEN mount reader, then supersede")
   setQ("a")

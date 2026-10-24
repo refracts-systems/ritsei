@@ -18,21 +18,25 @@ export class ApiUnauthorized extends Schema.TaggedError<ApiUnauthorized>()(
   { code: Schema.Literal("unauthorized") },
   { httpApiStatus: 401 },
 ) {}
+
 export class ApiForbidden extends Schema.TaggedError<ApiForbidden>()(
   "ApiForbidden",
   { code: Schema.Literal("forbidden") },
   { httpApiStatus: 403 },
 ) {}
+
 export class ApiNotFound extends Schema.TaggedError<ApiNotFound>()(
   "ApiNotFound",
   { code: Schema.String },
   { httpApiStatus: 404 },
 ) {}
+
 export class ApiConflict extends Schema.TaggedError<ApiConflict>()(
   "ApiConflict",
   { code: Schema.String },
   { httpApiStatus: 409 },
 ) {}
+
 export class ApiServiceUnavailable extends Schema.TaggedError<ApiServiceUnavailable>()(
   "ApiServiceUnavailable",
   { code: Schema.Literal("service_unavailable") },
@@ -62,24 +66,31 @@ export const MaxApiTextLength = 4_096
 export const MaxApiIdentifierLength = 256
 export const MaxApiCollectionItems = 1_000
 export const Uuid = Schema.String.check(Schema.isUUID())
+
 export const NonEmptyString = Schema.String.check(
   Schema.isPattern(/\S/),
   Schema.isMaxLength(MaxApiTextLength),
 )
+
 export const ShortString = Schema.String.check(
   Schema.isPattern(/\S/),
   Schema.isMaxLength(MaxApiIdentifierLength),
 )
+
 export const Email = Schema.String.check(
   Schema.isPattern(/^[^\s@]+@[^\s@]+$/),
   Schema.isMaxLength(320),
 )
+
 export const CurrencyCode = Schema.String.check(Schema.isPattern(/^[A-Za-z]{3}$/))
+
 export const PositiveInt = Schema.Int.check(
   Schema.isBetween({ minimum: 1, maximum: 2_147_483_647 }),
 )
+
 export const BoundedArray = <S extends Schema.Constraint>(schema: S) =>
   Schema.Array(schema).check(Schema.isMaxLength(MaxApiCollectionItems))
+
 /** An optional `limit` query parameter between 1 and 200. */
 export const ReadLimit = Schema.optionalKey(
   Schema.NumberFromString.pipe(
@@ -87,7 +98,9 @@ export const ReadLimit = Schema.optionalKey(
     Schema.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
   ),
 )
+
 export const TenantHeaders = { "x-tenant-id": Uuid }
+
 export const ConsistencyHeaders = {
   ...TenantHeaders,
   "x-ritsei-consistency-token": Schema.optionalKey(ConsistencyToken),
@@ -97,7 +110,7 @@ export const ConsistencyHeaders = {
 export const RitseiApiId = "RITSEI"
 
 /** A one-group API a module builds its handlers against; the composed API adds the same group. */
-export const makeModuleApi = <const Group extends HttpApiGroup.Constraint>(group: Group) =>
+export const moduleApi = <const Group extends HttpApiGroup.Constraint>(group: Group) =>
   HttpApi.make(RitseiApiId).add(group)
 
 export type ApiErrorKind =
@@ -130,7 +143,7 @@ const transportErrors = {
   invalid_request: () => new ApiConflict({ code: "invalid_request" }),
   service_unavailable: () => new ApiServiceUnavailable({ code: "service_unavailable" }),
   conflict: (tag: string) => new ApiConflict({ code: tag }),
-} satisfies Record<ApiErrorKind, (tag: string) => unknown>
+} satisfies Record<ApiErrorKind, (tag: string) => object>
 
 // A bad or mismatched token is the caller's to fix; any other replica failure is availability.
 const invalidConsistencyTokenReasons = new Set<ReplicaConsistencyFailure["reason"]>([
@@ -140,18 +153,21 @@ const invalidConsistencyTokenReasons = new Set<ReplicaConsistencyFailure["reason
   "placement_mismatch",
 ])
 
-export const makeApiErrorMapping = <const Policy extends Record<string, ApiErrorKind>>(
+export const apiErrorMapping = <const Policy extends Record<string, ApiErrorKind>>(
   policy: Policy,
 ) => {
   const toApiError = (error: ApiFailure<Policy>) => {
     if (!(error instanceof ReplicaConsistencyFailure)) {
-      return transportErrors[policy[error._tag] as ApiErrorKind](error._tag)
+      return transportErrors[policy[error._tag]](error._tag)
     }
+
     return invalidConsistencyTokenReasons.has(error.reason)
       ? new ApiConflict({ code: "invalid_consistency_token" })
       : new ApiServiceUnavailable({ code: "service_unavailable" })
   }
+
   const apiEffect = <A, E extends ApiFailure<Policy>, R>(effect: Effect.Effect<A, E, R>) =>
     effect.pipe(Effect.mapError(toApiError))
+
   return { toApiError, apiEffect }
 }

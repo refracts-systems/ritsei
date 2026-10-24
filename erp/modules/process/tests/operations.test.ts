@@ -59,6 +59,7 @@ it.effect("exposes a typed operator control for retry and compensation", () =>
       failureKind: "technical_retry",
       stepExecutions: [{ ...baseCheckpoint.stepExecutions[0]!, status: "retry_scheduled" }],
     })
+
     const operator = makeProcessOperatorService()
     const retried = yield* operator.retry(checkpoint)
     const retryFailure = yield* Effect.flip(operator.startCompensation(checkpoint))

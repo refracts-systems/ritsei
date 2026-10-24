@@ -1,6 +1,8 @@
 # Proposal: Anti-Slop Rules Deferred for Discussion
 
-> **Status:** Discussion notes, not a decision. Nothing here changes the lint configuration.
+> **Status:** Decided and done 2026-10-20: the owner accepted the lean of every rule (section 8), and
+> all six rules are enabled, each in the commit that cleaned it up. What each cleanup changed is in
+> [`UPSTREAM.md`](../../tooling/oxlint/anti-slop/UPSTREAM.md).
 >
 > **Owns:** The reasoning for six vendored anti-slop rules that are installed but turned off, their
 > measured findings, and the options for enabling each.
@@ -16,7 +18,8 @@
 
 ## 1. Why these six
 
-Eleven anti-slop rules are enabled and `pnpm run lint` passes. Seven more stay off because they
+Eleven anti-slop rules were enabled when this was written (seventeen now, with these six) and
+`pnpm run lint` passes. Seven more stay off because they
 conflict with a documented repository convention (services decode `input: unknown` with Schema;
 `_tag` outcome unions; `...ServiceShape` names; oxfmt owns formatting). The six below are different:
 they are not clearly wrong for this repository, they need a decision and a cleanup, and each cleanup
@@ -146,7 +149,20 @@ commented.
 **Lean:** option 1, after `no-chained-type-assertions`. **Decide:** should tests be exempt, or must
 every assertion carry its reason?
 
-## 8. How to run the discussion
+## 8. Decisions
+
+| Rule | Decision |
+| --- | --- |
+| `prefer-effect-match` | Option 1. A typed `Record<Union, T>` lookup is an acceptable replacement for `Match`. Branches that `yield*` keep a narrow disable with a reason. |
+| `no-chained-type-assertions` | Option 1. Test support may hold one `partial<T>()` helper with a single justified `as unknown as`; no other chained assertions. Platform adapters get a justified disable where a driver type cannot be bridged otherwise. |
+| `no-unsafe-dictionary-type` | Options 1 and 2. `Schema.Json` or a named schema type where Schema already defines the payload; a justified disable at a true untrusted boundary; `Record<Union, T>` for finite keys. |
+| `no-runtime-typeof` | Option 2 first (enabled with `allowInTypeGuards`; the exemption was later removed, so the rule now applies everywhere), remaining checks in named type guards, then `effect/Predicate` or Schema where one exists. |
+| `no-unknown-returns` | Options 1 and 2. Reload callbacks return `Promise<void>`; JSON readers decode inside the reader; canonicalizers that hash or redact arbitrary values may return `unknown` with a justified disable. |
+| `require-safety-comment-for-type-assertion` | Option 1. Enforced for non-test source only; tests are exempt by `overrides`. Production assertions are removed or given a `SAFETY` comment. |
+
+Order of work follows section 1. Each rule and its cleanup land in one commit.
+
+## 9. How to run the discussion
 
 For each rule: decide which option above, record the answer here, then make the cleanup and the
 `.oxlintrc.json` change in one commit and update the table in `UPSTREAM.md`. Do not enable a rule

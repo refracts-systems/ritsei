@@ -17,6 +17,7 @@ import {
 
 const PaymentInput = Schema.Struct({ amount: Schema.String })
 const PaymentOutput = Schema.Struct({ providerPaymentId: Schema.String })
+
 const createPayment = defineExternalAction({
   kind: "ExternalAction",
   id: "midtrans.payment.create",
@@ -56,6 +57,7 @@ it.effect("rejects an unreviewed operation and retired connector", () =>
       "reviewer-1",
       "2026-08-27T00:00:00.000Z",
     )
+
     const active = yield* activateExternalConnector(reviewed)
     const retired = retireExternalConnector(active)
     const retiredFailure = yield* Effect.flip(validateExternalOperation(retired, createPayment))
@@ -72,13 +74,16 @@ it.effect("preserves connector version compatibility and delivery controls", () 
       "reviewer-1",
       "2026-08-27T00:00:00.000Z",
     )
+
     const active = yield* activateExternalConnector(reviewed)
     const valid = yield* validateExternalOperation(active, createPayment)
+
     const control = yield* makeDeliveryControl({
       kind: "retry",
       operationId: valid.operationId,
       reason: "provider recovered",
     })
+
     const versionConflict = yield* Effect.flip(
       validateExternalOperation(active, {
         ...createPayment,

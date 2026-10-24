@@ -6,19 +6,23 @@ import { isMain } from "../entrypoint.ts"
 
 export const disposableDatabaseName = (databaseUrl: string) => {
   const name = decodeURIComponent(new URL(databaseUrl).pathname.slice(1))
+
   if (!/(?:rehearsal|disposable|scratch)/i.test(name)) {
     throw new Error("rehearsal database name must contain rehearsal, disposable, or scratch")
   }
+
   return name
 }
 
 const databaseUrl = process.env["RITSEI_DISPOSABLE_DATABASE_URL"]
+
 if (isMain(import.meta.url) && databaseUrl === undefined) {
   throw new Error("RITSEI_DISPOSABLE_DATABASE_URL is required")
 }
 
 if (isMain(import.meta.url)) {
   const databaseName = disposableDatabaseName(databaseUrl!)
+
   if (process.env["RITSEI_CONFIRM_DISPOSABLE_DATABASE"] !== databaseName) {
     throw new Error(
       `set RITSEI_CONFIRM_DISPOSABLE_DATABASE=${databaseName} to allow destructive work`,
@@ -26,11 +30,13 @@ if (isMain(import.meta.url)) {
   }
 
   const sql = postgres(databaseUrl!, { max: 1 })
+
   try {
     const [version] = await sql<[{ server_version_num: string; server_version: string }]>`
       select current_setting('server_version_num') as server_version_num,
              current_setting('server_version') as server_version
     `
+
     if (Number(version.server_version_num) < 190000) throw new Error("PostgreSQL 19+ is required")
 
     await sql.unsafe("drop schema if exists ritsei_pg19_rehearsal cascade")
@@ -60,8 +66,10 @@ if (isMain(import.meta.url)) {
                md5(string_agg(id::text || ':' || payload, ',' order by id)) as checksum
         from ritsei_pg19_rehearsal.repack_target
       `
+
       return row
     }
+
     const indexState = async () => {
       const [row] = await sql<[{ valid: boolean; ready: boolean }]>`
         select index.indisvalid as valid, index.indisready as ready
@@ -71,6 +79,7 @@ if (isMain(import.meta.url)) {
         where namespace.nspname = 'ritsei_pg19_rehearsal'
           and relation.relname = 'repack_target_payload_idx'
       `
+
       return row
     }
 
@@ -81,6 +90,7 @@ if (isMain(import.meta.url)) {
     const finishedAt = new Date().toISOString()
     const after = await checksum()
     const afterIndex = await indexState()
+
     const [settings] = await sql<
       [
         {
@@ -98,11 +108,13 @@ if (isMain(import.meta.url)) {
              current_setting('superuser_reserved_connections') as superuser_reserved_connections,
              current_setting('max_repack_replication_slots') as max_repack_replication_slots
     `
+
     const [io] = await sql<[{ rows: string }]>`select count(*)::text as rows from pg_stat_io`
 
     if (before.row_count !== after.row_count || before.checksum !== after.checksum) {
       throw new Error("REPACK changed table contents")
     }
+
     if (!beforeIndex.valid || !beforeIndex.ready || !afterIndex.valid || !afterIndex.ready) {
       throw new Error("REPACK left an invalid index")
     }
@@ -133,8 +145,10 @@ if (isMain(import.meta.url)) {
         pgStatIoRows: Number(io.rows),
       },
     }
+
     const output = `${JSON.stringify(evidence, null, 2)}\n`
     const outputPath = process.env["RITSEI_POSTGRES19_EVIDENCE_PATH"]
+
     if (outputPath === undefined) console.log(output)
     else await writeFile(outputPath, output, "utf8")
   } finally {

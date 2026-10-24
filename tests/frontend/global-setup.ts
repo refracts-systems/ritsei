@@ -15,15 +15,19 @@ declare module "vitest" {
 export default async function setup(project: TestProject) {
   const outDir = await mkdtemp(join(tmpdir(), "ritsei-web-"))
   const isWindows = process.platform === "win32"
+
   const output = spawnSync(
     "pnpm",
     ["--dir", "apps/web", "build", "--outDir", isWindows ? `"${outDir}"` : outDir],
     { encoding: "utf8", shell: isWindows },
   )
+
   if (output.status !== 0) {
     await rm(outDir, { recursive: true })
     throw new Error(`Web build failed:\n${output.stdout}${output.stderr}`)
   }
+
   project.provide("webOutDir", outDir)
+
   return () => rm(outDir, { recursive: true })
 }

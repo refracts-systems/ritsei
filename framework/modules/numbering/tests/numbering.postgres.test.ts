@@ -18,17 +18,22 @@ it.effect.skipIf(databaseUrl === undefined)(
     withTemporaryDatabase(databaseUrl!, (client) =>
       Effect.gen(function* () {
         yield* runMigrations(client)
+
         const [tenant] = yield* Effect.promise(
           () =>
             client<
               { id: string }[]
             >`insert into auth.tenants (slug) values (${uuidv7()}) returning id`,
         )
+
         const database = makePostgresDatabase(client)
+
         const numbering = yield* makeNumberingService().pipe(
           Effect.provideService(Database, database),
         )
+
         const scopeId = uuidv7()
+
         const request = (documentId = uuidv7()) => ({
           tenantId: tenant!.id,
           scopeId,
@@ -48,10 +53,12 @@ it.effect.skipIf(databaseUrl === undefined)(
             Effect.gen(function* () {
               const allocated = yield* numbering.allocate(request())
               assert.strictEqual(allocated.value, 2)
+
               return yield* Effect.fail(new RolledBack())
             }),
           )
           .pipe(Effect.flip)
+
         assert.instanceOf(rolledBack, RolledBack)
 
         const documentId = uuidv7()
@@ -65,6 +72,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           (input) => numbering.allocate(input),
           { concurrency: 4 },
         )
+
         assert.deepStrictEqual(
           concurrent.map((allocated) => allocated.value).toSorted((left, right) => left - right),
           [3, 4, 5, 6, 7, 8, 9, 10],
@@ -76,6 +84,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               select value::text as value from numbering.issued_numbers order by issued_numbers.value
             `,
         )
+
         assert.deepStrictEqual(
           issued.map((row) => Number(row.value)),
           Array.from({ length: 10 }, (_, index) => index + 1),

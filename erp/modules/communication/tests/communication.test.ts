@@ -3,7 +3,7 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 
 import {
-  EventEnvelopeShape,
+  EventEnvelopeContract,
   makeMessagingTestLayer,
   MessagingService,
 } from "../../../../framework/modules/messaging/mod.ts"
@@ -22,7 +22,7 @@ const supplierAccountId = "01990000-0000-7000-8000-000000000003"
 const eventId = "01990000-0000-7000-8000-000000000004"
 const timestamp = "2026-09-06T00:00:00.000Z"
 
-const event: EventEnvelopeShape = {
+const event: EventEnvelopeContract = {
   eventId,
   eventType: ProcurementPurchaseOrderConfirmedEvent.id,
   eventVersion: ProcurementPurchaseOrderConfirmedEvent.version,
@@ -52,9 +52,11 @@ const withCommunication = <A, E>(
   >,
 ) => {
   const messaging = makeMessagingTestLayer()
+
   const communication = makeCommunicationTestLayer({
     deliveryStatuses: ["unknown", "accepted"],
   }).pipe(Layer.provide(messaging))
+
   return Effect.provide(program, Layer.merge(messaging, communication))
 }
 
@@ -77,6 +79,7 @@ it.effect("derives one intent, renders once, and retries the same artifact", () 
       const firstDelivery = yield* service.deliver({
         communicationId: first.intent.communicationId,
       })
+
       assert.strictEqual(firstDelivery.communication.status, "reconciling")
       assert.strictEqual(firstDelivery.attempt?.status, "unknown")
       assert.strictEqual(firstDelivery.receipt?.status, "unknown")
@@ -102,6 +105,7 @@ it.effect("rejects unsupported source events before creating a communication", (
       const unsupportedEvent = { ...event, eventType: "billing.invoice.issued" }
       yield* messaging.append(unsupportedEvent)
       const service = yield* CommunicationService
+
       const failure = yield* Effect.flip(
         service.processPurchaseOrderConfirmed({ event: unsupportedEvent }),
       )
@@ -124,6 +128,7 @@ it.effect("does not retry a communication before its first delivery attempt", ()
       yield* messaging.append(event)
       const service = yield* CommunicationService
       const processed = yield* service.processPurchaseOrderConfirmed({ event })
+
       const failure = yield* Effect.flip(
         service.retry({ communicationId: processed.intent.communicationId }),
       )

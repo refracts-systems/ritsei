@@ -32,11 +32,13 @@ import {
 
 const Uuid = Schema.String.check(Schema.isUUID())
 const NonEmptyString = Schema.String.check(Schema.isPattern(/\S/))
+
 const TrimmedNonEmptyString = Schema.String.check(
   Schema.makeFilter((value) => /\S/.test(value) && value === value.trim(), {
     expected: "a trimmed nonblank string",
   }),
 )
+
 const Quantity = Schema.String.check(
   Schema.makeFilter(
     (value) => /^[1-9]\d*$/.test(value) && BigInt(value) <= 9_223_372_036_854_775_807n,
@@ -92,6 +94,7 @@ export const PurchaseOrder = Schema.Struct({
             total + requireExactMajorToMinor(line.unitPrice, 2) * BigInt(line.quantity),
           0n,
         )
+
         return lineTotal === requireExactMajorToMinor(order.total, 2)
       },
       { expected: "purchase order total must equal its line totals" },
@@ -105,9 +108,13 @@ export const PurchaseOrder = Schema.Struct({
   )
 
 export type SupplierAccount = Schema.Schema.Type<typeof SupplierAccount>
+
 export type PurchaseOrderLine = Schema.Schema.Type<typeof PurchaseOrderLine>
+
 export type PurchaseOrderLineSnapshot = Schema.Schema.Type<typeof PurchaseOrderLineSnapshot>
+
 export type PurchaseOrderStatus = Schema.Schema.Type<typeof PurchaseOrderStatus>
+
 export type PurchaseOrder = Schema.Schema.Type<typeof PurchaseOrder>
 
 const ListLimit = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 200 }))
@@ -169,8 +176,11 @@ export const ListPurchaseReceiptsInput = Schema.Struct({
   purchaseOrderId: Uuid,
   limit: Schema.optionalKey(ListLimit),
 })
+
 export type ListSupplierAccounts = Schema.Schema.Type<typeof ListSupplierAccountsInput>
+
 export type ListPurchaseOrders = Schema.Schema.Type<typeof ListPurchaseOrdersInput>
+
 export type ListPurchaseReceipts = Schema.Schema.Type<typeof ListPurchaseReceiptsInput>
 
 export const ReceivePurchaseOrderInput = Schema.Struct({
@@ -222,8 +232,11 @@ export const GoodsReceipt = Schema.Struct({
   )
 
 export type PurchaseReceiptLineInput = Schema.Schema.Type<typeof PurchaseReceiptLineInput>
+
 export type ReceivePurchaseOrder = Schema.Schema.Type<typeof ReceivePurchaseOrderInput>
+
 export type GoodsReceiptLine = Schema.Schema.Type<typeof GoodsReceiptLine>
+
 export type GoodsReceipt = Schema.Schema.Type<typeof GoodsReceipt>
 
 export type CommonFailure =
@@ -234,34 +247,34 @@ export type CommonFailure =
 
 export interface ProcurementService {
   readonly createSupplierAccount: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreateSupplierAccountInput>,
   ) => Effect.Effect<
     SupplierAccount,
     SupplierAccountAlreadyExists | SupplierRelationshipNotEligible | CommonFailure
   >
   readonly listSupplierAccounts: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ListSupplierAccountsInput>,
   ) => Effect.Effect<
     ReadonlyArray<SupplierAccount>,
     SupplierRelationshipNotEligible | CommonFailure
   >
   readonly createPurchaseOrder: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreatePurchaseOrderInput>,
   ) => Effect.Effect<PurchaseOrder, SupplierAccountNotFound | CommonFailure>
   readonly getPurchaseOrder: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof GetPurchaseOrderInput>,
   ) => Effect.Effect<
     PurchaseOrder,
     PurchaseOrderNotFound | ReplicaConsistencyFailure | CommonFailure
   >
   readonly listPurchaseOrders: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ListPurchaseOrdersInput>,
   ) => Effect.Effect<ReadonlyArray<PurchaseOrder>, CommonFailure>
   readonly listPurchaseReceipts: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ListPurchaseReceiptsInput>,
   ) => Effect.Effect<ReadonlyArray<GoodsReceipt>, CommonFailure>
   readonly confirmPurchaseOrder: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ConfirmPurchaseOrderInput>,
   ) => Effect.Effect<
     PurchaseOrder,
     | PurchaseOrderApprovalRequired
@@ -271,13 +284,13 @@ export interface ProcurementService {
     | CommonFailure
   >
   readonly cancelPurchaseOrder: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CancelPurchaseOrderInput>,
   ) => Effect.Effect<
     PurchaseOrder,
     PurchaseOrderHasReceipts | PurchaseOrderInvalidState | PurchaseOrderNotFound | CommonFailure
   >
   readonly receivePurchaseOrder: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof ReceivePurchaseOrderInput>,
   ) => Effect.Effect<
     GoodsReceipt,
     | PurchaseOrderInvalidState

@@ -3,6 +3,7 @@ import * as Clock from "effect/Clock"
 import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
+import * as Data from "effect/Data"
 
 import {
   purchaseOrderLines,
@@ -84,6 +85,72 @@ import {
 
 type Principal = Schema.Schema.Type<typeof PrincipalSchema>
 
+export type CancelPurchaseOrderOutcome = Data.TaggedEnum<{
+  NotFound: {}
+  Existing: {
+    readonly order: {
+      readonly id: string
+      readonly tenantId: string
+      readonly supplierAccountId: string
+      readonly status: "draft" | "confirmed" | "cancelled"
+      readonly confirmedAt: string | null
+      readonly total: string
+      readonly lines: readonly {
+        readonly id: string
+        readonly itemId: string
+        readonly quantity: string
+        readonly unitPrice: string
+      }[]
+    }
+  }
+  InvalidState: { readonly status: "draft" | "confirmed" | "cancelled" }
+  HasReceipts: {}
+  Cancelled: { readonly order: ReturnType<typeof toPurchaseOrder> }
+}>
+
+export const CancelPurchaseOrderOutcome = Data.taggedEnum<CancelPurchaseOrderOutcome>()
+
+export type ConfirmPurchaseOrderOutcome = Data.TaggedEnum<{
+  NotFound: {}
+  Existing: {
+    readonly order: {
+      readonly id: string
+      readonly tenantId: string
+      readonly supplierAccountId: string
+      readonly status: "draft" | "confirmed" | "cancelled"
+      readonly confirmedAt: string | null
+      readonly total: string
+      readonly lines: readonly {
+        readonly id: string
+        readonly itemId: string
+        readonly quantity: string
+        readonly unitPrice: string
+      }[]
+    }
+  }
+  IdempotencyConflict: {}
+  InvalidState: { readonly status: "draft" | "confirmed" | "cancelled" }
+  ApprovalRequired: { readonly status: "pending" | "approved" | "rejected" }
+  Confirmed: {
+    readonly order: {
+      readonly id: string
+      readonly tenantId: string
+      readonly supplierAccountId: string
+      readonly status: "draft" | "confirmed" | "cancelled"
+      readonly confirmedAt: string | null
+      readonly total: string
+      readonly lines: readonly {
+        readonly id: string
+        readonly itemId: string
+        readonly quantity: string
+        readonly unitPrice: string
+      }[]
+    }
+  }
+}>
+
+export const ConfirmPurchaseOrderOutcome = Data.taggedEnum<ConfirmPurchaseOrderOutcome>()
+
 export const makeProcurementService = Effect.gen(function* () {
   const database = yield* Database
   const readYourWrites = yield* Effect.serviceOption(PostgresReadYourWrites)
@@ -110,6 +177,7 @@ export const makeProcurementService = Effect.gen(function* () {
       const approvals = approvalsOption.value
       const scope = { principal, tenantId }
       const subject = { subjectType: PurchaseApprovalSubject, subjectId: purchaseOrderId }
+
       if (
         !(yield* approvals.isRequired({
           ...scope,
@@ -119,8 +187,11 @@ export const makeProcurementService = Effect.gen(function* () {
       ) {
         return undefined
       }
+
       const granted = yield* approvals.getForSubject({ ...scope, ...subject })
+
       if (granted?.status === "approved" && granted.amount === total) return undefined
+
       // Leave a pending request so an approver can act on it.
       const request =
         granted ??
@@ -130,6 +201,7 @@ export const makeProcurementService = Effect.gen(function* () {
           amount: total,
           reason: "Purchase order total exceeds the approval threshold",
         }))
+
       return request.status
     })
 
@@ -143,6 +215,7 @@ export const makeProcurementService = Effect.gen(function* () {
           capability: ProcurementCapabilities.supplierAccountCreate,
         })
         const relationship = yield* loadSupplierRelationship(party, decoded)
+
         const rows = yield* database
           .query(
             (db) =>
@@ -165,6 +238,7 @@ export const makeProcurementService = Effect.gen(function* () {
                   supplierRelationshipId: decoded.supplierRelationshipId,
                 })
               }
+
               if (
                 isDatabaseConstraint(
                   error,
@@ -177,10 +251,13 @@ export const makeProcurementService = Effect.gen(function* () {
                   supplierRelationshipId: decoded.supplierRelationshipId,
                 })
               }
+
               return error
             }),
           )
+
         const account = rows[0]!
+
         return {
           ...account,
           partyId: relationship.partyId,
@@ -197,6 +274,7 @@ export const makeProcurementService = Effect.gen(function* () {
           tenantId: decoded.tenantId,
           capability: ProcurementCapabilities.purchaseOrderRead,
         })
+
         const rows = yield* database.query(
           (db) =>
             db
@@ -207,6 +285,7 @@ export const makeProcurementService = Effect.gen(function* () {
               .limit(decoded.limit ?? 200),
           "procurement.supplier_account.list",
         )
+
         return yield* Effect.forEach(rows, (row) =>
           loadSupplierRelationship(party, {
             principal: decoded.principal,
@@ -233,6 +312,7 @@ export const makeProcurementService = Effect.gen(function* () {
         })
         const total = deriveTotal(decoded.lines)
         yield* Schema.decodeUnknownEffect(FinancialMajorAmount)(total)
+
         return yield* database
           .transaction(async (tx) => {
             const [order] = await tx
@@ -243,6 +323,7 @@ export const makeProcurementService = Effect.gen(function* () {
                 total,
               })
               .returning(purchaseOrderSelection)
+
             const lines = await tx
               .insert(purchaseOrderLines)
               .values(
@@ -255,6 +336,7 @@ export const makeProcurementService = Effect.gen(function* () {
                 })),
               )
               .returning(purchaseOrderLineSelection)
+
             return toPurchaseOrder(order!, lines)
           }, "procurement.purchase_order.create")
           .pipe(
@@ -277,12 +359,14 @@ export const makeProcurementService = Effect.gen(function* () {
           capability: ProcurementCapabilities.purchaseOrderRead,
         })
         const consistencyToken = yield* CurrentConsistencyToken
+
         const readDatabase =
           consistencyToken === undefined
             ? database
             : Option.isSome(readYourWrites)
               ? yield* readYourWrites.value.wait(decoded.tenantId, consistencyToken)
               : yield* Effect.fail(new ReplicaConsistencyFailure({ reason: "disabled" }))
+
         const read = readDatabase.transaction(async (tx) => {
           const [row] = await tx
             .select(purchaseOrderSelection)
@@ -293,7 +377,9 @@ export const makeProcurementService = Effect.gen(function* () {
                 eq(purchaseOrders.id, decoded.purchaseOrderId),
               ),
             )
+
           if (row === undefined) return undefined
+
           const lines = await tx
             .select(purchaseOrderLineSelection)
             .from(purchaseOrderLines)
@@ -303,12 +389,15 @@ export const makeProcurementService = Effect.gen(function* () {
                 eq(purchaseOrderLines.purchaseOrderId, row.id),
               ),
             )
+
           return toPurchaseOrder(row, lines)
         }, "procurement.purchase_order.get")
+
         const order =
           consistencyToken === undefined
             ? yield* read
             : yield* Effect.provideService(read, CurrentDatabaseTransaction, undefined)
+
         if (order === undefined) {
           return yield* Effect.fail(
             new PurchaseOrderNotFound({
@@ -317,6 +406,7 @@ export const makeProcurementService = Effect.gen(function* () {
             }),
           )
         }
+
         return order
       }),
     listPurchaseOrders: (input) =>
@@ -327,6 +417,7 @@ export const makeProcurementService = Effect.gen(function* () {
           tenantId: decoded.tenantId,
           capability: ProcurementCapabilities.purchaseOrderRead,
         })
+
         return yield* database.transaction(async (tx) => {
           const orders = await tx
             .select(purchaseOrderSelection)
@@ -344,7 +435,9 @@ export const makeProcurementService = Effect.gen(function* () {
             )
             .orderBy(asc(purchaseOrders.id))
             .limit(decoded.limit ?? 200)
+
           if (orders.length === 0) return []
+
           const lines = await tx
             .select(purchaseOrderLineListSelection)
             .from(purchaseOrderLines)
@@ -354,7 +447,9 @@ export const makeProcurementService = Effect.gen(function* () {
                 orders.map((order) => order.id),
               ),
             )
+
           const linesByOrder = new Map<string, PurchaseOrderLineSnapshot[]>()
+
           for (const line of lines) {
             const orderLines = linesByOrder.get(line.purchaseOrderId) ?? []
             orderLines.push({
@@ -365,6 +460,7 @@ export const makeProcurementService = Effect.gen(function* () {
             })
             linesByOrder.set(line.purchaseOrderId, orderLines)
           }
+
           return orders.map((order) => toPurchaseOrder(order, linesByOrder.get(order.id) ?? []))
         }, "procurement.purchase_order.list")
       }),
@@ -378,6 +474,7 @@ export const makeProcurementService = Effect.gen(function* () {
           tenantId: decoded.tenantId,
           capability: ProcurementCapabilities.purchaseOrderRead,
         })
+
         return yield* database.transaction(async (tx) => {
           const receipts = await tx
             .select(purchaseReceiptSelection)
@@ -390,7 +487,9 @@ export const makeProcurementService = Effect.gen(function* () {
             )
             .orderBy(asc(purchaseReceipts.id))
             .limit(decoded.limit ?? 200)
+
           if (receipts.length === 0) return []
+
           const lines = await tx
             .select(purchaseReceiptLineListSelection)
             .from(purchaseReceiptLines)
@@ -400,12 +499,15 @@ export const makeProcurementService = Effect.gen(function* () {
                 receipts.map((receipt) => receipt.id),
               ),
             )
+
           const linesByReceipt = new Map<string, GoodsReceiptLine[]>()
+
           for (const line of lines) {
             const receiptLines = linesByReceipt.get(line.receiptId) ?? []
             receiptLines.push(toGoodsReceiptLine(line))
             linesByReceipt.set(line.receiptId, receiptLines)
           }
+
           return receipts.map((receipt) =>
             toGoodsReceipt(receipt, linesByReceipt.get(receipt.id) ?? []),
           )
@@ -420,6 +522,7 @@ export const makeProcurementService = Effect.gen(function* () {
           capability: ProcurementCapabilities.purchaseOrderConfirm,
         })
         const normalizedIdempotencyKey = decoded.idempotencyKey.trim()
+
         const result = yield* database
           .withTransaction(
             Effect.gen(function* () {
@@ -440,7 +543,9 @@ export const makeProcurementService = Effect.gen(function* () {
                     .for("update"),
                 "procurement.purchase_order.confirm.lookup",
               )
-              if (row === undefined) return { _tag: "not-found" as const }
+
+              if (row === undefined) return ConfirmPurchaseOrderOutcome.NotFound()
+
               const lines = yield* database.query(
                 (db) =>
                   db
@@ -454,25 +559,32 @@ export const makeProcurementService = Effect.gen(function* () {
                     ),
                 "procurement.purchase_order.confirm.lines",
               )
+
               const current = toPurchaseOrder(row, lines)
+
               if (row.status === "confirmed") {
                 return row.confirmationIdempotencyKey === normalizedIdempotencyKey
-                  ? { _tag: "existing" as const, order: current }
-                  : { _tag: "idempotency-conflict" as const }
+                  ? ConfirmPurchaseOrderOutcome.Existing({ order: current })
+                  : ConfirmPurchaseOrderOutcome.IdempotencyConflict()
               }
+
               if (row.status !== "draft") {
-                return { _tag: "invalid-state" as const, status: row.status }
+                return ConfirmPurchaseOrderOutcome.InvalidState({ status: row.status })
               }
+
               const pending = yield* pendingApproval(
                 decoded.principal,
                 decoded.tenantId,
                 row.id,
                 current.total,
               )
+
               if (pending !== undefined) {
-                return { _tag: "approval-required" as const, status: pending }
+                return ConfirmPurchaseOrderOutcome.ApprovalRequired({ status: pending })
               }
+
               const confirmedAt = now()
+
               const [confirmed] = yield* database.query(
                 (db) =>
                   db
@@ -493,7 +605,9 @@ export const makeProcurementService = Effect.gen(function* () {
                     .returning(purchaseOrderSelection),
                 "procurement.purchase_order.confirm.update",
               )
+
               const order = toPurchaseOrder(confirmed!, lines)
+
               const payload = yield* Schema.decodeUnknownEffect(PurchaseOrderConfirmedEventPayload)(
                 {
                   purchaseOrderId: order.id,
@@ -501,6 +615,7 @@ export const makeProcurementService = Effect.gen(function* () {
                   total: order.total,
                 },
               )
+
               yield* messaging.append({
                 eventId: uuidv7(),
                 eventType: ProcurementPurchaseOrderConfirmedEvent.id,
@@ -516,7 +631,8 @@ export const makeProcurementService = Effect.gen(function* () {
                 occurredAt: confirmedAt.toISOString(),
                 payload,
               })
-              return { _tag: "confirmed" as const, order }
+
+              return ConfirmPurchaseOrderOutcome.Confirmed({ order })
             }),
             "procurement.purchase_order.confirm",
           )
@@ -531,7 +647,8 @@ export const makeProcurementService = Effect.gen(function* () {
                 : error,
             ),
           )
-        if (result._tag === "not-found") {
+
+        if (ConfirmPurchaseOrderOutcome.$is("NotFound")(result)) {
           return yield* Effect.fail(
             new PurchaseOrderNotFound({
               tenantId: decoded.tenantId,
@@ -539,7 +656,8 @@ export const makeProcurementService = Effect.gen(function* () {
             }),
           )
         }
-        if (result._tag === "idempotency-conflict") {
+
+        if (ConfirmPurchaseOrderOutcome.$is("IdempotencyConflict")(result)) {
           return yield* Effect.fail(
             new PurchaseOrderConfirmationIdempotencyConflict({
               tenantId: decoded.tenantId,
@@ -548,7 +666,8 @@ export const makeProcurementService = Effect.gen(function* () {
             }),
           )
         }
-        if (result._tag === "invalid-state") {
+
+        if (ConfirmPurchaseOrderOutcome.$is("InvalidState")(result)) {
           return yield* Effect.fail(
             new PurchaseOrderInvalidState({
               tenantId: decoded.tenantId,
@@ -557,7 +676,8 @@ export const makeProcurementService = Effect.gen(function* () {
             }),
           )
         }
-        if (result._tag === "approval-required") {
+
+        if (ConfirmPurchaseOrderOutcome.$is("ApprovalRequired")(result)) {
           return yield* Effect.fail(
             new PurchaseOrderApprovalRequired({
               tenantId: decoded.tenantId,
@@ -566,6 +686,7 @@ export const makeProcurementService = Effect.gen(function* () {
             }),
           )
         }
+
         return result.order
       }),
     cancelPurchaseOrder: (input) =>
@@ -576,6 +697,7 @@ export const makeProcurementService = Effect.gen(function* () {
           tenantId: decoded.tenantId,
           capability: ProcurementCapabilities.purchaseOrderCancel,
         })
+
         const result = yield* database.transaction(async (tx) => {
           const [row] = await tx
             .select(purchaseOrderSelection)
@@ -587,7 +709,9 @@ export const makeProcurementService = Effect.gen(function* () {
               ),
             )
             .for("update")
-          if (row === undefined) return { _tag: "not-found" as const }
+
+          if (row === undefined) return CancelPurchaseOrderOutcome.NotFound()
+
           const lines = await tx
             .select(purchaseOrderLineSelection)
             .from(purchaseOrderLines)
@@ -597,13 +721,17 @@ export const makeProcurementService = Effect.gen(function* () {
                 eq(purchaseOrderLines.purchaseOrderId, row.id),
               ),
             )
+
           const current = toPurchaseOrder(row, lines)
+
           if (row.status === "cancelled") {
-            return { _tag: "existing" as const, order: current }
+            return CancelPurchaseOrderOutcome.Existing({ order: current })
           }
+
           if (row.status !== "confirmed") {
-            return { _tag: "invalid-state" as const, status: row.status }
+            return CancelPurchaseOrderOutcome.InvalidState({ status: row.status })
           }
+
           const [receipt] = await tx
             .select({ id: purchaseReceipts.id })
             .from(purchaseReceipts)
@@ -614,7 +742,9 @@ export const makeProcurementService = Effect.gen(function* () {
               ),
             )
             .limit(1)
-          if (receipt !== undefined) return { _tag: "has-receipts" as const }
+
+          if (receipt !== undefined) return CancelPurchaseOrderOutcome.HasReceipts()
+
           const [cancelled] = await tx
             .update(purchaseOrders)
             .set({ status: "cancelled", updatedAt: now() })
@@ -626,9 +756,11 @@ export const makeProcurementService = Effect.gen(function* () {
               ),
             )
             .returning(purchaseOrderSelection)
-          return { _tag: "cancelled" as const, order: toPurchaseOrder(cancelled!, lines) }
+
+          return CancelPurchaseOrderOutcome.Cancelled({ order: toPurchaseOrder(cancelled!, lines) })
         }, "procurement.purchase_order.cancel")
-        if (result._tag === "not-found") {
+
+        if (CancelPurchaseOrderOutcome.$is("NotFound")(result)) {
           return yield* Effect.fail(
             new PurchaseOrderNotFound({
               tenantId: decoded.tenantId,
@@ -636,7 +768,8 @@ export const makeProcurementService = Effect.gen(function* () {
             }),
           )
         }
-        if (result._tag === "invalid-state") {
+
+        if (CancelPurchaseOrderOutcome.$is("InvalidState")(result)) {
           return yield* Effect.fail(
             new PurchaseOrderInvalidState({
               tenantId: decoded.tenantId,
@@ -645,7 +778,8 @@ export const makeProcurementService = Effect.gen(function* () {
             }),
           )
         }
-        if (result._tag === "has-receipts") {
+
+        if (CancelPurchaseOrderOutcome.$is("HasReceipts")(result)) {
           return yield* Effect.fail(
             new PurchaseOrderHasReceipts({
               tenantId: decoded.tenantId,
@@ -653,6 +787,7 @@ export const makeProcurementService = Effect.gen(function* () {
             }),
           )
         }
+
         return result.order
       }),
     receivePurchaseOrder: (input) =>
@@ -665,10 +800,12 @@ export const makeProcurementService = Effect.gen(function* () {
         })
         const normalizedIdempotencyKey = decoded.idempotencyKey.trim()
         const lines = canonicalReceiptLines(decoded.lines)
+
         const duplicateLine = lines.find(
           (line, index) =>
             index > 0 && lines[index - 1]!.purchaseOrderLineId === line.purchaseOrderLineId,
         )
+
         if (duplicateLine !== undefined) {
           return yield* Effect.fail(
             new PurchaseReceiptLineDuplicate({
@@ -678,7 +815,9 @@ export const makeProcurementService = Effect.gen(function* () {
             }),
           )
         }
+
         const inventory = yield* InventoryService
+
         const loadExistingReceipt = () =>
           Effect.gen(function* () {
             const existingRows = yield* database.query(
@@ -695,8 +834,11 @@ export const makeProcurementService = Effect.gen(function* () {
                   .for("update"),
               "procurement.purchase_receipt.idempotency",
             )
+
             const existing = existingRows[0]
+
             if (existing === undefined) return undefined
+
             const existingLines = yield* database.query(
               (db) =>
                 db
@@ -710,8 +852,10 @@ export const makeProcurementService = Effect.gen(function* () {
                   ),
               "procurement.purchase_receipt.idempotency.lines",
             )
+
             return toGoodsReceipt(existing, existingLines.map(toGoodsReceiptLine))
           })
+
         const acceptExistingReceipt = (receipt: GoodsReceipt) =>
           receipt.purchaseOrderId === decoded.purchaseOrderId &&
           receipt.warehouseId === decoded.warehouseId &&
@@ -724,10 +868,12 @@ export const makeProcurementService = Effect.gen(function* () {
                   idempotencyKey: normalizedIdempotencyKey,
                 }),
               )
+
         return yield* database
           .withTransaction(
             Effect.gen(function* () {
               const existing = yield* loadExistingReceipt()
+
               if (existing !== undefined) return yield* acceptExistingReceipt(existing)
 
               const orderRows = yield* database.query(
@@ -744,7 +890,9 @@ export const makeProcurementService = Effect.gen(function* () {
                     .for("update"),
                 "procurement.purchase_receipt.purchase_order",
               )
+
               const order = orderRows[0]
+
               if (order === undefined) {
                 return yield* Effect.fail(
                   new PurchaseOrderNotFound({
@@ -753,6 +901,7 @@ export const makeProcurementService = Effect.gen(function* () {
                   }),
                 )
               }
+
               if (order.status !== "confirmed") {
                 return yield* Effect.fail(
                   new PurchaseOrderInvalidState({
@@ -762,7 +911,9 @@ export const makeProcurementService = Effect.gen(function* () {
                   }),
                 )
               }
+
               const concurrentExisting = yield* loadExistingReceipt()
+
               if (concurrentExisting !== undefined) {
                 return yield* acceptExistingReceipt(concurrentExisting)
               }
@@ -780,6 +931,7 @@ export const makeProcurementService = Effect.gen(function* () {
                     ),
                 "procurement.purchase_receipt.supplier_account",
               )
+
               if (supplierAccount === undefined) {
                 return yield* Effect.fail(
                   new SupplierAccountNotFound({
@@ -788,11 +940,13 @@ export const makeProcurementService = Effect.gen(function* () {
                   }),
                 )
               }
+
               const supplierRelationship = yield* loadSupplierRelationship(party, {
                 principal: decoded.principal,
                 tenantId: decoded.tenantId,
                 supplierRelationshipId: supplierAccount.supplierRelationshipId,
               })
+
               const legalEntityId = supplierRelationship.legalEntityId
 
               const orderLines = yield* database.query(
@@ -808,7 +962,9 @@ export const makeProcurementService = Effect.gen(function* () {
                     ),
                 "procurement.purchase_receipt.purchase_order_lines",
               )
+
               const linesById = new Map(orderLines.map((line) => [line.id, line]))
+
               const receivedRows = yield* database.query(
                 (db) =>
                   db
@@ -826,11 +982,14 @@ export const makeProcurementService = Effect.gen(function* () {
                     .groupBy(purchaseReceiptLines.purchaseOrderLineId),
                 "procurement.purchase_receipt.received_quantities",
               )
+
               const receivedByLine = new Map(
                 receivedRows.map((row) => [row.purchaseOrderLineId, row.quantity]),
               )
+
               for (const line of lines) {
                 const orderLine = linesById.get(line.purchaseOrderLineId)
+
                 if (orderLine === undefined) {
                   return yield* Effect.fail(
                     new PurchaseReceiptLineNotFound({
@@ -840,7 +999,9 @@ export const makeProcurementService = Effect.gen(function* () {
                     }),
                   )
                 }
+
                 const received = receivedByLine.get(line.purchaseOrderLineId) ?? "0"
+
                 if (BigInt(received) + BigInt(line.quantity) > BigInt(orderLine.quantity)) {
                   return yield* Effect.fail(
                     new PurchaseReceiptQuantityExceeded({
@@ -868,9 +1029,12 @@ export const makeProcurementService = Effect.gen(function* () {
                     .returning(purchaseReceiptSelection),
                 "procurement.purchase_receipt.create",
               )
+
               const receivedLines: GoodsReceiptLine[] = []
+
               for (const line of lines) {
                 const orderLine = linesById.get(line.purchaseOrderLineId)!
+
                 const balance = yield* inventory
                   .receiveStock({
                     principal: decoded.principal,
@@ -901,6 +1065,7 @@ export const makeProcurementService = Effect.gen(function* () {
                       ),
                     ),
                   )
+
                 receivedLines.push({
                   id: uuidv7(),
                   purchaseOrderLineId: line.purchaseOrderLineId,
@@ -909,6 +1074,7 @@ export const makeProcurementService = Effect.gen(function* () {
                   unitOfMeasure: balance.unitOfMeasure,
                 })
               }
+
               yield* database.query(
                 (db) =>
                   db.insert(purchaseReceiptLines).values(
@@ -925,6 +1091,7 @@ export const makeProcurementService = Effect.gen(function* () {
                   ),
                 "procurement.purchase_receipt.lines",
               )
+
               return toGoodsReceipt(receipt!, receivedLines)
             }),
             "procurement.purchase_receipt.receive",
@@ -942,5 +1109,6 @@ export const makeProcurementService = Effect.gen(function* () {
           )
       }),
   }
+
   return withProcurementOperationNames(service)
 })

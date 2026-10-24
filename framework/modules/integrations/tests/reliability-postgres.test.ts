@@ -10,11 +10,12 @@ import {
   ExternalPayloadLimitExceeded,
   makePostgresExternalReliabilityStore,
 } from "../mod.ts"
+import type { Overrides } from "../../../../tests/support/overrides.ts"
 
 const databaseUrl = process.env["DATABASE_URL"]
 const sentAtMs = Date.parse("2026-08-30T00:00:00.000Z")
 
-const makeInput = (tenantId: string, overrides: Record<string, unknown> = {}) => ({
+const makeInputFields = (tenantId: string) => ({
   tenantId,
   replayKey: "event:payments:settled:provider-event-1",
   kind: "event" as const,
@@ -36,6 +37,13 @@ const makeInput = (tenantId: string, overrides: Record<string, unknown> = {}) =>
     observedAtMs: sentAtMs + 45,
     compatibilityRange: { minimumVersion: 1, maximumVersion: 1 },
   },
+})
+
+const makeInput = (
+  tenantId: string,
+  overrides: Overrides<ReturnType<typeof makeInputFields>> = {},
+) => ({
+  ...makeInputFields(tenantId),
   ...overrides,
 })
 
@@ -45,16 +53,20 @@ it.effect.skipIf(databaseUrl === undefined)(
     withTemporaryDatabase(databaseUrl!, (client) =>
       Effect.gen(function* () {
         yield* runMigrations(client)
+
         const [tenant] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${"integration-reliability-${sentAtMs}"}) returning id
           `,
         )
+
         const database = makePostgresDatabase(client)
+
         const store = yield* makePostgresExternalReliabilityStore.pipe(
           Effect.provideService(Database, database),
         )
+
         const input = makeInput(tenant!.id)
 
         const first = yield* store.record(input)
@@ -73,6 +85,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           ...input,
           reliability: { ...input.reliability, attempts: 2, providerStatus: "accepted" as const },
         })
+
         assert.strictEqual(accepted.duplicate, false)
         assert.strictEqual(accepted.record.id, first.record.id)
         assert.strictEqual(accepted.record.state, "accepted")
@@ -80,6 +93,7 @@ it.effect.skipIf(databaseUrl === undefined)(
         const restartedStore = yield* makePostgresExternalReliabilityStore.pipe(
           Effect.provideService(Database, database),
         )
+
         const recovered = yield* restartedStore.get(tenant!.id, input.replayKey)
         assert.strictEqual(recovered?.state, "accepted")
         assert.deepStrictEqual(recovered?.payload, first.record.payload)
@@ -90,6 +104,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             reliability: { ...input.reliability, operationId: "payments.refund" },
           }),
         )
+
         assert.instanceOf(conflict, ExternalIdempotencyConflict)
 
         const incompatible = yield* Effect.flip(
@@ -99,6 +114,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             reliability: { ...input.reliability, connectorVersion: 2 },
           }),
         )
+
         assert.instanceOf(incompatible, ExternalCompatibilityMismatch)
 
         const tooLarge = yield* Effect.flip(
@@ -108,6 +124,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             reliability: { ...input.reliability, maxPayloadBytes: 1 },
           }),
         )
+
         assert.instanceOf(tooLarge, ExternalPayloadLimitExceeded)
 
         const deadLetter = yield* restartedStore.record({
@@ -119,6 +136,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             attempts: 3,
           },
         })
+
         assert.strictEqual(deadLetter.record.state, "dead_letter")
 
         const health = yield* restartedStore.health(tenant!.id, "payments")

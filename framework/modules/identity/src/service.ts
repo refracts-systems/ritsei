@@ -29,17 +29,25 @@ export const makeUserAccountServiceFromStore = <R>(
     const databaseOption = yield* Effect.serviceOption(Database)
     const authorizerOption = yield* Effect.serviceOption(IdentityAccountAuthorizer)
     const publisherOption = yield* Effect.serviceOption(IdentityEventPublisher)
-    const create = Effect.fn("UserAccountService.create")(function* (input: unknown) {
+
+    const create = Effect.fn("UserAccountService.create")(function* (
+      input: Schema.Codec.Encoded<typeof CreateUserAccountInput>,
+    ) {
       const decoded = yield* Schema.decodeUnknownEffect(CreateUserAccountInput)(input)
+
       return yield* accountStore.create(normalizeEmail(decoded.email))
     })
+
     const decodeUserAccountId = (id: string) => Schema.decodeUnknownEffect(UserAccountId)(id)
+
     const decodeUserAccountIds = (ids: readonly string[]) =>
       Effect.forEach(ids, decodeUserAccountId)
+
     const createForTenant = Effect.fn("UserAccountService.createForTenant")(function* (
-      input: unknown,
+      input: Schema.Codec.Encoded<typeof CreateUserAccountForTenantInput>,
     ) {
       const decoded = yield* Schema.decodeUnknownEffect(CreateUserAccountForTenantInput)(input)
+
       if (Option.isNone(authorizerOption) || Option.isNone(publisherOption)) {
         return yield* Effect.fail(
           new DatabaseFailure({
@@ -48,16 +56,20 @@ export const makeUserAccountServiceFromStore = <R>(
           }),
         )
       }
+
       yield* authorizerOption.value.authorize({
         principal: decoded.principal,
         tenantId: decoded.tenantId,
       })
+
       const createAndPublish = Effect.gen(function* () {
         const account = yield* accountStore.create(normalizeEmail(decoded.email))
+
         const payload = yield* Schema.decodeUnknownEffect(UserAccountCreatedEventPayload)({
           userAccountId: account.id,
           email: account.email,
         })
+
         yield* publisherOption.value.append({
           eventId: uuidv7(),
           eventType: UserAccountCreatedEvent.id,
@@ -73,8 +85,10 @@ export const makeUserAccountServiceFromStore = <R>(
           occurredAt: new Date().toISOString(),
           payload,
         })
+
         return account
       })
+
       return Option.isSome(databaseOption)
         ? yield* databaseOption.value.withTransaction(
             createAndPublish,
@@ -82,47 +96,63 @@ export const makeUserAccountServiceFromStore = <R>(
           )
         : yield* createAndPublish
     })
+
     const resolveExternalSubject = Effect.fn("UserAccountService.resolveExternalSubject")(
-      function* (input: unknown) {
+      function* (input: Schema.Codec.Encoded<typeof ExternalSubject>) {
         const decoded = yield* Schema.decodeUnknownEffect(ExternalSubject)(input)
+
         return yield* accountStore.resolveExternalSubject(decoded.issuer, decoded.subject)
       },
     )
+
     const bindExternalSubject = Effect.fn("UserAccountService.bindExternalSubject")(function* (
-      input: unknown,
+      input: Schema.Codec.Encoded<typeof BindExternalSubjectInput>,
     ) {
       const decoded = yield* Schema.decodeUnknownEffect(BindExternalSubjectInput)(input)
+
       return yield* accountStore.bindExternalSubject(
         decoded.issuer,
         decoded.subject,
         decoded.userAccountId,
       )
     })
+
     const getById = Effect.fn("UserAccountService.getById")(function* (id: string) {
       return yield* accountStore.getById(yield* decodeUserAccountId(id))
     })
+
     const getByIds = Effect.fn("UserAccountService.getByIds")(function* (ids: readonly string[]) {
       return yield* accountStore.getByIds(yield* decodeUserAccountIds(ids))
     })
+
     const getAuthenticationState = Effect.fn("UserAccountService.getAuthenticationState")(
       function* (id: string) {
         return yield* accountStore.getAuthenticationState(yield* decodeUserAccountId(id))
       },
     )
+
     const list = Effect.fn("UserAccountService.list")(() => accountStore.list())
-    const update = Effect.fn("UserAccountService.update")(function* (input: unknown) {
+
+    const update = Effect.fn("UserAccountService.update")(function* (
+      input: Schema.Codec.Encoded<typeof UpdateUserAccountInput>,
+    ) {
       const decoded = yield* Schema.decodeUnknownEffect(UpdateUserAccountInput)(input)
+
       return yield* accountStore.update(decoded.id, normalizeEmail(decoded.email))
     })
+
     const disable = Effect.fn("UserAccountService.disable")(function* (id: string) {
       return yield* accountStore.disable(yield* decodeUserAccountId(id))
     })
+
     const enable = Effect.fn("UserAccountService.enable")(function* (id: string) {
       return yield* accountStore.enable(yield* decodeUserAccountId(id))
     })
+
     const remove = Effect.fn("UserAccountService.remove")(function* (id: string) {
       return yield* accountStore.remove(yield* decodeUserAccountId(id))
     })
+
     return {
       create,
       createForTenant,

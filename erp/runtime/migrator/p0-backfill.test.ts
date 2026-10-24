@@ -26,6 +26,7 @@ it.effect("rejects invalid schema with file context before database access", () 
     const failure = yield* Effect.flip(
       decodeP0BackfillInput({ warehouseScopes: "not-an-array" }, "/tmp/p0-mapping.json"),
     )
+
     assert.instanceOf(failure, P0BackfillFailure)
     assert.match(failure.detail, /\/tmp\/p0-mapping\.json: invalid P0 backfill mapping/)
   }),
@@ -40,6 +41,7 @@ it.effect("bounds each mapping collection before database access", () =>
         identifierScopes: [],
       }),
     )
+
     assert.instanceOf(failure, P0BackfillFailure)
     assert.match(failure.detail, /invalid P0 backfill mapping/)
   }),
@@ -121,6 +123,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             select legal_entity_id from inventory.warehouses where id = ${warehouseId}
           `,
         )
+
         const [identifier] = yield* Effect.promise(
           () =>
             client<{ provider: string; legal_entity_id: string }[]>`
@@ -129,6 +132,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             where id = ${identifierId}
           `,
         )
+
         assert.strictEqual(warehouse?.legal_entity_id, secondLegalEntityId)
         assert.strictEqual(identifier?.provider, "REGISTRY")
         assert.strictEqual(identifier?.legal_entity_id, secondLegalEntityId)
@@ -147,6 +151,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             ],
           }),
         )
+
         assert.instanceOf(missing, P0BackfillFailure)
         assert.match(missing.detail, /missing=/)
 
@@ -171,6 +176,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             ],
           }),
         )
+
         assert.instanceOf(unknown, P0BackfillFailure)
         assert.match(unknown.detail, /unknown=/)
 
@@ -201,6 +207,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             ],
           }),
         )
+
         assert.instanceOf(duplicate, P0BackfillFailure)
         assert.match(duplicate.detail, /duplicates=/)
       }),

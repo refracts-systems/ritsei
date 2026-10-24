@@ -24,9 +24,11 @@ it.effect.skipIf(databaseUrl === undefined)(
         Effect.gen(function* () {
           yield* runMigrations(client)
           const database = makePostgresDatabase(client)
+
           const userAccounts = yield* makeUserAccountService.pipe(
             Effect.provideService(Database, database),
           )
+
           const user = yield* userAccounts.create({ email: "external-session@example.test" })
           const issuer = "https://issuer.example.test"
           const issuedAt = Math.floor(Date.now() / 1_000)
@@ -35,6 +37,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             subject: "subject-1",
             userAccountId: user.id,
           })
+
           const auth = yield* makeAuthService.pipe(
             Effect.provideService(Database, database),
             Effect.provide(WebCryptoLive),
@@ -73,10 +76,13 @@ it.effect.skipIf(databaseUrl === undefined)(
         Effect.gen(function* () {
           yield* runMigrations(client)
           const database = makePostgresDatabase(client)
+
           const userAccounts = yield* makeUserAccountService.pipe(
             Effect.provideService(Database, database),
           )
+
           const user = yield* userAccounts.create({ email: "session@example.test" })
+
           const auth = yield* makeAuthService.pipe(
             Effect.provideService(Database, database),
             Effect.provide(WebCryptoLive),

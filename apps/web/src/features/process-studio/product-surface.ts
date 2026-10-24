@@ -1,5 +1,6 @@
 import {
   applyDesignerAction,
+  DesignerAction,
   type DesignerModel,
   makeInitialDesignerModel,
   serializeProcessIr,
@@ -7,6 +8,7 @@ import {
 } from "./designer-model.ts"
 
 export const ProcessStudioLanes = ["copilot_draft", "bounded_execution", "templates"] as const
+
 export type ProcessStudioLane = (typeof ProcessStudioLanes)[number]
 
 export const ProcessStudioLaneLabels: Readonly<Record<ProcessStudioLane, string>> = {
@@ -22,6 +24,7 @@ export const ProcessStudioLaneDescriptions: Readonly<Record<ProcessStudioLane, s
 }
 
 export const ProcessDraftSources = ["human", "copilot", "template"] as const
+
 export type ProcessDraftSource = (typeof ProcessDraftSources)[number]
 
 export type ProcessDraftMetadata = {
@@ -49,8 +52,9 @@ const templateModel = (
   label: string,
 ): DesignerModel => {
   const initial = makeInitialDesignerModel()
-  const withNode = applyDesignerAction(initial, { _tag: "add_node", kind })
+  const withNode = applyDesignerAction(initial, DesignerAction.AddNode({ kind }))
   const node = withNode.nodes.find((candidate) => candidate.kind === kind)
+
   return node === undefined
     ? withNode
     : {

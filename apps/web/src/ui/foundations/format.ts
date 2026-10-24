@@ -5,6 +5,7 @@ const decimalPattern = /^(-?)(\d+)(?:\.(\d+))?$/
 
 const separators = (locale?: string) => {
   const parts = new Intl.NumberFormat(locale).formatToParts(1000.5)
+
   return {
     decimal: parts.find((part) => part.type === "decimal")?.value ?? ".",
   }
@@ -16,8 +17,10 @@ const separators = (locale?: string) => {
  */
 export const formatDecimal = (value: string, locale?: string): string => {
   const match = decimalPattern.exec(value.trim())
+
   if (match === null) return value
   const [, sign, integer, fraction] = match
   const grouped = new Intl.NumberFormat(locale, { useGrouping: true }).format(BigInt(integer!))
+
   return `${sign}${grouped}${fraction === undefined ? "" : `${separators(locale).decimal}${fraction}`}`
 }

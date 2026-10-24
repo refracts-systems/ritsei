@@ -6,6 +6,7 @@ export {
   defineActionCatalogEntry,
   defineEventCatalogEntry,
 } from "./src/catalog.ts"
+
 export type {
   ActionCatalogEntry,
   ActionCompensation,
@@ -22,5 +23,7 @@ export type {
   EventDeliveryExpectation,
   EventSensitivity,
 } from "./src/catalog.ts"
+
 export { defineModule, validateModuleRegistry } from "./src/manifest.ts"
+
 export type { ModuleManifest } from "./src/manifest.ts"

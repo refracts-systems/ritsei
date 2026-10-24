@@ -100,7 +100,9 @@ contract.ts -> errors.ts -> service.ts -> store.ts -> postgres.ts/memory.ts -> l
 
 - `contract.ts`: public Effect Schema DTOs, service keys, operation contracts.
 - `errors.ts`: public tagged business failures.
-- `service.ts`: named `Effect.fn("Domain.operation")` workflows and orchestration.
+- `service.ts`: named `Effect.fn("Domain.operation")` workflows and orchestration. Operations take
+  the encoded type of their input schema (`Schema.Codec.Encoded<typeof XInput>`), never `unknown`,
+  and still decode it (ADR-0105).
 - `store.ts`: private semantic persistence ports; `postgres.ts` is the Drizzle implementation;
   `memory.ts` exists when a deterministic test implementation can preserve the same invariants.
 - `layers.ts`: named production/test composition; `mod.ts` exports only contract, errors,

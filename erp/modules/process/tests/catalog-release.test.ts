@@ -17,6 +17,7 @@ it.effect("validates a released process against exact catalog compatibility", ()
       ...InventoryTypedActionCatalog,
       ...ProcessTypedEventCatalog,
     ])
+
     const validation = yield* validateProcessRelease(registry, {
       definitionId: "018f3f77-0c5a-7cc0-8b62-6a163d214123",
       definitionVersion: 1,
@@ -43,6 +44,7 @@ it.effect("validates a released process against exact catalog compatibility", ()
 it.effect("rejects unregistered actions before a released process", () =>
   Effect.gen(function* () {
     const registry = yield* makeProcessCatalogRegistry([ProcessOrderConfirmationCompletedEvent])
+
     const failure = yield* Effect.flip(
       validateProcessRelease(registry, {
         definitionId: "018f3f77-0c5a-7cc0-8b62-6a163d214123",
@@ -70,7 +72,9 @@ it.effect("rejects a private event from a released process", () =>
       id: "process.private.example",
       stability: "PRIVATE" as const,
     }
+
     const registry = yield* makeProcessCatalogRegistry([privateEvent])
+
     const failure = yield* Effect.flip(
       validateProcessRelease(registry, {
         definitionId: "018f3f77-0c5a-7cc0-8b62-6a163d214123",

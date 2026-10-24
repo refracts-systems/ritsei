@@ -12,6 +12,7 @@ import {
   addServiceLayer,
 } from "../../tooling/entity-edits.ts"
 import { entityNames, renderEntityModule } from "../../tooling/entity-templates.ts"
+import { partial } from "../support/partial.ts"
 
 const names = entityNames("service_contract", "contract")
 const read = (path: string) => Effect.promise(() => readFile(path, "utf8"))
@@ -25,11 +26,13 @@ const assertInserted = (
 ) => {
   const file = ts.createSourceFile(path, after, ts.ScriptTarget.Latest, true)
   assert.deepStrictEqual(
-    (file as unknown as { parseDiagnostics: readonly unknown[] }).parseDiagnostics,
+    partial<{ parseDiagnostics: readonly unknown[] }>()(file).parseDiagnostics,
     [],
   )
+
   for (const text of expected) assert.include(after, text)
   let remaining = after
+
   for (const text of expected) remaining = remaining.replace(text, "")
   assert.strictEqual(remaining.replace(/[\s,]/g, ""), before.replace(/[\s,]/g, ""))
 }
@@ -37,6 +40,7 @@ const assertInserted = (
 describe("ritsei new module --entity", () => {
   it("renders the module, table, endpoint, page, and tests under the owner's paths", () => {
     const paths = renderEntityModule(names).map(({ path }) => path)
+
     for (const expected of [
       "erp/modules/service_contract/manifest.ts",
       "erp/modules/service_contract/http.ts",
@@ -47,6 +51,7 @@ describe("ritsei new module --entity", () => {
     ]) {
       assert.include(paths, expected)
     }
+
     assert.isTrue(
       paths.every((path) =>
         /^(?:erp\/modules\/service_contract|db\/schema|apps\/web\/src\/(?:features|app\/modules))\//.test(
@@ -60,6 +65,7 @@ describe("ritsei new module --entity", () => {
     const capabilities = renderEntityModule(names).find(({ path }) =>
       path.endsWith("src/capabilities.ts"),
     )!.content
+
     assert.include(capabilities, '"service_contract.contract.read"')
     assert.include(capabilities, '"service_contract.contract.create"')
     assert.include(capabilities, "Deny by default")

@@ -50,19 +50,25 @@ it.layer(TestHttpServices)("Party API", (it) => {
           capability,
         })),
       )
+
       const party = makePartyTestLayer(new Set([userAccountId])).pipe(Layer.provide(authorization))
+
       const bearer = Layer.succeed(BearerAuth, {
         bearer: (effect) => Effect.provideService(effect, CurrentPrincipal, principal),
       })
+
       const bearerClient = HttpApiMiddleware.layerClient(BearerAuth, ({ request, next }) =>
         next(HttpClientRequest.bearerToken(request, "test-token")),
       )
+
       const contacts = makePartyContactsTestLayer().pipe(Layer.provide(authorization))
+
       const handlers = PartyHandlers.pipe(
         Layer.provide(bearer),
         Layer.provide(party),
         Layer.provide(contacts),
       )
+
       const client = yield* HttpApiTest.groups(RitseiApi, ["Parties"]).pipe(
         Effect.provide(Layer.mergeAll(handlers, bearerClient, bearer)),
       )
@@ -71,14 +77,17 @@ it.layer(TestHttpServices)("Party API", (it) => {
         headers: { "x-tenant-id": tenantId },
         payload: { kind: "organization", name: "Northwind Holdings" },
       })
+
       const person = yield* client.Parties.create({
         headers: { "x-tenant-id": tenantId },
         payload: { kind: "person", name: "Ada Lovelace" },
       })
+
       const legalEntity = yield* client.Parties.createLegalEntity({
         params: { id: organization.id },
         headers: { "x-tenant-id": tenantId },
       })
+
       const branch = yield* client.Parties.createBranch({
         params: { id: legalEntity.id },
         headers: { "x-tenant-id": tenantId },
@@ -89,11 +98,13 @@ it.layer(TestHttpServices)("Party API", (it) => {
           dedicatedJournalCode: "LON",
         },
       })
+
       yield* client.Parties.assignRole({
         params: { id: person.id },
         headers: { "x-tenant-id": tenantId },
         payload: { role: "customer" },
       })
+
       const identifier = yield* client.Parties.attachIdentifier({
         params: { id: person.id },
         headers: { "x-tenant-id": tenantId },
@@ -104,33 +115,40 @@ it.layer(TestHttpServices)("Party API", (it) => {
           value: "C-001",
         },
       })
+
       const relationship = yield* client.Parties.createRelationship({
         params: { id: person.id },
         headers: { "x-tenant-id": tenantId },
         payload: { legalEntityId: legalEntity.id, kind: "customer" },
       })
+
       const representation = yield* client.Parties.createRepresentation({
         params: { id: person.id },
         headers: { "x-tenant-id": tenantId },
         payload: { userAccountId, kind: "self" },
       })
+
       const deactivated = yield* client.Parties.setRepresentationActive({
         params: { id: representation.id },
         headers: { "x-tenant-id": tenantId },
         payload: { active: false },
       })
+
       assert.isFalse(deactivated.active)
+
       const activated = yield* client.Parties.setRepresentationActive({
         params: { id: representation.id },
         headers: { "x-tenant-id": tenantId },
         payload: { active: true },
       })
+
       assert.isTrue(activated.active)
 
       const directory = yield* client.Parties.list({
         headers: { "x-tenant-id": tenantId },
         query: { search: "wind", kind: "organization", limit: 10 },
       })
+
       assert.deepStrictEqual(
         directory.map(({ party }) => party.id),
         [organization.id],
@@ -141,6 +159,7 @@ it.layer(TestHttpServices)("Party API", (it) => {
         params: { id: person.id },
         headers: { "x-tenant-id": tenantId },
       })
+
       assert.deepStrictEqual(detail.roles, ["customer"])
       assert.deepStrictEqual(detail.identifiers, [identifier])
       assert.deepStrictEqual(detail.relationships, [relationship])
@@ -150,6 +169,7 @@ it.layer(TestHttpServices)("Party API", (it) => {
         params: { id: organization.id },
         headers: { "x-tenant-id": tenantId },
       })
+
       assert.deepStrictEqual(organizationDetail.legalEntity, legalEntity)
       assert.deepStrictEqual(organizationDetail.branches, [branch])
 
@@ -158,6 +178,7 @@ it.layer(TestHttpServices)("Party API", (it) => {
         headers: { "x-tenant-id": tenantId },
         query: { limit: 10 },
       })
+
       assert.deepStrictEqual(
         related.map(({ targetPartyId }) => targetPartyId),
         [organization.id],
@@ -169,6 +190,7 @@ it.layer(TestHttpServices)("Party API", (it) => {
           query: {},
         }),
       )
+
       assert.strictEqual(denied._tag, "ApiForbidden")
     }),
   )

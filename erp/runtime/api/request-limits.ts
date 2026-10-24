@@ -10,6 +10,7 @@ import type * as Types from "effect/Types"
 export const MAX_REQUEST_BODY_BYTES = 1_048_576
 
 class RequestBodyTooLarge extends Error {}
+
 class InvalidUtf8 extends Error {}
 
 type ContentLength = number | "invalid" | undefined
@@ -17,8 +18,10 @@ type ContentLength = number | "invalid" | undefined
 export const parseContentLength = (value: string | undefined): ContentLength => {
   if (value === undefined) return undefined
   const normalized = value.trim()
+
   if (!/^\d+$/.test(normalized)) return "invalid"
   const length = Number(normalized)
+
   return Number.isSafeInteger(length) ? length : MAX_REQUEST_BODY_BYTES + 1
 }
 
@@ -26,10 +29,12 @@ const concatenate = (chunks: ReadonlyArray<Uint8Array>): Uint8Array => {
   const length = chunks.reduce((total, chunk) => total + chunk.byteLength, 0)
   const bytes = new Uint8Array(length)
   let offset = 0
+
   for (const chunk of chunks) {
     bytes.set(chunk, offset)
     offset += chunk.byteLength
   }
+
   return bytes
 }
 
@@ -39,7 +44,7 @@ const bufferedRequest = (
   text: string,
 ): HttpServerRequest.HttpServerRequest => {
   return new Proxy(request, {
-    get(target, property, receiver) {
+    get(target, property) {
       switch (property) {
         case "stream":
           return Stream.succeed(bytes)
@@ -51,8 +56,8 @@ const bufferedRequest = (
           return (options: Parameters<typeof request.modify>[0]) =>
             bufferedRequest(target.modify(options), bytes, text)
         default:
-          // oxlint-disable-next-line anti-slop/no-reflect-get -- the proxy forwards every other property with the original receiver
-          return Reflect.get(target, property, receiver)
+          // SAFETY: every other property is read from the wrapped request, whose keys are strings or symbols.
+          return target[property as keyof typeof target]
       }
     },
   })
@@ -63,10 +68,13 @@ const response = (code: string, status: 400 | 413) =>
 
 const declaredBodyResponse = (value: string | undefined) => {
   const contentLength = parseContentLength(value)
+
   if (contentLength === "invalid") return response("invalid_content_length", 400)
+
   if (contentLength !== undefined && contentLength > MAX_REQUEST_BODY_BYTES) {
     return response("request_body_too_large", 413)
   }
+
   return undefined
 }
 
@@ -92,23 +100,30 @@ const requestBodyLimitMiddleware = (
 > =>
   Effect.gen(function* () {
     const request = yield* HttpServerRequest.HttpServerRequest
+
     if (!HttpMethod.hasBody(request.method)) return yield* effect
 
     const declaredResponse = declaredBodyResponse(request.headers["content-length"])
+
     if (declaredResponse !== undefined) return declaredResponse
 
+    // SAFETY: the Node request source may expose a web body; its absence is checked with `in` below.
     const source = request.source as { readonly body?: ReadableStream<Uint8Array> | null }
+
     if ("body" in source && source.body === null) return yield* effect
 
     const result = yield* Effect.result(readBoundedBody(request))
+
     if (Result.isFailure(result)) {
       if (result.failure instanceof RequestBodyTooLarge) {
         return response("request_body_too_large", 413)
       }
+
       return yield* Effect.fail(result.failure)
     }
 
     const decoded = yield* Effect.result(decodeUtf8(result.success))
+
     if (Result.isFailure(decoded)) return response("invalid_utf8", 400)
 
     return yield* Effect.provideService(

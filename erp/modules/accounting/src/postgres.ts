@@ -5,6 +5,7 @@ import * as Base64Url from "effect/encoding/Base64Url"
 import * as Option from "effect/Option"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
+import * as Data from "effect/Data"
 
 import {
   accountingPeriods,
@@ -23,6 +24,8 @@ import {
   DatabaseFailure,
   isDatabaseConstraint,
   uuidv7,
+  omitNullish,
+  omitUndefined,
 } from "../../../../framework/foundation/mod.ts"
 import { AuthorizationService } from "../../../../framework/modules/authorization/mod.ts"
 import { MessagingService } from "../../../../framework/modules/messaging/mod.ts"
@@ -84,7 +87,7 @@ import {
 } from "./errors.ts"
 import { AccountingRevenuePostedEvent, RevenuePostedEventPayload } from "./events.ts"
 import {
-  type ExecutionAccountOutcome,
+  ExecutionAccountOutcome,
   type FinancialAccountConstraint,
   FinancialLedgerPort,
 } from "./financial-ledger.ts"
@@ -170,6 +173,100 @@ const revenuePostingProfileSelection = {
   revenueAccountId: revenuePostingProfiles.revenueAccountId,
 }
 
+export type PostJournalOutcome = Data.TaggedEnum<{
+  IdempotencyConflict: {}
+  Existing: {
+    readonly journal: {
+      id: string
+      tenantId: string
+      reference: string
+      status: "posted"
+      postedAt: string
+      lines: readonly {
+        readonly accountId: string
+        readonly debit: string
+        readonly credit: string
+      }[]
+    }
+  }
+  Created: {
+    readonly journal: {
+      id: string
+      tenantId: string
+      reference: string
+      status: "posted"
+      postedAt: string
+      lines: readonly {
+        readonly accountId: string
+        readonly debit: string
+        readonly credit: string
+      }[]
+    }
+  }
+}>
+
+export const PostJournalOutcome = Data.taggedEnum<PostJournalOutcome>()
+
+export type ReverseRevenueForOrderOutcome = Data.TaggedEnum<{
+  Existing: {
+    readonly entry: {
+      id: string
+      tenantId: string
+      reference: string
+      status: "posted" | "draft" | "reversed"
+      reversesEntryId: string | null
+      postedAt: Date | null
+    }
+  }
+  IdempotencyConflict: {}
+  ProfileMissing: {}
+  PeriodClosed: {}
+  SourceMissing: {}
+  Reversed: {
+    readonly journal: {
+      id: string
+      tenantId: string
+      reference: string
+      status: "reversed"
+      postedAt: string
+      reversesEntryId: string
+      lines: { accountId: string; debit: string; credit: string }[]
+    }
+  }
+}>
+
+export const ReverseRevenueForOrderOutcome = Data.taggedEnum<ReverseRevenueForOrderOutcome>()
+
+export type PostRevenueForOrderOutcome = Data.TaggedEnum<{
+  ProfileMissing: {}
+  PeriodClosed: {}
+  Posted: {
+    readonly journal:
+      | {
+          id: string
+          tenantId: string
+          reference: string
+          status: "posted"
+          postedAt: string
+          lines: readonly {
+            readonly accountId: string
+            readonly debit: string
+            readonly credit: string
+          }[]
+        }
+      | {
+          id: string
+          tenantId: string
+          reference: string
+          status: "posted"
+          postedAt: string
+          lines: { accountId: string; debit: string; credit: string }[]
+        }
+  }
+}>
+
+export const PostRevenueForOrderOutcome = Data.taggedEnum<PostRevenueForOrderOutcome>()
+
 export const makeAccountingService = Effect.gen(function* () {
   const database = yield* Database
   const authorization = yield* AuthorizationService
@@ -180,16 +277,19 @@ export const makeAccountingService = Effect.gen(function* () {
   const signerOption = yield* Effect.serviceOption(FinancialVerificationSigner)
   const keyringOption = yield* Effect.serviceOption(FinancialVerificationKeyring)
   const stagingEvidenceStoreOption = yield* Effect.serviceOption(FinancialStagingEvidenceStore)
+
   const stagingEvidenceStore = Option.isSome(stagingEvidenceStoreOption)
     ? stagingEvidenceStoreOption.value
     : yield* makePostgresFinancialStagingEvidenceStore
+
   const now = () => new Date(clock.currentTimeMillisUnsafe())
+
   const toCutoverControl = (row: {
     readonly tenantId: string
     readonly legalEntityId: string
     readonly status: FinancialCutoverControl["status"]
-    readonly sourceEngine: "postgresql" | "tigerbeetle"
-    readonly targetEngine: "postgresql" | "tigerbeetle"
+    readonly sourceEngine: "postgresql"
+    readonly targetEngine: "tigerbeetle"
     readonly cutoverWatermark: string | null
     readonly verificationHash: string | null
     readonly openingBalanceVerified: boolean
@@ -207,8 +307,8 @@ export const makeAccountingService = Effect.gen(function* () {
     tenantId: row.tenantId,
     legalEntityId: row.legalEntityId,
     status: row.status,
-    sourceEngine: row.sourceEngine as "postgresql",
-    targetEngine: row.targetEngine as "tigerbeetle",
+    sourceEngine: row.sourceEngine,
+    targetEngine: row.targetEngine,
     cutoverWatermark: row.cutoverWatermark,
     verificationHash: row.verificationHash,
     openingBalanceVerified: row.openingBalanceVerified,
@@ -223,6 +323,7 @@ export const makeAccountingService = Effect.gen(function* () {
     activatedAt: row.activatedAt?.toISOString() ?? null,
     lastError: row.lastError,
   })
+
   const cutoverSelection = {
     tenantId: financialCutoverControls.tenantId,
     legalEntityId: financialCutoverControls.legalEntityId,
@@ -243,12 +344,13 @@ export const makeAccountingService = Effect.gen(function* () {
     activatedAt: financialCutoverControls.activatedAt,
     lastError: financialCutoverControls.lastError,
   }
+
   const toVerificationArtifact = (row: {
     readonly id: string
     readonly tenantId: string
     readonly legalEntityId: string
     readonly artifactHash: string
-    readonly signatureAlgorithm: string
+    readonly signatureAlgorithm: "Ed25519"
     readonly signingKeyId: string
     readonly signature: string
     readonly status: "verified" | "rejected"
@@ -283,7 +385,7 @@ export const makeAccountingService = Effect.gen(function* () {
     tenantId: row.tenantId,
     legalEntityId: row.legalEntityId,
     artifactHash: row.artifactHash,
-    signatureAlgorithm: row.signatureAlgorithm as "Ed25519",
+    signatureAlgorithm: row.signatureAlgorithm,
     signingKeyId: row.signingKeyId,
     signature: row.signature,
     status: row.status,
@@ -318,15 +420,18 @@ export const makeAccountingService = Effect.gen(function* () {
     producerPrincipalId: row.producerPrincipalId,
     createdAt: row.createdAt.toISOString(),
   })
+
   const cutoverBlocked = (
     tenantId: string,
     legalEntityId: string,
     reason: FinancialEngineCutoverBlocked["reason"],
   ) => Effect.fail(new FinancialEngineCutoverBlocked({ tenantId, legalEntityId, reason }))
+
   const balanceConstraintForAccountType = (type: Account["type"]): FinancialAccountConstraint =>
     type === "asset" || type === "expense"
       ? "credits_must_not_exceed_debits"
       : "debits_must_not_exceed_credits"
+
   const ensureLegacyEngine = (tenantId: string, legalEntityId: string) =>
     Effect.gen(function* () {
       const [configuration] = yield* database.query(
@@ -342,10 +447,12 @@ export const makeAccountingService = Effect.gen(function* () {
             ),
         "accounting.legacy_engine.lookup",
       )
+
       if (configuration?.financialEngine === "tigerbeetle") {
         return yield* Effect.fail(new FinancialEngineActivated({ tenantId, legalEntityId }))
       }
     })
+
   const ensureLegacyTenantEngine = (tenantId: string) =>
     Effect.gen(function* () {
       const [configuration] = yield* database.query(
@@ -361,6 +468,7 @@ export const makeAccountingService = Effect.gen(function* () {
             ),
         "accounting.legacy_tenant_engine.lookup",
       )
+
       if (configuration !== undefined) {
         return yield* Effect.fail(
           new FinancialEngineActivated({
@@ -370,6 +478,7 @@ export const makeAccountingService = Effect.gen(function* () {
         )
       }
     })
+
   // Fallow: memory and PostgreSQL adapters intentionally mirror the guarded service shape.
   // fallow-ignore-next-line code-duplication
   const loadCutoverControl = (tenantId: string, legalEntityId: string, lock = false) =>
@@ -383,6 +492,7 @@ export const makeAccountingService = Effect.gen(function* () {
             eq(financialCutoverControls.legalEntityId, legalEntityId),
           ),
         )
+
       return lock ? query.for("update") : query
     }, "accounting.financial_cutover.get")
 
@@ -395,13 +505,16 @@ export const makeAccountingService = Effect.gen(function* () {
           tenantId: decoded.tenantId,
           capability: AccountingCapabilities.legalEntityRead,
         })
+
         const rows = yield* database.query((db) => {
           const filters = [eq(legalEntityAccountingConfigurations.tenantId, decoded.tenantId)]
+
           if (decoded.legalEntityId !== undefined) {
             filters.push(
               eq(legalEntityAccountingConfigurations.legalEntityId, decoded.legalEntityId),
             )
           }
+
           return db
             .select(accountingConfigurationSelection)
             .from(legalEntityAccountingConfigurations)
@@ -409,6 +522,7 @@ export const makeAccountingService = Effect.gen(function* () {
             .orderBy(asc(legalEntityAccountingConfigurations.legalEntityId))
             .limit(decoded.limit ?? 200)
         }, "accounting.configuration.list")
+
         return rows.map((row) => ({ ...row, precision: 2 as const }))
       }),
     // Fallow: memory and PostgreSQL adapters intentionally mirror public account-read authorization.
@@ -421,9 +535,12 @@ export const makeAccountingService = Effect.gen(function* () {
           tenantId: decoded.tenantId,
           capability: AccountingCapabilities.accountRead,
         })
+
         const rows = yield* database.query((db) => {
           const filters = [eq(accounts.tenantId, decoded.tenantId)]
+
           if (decoded.type !== undefined) filters.push(eq(accounts.type, decoded.type))
+
           return db
             .select(accountSelection)
             .from(accounts)
@@ -431,6 +548,7 @@ export const makeAccountingService = Effect.gen(function* () {
             .orderBy(asc(accounts.code))
             .limit(decoded.limit ?? 200)
         }, "accounting.account.list")
+
         return rows
       }),
     // Fallow: memory and PostgreSQL adapters intentionally mirror public period-read authorization.
@@ -443,14 +561,18 @@ export const makeAccountingService = Effect.gen(function* () {
           tenantId: decoded.tenantId,
           capability: AccountingCapabilities.periodRead,
         })
+
         const rows = yield* database.query((db) => {
           const filters = [eq(accountingPeriods.tenantId, decoded.tenantId)]
+
           if (decoded.legalEntityId !== undefined) {
             filters.push(eq(accountingPeriods.legalEntityId, decoded.legalEntityId))
           }
+
           if (decoded.status !== undefined) {
             filters.push(eq(accountingPeriods.status, decoded.status))
           }
+
           return db
             .select(accountingPeriodSelection)
             .from(accountingPeriods)
@@ -458,6 +580,7 @@ export const makeAccountingService = Effect.gen(function* () {
             .orderBy(asc(accountingPeriods.startsOn), asc(accountingPeriods.id))
             .limit(decoded.limit ?? 200)
         }, "accounting.period.list")
+
         return rows
       }),
     listRevenuePostingProfiles: (input) =>
@@ -468,11 +591,14 @@ export const makeAccountingService = Effect.gen(function* () {
           tenantId: decoded.tenantId,
           capability: AccountingCapabilities.revenueRead,
         })
+
         const rows = yield* database.query((db) => {
           const filters = [eq(revenuePostingProfiles.tenantId, decoded.tenantId)]
+
           if (decoded.legalEntityId !== undefined) {
             filters.push(eq(revenuePostingProfiles.legalEntityId, decoded.legalEntityId))
           }
+
           return db
             .select(revenuePostingProfileSelection)
             .from(revenuePostingProfiles)
@@ -480,6 +606,7 @@ export const makeAccountingService = Effect.gen(function* () {
             .orderBy(asc(revenuePostingProfiles.legalEntityId))
             .limit(decoded.limit ?? 200)
         }, "accounting.revenue_profile.list")
+
         return rows
       }),
     // Fallow: memory and PostgreSQL adapters intentionally mirror public read authorization.
@@ -492,13 +619,16 @@ export const makeAccountingService = Effect.gen(function* () {
           tenantId: decoded.tenantId,
           capability: AccountingCapabilities.journalRead,
         })
+
         const rows = yield* database.query((db) => {
           const filters = [eq(journalEntries.tenantId, decoded.tenantId)]
+
           if (decoded.status !== undefined) {
             filters.push(eq(journalEntries.status, decoded.status))
           } else {
             filters.push(inArray(journalEntries.status, ["posted", "reversed"]))
           }
+
           return db
             .select(journalEntrySelection)
             .from(journalEntries)
@@ -506,7 +636,9 @@ export const makeAccountingService = Effect.gen(function* () {
             .orderBy(desc(journalEntries.postedAt), desc(journalEntries.id))
             .limit(decoded.limit ?? 200)
         }, "accounting.journal.list")
+
         if (rows.length === 0) return []
+
         const lines = yield* database.query(
           (db) =>
             db
@@ -524,7 +656,9 @@ export const makeAccountingService = Effect.gen(function* () {
               .orderBy(asc(journalLines.entryId), asc(journalLines.id)),
           "accounting.journal.lines.list",
         )
+
         const linesByEntry = new Map<string, JournalLine[]>()
+
         for (const line of lines) {
           const entryLines = linesByEntry.get(line.entryId) ?? []
           entryLines.push({
@@ -534,13 +668,15 @@ export const makeAccountingService = Effect.gen(function* () {
           })
           linesByEntry.set(line.entryId, entryLines)
         }
+
         return rows.map((row) => ({
           id: row.id,
           tenantId: row.tenantId,
           reference: row.reference,
+          // SAFETY: the list filter admits only posted and reversed entries.
           status: row.status as "posted" | "reversed",
           postedAt: row.postedAt!.toISOString(),
-          ...(row.reversesEntryId === null ? {} : { reversesEntryId: row.reversesEntryId }),
+          ...omitNullish({ reversesEntryId: row.reversesEntryId }),
           lines: linesByEntry.get(row.id) ?? [],
         }))
       }),
@@ -549,11 +685,13 @@ export const makeAccountingService = Effect.gen(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(RecordFinancialStagingEvidenceInput)(
           input,
         )
+
         yield* authorization.authorize({
           principal: decoded.principal,
           tenantId: decoded.tenantId,
           capability: AccountingCapabilities.financialEvidenceRecord,
         })
+
         if (decoded.evidence.tenantId !== decoded.tenantId) {
           return yield* Effect.fail(
             new FinancialStagingEvidenceInvalid({
@@ -563,6 +701,7 @@ export const makeAccountingService = Effect.gen(function* () {
             }),
           )
         }
+
         if (decoded.evidence.operatorPrincipalId !== decoded.principal.userAccountId) {
           return yield* Effect.fail(
             new FinancialStagingEvidenceInvalid({
@@ -572,6 +711,7 @@ export const makeAccountingService = Effect.gen(function* () {
             }),
           )
         }
+
         const result = yield* stagingEvidenceStore
           .append({
             tenantId: decoded.tenantId,
@@ -589,6 +729,7 @@ export const makeAccountingService = Effect.gen(function* () {
                 : error,
             ),
           )
+
         return result.record
       }),
     listFinancialStagingEvidence: (input) =>
@@ -599,14 +740,13 @@ export const makeAccountingService = Effect.gen(function* () {
           tenantId: decoded.tenantId,
           capability: AccountingCapabilities.financialEvidenceRead,
         })
+
         return yield* stagingEvidenceStore.list({
           tenantId: decoded.tenantId,
-          ...(decoded.legalEntityId === undefined ? {} : { legalEntityId: decoded.legalEntityId }),
-          ...(decoded.gateId === undefined ? {} : { gateId: decoded.gateId }),
-          ...(decoded.cohortId === undefined ? {} : { cohortId: decoded.cohortId }),
-          ...(decoded.deploymentRevision === undefined
-            ? {}
-            : { deploymentRevision: decoded.deploymentRevision }),
+          ...omitUndefined({ legalEntityId: decoded.legalEntityId }),
+          ...omitUndefined({ gateId: decoded.gateId }),
+          ...omitUndefined({ cohortId: decoded.cohortId }),
+          ...omitUndefined({ deploymentRevision: decoded.deploymentRevision }),
           limit: decoded.limit,
         })
       }),
@@ -615,11 +755,13 @@ export const makeAccountingService = Effect.gen(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(RecordFinancialVerificationArtifactInput)(
           input,
         )
+
         yield* authorization.authorize({
           principal: decoded.principal,
           tenantId: decoded.tenantId,
           capability: AccountingCapabilities.financialEvidenceRecord,
         })
+
         if (decoded.evidence.tenantId !== decoded.tenantId) {
           return yield* Effect.fail(
             new FinancialVerificationArtifactInvalid({
@@ -629,6 +771,7 @@ export const makeAccountingService = Effect.gen(function* () {
             }),
           )
         }
+
         const [configuration] = yield* database.query(
           (db) =>
             db
@@ -645,6 +788,7 @@ export const makeAccountingService = Effect.gen(function* () {
               ),
           "accounting.financial_verification_artifact.configuration",
         )
+
         if (configuration?.baseCurrency !== decoded.evidence.currency) {
           return yield* Effect.fail(
             new FinancialVerificationArtifactInvalid({
@@ -654,8 +798,10 @@ export const makeAccountingService = Effect.gen(function* () {
             }),
           )
         }
+
         const startedAt = new Date(decoded.evidence.startedAt)
         const completedAt = new Date(decoded.evidence.completedAt)
+
         if (!Number.isFinite(startedAt.getTime()) || !Number.isFinite(completedAt.getTime())) {
           return yield* Effect.fail(
             new FinancialVerificationArtifactInvalid({
@@ -665,6 +811,7 @@ export const makeAccountingService = Effect.gen(function* () {
             }),
           )
         }
+
         if (completedAt < startedAt) {
           return yield* Effect.fail(
             new FinancialVerificationArtifactInvalid({
@@ -674,6 +821,7 @@ export const makeAccountingService = Effect.gen(function* () {
             }),
           )
         }
+
         if (Option.isNone(signerOption)) {
           return yield* Effect.fail(
             new FinancialVerificationArtifactInvalid({
@@ -683,6 +831,7 @@ export const makeAccountingService = Effect.gen(function* () {
             }),
           )
         }
+
         const artifactHash = yield* hashFinancialVerificationEvidence(decoded.evidence).pipe(
           Effect.catch(() =>
             Effect.fail(
@@ -694,6 +843,7 @@ export const makeAccountingService = Effect.gen(function* () {
             ),
           ),
         )
+
         const signatureBytes = yield* signerOption.value
           .sign(new TextEncoder().encode(artifactHash))
           .pipe(
@@ -706,7 +856,9 @@ export const makeAccountingService = Effect.gen(function* () {
                 }),
             ),
           )
+
         const signature = Base64Url.encode(signatureBytes)
+
         const [inserted] = yield* database.query(
           (db) =>
             db
@@ -748,6 +900,7 @@ export const makeAccountingService = Effect.gen(function* () {
               .returning(),
           "accounting.financial_verification_artifact.record",
         )
+
         return toVerificationArtifact(inserted!)
       }),
     prepareTigerBeetleCutover: (input) =>
@@ -758,6 +911,7 @@ export const makeAccountingService = Effect.gen(function* () {
           tenantId: decoded.tenantId,
           capability: AccountingCapabilities.financialEngineActivate,
         })
+
         return yield* database.withTransaction(
           Effect.gen(function* () {
             const [configuration] = yield* database.query(
@@ -774,6 +928,7 @@ export const makeAccountingService = Effect.gen(function* () {
                   .for("update"),
               "accounting.financial_cutover.prepare.configuration",
             )
+
             if (configuration === undefined) {
               return yield* Effect.fail(
                 new AccountingLegalEntityNotFound({
@@ -782,14 +937,17 @@ export const makeAccountingService = Effect.gen(function* () {
                 }),
               )
             }
+
             const [current] = yield* loadCutoverControl(
               decoded.tenantId,
               decoded.legalEntityId,
               true,
             )
+
             if (current === undefined) {
               return yield* cutoverBlocked(decoded.tenantId, decoded.legalEntityId, "not_prepared")
             }
+
             if (
               configuration.financialEngine === "tigerbeetle" ||
               current.status === "tigerbeetle"
@@ -801,7 +959,9 @@ export const makeAccountingService = Effect.gen(function* () {
                 }),
               )
             }
+
             if (current.status !== "postgresql") return toCutoverControl(current)
+
             const [prepared] = yield* database.query(
               (db) =>
                 db
@@ -820,6 +980,7 @@ export const makeAccountingService = Effect.gen(function* () {
                   .returning(cutoverSelection),
               "accounting.financial_cutover.prepare",
             )
+
             return toCutoverControl(prepared!)
           }),
           "accounting.financial_cutover.prepare.transaction",
@@ -833,6 +994,7 @@ export const makeAccountingService = Effect.gen(function* () {
           tenantId: decoded.tenantId,
           capability: AccountingCapabilities.financialEngineActivate,
         })
+
         return yield* database.withTransaction(
           Effect.gen(function* () {
             const [current] = yield* loadCutoverControl(
@@ -840,23 +1002,29 @@ export const makeAccountingService = Effect.gen(function* () {
               decoded.legalEntityId,
               true,
             )
+
             if (current === undefined) {
               return yield* cutoverBlocked(decoded.tenantId, decoded.legalEntityId, "not_prepared")
             }
+
             if (current.status === "tigerbeetle") return toCutoverControl(current)
+
             if (current.status === "approved") {
               if (current.evidenceArtifactId === decoded.evidenceArtifactId) {
                 return toCutoverControl(current)
               }
+
               return yield* cutoverBlocked(
                 decoded.tenantId,
                 decoded.legalEntityId,
                 "verification_mismatch",
               )
             }
+
             if (current.status === "postgresql") {
               return yield* cutoverBlocked(decoded.tenantId, decoded.legalEntityId, "not_prepared")
             }
+
             const [configuration] = yield* database.query(
               (db) =>
                 db
@@ -874,6 +1042,7 @@ export const makeAccountingService = Effect.gen(function* () {
                   .for("update"),
               "accounting.financial_cutover.approve.configuration",
             )
+
             if (configuration?.financialEngine !== "postgresql") {
               return yield* cutoverBlocked(
                 decoded.tenantId,
@@ -881,6 +1050,7 @@ export const makeAccountingService = Effect.gen(function* () {
                 "verification_mismatch",
               )
             }
+
             const [artifactRow] = yield* database.query(
               (db) =>
                 db
@@ -894,6 +1064,7 @@ export const makeAccountingService = Effect.gen(function* () {
                   ),
               "accounting.financial_cutover.approve.evidence",
             )
+
             if (artifactRow === undefined) {
               return yield* Effect.fail(
                 new FinancialVerificationArtifactNotFound({
@@ -902,7 +1073,9 @@ export const makeAccountingService = Effect.gen(function* () {
                 }),
               )
             }
+
             const artifact = toVerificationArtifact(artifactRow)
+
             if (
               artifact.legalEntityId !== decoded.legalEntityId ||
               artifact.evidence.currency !== configuration.baseCurrency ||
@@ -925,6 +1098,7 @@ export const makeAccountingService = Effect.gen(function* () {
                 }),
               )
             }
+
             if (
               Option.isNone(keyringOption) &&
               (Option.isNone(signerOption) || artifact.signingKeyId !== signerOption.value.keyId)
@@ -937,7 +1111,9 @@ export const makeAccountingService = Effect.gen(function* () {
                 }),
               )
             }
+
             const computedArtifactHash = yield* hashFinancialVerificationEvidence(artifact.evidence)
+
             if (computedArtifactHash !== artifact.artifactHash) {
               return yield* Effect.fail(
                 new FinancialVerificationArtifactInvalid({
@@ -947,12 +1123,15 @@ export const makeAccountingService = Effect.gen(function* () {
                 }),
               )
             }
+
             const signatureBytes = yield* decodeFinancialVerificationSignature(
               artifact.signature,
               decoded.tenantId,
               decoded.legalEntityId,
             )
+
             const signaturePayload = new TextEncoder().encode(artifact.artifactHash)
+
             const signatureValid = yield* Option.isSome(keyringOption)
               ? keyringOption.value
                   .verify(artifact.signingKeyId, signaturePayload, signatureBytes)
@@ -978,6 +1157,7 @@ export const makeAccountingService = Effect.gen(function* () {
                         }),
                     ),
                   )
+
             if (!signatureValid) {
               return yield* Effect.fail(
                 new FinancialVerificationArtifactInvalid({
@@ -987,6 +1167,7 @@ export const makeAccountingService = Effect.gen(function* () {
                 }),
               )
             }
+
             const unresolved = yield* database.query(
               (db) =>
                 db
@@ -1007,6 +1188,7 @@ export const makeAccountingService = Effect.gen(function* () {
                   ),
               "accounting.financial_cutover.approve.unresolved",
             )
+
             if (unresolved.length > 0) {
               return yield* cutoverBlocked(
                 decoded.tenantId,
@@ -1014,6 +1196,7 @@ export const makeAccountingService = Effect.gen(function* () {
                 "unresolved_operations",
               )
             }
+
             const [checkpoint] = yield* database.query(
               (db) =>
                 db
@@ -1041,6 +1224,7 @@ export const makeAccountingService = Effect.gen(function* () {
                   ),
               "accounting.financial_cutover.approve.checkpoint",
             )
+
             if (
               checkpoint === undefined ||
               checkpoint.sourceWatermark !== artifact.evidence.sourceWatermark ||
@@ -1060,6 +1244,7 @@ export const makeAccountingService = Effect.gen(function* () {
                 "verification_mismatch",
               )
             }
+
             const [approved] = yield* database.query(
               (db) =>
                 db
@@ -1088,6 +1273,7 @@ export const makeAccountingService = Effect.gen(function* () {
                   .returning(cutoverSelection),
               "accounting.financial_cutover.approve",
             )
+
             return toCutoverControl(approved!)
           }),
           "accounting.financial_cutover.approve.transaction",
@@ -1101,6 +1287,7 @@ export const makeAccountingService = Effect.gen(function* () {
           tenantId: decoded.tenantId,
           capability: AccountingCapabilities.financialEngineActivate,
         })
+
         if (Option.isNone(ledgerOption)) {
           return yield* cutoverBlocked(
             decoded.tenantId,
@@ -1108,6 +1295,7 @@ export const makeAccountingService = Effect.gen(function* () {
             "ledger_not_configured",
           )
         }
+
         const activating = yield* database.withTransaction(
           Effect.gen(function* () {
             const [current] = yield* loadCutoverControl(
@@ -1115,10 +1303,13 @@ export const makeAccountingService = Effect.gen(function* () {
               decoded.legalEntityId,
               true,
             )
+
             if (current === undefined) {
               return yield* cutoverBlocked(decoded.tenantId, decoded.legalEntityId, "not_prepared")
             }
+
             if (current.status === "tigerbeetle") return toCutoverControl(current)
+
             if (current.status !== "approved" && current.status !== "activating") {
               return yield* cutoverBlocked(
                 decoded.tenantId,
@@ -1126,6 +1317,7 @@ export const makeAccountingService = Effect.gen(function* () {
                 "activation_gates_pending",
               )
             }
+
             const [configuration] = yield* database.query(
               (db) =>
                 db
@@ -1140,6 +1332,7 @@ export const makeAccountingService = Effect.gen(function* () {
                   .for("update"),
               "accounting.financial_cutover.activate.configuration",
             )
+
             if (configuration?.financialEngine !== "postgresql") {
               return yield* cutoverBlocked(
                 decoded.tenantId,
@@ -1147,6 +1340,7 @@ export const makeAccountingService = Effect.gen(function* () {
                 "verification_mismatch",
               )
             }
+
             const [updated] = yield* database.query(
               (db) =>
                 db
@@ -1165,10 +1359,12 @@ export const makeAccountingService = Effect.gen(function* () {
                   .returning(cutoverSelection),
               "accounting.financial_cutover.activating",
             )
+
             return toCutoverControl(updated!)
           }),
           "accounting.financial_cutover.activate.prepare",
         )
+
         if (activating.status === "tigerbeetle") return activating
 
         const [activationConfiguration] = yield* database.query(
@@ -1184,6 +1380,7 @@ export const makeAccountingService = Effect.gen(function* () {
               ),
           "accounting.financial_cutover.activate.currency",
         )
+
         if (activationConfiguration === undefined) {
           return yield* cutoverBlocked(
             decoded.tenantId,
@@ -1191,6 +1388,7 @@ export const makeAccountingService = Effect.gen(function* () {
             "verification_mismatch",
           )
         }
+
         const accountRows = yield* database.query(
           (db) =>
             db
@@ -1199,6 +1397,7 @@ export const makeAccountingService = Effect.gen(function* () {
               .where(eq(accounts.tenantId, decoded.tenantId)),
           "accounting.financial_cutover.activate.accounts",
         )
+
         for (const account of accountRows) {
           const result: ExecutionAccountOutcome = yield* ledgerOption.value.createExecutionAccount({
             tenantId: decoded.tenantId,
@@ -1208,7 +1407,8 @@ export const makeAccountingService = Effect.gen(function* () {
             mappingVersion: 1,
             balanceConstraint: balanceConstraintForAccountType(account.type),
           })
-          if (result._tag !== "accepted") {
+
+          if (!ExecutionAccountOutcome.guards.accepted(result)) {
             yield* database.query(
               (db) =>
                 db
@@ -1225,6 +1425,7 @@ export const makeAccountingService = Effect.gen(function* () {
                   ),
               "accounting.financial_cutover.activate.account_failure",
             )
+
             return yield* cutoverBlocked(
               decoded.tenantId,
               decoded.legalEntityId,
@@ -1232,6 +1433,7 @@ export const makeAccountingService = Effect.gen(function* () {
             )
           }
         }
+
         return yield* database.withTransaction(
           Effect.gen(function* () {
             yield* database.query(
@@ -1250,6 +1452,7 @@ export const makeAccountingService = Effect.gen(function* () {
                   ),
               "accounting.financial_cutover.activate.engine",
             )
+
             const [control] = yield* database.query(
               (db) =>
                 db
@@ -1271,9 +1474,12 @@ export const makeAccountingService = Effect.gen(function* () {
                   .returning(cutoverSelection),
               "accounting.financial_cutover.activate.complete",
             )
+
             if (control !== undefined) return toCutoverControl(control)
             const [completed] = yield* loadCutoverControl(decoded.tenantId, decoded.legalEntityId)
+
             if (completed?.status === "tigerbeetle") return toCutoverControl(completed)
+
             return yield* cutoverBlocked(
               decoded.tenantId,
               decoded.legalEntityId,
@@ -1291,6 +1497,7 @@ export const makeAccountingService = Effect.gen(function* () {
           tenantId: decoded.tenantId,
           capability: AccountingCapabilities.legalEntityConfigure,
         })
+
         if (decoded.financialEngine === "tigerbeetle") {
           return yield* Effect.fail(
             new FinancialEngineCutoverBlocked({
@@ -1300,7 +1507,9 @@ export const makeAccountingService = Effect.gen(function* () {
             }),
           )
         }
+
         const baseCurrency = decoded.baseCurrency.toUpperCase()
+
         const rows = yield* database
           .query(
             (db) =>
@@ -1334,6 +1543,7 @@ export const makeAccountingService = Effect.gen(function* () {
                   legalEntityId: decoded.legalEntityId,
                 })
               }
+
               if (
                 isDatabaseConstraint(
                   error,
@@ -1346,9 +1556,11 @@ export const makeAccountingService = Effect.gen(function* () {
                   legalEntityId: decoded.legalEntityId,
                 })
               }
+
               return error
             }),
           )
+
         return { ...rows[0]!, precision: 2 as const }
       }),
     createAccount: (input) =>
@@ -1360,6 +1572,7 @@ export const makeAccountingService = Effect.gen(function* () {
           capability: AccountingCapabilities.accountCreate,
         })
         const code = decoded.code.trim().toUpperCase()
+
         const rows = yield* database
           .query(
             (db) =>
@@ -1387,6 +1600,7 @@ export const makeAccountingService = Effect.gen(function* () {
                 : error,
             ),
           )
+
         return rows[0]!
       }),
     configureRevenuePosting: (input) =>
@@ -1397,6 +1611,7 @@ export const makeAccountingService = Effect.gen(function* () {
           tenantId: decoded.tenantId,
           capability: AccountingCapabilities.revenueConfigure,
         })
+
         const accountRows = yield* database.query(
           (db) =>
             db
@@ -1410,6 +1625,7 @@ export const makeAccountingService = Effect.gen(function* () {
               ),
           "accounting.revenue_profile.receivable.lookup",
         )
+
         const revenueRows = yield* database.query(
           (db) =>
             db
@@ -1423,9 +1639,11 @@ export const makeAccountingService = Effect.gen(function* () {
               ),
           "accounting.revenue_profile.revenue.lookup",
         )
+
         if (accountRows[0] === undefined || revenueRows[0] === undefined) {
           return yield* Effect.fail(new AccountNotFound({ tenantId: decoded.tenantId }))
         }
+
         if (accountRows[0].type !== "asset" || revenueRows[0].type !== "revenue") {
           return yield* Effect.fail(
             new InvalidRevenuePostingProfile({
@@ -1434,6 +1652,7 @@ export const makeAccountingService = Effect.gen(function* () {
             }),
           )
         }
+
         const rows = yield* database
           .query(
             (db) =>
@@ -1455,6 +1674,7 @@ export const makeAccountingService = Effect.gen(function* () {
                 : error,
             ),
           )
+
         return rows[0]!
       }),
     openPeriod: (input) =>
@@ -1465,6 +1685,7 @@ export const makeAccountingService = Effect.gen(function* () {
           tenantId: decoded.tenantId,
           capability: AccountingCapabilities.periodOpen,
         })
+
         const rows = yield* database
           .query(
             (db) =>
@@ -1496,6 +1717,7 @@ export const makeAccountingService = Effect.gen(function* () {
                 : error,
             ),
           )
+
         return rows[0]!
       }),
     closePeriod: (input) =>
@@ -1506,6 +1728,7 @@ export const makeAccountingService = Effect.gen(function* () {
           tenantId: decoded.tenantId,
           capability: AccountingCapabilities.periodClose,
         })
+
         const period = yield* database.transaction(async (tx) => {
           const rows = await tx
             .select({
@@ -1525,10 +1748,13 @@ export const makeAccountingService = Effect.gen(function* () {
               ),
             )
             .for("update")
+
           const existing = rows[0]
+
           if (existing === undefined || existing.status === "closed") {
             return { period: existing, pending: false as const }
           }
+
           const pending = await tx
             .select({ id: financialOperations.id })
             .from(financialOperations)
@@ -1547,9 +1773,11 @@ export const makeAccountingService = Effect.gen(function* () {
               ),
             )
             .for("update")
+
           if (pending[0] !== undefined) {
             return { period: existing, pending: true as const }
           }
+
           return {
             pending: false as const,
             period: (
@@ -1571,6 +1799,7 @@ export const makeAccountingService = Effect.gen(function* () {
             )[0]!,
           }
         }, "accounting.period.close")
+
         if (period.pending) {
           return yield* Effect.fail(
             new FinancialOperationsPending({
@@ -1580,6 +1809,7 @@ export const makeAccountingService = Effect.gen(function* () {
             }),
           )
         }
+
         if (period.period === undefined) {
           return yield* Effect.fail(
             new AccountingPeriodNotFound({
@@ -1589,6 +1819,7 @@ export const makeAccountingService = Effect.gen(function* () {
             }),
           )
         }
+
         return period.period
       }),
     postRevenueForOrder: (input) =>
@@ -1604,6 +1835,7 @@ export const makeAccountingService = Effect.gen(function* () {
         const commandId = decoded.commandId.trim()
         const correlationId = decoded.correlationId.trim()
         const causationId = decoded.causationId?.trim() ?? null
+
         const loadExisting = () =>
           database.withTransaction(
             Effect.gen(function* () {
@@ -1612,6 +1844,7 @@ export const makeAccountingService = Effect.gen(function* () {
                 tenantId: decoded.tenantId,
                 orderId: decoded.orderId,
               })
+
               const entries = yield* database.query(
                 (db) =>
                   db
@@ -1625,13 +1858,17 @@ export const makeAccountingService = Effect.gen(function* () {
                     ),
                 "accounting.revenue.lookup",
               )
+
               const entry = entries[0]
+
               if (entry === undefined) return undefined
+
               if (entry.status !== "posted" || entry.postedAt === null) {
                 return yield* Effect.fail(
                   new JournalIdempotencyConflict({ tenantId: decoded.tenantId, reference }),
                 )
               }
+
               const profiles = yield* database.query(
                 (db) =>
                   db
@@ -1648,7 +1885,9 @@ export const makeAccountingService = Effect.gen(function* () {
                     ),
                 "accounting.revenue.profile.lookup",
               )
+
               const profile = profiles[0]
+
               const lines = yield* database.query(
                 (db) =>
                   db
@@ -1662,6 +1901,7 @@ export const makeAccountingService = Effect.gen(function* () {
                     ),
                 "accounting.revenue.lines.lookup",
               )
+
               const expectedLines =
                 profile === undefined
                   ? []
@@ -1677,11 +1917,13 @@ export const makeAccountingService = Effect.gen(function* () {
                         credit: amount,
                       },
                     ]
+
               const actualLines = lines.map((line) => ({
                 accountId: line.accountId,
                 debit: String(line.debit ?? "0"),
                 credit: String(line.credit ?? "0"),
               }))
+
               if (
                 profile === undefined ||
                 actualLines.length !== expectedLines.length ||
@@ -1692,6 +1934,7 @@ export const makeAccountingService = Effect.gen(function* () {
                   new JournalIdempotencyConflict({ tenantId: decoded.tenantId, reference }),
                 )
               }
+
               return {
                 id: entry.id,
                 tenantId: entry.tenantId,
@@ -1707,8 +1950,11 @@ export const makeAccountingService = Effect.gen(function* () {
             }),
             "accounting.revenue.replay",
           )
+
         const existing = yield* loadExisting()
+
         if (existing !== undefined) return existing
+
         const journal = yield* database
           .withTransaction(
             Effect.gen(function* () {
@@ -1717,6 +1963,7 @@ export const makeAccountingService = Effect.gen(function* () {
                 tenantId: decoded.tenantId,
                 orderId: decoded.orderId,
               })
+
               const mutation = yield* database.transaction(async (tx) => {
                 const profile = (
                   await tx
@@ -1730,7 +1977,9 @@ export const makeAccountingService = Effect.gen(function* () {
                     )
                     .for("update")
                 )[0]
-                if (profile === undefined) return { _tag: "profile-missing" as const }
+
+                if (profile === undefined) return PostRevenueForOrderOutcome.ProfileMissing()
+
                 const configuration = (
                   await tx
                     .select({
@@ -1748,9 +1997,11 @@ export const makeAccountingService = Effect.gen(function* () {
                     )
                     .for("update")
                 )[0]
+
                 if (configuration?.postingEnabled !== true) {
-                  return { _tag: "period-closed" as const }
+                  return PostRevenueForOrderOutcome.PeriodClosed()
                 }
+
                 const currentPeriod = (
                   await tx
                     .select({ id: accountingPeriods.id })
@@ -1766,7 +2017,9 @@ export const makeAccountingService = Effect.gen(function* () {
                     )
                     .for("update")
                 )[0]
-                if (currentPeriod === undefined) return { _tag: "period-closed" as const }
+
+                if (currentPeriod === undefined) return PostRevenueForOrderOutcome.PeriodClosed()
+
                 const entry = (
                   await tx
                     .insert(journalEntries)
@@ -1776,10 +2029,12 @@ export const makeAccountingService = Effect.gen(function* () {
                     })
                     .returning({ id: journalEntries.id })
                 )[0]!
+
                 const lines: readonly JournalLine[] = [
                   { accountId: profile.receivableAccountId, debit: amount, credit: "0" },
                   { accountId: profile.revenueAccountId, debit: "0", credit: amount },
                 ]
+
                 await tx.insert(journalLines).values(
                   lines.map((line) => ({
                     tenantId: decoded.tenantId,
@@ -1788,6 +2043,7 @@ export const makeAccountingService = Effect.gen(function* () {
                   })),
                 )
                 const postedAt = now()
+
                 const posted = (
                   await tx
                     .update(journalEntries)
@@ -1799,8 +2055,8 @@ export const makeAccountingService = Effect.gen(function* () {
                     .where(eq(journalEntries.id, entry.id))
                     .returning(journalEntrySelection)
                 )[0]!
-                return {
-                  _tag: "posted" as const,
+
+                return PostRevenueForOrderOutcome.Posted({
                   journal: {
                     id: posted.id,
                     tenantId: posted.tenantId,
@@ -1809,14 +2065,16 @@ export const makeAccountingService = Effect.gen(function* () {
                     postedAt: posted.postedAt!.toISOString(),
                     lines,
                   },
-                }
+                })
               }, "accounting.revenue.post")
-              if (mutation._tag === "posted") {
+
+              if (PostRevenueForOrderOutcome.$is("Posted")(mutation)) {
                 const payload = yield* Schema.decodeUnknownEffect(RevenuePostedEventPayload)({
                   journalId: mutation.journal.id,
                   legalEntityId: decoded.legalEntityId,
                   orderId: decoded.orderId,
                 })
+
                 yield* messaging.append({
                   eventId: uuidv7(),
                   eventType: AccountingRevenuePostedEvent.id,
@@ -1833,6 +2091,7 @@ export const makeAccountingService = Effect.gen(function* () {
                   payload,
                 })
               }
+
               return mutation
             }),
             "accounting.revenue.post.atomic",
@@ -1844,16 +2103,19 @@ export const makeAccountingService = Effect.gen(function* () {
               () =>
                 Effect.gen(function* () {
                   const existing = yield* loadExisting()
+
                   if (existing === undefined) {
                     return yield* Effect.fail(
                       new JournalIdempotencyConflict({ tenantId: decoded.tenantId, reference }),
                     )
                   }
-                  return { _tag: "posted" as const, journal: existing }
+
+                  return PostRevenueForOrderOutcome.Posted({ journal: existing })
                 }),
             ),
           )
-        if (journal._tag === "profile-missing") {
+
+        if (PostRevenueForOrderOutcome.$is("ProfileMissing")(journal)) {
           return yield* Effect.fail(
             new RevenuePostingProfileNotFound({
               tenantId: decoded.tenantId,
@@ -1861,7 +2123,8 @@ export const makeAccountingService = Effect.gen(function* () {
             }),
           )
         }
-        if (journal._tag === "period-closed") {
+
+        if (PostRevenueForOrderOutcome.$is("PeriodClosed")(journal)) {
           return yield* Effect.fail(
             new AccountingPeriodNotOpen({
               tenantId: decoded.tenantId,
@@ -1869,6 +2132,7 @@ export const makeAccountingService = Effect.gen(function* () {
             }),
           )
         }
+
         return journal.journal
       }),
     reverseRevenueForOrder: (input) =>
@@ -1882,6 +2146,7 @@ export const makeAccountingService = Effect.gen(function* () {
         yield* ensureLegacyEngine(decoded.tenantId, decoded.legalEntityId)
         const sourceReference = revenueReference(decoded.legalEntityId, decoded.orderId)
         const reference = reversalReference(decoded.legalEntityId, decoded.orderId)
+
         const journal = yield* database.transaction(async (tx) => {
           const existing = (
             await tx
@@ -1895,6 +2160,7 @@ export const makeAccountingService = Effect.gen(function* () {
               )
               .for("update")
           )[0]
+
           const sourceForExisting =
             existing === undefined
               ? undefined
@@ -1910,6 +2176,7 @@ export const makeAccountingService = Effect.gen(function* () {
                     )
                     .for("update")
                 )[0]
+
           const matchesSourceLines = async (
             entry: typeof existing,
             source: typeof sourceForExisting,
@@ -1923,6 +2190,7 @@ export const makeAccountingService = Effect.gen(function* () {
               entry.reversesEntryId !== source.id
             )
               return false
+
             const sourceLines = await tx
               .select(journalLineSelection)
               .from(journalLines)
@@ -1932,6 +2200,7 @@ export const makeAccountingService = Effect.gen(function* () {
                   eq(journalLines.entryId, source.id),
                 ),
               )
+
             const reversalLines = await tx
               .select(journalLineSelection)
               .from(journalLines)
@@ -1941,27 +2210,32 @@ export const makeAccountingService = Effect.gen(function* () {
                   eq(journalLines.entryId, entry.id),
                 ),
               )
+
             const expectedLines = sourceLines.map((line) => ({
               accountId: line.accountId,
               debit: String(line.credit ?? "0"),
               credit: String(line.debit ?? "0"),
             }))
+
             const actualLines = reversalLines.map((line) => ({
               accountId: line.accountId,
               debit: String(line.debit ?? "0"),
               credit: String(line.credit ?? "0"),
             }))
+
             return (
               expectedLines.length === actualLines.length &&
               JSON.stringify(normalizeLines(expectedLines)) ===
                 JSON.stringify(normalizeLines(actualLines))
             )
           }
+
           if (existing !== undefined) {
             return (await matchesSourceLines(existing, sourceForExisting))
-              ? { _tag: "existing" as const, entry: existing }
-              : { _tag: "idempotency-conflict" as const }
+              ? ReverseRevenueForOrderOutcome.Existing({ entry: existing })
+              : ReverseRevenueForOrderOutcome.IdempotencyConflict()
           }
+
           const profile = (
             await tx
               .select({ legalEntityId: revenuePostingProfiles.legalEntityId })
@@ -1974,7 +2248,9 @@ export const makeAccountingService = Effect.gen(function* () {
               )
               .for("update")
           )[0]
-          if (profile === undefined) return { _tag: "profile-missing" as const }
+
+          if (profile === undefined) return ReverseRevenueForOrderOutcome.ProfileMissing()
+
           const concurrentExisting = (
             await tx
               .select(journalEntrySelection)
@@ -1987,6 +2263,7 @@ export const makeAccountingService = Effect.gen(function* () {
               )
               .for("update")
           )[0]
+
           const sourceForConcurrentExisting =
             concurrentExisting === undefined
               ? undefined
@@ -2002,11 +2279,13 @@ export const makeAccountingService = Effect.gen(function* () {
                     )
                     .for("update")
                 )[0]
+
           if (concurrentExisting !== undefined) {
             return (await matchesSourceLines(concurrentExisting, sourceForConcurrentExisting))
-              ? { _tag: "existing" as const, entry: concurrentExisting }
-              : { _tag: "idempotency-conflict" as const }
+              ? ReverseRevenueForOrderOutcome.Existing({ entry: concurrentExisting })
+              : ReverseRevenueForOrderOutcome.IdempotencyConflict()
           }
+
           const configuration = (
             await tx
               .select({
@@ -2021,6 +2300,7 @@ export const makeAccountingService = Effect.gen(function* () {
               )
               .for("update")
           )[0]
+
           const currentPeriod = (
             await tx
               .select({ id: accountingPeriods.id })
@@ -2036,9 +2316,11 @@ export const makeAccountingService = Effect.gen(function* () {
               )
               .for("update")
           )[0]
+
           if (configuration?.postingEnabled !== true || currentPeriod === undefined) {
-            return { _tag: "period-closed" as const }
+            return ReverseRevenueForOrderOutcome.PeriodClosed()
           }
+
           const source = (
             await tx
               .select(journalEntrySelection)
@@ -2051,20 +2333,24 @@ export const makeAccountingService = Effect.gen(function* () {
               )
               .for("update")
           )[0]
+
           if (source === undefined || source.status !== "posted") {
-            return { _tag: "source-missing" as const }
+            return ReverseRevenueForOrderOutcome.SourceMissing()
           }
+
           const sourceLines = await tx
             .select(journalLineSelection)
             .from(journalLines)
             .where(
               and(eq(journalLines.tenantId, decoded.tenantId), eq(journalLines.entryId, source.id)),
             )
+
           const lines = sourceLines.map((line) => ({
             accountId: line.accountId,
             debit: String(line.credit ?? "0"),
             credit: String(line.debit ?? "0"),
           }))
+
           const entry = (
             await tx
               .insert(journalEntries)
@@ -2074,6 +2360,7 @@ export const makeAccountingService = Effect.gen(function* () {
               })
               .returning({ id: journalEntries.id })
           )[0]!
+
           await tx.insert(journalLines).values(
             lines.map((line) => ({
               tenantId: decoded.tenantId,
@@ -2082,6 +2369,7 @@ export const makeAccountingService = Effect.gen(function* () {
             })),
           )
           const postedAt = now()
+
           const posted = (
             await tx
               .update(journalEntries)
@@ -2094,8 +2382,8 @@ export const makeAccountingService = Effect.gen(function* () {
               .where(eq(journalEntries.id, entry.id))
               .returning(journalEntrySelection)
           )[0]!
-          return {
-            _tag: "reversed" as const,
+
+          return ReverseRevenueForOrderOutcome.Reversed({
             journal: {
               id: posted.id,
               tenantId: posted.tenantId,
@@ -2105,9 +2393,10 @@ export const makeAccountingService = Effect.gen(function* () {
               reversesEntryId: source.id,
               lines,
             },
-          }
+          })
         }, "accounting.revenue.reverse")
-        if (journal._tag === "profile-missing") {
+
+        if (ReverseRevenueForOrderOutcome.$is("ProfileMissing")(journal)) {
           return yield* Effect.fail(
             new RevenuePostingProfileNotFound({
               tenantId: decoded.tenantId,
@@ -2115,7 +2404,8 @@ export const makeAccountingService = Effect.gen(function* () {
             }),
           )
         }
-        if (journal._tag === "period-closed") {
+
+        if (ReverseRevenueForOrderOutcome.$is("PeriodClosed")(journal)) {
           return yield* Effect.fail(
             new AccountingPeriodNotOpen({
               tenantId: decoded.tenantId,
@@ -2123,12 +2413,14 @@ export const makeAccountingService = Effect.gen(function* () {
             }),
           )
         }
-        if (journal._tag === "idempotency-conflict") {
+
+        if (ReverseRevenueForOrderOutcome.$is("IdempotencyConflict")(journal)) {
           return yield* Effect.fail(
             new JournalIdempotencyConflict({ tenantId: decoded.tenantId, reference }),
           )
         }
-        if (journal._tag === "source-missing") {
+
+        if (ReverseRevenueForOrderOutcome.$is("SourceMissing")(journal)) {
           return yield* Effect.fail(
             new RevenueJournalNotFound({
               tenantId: decoded.tenantId,
@@ -2137,7 +2429,8 @@ export const makeAccountingService = Effect.gen(function* () {
             }),
           )
         }
-        if (journal._tag === "existing") {
+
+        if (ReverseRevenueForOrderOutcome.$is("Existing")(journal)) {
           const lines = yield* database.query(
             (db) =>
               db
@@ -2151,6 +2444,7 @@ export const makeAccountingService = Effect.gen(function* () {
                 ),
             "accounting.revenue_reversal.lines.lookup",
           )
+
           return {
             id: journal.entry.id,
             tenantId: journal.entry.tenantId,
@@ -2164,6 +2458,7 @@ export const makeAccountingService = Effect.gen(function* () {
             })),
           }
         }
+
         return journal.journal
       }),
     postJournal: (input) =>
@@ -2176,6 +2471,7 @@ export const makeAccountingService = Effect.gen(function* () {
         })
         yield* ensureLegacyTenantEngine(decoded.tenantId)
         const lineError = validateLines(decoded.lines)
+
         if (lineError !== undefined) return yield* Effect.fail(lineError)
         const reference = decoded.reference.trim()
 
@@ -2194,7 +2490,9 @@ export const makeAccountingService = Effect.gen(function* () {
                   ),
               "accounting.journal.lookup",
             )
+
             const entry = entries[0]
+
             if (entry === undefined || entry.status !== "posted" || entry.postedAt === null) {
               return yield* Effect.fail(
                 new JournalReferenceAlreadyExists({
@@ -2203,6 +2501,7 @@ export const makeAccountingService = Effect.gen(function* () {
                 }),
               )
             }
+
             const lines = yield* database.query(
               (db) =>
                 db
@@ -2216,11 +2515,13 @@ export const makeAccountingService = Effect.gen(function* () {
                   ),
               "accounting.journal.lines.lookup",
             )
+
             const storedLines = lines.map((line) => ({
               accountId: line.accountId,
               debit: String(line.debit ?? "0"),
               credit: String(line.credit ?? "0"),
             }))
+
             if (
               JSON.stringify(normalizeLines(storedLines)) !==
               JSON.stringify(normalizeLines(decoded.lines))
@@ -2232,6 +2533,7 @@ export const makeAccountingService = Effect.gen(function* () {
                 }),
               )
             }
+
             return {
               id: entry.id,
               tenantId: entry.tenantId,
@@ -2254,11 +2556,14 @@ export const makeAccountingService = Effect.gen(function* () {
                 ),
               )
               .for("update")
+
             const existing = existingEntries[0]
+
             if (existing !== undefined) {
               if (existing.status !== "posted" || existing.postedAt === null) {
-                return { _tag: "idempotency-conflict" as const }
+                return PostJournalOutcome.IdempotencyConflict()
               }
+
               const lines = await tx
                 .select(journalLineSelection)
                 .from(journalLines)
@@ -2268,19 +2573,21 @@ export const makeAccountingService = Effect.gen(function* () {
                     eq(journalLines.entryId, existing.id),
                   ),
                 )
+
               const storedLines = lines.map((line) => ({
                 accountId: line.accountId,
                 debit: String(line.debit ?? "0"),
                 credit: String(line.credit ?? "0"),
               }))
+
               if (
                 JSON.stringify(normalizeLines(storedLines)) !==
                 JSON.stringify(normalizeLines(decoded.lines))
               ) {
-                return { _tag: "idempotency-conflict" as const }
+                return PostJournalOutcome.IdempotencyConflict()
               }
-              return {
-                _tag: "existing" as const,
+
+              return PostJournalOutcome.Existing({
                 journal: {
                   id: existing.id,
                   tenantId: existing.tenantId,
@@ -2289,7 +2596,7 @@ export const makeAccountingService = Effect.gen(function* () {
                   postedAt: existing.postedAt.toISOString(),
                   lines: decoded.lines,
                 },
-              }
+              })
             }
 
             const entry = (
@@ -2313,6 +2620,7 @@ export const makeAccountingService = Effect.gen(function* () {
             )
 
             const postedAt = now()
+
             const posted = (
               await tx
                 .update(journalEntries)
@@ -2320,8 +2628,8 @@ export const makeAccountingService = Effect.gen(function* () {
                 .where(eq(journalEntries.id, entry.id))
                 .returning(journalEntrySelection)
             )[0]!
-            return {
-              _tag: "created" as const,
+
+            return PostJournalOutcome.Created({
               journal: {
                 id: posted.id,
                 tenantId: posted.tenantId,
@@ -2330,28 +2638,33 @@ export const makeAccountingService = Effect.gen(function* () {
                 postedAt: posted.postedAt!.toISOString(),
                 lines: decoded.lines,
               },
-            }
+            })
           }, "accounting.journal.post")
           .pipe(
             Effect.mapError((error) => {
               if (isDatabaseConstraint(error, "journal_lines_account_fkey", "23503")) {
                 return new AccountNotFound({ tenantId: decoded.tenantId })
               }
+
               if (isDatabaseConstraint(error, "journal_entries_reference_key")) {
                 return new JournalReferenceAlreadyExists({
                   tenantId: decoded.tenantId,
                   reference,
                 })
               }
+
               return error
             }),
             Effect.result,
           )
+
         if (Result.isFailure(result)) {
           if (result.failure instanceof JournalReferenceAlreadyExists) return yield* loadExisting()
+
           return yield* Effect.fail(result.failure)
         }
-        if (result.success._tag === "idempotency-conflict") {
+
+        if (PostJournalOutcome.$is("IdempotencyConflict")(result.success)) {
           return yield* Effect.fail(
             new JournalIdempotencyConflict({
               tenantId: decoded.tenantId,
@@ -2359,8 +2672,10 @@ export const makeAccountingService = Effect.gen(function* () {
             }),
           )
         }
+
         return result.success.journal
       }),
   }
+
   return withAccountingOperationNames(service)
 })

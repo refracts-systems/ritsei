@@ -38,6 +38,7 @@ export const AllocateNumberInput = Schema.Struct({
   prefix: Prefix,
   padding: Schema.optionalKey(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 12 }))),
 })
+
 export type AllocateNumberCommand = Schema.Schema.Type<typeof AllocateNumberInput>
 
 export const AllocatedNumber = Schema.Struct({
@@ -46,11 +47,12 @@ export const AllocatedNumber = Schema.Struct({
   value: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)),
   number: Schema.String,
 })
+
 export type AllocatedNumber = Schema.Schema.Type<typeof AllocatedNumber>
 
 export interface NumberingService {
   readonly allocate: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof AllocateNumberInput>,
   ) => Effect.Effect<AllocatedNumber, DatabaseFailure | Schema.SchemaError>
 }
 
@@ -74,6 +76,7 @@ export const FiscalCalendar = Context.Service<FiscalCalendar>("RITSEI/FiscalCale
 export const fiscalPeriodKey = (documentDate: string, fiscalYearStartMonth: number): string => {
   const year = Number(documentDate.slice(0, 4))
   const month = Number(documentDate.slice(5, 7))
+
   return String(month >= fiscalYearStartMonth ? year : year - 1)
 }
 

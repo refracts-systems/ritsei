@@ -1,4 +1,5 @@
 export { SalesCapabilities } from "./src/capabilities.ts"
+
 export {
   SalesConfirmOrderAction,
   SalesOrderConfirmedEvent,
@@ -6,6 +7,7 @@ export {
   SalesTypedActionCatalog,
   SalesTypedEventCatalog,
 } from "./src/catalog.ts"
+
 export {
   CancelConfirmedOrderInput,
   ConfirmOrderInput,
@@ -27,6 +29,7 @@ export {
   SalesOrderStatus,
   SalesService,
 } from "./src/contract.ts"
+
 export type {
   Customer as CustomerType,
   Quotation as QuotationType,
@@ -34,8 +37,9 @@ export type {
   SalesOrder as SalesOrderType,
   SalesOrderLine as SalesOrderLineType,
   SalesOrderStatus as SalesOrderStatusType,
-  SalesService as SalesServiceShape,
+  SalesService as SalesServiceContract,
 } from "./src/contract.ts"
+
 export {
   CustomerAlreadyExists,
   CustomerNotFound,
@@ -45,8 +49,11 @@ export {
   SalesOrderInvalidState,
   SalesOrderNotFound,
 } from "./src/errors.ts"
+
 export { makeSalesService, makeSalesTestLayer, SalesLive } from "./src/layers.ts"
+
 export { SalesModule } from "./manifest.ts"
+
 export {
   AssignCustomerPriceListInput,
   CreatePartyCustomerInput,
@@ -68,13 +75,15 @@ export {
   SalesQuotation,
   SetPriceInput,
 } from "./src/documents-contract.ts"
+
 export type {
   Delivery as DeliveryType,
   OrderFulfillment as OrderFulfillmentType,
   PartyCustomer as PartyCustomerType,
-  SalesDocumentService as SalesDocumentServiceShape,
+  SalesDocumentService as SalesDocumentServiceContract,
   SalesQuotation as SalesQuotationType,
 } from "./src/documents-contract.ts"
+
 export {
   CustomerLegalEntityRequired,
   CustomerPartyRoleInvalid,
@@ -85,4 +94,5 @@ export {
   ProductPriceNotFound,
   QuotationInvalidState,
 } from "./src/errors.ts"
+
 export { discountedPrice, SalesDocumentsLive } from "./src/documents.ts"

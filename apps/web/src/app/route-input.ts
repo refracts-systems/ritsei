@@ -1,5 +1,6 @@
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
+import { definedFields } from "../shared/api.ts"
 
 export function decodeRouteInput<S extends Schema.ConstraintDecoder<unknown, never>>(
   schema: S,
@@ -9,9 +10,10 @@ export function decodeRouteInput<S extends Schema.ConstraintDecoder<unknown, nev
   const decoded = Schema.decodeUnknownResult(schema)(
     {
       ...Object.fromEntries(new URLSearchParams(search)),
-      ...(id === undefined ? {} : { id }),
+      ...definedFields({ id }),
     },
     { onExcessProperty: "error" },
   )
+
   return Result.isSuccess(decoded) ? decoded.success : null
 }

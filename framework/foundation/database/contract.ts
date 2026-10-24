@@ -3,6 +3,7 @@ import type { AnyRelations, EmptyRelations } from "drizzle-orm/relations"
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import * as Predicate from "effect/Predicate"
 
 export interface PostgresTransaction {
   readonly unsafe: <Row extends Record<string, unknown>>(
@@ -16,6 +17,7 @@ export interface PostgresClient {
 }
 
 export type DrizzleDatabase = PostgresJsDatabase<EmptyRelations>
+
 export type DrizzleTransaction = PostgresJsTransaction<AnyRelations>
 
 export const CurrentDatabaseTransaction = Context.Reference<DrizzleTransaction | undefined>(
@@ -28,17 +30,16 @@ export class DatabaseFailure extends Schema.TaggedError<DatabaseFailure>()("Data
   cause: Schema.Unknown,
 }) {}
 
-const unwrapCause = (cause: unknown): unknown =>
-  typeof cause === "object" && cause !== null && "cause" in cause && cause.cause !== undefined
-    ? unwrapCause(cause.cause)
-    : cause
-
-export const isDatabaseConstraint = (error: unknown, constraint: string, code = "23505") => {
+export const isDatabaseConstraint = <E>(error: E, constraint: string, code = "23505") => {
   if (!(error instanceof DatabaseFailure)) return false
-  const cause = unwrapCause(error.cause)
+  let cause: unknown = error.cause
+
+  while (Predicate.isObjectOrArray(cause) && "cause" in cause && cause.cause !== undefined) {
+    cause = cause.cause
+  }
+
   return (
-    typeof cause === "object" &&
-    cause !== null &&
+    Predicate.isObjectOrArray(cause) &&
     "code" in cause &&
     cause.code === code &&
     (("constraint" in cause && cause.constraint === constraint) ||

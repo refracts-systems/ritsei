@@ -17,8 +17,8 @@ import {
   ShortString,
   TenantHeaders as tenantHeaders,
   Uuid,
-  makeApiErrorMapping,
-  makeModuleApi,
+  apiErrorMapping,
+  moduleApi,
   ReadLimit,
 } from "../../../framework/modules/http/mod.ts"
 import {
@@ -45,10 +45,12 @@ import {
 const CreatedOrderConfirmation = OrderConfirmationResult.pipe(HttpApiSchema.status(201))
 const CreatedOrderCancellation = OrderCancellationResult.pipe(HttpApiSchema.status(201))
 const CreatedOrderFulfillment = OrderFulfillmentResult.pipe(HttpApiSchema.status(201))
+
 const ProcessInboxResponse = Schema.Struct({
   runtimeInstances: BoundedArray(ProcessRuntimeInstance),
   jobs: BoundedArray(ProcessJobInboxItem),
 })
+
 const ProcessReadLimit = ReadLimit
 
 export const ProcessHttpGroup = HttpApiGroup.make("Process").add(
@@ -147,9 +149,9 @@ export const ProcessHttpGroup = HttpApiGroup.make("Process").add(
   }).middleware(BearerAuth),
 )
 
-const ProcessHttpApi = makeModuleApi(ProcessHttpGroup)
+const ProcessHttpApi = moduleApi(ProcessHttpGroup)
 
-export const ProcessHttpErrors = makeApiErrorMapping({
+export const ProcessHttpErrors = apiErrorMapping({
   ...BaseApiErrorPolicy,
   AccountingPeriodNotOpen: "conflict",
   FinancialEngineActivated: "conflict",
@@ -181,17 +183,20 @@ export const ProcessHttpErrors = makeApiErrorMapping({
   WorkflowResultCorrupt: "conflict",
   WorkflowRunNotFound: "not_found",
 })
+
 const coreApiEffect = ProcessHttpErrors.apiEffect
 
 export const ProcessHttpHandlers = HttpApiBuilder.group(ProcessHttpApi, "Process", (handlers) =>
   Effect.gen(function* () {
     const process = yield* ProcessService
     const studio = yield* ProcessStudioService
+
     return handlers
       .handle(
         "confirmOrder",
         Effect.fn("Http.Process.confirmOrder")(function* ({ headers, payload }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             process.confirmOrder({ principal, tenantId: headers["x-tenant-id"], ...payload }),
           )
@@ -201,6 +206,7 @@ export const ProcessHttpHandlers = HttpApiBuilder.group(ProcessHttpApi, "Process
         "cancelOrder",
         Effect.fn("Http.Process.cancelOrder")(function* ({ headers, payload }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             process.cancelOrder({ principal, tenantId: headers["x-tenant-id"], ...payload }),
           )
@@ -210,6 +216,7 @@ export const ProcessHttpHandlers = HttpApiBuilder.group(ProcessHttpApi, "Process
         "fulfillOrder",
         Effect.fn("Http.Process.fulfillOrder")(function* ({ headers, payload }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             process.fulfillOrder({ principal, tenantId: headers["x-tenant-id"], ...payload }),
           )
@@ -219,6 +226,7 @@ export const ProcessHttpHandlers = HttpApiBuilder.group(ProcessHttpApi, "Process
         "recoverOrder",
         Effect.fn("Http.Process.recoverOrder")(function* ({ headers, payload }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             process.recoverOrder({ principal, tenantId: headers["x-tenant-id"], ...payload }),
           )
@@ -228,6 +236,7 @@ export const ProcessHttpHandlers = HttpApiBuilder.group(ProcessHttpApi, "Process
         "manualRecovery",
         Effect.fn("Http.Process.manualRecovery")(function* ({ headers, payload }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             process.markManualRecovery({
               principal,
@@ -241,6 +250,7 @@ export const ProcessHttpHandlers = HttpApiBuilder.group(ProcessHttpApi, "Process
         "listCatalog",
         Effect.fn("Http.Process.listCatalog")(function* ({ headers, query }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             studio.listCatalog({ principal, tenantId: headers["x-tenant-id"], ...query }),
           )
@@ -250,6 +260,7 @@ export const ProcessHttpHandlers = HttpApiBuilder.group(ProcessHttpApi, "Process
         "validateDefinition",
         Effect.fn("Http.Process.validateDefinition")(function* ({ headers, payload }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             studio.validateDefinition({
               principal,
@@ -263,6 +274,7 @@ export const ProcessHttpHandlers = HttpApiBuilder.group(ProcessHttpApi, "Process
         "listRuntimeInstances",
         Effect.fn("Http.Process.listRuntimeInstances")(function* ({ headers, query }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             studio.listRuntimeInstances({
               principal,
@@ -276,6 +288,7 @@ export const ProcessHttpHandlers = HttpApiBuilder.group(ProcessHttpApi, "Process
         "listWorkflowRuns",
         Effect.fn("Http.Process.listWorkflowRuns")(function* ({ headers, query }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             studio.listWorkflowRuns({ principal, tenantId: headers["x-tenant-id"], ...query }),
           )
@@ -285,6 +298,7 @@ export const ProcessHttpHandlers = HttpApiBuilder.group(ProcessHttpApi, "Process
         "listOperatorInbox",
         Effect.fn("Http.Process.listOperatorInbox")(function* ({ headers, query }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             studio.listOperatorInbox({ principal, tenantId: headers["x-tenant-id"], ...query }),
           )
@@ -294,6 +308,7 @@ export const ProcessHttpHandlers = HttpApiBuilder.group(ProcessHttpApi, "Process
         "listOperatorControls",
         Effect.fn("Http.Process.listOperatorControls")(function* ({ headers, query }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             studio.listOperatorControls({
               principal,
@@ -307,6 +322,7 @@ export const ProcessHttpHandlers = HttpApiBuilder.group(ProcessHttpApi, "Process
         "operateRuntime",
         Effect.fn("Http.Process.operateRuntime")(function* ({ headers, params, payload }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             studio.operateRuntime({
               principal,

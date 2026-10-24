@@ -77,6 +77,7 @@ export const makeProcurementTestLayer = () =>
               capability: ProcurementCapabilities.supplierAccountCreate,
             })
             const relationship = yield* loadSupplierRelationship(party, decoded)
+
             if (
               [...storedSupplierAccounts.values()].some(
                 (account) =>
@@ -91,6 +92,7 @@ export const makeProcurementTestLayer = () =>
                 }),
               )
             }
+
             const account: SupplierAccount = {
               id: uuidv7(),
               tenantId: decoded.tenantId,
@@ -98,7 +100,9 @@ export const makeProcurementTestLayer = () =>
               partyId: relationship.partyId,
               legalEntityId: relationship.legalEntityId,
             }
+
             storedSupplierAccounts.set(account.id, account)
+
             return account
           }),
         // Fallow: memory and PostgreSQL adapters intentionally mirror public read authorization.
@@ -111,6 +115,7 @@ export const makeProcurementTestLayer = () =>
               tenantId: decoded.tenantId,
               capability: ProcurementCapabilities.purchaseOrderRead,
             })
+
             return [...storedSupplierAccounts.values()]
               .filter((account) => account.tenantId === decoded.tenantId)
               .sort((left, right) => left.id.localeCompare(right.id))
@@ -128,6 +133,7 @@ export const makeProcurementTestLayer = () =>
             })
             const total = deriveTotal(decoded.lines)
             yield* Schema.decodeUnknownEffect(FinancialMajorAmount)(total)
+
             if (
               storedSupplierAccounts.get(decoded.supplierAccountId)?.tenantId !== decoded.tenantId
             ) {
@@ -138,6 +144,7 @@ export const makeProcurementTestLayer = () =>
                 }),
               )
             }
+
             const order: PurchaseOrder = {
               id: uuidv7(),
               tenantId: decoded.tenantId,
@@ -147,7 +154,9 @@ export const makeProcurementTestLayer = () =>
               total,
               lines: decoded.lines.map((line) => ({ id: uuidv7(), ...line })),
             }
+
             storedPurchaseOrders.set(order.id, order)
+
             return order
           }),
         getPurchaseOrder: (input) =>
@@ -159,6 +168,7 @@ export const makeProcurementTestLayer = () =>
               capability: ProcurementCapabilities.purchaseOrderRead,
             })
             const order = storedPurchaseOrders.get(decoded.purchaseOrderId)
+
             if (order?.tenantId !== decoded.tenantId) {
               return yield* Effect.fail(
                 new PurchaseOrderNotFound({
@@ -167,6 +177,7 @@ export const makeProcurementTestLayer = () =>
                 }),
               )
             }
+
             return order
           }),
         listPurchaseOrders: (input) =>
@@ -177,6 +188,7 @@ export const makeProcurementTestLayer = () =>
               tenantId: decoded.tenantId,
               capability: ProcurementCapabilities.purchaseOrderRead,
             })
+
             return [...storedPurchaseOrders.values()]
               .filter(
                 (order) =>
@@ -198,6 +210,7 @@ export const makeProcurementTestLayer = () =>
               tenantId: decoded.tenantId,
               capability: ProcurementCapabilities.purchaseOrderRead,
             })
+
             return [...storedReceipts.values()]
               .filter(
                 (receipt) =>
@@ -217,6 +230,7 @@ export const makeProcurementTestLayer = () =>
             })
             const normalizedIdempotencyKey = decoded.idempotencyKey.trim()
             const order = storedPurchaseOrders.get(decoded.purchaseOrderId)
+
             if (order?.tenantId !== decoded.tenantId) {
               return yield* Effect.fail(
                 new PurchaseOrderNotFound({
@@ -225,6 +239,7 @@ export const makeProcurementTestLayer = () =>
                 }),
               )
             }
+
             if (order.status === "confirmed") {
               if (confirmationKeys.get(order.id) !== normalizedIdempotencyKey) {
                 return yield* Effect.fail(
@@ -235,8 +250,10 @@ export const makeProcurementTestLayer = () =>
                   }),
                 )
               }
+
               return order
             }
+
             if (order.status !== "draft") {
               return yield* Effect.fail(
                 new PurchaseOrderInvalidState({
@@ -246,8 +263,10 @@ export const makeProcurementTestLayer = () =>
                 }),
               )
             }
+
             const confirmationKey = `${decoded.tenantId}:${normalizedIdempotencyKey}`
             const existingOrderId = confirmationOrderIdsByKey.get(confirmationKey)
+
             if (existingOrderId !== undefined && existingOrderId !== order.id) {
               return yield* Effect.fail(
                 new PurchaseOrderConfirmationIdempotencyConflict({
@@ -257,16 +276,19 @@ export const makeProcurementTestLayer = () =>
                 }),
               )
             }
+
             const confirmed: PurchaseOrder = {
               ...order,
               status: "confirmed",
               confirmedAt: now().toISOString(),
             }
+
             const payload = yield* Schema.decodeUnknownEffect(PurchaseOrderConfirmedEventPayload)({
               purchaseOrderId: confirmed.id,
               supplierAccountId: confirmed.supplierAccountId,
               total: confirmed.total,
             })
+
             yield* messaging.append({
               eventId: uuidv7(),
               eventType: ProcurementPurchaseOrderConfirmedEvent.id,
@@ -285,6 +307,7 @@ export const makeProcurementTestLayer = () =>
             storedPurchaseOrders.set(order.id, confirmed)
             confirmationKeys.set(order.id, normalizedIdempotencyKey)
             confirmationOrderIdsByKey.set(confirmationKey, order.id)
+
             return confirmed
           }),
         cancelPurchaseOrder: (input) =>
@@ -296,6 +319,7 @@ export const makeProcurementTestLayer = () =>
               capability: ProcurementCapabilities.purchaseOrderCancel,
             })
             const order = storedPurchaseOrders.get(decoded.purchaseOrderId)
+
             if (order?.tenantId !== decoded.tenantId) {
               return yield* Effect.fail(
                 new PurchaseOrderNotFound({
@@ -304,7 +328,9 @@ export const makeProcurementTestLayer = () =>
                 }),
               )
             }
+
             if (order.status === "cancelled") return order
+
             if (order.status !== "confirmed") {
               return yield* Effect.fail(
                 new PurchaseOrderInvalidState({
@@ -314,6 +340,7 @@ export const makeProcurementTestLayer = () =>
                 }),
               )
             }
+
             if (
               [...storedReceipts.values()].some(
                 (receipt) =>
@@ -327,8 +354,10 @@ export const makeProcurementTestLayer = () =>
                 }),
               )
             }
+
             const cancelled: PurchaseOrder = { ...order, status: "cancelled" }
             storedPurchaseOrders.set(order.id, cancelled)
+
             return cancelled
           }),
         receivePurchaseOrder: (input) =>
@@ -342,10 +371,12 @@ export const makeProcurementTestLayer = () =>
             })
             const normalizedIdempotencyKey = decoded.idempotencyKey.trim()
             const lines = canonicalReceiptLines(decoded.lines)
+
             const duplicateLine = lines.find(
               (line, index) =>
                 index > 0 && lines[index - 1]!.purchaseOrderLineId === line.purchaseOrderLineId,
             )
+
             if (duplicateLine !== undefined) {
               return yield* Effect.fail(
                 new PurchaseReceiptLineDuplicate({
@@ -355,8 +386,10 @@ export const makeProcurementTestLayer = () =>
                 }),
               )
             }
+
             const receiptKey = `${decoded.tenantId}:${normalizedIdempotencyKey}`
             const existing = storedReceipts.get(receiptKey)
+
             if (existing !== undefined) {
               if (
                 existing.purchaseOrderId !== decoded.purchaseOrderId ||
@@ -371,9 +404,12 @@ export const makeProcurementTestLayer = () =>
                   }),
                 )
               }
+
               return existing
             }
+
             const order = storedPurchaseOrders.get(decoded.purchaseOrderId)
+
             if (order?.tenantId !== decoded.tenantId) {
               return yield* Effect.fail(
                 new PurchaseOrderNotFound({
@@ -382,6 +418,7 @@ export const makeProcurementTestLayer = () =>
                 }),
               )
             }
+
             if (order.status !== "confirmed") {
               return yield* Effect.fail(
                 new PurchaseOrderInvalidState({
@@ -391,7 +428,9 @@ export const makeProcurementTestLayer = () =>
                 }),
               )
             }
+
             const supplierAccount = storedSupplierAccounts.get(order.supplierAccountId)
+
             if (supplierAccount === undefined) {
               return yield* Effect.fail(
                 new SupplierAccountNotFound({
@@ -400,12 +439,15 @@ export const makeProcurementTestLayer = () =>
                 }),
               )
             }
+
             const linesById = new Map(order.lines.map((line) => [line.id, line]))
             const nextQuantities = new Map(receivedQuantities)
             const receiptId = uuidv7()
             const receivedLines: GoodsReceiptLine[] = []
+
             for (const line of lines) {
               const orderLine = linesById.get(line.purchaseOrderLineId)
+
               if (orderLine === undefined) {
                 return yield* Effect.fail(
                   new PurchaseReceiptLineNotFound({
@@ -415,8 +457,10 @@ export const makeProcurementTestLayer = () =>
                   }),
                 )
               }
+
               const receivedKey = `${decoded.purchaseOrderId}:${line.purchaseOrderLineId}`
               const received = nextQuantities.get(receivedKey) ?? 0n
+
               if (received + BigInt(line.quantity) > BigInt(orderLine.quantity)) {
                 return yield* Effect.fail(
                   new PurchaseReceiptQuantityExceeded({
@@ -429,6 +473,7 @@ export const makeProcurementTestLayer = () =>
                   }),
                 )
               }
+
               const balance = yield* inventory
                 .receiveStock({
                   principal: decoded.principal,
@@ -459,6 +504,7 @@ export const makeProcurementTestLayer = () =>
                     ),
                   ),
                 )
+
               nextQuantities.set(receivedKey, received + BigInt(line.quantity))
               receivedLines.push({
                 id: uuidv7(),
@@ -468,7 +514,9 @@ export const makeProcurementTestLayer = () =>
                 unitOfMeasure: balance.unitOfMeasure,
               })
             }
+
             for (const [key, quantity] of nextQuantities) receivedQuantities.set(key, quantity)
+
             const receipt: GoodsReceipt = {
               id: receiptId,
               tenantId: decoded.tenantId,
@@ -478,10 +526,13 @@ export const makeProcurementTestLayer = () =>
               receivedAt: now().toISOString(),
               lines: receivedLines,
             }
+
             storedReceipts.set(receiptKey, receipt)
+
             return receipt
           }),
       }
+
       return withProcurementOperationNames(service)
     }),
   )

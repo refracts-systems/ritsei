@@ -1,12 +1,14 @@
+import * as Match from "effect/Match"
+import * as Predicate from "effect/Predicate"
 import { createSignal, Show, useContext } from "solid-js"
-import { CommandFeedback, QueryBoundary } from "../../shared/request-feedback.tsx"
+import { CommandFeedback, QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
 import { ApiRuntime } from "../../shared/runtime.ts"
 import { layout } from "../../ui/foundations/layout.ts"
 import { DataTable } from "../../ui/patterns/data-table.tsx"
 import { Button } from "../../ui/primitives/button.tsx"
 import { createDialogOpenChange, Dialog } from "../../ui/primitives/dialog.tsx"
 import { FormField } from "../../ui/primitives/form-field.tsx"
-import { Form } from "../../ui/primitives/form.tsx"
+import { Form, type FormValue } from "../../ui/primitives/form.tsx"
 import { Input } from "../../ui/primitives/input.tsx"
 import { Select } from "../../ui/primitives/select.tsx"
 import { createProductMutation, createProductsQuery } from "./queries.ts"
@@ -17,17 +19,28 @@ const typeLabels = {
   consumable: "Consumable",
   service: "Service",
 } as const
+
 const typeOptions = Object.entries(typeLabels).map(([value, label]) => ({ value, label }))
 
-const text = (value: unknown) => (typeof value === "string" ? value.trim() : "")
+const text = (value: FormValue[string] | undefined) =>
+  Predicate.isString(value) ? value.trim() : ""
+
+/** The selected product type; anything else falls back to stockable, the form default. */
+const productTypeOf = (value: string) =>
+  Match.value(value).pipe(
+    Match.when("consumable", () => "consumable" as const),
+    Match.when("service", () => "service" as const),
+    Match.orElse(() => "stockable" as const),
+  )
 
 /** The create payload, or undefined when the code or name is missing. */
-const productPayload = (value: Record<string, unknown>) => {
+const productPayload = (value: FormValue) => {
   const payload = {
     code: text(value.code).toUpperCase(),
     name: text(value.name),
-    type: text(value.type) || "stockable",
+    type: productTypeOf(text(value.type)),
   }
+
   return payload.code !== "" && payload.name !== "" ? payload : undefined
 }
 
@@ -53,15 +66,17 @@ function ProductTable(props: { records: readonly Product[] }) {
   )
 }
 
-function CreateProductDialog(props: { reload: () => Promise<unknown> }) {
+function CreateProductDialog(props: { reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
   let formElement: HTMLFormElement | undefined
+
   const mutation = createProductMutation(scope, () => {
     formElement?.reset()
     setOpen(false)
   })
+
   return (
     <Dialog
       open={open()}
@@ -79,6 +94,7 @@ function CreateProductDialog(props: { reload: () => Promise<unknown> }) {
         onSubmit={(value) => {
           const payload = productPayload(value)
           setInvalid(payload === undefined)
+
           if (payload !== undefined && !mutation.isPending) mutation.mutate(payload)
         }}
       >
@@ -136,6 +152,7 @@ function CreateProductDialog(props: { reload: () => Promise<unknown> }) {
 export function Products() {
   const scope = useContext(ApiRuntime)
   const query = createProductsQuery(scope)
+
   return (
     <section class={layout.stack} aria-label="Products">
       <header class={layout.workspaceHeading}>
@@ -145,9 +162,9 @@ export function Products() {
             Goods and services that sales, purchasing, billing, and inventory share.
           </p>
         </div>
-        <CreateProductDialog reload={() => query.refetch()} />
+        <CreateProductDialog reload={() => reloaded(query.refetch())} />
       </header>
-      <QueryBoundary label="products" retry={() => query.refetch()}>
+      <QueryBoundary label="products" retry={() => reloaded(query.refetch())}>
         <Show
           when={query.data.length > 0}
           fallback={

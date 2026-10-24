@@ -3,9 +3,10 @@ import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 
 export { ExternalIdentity, IdentityProvider } from "./provider.ts"
+
 export type {
   ExternalIdentity as ExternalIdentityType,
-  IdentityProvider as IdentityProviderShape,
+  IdentityProvider as IdentityProviderContract,
 } from "./provider.ts"
 
 const PositiveSeconds = Schema.Int.check(Schema.isGreaterThan(0))
@@ -16,20 +17,24 @@ export const CreateTenantInput = Schema.Struct({
   slug: Schema.String,
   timezone: Schema.optionalKey(NonBlankString),
 })
+
 export const IssueSessionInput = Schema.Struct({
   userAccountId: Schema.String,
   ttlSeconds: PositiveSeconds,
 })
+
 export const Tenant = Schema.Struct({
   id: Uuid,
   slug: Schema.String,
   timezone: Schema.String,
 })
+
 export const Session = Schema.Struct({
   id: Schema.String,
   userAccountId: Schema.String,
   expiresAt: Schema.String,
 })
+
 export const Principal = Schema.Struct({
   userAccountId: Schema.String,
   sessionId: Schema.String,
@@ -39,7 +44,9 @@ export const Principal = Schema.Struct({
 })
 
 export type Tenant = Schema.Schema.Type<typeof Tenant>
+
 export type Session = Schema.Schema.Type<typeof Session>
+
 export type Principal = Schema.Schema.Type<typeof Principal>
 
 export interface IssuedSession {
@@ -52,7 +59,7 @@ export interface AuthService {
     slug: string,
   ) => Effect.Effect<Tenant | undefined, import("../../../foundation/mod.ts").DatabaseFailure>
   readonly createTenant: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof CreateTenantInput>,
   ) => Effect.Effect<
     Tenant,
     | import("./errors.ts").TenantAlreadyExists
@@ -60,7 +67,7 @@ export interface AuthService {
     | Schema.SchemaError
   >
   readonly issueSession: (
-    input: unknown,
+    input: Schema.Codec.Encoded<typeof IssueSessionInput>,
   ) => Effect.Effect<
     IssuedSession,
     | import("./errors.ts").SessionUserAccountNotFound

@@ -23,13 +23,14 @@ import {
   AccountingCapabilities,
   FinancialEngineCutoverBlocked,
   FinancialLedgerPort,
-  type FinancialOperationServiceShape,
+  type FinancialOperationServiceContract,
   FinancialReconciliationCheckpointEvidenceInvalid,
   FinancialVerificationArtifactInvalid,
   makeAccountingService,
   makeFinancialLedgerTestLayer,
   makeFinancialOperationService,
   type ReconcileFinancialCheckpointInputType,
+  FinancialBalanceOutcome,
 } from "../mod.ts"
 import {
   type FinancialStoreInventoryType,
@@ -38,21 +39,25 @@ import {
   FinancialVerificationSigner,
   hashFinancialStoreWatermarks,
 } from "../mod.ts"
+import { postgresConstraint } from "../../../../tests/support/postgres-error.ts"
+import { partial } from "../../../../tests/support/partial.ts"
 
 const databaseUrl = process.env["DATABASE_URL"]
-const sales = {} as SalesService
+const sales = partial<SalesService>()({})
 
 it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover state machine", () =>
   withTemporaryDatabase(databaseUrl!, (client) =>
     Effect.gen(function* () {
       yield* runMigrations(client)
       const database = makePostgresDatabase(client)
+
       const [tenant] = yield* Effect.promise(
         () =>
           client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
           `,
       )
+
       const [organization] = yield* Effect.promise(
         () =>
           client<{ id: string }[]>`
@@ -60,6 +65,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
             values (${tenant!.id}, 'organization', 'Cutover Organization') returning id
           `,
       )
+
       const [legalEntity] = yield* Effect.promise(
         () =>
           client<{ id: string }[]>`
@@ -67,6 +73,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
             values (${tenant!.id}, ${organization!.id}) returning id
           `,
       )
+
       yield* Effect.promise(
         () =>
           client`
@@ -85,15 +92,19 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
               (${tenant!.id}, '4000', 'Revenue', 'revenue')
           `,
       )
+
       const principal = {
         userAccountId: uuidv7(),
         sessionId: uuidv7(),
       }
+
       const generatedSigner = yield* generateEd25519FinancialVerificationSigner("test-key")
+
       const signer = yield* Effect.provide(
         Effect.service(FinancialVerificationSigner),
         generatedSigner.layer,
       )
+
       const authorization = makeAuthorizationTestLayer([
         {
           userAccountId: principal.userAccountId,
@@ -121,7 +132,9 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
           capability: AccountingCapabilities.financialEvidenceRecord,
         },
       ])
+
       const messaging = yield* makeMessagingService.pipe(Effect.provideService(Database, database))
+
       const service = yield* Effect.provide(
         makeAccountingService,
         Layer.mergeAll(
@@ -139,6 +152,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
         tenantId: tenant!.id,
         legalEntityId: legalEntity!.id,
       })
+
       assert.strictEqual(prepared.status, "preparing_tigerbeetle")
 
       const evidence = {
@@ -169,11 +183,13 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
         startedAt: "2026-08-18T00:00:00.000Z",
         completedAt: "2026-08-18T00:01:00.000Z",
       }
+
       const rejected = yield* service.recordFinancialVerificationArtifact({
         principal,
         tenantId: tenant!.id,
         evidence,
       })
+
       assert.strictEqual(rejected.status, "rejected")
       assert.strictEqual(rejected.signatureAlgorithm, "Ed25519")
       const rejectedSignature = yield* Effect.fromResult(Base64Url.decode(rejected.signature))
@@ -181,6 +197,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
         yield* signer.verify(new TextEncoder().encode(rejected.artifactHash), rejectedSignature),
         true,
       )
+
       const artifactMutation = yield* Effect.flip(
         Effect.tryPromise({
           try: () =>
@@ -192,10 +209,12 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
           catch: (cause) => cause,
         }),
       )
+
       assert.strictEqual(
-        (artifactMutation as { constraint_name?: string }).constraint_name,
+        postgresConstraint(artifactMutation),
         "financial_verification_artifacts_immutable",
       )
+
       const blocked = yield* Effect.flip(
         service.approveTigerBeetleCutover({
           principal,
@@ -204,8 +223,10 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
           evidenceArtifactId: rejected.id,
         }),
       )
+
       assert.instanceOf(blocked, FinancialVerificationArtifactInvalid)
       assert.strictEqual(blocked.reason, "mismatch")
+
       const wrongCurrency = yield* Effect.flip(
         service.recordFinancialVerificationArtifact({
           principal,
@@ -213,6 +234,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
           evidence: { ...evidence, currency: "EUR", mismatchCount: 0 },
         }),
       )
+
       assert.instanceOf(wrongCurrency, FinancialVerificationArtifactInvalid)
       assert.strictEqual(wrongCurrency.reason, "scope_mismatch")
 
@@ -221,6 +243,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
         tenantId: tenant!.id,
         evidence: { ...evidence, mismatchCount: 0 },
       })
+
       const [forged] = yield* Effect.promise(
         () =>
           client<{ id: string }[]>`
@@ -249,6 +272,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
               returning id
             `,
       )
+
       const forgedApproval = yield* Effect.flip(
         service.approveTigerBeetleCutover({
           principal,
@@ -257,6 +281,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
           evidenceArtifactId: forged!.id,
         }),
       )
+
       assert.instanceOf(forgedApproval, FinancialVerificationArtifactInvalid)
       assert.strictEqual(forgedApproval.reason, "unsigned")
       yield* Effect.promise(
@@ -267,6 +292,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
               where tenant_id = ${tenant!.id} and legal_entity_id = ${legalEntity!.id}
             `,
       )
+
       const driftedApproval = yield* Effect.flip(
         service.approveTigerBeetleCutover({
           principal,
@@ -275,6 +301,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
           evidenceArtifactId: verified.id,
         }),
       )
+
       assert.instanceOf(driftedApproval, FinancialVerificationArtifactInvalid)
       assert.strictEqual(driftedApproval.reason, "scope_mismatch")
       yield* Effect.promise(
@@ -304,12 +331,14 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
               )
             `,
       )
+
       const approved = yield* service.approveTigerBeetleCutover({
         principal,
         tenantId: tenant!.id,
         legalEntityId: legalEntity!.id,
         evidenceArtifactId: verified.id,
       })
+
       assert.strictEqual(approved.status, "approved")
       assert.strictEqual(approved.approvedBy, principal.userAccountId)
 
@@ -318,6 +347,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
         tenantId: tenant!.id,
         legalEntityId: legalEntity!.id,
       })
+
       assert.strictEqual(activated.status, "tigerbeetle")
       assert.strictEqual(activated.activatedBy, principal.userAccountId)
 
@@ -326,6 +356,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
         tenantId: tenant!.id,
         legalEntityId: legalEntity!.id,
       })
+
       assert.deepStrictEqual(idempotent, activated)
 
       const [configuration] = yield* Effect.promise(
@@ -336,6 +367,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
             where tenant_id = ${tenant!.id} and legal_entity_id = ${legalEntity!.id}
           `,
       )
+
       assert.strictEqual(configuration!.financial_engine, "tigerbeetle")
 
       yield* Effect.promise(
@@ -346,6 +378,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
               values (${tenant!.id}, ${legalEntity!.id}, '1900-01-01', '2100-12-31', 'open')
             `,
       )
+
       const accountRows = yield* Effect.promise(
         () =>
           client<{ id: string; code: string }[]>`
@@ -354,7 +387,9 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
               order by code
             `,
       )
+
       const jobs = yield* makeProcessJobEnqueuer.pipe(Effect.provideService(Database, database))
+
       let observedSourceWatermark: FinancialStoreWatermarkType = {
         authority: "postgresql",
         scope: `tenant:${tenant!.id}/legal-entity:${legalEntity!.id}`,
@@ -363,6 +398,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
         consistency: "bounded",
         capturedAt: "2026-08-30T00:00:00.000Z",
       }
+
       let observedTargetWatermark: FinancialStoreWatermarkType = {
         authority: "tigerbeetle",
         scope: "provider:tigerbeetle",
@@ -371,16 +407,19 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
         consistency: "bounded",
         capturedAt: "2026-08-30T00:00:00.000Z",
       }
+
       const observationRegistry = Layer.succeed(FinancialStoreObservationRegistry, {
         collect: (authority) =>
           Effect.succeed(
             authority === "postgresql" ? observedSourceWatermark : observedTargetWatermark,
           ),
         scan: (authority, input) => {
+          // SAFETY: the test calls this double only with inputs of the shape it reads.
           const request = input as {
             readonly scope: string
             readonly watermark: FinancialStoreWatermarkType
           }
+
           return Effect.succeed({
             authority,
             scope: request.scope,
@@ -390,8 +429,9 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
           } satisfies FinancialStoreInventoryType)
         },
       })
+
       const reconcileCheckpoint = (
-        operationService: FinancialOperationServiceShape,
+        operationService: FinancialOperationServiceContract,
         input: ReconcileFinancialCheckpointInputType,
         consistency: FinancialStoreWatermarkType["consistency"] = "bounded",
       ) =>
@@ -403,15 +443,18 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
             snapshotRef: input.sourceSnapshotRef?.trim() ?? `postgres:${uuidv7()}`,
             consistency,
           }
+
           const targetWatermark: FinancialStoreWatermarkType = {
             ...observedTargetWatermark,
             value: input.targetWatermark?.trim() ?? `tigerbeetle:${uuidv7()}`,
             snapshotRef: input.targetSnapshotRef?.trim() ?? `tigerbeetle:${uuidv7()}`,
             consistency,
           }
+
           observedSourceWatermark = sourceWatermark
           observedTargetWatermark = targetWatermark
           const recoveryHash = yield* hashFinancialStoreWatermarks(sourceWatermark, targetWatermark)
+
           return yield* operationService.reconcileFinancialCheckpoint({
             ...input,
             recoveryWatermark: `observation:${recoveryHash}`,
@@ -421,11 +464,14 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
             targetSnapshotRef: targetWatermark.snapshotRef,
           })
         })
+
       const operationLedger = makeFinancialLedgerTestLayer()
+
       const operationLedgerService = yield* Effect.provide(
         Effect.service(FinancialLedgerPort),
         operationLedger,
       )
+
       const operationDependencies = Layer.mergeAll(
         Layer.succeed(Database, database),
         authorization,
@@ -435,10 +481,12 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
         Layer.succeed(FinancialLedgerPort, operationLedgerService),
         observationRegistry,
       )
+
       const operationService = yield* Effect.provide(
         makeFinancialOperationService,
         operationDependencies,
       )
+
       const operationInput = {
         principal,
         tenantId: tenant!.id,
@@ -461,11 +509,14 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
         ],
         correlationId: `cutover-correlation-${uuidv7()}`,
       }
+
       const operation = yield* operationService.createJournalIntent(operationInput)
+
       const accepted = yield* operationService.submitFinancialOperation({
         tenantId: tenant!.id,
         operationId: operation.operationId,
       })
+
       assert.strictEqual(accepted.status, "reconciled")
       yield* Effect.promise(
         () =>
@@ -474,6 +525,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
               where tenant_id = ${tenant!.id} and operation_id = ${operation.id}
             `,
       )
+
       const missingProjectionCheckpoint = yield* reconcileCheckpoint(operationService, {
         principal,
         tenantId: tenant!.id,
@@ -485,6 +537,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
         targetSnapshotRef: "tigerbeetle:missing-projection-snapshot",
         evidenceArtifactId: null,
       })
+
       assert.strictEqual(missingProjectionCheckpoint.status, "blocked")
       assert.isAbove(missingProjectionCheckpoint.mismatchCount, 0)
       yield* Effect.promise(
@@ -498,12 +551,15 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
               )
             `,
       )
+
       const rebuilt = yield* operationService.rebuildFinancialProjections({
         principal,
         tenantId: tenant!.id,
         legalEntityId: legalEntity!.id,
       })
+
       assert.isAtLeast(rebuilt.rebuiltOperations, 1)
+
       const checkpoint = yield* reconcileCheckpoint(operationService, {
         principal,
         tenantId: tenant!.id,
@@ -515,7 +571,9 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
         targetSnapshotRef: "tigerbeetle:test-snapshot",
         evidenceArtifactId: null,
       })
+
       assert.strictEqual(checkpoint.status, "verified")
+
       const hashMismatchCheckpoint = yield* Effect.flip(
         reconcileCheckpoint(
           operationService,
@@ -533,13 +591,16 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
           "snapshot",
         ),
       )
+
       assert.instanceOf(hashMismatchCheckpoint, FinancialReconciliationCheckpointEvidenceInvalid)
       assert.strictEqual(hashMismatchCheckpoint.reason, "hash_mismatch")
+
       const pendingIntent = yield* operationService.createJournalIntent({
         ...operationInput,
         operationId: `cutover-pending-intent-${uuidv7()}`,
         reference: `cutover-pending-intent-${uuidv7()}`,
       })
+
       const pendingCheckpoint = yield* reconcileCheckpoint(operationService, {
         principal,
         tenantId: tenant!.id,
@@ -551,9 +612,11 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
         targetSnapshotRef: "tigerbeetle:pending-intent-snapshot",
         evidenceArtifactId: null,
       })
+
       assert.strictEqual(pendingCheckpoint.status, "blocked")
       assert.isAbove(pendingCheckpoint.mismatchCount, 0)
       assert.strictEqual(pendingIntent.status, "intent")
+
       const mappingMismatchArtifact = yield* service.recordFinancialVerificationArtifact({
         principal,
         tenantId: tenant!.id,
@@ -567,7 +630,9 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
           targetSnapshotRef: "tigerbeetle:mapping-artifact-snapshot",
         },
       })
+
       assert.strictEqual(mappingMismatchArtifact.status, "verified")
+
       const mappingMismatchCheckpoint = yield* Effect.flip(
         reconcileCheckpoint(operationService, {
           principal,
@@ -581,13 +646,16 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
           evidenceArtifactId: mappingMismatchArtifact.id,
         }),
       )
+
       assert.instanceOf(mappingMismatchCheckpoint, FinancialReconciliationCheckpointEvidenceInvalid)
       assert.strictEqual(mappingMismatchCheckpoint.reason, "mapping_version_mismatch")
 
       let failReceipt = true
+
+      // SAFETY: the double keeps the real messaging members and replaces only append.
       const failingMessaging = {
         ...messaging,
-        append: (event: unknown) =>
+        append: (event: Parameters<typeof messaging.append>[0]) =>
           failReceipt
             ? Effect.fail(
                 new DatabaseFailure({
@@ -597,6 +665,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
               )
             : messaging.append(event),
       } as typeof messaging
+
       const failingService = yield* Effect.provide(
         makeFinancialOperationService,
         Layer.mergeAll(
@@ -609,19 +678,24 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
           observationRegistry,
         ),
       )
+
       const failedInput = {
         ...operationInput,
         operationId: `cutover-draft-${uuidv7()}`,
         reference: `cutover-draft-${uuidv7()}`,
       }
+
       yield* failingService.createJournalIntent(failedInput)
+
       const receiptFailure = yield* Effect.flip(
         failingService.submitFinancialOperation({
           tenantId: tenant!.id,
           operationId: failedInput.operationId,
         }),
       )
+
       assert.instanceOf(receiptFailure, DatabaseFailure)
+
       const [failedState] = yield* Effect.promise(
         () =>
           client<
@@ -642,11 +716,13 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
                 and operation.operation_id = ${failedInput.operationId}
             `,
       )
+
       assert.deepStrictEqual(failedState, {
         status: "accepted",
         journal_status: "draft",
         transfer_status: "unresolved",
       })
+
       const draftCheckpoint = yield* reconcileCheckpoint(failingService, {
         principal,
         tenantId: tenant!.id,
@@ -658,13 +734,16 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
         targetSnapshotRef: "tigerbeetle:draft-journal-snapshot",
         evidenceArtifactId: null,
       })
+
       assert.strictEqual(draftCheckpoint.status, "blocked")
       assert.isAbove(draftCheckpoint.mismatchCount, 0)
       failReceipt = false
+
       const recovered = yield* failingService.submitFinancialOperation({
         tenantId: tenant!.id,
         operationId: failedInput.operationId,
       })
+
       assert.strictEqual(recovered.status, "reconciled")
       yield* Effect.promise(
         () =>
@@ -674,6 +753,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
               where tenant_id = ${tenant!.id} and operation_id = ${operation.id}
             `,
       )
+
       const quarantinedTransferCheckpoint = yield* reconcileCheckpoint(operationService, {
         principal,
         tenantId: tenant!.id,
@@ -685,15 +765,16 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
         targetSnapshotRef: "tigerbeetle:quarantined-transfer-snapshot",
         evidenceArtifactId: null,
       })
+
       assert.strictEqual(quarantinedTransferCheckpoint.status, "blocked")
       assert.isAbove(quarantinedTransferCheckpoint.mismatchCount, 0)
 
       const balanceMismatchLedger = {
         ...operationLedgerService,
-        getBalance: (input: unknown) =>
+        getBalance: (input: Parameters<typeof operationLedgerService.getBalance>[0]) =>
           operationLedgerService.getBalance(input).pipe(
             Effect.map((outcome) =>
-              outcome._tag === "available"
+              FinancialBalanceOutcome.guards.available(outcome)
                 ? {
                     ...outcome,
                     debitsPostedMinor: (BigInt(outcome.debitsPostedMinor) + 1n).toString(),
@@ -702,6 +783,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
             ),
           ),
       }
+
       const balanceMismatchService = yield* Effect.provide(
         makeFinancialOperationService,
         Layer.mergeAll(
@@ -714,6 +796,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
           observationRegistry,
         ),
       )
+
       const balanceMismatchCheckpoint = yield* reconcileCheckpoint(balanceMismatchService, {
         principal,
         tenantId: tenant!.id,
@@ -725,8 +808,10 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
         targetSnapshotRef: "tigerbeetle:balance-mismatch-snapshot",
         evidenceArtifactId: null,
       })
+
       assert.strictEqual(balanceMismatchCheckpoint.status, "blocked")
       assert.isAbove(balanceMismatchCheckpoint.mismatchCount, 0)
+
       const provenanceMismatch = yield* Effect.flip(
         reconcileCheckpoint(operationService, {
           principal,
@@ -740,6 +825,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
           evidenceArtifactId: verified.id,
         }),
       )
+
       assert.instanceOf(provenanceMismatch, FinancialReconciliationCheckpointEvidenceInvalid)
       assert.strictEqual(provenanceMismatch.reason, "provenance_mismatch")
       yield* Effect.promise(
@@ -750,6 +836,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
               where tenant_id = ${tenant!.id} and legal_entity_id = ${legalEntity!.id}
             `,
       )
+
       const driftedCheckpoint = yield* Effect.flip(
         reconcileCheckpoint(operationService, {
           principal,
@@ -763,6 +850,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
           evidenceArtifactId: verified.id,
         }),
       )
+
       assert.instanceOf(driftedCheckpoint, FinancialReconciliationCheckpointEvidenceInvalid)
       assert.strictEqual(driftedCheckpoint.reason, "scope_mismatch")
       yield* Effect.promise(
@@ -773,17 +861,21 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
               where tenant_id = ${tenant!.id} and legal_entity_id = ${legalEntity!.id}
             `,
       )
+
       const mixedMappingOperation = yield* operationService.createJournalIntent({
         ...operationInput,
         operationId: `cutover-mapping-v2-${uuidv7()}`,
         reference: `cutover-mapping-v2-${uuidv7()}`,
         mappingVersion: 2,
       })
+
       const mixedMappingAccepted = yield* operationService.submitFinancialOperation({
         tenantId: tenant!.id,
         operationId: mixedMappingOperation.operationId,
       })
+
       assert.strictEqual(mixedMappingAccepted.status, "reconciled")
+
       const mixedMappingCheckpoint = yield* Effect.flip(
         reconcileCheckpoint(operationService, {
           principal,
@@ -797,6 +889,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
           evidenceArtifactId: null,
         }),
       )
+
       assert.instanceOf(mixedMappingCheckpoint, FinancialReconciliationCheckpointEvidenceInvalid)
       assert.strictEqual(mixedMappingCheckpoint.reason, "mapping_version_mismatch")
 
@@ -807,6 +900,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
             values (${tenant!.id}, 'organization', 'Second Cutover Organization') returning id
           `,
       )
+
       const [otherEntity] = yield* Effect.promise(
         () =>
           client<{ id: string }[]>`
@@ -814,6 +908,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
             values (${tenant!.id}, ${otherOrganization!.id}) returning id
           `,
       )
+
       yield* Effect.promise(
         () =>
           client`
@@ -823,12 +918,15 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
             values (${tenant!.id}, ${otherEntity!.id}, 'USD', 2, 1, true)
           `,
       )
+
       const otherPrepared = yield* service.prepareTigerBeetleCutover({
         principal,
         tenantId: tenant!.id,
         legalEntityId: otherEntity!.id,
       })
+
       assert.strictEqual(otherPrepared.status, "preparing_tigerbeetle")
+
       const otherEvidence = {
         ...evidence,
         legalEntityId: otherEntity!.id,
@@ -846,12 +944,15 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
         transferCount: 0,
         mismatchCount: 0,
       }
+
       const otherArtifact = yield* service.recordFinancialVerificationArtifact({
         principal,
         tenantId: tenant!.id,
         evidence: otherEvidence,
       })
+
       assert.strictEqual(otherArtifact.status, "verified")
+
       const missingCheckpointApproval = yield* Effect.flip(
         service.approveTigerBeetleCutover({
           principal,
@@ -860,8 +961,10 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
           evidenceArtifactId: otherArtifact.id,
         }),
       )
+
       assert.instanceOf(missingCheckpointApproval, FinancialEngineCutoverBlocked)
       assert.strictEqual(missingCheckpointApproval.reason, "verification_mismatch")
+
       const [otherPeriod] = yield* Effect.promise(
         () =>
           client<{ id: string }[]>`
@@ -871,6 +974,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
               returning id
             `,
       )
+
       const [otherJournal] = yield* Effect.promise(
         () =>
           client<{ id: string }[]>`
@@ -879,6 +983,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
               returning id
             `,
       )
+
       yield* Effect.promise(
         () =>
           client`
@@ -897,6 +1002,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
               )
             `,
       )
+
       const manualRecoveryCheckpoint = yield* reconcileCheckpoint(operationService, {
         principal,
         tenantId: tenant!.id,
@@ -908,8 +1014,10 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
         targetSnapshotRef: "tigerbeetle:manual-recovery-checkpoint-snapshot",
         evidenceArtifactId: null,
       })
+
       assert.strictEqual(manualRecoveryCheckpoint.status, "blocked")
       assert.isAbove(manualRecoveryCheckpoint.mismatchCount, 0)
+
       const manualRecoveryApproval = yield* Effect.flip(
         service.approveTigerBeetleCutover({
           principal,
@@ -918,6 +1026,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
           evidenceArtifactId: otherArtifact.id,
         }),
       )
+
       assert.instanceOf(manualRecoveryApproval, FinancialEngineCutoverBlocked)
       assert.strictEqual(manualRecoveryApproval.reason, "unresolved_operations")
 
@@ -932,8 +1041,9 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
           catch: (cause) => cause,
         }),
       )
+
       assert.strictEqual(
-        (bypass as { constraint_name?: string }).constraint_name,
+        postgresConstraint(bypass),
         "legal_entity_accounting_engine_activation_gate_check",
       )
     }),

@@ -17,6 +17,7 @@ type PartyFieldProps = Omit<JSX.SelectHTMLAttributes<HTMLSelectElement>, "class"
 
 export function PartyField(props: PartyFieldProps) {
   const selectProps = omit(props, "class", "label", "error", "options", "placeholder")
+
   return (
     <FieldShell label={props.label} error={props.error} id={props.id} class={props.class}>
       {(fieldProps) => (

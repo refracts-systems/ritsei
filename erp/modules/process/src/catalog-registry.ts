@@ -17,6 +17,7 @@ export const ResolveProcessCatalogInput = Schema.Struct({
   id: NonEmptyString,
   version: PositiveInt,
 })
+
 export type ResolveProcessCatalogInput = Schema.Schema.Type<typeof ResolveProcessCatalogInput>
 
 export class ProcessCatalogConflict extends Schema.TaggedError<ProcessCatalogConflict>()(
@@ -45,8 +46,10 @@ export const makeProcessCatalogRegistry = (
   entries: readonly ProcessCatalogEntry[],
 ): Effect.Effect<ProcessCatalogRegistry, ProcessCatalogConflict> => {
   const byKey = new Map<string, ProcessCatalogEntry>()
+
   for (const entry of entries) {
     const key = entryKey(entry)
+
     if (byKey.has(key)) {
       return Effect.fail(
         new ProcessCatalogConflict({
@@ -56,6 +59,7 @@ export const makeProcessCatalogRegistry = (
         }),
       )
     }
+
     byKey.set(key, entry)
   }
 
@@ -63,6 +67,7 @@ export const makeProcessCatalogRegistry = (
     entries: [...entries],
     resolveReleasedCapability: (input) => {
       const entry = byKey.get(lookupKey(input))
+
       return entry?.stability === "PUBLIC" ? entry : undefined
     },
   })

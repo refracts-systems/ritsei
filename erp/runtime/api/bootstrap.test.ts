@@ -28,8 +28,10 @@ import {
 } from "../../modules/party/mod.ts"
 import { SalesService } from "../../modules/sales/mod.ts"
 import { bootstrapTenant } from "./bootstrap.ts"
+import { partial } from "../../../tests/support/partial.ts"
 
 const principal = { userAccountId: "bootstrap-admin", sessionId: "session" }
+
 const input = {
   principal,
   slug: "acme",
@@ -41,7 +43,7 @@ const input = {
   dedicatedJournalCode: "JKT-OPS",
   warehouseName: "Jakarta Main",
   baseCurrency: "usd",
-  precision: 2,
+  precision: 2 as const,
   fiscalYearStartMonth: 1,
   postingEnabled: true,
 }
@@ -55,22 +57,26 @@ const withBootstrap = <A, E>(
 ) => {
   const authorizationLayer = makeAuthorizationTestLayer()
   const messagingLayer = makeMessagingTestLayer()
+
   const accountingLayer = makeAccountingTestLayer().pipe(
     Layer.provide(
       Layer.mergeAll(
         authorizationLayer,
         messagingLayer,
-        Layer.succeed(SalesService, {
-          getConfirmedOrderTotal: () => Effect.succeed("0.00"),
-        } as unknown as SalesService),
+        Layer.succeed(
+          SalesService,
+          partial<SalesService>()({ getConfirmedOrderTotal: () => Effect.succeed("0.00") }),
+        ),
       ),
     ),
   )
+
   const businessLayers = Layer.mergeAll(
     makePartyTestLayer(),
     accountingLayer,
     makeInventoryTestLayer(),
   ).pipe(Layer.provide(Layer.merge(authorizationLayer, messagingLayer)))
+
   return Effect.provide(
     program,
     Layer.mergeAll(makeAuthTestLayer(), authorizationLayer, businessLayers),
@@ -155,6 +161,7 @@ it.effect("preserves typed failure boundaries around the bootstrap result", () =
         tenantId: result.tenant.id,
         capability: "party.party_identifier.attach",
       })
+
       const identifier = {
         principal,
         tenantId: result.tenant.id,
@@ -164,6 +171,7 @@ it.effect("preserves typed failure boundaries around the bootstrap result", () =
         scope: "global",
         value: "ACME-1",
       }
+
       yield* party.attachIdentifier(identifier)
       assert.instanceOf(
         yield* Effect.flip(party.attachIdentifier(identifier)),
@@ -175,12 +183,14 @@ it.effect("preserves typed failure boundaries around the bootstrap result", () =
         tenantId: result.tenant.id,
         capability: "inventory.stock_transfer.create",
       })
+
       const otherWarehouse = yield* inventory.createWarehouse({
         principal,
         tenantId: result.tenant.id,
         legalEntityId: "00000000-0000-4000-8000-000000000012",
         name: "Other Entity Warehouse",
       })
+
       assert.instanceOf(
         yield* Effect.flip(
           inventory.createTransfer({

@@ -58,14 +58,17 @@ const collectFiles = async (
   directory: string,
 ): Promise<readonly { readonly path: string; readonly size: number }[]> => {
   const files: { path: string; size: number }[] = []
+
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     const path = `${directory}/${entry.name}`
+
     if (entry.isDirectory()) {
       files.push(...(await collectFiles(path)))
     } else if (entry.isFile()) {
       files.push({ path, size: (await stat(path)).size })
     }
   }
+
   return files
 }
 
@@ -107,6 +110,7 @@ it.effect(
           await page.getByRole("button", { name: "Dark theme", exact: true }).click()
           await page.getByRole("button", { name: "Dark theme", exact: true }).click()
         }
+
         assert.equal(await page.getByRole("main").count(), 1)
         assert.deepEqual(errors, [])
 

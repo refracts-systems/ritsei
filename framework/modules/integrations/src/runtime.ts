@@ -1,6 +1,7 @@
 import * as Effect from "effect/Effect"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
+import * as Predicate from "effect/Predicate"
 
 import { CloudEventsEnvelope } from "./cloudevents.ts"
 import {
@@ -28,6 +29,7 @@ import {
 } from "./store.ts"
 
 const Uuid = Schema.String.check(Schema.isUUID())
+
 const BoundedNonEmptyString = Schema.String.check(
   Schema.isPattern(/\S/),
   Schema.isMaxLength(ExternalCatalogLimits.maxIdentifierLength),
@@ -91,7 +93,8 @@ const catalogIdentifier = (
   value: { readonly id?: unknown } | null | undefined,
   fallback: string,
 ): string => {
-  const id = typeof value?.id === "string" && value.id.trim() !== "" ? value.id : undefined
+  const id = Predicate.isString(value?.id) && value.id.trim() !== "" ? value.id : undefined
+
   return id === undefined ? fallback : id.slice(0, ExternalCatalogLimits.maxIdentifierLength)
 }
 
@@ -136,6 +139,7 @@ export const makeExternalConnectorRuntime = (options: {
       Effect.result,
       Effect.flatMap((result) => {
         if (Result.isSuccess(result)) return Effect.succeed(result.success)
+
         if (
           result.failure instanceof ExternalProviderFailure &&
           result.failure.retryable &&
@@ -143,6 +147,7 @@ export const makeExternalConnectorRuntime = (options: {
         ) {
           return invokeWithBoundedRetry(input, attempt + 1)
         }
+
         return Effect.fail(result.failure)
       }),
     )
@@ -150,6 +155,7 @@ export const makeExternalConnectorRuntime = (options: {
   const invokeAction: ExternalConnectorRuntime["invokeAction"] = (input) =>
     Effect.gen(function* () {
       const identifier = catalogIdentifier(input.action, "external-action")
+
       if (!isValidActionInvocation(input)) {
         return yield* Effect.fail(
           new ExternalPayloadInvalid({
@@ -158,6 +164,7 @@ export const makeExternalConnectorRuntime = (options: {
           }),
         )
       }
+
       if (!isAllowlistedExternalAction(input.action) || input.action.stability !== "PUBLIC") {
         return yield* Effect.fail(
           new ExternalActionNotAllowlisted({
@@ -171,6 +178,7 @@ export const makeExternalConnectorRuntime = (options: {
         tenantId: input.tenantId,
         requiredScope: input.action.requiredScope,
       })
+
       const decodedInput = yield* decodeExternalSchema(input.action.inputSchema, input.input).pipe(
         Effect.mapError(
           () =>
@@ -180,7 +188,9 @@ export const makeExternalConnectorRuntime = (options: {
             }),
         ),
       )
+
       const existing = yield* store.getInvocation(input.tenantId, input.idempotencyKey)
+
       if (existing !== undefined) {
         if (
           existing.actionId !== input.action.id ||
@@ -193,6 +203,7 @@ export const makeExternalConnectorRuntime = (options: {
             }),
           )
         }
+
         if (existing.status === "unknown") {
           return yield* Effect.fail(
             new ExternalUnknownOutcome({
@@ -202,6 +213,7 @@ export const makeExternalConnectorRuntime = (options: {
             }),
           )
         }
+
         return existing.output
       }
 
@@ -218,6 +230,7 @@ export const makeExternalConnectorRuntime = (options: {
             : Effect.succeed(undefined),
         ),
       )
+
       const decodedOutput = yield* decodeExternalSchema(input.action.outputSchema, output).pipe(
         Effect.mapError(
           () =>
@@ -227,6 +240,7 @@ export const makeExternalConnectorRuntime = (options: {
             }),
         ),
       )
+
       yield* store.putInvocation({
         tenantId: input.tenantId,
         actionId: input.action.id,
@@ -235,6 +249,7 @@ export const makeExternalConnectorRuntime = (options: {
         status: "accepted",
         output: decodedOutput,
       })
+
       return decodedOutput
     })
 
@@ -244,6 +259,7 @@ export const makeExternalConnectorRuntime = (options: {
   const ingestEvent: ExternalConnectorRuntime["ingestEvent"] = (input) =>
     Effect.gen(function* () {
       const identifier = catalogIdentifier(input.event, "external-event")
+
       if (!isValidEventRegistration(input) || input.event.stability !== "PUBLIC") {
         return yield* Effect.fail(
           new ExternalPayloadInvalid({
@@ -252,6 +268,7 @@ export const makeExternalConnectorRuntime = (options: {
           }),
         )
       }
+
       const envelope = yield* Schema.decodeUnknownEffect(WebhookIngestion)(input.envelope).pipe(
         Effect.mapError(
           () =>
@@ -261,6 +278,7 @@ export const makeExternalConnectorRuntime = (options: {
             }),
         ),
       )
+
       if (envelope.type !== input.event.id) {
         return yield* Effect.fail(
           new ExternalPayloadInvalid({
@@ -269,6 +287,7 @@ export const makeExternalConnectorRuntime = (options: {
           }),
         )
       }
+
       if (envelope.source !== input.event.source) {
         return yield* Effect.fail(
           new ExternalPayloadInvalid({
@@ -277,6 +296,7 @@ export const makeExternalConnectorRuntime = (options: {
           }),
         )
       }
+
       const payload = yield* decodeExternalSchema(input.event.payloadSchema, envelope.data).pipe(
         Effect.mapError(
           () =>
@@ -286,7 +306,9 @@ export const makeExternalConnectorRuntime = (options: {
             }),
         ),
       )
+
       const existing = yield* deduplicateEvent(input.tenantId, envelope.source, envelope.id)
+
       if (existing !== undefined) {
         return {
           duplicate: true,
@@ -296,6 +318,7 @@ export const makeExternalConnectorRuntime = (options: {
           payload: existing.payload,
         }
       }
+
       const receipt: ExternalEventReceipt = {
         tenantId: input.tenantId,
         eventType: input.event.id,
@@ -304,7 +327,9 @@ export const makeExternalConnectorRuntime = (options: {
         providerEventId: envelope.id,
         payload,
       }
+
       yield* store.putEvent(receipt)
+
       return {
         duplicate: false,
         eventId: envelope.id,
@@ -318,4 +343,5 @@ export const makeExternalConnectorRuntime = (options: {
 }
 
 export { makeMemoryExternalConnectorStore }
+
 export type { ExternalConnectorStore, ExternalEventReceipt, ExternalInvocationReceipt }

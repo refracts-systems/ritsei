@@ -111,6 +111,7 @@ export const AccountingTypedActionCatalog = [
   AccountingFinancialOperationPostAction,
   AccountingRevenuePostAction,
 ] as const
+
 export const AccountingTypedEventCatalog = [
   AccountingFinancialOperationReconciledEvent,
   AccountingRevenuePostedEvent,

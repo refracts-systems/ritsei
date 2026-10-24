@@ -8,6 +8,7 @@ type QuantityFieldProps = Omit<JSX.InputHTMLAttributes<HTMLInputElement>, "class
 
 export function QuantityField(props: QuantityFieldProps) {
   const inputProps = omit(props, "class", "label", "error")
+
   return (
     <FieldShell label={props.label} error={props.error} id={props.id} class={props.class}>
       {(fieldProps) => (

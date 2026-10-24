@@ -77,6 +77,7 @@ it("requires an allowlisted operation before publication", () => {
 it("keeps a separate envelope from external payloads", () => {
   assert.strictEqual(paymentSettled.envelope, "CloudEvents 1.0.x")
   assert.strictEqual(paymentSettled.transport, "HTTPS/Webhook")
+  // SAFETY: the comparison only needs reference identity.
   assert.notStrictEqual(paymentSettled.payloadSchema as unknown, paymentSettled.envelope)
   assert.deepStrictEqual(paymentSettled.correlationFields, ["providerPaymentId"])
   assert.deepStrictEqual(paymentSettled.filterableFields, ["providerPaymentId"])
@@ -102,6 +103,7 @@ it.effect("validates external schemas at the contract boundary", () =>
         detail: "",
       }),
     )
+
     assert.strictEqual(invalid._tag, "SchemaError")
   }),
 )

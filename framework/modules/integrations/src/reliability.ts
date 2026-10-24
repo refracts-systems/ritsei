@@ -1,5 +1,6 @@
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import * as Predicate from "effect/Predicate"
 
 import { ExternalCompatibilityMismatch, ExternalPayloadLimitExceeded } from "./errors.ts"
 
@@ -21,7 +22,7 @@ export type ExternalReliabilityInput = {
   readonly attempts: number
   readonly maxAttempts: number
   readonly maxPayloadBytes: number
-  readonly payload: unknown
+  readonly payload: Schema.Json
   readonly sentAtMs: number
   readonly observedAtMs: number
   readonly compatibilityRange: {
@@ -37,7 +38,7 @@ export type ExternalReliabilityDecision = {
   readonly providerStatus: Schema.Schema.Type<typeof ExternalProviderStatus>
   readonly attempts: number
   readonly lagMs: number
-  readonly payload: unknown
+  readonly payload: Schema.Json
 }
 
 const sensitiveField = (key: string): boolean =>
@@ -46,9 +47,18 @@ const sensitiveField = (key: string): boolean =>
   )
 
 // redaction removes credentials before a delivery record is exposed or retained.
-export const redactExternalPayload = (value: unknown): unknown => {
+export const redactExternalPayload = (value: Schema.Json): Schema.Json => {
   if (Array.isArray(value)) return value.map(redactExternalPayload)
-  if (typeof value !== "object" || value === null) return value
+
+  if (
+    value === null ||
+    Predicate.isString(value) ||
+    Predicate.isNumber(value) ||
+    Predicate.isBoolean(value)
+  ) {
+    return value
+  }
+
   return Object.fromEntries(
     Object.entries(value).map(([key, child]) => [
       key,
@@ -78,8 +88,10 @@ export const assessExternalDelivery = (
   }
 
   const encoded = JSON.stringify(input.payload)
+
   const actualPayloadBytes =
     encoded === undefined ? Number.POSITIVE_INFINITY : new TextEncoder().encode(encoded).byteLength
+
   if (actualPayloadBytes > input.maxPayloadBytes) {
     return Effect.fail(
       new ExternalPayloadLimitExceeded({
@@ -98,6 +110,7 @@ export const assessExternalDelivery = (
       : input.attempts >= input.maxAttempts
         ? "dead_letter"
         : "retry"
+
   return Effect.succeed({
     state,
     connectorId: input.connectorId,

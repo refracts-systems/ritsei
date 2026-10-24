@@ -3,7 +3,8 @@
 Source: [dmmulroy/anti-slop](https://github.com/dmmulroy/anti-slop), commit
 `13909c9e07590f5a85d93c62712259fe14a883f7` (2026-10-13), copied with the upstream
 `skills/install-anti-slop/scripts/install.mjs` from the bundled assets. The generic plugin
-(`index.ts`) and the opt-in Effect plugin (`effect/index.ts`) are unmodified copies; the
+(`index.ts`) and the opt-in Effect plugin (`effect/index.ts`) are copies, except where a deviation is
+recorded below (so far `effect/rules/no-service-constructor-imports.ts`); the
 `vendor/eslint-stylistic` files keep their own `UPSTREAM.md` and `LICENSE`.
 
 The files are owned by this repository: change them to match RITSEI's standards, and record each
@@ -17,7 +18,10 @@ formatting, and Fallow because it keeps upstream's tab-indented style.
 `anti-slop/no-reduce-accumulator-copy`, `anti-slop/no-known-value-widening`,
 `anti-slop/no-module-mocking`, `anti-slop/no-object-parameters`, `anti-slop/no-reflect-apply`,
 `anti-slop/no-reflect-get`, `anti-slop/no-unknown-type-aliases`,
-`anti-slop/no-widen-then-assert`, and `anti-slop-effect/no-manual-effect-error-tag`.
+`anti-slop/no-widen-then-assert`, `anti-slop-effect/no-manual-effect-error-tag`,
+`anti-slop-effect/prefer-effect-match`, `anti-slop/no-chained-type-assertions`,
+`anti-slop/no-unsafe-dictionary-type`, `anti-slop/no-runtime-typeof`, `anti-slop/no-unknown-returns`, and
+`anti-slop/require-safety-comment-for-type-assertion` (everywhere, tests included), `anti-slop-effect/no-service-constructor-imports`, `anti-slop/no-shape-in-symbol-names`, `anti-slop/no-conditional-empty-object-spread`, `anti-slop/no-unknown-parameters`, `anti-slop-effect/no-manual-tag-comparison`, `anti-slop-effect/no-manual-tagged-construction`, `anti-slop/require-readable-spacing`.
 
 `pnpm run lint` passes with this set. Fixes made when enabling it:
 
@@ -28,26 +32,77 @@ formatting, and Fallow because it keeps upstream's tab-indented style.
   typed helper, and `compareFinancialFactSnapshots` returns a named type.
 - `no-object-parameters` (1 site): `responseMatches` is generic over the checked owner, so expected
   keys are typed against it.
-- `no-reflect-get` (1 site): the `Proxy` default branch in `request-limits.ts` keeps
-  `Reflect.get` with a justified `oxlint-disable-next-line`.
+- `prefer-effect-match` (13 sites): literal lookups and outcome choices use `Match.value`/`Match.tag`
+  (`Match.exhaustive` where the union is closed), including the process operator's choice of effect.
+- `no-chained-type-assertions` (35 sites): test doubles go through `partial<T>()` in
+  `tests/support/partial.ts`, the one place a double is asserted into its full type. The runtime
+  `postgres.js` client reaches the version check through `asPostgresClient` (now in
+  `framework/platform/postgres`, no longer private to migrations), which also dropped its own two
+  casts. The `solid-effect` experiment (kept as a reference) re-exports the production bridge
+  directly instead of narrowing it with casts.
+- `no-unsafe-dictionary-type` (26 sites): JSON boundaries use `Schema.JsonObject` (OIDC token and
+  key parsing, OpenAPI path items); form payload builders take the existing `FormValue`; helpers
+  that only copy fields are generic over the caller's type; the P0 backfill rows are typed by their
+  selected columns. Test SQL rows use the named row types in `tests/support/sql-row.ts`, and
+  fixture overrides are `Overrides<Fixture>` (`tests/support/overrides.ts`).
+- `no-runtime-typeof` (60 sites, no `allowInTypeGuards` exemption): checks
+  became `effect/Predicate` guards (`isString`, `isNumber`, `isFunction`, `isObjectOrArray`);
+  values already typed as `Schema.Json` branch on `Array.isArray` and scalar guards so the union
+  stays narrowed; tests use `assert.isFunction`. The boneyard probe reports
+  `snapshotIsFunction` instead of a `typeof` string, and the standalone `verify-r.mjs` script
+  probes with `instanceof Function`.
+- `no-unknown-returns` (73 sites): web reload and retry callbacks return `Promise<void>`, and
+  producers wrap their refetches in `reloaded()` (`request-feedback.tsx`); the OIDC JSON reader
+  decodes with `Schema.Json`; event payload callbacks return `Schema.Json`; postgres test helpers
+  are generic over their result. `canonicalize` is one generic helper in `framework/foundation`,
+  `redactExternalPayload` takes and returns `Schema.Json`, and `unwrapCause` became a loop.
+- `require-safety-comment-for-type-assertion` (production source and tests; the test exemption was removed): where the type
+  could be proven, the assertion went away (annotated empty arrays, `Predicate.hasProperty` for
+  errno codes through `tooling/errno.ts`, `find` instead of a membership check plus cast, type
+  predicates in `Array.find`, `Form` handing callers its `FormData`). The rest carry a `SAFETY:`
+  comment naming the invariant: a database check constraint, a prior validation, or a module-owned
+  writer. Tests gained `postgresCode`/`postgresConstraint` (`tests/support/postgres-error.ts`) in
+  place of about 215 `as { code?: string }` casts, narrow with `assert.instanceOf`, and build
+  doubles with `partial<T>()`; the rest carry a `SAFETY:` comment.
+- `anti-slop-effect/no-service-constructor-imports` (109 sites): the vendored rule now skips test
+  support, `tooling/`, and imports from the same directory (`./`), since a constructor imported
+  from a sibling stays inside its owning module (a deviation from upstream, in
+  `effect/rules/no-service-constructor-imports.ts`). Helpers and builders that were not service
+  constructors lost the `make` prefix (`scopedCommand`, `moduleApi`, `apiErrorMapping`,
+  `createDocumentSnapshot`, `financialLedgerLayer`, ...). The composition root in
+  `erp/runtime/layers.ts` imports each module's `...Live` layer instead of rebuilding it from
+  `make<Service>`; Accounting gained `AccountingServiceLive` and Process `ProcessJobEnqueuerLive`
+  for that.
+- `no-shape-in-symbol-names` (111 sites, 38 symbols): service interfaces exported as
+  `...ServiceShape` are now `...ServiceContract`, store and input types follow the same suffix,
+  `InvalidTokenShape` is `InvalidTokenFormat`, and `capabilityIdShape` is `capabilityIdPattern`.
+  The module generator templates were updated with them.
+- `no-conditional-empty-object-spread` (51 sites): optional keys are omitted through
+  `omitUndefined`/`omitNullish` (`framework/foundation/optional`) in server code and
+  `definedFields`/`presentFields` (`apps/web/src/shared/api.ts`) in the web app, so the
+  `...(x === undefined ? {} : { x })` pattern is gone.
+- `no-unknown-parameters` (668 sites, ADR-0105): service and port operations take the encoded type
+  of the schema that decodes them, interfaces and implementations alike, and still decode at
+  runtime. Stored JSON (`jsonb` columns, checkpoints, mapping files) is typed as JSON through the
+  `json()` column helper and `Schema.Json`; error predicates and pass-through helpers are generic;
+  capability parameters use the catalog `Capability` union. Tests that send invalid input build it
+  with `partial<T>()(value)`. The migration ran module by module behind a shrinking `overrides`
+  block, now removed.
+- `no-manual-tag-comparison` and `no-manual-tagged-construction` (about 330 sites): outcomes that stay in
+  memory are `Data.taggedEnum` types with PascalCase tags, built with their variant constructors and
+  consumed with `$match`/`$is`. Outcomes defined by a Schema (email and document nodes, the financial
+  ledger port outcomes) are `Schema.TaggedStruct` members joined with `Schema.toTaggedUnion`, built with
+  `.make` and consumed with `.match` or `.guards`; their tag values did not change. Effect built-ins use
+  `Option.isSome`, `Result.isSuccess` and `Exit.isFailure`, failure unions use `Match.valueTags` or
+  `Effect.catchTag`. Tests build error and wire fixtures from the real classes; an invalid wire body is a
+  valid instance with one field overridden. One exception: `PlatformError.systemError` takes an option
+  named `_tag` (`crypto/adapter.ts`), which carries an inline disable with the reason. The earlier note
+  that hand-matched outcome unions were a repo convention was wrong: no ADR required them.
+- `no-reflect-get` (1 site): the `Proxy` default branch in `request-limits.ts` reads the wrapped
+  request directly, with a `SAFETY:` comment.
+- `require-readable-spacing` (8468 sites): the autofix only inserts blank lines, which oxfmt keeps, so
+  the rule and the formatter agree. It ran as one commit that is listed in `.git-blame-ignore-revs`.
 
 ## Rules left off, and why
 
-Counts are Oxlint findings when each rule was enabled alone. Enable a rule only together with the
-cleanup it needs.
-
-| Rule | Findings | Reason |
-| --- | --- | --- |
-| `no-unknown-parameters` | 668 | Module services take `input: unknown` and decode it with Effect Schema at the boundary (`AGENTS.md`, default Effect feature shape); the rule targets the opposite pattern. |
-| `no-unknown-returns` | 73 | Boundary canonicalizers and JSON readers return `unknown` before parsing. |
-| `no-unsafe-dictionary-type` | 26 | `Record<string, unknown>` marks untrusted payloads (events, evidence, responses). |
-| `no-runtime-typeof` | 60 | Frontend and platform adapters narrow untrusted values without a schema. |
-| `no-conditional-empty-object-spread` | 51 | `...(x === undefined ? {} : { x })` is how optional keys are omitted for `Schema.optionalKey`; assigning `undefined` is not equivalent. |
-| `no-chained-type-assertions` | 35 | `as unknown as` in test doubles; needs a typed fixture approach first. |
-| `no-shape-in-symbol-names` | 110 | Effect service interfaces are named `...ServiceShape` by repository convention. |
-| `require-safety-comment-for-type-assertion` | 429 | Needs a repository-wide assertion cleanup. |
-| `require-readable-spacing` | 8468 | Formatting belongs to oxfmt; the autofix would rewrite most files and fight the formatter. |
-| `anti-slop-effect/no-manual-tag-comparison` | 146 | Outcome unions (`{ _tag: "posted" }`) are matched by hand throughout. |
-| `anti-slop-effect/no-manual-tagged-construction` | 182 | The same outcome unions are built as literals. |
-| `anti-slop-effect/no-service-constructor-imports` | 109 | Layers and runtime composition import `make<Service>` constructors from module entry points by design. |
-| `anti-slop-effect/prefer-effect-match` | 13 | Small literal lookup ternaries in UI and financial code; some branches `yield*`, which `Match` callbacks cannot. |
+None: every rule in the upstream package is enabled.
