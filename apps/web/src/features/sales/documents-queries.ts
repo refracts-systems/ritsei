@@ -1,7 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/solid-query"
-import * as Effect from "effect/Effect"
 import type { RequestFailure } from "../../shared/api.ts"
-import type { Warehouse } from "../../shared/contracts/generated/inventory.ts"
 import { type ApiScope, runRequest } from "../../shared/runtime.ts"
 import { createServerQuery, serverQueryKey } from "../../shared/server-query.ts"
 import {
@@ -10,10 +8,7 @@ import {
   draftQuotation,
   getOrderFulfillment,
   getQuotationDocument,
-  listProducts,
-  listWarehouses,
   type OrderFulfillment,
-  type Product,
   type QuotationAction,
   type QuotationActionResult,
   type QuotationDocument,
@@ -36,26 +31,6 @@ export function createOrderFulfillmentQuery(scope: ApiScope, orderId: string) {
     key: [...salesKey, "fulfillment", orderId],
     cache: "detail",
     load: ({ signal }) => runRequest(scope, getOrderFulfillment(orderId), signal),
-  })
-}
-
-export function createProductsQuery(scope: ApiScope) {
-  return createServerQuery<readonly Product[], RequestFailure>({
-    tenantId: scope.tenantId,
-    key: [...salesKey, "products"],
-    cache: "lookup",
-    // Product names are a convenience: without product access the list stays empty.
-    load: ({ signal }) =>
-      runRequest(scope, listProducts().pipe(Effect.catch(() => Effect.succeed([]))), signal),
-  })
-}
-
-export function createWarehousesQuery(scope: ApiScope) {
-  return createServerQuery<readonly Warehouse[], RequestFailure>({
-    tenantId: scope.tenantId,
-    key: [...salesKey, "warehouses"],
-    cache: "lookup",
-    load: ({ signal }) => runRequest(scope, listWarehouses(), signal),
   })
 }
 
