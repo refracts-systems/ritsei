@@ -61,6 +61,7 @@ Match developer intent to the descriptions; do not require the user to name a sk
 | Change tables, constraints, triggers, RLS, or migrations | [`change-schema`](.agents/skills/change-schema/SKILL.md) |
 | Cross-domain consumption, or stock/balance/journal/idempotent/multi-write invariants | [`cross-domain-and-transactions`](.agents/skills/cross-domain-and-transactions/SKILL.md) |
 | Design or explain an Effect success/error/requirements flow | [`design-effect-program`](.agents/skills/design-effect-program/SKILL.md) |
+| Deliver a web screen, route, or UI component change in `apps/web` | [`ui-delivery-gate`](.agents/skills/ui-delivery-gate/SKILL.md) |
 
 Skills supplement, and never replace, repository ownership, tooling, and validation rules.
 

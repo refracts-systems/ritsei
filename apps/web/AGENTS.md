@@ -22,3 +22,4 @@ Architecture: [`frontend.md`](../../docs/architecture/frontend.md),
 - Preserve accessibility, keyboard navigation, and semantic HTML.
 - Web-only dependencies belong in `apps/web/package.json` with exact pins.
 - Build and check: `pnpm --filter @ritsei/web run check` and `... run build`.
+- Before delivering a screen, follow the [`ui-delivery-gate`](../../.agents/skills/ui-delivery-gate/SKILL.md) skill.

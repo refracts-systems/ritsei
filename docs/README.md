@@ -67,6 +67,7 @@
 - [`./proposals/erp-module-parity-plan.md`](./proposals/erp-module-parity-plan.md)
 - [`./proposals/erp-chains-next-steps.md`](./proposals/erp-chains-next-steps.md)
 - [`./proposals/anti-slop-deferred-rules.md`](./proposals/anti-slop-deferred-rules.md)
+- [`./proposals/ux-acceptance.md`](./proposals/ux-acceptance.md)
 
 ## Roadmaps
 
