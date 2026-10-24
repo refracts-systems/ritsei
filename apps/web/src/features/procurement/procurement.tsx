@@ -449,8 +449,8 @@ function PurchaseOrderDetail(props: { id: string }) {
               <section class={[surface(), layout.stack]} aria-labelledby="order-commands-heading">
                 <h3 id="order-commands-heading">Eligible commands</h3>
                 <p>
-                  Procurement owns the order snapshot. Confirmation, cancellation, and receipt
-                  commands are checked again by the backend and never mutate Inventory directly.
+                  Procurement owns the order snapshot. Release, receipt, return, and cancellation
+                  are checked again by the backend, which also posts the stock and ledger effects.
                 </p>
                 <div class={layout.row}>
                   <Show when={order.status === "confirmed"}>
