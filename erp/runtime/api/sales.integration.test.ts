@@ -8,7 +8,14 @@ import * as HttpClientRequest from "effect/http/HttpClientRequest"
 import * as Layer from "effect/Layer"
 import * as Path from "effect/Path"
 
-import { SalesService, type SalesService as SalesServiceContract } from "../../modules/sales/mod.ts"
+import { partial } from "../../../tests/support/partial.ts"
+import {
+  SalesDocumentService,
+  type SalesDocumentServiceContract,
+  SalesService,
+  type SalesQuotationType,
+  type SalesService as SalesServiceContract,
+} from "../../modules/sales/mod.ts"
 import { BearerAuth, CurrentPrincipal, RitseiApi } from "./api.ts"
 import { SalesHttpHandlers as SalesHandlers } from "../../modules/sales/http.ts"
 
@@ -53,6 +60,24 @@ const confirmedOrder = {
 
 const cancelledOrder = { ...confirmedOrder, status: "cancelled" as const }
 
+const documentQuotation: SalesQuotationType = {
+  id: quotationId,
+  tenantId,
+  customerId,
+  legalEntityId: "018f2000-0000-7000-8000-000000000006",
+  status: "draft",
+  validUntil: "2026-12-31",
+  total: "10.00",
+  lines: [],
+}
+
+const salesDocuments = partial<SalesDocumentServiceContract>()({
+  draftQuotation: () => Effect.succeed(documentQuotation),
+  getQuotation: () => Effect.succeed(documentQuotation),
+  sendQuotation: () => Effect.succeed({ ...documentQuotation, status: "sent" as const }),
+  convertQuotation: () => Effect.succeed({ orderId }),
+})
+
 const salesService = (observedInputs: unknown[]): SalesServiceContract => ({
   listCustomers: (input) =>
     Effect.sync(() => {
@@ -93,6 +118,7 @@ it.layer(TestHttpServices)("sales API contracts", (it) => {
       const handlers = SalesHandlers.pipe(
         Layer.provide(bearer),
         Layer.provide(Layer.succeed(SalesService, salesService(observedInputs))),
+        Layer.provide(Layer.succeed(SalesDocumentService, salesDocuments)),
       )
 
       const client = yield* HttpApiTest.groups(RitseiApi, ["Sales"]).pipe(
@@ -172,6 +198,25 @@ it.layer(TestHttpServices)("sales API contracts", (it) => {
       assert.deepStrictEqual(
         yield* client.Sales.cancelOrder({ params: { id: orderId }, headers }),
         cancelledOrder,
+      )
+      assert.deepStrictEqual(
+        yield* client.Sales.draftQuotation({
+          headers,
+          payload: {
+            customerId,
+            validUntil: "2026-12-31",
+            lines: [{ productId: itemId, quantity: "1" }],
+          },
+        }),
+        documentQuotation,
+      )
+      assert.strictEqual(
+        (yield* client.Sales.sendQuotation({ params: { id: quotationId }, headers })).status,
+        "sent",
+      )
+      assert.deepStrictEqual(
+        yield* client.Sales.convertQuotation({ params: { id: quotationId }, headers }),
+        { orderId },
       )
     }),
   )
