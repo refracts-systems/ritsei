@@ -5,6 +5,8 @@ import { AccountingModule } from "../modules/accounting/mod.ts"
 import { BillingHttpGroup, BillingHttpHandlers } from "../modules/billing/http.ts"
 import { BillingModule } from "../modules/billing/mod.ts"
 import { CommunicationModule } from "../modules/communication/mod.ts"
+import { DocumentsHttpGroup, DocumentsHttpHandlers } from "../modules/documents/http.ts"
+import { DocumentsModule } from "../modules/documents/mod.ts"
 import { InventoryHttpGroup, InventoryHttpHandlers } from "../modules/inventory/http.ts"
 import { InventoryModule } from "../modules/inventory/mod.ts"
 import { PartyHttpGroup, PartyHttpHandlers } from "../modules/party/http.ts"
@@ -27,6 +29,7 @@ export const ErpModules: ReadonlyArray<ModuleManifest> = [
   AccountingModule,
   BillingModule,
   CommunicationModule,
+  DocumentsModule,
   InventoryModule,
   PartyModule,
   ProcessModule,
@@ -41,6 +44,7 @@ export const ErpModules: ReadonlyArray<ModuleManifest> = [
 export const ErpHttpGroups = [
   AccountingHttpGroup,
   BillingHttpGroup,
+  DocumentsHttpGroup,
   InventoryHttpGroup,
   PartyHttpGroup,
   ProcessHttpGroup,
@@ -55,6 +59,7 @@ export const ErpHttpGroups = [
 export const ErpHttpHandlers = [
   AccountingHttpHandlers,
   BillingHttpHandlers,
+  DocumentsHttpHandlers,
   InventoryHttpHandlers,
   PartyHttpHandlers,
   ProcessHttpHandlers,

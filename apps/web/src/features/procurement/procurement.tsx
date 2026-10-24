@@ -33,6 +33,7 @@ import {
 import { definedFields } from "../../shared/api.ts"
 import { DraftPurchaseOrderDialog } from "./draft-purchase-order-dialog.tsx"
 import { OrderDocuments } from "./order-documents.tsx"
+import { DocumentFlow } from "../documents/document-flow.tsx"
 
 const statusOptions = [
   { value: "draft", label: "Draft" },
@@ -462,6 +463,11 @@ function PurchaseOrderDetail(props: { id: string }) {
                 </div>
               </section>
               <OrderDocuments id={order.id} reloadOrder={reload} />
+              <DocumentFlow
+                feature="procurement"
+                documentType="procurement.purchase_order"
+                documentId={order.id}
+              />
               <QueryBoundary label="receipt evidence" retry={() => reloaded(receipts.refetch())}>
                 <ReceiptTable receipts={receipts.data} />
               </QueryBoundary>

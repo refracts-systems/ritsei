@@ -50,6 +50,7 @@ import { ProductLive } from "../modules/product/mod.ts"
 import { TaxLive } from "../modules/tax/mod.ts"
 import { BillingLive } from "../modules/billing/mod.ts"
 import { SettlementLive } from "../modules/settlement/mod.ts"
+import { DocumentsLive } from "../modules/documents/mod.ts"
 
 export const serviceLayers = (
   client: Sql,
@@ -224,6 +225,19 @@ export const serviceLayers = (
     ),
   )
 
+  const DocumentsServiceLive = DocumentsLive.pipe(
+    Layer.provide(
+      Layer.mergeAll(
+        SalesLive,
+        SalesDocumentServiceLive,
+        ProcurementLiveWithRequirements,
+        PurchaseDocumentServiceLive,
+        BillingServiceLive,
+        SettlementServiceLive,
+      ),
+    ),
+  )
+
   const OrderToCashServiceLive = OrderToCashLive.pipe(
     Layer.provide(
       Layer.mergeAll(
@@ -258,6 +272,7 @@ export const serviceLayers = (
     SalesDocumentServiceLive,
     BillingServiceLive,
     SettlementServiceLive,
+    DocumentsServiceLive,
     ApprovalServiceLive,
     PurchaseDocumentServiceLive,
     OrderToCashServiceLive,

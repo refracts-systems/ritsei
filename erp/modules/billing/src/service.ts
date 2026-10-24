@@ -1002,6 +1002,10 @@ export const makeBillingService = Effect.gen(function* () {
                 ? undefined
                 : inArray(invoices.kind, kindsOf(decoded.side)),
               decoded.to === undefined ? undefined : lte(invoices.invoiceDate, decoded.to),
+              decoded.sourceId === undefined ? undefined : eq(invoices.sourceId, decoded.sourceId),
+              decoded.creditedInvoiceId === undefined
+                ? undefined
+                : eq(invoices.creditedInvoiceId, decoded.creditedInvoiceId),
             ),
           )
           .orderBy(asc(invoices.invoiceDate), asc(invoices.number))

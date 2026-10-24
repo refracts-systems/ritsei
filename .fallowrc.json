@@ -151,6 +151,7 @@
           "apps/web/src/ui/patterns/master-detail.tsx",
           "apps/web/src/ui/patterns/operational-workspace.tsx",
           "apps/web/src/ui/patterns/data-table.tsx",
+          "apps/web/src/ui/patterns/document-flow.tsx",
           "apps/web/src/ui/patterns/ritsei-virtual-list.tsx",
           "apps/web/src/ui/patterns/settings.tsx",
           "apps/web/src/ui/icons/index.ts",

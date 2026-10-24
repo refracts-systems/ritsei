@@ -39,6 +39,7 @@ import { presentFields, definedFields } from "../../shared/api.ts"
 import { DraftQuotationDialog } from "./draft-quotation-dialog.tsx"
 import { OrderDelivery } from "./order-delivery.tsx"
 import { QuotationLifecycle } from "./quotation-lifecycle.tsx"
+import { DocumentFlow } from "../documents/document-flow.tsx"
 
 const quotationStatusOptions = [
   { value: "draft", label: "Draft" },
@@ -651,6 +652,7 @@ function QuotationDetail(props: { id: string }) {
         </Show>
       </QueryBoundary>
       <QuotationLifecycle id={id} />
+      <DocumentFlow feature="sales" documentType="sales.quotation" documentId={id} />
     </section>
   )
 }
@@ -736,6 +738,7 @@ function OrderDetail(props: { id: string; reloadLists: () => Promise<void> }) {
               <Show when={order.status === "confirmed"}>
                 <OrderDelivery orderId={order.id} reloadOrder={reload} />
               </Show>
+              <DocumentFlow feature="sales" documentType="sales.order" documentId={order.id} />
               <section
                 class={[surface(), layout.stack]}
                 aria-labelledby="sales-order-commands-heading"

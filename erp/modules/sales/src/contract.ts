@@ -146,6 +146,8 @@ export const GetQuotationInput = Schema.Struct({
 export const ListOrdersInput = Schema.Struct({
   ...ScopedInput,
   customerId: Schema.optionalKey(Uuid),
+  /** Only orders created from this quotation. */
+  quotationId: Schema.optionalKey(Uuid),
   status: Schema.optionalKey(SalesOrderStatus),
   limit: Schema.optionalKey(ListLimit),
 })

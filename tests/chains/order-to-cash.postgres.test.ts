@@ -9,6 +9,7 @@ import {
   BillingService,
   NothingToInvoice,
 } from "../../erp/modules/billing/mod.ts"
+import { DocumentNotFound, DocumentsService } from "../../erp/modules/documents/mod.ts"
 import { InventoryCapabilities, StockKeepingService } from "../../erp/modules/inventory/mod.ts"
 import { PartyCapabilities, PartyService } from "../../erp/modules/party/mod.ts"
 import { OrderToCashService } from "../../erp/modules/process/mod.ts"
@@ -71,6 +72,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           const orderToCash = yield* OrderToCashService
           const billing = yield* BillingService
           const settlement = yield* SettlementService
+          const documents = yield* DocumentsService
           const scope = { principal, tenantId }
 
           // Masters: chart, customer party role, products, stock, tax, prices, payment terms.
@@ -351,6 +353,59 @@ it.effect.skipIf(databaseUrl === undefined)(
           })
 
           assert.strictEqual(onAccount.unallocatedAmount, "34.56")
+
+          // The document chain reads the same story from any document in it.
+          const flow = yield* documents.chain({
+            ...scope,
+            documentType: "billing.document",
+            documentId: firstInvoice.id,
+          })
+
+          assert.deepStrictEqual(
+            flow.nodes.map((node) => [node.type, node.state]),
+            [
+              ["sales.quotation", "accepted"],
+              ["sales.order", "confirmed"],
+              ["sales.delivery", "delivered"],
+              ["sales.delivery", "delivered"],
+              ["billing.customer_invoice", "settled"],
+              ["billing.customer_invoice", "open"],
+              ["billing.customer_credit_note", "applied"],
+              ["settlement.payment", "allocated"],
+              ["settlement.payment", "partly allocated"],
+            ],
+          )
+          assert.deepStrictEqual(
+            flow.nodes.filter((node) => node.current).map((node) => node.id),
+            [firstInvoice.id],
+          )
+
+          for (const [documentType, documentId] of [
+            ["sales.quotation", quotation.id],
+            ["sales.order", orderId],
+            ["billing.document", creditNote.id],
+          ] as const) {
+            const same = yield* documents.chain({
+              ...scope,
+              documentType,
+              documentId,
+            })
+
+            assert.deepStrictEqual(
+              same.nodes.map((node) => node.id),
+              flow.nodes.map((node) => node.id),
+            )
+          }
+
+          const unknown = yield* Effect.flip(
+            documents.chain({
+              ...scope,
+              documentType: "sales.order",
+              documentId: uuidv7(),
+            }),
+          )
+
+          assert.instanceOf(unknown, DocumentNotFound)
 
           const premature = yield* Effect.flip(
             settlement.allocatePayment({
