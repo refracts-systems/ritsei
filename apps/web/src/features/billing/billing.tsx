@@ -131,7 +131,6 @@ function DocumentTable(props: {
   return (
     <DataTable
       surface={false}
-      tableClass={layout.collectionTable}
       caption="Billing documents in this legal entity"
       rows={props.documents}
       getRowId={(document) => document.id}
