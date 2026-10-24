@@ -15,6 +15,7 @@ import { PartyCapabilities, PartyService } from "../../erp/modules/party/mod.ts"
 import { OrderToCashService } from "../../erp/modules/process/mod.ts"
 import { ProductCapabilities, ProductService } from "../../erp/modules/product/mod.ts"
 import {
+  CreditLimitExceeded,
   DeliveryExceedsOrder,
   QuotationInvalidState,
   SalesCapabilities,
@@ -232,6 +233,37 @@ it.effect.skipIf(databaseUrl === undefined)(
           })
 
           assert.strictEqual(again.orderId, orderId)
+
+          // A credit limit below the order total stops the confirmation until it is raised.
+          const limited = yield* salesDocuments.setCreditLimit({
+            ...scope,
+            customerId: customer.id,
+            creditLimit: "100.00",
+          })
+
+          assert.deepStrictEqual(limited, {
+            customerId: customer.id,
+            creditLimit: "100.00",
+            receivableBalance: "0.00",
+            available: "100.00",
+          })
+
+          const blocked = yield* Effect.flip(
+            sales.confirmOrder({
+              ...scope,
+              orderId,
+              commandId: uuidv7(),
+              correlationId: uuidv7(),
+              idempotencyKey: `confirm-${orderId}`,
+            }),
+          )
+
+          assert.instanceOf(blocked, CreditLimitExceeded)
+          yield* salesDocuments.setCreditLimit({
+            ...scope,
+            customerId: customer.id,
+            creditLimit: "1000.00",
+          })
           yield* sales.confirmOrder({
             ...scope,
             orderId,
@@ -268,6 +300,15 @@ it.effect.skipIf(databaseUrl === undefined)(
           })
 
           assert.strictEqual(firstInvoice.number, "INV/2026/00001")
+
+          // What the customer owes counts against the limit.
+          const standing = yield* salesDocuments.getCreditStanding({
+            ...scope,
+            customerId: customer.id,
+          })
+
+          assert.strictEqual(standing.receivableBalance, "115.44")
+          assert.strictEqual(standing.available, "884.56")
           assert.deepStrictEqual(
             [firstInvoice.subtotal, firstInvoice.taxTotal, firstInvoice.total],
             ["104.00", "11.44", "115.44"],

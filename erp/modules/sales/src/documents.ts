@@ -30,10 +30,12 @@ import { NumberingService } from "../../../../framework/modules/numbering/mod.ts
 import { PartyService } from "../../party/mod.ts"
 import { TaxService } from "../../tax/mod.ts"
 import { SalesCapabilities } from "./capabilities.ts"
+import { CreditExposure, standingOf } from "./credit.ts"
 import {
   AssignCustomerPriceListInput,
   CreatePartyCustomerInput,
   CreatePriceListInput,
+  CreditStandingInput,
   type Delivery,
   DraftQuotationInput,
   ExpireQuotationsInput,
@@ -44,6 +46,7 @@ import {
   RecordDeliveryInput,
   SalesDocumentService,
   type SalesQuotation,
+  SetCreditLimitInput,
   SetPriceInput,
 } from "./documents-contract.ts"
 import {
@@ -120,6 +123,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
   const authorized = scopedCommand(authorization)
   const party = yield* PartyService
   const tax = yield* TaxService
+  const exposure = yield* CreditExposure
   const numbering = yield* NumberingService
 
   const loadCustomer = (tenantId: string, customerId: string) =>
@@ -248,6 +252,79 @@ export const makeSalesDocumentService = Effect.gen(function* () {
         "sales.quotation.transition.atomic",
       )
     })
+
+  const creditStanding = Effect.fn("SalesDocumentService.creditStanding")(function* (
+    tenantId: string,
+    customerId: string,
+  ) {
+    const rows = yield* database.query(
+      (db) =>
+        db
+          .select({
+            creditLimit: customers.creditLimit,
+            partyId: customers.partyId,
+            legalEntityId: customers.legalEntityId,
+          })
+          .from(customers)
+          .where(and(eq(customers.tenantId, tenantId), eq(customers.id, customerId)))
+          .limit(1),
+      "sales.customer.credit",
+    )
+
+    const customer = rows[0]
+
+    if (customer === undefined) {
+      return yield* Effect.fail(new CustomerNotFound({ tenantId, customerId }))
+    }
+
+    const balance =
+      customer.partyId === null || customer.legalEntityId === null
+        ? "0.00"
+        : yield* exposure.receivableBalance({
+            tenantId,
+            legalEntityId: customer.legalEntityId,
+            partyId: customer.partyId,
+          })
+
+    return standingOf(customerId, customer.creditLimit, balance)
+  })
+
+  const getCreditStanding = Effect.fn("SalesDocumentService.getCreditStanding")(function* (
+    input: Schema.Codec.Encoded<typeof CreditStandingInput>,
+  ) {
+    const decoded = yield* authorized(CreditStandingInput, SalesCapabilities.customerRead)(input)
+
+    return yield* creditStanding(decoded.tenantId, decoded.customerId)
+  })
+
+  const setCreditLimit = Effect.fn("SalesDocumentService.setCreditLimit")(function* (
+    input: Schema.Codec.Encoded<typeof SetCreditLimitInput>,
+  ) {
+    const decoded = yield* authorized(
+      SetCreditLimitInput,
+      SalesCapabilities.creditLimitConfigure,
+    )(input)
+
+    const updated = yield* database.query(
+      (db) =>
+        db
+          .update(customers)
+          .set({ creditLimit: decoded.creditLimit, updatedAt: new Date() })
+          .where(
+            and(eq(customers.tenantId, decoded.tenantId), eq(customers.id, decoded.customerId)),
+          )
+          .returning({ id: customers.id }),
+      "sales.customer.credit_limit.set",
+    )
+
+    if (updated.length === 0) {
+      return yield* Effect.fail(
+        new CustomerNotFound({ tenantId: decoded.tenantId, customerId: decoded.customerId }),
+      )
+    }
+
+    return yield* creditStanding(decoded.tenantId, decoded.customerId)
+  })
 
   const createPartyCustomer = Effect.fn("SalesDocumentService.createPartyCustomer")(function* (
     input: Schema.Codec.Encoded<typeof CreatePartyCustomerInput>,
@@ -938,6 +1015,8 @@ export const makeSalesDocumentService = Effect.gen(function* () {
 
   return {
     createPartyCustomer,
+    getCreditStanding,
+    setCreditLimit,
     createPriceList,
     setPrice,
     assignCustomerPriceList,

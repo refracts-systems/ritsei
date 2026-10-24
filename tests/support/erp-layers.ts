@@ -11,7 +11,7 @@ import {
   GeneralLedgerLive,
 } from "../../erp/modules/accounting/mod.ts"
 import { StockKeepingLive } from "../../erp/modules/inventory/mod.ts"
-import { BillingLive } from "../../erp/modules/billing/mod.ts"
+import { BillingCreditExposureLive, BillingLive } from "../../erp/modules/billing/mod.ts"
 import { DocumentsLive } from "../../erp/modules/documents/mod.ts"
 import { PartyLive } from "../../erp/modules/party/mod.ts"
 import { OrderToCashLive } from "../../erp/modules/process/mod.ts"
@@ -60,11 +60,16 @@ export const erpChainLayers = (client: Sql, grants: ReadonlyArray<Grant>) => {
   const party = PartyLive.pipe(Layer.provide(Layer.mergeAll(platform, messaging)))
   const tax = TaxLive.pipe(Layer.provide(platform))
 
+  const creditExposure = BillingCreditExposureLive.pipe(Layer.provide(platform))
+
   const sales = SalesDocumentsLive.pipe(
-    Layer.provide(Layer.mergeAll(platform, party, tax, numbering)),
+    Layer.provide(Layer.mergeAll(platform, party, tax, numbering, creditExposure)),
   )
 
-  const legacySales = SalesLive.pipe(Layer.provide(Layer.merge(platform, messaging)))
+  const legacySales = SalesLive.pipe(
+    Layer.provide(Layer.mergeAll(platform, messaging, creditExposure)),
+  )
+
   const approvals = ApprovalsLive.pipe(Layer.provide(platform))
   const inventory = InventoryLive.pipe(Layer.provide(Layer.merge(platform, messaging)))
 

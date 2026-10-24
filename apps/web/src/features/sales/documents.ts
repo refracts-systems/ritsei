@@ -171,3 +171,50 @@ export const deliveryFailureMessages = {
   PostingRuleNotFound:
     "A posting rule is missing for this legal entity. Apply a chart template in Finance first.",
 } as const
+
+/** A customer's credit limit and how much of it is used; no limit leaves `available` null. */
+const CreditStanding = Schema.Struct({
+  customerId: Uuid,
+  creditLimit: Schema.NullOr(Amount),
+  receivableBalance: Amount,
+  available: Schema.NullOr(Amount),
+})
+
+export type CreditStanding = Schema.Schema.Type<typeof CreditStanding>
+
+const SetCreditLimitInput = Schema.Struct({
+  customerId: Uuid,
+  creditLimit: Schema.NullOr(Schema.String.check(Schema.isPattern(/^\d+(\.\d{1,2})?$/))),
+})
+
+export const getCreditStanding = Effect.fn("Frontend.Sales.getCreditStanding")(function* (
+  customerId: string,
+) {
+  const decoded = yield* decodeInput(Uuid, customerId)
+  const body = yield* requestJson(routeWithId("/sales/customers/:id/credit", decoded))
+
+  return yield* decodeResponse(CreditStanding, body)
+})
+
+export const setCreditLimit = Effect.fn("Frontend.Sales.setCreditLimit")(function* (
+  input: Schema.Codec.Encoded<typeof SetCreditLimitInput>,
+) {
+  const decoded = yield* decodeInput(SetCreditLimitInput, input)
+
+  const body = yield* mutationRequest(
+    routeWithId("/sales/customers/:id/credit-limit", decoded.customerId),
+    { creditLimit: decoded.creditLimit },
+  )
+
+  return yield* decodeResponse(CreditStanding, body, "unknown-outcome")
+})
+
+/** What the user is told when confirming an order is refused by the credit limit. */
+export const confirmFailureMessages = {
+  CreditLimitExceeded:
+    "Confirming this order would take the customer past their credit limit. Raise the limit in the customer's detail or collect what is open first.",
+} as const
+
+export const creditFailureMessages = {
+  CustomerNotFound: "This customer is no longer available. Reload the workspace.",
+} as const

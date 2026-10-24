@@ -33,6 +33,8 @@ export {
   SettlementExceedsOpenAmount,
 } from "./src/errors.ts"
 
+export { BillingCreditExposureLive } from "./src/credit-exposure.ts"
+
 export { BillingLive } from "./src/service.ts"
 
 export { BillingModule } from "./manifest.ts"

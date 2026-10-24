@@ -69,6 +69,11 @@ export const makeSalesMemoryStore = (): SalesStore => {
     }),
   )
 
+  // The in-memory store keeps no credit limits.
+  const getCreditContext = Effect.fn("SalesStore.memory.getCreditContext")(() =>
+    Effect.succeed(undefined),
+  )
+
   const listQuotations = Effect.fn("SalesStore.memory.listQuotations")(
     (input: ListQuotationsCommand) =>
       Effect.sync(() =>
@@ -274,6 +279,7 @@ export const makeSalesMemoryStore = (): SalesStore => {
   return {
     listCustomers,
     getCustomer,
+    getCreditContext,
     listQuotations,
     getQuotation,
     listOrders,

@@ -7,6 +7,8 @@ import { Principal } from "../../../../framework/modules/auth/mod.ts"
 import { AuthorizationService } from "../../../../framework/modules/authorization/mod.ts"
 import { MessagingService } from "../../../../framework/modules/messaging/mod.ts"
 import { SalesCapabilities } from "./capabilities.ts"
+import { CreditExposure, exceedsCreditLimit } from "./credit.ts"
+import { CreditLimitExceeded } from "./errors.ts"
 import {
   CancelConfirmedOrderInput,
   ConfirmOrderInput,
@@ -38,6 +40,7 @@ export const makeSalesServiceFromStore = <R>(storeEffect: Effect.Effect<SalesSto
     const store = yield* storeEffect
     const authorization = yield* AuthorizationService
     const messaging = yield* MessagingService
+    const exposure = yield* CreditExposure
 
     const authorize = (
       input: { principal: Schema.Schema.Type<typeof Principal>; tenantId: string },
@@ -161,6 +164,35 @@ export const makeSalesServiceFromStore = <R>(storeEffect: Effect.Effect<SalesSto
         correlationId: decoded.correlationId.trim(),
         causationId: decoded.causationId?.trim() ?? null,
         idempotencyKey: decoded.idempotencyKey.trim(),
+      }
+
+      // A draft order is checked against the customer's credit limit; a retried confirmation is not.
+      const credit = yield* store.getCreditContext(decoded)
+
+      if (
+        credit?.status === "draft" &&
+        credit.creditLimit !== null &&
+        credit.partyId !== null &&
+        credit.legalEntityId !== null
+      ) {
+        const balance = yield* exposure.receivableBalance({
+          tenantId: decoded.tenantId,
+          legalEntityId: credit.legalEntityId,
+          partyId: credit.partyId,
+        })
+
+        if (exceedsCreditLimit(credit.creditLimit, balance, credit.total)) {
+          return yield* Effect.fail(
+            new CreditLimitExceeded({
+              tenantId: decoded.tenantId,
+              orderId: decoded.orderId,
+              customerId: credit.customerId,
+              creditLimit: credit.creditLimit,
+              receivableBalance: balance,
+              orderTotal: credit.total,
+            }),
+          )
+        }
       }
 
       const mutation = yield* store.confirmOrder(normalized, (order) =>
