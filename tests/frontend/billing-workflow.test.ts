@@ -2,7 +2,7 @@ import { AxeBuilder } from "@axe-core/playwright"
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import type { Page, Route } from "playwright"
-import { builtApp, connectToTenant, forbiddenBody } from "./browser.ts"
+import { builtApp, conflictBody, connectToTenant, forbiddenBody } from "./browser.ts"
 
 const tenantId = "01900000-0000-7000-8000-000000000010"
 const legalEntityId = "01900000-0000-7000-8000-000000000020"
@@ -216,6 +216,171 @@ it.effect(
         await page.getByText("No legal entity is configured for accounting yet.").waitFor()
         await page.getByRole("link", { name: "Configure one in Accounting" }).waitFor()
       })
+    }),
+  { timeout: 120_000 },
+)
+
+it.effect(
+  "creates an invoice from a confirmed order and explains why it cannot",
+  () =>
+    Effect.gen(function* () {
+      const { page, url, errors } = yield* builtApp
+      const orderId = "01900000-0000-7000-8000-000000000040"
+      const customerId = "01900000-0000-7000-8000-000000000041"
+      let attempts = 0
+      let invoiceBody: unknown
+
+      yield* Effect.promise(async () => {
+        await page.route("**/api/**", (route) => {
+          const requestUrl = new URL(route.request().url())
+          const path = requestUrl.pathname.replace(/^\/api/, "")
+
+          if (path === "/user-accounts") return fulfillJson(route, 200, [])
+
+          if (path === "/parties") return fulfillJson(route, 200, directory)
+
+          if (path === "/accounting/configurations") {
+            return fulfillJson(route, 200, [configuration])
+          }
+
+          if (path === "/billing/documents") {
+            return fulfillJson(route, 200, attempts < 2 ? [] : [invoice])
+          }
+
+          if (path === `/billing/documents/${invoiceId}`) return fulfillJson(route, 200, invoice)
+
+          if (path === "/sales/customers") {
+            return fulfillJson(route, 200, [
+              { id: customerId, tenantId, name: "PT Pembeli", email: "finance@pembeli.test" },
+            ])
+          }
+
+          if (path === "/sales/orders") {
+            return fulfillJson(route, 200, [
+              {
+                id: orderId,
+                tenantId,
+                customerId,
+                quotationId: null,
+                status: "confirmed",
+                confirmedAt: "2026-10-20T00:00:00.000Z",
+                total: "140.00",
+                lines: [{ itemId: customerId, quantity: "1", unitPrice: "140.00" }],
+              },
+            ])
+          }
+
+          if (path === "/billing/invoices" && route.request().method() === "POST") {
+            attempts += 1
+            invoiceBody = route.request().postDataJSON()
+
+            return attempts === 1
+              ? fulfillJson(route, 409, conflictBody("NothingToInvoice"))
+              : fulfillJson(route, 201, invoice)
+          }
+
+          return fulfillJson(route, 404, { code: "unexpected_test_request" })
+        })
+
+        await openBilling(page, url)
+        await page.getByText("No invoices or credit notes in this legal entity yet.").waitFor()
+
+        await page.getByRole("button", { name: "Create invoice", exact: true }).click()
+        const dialog = page.getByRole("dialog", { name: "Create invoice" })
+        await dialog.waitFor()
+        assert.deepEqual(
+          (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()).violations,
+          [],
+        )
+        await dialog
+          .getByRole("combobox", { name: "Sales order", exact: true })
+          .selectOption(orderId)
+        await dialog.getByRole("button", { name: "Create invoice", exact: true }).click()
+        await dialog.getByRole("alert").waitFor()
+        assert.include(await dialog.getByRole("alert").innerText(), "Nothing is left to invoice")
+
+        attempts = 1
+        await dialog.getByRole("button", { name: "Create invoice", exact: true }).click()
+        await page.getByRole("heading", { name: "Invoice INV-0001", exact: true }).waitFor()
+        assert.equal(new URL(page.url()).pathname, `/billing/${invoiceId}`)
+        assert.deepEqual(invoiceBody, {
+          orderId,
+          invoiceDate: new Date().toISOString().slice(0, 10),
+        })
+      })
+
+      assert.deepEqual(errors, [])
+    }),
+  { timeout: 120_000 },
+)
+
+it.effect(
+  "receives a payment against an open invoice and shows it settled",
+  () =>
+    Effect.gen(function* () {
+      const { page, url, errors } = yield* builtApp
+      let document = invoice
+      let paymentBody: unknown
+
+      yield* Effect.promise(async () => {
+        await page.route("**/api/**", (route) => {
+          const requestUrl = new URL(route.request().url())
+          const path = requestUrl.pathname.replace(/^\/api/, "")
+
+          if (path === "/user-accounts") return fulfillJson(route, 200, [])
+
+          if (path === "/parties") return fulfillJson(route, 200, directory)
+
+          if (path === "/accounting/configurations") {
+            return fulfillJson(route, 200, [configuration])
+          }
+
+          if (path === "/billing/documents") return fulfillJson(route, 200, [document])
+
+          if (path === `/billing/documents/${invoiceId}`) return fulfillJson(route, 200, document)
+
+          if (path === "/settlement/receipts" && route.request().method() === "POST") {
+            paymentBody = route.request().postDataJSON()
+            document = { ...document, openAmount: "0.00" }
+
+            return fulfillJson(route, 201, {
+              id: "01900000-0000-7000-8000-000000000050",
+              number: "RCV/2026/00001",
+              amount: "111.00",
+              unallocatedAmount: "0.00",
+            })
+          }
+
+          return fulfillJson(route, 404, { code: "unexpected_test_request" })
+        })
+
+        await openBilling(page, url)
+        await page.getByRole("link", { name: "INV-0001", exact: true }).click()
+        await page.getByRole("heading", { name: "Invoice INV-0001", exact: true }).waitFor()
+
+        await page.getByRole("button", { name: "Receive payment", exact: true }).click()
+        const dialog = page.getByRole("dialog", { name: "Receive payment" })
+        await dialog.waitFor()
+        assert.equal(await dialog.getByRole("textbox", { name: "Amount" }).inputValue(), "111.00")
+        assert.deepEqual(
+          (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()).violations,
+          [],
+        )
+        await dialog.getByRole("button", { name: "Receive payment", exact: true }).click()
+        await dialog.waitFor({ state: "hidden" })
+
+        assert.deepEqual(paymentBody, {
+          legalEntityId,
+          partyId,
+          paymentDate: new Date().toISOString().slice(0, 10),
+          amount: "111.00",
+          allocations: [{ invoiceId, amount: "111.00" }],
+        })
+        await page.getByText("Settled", { exact: true }).first().waitFor()
+        assert.equal(await page.getByRole("button", { name: "Receive payment" }).count(), 0)
+      })
+
+      assert.deepEqual(errors, [])
     }),
   { timeout: 120_000 },
 )

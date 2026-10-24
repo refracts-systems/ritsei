@@ -8,6 +8,7 @@ export {
   AssignPartyTermInput,
   CreatePaymentTermInput,
   CustomerStatement,
+  ListPaymentsInput,
   MakePaymentInput,
   Payment,
   PaymentDirection,

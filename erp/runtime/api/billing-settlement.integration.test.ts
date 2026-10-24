@@ -112,6 +112,7 @@ it.layer(TestHttpServices)("billing and settlement API contracts", (it) => {
       })
 
       const settlement = partial<SettlementServiceContract>()({
+        listPayments: () => Effect.succeed([payment]),
         receivePayment: (input: Parameters<SettlementServiceContract["receivePayment"]>[0]) =>
           Effect.sync(() => {
             observed.push(input)
@@ -184,6 +185,10 @@ it.layer(TestHttpServices)("billing and settlement API contracts", (it) => {
           },
         }),
         payment,
+      )
+      assert.deepStrictEqual(
+        yield* client.Settlement.listPayments({ headers, query: { legalEntityId } }),
+        [payment],
       )
       // SAFETY: the test calls this double only with inputs of the shape it reads.
       const received = observed.at(-1) as { tenantId: string; amount: string }

@@ -21,6 +21,8 @@ import {
   createLegalEntitiesQuery,
   createPartyDirectoryQuery,
 } from "./queries.ts"
+import { InvoiceOrderDialog } from "./invoice-order-dialog.tsx"
+import { canRecordPayment, RecordPaymentDialog } from "./record-payment-dialog.tsx"
 import type { BillingDocument, BillingSide } from "./service.ts"
 
 const sideOptions = [
@@ -182,12 +184,21 @@ function DocumentTable(props: {
   )
 }
 
-function DocumentDetail(props: { document: BillingDocument; names: Names }) {
+function DocumentDetail(props: {
+  document: BillingDocument
+  names: Names
+  reload: () => Promise<void>
+}) {
   return (
     <section class={layout.stack} aria-labelledby="billing-document-heading">
       <h2 id="billing-document-heading">
         {kindLabels[props.document.kind]} {props.document.number}
       </h2>
+      <Show when={canRecordPayment(props.document)}>
+        <div class={layout.actionRow}>
+          <RecordPaymentDialog document={props.document} reload={props.reload} />
+        </div>
+      </Show>
       <dl class={layout.detailList}>
         <div class={layout.detailItem}>
           <dt class={layout.detailTerm}>Status</dt>
@@ -305,7 +316,11 @@ function SelectedDocument(props: { id: string; names: Names }) {
 
   return (
     <QueryBoundary label="document" retry={() => reloaded(query.refetch())}>
-      <DocumentDetail document={query.data} names={props.names} />
+      <DocumentDetail
+        document={query.data}
+        names={props.names}
+        reload={() => reloaded(query.refetch())}
+      />
     </QueryBoundary>
   )
 }
@@ -394,6 +409,7 @@ export function Billing(props: {
                   Posted invoices, credit notes, and supplier bills with what is still open on each.
                 </p>
               }
+              headerActions={<InvoiceOrderDialog />}
               toolbar={
                 <BillingFilters
                   names={names()}

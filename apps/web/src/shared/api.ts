@@ -20,6 +20,8 @@ export class RequestFailure extends Schema.TaggedError<RequestFailure>()("Fronte
     "invalid-response",
     "unknown-outcome",
   ]),
+  /** The stable business code of a conflict or missing record, so a feature can say what happened. */
+  code: Schema.optionalKey(Schema.String),
 }) {}
 
 export const connectionTenant = Effect.gen(function* () {
@@ -41,9 +43,12 @@ const failureMessages = {
     "The server may have saved this change. Reload the workspace before trying again.",
 } as const
 
-export const failureMessage = <Failure>(error: Failure): string =>
+/** Feature wording for business codes, keyed by the code the API returns (a tagged error name). */
+export type FailureMessages = Readonly<Record<string, string>>
+
+export const failureMessage = <Failure>(error: Failure, messages: FailureMessages = {}): string =>
   error instanceof RequestFailure
-    ? failureMessages[error.kind]
+    ? ((error.code === undefined ? undefined : messages[error.code]) ?? failureMessages[error.kind])
     : "The request could not be completed. Reload the page to try again."
 
 // The existing list endpoint has no pagination. Refuse oversized payloads instead of silently
@@ -222,6 +227,7 @@ export const requestJson = Effect.fn("Frontend.requestJson")(function* <Payload>
   return yield* Effect.fail(
     new RequestFailure({
       kind: status === response.status ? kind : "invalid-response",
+      code: error.code,
     }),
   )
 })

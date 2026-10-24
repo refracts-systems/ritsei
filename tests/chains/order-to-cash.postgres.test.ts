@@ -320,6 +320,13 @@ it.effect.skipIf(databaseUrl === undefined)(
 
           assert.strictEqual(receipt.number, "RCV/2026/00001")
 
+          const register = yield* settlement.listPayments({ ...scope, legalEntityId })
+
+          assert.deepStrictEqual(
+            register.map((payment) => [payment.number, payment.allocations]),
+            [["RCV/2026/00001", [{ invoiceId: firstInvoice.id, amount: "100.00" }]]],
+          )
+
           const creditNote = yield* billing.creditInvoice({
             ...scope,
             invoiceId: secondInvoice.id,

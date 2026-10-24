@@ -2,7 +2,7 @@ import type { JSX } from "@solidjs/web"
 import { Errored, Loading, Show } from "solid-js"
 import { layout } from "../ui/foundations/layout.ts"
 import { Button } from "../ui/primitives/button.tsx"
-import { failureMessage, type RequestFailure } from "./api.ts"
+import { type FailureMessages, failureMessage, type RequestFailure } from "./api.ts"
 
 /** Waits for a refetch, discarding its result: reload callbacks only signal completion. */
 export function reloaded<A>(request: Promise<A>): Promise<void> {
@@ -12,6 +12,8 @@ export function reloaded<A>(request: Promise<A>): Promise<void> {
 export interface CommandFeedbackProps {
   readonly area?: string
   readonly error?: RequestFailure | null
+  /** Wording for the business codes this command can fail with. */
+  readonly messages?: FailureMessages
   readonly pending: boolean
   readonly success: boolean
   readonly successMessage: string
@@ -25,7 +27,7 @@ export function CommandFeedback(props: CommandFeedbackProps) {
   return (
     <>
       <Show when={props.error} keyed>
-        {(error) => <p role="alert">{failureMessage(error)}</p>}
+        {(error) => <p role="alert">{failureMessage(error, props.messages)}</p>}
       </Show>
       <Show when={props.error?.kind === "unknown-outcome"}>
         <Button

@@ -149,6 +149,14 @@ export const AllocatePaymentInput = Schema.Struct({
   allocations: Schema.Array(Allocation).check(Schema.isMinLength(1)),
 })
 
+export const ListPaymentsInput = Schema.Struct({
+  ...ScopedInput,
+  legalEntityId: Uuid,
+  direction: Schema.optionalKey(PaymentDirection),
+  partyId: Schema.optionalKey(Uuid),
+  limit: Schema.optionalKey(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 200 }))),
+})
+
 export const AgingInput = Schema.Struct({
   ...ScopedInput,
   legalEntityId: Uuid,
@@ -197,6 +205,10 @@ export interface SettlementService {
   readonly allocatePayment: (
     input: Schema.Codec.Encoded<typeof AllocatePaymentInput>,
   ) => Effect.Effect<Payment, PaymentFailure>
+  /** The payment register, newest first; authorized like the reports because it reads money. */
+  readonly listPayments: (
+    input: Schema.Codec.Encoded<typeof ListPaymentsInput>,
+  ) => Effect.Effect<ReadonlyArray<Payment>, CommonFailure>
   readonly aging: (
     input: Schema.Codec.Encoded<typeof AgingInput>,
   ) => Effect.Effect<AgingReport, CommonFailure>

@@ -3,6 +3,7 @@ import * as Schema from "effect/Schema"
 import {
   decodeInput,
   decodeResponse,
+  mutationRequest,
   querySuffix,
   requestJson,
   routeWithId,
@@ -12,6 +13,7 @@ import {
   accountingRoutes,
 } from "../../shared/contracts/generated/accounting.ts"
 import { PartyDirectoryEntry, partyRoutes } from "../../shared/contracts/generated/party.ts"
+import { Customer, SalesOrder, salesRoutes } from "../../shared/contracts/generated/sales.ts"
 
 const Uuid = Schema.String.check(Schema.isUUID())
 const CalendarDate = Schema.String.check(Schema.isPattern(/^\d{4}-\d{2}-\d{2}$/))
@@ -103,3 +105,98 @@ export const listPartyDirectory = Effect.fn("Frontend.Billing.listPartyDirectory
 
   return yield* decodeResponse(PartyDirectory, body)
 })
+
+const OrderList = Schema.Array(SalesOrder).check(Schema.isMaxLength(200))
+const CustomerList = Schema.Array(Customer).check(Schema.isMaxLength(200))
+const InvoiceOrderInput = Schema.Struct({ orderId: Uuid, invoiceDate: CalendarDate })
+
+/** Confirmed orders are the ones that can have delivered quantities to invoice. */
+export const listConfirmedOrders = Effect.fn("Frontend.Billing.listConfirmedOrders")(function* () {
+  const body = yield* requestJson(
+    `${salesRoutes.listOrders}${querySuffix({ status: "confirmed", limit: 200 })}`,
+  )
+
+  return yield* decodeResponse(OrderList, body)
+})
+
+export const listCustomers = Effect.fn("Frontend.Billing.listCustomers")(function* () {
+  const body = yield* requestJson(`${salesRoutes.listCustomers}${querySuffix({ limit: 200 })}`)
+
+  return yield* decodeResponse(CustomerList, body)
+})
+
+export const invoiceSalesOrder = Effect.fn("Frontend.Billing.invoiceSalesOrder")(function* (
+  input: Schema.Codec.Encoded<typeof InvoiceOrderInput>,
+) {
+  const decoded = yield* decodeInput(InvoiceOrderInput, input)
+  const body = yield* mutationRequest("/billing/invoices", decoded)
+
+  return yield* decodeResponse(BillingDocument, body, "unknown-outcome")
+})
+
+/** What the user is told for the business failures invoicing can return. */
+export const invoiceFailureMessages = {
+  NothingToInvoice:
+    "Nothing is left to invoice on this order. Deliver goods first, or everything delivered is already invoiced.",
+  SalesOrderInvalidState: "Only confirmed orders can be invoiced.",
+  SalesOrderNotFound: "This order is no longer available. Reload and choose another.",
+  CustomerLegalEntityRequired: "This customer is not linked to a legal entity yet.",
+  AccountingPeriodNotOpen: "The accounting period for that invoice date is not open.",
+  PostingRuleNotFound:
+    "A posting rule is missing for this legal entity. Apply a chart template in Finance first.",
+  AccountingLegalEntityNotFound: "This legal entity is not configured for accounting.",
+  TaxCodeNotFound: "A tax code used by this order no longer exists.",
+  ProductNotFound: "A product on this order no longer exists.",
+} as const
+
+const Money = Schema.String.check(Schema.isPattern(/^\d+(\.\d{1,2})?$/))
+
+const RecordPaymentInput = Schema.Struct({
+  side: BillingSide,
+  legalEntityId: Uuid,
+  partyId: Uuid,
+  invoiceId: Uuid,
+  paymentDate: CalendarDate,
+  amount: Money,
+})
+
+const RecordedPayment = Schema.Struct({
+  id: Uuid,
+  number: Schema.String,
+  amount: Amount,
+  unallocatedAmount: Amount,
+})
+
+export type RecordedPayment = Schema.Schema.Type<typeof RecordedPayment>
+
+/** Receives (receivable) or makes (payable) a payment that settles one billing document. */
+export const recordPayment = Effect.fn("Frontend.Billing.recordPayment")(function* (
+  input: Schema.Codec.Encoded<typeof RecordPaymentInput>,
+) {
+  const decoded = yield* decodeInput(RecordPaymentInput, input)
+
+  const body = yield* mutationRequest(
+    decoded.side === "receivable" ? "/settlement/receipts" : "/settlement/payments",
+    {
+      legalEntityId: decoded.legalEntityId,
+      partyId: decoded.partyId,
+      paymentDate: decoded.paymentDate,
+      amount: decoded.amount,
+      allocations: [{ invoiceId: decoded.invoiceId, amount: decoded.amount }],
+    },
+  )
+
+  return yield* decodeResponse(RecordedPayment, body, "unknown-outcome")
+})
+
+/** What the user is told for the business failures a payment can return. */
+export const paymentFailureMessages = {
+  SettlementExceedsOpenAmount: "The amount is more than what is still open on this document.",
+  SettlementConflict: "This document was settled by another change. Reload and try again.",
+  BillingDocumentNotFound: "This document is no longer available. Reload the workspace.",
+  AllocationMismatch: "This document belongs to a different party or side than the payment.",
+  AccountingPeriodNotOpen: "The accounting period for that payment date is not open.",
+  PostingRuleNotFound:
+    "A posting rule (cash or receivables) is missing. Apply a chart template in Finance first.",
+  AccountingLegalEntityNotFound: "This legal entity is not configured for accounting.",
+} as const

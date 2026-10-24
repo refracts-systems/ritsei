@@ -12,6 +12,7 @@ import {
   BaseApiErrorPolicy,
   BearerAuth,
   CurrentPrincipal,
+  ReadLimit,
   TenantHeaders,
   Uuid,
   apiErrorMapping,
@@ -22,6 +23,7 @@ import {
   Allocation,
   CustomerStatement,
   Payment,
+  PaymentDirection,
   SettlementService,
   SettlementSide,
 } from "./mod.ts"
@@ -57,6 +59,17 @@ export const SettlementHttpGroup = HttpApiGroup.make("Settlement").add(
       allocations: Schema.Array(Allocation),
     }),
     success: Payment,
+    error: ApiErrors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.get("listPayments", "/settlement/payments", {
+    headers: TenantHeaders,
+    query: {
+      legalEntityId: Uuid,
+      direction: Schema.optionalKey(PaymentDirection),
+      partyId: Schema.optionalKey(Uuid),
+      limit: ReadLimit,
+    },
+    success: Schema.Array(Payment),
     error: ApiErrors,
   }).middleware(BearerAuth),
   HttpApiEndpoint.get("agingReport", "/settlement/aging", {
@@ -142,6 +155,16 @@ export const SettlementHttpHandlers = HttpApiBuilder.group(
                 paymentId: params.id,
                 ...payload,
               }),
+            )
+          }),
+        )
+        .handle(
+          "listPayments",
+          Effect.fn("Http.Settlement.listPayments")(function* ({ headers, query }) {
+            const principal = yield* CurrentPrincipal
+
+            return yield* SettlementHttpErrors.apiEffect(
+              settlement.listPayments({ principal, tenantId: headers["x-tenant-id"], ...query }),
             )
           }),
         )
