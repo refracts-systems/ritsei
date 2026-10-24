@@ -38,19 +38,19 @@ repository standard.
 
 Use one of these types:
 
-| Type | Use for |
-| --- | --- |
-| `feat` | A new capability |
-| `fix` | A bug or incorrect behavior |
-| `docs` | Documentation-only changes |
+| Type       | Use for                                        |
+| ---------- | ---------------------------------------------- |
+| `feat`     | A new capability                               |
+| `fix`      | A bug or incorrect behavior                    |
+| `docs`     | Documentation-only changes                     |
 | `refactor` | Internal restructuring without behavior change |
-| `perf` | Performance improvements |
-| `test` | Test changes |
-| `build` | Build system or dependency changes |
-| `ci` | Continuous-integration changes |
-| `chore` | Maintenance that does not fit another type |
-| `style` | Formatting or non-semantic style changes |
-| `revert` | Reverting an earlier commit |
+| `perf`     | Performance improvements                       |
+| `test`     | Test changes                                   |
+| `build`    | Build system or dependency changes             |
+| `ci`       | Continuous-integration changes                 |
+| `chore`    | Maintenance that does not fit another type     |
+| `style`    | Formatting or non-semantic style changes       |
+| `revert`   | Reverting an earlier commit                    |
 
 ## Rules
 
@@ -71,6 +71,18 @@ Use one of these types:
 - Mark an incompatible change with `!` after the type or scope and explain it in
   a `BREAKING CHANGE:` footer.
 - Do not rewrite shared or already-published history without explicit approval.
+
+## Whitespace-only commits
+
+A commit that only changes layout, such as an autofix that inserts blank lines across the repository,
+is recorded in [`.git-blame-ignore-revs`](../../.git-blame-ignore-revs) so that `git blame` skips it.
+GitHub reads the file by itself; locally, run this once per clone:
+
+```sh
+git config blame.ignoreRevsFile .git-blame-ignore-revs
+```
+
+Add the hash in a follow-up commit, because a commit cannot contain its own hash.
 
 ## Examples
 
