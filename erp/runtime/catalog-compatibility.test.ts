@@ -36,6 +36,7 @@ import {
   InventoryTypedEventCatalog,
   StockCorrectedEventPayload,
   StockCorrection,
+  StockCorrectionIdempotencyConflict,
 } from "../modules/inventory/mod.ts"
 import {
   CreatePartyInput,
@@ -276,11 +277,14 @@ describe("catalog compatibility", () => {
         reason: "cycle count",
         idempotencyKey: "correction-1",
       })
-      yield* Schema.decodeUnknownEffect(InventoryAdjustStockAction.errorSchemas[2]!)({
-        _tag: "StockCorrectionIdempotencyConflict",
-        tenantId: "00000000-0000-4000-8000-000000000001",
-        idempotencyKey: "correction-1",
-      })
+      yield* Schema.decodeUnknownEffect(InventoryAdjustStockAction.errorSchemas[2]!)(
+        Schema.encodeSync(StockCorrectionIdempotencyConflict)(
+          new StockCorrectionIdempotencyConflict({
+            tenantId: "00000000-0000-4000-8000-000000000001",
+            idempotencyKey: "correction-1",
+          }),
+        ),
+      )
 
       yield* Schema.decodeUnknownEffect(SalesConfirmOrderAction.inputSchema)({
         principal,

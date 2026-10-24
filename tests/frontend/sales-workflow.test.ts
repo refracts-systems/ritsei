@@ -3,7 +3,7 @@ import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import type { Page, Route } from "playwright"
 import type { SalesOrder } from "../../apps/web/src/shared/contracts/generated/sales.ts"
-import { builtApp, connectToTenant } from "./browser.ts"
+import { builtApp, connectToTenant, notFoundBody } from "./browser.ts"
 
 const tenantId = "01910000-0000-7000-8000-000000000010"
 const customerId = "01910000-0000-7000-8000-000000000011"
@@ -135,7 +135,7 @@ it.effect(
             currentOrder = { ...(currentOrder ?? draftOrder), status: "cancelled" }
             return fulfillJson(route, 200, currentOrder)
           }
-          return fulfillJson(route, 404, { _tag: "ApiNotFound", code: "not_found" })
+          return fulfillJson(route, 404, notFoundBody())
         })
 
         await connectAndOpenSales(page, url)

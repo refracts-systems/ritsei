@@ -2,7 +2,7 @@ import { AxeBuilder } from "@axe-core/playwright"
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import type { Page, Route } from "playwright"
-import { builtApp, connectToTenant } from "./browser.ts"
+import { builtApp, connectToTenant, forbiddenBody, notFoundBody } from "./browser.ts"
 
 const tenantId = "01900000-0000-7000-8000-000000000010"
 const activeMemberId = "01900000-0000-7000-8000-000000000020"
@@ -135,7 +135,7 @@ it.effect(
             const membership = memberships.find((item) => item.userAccountId === userAccountId)
             if (method === "DELETE") {
               if (!membership) {
-                return fulfillJson(route, 404, { _tag: "ApiNotFound", code: "not_found" })
+                return fulfillJson(route, 404, notFoundBody())
               }
               memberships.splice(memberships.indexOf(membership), 1)
               grants.delete(userAccountId)
@@ -143,7 +143,7 @@ it.effect(
             }
             return membership
               ? fulfillJson(route, 200, membership)
-              : fulfillJson(route, 404, { _tag: "ApiNotFound", code: "not_found" })
+              : fulfillJson(route, 404, notFoundBody())
           }
 
           const directGrants = path.match(/^\/tenant-memberships\/([^/]+)\/capabilities$/)
@@ -166,13 +166,13 @@ it.effect(
             const userAccountId = decodeURIComponent(transition[1]!)
             const membership = memberships.find((item) => item.userAccountId === userAccountId)
             if (!membership) {
-              return fulfillJson(route, 404, { _tag: "ApiNotFound", code: "not_found" })
+              return fulfillJson(route, 404, notFoundBody())
             }
             membership.status = transition[2] === "suspend" ? "suspended" : "active"
             return fulfillJson(route, 200, membership)
           }
 
-          return fulfillJson(route, 404, { _tag: "ApiNotFound", code: "not_found" })
+          return fulfillJson(route, 404, notFoundBody())
         })
 
         await connectAndOpenAccess(page, url)
@@ -303,7 +303,7 @@ it.effect(
           if (path === "/user-accounts") return fulfillJson(route, 200, [])
           if (path === "/tenant-memberships" && request.method() === "GET") {
             if (mode === "forbidden") {
-              return fulfillJson(route, 403, { _tag: "ApiForbidden", code: "forbidden" })
+              return fulfillJson(route, 403, forbiddenBody())
             }
             if (mode === "malformed") return fulfillJson(route, 200, { memberships: [] })
             return fulfillJson(route, 200, [membership])
@@ -318,7 +318,7 @@ it.effect(
           if (path === "/capabilities" && mode === "unknown-grant") {
             return route.abort("connectionreset")
           }
-          return fulfillJson(route, 404, { _tag: "ApiNotFound", code: "not_found" })
+          return fulfillJson(route, 404, notFoundBody())
         })
 
         await connectAndOpenAccess(page, url)

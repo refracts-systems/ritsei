@@ -1,10 +1,37 @@
 import { assert } from "@effect/vitest"
 import * as Effect from "effect/Effect"
+import * as Schema from "effect/Schema"
 import * as Predicate from "effect/Predicate"
 import { chromium } from "playwright"
 import type { Page } from "playwright"
 import { preview } from "vite"
 import { inject } from "vitest"
+
+import {
+  ApiConflict,
+  ApiForbidden,
+  ApiNotFound,
+  ApiServiceUnavailable,
+  ApiUnauthorized,
+} from "../../erp/runtime/api/api.ts"
+
+const ApiErrorWire = Schema.Union([
+  ApiUnauthorized,
+  ApiForbidden,
+  ApiNotFound,
+  ApiConflict,
+  ApiServiceUnavailable,
+])
+
+/** Wire body of a canonical HTTP API failure, encoded by the backend schema itself. */
+export const unauthorizedBody = () =>
+  Schema.encodeSync(ApiErrorWire)(new ApiUnauthorized({ code: "unauthorized" }))
+export const forbiddenBody = () =>
+  Schema.encodeSync(ApiErrorWire)(new ApiForbidden({ code: "forbidden" }))
+export const notFoundBody = (code = "not_found") =>
+  Schema.encodeSync(ApiErrorWire)(new ApiNotFound({ code }))
+export const conflictBody = (code = "conflict") =>
+  Schema.encodeSync(ApiErrorWire)(new ApiConflict({ code }))
 
 type MockLocalAuthOptions = Readonly<{
   memberships?: readonly {
@@ -47,7 +74,7 @@ export const mockLocalAuth = async (
       return route.fulfill({
         status: 403,
         contentType: "application/json",
-        body: JSON.stringify({ _tag: "ApiForbidden", code: "forbidden" }),
+        body: JSON.stringify(forbiddenBody()),
       })
     }
     return route.fulfill({

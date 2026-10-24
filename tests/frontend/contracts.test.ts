@@ -598,13 +598,17 @@ it.effect("generates the canonical HTTP error wire union without backend error c
       ApiServiceUnavailable,
     ])
     for (const input of [
-      { _tag: "ApiUnauthorized", code: "unauthorized" },
-      { _tag: "ApiForbidden", code: "forbidden" },
-      { _tag: "ApiNotFound", code: "user_account_not_found" },
-      { _tag: "ApiConflict", code: "user_account_already_exists" },
-      { _tag: "ApiServiceUnavailable", code: "service_unavailable" },
-      { _tag: "ApiUnauthorized", code: "wrong" },
-      { _tag: "Unknown", code: "unknown" },
+      Schema.encodeSync(canonical)(new ApiUnauthorized({ code: "unauthorized" })),
+      Schema.encodeSync(canonical)(new ApiForbidden({ code: "forbidden" })),
+      Schema.encodeSync(canonical)(new ApiNotFound({ code: "user_account_not_found" })),
+      Schema.encodeSync(canonical)(new ApiConflict({ code: "user_account_already_exists" })),
+      Schema.encodeSync(canonical)(new ApiServiceUnavailable({ code: "service_unavailable" })),
+      // Invalid wire bodies: a valid body with one field overridden.
+      {
+        ...Schema.encodeSync(canonical)(new ApiUnauthorized({ code: "unauthorized" })),
+        code: "wrong",
+      },
+      Schema.TaggedStruct("Unknown", { code: Schema.String }).make({ code: "unknown" }),
       ...unknownInputs,
     ]) {
       const expected = yield* Effect.result(Schema.decodeUnknownEffect(canonical)(input))

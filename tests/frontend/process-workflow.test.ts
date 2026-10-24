@@ -9,7 +9,7 @@ import type {
   ProcessRuntimeInstance,
   ProcessWorkflowRun,
 } from "../../apps/web/src/shared/contracts/generated/process.ts"
-import { builtApp, connectToTenant } from "./browser.ts"
+import { builtApp, connectToTenant, notFoundBody } from "./browser.ts"
 
 const tenantId = "01930000-0000-7000-8000-000000000001"
 const definitionId = "018f3f77-0c5a-7cc0-8b62-6a163d214123"
@@ -177,7 +177,7 @@ it.effect(
             ]
             return fulfillJson(route, 200, runtime)
           }
-          return fulfillJson(route, 404, { _tag: "ApiNotFound", code: "not_found" })
+          return fulfillJson(route, 404, notFoundBody())
         })
 
         await connectAndOpenProcessStudio(page, url)

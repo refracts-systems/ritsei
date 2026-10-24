@@ -114,12 +114,17 @@ it.effect("rejects malformed idempotency-conflict identities", () =>
   Effect.gen(function* () {
     const invalid = yield* Effect.flip(
       Schema.decodeUnknownEffect(EventIdempotencyConflict)({
-        _tag: "EventIdempotencyConflict",
+        ...Schema.encodeSync(EventIdempotencyConflict)(
+          new EventIdempotencyConflict({
+            tenantId: event().tenantId,
+            eventId: event().eventId,
+            eventType: event().eventType,
+            eventVersion: event().eventVersion,
+            idempotencyKey: event().idempotencyKey,
+          }),
+        ),
         tenantId: "not-a-uuid",
-        eventId: event().eventId,
-        eventType: event().eventType,
         eventVersion: 0,
-        idempotencyKey: event().idempotencyKey,
       }),
     )
     assert.strictEqual(invalid._tag, "SchemaError")

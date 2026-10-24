@@ -3,7 +3,7 @@ import { AxeBuilder } from "@axe-core/playwright"
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import type { Page, Route } from "playwright"
-import { builtApp, connectToTenant } from "./browser.ts"
+import { builtApp, connectToTenant, forbiddenBody, notFoundBody } from "./browser.ts"
 
 const tenantId = "01900000-0000-7000-8000-000000000010"
 const northwindId = "01900000-0000-7000-8000-000000000020"
@@ -205,7 +205,7 @@ it.effect(
                   ],
             )
           }
-          return fulfillJson(route, 404, { _tag: "ApiNotFound", code: "not_found" })
+          return fulfillJson(route, 404, notFoundBody())
         })
 
         await connectAndOpenParties(page, url)
@@ -351,7 +351,7 @@ it.effect(
           if (path === "/user-accounts") return fulfillJson(route, 200, [])
           if (path === "/parties" && request.method() === "GET") {
             if (mode === "forbidden") {
-              return fulfillJson(route, 403, { _tag: "ApiForbidden", code: "forbidden" })
+              return fulfillJson(route, 403, forbiddenBody())
             }
             if (mode === "malformed") return fulfillJson(route, 200, { parties: [] })
             return fulfillJson(route, 200, [{ party: northwind, legalEntityId: null }])
@@ -359,7 +359,7 @@ it.effect(
           if (path === "/parties" && request.method() === "POST" && mode === "unknown-create") {
             return route.abort("connectionreset")
           }
-          return fulfillJson(route, 404, { _tag: "ApiNotFound", code: "not_found" })
+          return fulfillJson(route, 404, notFoundBody())
         })
 
         await connectAndOpenParties(page, url)

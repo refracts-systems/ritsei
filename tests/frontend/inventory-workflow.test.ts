@@ -8,7 +8,7 @@ import type {
   StockReservation,
   StockTransfer,
 } from "../../apps/web/src/shared/contracts/generated/inventory.ts"
-import { builtApp, connectToTenant, chooseMoreAction } from "./browser.ts"
+import { builtApp, connectToTenant, chooseMoreAction, notFoundBody } from "./browser.ts"
 
 const tenantId = "01900000-0000-7000-8000-000000000010"
 const legalEntityId = "01900000-0000-7000-8000-000000000011"
@@ -277,7 +277,7 @@ it.effect(
               idempotencyKey: body.idempotencyKey,
             })
           }
-          return fulfillJson(route, 404, { _tag: "ApiNotFound", code: "not_found" })
+          return fulfillJson(route, 404, notFoundBody())
         })
 
         await connectAndOpenInventory(page, url)

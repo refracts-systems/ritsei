@@ -299,16 +299,24 @@ it.effect("validates workflow error identities and recovery reasons", () =>
   Effect.gen(function* () {
     const invalidIdentity = yield* Effect.flip(
       Schema.decodeUnknownEffect(WorkflowRunNotFound)({
-        _tag: "WorkflowRunNotFound",
+        ...Schema.encodeSync(WorkflowRunNotFound)(
+          new WorkflowRunNotFound({
+            tenantId: "018f3f77-0c5a-7cc0-8b62-6a163d214124",
+            idempotencyKey: "confirmation-1",
+          }),
+        ),
         tenantId: "not-a-uuid",
-        idempotencyKey: "confirmation-1",
       }),
     )
     const invalidReason = yield* Effect.flip(
       Schema.decodeUnknownEffect(WorkflowManualRecoveryRequired)({
-        _tag: "WorkflowManualRecoveryRequired",
-        tenantId: "018f3f77-0c5a-7cc0-8b62-6a163d214124",
-        idempotencyKey: "confirmation-1",
+        ...Schema.encodeSync(WorkflowManualRecoveryRequired)(
+          new WorkflowManualRecoveryRequired({
+            tenantId: "018f3f77-0c5a-7cc0-8b62-6a163d214124",
+            idempotencyKey: "confirmation-1",
+            reason: "needs operator",
+          }),
+        ),
         reason: "",
       }),
     )

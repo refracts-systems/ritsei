@@ -1,6 +1,6 @@
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
-import { builtApp, connectToTenant, mockLocalAuth } from "./browser.ts"
+import { builtApp, connectToTenant, mockLocalAuth, unauthorizedBody } from "./browser.ts"
 
 it.effect(
   "builds the SPA, signs in, navigates, and changes theme",
@@ -154,7 +154,7 @@ it.effect(
           route.fulfill({
             status: 401,
             contentType: "application/json",
-            body: JSON.stringify({ _tag: "ApiUnauthorized", code: "unauthorized" }),
+            body: JSON.stringify(unauthorizedBody()),
           }),
         )
         await page.getByRole("link", { name: "User accounts", exact: true }).click()

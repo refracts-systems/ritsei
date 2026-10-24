@@ -2,7 +2,7 @@ import { AxeBuilder } from "@axe-core/playwright"
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import type { Page, Route } from "playwright"
-import { builtApp, connectToTenant } from "./browser.ts"
+import { builtApp, connectToTenant, forbiddenBody } from "./browser.ts"
 
 const tenantId = "01900000-0000-7000-8000-000000000010"
 const accountId = "01900000-0000-7000-8000-000000000001"
@@ -172,10 +172,7 @@ it.effect(
           const path = new URL(request.url()).pathname.replace(/^\/api/, "")
           if (path === "/user-accounts") {
             if (mode === "forbidden-list") {
-              return fulfillJson(route, 403, {
-                _tag: "ApiForbidden",
-                code: "forbidden",
-              })
+              return fulfillJson(route, 403, forbiddenBody())
             }
             if (mode === "malformed-list") {
               return fulfillJson(route, 200, { account: "not-an-array" })

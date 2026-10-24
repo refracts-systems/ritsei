@@ -9,7 +9,14 @@ import type {
   JournalEntry,
   RevenuePostingProfile,
 } from "../../apps/web/src/shared/contracts/generated/accounting.ts"
-import { builtApp, connectToTenant, chooseMoreAction } from "./browser.ts"
+import {
+  builtApp,
+  connectToTenant,
+  chooseMoreAction,
+  conflictBody,
+  forbiddenBody,
+  notFoundBody,
+} from "./browser.ts"
 
 const tenantId = "01930000-0000-7000-8000-000000000001"
 const legalEntityId = "01930000-0000-7000-8000-000000000002"
@@ -124,7 +131,7 @@ it.effect(
           if (path === `/accounting/periods/${periodId}/close` && method === "POST") {
             const period = periods.find((candidate) => candidate.id === periodId)
             if (period === undefined) {
-              return fulfillJson(route, 404, { _tag: "ApiNotFound", code: "not_found" })
+              return fulfillJson(route, 404, notFoundBody())
             }
             const closed: AccountingPeriod = { ...period, status: "closed" }
             periods = periods.map((candidate) => (candidate.id === periodId ? closed : candidate))
@@ -142,7 +149,7 @@ it.effect(
             journals = [journal, ...journals]
             return fulfillJson(route, 201, journal)
           }
-          return fulfillJson(route, 404, { _tag: "ApiNotFound", code: "not_found" })
+          return fulfillJson(route, 404, notFoundBody())
         })
 
         await connectAndOpenAccounting(page, url)
@@ -378,7 +385,7 @@ it.effect(
           if (path === "/user-accounts" && method === "GET") return fulfillJson(route, 200, [])
           if (path === "/accounting/accounts" && method === "GET") {
             if (mode === "forbidden-list") {
-              return fulfillJson(route, 403, { _tag: "ApiForbidden", code: "forbidden" })
+              return fulfillJson(route, 403, forbiddenBody())
             }
             if (mode === "malformed-list") {
               return fulfillJson(route, 200, { accounts: "not-an-array" })
@@ -388,7 +395,7 @@ it.effect(
           if (path.startsWith("/accounting/")) {
             if (path === "/accounting/revenue-posting-profiles" && method === "POST") {
               if (mode === "profile-conflict") {
-                return fulfillJson(route, 409, { _tag: "ApiConflict", code: "conflict" })
+                return fulfillJson(route, 409, conflictBody())
               }
               return fulfillJson(route, 201, {
                 tenantId,
@@ -434,7 +441,7 @@ it.effect(
               }
             }
           }
-          return fulfillJson(route, 404, { _tag: "ApiNotFound", code: "not_found" })
+          return fulfillJson(route, 404, notFoundBody())
         })
 
         await connectAndOpenAccounting(page, url)

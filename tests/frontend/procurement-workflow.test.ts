@@ -3,7 +3,7 @@ import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import type { Page, Route } from "playwright"
 import type { PurchaseOrder } from "../../apps/web/src/shared/contracts/generated/procurement.ts"
-import { builtApp, connectToTenant } from "./browser.ts"
+import { builtApp, connectToTenant, notFoundBody } from "./browser.ts"
 
 const tenantId = "01900000-0000-7000-8000-000000000010"
 const relationshipId = "01900000-0000-7000-8000-000000000020"
@@ -124,7 +124,7 @@ it.effect(
             receipts = [receipt]
             return fulfillJson(route, 201, receipt)
           }
-          return fulfillJson(route, 404, { _tag: "ApiNotFound", code: "not_found" })
+          return fulfillJson(route, 404, notFoundBody())
         })
 
         await connectAndOpenProcurement(page, url)
