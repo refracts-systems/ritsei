@@ -121,6 +121,18 @@ it.effect(
         )
         await page.getByText("Open", { exact: true }).first().waitFor()
         await page.getByText("PT Pembeli", { exact: true }).first().waitFor()
+
+        // Every column keeps room for its content; a squeezed column wraps text one character per line.
+        const cells = page.locator("tbody tr").first().locator("th, td")
+        const count = await cells.count()
+        assert.equal(count, 7)
+
+        for (let index = 0; index < count; index += 1) {
+          const box = await cells.nth(index).boundingBox()
+          assert.isAbove(box?.width ?? 0, 48, `column ${index + 1} is too narrow`)
+          assert.isBelow(box?.height ?? 999, 80, `column ${index + 1} wraps onto too many lines`)
+        }
+
         await page.getByRole("option", { name: "PT Demo Trading" }).waitFor({ state: "attached" })
         assert.deepEqual(
           (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()).violations,
