@@ -14,8 +14,6 @@ import {
   routeWithId,
 } from "../../shared/api.ts"
 import {
-  ConfirmPurchaseOrderInput,
-  CreatePurchaseOrderInput,
   CreateSupplierAccountInput,
   GoodsReceipt,
   ListPurchaseOrdersInput,
@@ -23,7 +21,6 @@ import {
   ListSupplierAccountsInput,
   procurementRoutes,
   PurchaseOrder,
-  ReceivePurchaseOrderInput,
   SupplierAccount,
 } from "../../shared/contracts/generated/procurement.ts"
 
@@ -94,27 +91,6 @@ export const listPurchaseOrders = Effect.fn("Frontend.Procurement.listPurchaseOr
   return orders
 })
 
-export const createPurchaseOrder = Effect.fn("Frontend.Procurement.createPurchaseOrder")(function* (
-  input: Schema.Codec.Encoded<typeof CreatePurchaseOrderInput>,
-) {
-  const decoded = yield* decodeInput(CreatePurchaseOrderInput, input)
-  const connection = yield* BrowserConnection
-  const body = yield* mutationRequest(procurementRoutes.createPurchaseOrder, "POST", decoded)
-  const order = yield* decodeResponse(PurchaseOrder, body, "unknown-outcome")
-
-  if (
-    !responseMatches(order, {
-      tenantId: connection.tenantId,
-      supplierAccountId: decoded.supplierAccountId,
-      status: "draft",
-    })
-  ) {
-    return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
-  }
-
-  return order
-})
-
 export const getPurchaseOrder = Effect.fn("Frontend.Procurement.getPurchaseOrder")(function* (
   id: Schema.Codec.Encoded<typeof Uuid>,
 ) {
@@ -134,39 +110,6 @@ export const getPurchaseOrder = Effect.fn("Frontend.Procurement.getPurchaseOrder
 
   return order
 })
-
-// Fallow: confirm and cancel are paired lifecycle adapters with the same verified mutation shape.
-// fallow-ignore-next-line code-duplication
-export const confirmPurchaseOrder = Effect.fn("Frontend.Procurement.confirmPurchaseOrder")(
-  function* (
-    id: Schema.Codec.Encoded<typeof Uuid>,
-    input: Schema.Codec.Encoded<typeof ConfirmPurchaseOrderInput>,
-  ) {
-    const decodedId = yield* decodeInput(Uuid, id)
-    const decoded = yield* decodeInput(ConfirmPurchaseOrderInput, input)
-    const connection = yield* BrowserConnection
-
-    const body = yield* mutationRequest(
-      routeWithId(procurementRoutes.confirmPurchaseOrder, decodedId),
-      "POST",
-      decoded,
-    )
-
-    const order = yield* decodeResponse(PurchaseOrder, body, "unknown-outcome")
-
-    if (
-      !responseMatches(order, {
-        id: decodedId,
-        tenantId: connection.tenantId,
-        status: "confirmed",
-      })
-    ) {
-      return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
-    }
-
-    return order
-  },
-)
 
 // Fallow: confirm and cancel are paired lifecycle adapters with the same verified mutation shape.
 // fallow-ignore-next-line code-duplication
@@ -221,36 +164,5 @@ export const listPurchaseReceipts = Effect.fn("Frontend.Procurement.listPurchase
     }
 
     return receipts
-  },
-)
-
-export const receivePurchaseOrder = Effect.fn("Frontend.Procurement.receivePurchaseOrder")(
-  function* (
-    id: Schema.Codec.Encoded<typeof Uuid>,
-    input: Schema.Codec.Encoded<typeof ReceivePurchaseOrderInput>,
-  ) {
-    const decodedId = yield* decodeInput(Uuid, id)
-    const decoded = yield* decodeInput(ReceivePurchaseOrderInput, input)
-    const connection = yield* BrowserConnection
-
-    const body = yield* mutationRequest(
-      routeWithId(procurementRoutes.receivePurchaseOrder, decodedId),
-      "POST",
-      decoded,
-    )
-
-    const receipt = yield* decodeResponse(GoodsReceipt, body, "unknown-outcome")
-
-    if (
-      !responseMatches(receipt, {
-        tenantId: connection.tenantId,
-        purchaseOrderId: decodedId,
-        warehouseId: decoded.warehouseId,
-      })
-    ) {
-      return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
-    }
-
-    return receipt
   },
 )

@@ -2,7 +2,6 @@ import { useMutation, useQueryClient } from "@tanstack/solid-query"
 import * as Effect from "effect/Effect"
 import { type RequestFailure } from "../../shared/api.ts"
 import type { AccountingConfiguration } from "../../shared/contracts/generated/accounting.ts"
-import type { PartyDirectoryEntry } from "../../shared/contracts/generated/party.ts"
 import type { Customer, SalesOrder } from "../../shared/contracts/generated/sales.ts"
 import { type ApiScope, runRequest } from "../../shared/runtime.ts"
 import { createServerQuery, serverQueryKey } from "../../shared/server-query.ts"
@@ -16,7 +15,6 @@ import {
   listCustomers,
   recordPayment,
   listLegalEntities,
-  listPartyDirectory,
 } from "./service.ts"
 
 const billingKey = ["billing"] as const
@@ -27,17 +25,6 @@ export function createLegalEntitiesQuery(scope: ApiScope) {
     key: [...billingKey, "legal_entities"],
     cache: "lookup",
     load: ({ signal }) => runRequest(scope, listLegalEntities(), signal),
-  })
-}
-
-export function createPartyDirectoryQuery(scope: ApiScope) {
-  return createServerQuery<readonly PartyDirectoryEntry[], RequestFailure>({
-    tenantId: scope.tenantId,
-    key: [...billingKey, "party_directory"],
-    cache: "lookup",
-    // Names are a convenience: if the directory cannot load, documents still show identifiers.
-    load: ({ signal }) =>
-      runRequest(scope, listPartyDirectory().pipe(Effect.catch(() => Effect.succeed([]))), signal),
   })
 }
 

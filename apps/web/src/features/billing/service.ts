@@ -13,7 +13,6 @@ import {
   AccountingConfiguration,
   accountingRoutes,
 } from "../../shared/contracts/generated/accounting.ts"
-import { PartyDirectoryEntry, partyRoutes } from "../../shared/contracts/generated/party.ts"
 import { Customer, SalesOrder, salesRoutes } from "../../shared/contracts/generated/sales.ts"
 
 /** Browser view of the Billing transport contract served by the billing module. */
@@ -62,7 +61,6 @@ export type BillingSide = Schema.Schema.Type<typeof BillingSide>
 
 const BillingDocumentList = Schema.Array(BillingDocument).check(Schema.isMaxLength(1000))
 const ConfigurationList = Schema.Array(AccountingConfiguration).check(Schema.isMaxLength(200))
-const PartyDirectory = Schema.Array(PartyDirectoryEntry).check(Schema.isMaxLength(200))
 
 const ListDocumentsInput = Schema.Struct({
   legalEntityId: Uuid,
@@ -94,13 +92,6 @@ export const listLegalEntities = Effect.fn("Frontend.Billing.listLegalEntities")
   const body = yield* requestJson(accountingRoutes.listConfigurations)
 
   return yield* decodeResponse(ConfigurationList, body)
-})
-
-/** Party names, so documents show who they are for and legal entities show their organization. */
-export const listPartyDirectory = Effect.fn("Frontend.Billing.listPartyDirectory")(function* () {
-  const body = yield* requestJson(`${partyRoutes.list}${querySuffix({ limit: 200 })}`)
-
-  return yield* decodeResponse(PartyDirectory, body)
 })
 
 const OrderList = Schema.Array(SalesOrder).check(Schema.isMaxLength(200))

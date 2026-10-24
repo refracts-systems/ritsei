@@ -3,6 +3,7 @@ import * as Schema from "effect/Schema"
 import type { RequestFailure } from "./api.ts"
 import { decodeResponse, querySuffix, requestJson } from "./api.ts"
 import { Warehouse, inventoryRoutes } from "./contracts/generated/inventory.ts"
+import { PartyDirectoryEntry, partyRoutes } from "./contracts/generated/party.ts"
 import { type ApiScope, runRequest } from "./runtime.ts"
 import { createServerQuery } from "./server-query.ts"
 import { Uuid } from "./schemas.ts"
@@ -18,6 +19,7 @@ const Product = Schema.Struct({
 export type Product = Schema.Schema.Type<typeof Product>
 
 const ProductList = Schema.Array(Product).check(Schema.isMaxLength(200))
+const PartyDirectory = Schema.Array(PartyDirectoryEntry).check(Schema.isMaxLength(200))
 const WarehouseList = Schema.Array(Warehouse).check(Schema.isMaxLength(200))
 
 export const listProducts = Effect.fn("Frontend.Lookups.listProducts")(function* () {
@@ -49,5 +51,22 @@ export function createWarehousesQuery(scope: ApiScope) {
     key: ["lookups", "warehouses"],
     cache: "lookup",
     load: ({ signal }) => runRequest(scope, listWarehouses(), signal),
+  })
+}
+
+export const listPartyDirectory = Effect.fn("Frontend.Lookups.listPartyDirectory")(function* () {
+  const body = yield* requestJson(`${partyRoutes.list}${querySuffix({ limit: 200 })}`)
+
+  return yield* decodeResponse(PartyDirectory, body)
+})
+
+/** Party names for display; a failed load leaves identifiers in place. */
+export function createPartyDirectoryQuery(scope: ApiScope) {
+  return createServerQuery<readonly PartyDirectoryEntry[], RequestFailure>({
+    tenantId: scope.tenantId,
+    key: ["lookups", "party_directory"],
+    cache: "lookup",
+    load: ({ signal }) =>
+      runRequest(scope, listPartyDirectory().pipe(Effect.catch(() => Effect.succeed([]))), signal),
   })
 }

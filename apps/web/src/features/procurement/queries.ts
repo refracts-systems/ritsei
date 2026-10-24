@@ -1,28 +1,23 @@
 import { useMutation, useQueryClient } from "@tanstack/solid-query"
 import type { RequestFailure } from "../../shared/api.ts"
 import type {
-  CreatePurchaseOrderInput,
   CreateSupplierAccountInput,
   GoodsReceipt,
   ListPurchaseOrdersInput,
   ListPurchaseReceiptsInput,
   ListSupplierAccountsInput,
   PurchaseOrder,
-  ReceivePurchaseOrderInput,
   SupplierAccount,
 } from "../../shared/contracts/generated/procurement.ts"
 import { type ApiScope, runRequest } from "../../shared/runtime.ts"
 import { createServerQuery, serverQueryKey } from "../../shared/server-query.ts"
 import {
   cancelPurchaseOrder,
-  confirmPurchaseOrder,
-  createPurchaseOrder,
   createSupplierAccount,
   getPurchaseOrder,
   listPurchaseOrders,
   listPurchaseReceipts,
   listSupplierAccounts,
-  receivePurchaseOrder,
 } from "./service.ts"
 
 const procurementCollectionKey = ["procurement", "collection"] as const
@@ -42,12 +37,6 @@ const invalidatePurchaseOrder = (
   tenantId: string,
   id: string,
 ) => client.invalidateQueries({ queryKey: serverQueryKey(tenantId, purchaseOrderDetailKey(id)) })
-
-const invalidatePurchaseReceipts = (
-  client: ReturnType<typeof useQueryClient>,
-  tenantId: string,
-  id: string,
-) => client.invalidateQueries({ queryKey: serverQueryKey(tenantId, purchaseReceiptsKey(id)) })
 
 export function createSupplierAccountsQuery(
   scope: ApiScope,
@@ -108,45 +97,6 @@ export function createSupplierAccountMutation(
   }))
 }
 
-export function createPurchaseOrderMutation(
-  scope: ApiScope,
-  afterSuccess?: (order: PurchaseOrder) => void,
-) {
-  const client = useQueryClient()
-
-  return useMutation<PurchaseOrder, RequestFailure, CreatePurchaseOrderInput>(() => ({
-    mutationFn: (input) => runRequest(scope, createPurchaseOrder(input)),
-    onSuccess: (order) => {
-      afterSuccess?.(order)
-
-      return Promise.all([
-        invalidatePurchaseOrders(client, scope.tenantId),
-        invalidateSupplierAccounts(client, scope.tenantId),
-      ])
-    },
-  }))
-}
-
-export function createConfirmPurchaseOrderMutation(
-  scope: ApiScope,
-  afterSuccess?: (order: PurchaseOrder) => void,
-) {
-  const client = useQueryClient()
-
-  return useMutation<PurchaseOrder, RequestFailure, { id: string; idempotencyKey: string }>(() => ({
-    mutationFn: ({ id, idempotencyKey }) =>
-      runRequest(scope, confirmPurchaseOrder(id, { idempotencyKey })),
-    onSuccess: (order) => {
-      afterSuccess?.(order)
-
-      return Promise.all([
-        invalidatePurchaseOrders(client, scope.tenantId),
-        invalidatePurchaseOrder(client, scope.tenantId, order.id),
-      ])
-    },
-  }))
-}
-
 export function createCancelPurchaseOrderMutation(
   scope: ApiScope,
   afterSuccess?: (order: PurchaseOrder) => void,
@@ -164,26 +114,4 @@ export function createCancelPurchaseOrderMutation(
       ])
     },
   }))
-}
-
-export function createReceivePurchaseOrderMutation(
-  scope: ApiScope,
-  afterSuccess?: (receipt: GoodsReceipt) => void,
-) {
-  const client = useQueryClient()
-
-  return useMutation<GoodsReceipt, RequestFailure, { id: string } & ReceivePurchaseOrderInput>(
-    () => ({
-      mutationFn: ({ id, ...input }) => runRequest(scope, receivePurchaseOrder(id, input)),
-      onSuccess: (receipt) => {
-        afterSuccess?.(receipt)
-
-        return Promise.all([
-          invalidatePurchaseReceipts(client, scope.tenantId, receipt.purchaseOrderId),
-          invalidatePurchaseOrder(client, scope.tenantId, receipt.purchaseOrderId),
-          invalidatePurchaseOrders(client, scope.tenantId),
-        ])
-      },
-    }),
-  )
 }

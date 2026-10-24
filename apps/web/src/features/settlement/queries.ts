@@ -1,7 +1,6 @@
 import * as Effect from "effect/Effect"
 import type { RequestFailure } from "../../shared/api.ts"
 import type { AccountingConfiguration } from "../../shared/contracts/generated/accounting.ts"
-import type { PartyDirectoryEntry } from "../../shared/contracts/generated/party.ts"
 import { type ApiScope, runRequest } from "../../shared/runtime.ts"
 import { createServerQuery } from "../../shared/server-query.ts"
 import {
@@ -11,7 +10,6 @@ import {
   getStatement,
   listDocumentNumbers,
   listLegalEntities,
-  listPartyDirectory,
   listPayments,
   type Payment,
 } from "./service.ts"
@@ -24,17 +22,6 @@ export function createLegalEntitiesQuery(scope: ApiScope) {
     key: [...settlementKey, "legal_entities"],
     cache: "lookup",
     load: ({ signal }) => runRequest(scope, listLegalEntities(), signal),
-  })
-}
-
-export function createPartyDirectoryQuery(scope: ApiScope) {
-  return createServerQuery<readonly PartyDirectoryEntry[], RequestFailure>({
-    tenantId: scope.tenantId,
-    key: [...settlementKey, "party_directory"],
-    cache: "lookup",
-    // Names are a convenience: if the directory cannot load, payments still show identifiers.
-    load: ({ signal }) =>
-      runRequest(scope, listPartyDirectory().pipe(Effect.catch(() => Effect.succeed([]))), signal),
   })
 }
 

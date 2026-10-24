@@ -3,6 +3,7 @@ import { createMemo, For, Show, useContext } from "solid-js"
 import { formText as text, isDate, today } from "../../shared/form-values.ts"
 import { type Names, namesFrom } from "../../shared/party-names.ts"
 import { QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
+import { createPartyDirectoryQuery } from "../../shared/lookups.ts"
 import { ApiRuntime } from "../../shared/runtime.ts"
 import { formatDecimal } from "../../ui/foundations/format.ts"
 import { layout } from "../../ui/foundations/layout.ts"
@@ -21,7 +22,6 @@ import {
   createAgingQuery,
   createDocumentNumbersQuery,
   createLegalEntitiesQuery,
-  createPartyDirectoryQuery,
   createPaymentsQuery,
   createStatementQuery,
 } from "./queries.ts"
