@@ -22,6 +22,7 @@ const DocumentNodeType = Schema.Literals([
   "settlement.payment",
   "procurement.purchase_order",
   "procurement.receipt",
+  "procurement.return",
   "billing.supplier_bill",
   "billing.supplier_credit_note",
 ])
@@ -70,6 +71,7 @@ export const nodeKinds: Readonly<Record<DocumentNodeType, string>> = {
   "settlement.payment": "Payment",
   "procurement.purchase_order": "Purchase order",
   "procurement.receipt": "Goods receipt",
+  "procurement.return": "Purchase return",
   "billing.supplier_bill": "Supplier bill",
   "billing.supplier_credit_note": "Supplier credit note",
 }

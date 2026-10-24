@@ -47,6 +47,23 @@ describe("documents module", () => {
     )
   })
 
+  it("places a purchase return after the receipts and before the bills", () => {
+    const arranged = arrangeChain(
+      [
+        node({ type: "billing.supplier_bill", id: "b1", number: "BILL-1", date: "2026-10-01" }),
+        node({ type: "procurement.return", id: "r1", number: "RET-1", date: "2026-10-09" }),
+        node({ type: "procurement.receipt", id: "g1", date: "2026-10-08" }),
+        node({ type: "procurement.purchase_order", id: "p1" }),
+      ],
+      "p1",
+    )
+
+    assert.deepStrictEqual(
+      arranged.map((entry) => entry.id),
+      ["p1", "g1", "r1", "b1"],
+    )
+  })
+
   it("lists a document once even when two walks reach it", () => {
     const repeated = node({ type: "billing.supplier_bill", id: "b1", number: "BILL-1" })
 

@@ -37,5 +37,6 @@ describe("document flow links", () => {
     assert.isUndefined(nodeHref(node("sales.delivery"), legalEntityId))
     assert.isUndefined(nodeHref(node("settlement.payment"), legalEntityId))
     assert.isUndefined(nodeHref(node("procurement.receipt"), legalEntityId))
+    assert.isUndefined(nodeHref(node("procurement.return"), legalEntityId))
   })
 })

@@ -45,6 +45,13 @@ export const SupplierPrice = Schema.Struct({
 
 export const ListSupplierPricesInput = Schema.Struct({ ...ScopedInput, supplierAccountId: Uuid })
 
+export const PurchaseReturn = Schema.Struct({
+  id: Uuid,
+  purchaseOrderId: Uuid,
+  number: Schema.String,
+  returnDate: CalendarDate,
+})
+
 export const PricedPurchaseOrder = Schema.Struct({
   purchaseOrderId: Uuid,
   total: FinancialMajorAmount,
@@ -168,6 +175,10 @@ export interface PurchaseDocumentService {
   readonly listSupplierPrices: (
     input: Schema.Codec.Encoded<typeof ListSupplierPricesInput>,
   ) => Effect.Effect<ReadonlyArray<Schema.Schema.Type<typeof SupplierPrice>>, CommonFailure>
+  /** The purchase order's returns to the supplier, oldest first. */
+  readonly listPurchaseReturns: (
+    input: Schema.Codec.Encoded<typeof PurchaseOrderQueryInput>,
+  ) => Effect.Effect<ReadonlyArray<Schema.Schema.Type<typeof PurchaseReturn>>, CommonFailure>
   readonly draftPurchaseOrder: (
     input: Schema.Codec.Encoded<typeof DraftPurchaseOrderInput>,
   ) => Effect.Effect<
