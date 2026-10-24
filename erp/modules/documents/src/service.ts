@@ -207,6 +207,7 @@ export const makeDocumentsService = Effect.gen(function* () {
         .pipe(Effect.catchTag("PurchaseOrderNotFound", Effect.die))
 
       const receipts = yield* procurement.listPurchaseReceipts({ ...scope, purchaseOrderId })
+      const returns = yield* purchasing.listPurchaseReturns({ ...scope, purchaseOrderId })
 
       return [
         {
@@ -224,6 +225,14 @@ export const makeDocumentsService = Effect.gen(function* () {
           state: "received",
           amount: null,
           date: instantDate(receipt.receivedAt),
+        })),
+        ...returns.map((purchaseReturn): FlowNode => ({
+          type: "procurement.return",
+          id: purchaseReturn.id,
+          number: purchaseReturn.number,
+          state: "returned",
+          amount: null,
+          date: purchaseReturn.returnDate,
         })),
         ...(yield* documentsOf("payable", order.id, legalEntityId)),
       ] satisfies ReadonlyArray<FlowNode>

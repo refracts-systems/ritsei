@@ -99,6 +99,7 @@ export {
   ReleasePurchaseOrderInput,
   ReturnToSupplierInput,
   ListSupplierPricesInput,
+  PurchaseReturn,
   SetSupplierPriceInput,
   SupplierPrice,
 } from "./src/documents-contract.ts"

@@ -84,8 +84,8 @@ proposal until a design-system change adds it to §6.
   across modules through public contracts: the `documents` module's `chain` read port, proposed in
   [ADR-0107](../decisions/0107-read-document-chains-through-a-documents-module.md). It reads the
   source references the owners already store, and the same shape serves the credit-limit work
-  ([`erp-chains-next-steps.md`](./erp-chains-next-steps.md) F4). Purchase returns join the chain when
-  Procurement exposes a read for them.
+  ([`erp-chains-next-steps.md`](./erp-chains-next-steps.md) F4). Purchase returns are part of the payable
+  chain.
 
 ## 5. Risks and assumptions
 

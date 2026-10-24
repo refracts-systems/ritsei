@@ -31,6 +31,7 @@ export const DocumentNodeType = Schema.Literals([
   "settlement.payment",
   "procurement.purchase_order",
   "procurement.receipt",
+  "procurement.return",
   "billing.supplier_bill",
   "billing.supplier_credit_note",
 ])

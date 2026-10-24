@@ -382,7 +382,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           assert.strictEqual(paid.number, "PAY/2026/00001")
           assert.strictEqual(paid.unallocatedAmount, "0.00")
 
-          // One payment settles two bills; the chain lists it once, after both bills.
+          // One payment settles two bills; the chain lists it once, after both bills and the return.
           const flow = yield* documents.chain({
             ...scope,
             documentType: "billing.document",
@@ -395,6 +395,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               ["procurement.purchase_order", "confirmed"],
               ["procurement.receipt", "received"],
               ["procurement.receipt", "received"],
+              ["procurement.return", "returned"],
               ["billing.supplier_bill", "settled"],
               ["billing.supplier_bill", "open"],
               ["settlement.payment", "allocated"],
