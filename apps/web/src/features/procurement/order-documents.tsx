@@ -280,7 +280,7 @@ export function OrderDocuments(props: { id: string; reloadOrder: () => Promise<v
                       reload={reload}
                     />
                   </Show>
-                  <a href="/billing">Bill received goods in Billing</a>
+                  <a href="/billing?side=payable">Bill received goods in Billing</a>
                 </Show>
               </div>
             </div>

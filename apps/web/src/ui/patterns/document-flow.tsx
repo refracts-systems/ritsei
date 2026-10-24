@@ -28,7 +28,9 @@ export function DocumentFlow(props: {
       <For each={props.items}>
         {(item) => (
           <li class={layout.row} aria-current={item.current ? "true" : undefined}>
-            <span class={layout.detailTerm}>{item.kind}</span>
+            <Show when={item.label !== item.kind}>
+              <span class={layout.detailTerm}>{item.kind}</span>
+            </Show>
             <Show when={item.href !== undefined} fallback={<strong>{item.label}</strong>}>
               <a href={item.href}>{item.label}</a>
             </Show>
