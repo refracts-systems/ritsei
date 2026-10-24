@@ -1,6 +1,6 @@
 # Proposal: ERP Chains, Next Steps and Merge Plan
 
-> **Status:** The Phase 4–6 branch was merged into `master` in #17 (2026-10-20); section 4 is the
+> **Status:** The Phase 4–6 branch was merged into `main` in #17 (2026-10-20); section 4 is the
 > open follow-up list and is still a proposal until each item gets its own branch.
 >
 > **Owns:** The known gaps left by the Phase 4–6 implementation (the experiment branch merged in #17),
@@ -18,7 +18,7 @@
 
 ## 1. Where the branch stood
 
-The experiment branch (`exp/erp-chains`, merged as #17) was 19 commits on `master` `143944c`: numbering, ledger, party contacts, product,
+The experiment branch (`exp/erp-chains`, merged as #17) was 19 commits on `main` `143944c`: numbering, ledger, party contacts, product,
 valued inventory, tax, Order-to-Cash, Procure-to-Pay, a cleanup, the anti-slop lint, and four fixes. Three chain
 tests prove the exit criteria against PostgreSQL. The diff is 292 files; about 300,000 of the added
 lines are Drizzle `snapshot.json` files, so the reviewable source is far smaller.
@@ -43,7 +43,7 @@ lines are Drizzle `snapshot.json` files, so the reviewable source is far smaller
    (numbering, ledger, party), Phase 5 (product through settlement), Phase 6 (approvals through
    P2P), with lint and cleanup riding on the last. The commits depend on each other linearly, so the
    PRs would stack.
-4. After merge, start every item in section 4 from `master` on its own branch.
+4. After merge, start every item in section 4 from `main` on its own branch.
 
 ## 3. Correctness gaps closed on this branch
 
@@ -56,7 +56,7 @@ lines are Drizzle `snapshot.json` files, so the reviewable source is far smaller
 
 ## 4. Follow-up work after merge
 
-Each item gets its own branch from `master`, and an ADR only where noted.
+Each item gets its own branch from `main`, and an ADR only where noted.
 
 | #   | Item                                              | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | --- | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
