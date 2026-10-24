@@ -1,6 +1,7 @@
 import { useNavigate } from "@solidjs/router"
-import * as Predicate from "effect/Predicate"
 import { createMemo, For, Show, useContext } from "solid-js"
+import { formText as text } from "../../shared/form-values.ts"
+import { type Names, namesFrom } from "../../shared/party-names.ts"
 import { QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
 import { ApiRuntime } from "../../shared/runtime.ts"
 import { formatDecimal } from "../../ui/foundations/format.ts"
@@ -14,13 +15,14 @@ import { Form, type FormValue } from "../../ui/primitives/form.tsx"
 import { Reference } from "../../ui/primitives/reference.tsx"
 import { Select } from "../../ui/primitives/select.tsx"
 import { surface } from "../../ui/recipes/surface.ts"
-import type { PartyDirectoryEntry } from "../../shared/contracts/generated/party.ts"
 import {
   createBillingDocumentQuery,
   createBillingDocumentsQuery,
   createLegalEntitiesQuery,
   createPartyDirectoryQuery,
 } from "./queries.ts"
+import { InvoiceOrderDialog } from "./invoice-order-dialog.tsx"
+import { canRecordPayment, RecordPaymentDialog } from "./record-payment-dialog.tsx"
 import type { BillingDocument, BillingSide } from "./service.ts"
 
 const sideOptions = [
@@ -50,24 +52,6 @@ function DocumentStatus(props: { document: BillingDocument }) {
     </Show>
   )
 }
-
-/** Names resolved from the party directory; an unresolved id falls back to the identifier. */
-interface Names {
-  readonly parties: ReadonlyMap<string, string>
-  readonly legalEntities: ReadonlyMap<string, string>
-}
-
-const namesFrom = (entries: readonly PartyDirectoryEntry[]): Names => ({
-  parties: new Map(entries.map((entry) => [entry.party.id, entry.party.name])),
-  legalEntities: new Map(
-    entries.flatMap((entry) =>
-      entry.legalEntityId === null ? [] : [[entry.legalEntityId, entry.party.name] as const],
-    ),
-  ),
-})
-
-const text = (value: FormValue[string] | undefined) =>
-  Predicate.isString(value) ? value.trim() : ""
 
 const sideOf = (value: FormValue[string] | undefined): BillingSide =>
   value === "payable" ? "payable" : "receivable"
@@ -182,12 +166,21 @@ function DocumentTable(props: {
   )
 }
 
-function DocumentDetail(props: { document: BillingDocument; names: Names }) {
+function DocumentDetail(props: {
+  document: BillingDocument
+  names: Names
+  reload: () => Promise<void>
+}) {
   return (
     <section class={layout.stack} aria-labelledby="billing-document-heading">
       <h2 id="billing-document-heading">
         {kindLabels[props.document.kind]} {props.document.number}
       </h2>
+      <Show when={canRecordPayment(props.document)}>
+        <div class={layout.actionRow}>
+          <RecordPaymentDialog document={props.document} reload={props.reload} />
+        </div>
+      </Show>
       <dl class={layout.detailList}>
         <div class={layout.detailItem}>
           <dt class={layout.detailTerm}>Status</dt>
@@ -269,7 +262,7 @@ function DocumentDetail(props: { document: BillingDocument; names: Names }) {
           when={props.document.lines.length > 0}
           fallback={<p role="status">This document has no lines.</p>}
         >
-          <div class={layout.scroll}>
+          <div class={layout.scroll} tabindex="0" role="region" aria-label="Document lines">
             <table>
               <thead>
                 <tr>
@@ -305,7 +298,11 @@ function SelectedDocument(props: { id: string; names: Names }) {
 
   return (
     <QueryBoundary label="document" retry={() => reloaded(query.refetch())}>
-      <DocumentDetail document={query.data} names={props.names} />
+      <DocumentDetail
+        document={query.data}
+        names={props.names}
+        reload={() => reloaded(query.refetch())}
+      />
     </QueryBoundary>
   )
 }
@@ -394,6 +391,7 @@ export function Billing(props: {
                   Posted invoices, credit notes, and supplier bills with what is still open on each.
                 </p>
               }
+              headerActions={<InvoiceOrderDialog />}
               toolbar={
                 <BillingFilters
                   names={names()}

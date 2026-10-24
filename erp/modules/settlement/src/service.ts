@@ -1,5 +1,5 @@
 import type { CapabilityType } from "../../../../framework/modules/authorization/mod.ts"
-import { and, asc, eq, inArray, lte, sql } from "drizzle-orm"
+import { and, asc, desc, eq, inArray, lte, sql } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
@@ -34,6 +34,7 @@ import {
   AllocatePaymentInput,
   AssignPartyTermInput,
   CreatePaymentTermInput,
+  ListPaymentsInput,
   MakePaymentInput,
   type Payment,
   type PaymentDirection,
@@ -518,6 +519,66 @@ export const makeSettlementService = Effect.gen(function* () {
           )
           .pipe(Effect.map((terms) => new Map(terms.map((term) => [term.partyId, term.netDays]))))
 
+  const listPayments = Effect.fn("SettlementService.listPayments")(function* (
+    input: Schema.Codec.Encoded<typeof ListPaymentsInput>,
+  ) {
+    const decoded = yield* authorized(ListPaymentsInput, SettlementCapabilities.reportRead)(input)
+
+    return yield* database.transaction(async (tx) => {
+      const headers = await tx
+        .select()
+        .from(payments)
+        .where(
+          and(
+            eq(payments.tenantId, decoded.tenantId),
+            eq(payments.legalEntityId, decoded.legalEntityId),
+            ...(decoded.direction === undefined ? [] : [eq(payments.direction, decoded.direction)]),
+            ...(decoded.partyId === undefined ? [] : [eq(payments.partyId, decoded.partyId)]),
+          ),
+        )
+        .orderBy(desc(payments.paymentDate), desc(payments.number))
+        .limit(decoded.limit ?? 100)
+
+      const allocations =
+        headers.length === 0
+          ? []
+          : await tx
+              .select({
+                paymentId: paymentAllocations.paymentId,
+                invoiceId: paymentAllocations.invoiceId,
+                amount: paymentAllocations.amount,
+              })
+              .from(paymentAllocations)
+              .where(
+                and(
+                  eq(paymentAllocations.tenantId, decoded.tenantId),
+                  inArray(
+                    paymentAllocations.paymentId,
+                    headers.map((header) => header.id),
+                  ),
+                ),
+              )
+              .orderBy(asc(paymentAllocations.invoiceId))
+
+      return headers.map((header): Payment => ({
+        id: header.id,
+        tenantId: header.tenantId,
+        legalEntityId: header.legalEntityId,
+        direction: header.direction,
+        partyId: header.partyId,
+        number: header.number,
+        paymentDate: header.paymentDate,
+        amount: normalize(header.amount),
+        unallocatedAmount: normalize(header.unallocatedAmount),
+        cashAccountId: header.cashAccountId,
+        journalEntryId: header.journalEntryId,
+        allocations: allocations
+          .filter((row) => row.paymentId === header.id)
+          .map((row) => ({ invoiceId: row.invoiceId, amount: normalize(row.amount) })),
+      }))
+    }, "settlement.payment.list")
+  })
+
   const aging = Effect.fn("SettlementService.aging")(function* (
     input: Schema.Codec.Encoded<typeof AgingInput>,
   ) {
@@ -658,6 +719,7 @@ export const makeSettlementService = Effect.gen(function* () {
     receivePayment,
     makePayment,
     allocatePayment,
+    listPayments,
     aging,
     customerStatement,
   } satisfies SettlementService
