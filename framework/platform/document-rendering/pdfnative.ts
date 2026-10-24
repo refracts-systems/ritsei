@@ -1,4 +1,5 @@
 import * as Effect from "effect/Effect"
+import * as Match from "effect/Match"
 import * as Schema from "effect/Schema"
 import * as Predicate from "effect/Predicate"
 import {
@@ -134,39 +135,41 @@ const loadAsset = (assetId: string, resolveAsset: PdfNativeAssetResolver | undef
 
 type StaticDocumentNode = Exclude<DocumentNode, { _tag: "image" | "signature" }>
 
-const toStaticPdfBlock = (node: StaticDocumentNode): PdfDocumentBlock => {
-  switch (node._tag) {
-    case "text":
-      return { type: "paragraph", text: node.value }
-    case "table":
-      return {
-        type: "table",
-        headers: node.headers,
-        rows: node.rows.map((cells) => ({ cells, type: "default", pointed: false })),
-        repeatHeader: true,
-        wrap: "auto",
-      }
-    case "divider":
-      return {
-        type: "svg",
-        data: "M 0 0 L 460 0",
-        width: 460,
-        height: 1,
-        fill: "none",
-        stroke: "#CBD5E1",
-        strokeWidth: 0.5,
-        alt: "divider",
-      }
-    case "spacer":
-      return { type: "spacer", height: node.heightPx }
-    case "page_break":
-      return { type: "pageBreak" }
-    case "barcode":
-      return { type: "barcode", format: "code128", data: node.value, align: "center" }
-    case "qr_code":
-      return { type: "barcode", format: "qr", data: node.value, align: "center" }
-  }
-}
+const toStaticPdfBlock = (node: StaticDocumentNode): PdfDocumentBlock =>
+  Match.valueTags(node, {
+    text: (node): PdfDocumentBlock => ({ type: "paragraph", text: node.value }),
+    table: (node): PdfDocumentBlock => ({
+      type: "table",
+      headers: node.headers,
+      rows: node.rows.map((cells) => ({ cells, type: "default", pointed: false })),
+      repeatHeader: true,
+      wrap: "auto",
+    }),
+    divider: (): PdfDocumentBlock => ({
+      type: "svg",
+      data: "M 0 0 L 460 0",
+      width: 460,
+      height: 1,
+      fill: "none",
+      stroke: "#CBD5E1",
+      strokeWidth: 0.5,
+      alt: "divider",
+    }),
+    spacer: (node): PdfDocumentBlock => ({ type: "spacer", height: node.heightPx }),
+    page_break: (): PdfDocumentBlock => ({ type: "pageBreak" }),
+    barcode: (node): PdfDocumentBlock => ({
+      type: "barcode",
+      format: "code128",
+      data: node.value,
+      align: "center",
+    }),
+    qr_code: (node): PdfDocumentBlock => ({
+      type: "barcode",
+      format: "qr",
+      data: node.value,
+      align: "center",
+    }),
+  })
 
 const toImageBlocks = (
   node: Extract<DocumentNode, { _tag: "image" }>,
@@ -204,16 +207,15 @@ const toPdfBlocks = (
 ) =>
   Effect.gen(function* () {
     const blockResults = yield* Effect.all(
-      nodes.map((node) => {
-        switch (node._tag) {
-          case "image":
-            return toImageBlocks(node, resolveAsset)
-          case "signature":
-            return toSignatureBlocks(node, resolveAsset)
-          default:
-            return Effect.succeed({ blocks: [toStaticPdfBlock(node)], assetBytes: 0 })
-        }
-      }),
+      nodes.map((node) =>
+        Match.value(node).pipe(
+          Match.tag("image", (image) => toImageBlocks(image, resolveAsset)),
+          Match.tag("signature", (signature) => toSignatureBlocks(signature, resolveAsset)),
+          Match.orElse((rest) =>
+            Effect.succeed({ blocks: [toStaticPdfBlock(rest)], assetBytes: 0 }),
+          ),
+        ),
+      ),
     )
     const result = { blocks: new Array<PdfDocumentBlock>(), assetBytes: 0 }
     for (const blockResult of blockResults) {

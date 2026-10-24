@@ -4,9 +4,16 @@ import { extractText, validatePdfUA } from "pdfnative"
 
 import {
   DocumentAssetUnavailable,
+  DocumentBarcodeNode,
   documentContextFromSnapshot,
+  DocumentDividerNode,
+  DocumentImageNode,
+  DocumentQrCodeNode,
   DocumentRenderInput,
   type DocumentRenderPolicy,
+  DocumentSignatureNode,
+  DocumentTableNode,
+  DocumentTextNode,
   createDocumentAst,
   createDocumentRenderRequest,
   createDocumentSnapshot,
@@ -54,18 +61,17 @@ const renderInput = () =>
       documentType: "purchase_order",
       astVersion: 1,
       nodes: [
-        { _tag: "text", value: "PURCHASE ORDER" },
-        { _tag: "text", value: "فاتورة شراء / 仕入注文 / 구매 주문" },
-        {
-          _tag: "table",
+        DocumentTextNode.make({ value: "PURCHASE ORDER" }),
+        DocumentTextNode.make({ value: "فاتورة شراء / 仕入注文 / 구매 주문" }),
+        DocumentTableNode.make({
           headers: ["Item", "Quantity", "Unit Price"],
           rows: Array.from({ length: 80 }, (_, index) => [`ITEM-${index + 1}`, "2", "12.50"]),
-        },
-        { _tag: "divider" },
-        { _tag: "image", assetId: "logo-v1", alt: "Company logo" },
-        { _tag: "barcode", value: "PO-2026-0001" },
-        { _tag: "qr_code", value: "https://example.invalid/po/0001" },
-        { _tag: "signature", assetId: "signature-v1", label: "Approved by" },
+        }),
+        DocumentDividerNode.make({}),
+        DocumentImageNode.make({ assetId: "logo-v1", alt: "Company logo" }),
+        DocumentBarcodeNode.make({ value: "PO-2026-0001" }),
+        DocumentQrCodeNode.make({ value: "https://example.invalid/po/0001" }),
+        DocumentSignatureNode.make({ assetId: "signature-v1", label: "Approved by" }),
       ],
     })
     const request = yield* createDocumentRenderRequest({

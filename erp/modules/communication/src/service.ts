@@ -10,9 +10,12 @@ import {
   CommunicationRecipientResolver,
   DeliveryAttempt,
   DeliveryReceipt,
+  EmailHeadingNode,
+  EmailKeyValueNode,
   EmailMessage,
   EmailRenderer,
   EmailRenderInput,
+  EmailTextNode,
   EmailTransport,
   PreparedEmail,
   RecipientSnapshot,
@@ -64,19 +67,17 @@ const makeEmailMessage = (
   subject: `Purchase order ${event.aggregateId} confirmed`,
   preheader: "Your purchase order has been confirmed.",
   nodes: [
-    { _tag: "heading", level: 1, text: "Purchase order confirmed" },
-    {
-      _tag: "text",
+    EmailHeadingNode.make({ level: 1, text: "Purchase order confirmed" }),
+    EmailTextNode.make({
       text: `Purchase order ${event.aggregateId} was confirmed for ${payload.total}.`,
-    },
-    {
-      _tag: "key_value",
+    }),
+    EmailKeyValueNode.make({
       entries: [
         { label: "Purchase order", value: event.aggregateId },
         { label: "Supplier", value: payload.supplierAccountId },
         { label: "Total", value: payload.total },
       ],
-    },
+    }),
   ],
   attachments: [],
 })

@@ -11,6 +11,7 @@ import {
   CommunicationRecipientResolver,
   CommunicationRenderFailure,
   EmailMessage,
+  EmailMessageNode,
   EmailRenderer,
   EmailRenderInput,
   EmailTransport,
@@ -59,53 +60,38 @@ const escapeHtml = (value: string) =>
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;")
 
-const renderHtmlNode = (node: EmailMessage["nodes"][number]): string => {
-  switch (node._tag) {
-    case "heading":
-      return `<h${node.level}>${escapeHtml(node.text)}</h${node.level}>`
-    case "text":
-      return `<p>${escapeHtml(node.text)}</p>`
-    case "image":
-      return `<img src="${escapeHtml(node.assetId)}" alt="${escapeHtml(node.alt)}">`
-    case "button":
-      return `<a href="${escapeHtml(node.href)}">${escapeHtml(node.label)}</a>`
-    case "divider":
-      return "<hr>"
-    case "spacer":
-      return `<div style="height:${node.heightPx}px"></div>`
-    case "key_value":
-      return `<dl>${node.entries
+const renderHtmlNode = (node: EmailMessage["nodes"][number]): string =>
+  EmailMessageNode.match(node, {
+    heading: (node) => `<h${node.level}>${escapeHtml(node.text)}</h${node.level}>`,
+    text: (node) => `<p>${escapeHtml(node.text)}</p>`,
+    image: (node) => `<img src="${escapeHtml(node.assetId)}" alt="${escapeHtml(node.alt)}">`,
+    button: (node) => `<a href="${escapeHtml(node.href)}">${escapeHtml(node.label)}</a>`,
+    divider: () => "<hr>",
+    spacer: (node) => `<div style="height:${node.heightPx}px"></div>`,
+    key_value: (node) =>
+      `<dl>${node.entries
         .map((entry) => `<dt>${escapeHtml(entry.label)}</dt><dd>${escapeHtml(entry.value)}</dd>`)
-        .join("")}</dl>`
-    case "table":
-      return `<table><thead><tr>${node.headers
+        .join("")}</dl>`,
+    table: (node) =>
+      `<table><thead><tr>${node.headers
         .map((header) => `<th>${escapeHtml(header)}</th>`)
         .join("")}</tr></thead><tbody>${node.rows
         .map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`)
-        .join("")}</tbody></table>`
-  }
-}
+        .join("")}</tbody></table>`,
+  })
 
-const renderTextNode = (node: EmailMessage["nodes"][number]): string => {
-  switch (node._tag) {
-    case "heading":
-      return `${"#".repeat(node.level)} ${node.text}`
-    case "text":
-      return node.text
-    case "image":
-      return `[${node.alt}]`
-    case "button":
-      return `${node.label}: ${node.href}`
-    case "divider":
-      return "---"
-    case "spacer":
-      return ""
-    case "key_value":
-      return node.entries.map((entry) => `${entry.label}: ${entry.value}`).join("\n")
-    case "table":
-      return [node.headers.join(" | ")].concat(node.rows.map((row) => row.join(" | "))).join("\n")
-  }
-}
+const renderTextNode = (node: EmailMessage["nodes"][number]): string =>
+  EmailMessageNode.match(node, {
+    heading: (node) => `${"#".repeat(node.level)} ${node.text}`,
+    text: (node) => node.text,
+    image: (node) => `[${node.alt}]`,
+    button: (node) => `${node.label}: ${node.href}`,
+    divider: () => "---",
+    spacer: () => "",
+    key_value: (node) => node.entries.map((entry) => `${entry.label}: ${entry.value}`).join("\n"),
+    table: (node) =>
+      [node.headers.join(" | ")].concat(node.rows.map((row) => row.join(" | "))).join("\n"),
+  })
 
 const sha256Hex = (value: string) =>
   Effect.tryPromise({

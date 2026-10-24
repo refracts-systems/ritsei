@@ -9,7 +9,9 @@ import {
   communicationIdempotencyKey,
   CommunicationIntent,
   DeliveryAttempt,
+  EmailButtonNode,
   EmailMessage,
+  EmailTableNode,
   createCommunicationIntent,
   RecipientSnapshot,
 } from "../mod.ts"
@@ -88,14 +90,24 @@ it.effect("rejects unsafe email links and malformed table rows", () =>
     const unsafe = yield* Effect.flip(
       Schema.decodeUnknownEffect(EmailMessage)({
         subject: "Purchase order",
-        nodes: [{ _tag: "button", label: "Open", href: "javascript:alert(1)" }],
+        nodes: [
+          {
+            ...EmailButtonNode.make({ label: "Open", href: "https://example.test" }),
+            href: "javascript:alert(1)",
+          },
+        ],
         attachments: [],
       }),
     )
     const malformedTable = yield* Effect.flip(
       Schema.decodeUnknownEffect(EmailMessage)({
         subject: "Purchase order",
-        nodes: [{ _tag: "table", headers: ["Item", "Quantity"], rows: [["Widget"]] }],
+        nodes: [
+          {
+            ...EmailTableNode.make({ headers: ["Item", "Quantity"], rows: [["Widget", "1"]] }),
+            rows: [["Widget"]],
+          },
+        ],
         attachments: [],
       }),
     )

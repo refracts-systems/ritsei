@@ -78,17 +78,14 @@ export const DocumentContext = Schema.Struct({
 })
 export type DocumentContext = Schema.Schema.Type<typeof DocumentContext>
 
-const DocumentTextNode = Schema.Struct({
-  _tag: Schema.Literal("text"),
+export const DocumentTextNode = Schema.TaggedStruct("text", {
   value: NonEmptyString,
 })
-const DocumentImageNode = Schema.Struct({
-  _tag: Schema.Literal("image"),
+export const DocumentImageNode = Schema.TaggedStruct("image", {
   assetId: NonEmptyString,
   alt: NonEmptyString,
 })
-const DocumentTableNode = Schema.Struct({
-  _tag: Schema.Literal("table"),
+export const DocumentTableNode = Schema.TaggedStruct("table", {
   headers: Schema.Array(NonEmptyString).check(Schema.isMinLength(1)),
   rows: Schema.Array(Schema.Array(NonEmptyString)),
 }).check(
@@ -96,22 +93,18 @@ const DocumentTableNode = Schema.Struct({
     expected: "document table rows must match the header width",
   }),
 )
-const DocumentDividerNode = Schema.Struct({ _tag: Schema.Literal("divider") })
-const DocumentSpacerNode = Schema.Struct({
-  _tag: Schema.Literal("spacer"),
+export const DocumentDividerNode = Schema.TaggedStruct("divider", {})
+export const DocumentSpacerNode = Schema.TaggedStruct("spacer", {
   heightPx: NonNegativeInteger,
 })
-const DocumentPageBreakNode = Schema.Struct({ _tag: Schema.Literal("page_break") })
-const DocumentBarcodeNode = Schema.Struct({
-  _tag: Schema.Literal("barcode"),
+export const DocumentPageBreakNode = Schema.TaggedStruct("page_break", {})
+export const DocumentBarcodeNode = Schema.TaggedStruct("barcode", {
   value: NonEmptyString,
 })
-const DocumentQrCodeNode = Schema.Struct({
-  _tag: Schema.Literal("qr_code"),
+export const DocumentQrCodeNode = Schema.TaggedStruct("qr_code", {
   value: NonEmptyString,
 })
-const DocumentSignatureNode = Schema.Struct({
-  _tag: Schema.Literal("signature"),
+export const DocumentSignatureNode = Schema.TaggedStruct("signature", {
   assetId: NonEmptyString,
   label: NonEmptyString,
 })
@@ -126,7 +119,7 @@ export const DocumentNode = Schema.Union([
   DocumentBarcodeNode,
   DocumentQrCodeNode,
   DocumentSignatureNode,
-])
+]).pipe(Schema.toTaggedUnion("_tag"))
 export type DocumentNode = Schema.Schema.Type<typeof DocumentNode>
 
 export const DocumentAstInput = Schema.Struct({

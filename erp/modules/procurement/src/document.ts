@@ -8,6 +8,8 @@ import {
   DocumentNode,
   DocumentSnapshot,
   DocumentSnapshotInput,
+  DocumentTableNode,
+  DocumentTextNode,
   createDocumentAst,
   createDocumentSnapshot,
 } from "../../../../framework/foundation/mod.ts"
@@ -104,16 +106,15 @@ export const makePurchaseOrderDocumentAst = (
       decodedSnapshot.payload,
     )
     const nodes: DocumentNode[] = [
-      { _tag: "text", value: "PURCHASE ORDER" },
-      { _tag: "text", value: `Order ${decodedSnapshot.source.id}` },
-      { _tag: "text", value: `Supplier account ${payload.supplierAccountId}` },
-      { _tag: "text", value: `Confirmed ${payload.confirmedAt}` },
-      {
-        _tag: "table",
+      DocumentTextNode.make({ value: "PURCHASE ORDER" }),
+      DocumentTextNode.make({ value: `Order ${decodedSnapshot.source.id}` }),
+      DocumentTextNode.make({ value: `Supplier account ${payload.supplierAccountId}` }),
+      DocumentTextNode.make({ value: `Confirmed ${payload.confirmedAt}` }),
+      DocumentTableNode.make({
         headers: ["Item", "Quantity", "Unit Price"],
         rows: payload.lines.map((line) => [line.itemId, line.quantity, line.unitPrice]),
-      },
-      { _tag: "text", value: `Total ${payload.total}` },
+      }),
+      DocumentTextNode.make({ value: `Total ${payload.total}` }),
     ]
     return yield* createDocumentAst({
       snapshotId: decodedSnapshot.snapshotId,

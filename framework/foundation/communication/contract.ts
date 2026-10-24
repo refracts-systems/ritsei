@@ -166,32 +166,26 @@ export const CommunicationAttachmentRef = Schema.Struct({
 })
 export type CommunicationAttachmentRef = Schema.Schema.Type<typeof CommunicationAttachmentRef>
 
-const EmailHeadingNode = Schema.Struct({
-  _tag: Schema.Literal("heading"),
+export const EmailHeadingNode = Schema.TaggedStruct("heading", {
   level: Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 6 })),
   text: NonEmptyString,
 })
-const EmailTextNode = Schema.Struct({
-  _tag: Schema.Literal("text"),
+export const EmailTextNode = Schema.TaggedStruct("text", {
   text: NonEmptyString,
 })
-const EmailImageNode = Schema.Struct({
-  _tag: Schema.Literal("image"),
+export const EmailImageNode = Schema.TaggedStruct("image", {
   assetId: NonEmptyString,
   alt: NonEmptyString,
 })
-const EmailButtonNode = Schema.Struct({
-  _tag: Schema.Literal("button"),
+export const EmailButtonNode = Schema.TaggedStruct("button", {
   label: NonEmptyString,
   href: SafeEmailLink,
 })
-const EmailDividerNode = Schema.Struct({ _tag: Schema.Literal("divider") })
-const EmailSpacerNode = Schema.Struct({
-  _tag: Schema.Literal("spacer"),
+export const EmailDividerNode = Schema.TaggedStruct("divider", {})
+export const EmailSpacerNode = Schema.TaggedStruct("spacer", {
   heightPx: NonNegativeInteger,
 })
-const EmailKeyValueNode = Schema.Struct({
-  _tag: Schema.Literal("key_value"),
+export const EmailKeyValueNode = Schema.TaggedStruct("key_value", {
   entries: Schema.Array(
     Schema.Struct({
       label: NonEmptyString,
@@ -199,8 +193,7 @@ const EmailKeyValueNode = Schema.Struct({
     }),
   ).check(Schema.isMinLength(1)),
 })
-const EmailTableNode = Schema.Struct({
-  _tag: Schema.Literal("table"),
+export const EmailTableNode = Schema.TaggedStruct("table", {
   headers: Schema.Array(NonEmptyString).check(Schema.isMinLength(1)),
   rows: Schema.Array(Schema.Array(NonEmptyString)),
 }).check(
@@ -218,7 +211,7 @@ export const EmailMessageNode = Schema.Union([
   EmailSpacerNode,
   EmailKeyValueNode,
   EmailTableNode,
-])
+]).pipe(Schema.toTaggedUnion("_tag"))
 export type EmailMessageNode = Schema.Schema.Type<typeof EmailMessageNode>
 
 export const EmailMessage = Schema.Struct({

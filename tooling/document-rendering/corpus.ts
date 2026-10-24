@@ -1,4 +1,14 @@
-import type { DocumentCapability, DocumentNode } from "../../framework/foundation/mod.ts"
+import {
+  DocumentBarcodeNode,
+  type DocumentCapability,
+  DocumentImageNode,
+  type DocumentNode,
+  DocumentPageBreakNode,
+  DocumentQrCodeNode,
+  DocumentSignatureNode,
+  DocumentTableNode,
+  DocumentTextNode,
+} from "../../framework/foundation/mod.ts"
 
 export type DocumentBenchmarkFixture = {
   readonly name: string
@@ -19,9 +29,9 @@ export const documentBenchmarkCorpus: ReadonlyArray<DocumentBenchmarkFixture> = 
   {
     name: "purchase-order-small",
     nodes: [
-      { _tag: "text", value: "PURCHASE ORDER" },
-      { _tag: "table", headers: ["Item", "Quantity", "Unit Price"], rows: tableRows(3) },
-      { _tag: "text", value: "Total 25.00" },
+      DocumentTextNode.make({ value: "PURCHASE ORDER" }),
+      DocumentTableNode.make({ headers: ["Item", "Quantity", "Unit Price"], rows: tableRows(3) }),
+      DocumentTextNode.make({ value: "Total 25.00" }),
     ],
     capabilities: [],
     pageCount: 1,
@@ -30,9 +40,9 @@ export const documentBenchmarkCorpus: ReadonlyArray<DocumentBenchmarkFixture> = 
   {
     name: "purchase-order-large",
     nodes: [
-      { _tag: "text", value: "PURCHASE ORDER" },
-      { _tag: "table", headers: ["Item", "Quantity", "Unit Price"], rows: tableRows(100) },
-      { _tag: "text", value: "Total 2500.00" },
+      DocumentTextNode.make({ value: "PURCHASE ORDER" }),
+      DocumentTableNode.make({ headers: ["Item", "Quantity", "Unit Price"], rows: tableRows(100) }),
+      DocumentTextNode.make({ value: "Total 2500.00" }),
     ],
     capabilities: [],
     pageCount: 5,
@@ -41,8 +51,8 @@ export const documentBenchmarkCorpus: ReadonlyArray<DocumentBenchmarkFixture> = 
   {
     name: "unicode-cjk-rtl",
     nodes: [
-      { _tag: "text", value: "فاتورة شراء / 仕入注文 / 구매 주문" },
-      { _tag: "text", value: "Noto Sans CJK + RTL fixture" },
+      DocumentTextNode.make({ value: "فاتورة شراء / 仕入注文 / 구매 주문" }),
+      DocumentTextNode.make({ value: "Noto Sans CJK + RTL fixture" }),
     ],
     capabilities: ["svg"],
     pageCount: 1,
@@ -51,10 +61,13 @@ export const documentBenchmarkCorpus: ReadonlyArray<DocumentBenchmarkFixture> = 
   {
     name: "pagination-table",
     nodes: [
-      { _tag: "text", value: "MULTI-PAGE STATEMENT" },
-      { _tag: "table", headers: ["Reference", "Quantity", "Amount"], rows: tableRows(250) },
-      { _tag: "page_break" },
-      { _tag: "text", value: "REPEATED PAGE SECTION" },
+      DocumentTextNode.make({ value: "MULTI-PAGE STATEMENT" }),
+      DocumentTableNode.make({
+        headers: ["Reference", "Quantity", "Amount"],
+        rows: tableRows(250),
+      }),
+      DocumentPageBreakNode.make({}),
+      DocumentTextNode.make({ value: "REPEATED PAGE SECTION" }),
     ],
     capabilities: ["paged-media"],
     pageCount: 12,
@@ -63,10 +76,10 @@ export const documentBenchmarkCorpus: ReadonlyArray<DocumentBenchmarkFixture> = 
   {
     name: "asset-and-code-heavy",
     nodes: [
-      { _tag: "image", assetId: "logo-v1", alt: "Company logo" },
-      { _tag: "barcode", value: "PO-2026-0001" },
-      { _tag: "qr_code", value: "https://example.invalid/document/PO-2026-0001" },
-      { _tag: "signature", assetId: "signature-v1", label: "Approved by" },
+      DocumentImageNode.make({ assetId: "logo-v1", alt: "Company logo" }),
+      DocumentBarcodeNode.make({ value: "PO-2026-0001" }),
+      DocumentQrCodeNode.make({ value: "https://example.invalid/document/PO-2026-0001" }),
+      DocumentSignatureNode.make({ assetId: "signature-v1", label: "Approved by" }),
     ],
     capabilities: ["svg"],
     pageCount: 1,
