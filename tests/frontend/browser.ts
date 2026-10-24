@@ -36,6 +36,9 @@ export const notFoundBody = (code = "not_found") =>
 export const conflictBody = (code = "conflict") =>
   Schema.encodeSync(ApiErrorWire)(new ApiConflict({ code }))
 
+export const serviceUnavailableBody = () =>
+  Schema.encodeSync(ApiErrorWire)(new ApiServiceUnavailable({ code: "service_unavailable" }))
+
 type MockLocalAuthOptions = Readonly<{
   memberships?: readonly {
     userAccountId: string

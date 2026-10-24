@@ -25,6 +25,7 @@ import { InvoiceOrderDialog } from "./invoice-order-dialog.tsx"
 import { SupplierBillDialog } from "./supplier-bill-dialog.tsx"
 import { canRecordPayment, RecordPaymentDialog } from "./record-payment-dialog.tsx"
 import type { BillingDocument, BillingSide } from "./service.ts"
+import { DocumentFlow } from "../documents/document-flow.tsx"
 
 const sideOptions = [
   { value: "receivable", label: "Customers (receivable)" },
@@ -289,6 +290,11 @@ function DocumentDetail(props: {
           </div>
         </Show>
       </section>
+      <DocumentFlow
+        feature="billing"
+        documentType="billing.document"
+        documentId={props.document.id}
+      />
     </section>
   )
 }
