@@ -98,6 +98,9 @@ export const makeSalesMemoryStore = (): SalesStore => {
         .filter((order) => order.tenantId === input.tenantId)
         .filter((order) => input.customerId === undefined || order.customerId === input.customerId)
         .filter((order) => input.status === undefined || order.status === input.status)
+        .filter(
+          (order) => input.quotationId === undefined || order.quotationId === input.quotationId,
+        )
         .sort((left, right) => left.id.localeCompare(right.id))
         .slice(0, input.limit ?? 200),
     ),

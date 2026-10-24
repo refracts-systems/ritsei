@@ -186,6 +186,9 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
                 ? undefined
                 : eq(orders.customerId, decoded.customerId),
               decoded.status === undefined ? undefined : eq(orders.status, decoded.status),
+              decoded.quotationId === undefined
+                ? undefined
+                : eq(orders.quotationId, decoded.quotationId),
             ),
           )
           .orderBy(asc(orders.id))

@@ -534,6 +534,22 @@ export const makeSettlementService = Effect.gen(function* () {
             eq(payments.legalEntityId, decoded.legalEntityId),
             ...(decoded.direction === undefined ? [] : [eq(payments.direction, decoded.direction)]),
             ...(decoded.partyId === undefined ? [] : [eq(payments.partyId, decoded.partyId)]),
+            ...(decoded.invoiceId === undefined
+              ? []
+              : [
+                  inArray(
+                    payments.id,
+                    tx
+                      .select({ id: paymentAllocations.paymentId })
+                      .from(paymentAllocations)
+                      .where(
+                        and(
+                          eq(paymentAllocations.tenantId, decoded.tenantId),
+                          eq(paymentAllocations.invoiceId, decoded.invoiceId),
+                        ),
+                      ),
+                  ),
+                ]),
           ),
         )
         .orderBy(desc(payments.paymentDate), desc(payments.number))

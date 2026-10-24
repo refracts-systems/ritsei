@@ -154,6 +154,8 @@ export const ListPaymentsInput = Schema.Struct({
   legalEntityId: Uuid,
   direction: Schema.optionalKey(PaymentDirection),
   partyId: Schema.optionalKey(Uuid),
+  /** Only payments that settle this document. */
+  invoiceId: Schema.optionalKey(Uuid),
   limit: Schema.optionalKey(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 200 }))),
 })
 

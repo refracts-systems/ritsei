@@ -12,6 +12,7 @@ import {
 } from "../../erp/modules/accounting/mod.ts"
 import { StockKeepingLive } from "../../erp/modules/inventory/mod.ts"
 import { BillingLive } from "../../erp/modules/billing/mod.ts"
+import { DocumentsLive } from "../../erp/modules/documents/mod.ts"
 import { PartyLive } from "../../erp/modules/party/mod.ts"
 import { OrderToCashLive } from "../../erp/modules/process/mod.ts"
 import { SettlementLive } from "../../erp/modules/settlement/mod.ts"
@@ -87,6 +88,10 @@ export const erpChainLayers = (client: Sql, grants: ReadonlyArray<Grant>) => {
     Layer.provide(Layer.mergeAll(platform, ledger, billing, numbering)),
   )
 
+  const documents = DocumentsLive.pipe(
+    Layer.provide(Layer.mergeAll(legacySales, sales, procurement, purchasing, billing, settlement)),
+  )
+
   const orderToCash = OrderToCashLive.pipe(
     Layer.provide(Layer.mergeAll(platform, sales, stock, product)),
   )
@@ -108,6 +113,7 @@ export const erpChainLayers = (client: Sql, grants: ReadonlyArray<Grant>) => {
     inventory,
     procurement,
     purchasing,
+    documents,
     orderToCash,
   )
 }

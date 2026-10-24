@@ -15,6 +15,7 @@ import {
   BillingService,
   BillVarianceSubject,
 } from "../../erp/modules/billing/mod.ts"
+import { DocumentsService } from "../../erp/modules/documents/mod.ts"
 import { InventoryCapabilities, StockKeepingService } from "../../erp/modules/inventory/mod.ts"
 import { PartyCapabilities, PartyService } from "../../erp/modules/party/mod.ts"
 import {
@@ -83,6 +84,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           const approvals = yield* ApprovalService
           const billing = yield* BillingService
           const settlement = yield* SettlementService
+          const documents = yield* DocumentsService
           const scope = { principal: buyer, tenantId }
 
           // Masters: chart, supplier party role and account, stockable product, tax, price, policy.
@@ -366,6 +368,37 @@ it.effect.skipIf(databaseUrl === undefined)(
 
           assert.strictEqual(paid.number, "PAY/2026/00001")
           assert.strictEqual(paid.unallocatedAmount, "0.00")
+
+          // One payment settles two bills; the chain lists it once, after both bills.
+          const flow = yield* documents.chain({
+            ...scope,
+            documentType: "billing.document",
+            documentId: secondBill.id,
+          })
+
+          assert.deepStrictEqual(
+            flow.nodes.map((node) => [node.type, node.state]),
+            [
+              ["procurement.purchase_order", "confirmed"],
+              ["procurement.receipt", "received"],
+              ["procurement.receipt", "received"],
+              ["billing.supplier_bill", "settled"],
+              ["billing.supplier_bill", "open"],
+              ["settlement.payment", "allocated"],
+            ],
+          )
+          assert.deepStrictEqual(
+            flow.nodes.filter((node) => node.current).map((node) => node.id),
+            [secondBill.id],
+          )
+          assert.deepStrictEqual(
+            (yield* documents.chain({
+              ...scope,
+              documentType: "procurement.purchase_order",
+              documentId: drafted.purchaseOrderId,
+            })).nodes.map((node) => node.id),
+            flow.nodes.map((node) => node.id),
+          )
 
           const aging = yield* settlement.aging({
             ...scope,

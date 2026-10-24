@@ -80,11 +80,12 @@ proposal until a design-system change adds it to §6.
   owning workspace.
 - **Accessibility.** The chain is a real list in document order with one current item; keyboard focus
   moves node to node; the same facts are reachable without the diagram.
-- **Open question: data.** No module may read another module's tables. The chain therefore needs a
-  query that joins references across modules through public contracts, for example a read port in a
-  coordinating module, the same shape the credit-limit work will need
-  ([`erp-chains-next-steps.md`](./erp-chains-next-steps.md) F4). Whether each document already stores a
-  usable source reference has to be checked module by module before the pattern is built.
+- **Data.** No module may read another module's tables, so the chain is a query that joins references
+  across modules through public contracts: the `documents` module's `chain` read port, proposed in
+  [ADR-0107](../decisions/0107-read-document-chains-through-a-documents-module.md). It reads the
+  source references the owners already store, and the same shape serves the credit-limit work
+  ([`erp-chains-next-steps.md`](./erp-chains-next-steps.md) F4). Purchase returns join the chain when
+  Procurement exposes a read for them.
 
 ## 5. Risks and assumptions
 

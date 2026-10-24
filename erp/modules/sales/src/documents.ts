@@ -804,6 +804,32 @@ export const makeSalesDocumentService = Effect.gen(function* () {
       } satisfies Delivery
     }, "sales.delivery.load")
 
+  const listDeliveries = Effect.fn("SalesDocumentService.listDeliveries")(function* (
+    input: Schema.Codec.Encoded<typeof OrderQueryInput>,
+  ) {
+    const decoded = yield* authorized(OrderQueryInput, SalesCapabilities.orderRead)(input)
+
+    yield* loadFulfillment(decoded.tenantId, decoded.orderId, false)
+
+    const headers = yield* database.query(
+      (db) =>
+        db
+          .select({ id: deliveries.id })
+          .from(deliveries)
+          .where(
+            and(eq(deliveries.tenantId, decoded.tenantId), eq(deliveries.orderId, decoded.orderId)),
+          )
+          .orderBy(asc(deliveries.deliveryDate), asc(deliveries.number)),
+      "sales.delivery.list",
+    )
+
+    const loaded = yield* Effect.forEach(headers, (header) =>
+      loadDelivery(decoded.tenantId, header.id),
+    )
+
+    return loaded.filter((delivery) => delivery !== undefined)
+  })
+
   const recordDelivery = Effect.fn("SalesDocumentService.recordDelivery")(function* (
     input: Schema.Codec.Encoded<typeof RecordDeliveryInput>,
   ) {
@@ -932,6 +958,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
     expireQuotations,
     convertQuotation,
     getFulfillment,
+    listDeliveries,
     recordDelivery,
   } satisfies SalesDocumentService
 })

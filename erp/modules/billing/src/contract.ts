@@ -161,6 +161,9 @@ export const ListBillingDocumentsInput = Schema.Struct({
   partyId: Schema.optionalKey(Uuid),
   side: Schema.optionalKey(BillingSide),
   to: Schema.optionalKey(CalendarDate),
+  /** Only documents raised from this source document, or crediting this invoice. */
+  sourceId: Schema.optionalKey(Uuid),
+  creditedInvoiceId: Schema.optionalKey(Uuid),
 })
 
 type CommonFailure = AuthorizationDenied | DatabaseFailure | Schema.SchemaError

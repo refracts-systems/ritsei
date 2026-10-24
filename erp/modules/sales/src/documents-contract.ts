@@ -267,6 +267,13 @@ export interface SalesDocumentService {
     OrderFulfillment,
     SalesOrderNotFound | CustomerLegalEntityRequired | CommonFailure
   >
+  /** The order's deliveries, oldest first. */
+  readonly listDeliveries: (
+    input: Schema.Codec.Encoded<typeof OrderQueryInput>,
+  ) => Effect.Effect<
+    ReadonlyArray<Delivery>,
+    SalesOrderNotFound | CustomerLegalEntityRequired | CommonFailure
+  >
   readonly recordDelivery: (
     input: Schema.Codec.Encoded<typeof RecordDeliveryInput>,
   ) => Effect.Effect<
