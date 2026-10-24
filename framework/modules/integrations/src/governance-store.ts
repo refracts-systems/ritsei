@@ -1,7 +1,6 @@
 import { and, desc, eq } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
-import * as Predicate from "effect/Predicate"
 import * as Match from "effect/Match"
 import * as Data from "effect/Data"
 
@@ -312,32 +311,40 @@ const auditValues = (input: {
   details: input.details,
 })
 
-type TransitionResult =
-  | { readonly _tag: "updated"; readonly row: GovernanceRow; readonly audit: AuditRow }
-  | { readonly _tag: "duplicate"; readonly row: GovernanceRow; readonly audit: AuditRow }
-  | { readonly _tag: "missing" }
-  | { readonly _tag: "conflict" }
-  | { readonly _tag: "not_reviewed" }
-  | { readonly _tag: "retired" }
+type TransitionResult = Data.TaggedEnum<{
+  Updated: { readonly row: GovernanceRow; readonly audit: AuditRow }
+  Duplicate: { readonly row: GovernanceRow; readonly audit: AuditRow }
+  Missing: {}
+  Conflict: {}
+  NotReviewed: {}
+  Retired: {}
+}>
+const TransitionResult = Data.taggedEnum<TransitionResult>()
 
-type TransitionDecision =
-  | { readonly _tag: "updated"; readonly status: GovernanceRow["status"] }
-  | "conflict"
-  | "not_reviewed"
-  | "retired"
+type TransitionDecision = Data.TaggedEnum<{
+  Advance: { readonly status: GovernanceRow["status"] }
+  Conflict: {}
+  NotReviewed: {}
+  Retired: {}
+}>
+const TransitionDecision = Data.taggedEnum<TransitionDecision>()
 
 const transitionStatus = (
   row: GovernanceRow,
   input: ExternalConnectorTransitionInput,
 ): TransitionDecision => {
-  if (row.status === "retired") return "retired"
+  if (row.status === "retired") return TransitionDecision.Retired()
   if (input.action === "review") {
-    return row.status === "draft" ? { _tag: "updated", status: "reviewed" } : "conflict"
+    return row.status === "draft"
+      ? TransitionDecision.Advance({ status: "reviewed" })
+      : TransitionDecision.Conflict()
   }
   if (input.action === "activate") {
-    return row.status === "reviewed" ? { _tag: "updated", status: "active" } : "not_reviewed"
+    return row.status === "reviewed"
+      ? TransitionDecision.Advance({ status: "active" })
+      : TransitionDecision.NotReviewed()
   }
-  return { _tag: "updated", status: "retired" }
+  return TransitionDecision.Advance({ status: "retired" })
 }
 
 const transitionAuditAction = (
@@ -351,10 +358,10 @@ const transitionAuditAction = (
   )
 
 const mapMutationFailure = (
-  result: TransitionResult,
+  kind: "NotReviewed" | "Retired" | "Other",
   input: { readonly connectorId: string; readonly version: number },
 ): Effect.Effect<never, GovernanceStoreError> => {
-  if (result._tag === "not_reviewed") {
+  if (kind === "NotReviewed") {
     return Effect.fail(
       new ExternalConnectorNotReviewed({
         connectorId: input.connectorId,
@@ -362,7 +369,7 @@ const mapMutationFailure = (
       }),
     )
   }
-  if (result._tag === "retired") {
+  if (kind === "Retired") {
     return Effect.fail(
       new ExternalConnectorRetired({
         connectorId: input.connectorId,
@@ -388,8 +395,8 @@ const findTransitionReplay = async (
   return row !== undefined &&
     audit.connectorId === input.connectorId &&
     audit.connectorVersion === input.version
-    ? { _tag: "duplicate", row, audit }
-    : { _tag: "conflict" }
+    ? TransitionResult.Duplicate({ row, audit })
+    : TransitionResult.Conflict()
 }
 
 const applyTransition = async (
@@ -398,7 +405,9 @@ const applyTransition = async (
   existing: GovernanceRow,
 ): Promise<TransitionResult> => {
   const next = transitionStatus(existing, input)
-  if (Predicate.isString(next)) return { _tag: next }
+  if (TransitionDecision.$is("Conflict")(next)) return TransitionResult.Conflict()
+  if (TransitionDecision.$is("NotReviewed")(next)) return TransitionResult.NotReviewed()
+  if (TransitionDecision.$is("Retired")(next)) return TransitionResult.Retired()
   const [row] = await transaction
     .update(externalConnectorGovernance)
     .set({
@@ -415,7 +424,7 @@ const applyTransition = async (
       ),
     )
     .returning()
-  if (row === undefined) return { _tag: "missing" }
+  if (row === undefined) return TransitionResult.Missing()
   const [audit] = await transaction
     .insert(externalGovernanceAudit)
     .values(
@@ -432,7 +441,7 @@ const applyTransition = async (
       }),
     )
     .returning()
-  return audit === undefined ? { _tag: "missing" } : { _tag: "updated", row, audit }
+  return audit === undefined ? TransitionResult.Missing() : TransitionResult.Updated({ row, audit })
 }
 
 export type RecordDeliveryControlOutcome = Data.TaggedEnum<{
@@ -600,19 +609,19 @@ export const makePostgresExternalGovernanceStore = Effect.gen(function* () {
           decoded.version,
           true,
         )
-        if (existing === undefined) return { _tag: "missing" }
+        if (existing === undefined) return TransitionResult.Missing()
         return applyTransition(transaction, decoded, existing)
       }, "integration.connector.transition")
-      if (result._tag === "missing") {
-        return yield* Effect.fail(invalid(`${decoded.connectorId}:${decoded.version}`))
-      }
-      if (result._tag === "conflict") {
-        return yield* Effect.fail(mapIdempotencyFailure(decoded.tenantId, decoded.idempotencyKey))
-      }
-      if (result._tag === "not_reviewed" || result._tag === "retired") {
-        return yield* mapMutationFailure(result, decoded)
-      }
-      return { record: toGovernanceRecord(result.row), duplicate: result._tag === "duplicate" }
+      return yield* TransitionResult.$match(result, {
+        Missing: () => mapMutationFailure("Other", decoded),
+        Conflict: () =>
+          Effect.fail(mapIdempotencyFailure(decoded.tenantId, decoded.idempotencyKey)),
+        NotReviewed: () => mapMutationFailure("NotReviewed", decoded),
+        Retired: () => mapMutationFailure("Retired", decoded),
+        Updated: ({ row }) => Effect.succeed({ record: toGovernanceRecord(row), duplicate: false }),
+        Duplicate: ({ row }) =>
+          Effect.succeed({ record: toGovernanceRecord(row), duplicate: true }),
+      })
     })
 
   const recordDeliveryControl = (

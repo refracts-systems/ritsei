@@ -1,4 +1,5 @@
 import { and, desc, eq } from "drizzle-orm"
+import * as Data from "effect/Data"
 import * as Effect from "effect/Effect"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
@@ -395,15 +396,13 @@ export const makeMemoryExternalReliabilityStore = (): ExternalReliabilityStore =
   }
 }
 
-type PersistedRecordResult =
-  | {
-      readonly _tag: "result"
-      readonly record: ExternalReliabilityRecord
-      readonly duplicate: boolean
-    }
-  | { readonly _tag: "missing" }
-  | { readonly _tag: "conflict" }
-  | { readonly _tag: "invalid" }
+type PersistedRecordResult = Data.TaggedEnum<{
+  Result: { readonly record: ExternalReliabilityRecord; readonly duplicate: boolean }
+  Missing: {}
+  Conflict: {}
+  Invalid: {}
+}>
+const PersistedRecordResult = Data.taggedEnum<PersistedRecordResult>()
 
 export const makePostgresExternalReliabilityStore = Effect.gen(function* () {
   const database = yield* Database
@@ -421,8 +420,8 @@ export const makePostgresExternalReliabilityStore = Effect.gen(function* () {
             if (inserted !== undefined) {
               const record = rowToRecord(inserted)
               return record === undefined
-                ? { _tag: "invalid" }
-                : { _tag: "result", record, duplicate: false }
+                ? PersistedRecordResult.Invalid()
+                : PersistedRecordResult.Result({ record, duplicate: false })
             }
 
             const [existingRow] = await transaction
@@ -435,14 +434,14 @@ export const makePostgresExternalReliabilityStore = Effect.gen(function* () {
                 ),
               )
               .for("update")
-            if (existingRow === undefined) return { _tag: "missing" }
+            if (existingRow === undefined) return PersistedRecordResult.Missing()
 
             const existing = rowToRecord(existingRow)
-            if (existing === undefined) return { _tag: "invalid" }
+            if (existing === undefined) return PersistedRecordResult.Invalid()
             const merged = merge(existing, candidate)
-            if (merged === "conflict") return { _tag: "conflict" }
+            if (merged === "conflict") return PersistedRecordResult.Conflict()
             if (merged.duplicate) {
-              return { _tag: "result", record: merged.record, duplicate: true }
+              return PersistedRecordResult.Result({ record: merged.record, duplicate: true })
             }
             const [updated] = await transaction
               .update(externalReliabilityRecords)
@@ -454,39 +453,38 @@ export const makePostgresExternalReliabilityStore = Effect.gen(function* () {
                 ),
               )
               .returning()
-            if (updated === undefined) return { _tag: "missing" }
+            if (updated === undefined) return PersistedRecordResult.Missing()
             const record = rowToRecord(updated)
             return record === undefined
-              ? { _tag: "invalid" }
-              : { _tag: "result", record, duplicate: false }
+              ? PersistedRecordResult.Invalid()
+              : PersistedRecordResult.Result({ record, duplicate: false })
           },
           "integration.reliability.record",
         )
-        if (result._tag === "conflict") {
-          return yield* Effect.fail(
-            new ExternalIdempotencyConflict({
-              tenantId: candidate.tenantId,
-              idempotencyKey: candidate.replayKey,
-            }),
-          )
-        }
-        if (result._tag === "missing") {
-          return yield* Effect.fail(
-            new DatabaseFailure({
-              operation: "integration.reliability.record",
-              cause: "replay record disappeared during persistence",
-            }),
-          )
-        }
-        if (result._tag === "invalid") {
-          return yield* Effect.fail(
-            new DatabaseFailure({
-              operation: "integration.reliability.record",
-              cause: "persisted reliability record failed validation",
-            }),
-          )
-        }
-        return { record: result.record, duplicate: result.duplicate }
+        return yield* PersistedRecordResult.$match(result, {
+          Conflict: () =>
+            Effect.fail(
+              new ExternalIdempotencyConflict({
+                tenantId: candidate.tenantId,
+                idempotencyKey: candidate.replayKey,
+              }),
+            ),
+          Missing: () =>
+            Effect.fail(
+              new DatabaseFailure({
+                operation: "integration.reliability.record",
+                cause: "replay record disappeared during persistence",
+              }),
+            ),
+          Invalid: () =>
+            Effect.fail(
+              new DatabaseFailure({
+                operation: "integration.reliability.record",
+                cause: "persisted reliability record failed validation",
+              }),
+            ),
+          Result: ({ record, duplicate }) => Effect.succeed({ record, duplicate }),
+        })
       }),
     get: (tenantId: string, replayKey: string) =>
       Effect.gen(function* () {
