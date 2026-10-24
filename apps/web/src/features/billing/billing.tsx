@@ -26,6 +26,7 @@ import { SupplierBillDialog } from "./supplier-bill-dialog.tsx"
 import { canRecordPayment, RecordPaymentDialog } from "./record-payment-dialog.tsx"
 import type { BillingDocument, BillingSide } from "./service.ts"
 import { DocumentFlow } from "../documents/document-flow.tsx"
+import { PrintableDocument } from "./printable-document.tsx"
 
 const sideOptions = [
   { value: "receivable", label: "Customers (receivable)" },
@@ -178,11 +179,15 @@ function DocumentDetail(props: {
       <h2 id="billing-document-heading">
         {kindLabels[props.document.kind]} {props.document.number}
       </h2>
-      <Show when={canRecordPayment(props.document)}>
-        <div class={layout.actionRow}>
+      <div class={layout.actionRow}>
+        <Show when={canRecordPayment(props.document)}>
           <RecordPaymentDialog document={props.document} reload={props.reload} />
-        </div>
-      </Show>
+        </Show>
+        <Button type="button" onClick={() => globalThis.print()}>
+          Print or save as PDF
+        </Button>
+      </div>
+      <PrintableDocument document={props.document} names={props.names} />
       <dl class={layout.detailList}>
         <div class={layout.detailItem}>
           <dt class={layout.detailTerm}>Status</dt>

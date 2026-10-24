@@ -558,6 +558,20 @@ export default defineConfig({
       textRendering: "optimizeLegibility",
     },
     body: { margin: "0", textStyle: "body" },
+    // Printing shows only the document marked for it, so "Print" can also save a PDF.
+    "[data-print-sheet]": { display: "none" },
+    "@media print": {
+      "body *": { visibility: "hidden" },
+      // Black on white whatever the theme, since a printed page has no dark mode.
+      "[data-print-sheet], [data-print-sheet] *": { visibility: "visible", color: "[black]" },
+      "[data-print-sheet]": {
+        display: "block",
+        position: "absolute",
+        insetInlineStart: "0",
+        insetBlockStart: "0",
+        width: "[100%]",
+      },
+    },
     "[data-theme=dark]": { colorScheme: "dark" },
     "[data-theme=light]": { colorScheme: "light" },
     "::selection": { bg: "actionSubtle", color: "text" },
