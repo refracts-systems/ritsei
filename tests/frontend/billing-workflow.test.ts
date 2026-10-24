@@ -69,8 +69,6 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const { page, url, errors } = yield* builtApp
-      const configurations: unknown[] = [configuration]
-      const documentsStatus = 200
       const requests: Array<{ path: string; search: string }> = []
 
       yield* Effect.promise(async () => {
@@ -81,11 +79,9 @@ it.effect(
 
           if (path === "/user-accounts") return fulfillJson(route, 200, [])
 
-          if (path === "/accounting/configurations") return fulfillJson(route, 200, configurations)
+          if (path === "/accounting/configurations") return fulfillJson(route, 200, [configuration])
 
           if (path === "/billing/documents") {
-            if (documentsStatus === 403) return fulfillJson(route, 403, forbiddenBody())
-
             return fulfillJson(
               route,
               200,
