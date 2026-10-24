@@ -17,9 +17,13 @@ import {
   InventoryService,
   type InventoryService as InventoryServiceContract,
 } from "../../modules/inventory/mod.ts"
+import { partial } from "../../../tests/support/partial.ts"
 import {
   ProcurementService,
+  PurchaseDocumentService,
   type ProcurementService as ProcurementServiceContract,
+  type PurchaseDocumentServiceContract,
+  type PurchaseMatchingType,
 } from "../../modules/procurement/mod.ts"
 import { BearerAuth, CurrentPrincipal, RitseiApi } from "./api.ts"
 import { ProcurementHttpHandlers as ProcurementHandlers } from "../../modules/procurement/http.ts"
@@ -88,6 +92,20 @@ const inventoryService: InventoryServiceContract = {
   completeTransfer: unused,
 }
 
+const matching: PurchaseMatchingType = {
+  purchaseOrderId: orderId,
+  supplierAccountId: "018f0000-0000-7000-8000-000000000004",
+  partyId: "018f0000-0000-7000-8000-000000000005",
+  legalEntityId: "018f0000-0000-7000-8000-000000000006",
+  status: "confirmed",
+  lines: [],
+}
+
+const purchaseDocuments = partial<PurchaseDocumentServiceContract>()({
+  getMatching: () => Effect.succeed(matching),
+  releasePurchaseOrder: () => Effect.succeed(matching),
+})
+
 const provideInventory = HttpRouter.middleware<{ provides: InventoryService }>()((httpEffect) =>
   Effect.provideService(httpEffect, InventoryService, inventoryService),
 )
@@ -124,6 +142,7 @@ it.layer(TestHttpServices)("procurement API consistency headers", (it) => {
         Layer.provide(provideInventory.layer),
         Layer.provide(Layer.succeed(PostgresReadYourWrites, readYourWrites)),
         Layer.provide(Layer.succeed(ProcurementService, makeProcurementStub(observedTokens))),
+        Layer.provide(Layer.succeed(PurchaseDocumentService, purchaseDocuments)),
       )
 
       const client = yield* HttpApiTest.groups(RitseiApi, ["Procurement"]).pipe(
@@ -177,6 +196,21 @@ it.layer(TestHttpServices)("procurement API consistency headers", (it) => {
 
       assert.deepStrictEqual(read, order)
       assert.strictEqual(observedTokens.at(-1), consistencyToken)
+      assert.deepStrictEqual(
+        yield* client.Procurement.getPurchaseMatching({
+          params: { id: orderId },
+          headers: { "x-tenant-id": tenantId },
+        }),
+        matching,
+      )
+      assert.deepStrictEqual(
+        yield* client.Procurement.releasePurchaseOrder({
+          params: { id: orderId },
+          headers: { "x-tenant-id": tenantId },
+          payload: { idempotencyKey: "release-1" },
+        }),
+        matching,
+      )
     }),
   )
 })

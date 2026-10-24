@@ -4,6 +4,7 @@ import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import postgres from "postgres"
 
+import { omitUndefined } from "../../../framework/foundation/mod.ts"
 import {
   AuthService,
   type Principal,
@@ -48,25 +49,27 @@ type BootstrapEnvironment = Schema.Schema.Type<typeof BootstrapEnvironment>
 const env = (name: string, fallback?: string) => process.env[name] ?? fallback
 
 const readEnvironment = () =>
-  Schema.decodeUnknownEffect(BootstrapEnvironment)({
-    email: env("RITSEI_BOOTSTRAP_EMAIL", "admin@example.test"),
-    tenantSlug: env("RITSEI_BOOTSTRAP_TENANT_SLUG", "local"),
-    timezone: env("RITSEI_BOOTSTRAP_TIMEZONE", "UTC"),
-    organizationName: env("RITSEI_BOOTSTRAP_ORGANIZATION_NAME", "Local Organization"),
-    branchName: env("RITSEI_BOOTSTRAP_BRANCH_NAME", "Main Branch"),
-    branchTimezone: env("RITSEI_BOOTSTRAP_BRANCH_TIMEZONE", "UTC"),
-    localTaxRegistration: env("RITSEI_BOOTSTRAP_LOCAL_TAX_REGISTRATION"),
-    dedicatedJournalCode: env("RITSEI_BOOTSTRAP_DEDICATED_JOURNAL_CODE"),
-    warehouseName: env("RITSEI_BOOTSTRAP_WAREHOUSE_NAME", "Main Warehouse"),
-    baseCurrency: env("RITSEI_BOOTSTRAP_BASE_CURRENCY", "USD"),
-    fiscalYearStartMonth: Number.parseInt(
-      env("RITSEI_BOOTSTRAP_FISCAL_YEAR_START_MONTH", "1")!,
-      10,
-    ),
-    postingEnabled: env("RITSEI_BOOTSTRAP_POSTING_ENABLED", "false") === "true",
-    externalIssuer: env("RITSEI_BOOTSTRAP_EXTERNAL_ISSUER"),
-    externalSubject: env("RITSEI_BOOTSTRAP_EXTERNAL_SUBJECT"),
-  })
+  Schema.decodeUnknownEffect(BootstrapEnvironment)(
+    omitUndefined({
+      email: env("RITSEI_BOOTSTRAP_EMAIL", "admin@example.test"),
+      tenantSlug: env("RITSEI_BOOTSTRAP_TENANT_SLUG", "local"),
+      timezone: env("RITSEI_BOOTSTRAP_TIMEZONE", "UTC"),
+      organizationName: env("RITSEI_BOOTSTRAP_ORGANIZATION_NAME", "Local Organization"),
+      branchName: env("RITSEI_BOOTSTRAP_BRANCH_NAME", "Main Branch"),
+      branchTimezone: env("RITSEI_BOOTSTRAP_BRANCH_TIMEZONE", "UTC"),
+      localTaxRegistration: env("RITSEI_BOOTSTRAP_LOCAL_TAX_REGISTRATION"),
+      dedicatedJournalCode: env("RITSEI_BOOTSTRAP_DEDICATED_JOURNAL_CODE"),
+      warehouseName: env("RITSEI_BOOTSTRAP_WAREHOUSE_NAME", "Main Warehouse"),
+      baseCurrency: env("RITSEI_BOOTSTRAP_BASE_CURRENCY", "USD"),
+      fiscalYearStartMonth: Number.parseInt(
+        env("RITSEI_BOOTSTRAP_FISCAL_YEAR_START_MONTH", "1")!,
+        10,
+      ),
+      postingEnabled: env("RITSEI_BOOTSTRAP_POSTING_ENABLED", "false") === "true",
+      externalIssuer: env("RITSEI_BOOTSTRAP_EXTERNAL_ISSUER"),
+      externalSubject: env("RITSEI_BOOTSTRAP_EXTERNAL_SUBJECT"),
+    }),
+  )
 
 const findOrCreateUser = (input: BootstrapEnvironment) =>
   Effect.gen(function* () {
@@ -183,17 +186,19 @@ const provision = (input: BootstrapEnvironment) =>
     const result = yield* bootstrapTenant({
       principal,
       slug: input.tenantSlug,
-      timezone: input.timezone,
       organizationName: input.organizationName,
       branchName: input.branchName,
-      branchTimezone: input.branchTimezone,
-      localTaxRegistration: input.localTaxRegistration,
-      dedicatedJournalCode: input.dedicatedJournalCode,
       warehouseName: input.warehouseName,
       baseCurrency: input.baseCurrency,
       precision: 2,
       fiscalYearStartMonth: input.fiscalYearStartMonth,
       postingEnabled: input.postingEnabled,
+      ...omitUndefined({
+        timezone: input.timezone,
+        branchTimezone: input.branchTimezone,
+        localTaxRegistration: input.localTaxRegistration,
+        dedicatedJournalCode: input.dedicatedJournalCode,
+      }),
     }).pipe(
       Effect.catch((error) =>
         error instanceof TenantAlreadyExists ? Effect.succeed(undefined) : Effect.fail(error),

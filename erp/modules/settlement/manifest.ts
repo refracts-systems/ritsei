@@ -10,6 +10,6 @@ export const SettlementModule = defineModule({
   actions: [],
   events: [],
   consumes: [],
-  http: [],
+  http: ["Settlement"],
   pages: [],
 })

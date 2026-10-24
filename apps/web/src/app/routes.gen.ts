@@ -3,6 +3,7 @@ import { lazy } from "solid-js"
 
 import type { ModuleWorkspace } from "./workspace.ts"
 import { workspace as accountingWorkspace } from "./modules/accounting.workspace.ts"
+import { workspace as billingWorkspace } from "./modules/billing.workspace.ts"
 import { workspace as inventoryWorkspace } from "./modules/inventory.workspace.ts"
 import { workspace as partyWorkspace } from "./modules/party.workspace.ts"
 import { workspace as processWorkspace } from "./modules/process.workspace.ts"
@@ -12,6 +13,7 @@ import { workspace as salesWorkspace } from "./modules/sales.workspace.ts"
 import { workspace as taxWorkspace } from "./modules/tax.workspace.ts"
 
 const AccountingPage = lazy(() => import("./modules/accounting.tsx"))
+const BillingPage = lazy(() => import("./modules/billing.tsx"))
 const InventoryPage = lazy(() => import("./modules/inventory.tsx"))
 const PartyPage = lazy(() => import("./modules/party.tsx"))
 const ProcessPage = lazy(() => import("./modules/process.tsx"))
@@ -24,6 +26,8 @@ const TaxPage = lazy(() => import("./modules/tax.tsx"))
 export const moduleRoutes = [
   { path: "/accounting", component: AccountingPage },
   { path: "/accounting/:id", component: AccountingPage },
+  { path: "/billing", component: BillingPage },
+  { path: "/billing/:id", component: BillingPage },
   { path: "/inventory", component: InventoryPage },
   { path: "/inventory/:id", component: InventoryPage },
   { path: "/parties", component: PartyPage },
@@ -43,6 +47,7 @@ export const moduleRoutes = [
 /** Home-directory and shell-navigation entries, one per module workspace, in declared order. */
 export const moduleWorkspaces: ReadonlyArray<ModuleWorkspace & { readonly href: string }> = [
   { href: "/accounting", ...accountingWorkspace },
+  { href: "/billing", ...billingWorkspace },
   { href: "/inventory", ...inventoryWorkspace },
   { href: "/parties", ...partyWorkspace },
   { href: "/processes", ...processWorkspace },

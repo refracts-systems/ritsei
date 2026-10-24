@@ -2,6 +2,7 @@
 import type { ModuleManifest } from "../../framework/modules/module/mod.ts"
 import { AccountingHttpGroup, AccountingHttpHandlers } from "../modules/accounting/http.ts"
 import { AccountingModule } from "../modules/accounting/mod.ts"
+import { BillingHttpGroup, BillingHttpHandlers } from "../modules/billing/http.ts"
 import { BillingModule } from "../modules/billing/mod.ts"
 import { CommunicationModule } from "../modules/communication/mod.ts"
 import { InventoryHttpGroup, InventoryHttpHandlers } from "../modules/inventory/http.ts"
@@ -16,6 +17,7 @@ import { ProductHttpGroup, ProductHttpHandlers } from "../modules/product/http.t
 import { ProductModule } from "../modules/product/mod.ts"
 import { SalesHttpGroup, SalesHttpHandlers } from "../modules/sales/http.ts"
 import { SalesModule } from "../modules/sales/mod.ts"
+import { SettlementHttpGroup, SettlementHttpHandlers } from "../modules/settlement/http.ts"
 import { SettlementModule } from "../modules/settlement/mod.ts"
 import { TaxHttpGroup, TaxHttpHandlers } from "../modules/tax/http.ts"
 import { TaxModule } from "../modules/tax/mod.ts"
@@ -38,23 +40,27 @@ export const ErpModules: ReadonlyArray<ModuleManifest> = [
 /** HttpApi groups the runtime composes into RitseiApi. */
 export const ErpHttpGroups = [
   AccountingHttpGroup,
+  BillingHttpGroup,
   InventoryHttpGroup,
   PartyHttpGroup,
   ProcessHttpGroup,
   ProcurementHttpGroup,
   ProductHttpGroup,
   SalesHttpGroup,
+  SettlementHttpGroup,
   TaxHttpGroup,
 ] as const
 
 /** Handler layers for ErpHttpGroups. */
 export const ErpHttpHandlers = [
   AccountingHttpHandlers,
+  BillingHttpHandlers,
   InventoryHttpHandlers,
   PartyHttpHandlers,
   ProcessHttpHandlers,
   ProcurementHttpHandlers,
   ProductHttpHandlers,
   SalesHttpHandlers,
+  SettlementHttpHandlers,
   TaxHttpHandlers,
 ] as const

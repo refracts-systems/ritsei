@@ -8,8 +8,11 @@ import * as Schema from "effect/Schema"
 import * as Option from "effect/Option"
 
 import {
+  CalendarDate,
   ConsistencyToken,
   CurrentConsistencyToken,
+  FinancialMajorAmount,
+  PositiveQuantity,
   PostgresReadYourWrites,
 } from "../../../framework/foundation/mod.ts"
 import {
@@ -27,7 +30,11 @@ import {
 } from "../../../framework/modules/http/mod.ts"
 import {
   GoodsReceipt,
+  PricedPurchaseOrder,
   ProcurementService,
+  PurchaseDocumentService,
+  PurchaseMatching,
+  PurchaseStockDocument,
   PurchaseOrder,
   PurchaseOrderLine,
   PurchaseOrderStatus,
@@ -43,6 +50,12 @@ const CreatedPurchaseOrder = HttpApiSchema.WithHeaders(
 )
 
 const CreatedGoodsReceipt = GoodsReceipt.pipe(HttpApiSchema.status(201))
+const CreatedPricedPurchaseOrder = PricedPurchaseOrder.pipe(HttpApiSchema.status(201))
+const CreatedPurchaseStockDocument = PurchaseStockDocument.pipe(HttpApiSchema.status(201))
+
+const DocumentLines = BoundedArray(
+  Schema.Struct({ purchaseOrderLineId: Uuid, quantity: PositiveQuantity }),
+).check(Schema.isMinLength(1))
 
 export const ProcurementHttpGroup = HttpApiGroup.make("Procurement").add(
   HttpApiEndpoint.get("listSupplierAccounts", "/procurement/supplier-accounts", {
@@ -132,13 +145,82 @@ export const ProcurementHttpGroup = HttpApiGroup.make("Procurement").add(
     success: CreatedGoodsReceipt,
     error: errors,
   }).middleware(BearerAuth),
+  HttpApiEndpoint.post("draftPurchaseOrder", "/procurement/purchase-order-drafts", {
+    headers: tenantHeaders,
+    payload: Schema.Struct({
+      supplierAccountId: Uuid,
+      lines: BoundedArray(
+        Schema.Struct({
+          productId: Uuid,
+          quantity: PositiveQuantity,
+          unitPrice: Schema.optionalKey(FinancialMajorAmount),
+          taxCodeId: Schema.optionalKey(Schema.NullOr(Uuid)),
+        }),
+      ).check(Schema.isMinLength(1)),
+    }),
+    success: CreatedPricedPurchaseOrder,
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.post("releasePurchaseOrder", "/procurement/purchase-orders/:id/release", {
+    params: { id: Uuid },
+    headers: tenantHeaders,
+    payload: Schema.Struct({ idempotencyKey: ShortString }),
+    success: PurchaseMatching,
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.get("getPurchaseMatching", "/procurement/purchase-orders/:id/matching", {
+    params: { id: Uuid },
+    headers: tenantHeaders,
+    success: PurchaseMatching,
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.post("receiveValued", "/procurement/purchase-orders/:id/valued-receipts", {
+    params: { id: Uuid },
+    headers: tenantHeaders,
+    payload: Schema.Struct({
+      receiptId: Schema.optionalKey(Uuid),
+      warehouseId: Uuid,
+      receiptDate: CalendarDate,
+      lines: DocumentLines,
+    }),
+    success: CreatedPurchaseStockDocument,
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.post("returnToSupplier", "/procurement/purchase-orders/:id/returns", {
+    params: { id: Uuid },
+    headers: tenantHeaders,
+    payload: Schema.Struct({
+      returnId: Schema.optionalKey(Uuid),
+      warehouseId: Uuid,
+      returnDate: CalendarDate,
+      lines: DocumentLines,
+    }),
+    success: CreatedPurchaseStockDocument,
+    error: errors,
+  }).middleware(BearerAuth),
 )
 
 const ProcurementHttpApi = moduleApi(ProcurementHttpGroup)
 
 export const ProcurementHttpErrors = apiErrorMapping({
   ...BaseApiErrorPolicy,
+  InventoryReferenceNotFound: "not_found",
+  PartyRelationshipNotFound: "not_found",
+  ProductNotFound: "not_found",
+  PurchaseLineNotStockable: "conflict",
   PurchaseOrderApprovalRequired: "conflict",
+  PurchaseReturnExceedsReceipt: "conflict",
+  StockUnavailable: "conflict",
+  StockValuationUnavailable: "conflict",
+  SupplierPriceNotFound: "not_found",
+  AccountNotFound: "not_found",
+  AccountingLegalEntityNotFound: "not_found",
+  AccountingPeriodNotOpen: "conflict",
+  FinancialEngineActivated: "conflict",
+  InvalidJournalLine: "conflict",
+  JournalIdempotencyConflict: "conflict",
+  PostingRuleNotFound: "conflict",
+  UnbalancedJournal: "conflict",
   PurchaseOrderConfirmationIdempotencyConflict: "conflict",
   PurchaseOrderHasReceipts: "conflict",
   PurchaseOrderInvalidState: "conflict",
@@ -162,6 +244,7 @@ export const ProcurementHttpHandlers = HttpApiBuilder.group(
   (handlers) =>
     Effect.gen(function* () {
       const procurement = yield* ProcurementService
+      const documents = yield* PurchaseDocumentService
       const readYourWrites = yield* Effect.serviceOption(PostgresReadYourWrites)
 
       return handlers
@@ -313,6 +396,83 @@ export const ProcurementHttpHandlers = HttpApiBuilder.group(
 
             return yield* coreApiEffect(
               procurement.receivePurchaseOrder({
+                principal,
+                tenantId: headers["x-tenant-id"],
+                purchaseOrderId: params.id,
+                ...payload,
+              }),
+            )
+          }),
+        )
+        .handle(
+          "draftPurchaseOrder",
+          Effect.fn("Http.Procurement.draftPurchaseOrder")(function* ({ headers, payload }) {
+            const principal = yield* CurrentPrincipal
+
+            return yield* coreApiEffect(
+              documents.draftPurchaseOrder({
+                principal,
+                tenantId: headers["x-tenant-id"],
+                ...payload,
+              }),
+            )
+          }),
+        )
+        .handle(
+          "releasePurchaseOrder",
+          Effect.fn("Http.Procurement.releasePurchaseOrder")(function* ({
+            headers,
+            params,
+            payload,
+          }) {
+            const principal = yield* CurrentPrincipal
+
+            return yield* coreApiEffect(
+              documents.releasePurchaseOrder({
+                principal,
+                tenantId: headers["x-tenant-id"],
+                purchaseOrderId: params.id,
+                ...payload,
+              }),
+            )
+          }),
+        )
+        .handle(
+          "getPurchaseMatching",
+          Effect.fn("Http.Procurement.getPurchaseMatching")(function* ({ headers, params }) {
+            const principal = yield* CurrentPrincipal
+
+            return yield* coreApiEffect(
+              documents.getMatching({
+                principal,
+                tenantId: headers["x-tenant-id"],
+                purchaseOrderId: params.id,
+              }),
+            )
+          }),
+        )
+        .handle(
+          "receiveValued",
+          Effect.fn("Http.Procurement.receiveValued")(function* ({ headers, params, payload }) {
+            const principal = yield* CurrentPrincipal
+
+            return yield* coreApiEffect(
+              documents.receiveValued({
+                principal,
+                tenantId: headers["x-tenant-id"],
+                purchaseOrderId: params.id,
+                ...payload,
+              }),
+            )
+          }),
+        )
+        .handle(
+          "returnToSupplier",
+          Effect.fn("Http.Procurement.returnToSupplier")(function* ({ headers, params, payload }) {
+            const principal = yield* CurrentPrincipal
+
+            return yield* coreApiEffect(
+              documents.returnToSupplier({
                 principal,
                 tenantId: headers["x-tenant-id"],
                 purchaseOrderId: params.id,

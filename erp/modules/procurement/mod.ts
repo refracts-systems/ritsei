@@ -89,10 +89,12 @@ export { ProcurementModule } from "./manifest.ts"
 export {
   DraftPurchaseOrderInput,
   MatchingLine,
+  PricedPurchaseOrder,
   PurchaseApprovalSubject,
   PurchaseDocumentService,
   PurchaseMatching,
   PurchaseOrderQueryInput,
+  PurchaseStockDocument,
   ReceiveValuedInput,
   ReleasePurchaseOrderInput,
   ReturnToSupplierInput,
@@ -101,10 +103,8 @@ export {
 } from "./src/documents-contract.ts"
 
 export type {
-  PricedPurchaseOrder,
   PurchaseDocumentService as PurchaseDocumentServiceContract,
   PurchaseMatching as PurchaseMatchingType,
-  PurchaseStockDocument,
 } from "./src/documents-contract.ts"
 
 export {

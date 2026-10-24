@@ -6,7 +6,11 @@ import * as HttpApiGroup from "effect/http-api/HttpApiGroup"
 import * as HttpApiSchema from "effect/http-api/HttpApiSchema"
 import * as Schema from "effect/Schema"
 
-import { FinancialMajorAmount } from "../../../framework/foundation/mod.ts"
+import {
+  CalendarDate,
+  FinancialMajorAmount,
+  PositiveQuantity,
+} from "../../../framework/foundation/mod.ts"
 import {
   ApiErrors as errors,
   BaseApiErrorPolicy,
@@ -22,17 +26,24 @@ import {
 } from "../../../framework/modules/http/mod.ts"
 import {
   Customer,
+  Delivery,
+  DiscountPercent,
+  OrderFulfillment,
   Quotation,
   QuotationStatus,
+  SalesDocumentService,
   SalesOrder,
   SalesOrderLine,
   SalesOrderStatus,
+  SalesQuotation,
   SalesService,
 } from "./mod.ts"
 
 const CreatedCustomer = Customer.pipe(HttpApiSchema.status(201))
 const CreatedQuotation = Quotation.pipe(HttpApiSchema.status(201))
 const CreatedOrder = SalesOrder.pipe(HttpApiSchema.status(201))
+const CreatedSalesQuotation = SalesQuotation.pipe(HttpApiSchema.status(201))
+const CreatedDelivery = Delivery.pipe(HttpApiSchema.status(201))
 
 export const SalesHttpGroup = HttpApiGroup.make("Sales").add(
   HttpApiEndpoint.get("listCustomers", "/sales/customers", {
@@ -137,6 +148,74 @@ export const SalesHttpGroup = HttpApiGroup.make("Sales").add(
     success: SalesOrder,
     error: errors,
   }).middleware(BearerAuth),
+  HttpApiEndpoint.post("draftQuotation", "/sales/quotation-documents", {
+    headers: tenantHeaders,
+    payload: Schema.Struct({
+      customerId: Uuid,
+      validUntil: CalendarDate,
+      lines: BoundedArray(
+        Schema.Struct({
+          productId: Uuid,
+          quantity: PositiveQuantity,
+          listPrice: Schema.optionalKey(FinancialMajorAmount),
+          discountPercent: Schema.optionalKey(DiscountPercent),
+          taxCodeId: Schema.optionalKey(Schema.NullOr(Uuid)),
+        }),
+      ).check(Schema.isMinLength(1)),
+    }),
+    success: CreatedSalesQuotation,
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.get("getQuotationDocument", "/sales/quotation-documents/:id", {
+    params: { id: Uuid },
+    headers: tenantHeaders,
+    success: SalesQuotation,
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.post("sendQuotation", "/sales/quotation-documents/:id/send", {
+    params: { id: Uuid },
+    headers: tenantHeaders,
+    success: SalesQuotation,
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.post("acceptQuotation", "/sales/quotation-documents/:id/accept", {
+    params: { id: Uuid },
+    headers: tenantHeaders,
+    success: SalesQuotation,
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.post("rejectQuotation", "/sales/quotation-documents/:id/reject", {
+    params: { id: Uuid },
+    headers: tenantHeaders,
+    success: SalesQuotation,
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.post("convertQuotation", "/sales/quotation-documents/:id/convert", {
+    params: { id: Uuid },
+    headers: tenantHeaders,
+    success: Schema.Struct({ orderId: Uuid }),
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.get("getOrderFulfillment", "/sales/orders/:id/fulfillment", {
+    params: { id: Uuid },
+    headers: tenantHeaders,
+    success: OrderFulfillment,
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.post("recordDelivery", "/sales/orders/:id/deliveries", {
+    params: { id: Uuid },
+    headers: tenantHeaders,
+    payload: Schema.Struct({
+      deliveryId: Schema.optionalKey(Uuid),
+      warehouseId: Uuid,
+      deliveryDate: CalendarDate,
+      lines: BoundedArray(Schema.Struct({ orderLineId: Uuid, quantity: PositiveQuantity })).check(
+        Schema.isMinLength(1),
+      ),
+    }),
+    success: CreatedDelivery,
+    error: errors,
+  }).middleware(BearerAuth),
 )
 
 const SalesHttpApi = moduleApi(SalesHttpGroup)
@@ -144,8 +223,13 @@ const SalesHttpApi = moduleApi(SalesHttpGroup)
 export const SalesHttpErrors = apiErrorMapping({
   ...BaseApiErrorPolicy,
   CustomerAlreadyExists: "conflict",
+  CustomerLegalEntityRequired: "conflict",
   CustomerNotFound: "not_found",
+  DeliveryExceedsOrder: "conflict",
+  OrderLineNotFound: "not_found",
+  ProductPriceNotFound: "not_found",
   QuotationCustomerMismatch: "conflict",
+  QuotationInvalidState: "conflict",
   QuotationNotFound: "not_found",
   SalesOrderConfirmationIdempotencyConflict: "conflict",
   SalesOrderInvalidState: "conflict",
@@ -157,6 +241,7 @@ const coreApiEffect = SalesHttpErrors.apiEffect
 export const SalesHttpHandlers = HttpApiBuilder.group(SalesHttpApi, "Sales", (handlers) =>
   Effect.gen(function* () {
     const sales = yield* SalesService
+    const documents = yield* SalesDocumentService
 
     return handlers
       .handle(
@@ -286,6 +371,115 @@ export const SalesHttpHandlers = HttpApiBuilder.group(SalesHttpApi, "Sales", (ha
               principal,
               tenantId: headers["x-tenant-id"],
               orderId: params.id,
+            }),
+          )
+        }),
+      )
+      .handle(
+        "draftQuotation",
+        Effect.fn("Http.Sales.draftQuotation")(function* ({ headers, payload }) {
+          const principal = yield* CurrentPrincipal
+
+          return yield* coreApiEffect(
+            documents.draftQuotation({ principal, tenantId: headers["x-tenant-id"], ...payload }),
+          )
+        }),
+      )
+      .handle(
+        "getQuotationDocument",
+        Effect.fn("Http.Sales.getQuotationDocument")(function* ({ headers, params }) {
+          const principal = yield* CurrentPrincipal
+
+          return yield* coreApiEffect(
+            documents.getQuotation({
+              principal,
+              tenantId: headers["x-tenant-id"],
+              quotationId: params.id,
+            }),
+          )
+        }),
+      )
+      .handle(
+        "sendQuotation",
+        Effect.fn("Http.Sales.sendQuotation")(function* ({ headers, params }) {
+          const principal = yield* CurrentPrincipal
+
+          return yield* coreApiEffect(
+            documents.sendQuotation({
+              principal,
+              tenantId: headers["x-tenant-id"],
+              quotationId: params.id,
+            }),
+          )
+        }),
+      )
+      .handle(
+        "acceptQuotation",
+        Effect.fn("Http.Sales.acceptQuotation")(function* ({ headers, params }) {
+          const principal = yield* CurrentPrincipal
+
+          return yield* coreApiEffect(
+            documents.acceptQuotation({
+              principal,
+              tenantId: headers["x-tenant-id"],
+              quotationId: params.id,
+            }),
+          )
+        }),
+      )
+      .handle(
+        "rejectQuotation",
+        Effect.fn("Http.Sales.rejectQuotation")(function* ({ headers, params }) {
+          const principal = yield* CurrentPrincipal
+
+          return yield* coreApiEffect(
+            documents.rejectQuotation({
+              principal,
+              tenantId: headers["x-tenant-id"],
+              quotationId: params.id,
+            }),
+          )
+        }),
+      )
+      .handle(
+        "convertQuotation",
+        Effect.fn("Http.Sales.convertQuotation")(function* ({ headers, params }) {
+          const principal = yield* CurrentPrincipal
+
+          return yield* coreApiEffect(
+            documents.convertQuotation({
+              principal,
+              tenantId: headers["x-tenant-id"],
+              quotationId: params.id,
+            }),
+          )
+        }),
+      )
+      .handle(
+        "getOrderFulfillment",
+        Effect.fn("Http.Sales.getOrderFulfillment")(function* ({ headers, params }) {
+          const principal = yield* CurrentPrincipal
+
+          return yield* coreApiEffect(
+            documents.getFulfillment({
+              principal,
+              tenantId: headers["x-tenant-id"],
+              orderId: params.id,
+            }),
+          )
+        }),
+      )
+      .handle(
+        "recordDelivery",
+        Effect.fn("Http.Sales.recordDelivery")(function* ({ headers, params, payload }) {
+          const principal = yield* CurrentPrincipal
+
+          return yield* coreApiEffect(
+            documents.recordDelivery({
+              principal,
+              tenantId: headers["x-tenant-id"],
+              orderId: params.id,
+              ...payload,
             }),
           )
         }),
