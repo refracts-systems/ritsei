@@ -43,6 +43,7 @@ import {
   ReceiveValuedInput,
   ReleasePurchaseOrderInput,
   ReturnToSupplierInput,
+  ListSupplierPricesInput,
   SetSupplierPriceInput,
 } from "./documents-contract.ts"
 import {
@@ -209,6 +210,35 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
         })),
       } satisfies PurchaseMatching
     })
+
+  const listSupplierPrices = Effect.fn("PurchaseDocumentService.listSupplierPrices")(function* (
+    input: Schema.Codec.Encoded<typeof ListSupplierPricesInput>,
+  ) {
+    const decoded = yield* authorized(
+      ListSupplierPricesInput,
+      ProcurementCapabilities.supplierPriceRead,
+    )(input)
+
+    return yield* database.query(
+      (db) =>
+        db
+          .select({
+            supplierAccountId: supplierPrices.supplierAccountId,
+            productId: supplierPrices.productId,
+            unitPrice: supplierPrices.unitPrice,
+          })
+          .from(supplierPrices)
+          .where(
+            and(
+              eq(supplierPrices.tenantId, decoded.tenantId),
+              eq(supplierPrices.supplierAccountId, decoded.supplierAccountId),
+            ),
+          )
+          .orderBy(asc(supplierPrices.productId))
+          .limit(500),
+      "procurement.supplier_price.list",
+    )
+  })
 
   const setSupplierPrice = Effect.fn("PurchaseDocumentService.setSupplierPrice")(function* (
     input: Schema.Codec.Encoded<typeof SetSupplierPriceInput>,
@@ -723,6 +753,7 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
 
   return {
     setSupplierPrice,
+    listSupplierPrices,
     draftPurchaseOrder,
     releasePurchaseOrder,
     getMatching,

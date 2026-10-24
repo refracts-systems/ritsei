@@ -17,6 +17,7 @@ const quotationId = "01900000-0000-7000-8000-000000000023"
 const invoiceId = "01900000-0000-7000-8000-000000000030"
 const paymentId = "01900000-0000-7000-8000-000000000033"
 const deliveryId = "01900000-0000-7000-8000-000000000034"
+const secondInvoiceId = "01900000-0000-7000-8000-000000000035"
 
 const invoice = {
   id: invoiceId,
@@ -47,6 +48,8 @@ interface NodeFields {
   readonly date?: string
   readonly current?: boolean
 }
+
+const secondInvoice = { ...invoice, id: secondInvoiceId, number: "INV-0002", sourceId: null }
 
 const node = (fields: NodeFields) => ({
   number: null,
@@ -88,6 +91,21 @@ const chain = {
   ],
 }
 
+const secondChain = {
+  legalEntityId,
+  nodes: [
+    node({
+      type: "billing.customer_invoice",
+      id: secondInvoiceId,
+      number: "INV-0002",
+      state: "open",
+      amount: "111.00",
+      date: "2026-10-24",
+      current: true,
+    }),
+  ],
+}
+
 it.effect(
   "shows the documents before and after an invoice and lets the user retry a failed read",
   () =>
@@ -117,12 +135,18 @@ it.effect(
                 financialEngine: "postgresql",
               },
             ]),
-          "GET /billing/documents": (route) => fulfillJson(route, 200, [invoice]),
+          "GET /billing/documents": (route) => fulfillJson(route, 200, [invoice, secondInvoice]),
           [`GET /billing/documents/${invoiceId}`]: (route) => fulfillJson(route, 200, invoice),
+          [`GET /billing/documents/${secondInvoiceId}`]: (route) =>
+            fulfillJson(route, 200, secondInvoice),
           "GET /documents/chain": (route) => {
             const query = new URL(route.request().url()).searchParams
 
             chainRequests.push(`${query.get("documentType")}:${query.get("documentId")}`)
+
+            if (query.get("documentId") === secondInvoiceId) {
+              return fulfillJson(route, 200, secondChain)
+            }
 
             return chainRequests.length === 1
               ? fulfillJson(route, 503, serviceUnavailableBody())
@@ -161,6 +185,13 @@ it.effect(
         )
         assert.include(await items.nth(4).innerText(), "RCV/2026/00001")
         assert.equal(await flow.getByRole("link", { name: "RCV/2026/00001" }).count(), 0)
+
+        // Another document in the same workspace shows its own flow, not the previous one.
+        await page.getByRole("link", { name: "INV-0002", exact: true }).click()
+        await page.getByRole("heading", { name: "Invoice INV-0002", exact: true }).waitFor()
+        await page.getByRole("list", { name: "Documents in this flow" }).waitFor()
+        assert.equal(await flow.getByRole("listitem").count(), 1)
+        assert.include(await flow.locator('[aria-current="true"]').innerText(), "INV-0002")
 
         assert.deepEqual(
           (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()).violations,

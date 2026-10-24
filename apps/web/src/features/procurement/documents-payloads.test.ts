@@ -1,6 +1,12 @@
 import { assert, describe, it } from "@effect/vitest"
 import type { PurchaseMatching } from "./documents.ts"
-import { draftPayload, receivable, returnable, stockPayload } from "./documents-payloads.ts"
+import {
+  draftPayload,
+  pricePayload,
+  receivable,
+  returnable,
+  stockPayload,
+} from "./documents-payloads.ts"
 
 const matching: PurchaseMatching = {
   purchaseOrderId: "01900000-0000-7000-8000-000000000001",
@@ -101,5 +107,25 @@ describe("receipt and return payload", () => {
     assert.isUndefined(
       stockPayload({ warehouseId: "w1", "quantity-line-a": "1" }, matching, receivable),
     )
+  })
+})
+
+describe("pricePayload", () => {
+  const supplierAccountId = "01900000-0000-7000-8000-000000000010"
+  const productId = "01900000-0000-7000-8000-000000000011"
+
+  it("sets one price for the chosen product", () => {
+    assert.deepStrictEqual(pricePayload({ productId, unitPrice: " 6.5 " }, supplierAccountId), {
+      supplierAccountId,
+      productId,
+      unitPrice: "6.5",
+    })
+  })
+
+  it("rejects a missing product and a price that is not an amount", () => {
+    assert.isUndefined(pricePayload({ productId: "", unitPrice: "6.50" }, supplierAccountId))
+    assert.isUndefined(pricePayload({ productId, unitPrice: "" }, supplierAccountId))
+    assert.isUndefined(pricePayload({ productId, unitPrice: "6.505" }, supplierAccountId))
+    assert.isUndefined(pricePayload({ productId, unitPrice: "-1" }, supplierAccountId))
   })
 })

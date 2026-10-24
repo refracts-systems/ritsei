@@ -133,6 +133,19 @@ it.effect.skipIf(databaseUrl === undefined)(
             productId: widget.id,
             unitPrice: "6.00",
           })
+
+          // Setting a price again replaces it; the list shows one price per product.
+          yield* purchasing.setSupplierPrice({
+            ...scope,
+            supplierAccountId: supplier.id,
+            productId: widget.id,
+            unitPrice: "6.00",
+          })
+          assert.deepStrictEqual(
+            yield* purchasing.listSupplierPrices({ ...scope, supplierAccountId: supplier.id }),
+            [{ supplierAccountId: supplier.id, productId: widget.id, unitPrice: "6.00" }],
+          )
+
           yield* approvals.configurePolicy({
             ...scope,
             subjectType: "procurement.purchase_order",

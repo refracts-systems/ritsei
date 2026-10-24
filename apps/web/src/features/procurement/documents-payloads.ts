@@ -66,3 +66,16 @@ export const stockPayload = (
     ? undefined
     : { purchaseOrderId: matching.purchaseOrderId, warehouseId, date, lines }
 }
+
+/**
+ * The payload that sets one supplier price from `productId` and `unitPrice`. Undefined when the
+ * product is missing or the price is not a non-negative amount with at most two decimals.
+ */
+export const pricePayload = (value: FormValue, supplierAccountId: string) => {
+  const productId = formText(value.productId)
+  const unitPrice = formText(value.unitPrice)
+
+  return productId === "" || !money.test(unitPrice)
+    ? undefined
+    : { supplierAccountId, productId, unitPrice }
+}

@@ -44,14 +44,14 @@ export function DocumentFlow(props: ChainRequest) {
           return Promise.resolve()
         }}
       >
-        {/* Keyed on the attempt, so a retry builds a new query instead of replaying the failed one. */}
-        <Show when={attempt() + 1} keyed>
-          {(number) => (
+        {/* A new document or a retry builds a new query instead of reusing the previous one. */}
+        <Show when={{ id: props.documentId, attempt: attempt() }} keyed>
+          {(target) => (
             <FlowItems
               documentType={props.documentType}
-              documentId={props.documentId}
+              documentId={target.id}
               feature={props.feature}
-              attempt={number - 1}
+              attempt={target.attempt}
             />
           )}
         </Show>
