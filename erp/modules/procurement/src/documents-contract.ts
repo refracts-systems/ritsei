@@ -43,6 +43,8 @@ export const SupplierPrice = Schema.Struct({
   unitPrice: FinancialMajorAmount,
 })
 
+export const ListSupplierPricesInput = Schema.Struct({ ...ScopedInput, supplierAccountId: Uuid })
+
 export const PricedPurchaseOrder = Schema.Struct({
   purchaseOrderId: Uuid,
   total: FinancialMajorAmount,
@@ -163,6 +165,9 @@ export interface PurchaseDocumentService {
     Schema.Schema.Type<typeof SupplierPrice>,
     ProcurementErrors.SupplierAccountNotFound | ProductNotFound | CommonFailure
   >
+  readonly listSupplierPrices: (
+    input: Schema.Codec.Encoded<typeof ListSupplierPricesInput>,
+  ) => Effect.Effect<ReadonlyArray<Schema.Schema.Type<typeof SupplierPrice>>, CommonFailure>
   readonly draftPurchaseOrder: (
     input: Schema.Codec.Encoded<typeof DraftPurchaseOrderInput>,
   ) => Effect.Effect<

@@ -4,6 +4,7 @@ import {
   decodeInput,
   decodeResponse,
   mutationRequest,
+  querySuffix,
   requestJson,
   routeWithId,
 } from "../../shared/api.ts"
@@ -157,4 +158,43 @@ export const stockFailureMessages = {
   AccountingPeriodNotOpen: "The accounting period for that date is not open.",
   PostingRuleNotFound:
     "A posting rule is missing for this legal entity. Apply a chart template in Finance first.",
+} as const
+
+const SupplierPrice = Schema.Struct({ supplierAccountId: Uuid, productId: Uuid, unitPrice: Amount })
+
+export type SupplierPrice = Schema.Schema.Type<typeof SupplierPrice>
+
+const SupplierPriceList = Schema.Array(SupplierPrice).check(Schema.isMaxLength(500))
+
+const SetSupplierPriceInput = Schema.Struct({
+  supplierAccountId: Uuid,
+  productId: Uuid,
+  unitPrice: Schema.String.check(Schema.isPattern(/^\d+(\.\d{1,2})?$/)),
+})
+
+export const listSupplierPrices = Effect.fn("Frontend.Procurement.listSupplierPrices")(function* (
+  supplierAccountId: string,
+) {
+  const decoded = yield* decodeInput(Uuid, supplierAccountId)
+
+  const body = yield* requestJson(
+    `/procurement/supplier-prices${querySuffix({ supplierAccountId: decoded })}`,
+  )
+
+  return yield* decodeResponse(SupplierPriceList, body)
+})
+
+export const setSupplierPrice = Effect.fn("Frontend.Procurement.setSupplierPrice")(function* (
+  input: Schema.Codec.Encoded<typeof SetSupplierPriceInput>,
+) {
+  const decoded = yield* decodeInput(SetSupplierPriceInput, input)
+  const body = yield* mutationRequest("/procurement/supplier-prices", decoded)
+
+  return yield* decodeResponse(SupplierPrice, body, "unknown-outcome")
+})
+
+/** What the user is told for the business failures setting a supplier price can return. */
+export const priceFailureMessages = {
+  SupplierAccountNotFound: "This supplier account is no longer available. Reload the workspace.",
+  ProductNotFound: "This product no longer exists. Reload the workspace.",
 } as const

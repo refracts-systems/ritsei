@@ -5,11 +5,14 @@ import { createServerQuery, serverQueryKey } from "../../shared/server-query.ts"
 import {
   draftPurchaseOrder,
   getPurchaseMatching,
+  listSupplierPrices,
   type PricedPurchaseOrder,
   type PurchaseMatching,
   receiveValued,
   releasePurchaseOrder,
   returnToSupplier,
+  setSupplierPrice,
+  type SupplierPrice,
 } from "./documents.ts"
 
 const procurementKey = ["procurement"] as const
@@ -68,5 +71,23 @@ export function createStockMutation(
       await refresh(client, scope)
       afterSuccess?.()
     },
+  }))
+}
+
+export function createSupplierPricesQuery(scope: ApiScope, supplierAccountId: string) {
+  return createServerQuery<readonly SupplierPrice[], RequestFailure>({
+    tenantId: scope.tenantId,
+    key: [...procurementKey, "supplier_prices", supplierAccountId],
+    cache: "collection",
+    load: ({ signal }) => runRequest(scope, listSupplierPrices(supplierAccountId), signal),
+  })
+}
+
+export function createSetPriceMutation(scope: ApiScope) {
+  const client = useQueryClient()
+
+  return useMutation<SupplierPrice, RequestFailure, Parameters<typeof setSupplierPrice>[0]>(() => ({
+    mutationFn: (input) => runRequest(scope, setSupplierPrice(input)),
+    onSuccess: () => refresh(client, scope),
   }))
 }

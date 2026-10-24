@@ -32,6 +32,7 @@ import {
 } from "./queries.ts"
 import { definedFields } from "../../shared/api.ts"
 import { DraftPurchaseOrderDialog } from "./draft-purchase-order-dialog.tsx"
+import { SupplierPricesDialog } from "./supplier-prices-dialog.tsx"
 import { OrderDocuments } from "./order-documents.tsx"
 import { DocumentFlow } from "../documents/document-flow.tsx"
 
@@ -184,7 +185,10 @@ function CancelPurchaseOrderDialog(props: { order: PurchaseOrder; reload: () => 
   )
 }
 
-function SupplierAccountsTable(props: { accounts: readonly SupplierAccount[] }) {
+function SupplierAccountsTable(props: {
+  accounts: readonly SupplierAccount[]
+  reload: () => Promise<void>
+}) {
   return (
     <DataTable
       surface={false}
@@ -210,6 +214,13 @@ function SupplierAccountsTable(props: { accounts: readonly SupplierAccount[] }) 
           id: "legalEntityId",
           header: "Legal entity",
           cell: (account) => <span class={layout.code}>{account.legalEntityId}</span>,
+        },
+        {
+          id: "prices",
+          header: "Prices",
+          cell: (account) => (
+            <SupplierPricesDialog supplierAccountId={account.id} reload={props.reload} />
+          ),
         },
       ]}
     />
@@ -498,7 +509,7 @@ function SupplierAccountsSection(props: {
         when={props.accounts.length > 0}
         fallback={<p role="status">No supplier accounts are registered in this tenant.</p>}
       >
-        <SupplierAccountsTable accounts={props.accounts} />
+        <SupplierAccountsTable accounts={props.accounts} reload={props.reload} />
       </Show>
     </section>
   )

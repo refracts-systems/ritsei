@@ -40,6 +40,7 @@ import {
   PurchaseOrderStatus,
   PurchaseReceiptLineInput,
   SupplierAccount,
+  SupplierPrice,
 } from "./mod.ts"
 
 const CreatedSupplierAccount = SupplierAccount.pipe(HttpApiSchema.status(201))
@@ -143,6 +144,18 @@ export const ProcurementHttpGroup = HttpApiGroup.make("Procurement").add(
       lines: BoundedArray(PurchaseReceiptLineInput).check(Schema.isMinLength(1)),
     }),
     success: CreatedGoodsReceipt,
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.get("listSupplierPrices", "/procurement/supplier-prices", {
+    headers: tenantHeaders,
+    query: { supplierAccountId: Uuid },
+    success: Schema.Array(SupplierPrice),
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.post("setSupplierPrice", "/procurement/supplier-prices", {
+    headers: tenantHeaders,
+    payload: SupplierPrice,
+    success: SupplierPrice,
     error: errors,
   }).middleware(BearerAuth),
   HttpApiEndpoint.post("draftPurchaseOrder", "/procurement/purchase-order-drafts", {
@@ -399,6 +412,34 @@ export const ProcurementHttpHandlers = HttpApiBuilder.group(
                 principal,
                 tenantId: headers["x-tenant-id"],
                 purchaseOrderId: params.id,
+                ...payload,
+              }),
+            )
+          }),
+        )
+        .handle(
+          "listSupplierPrices",
+          Effect.fn("Http.Procurement.listSupplierPrices")(function* ({ headers, query }) {
+            const principal = yield* CurrentPrincipal
+
+            return yield* coreApiEffect(
+              documents.listSupplierPrices({
+                principal,
+                tenantId: headers["x-tenant-id"],
+                ...query,
+              }),
+            )
+          }),
+        )
+        .handle(
+          "setSupplierPrice",
+          Effect.fn("Http.Procurement.setSupplierPrice")(function* ({ headers, payload }) {
+            const principal = yield* CurrentPrincipal
+
+            return yield* coreApiEffect(
+              documents.setSupplierPrice({
+                principal,
+                tenantId: headers["x-tenant-id"],
                 ...payload,
               }),
             )

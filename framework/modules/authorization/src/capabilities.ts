@@ -109,6 +109,7 @@ export const CapabilityIds = [
   "approvals.policy.configure",
   "approvals.request.read",
   "procurement.supplier_price.configure",
+  "procurement.supplier_price.read",
   "procurement.purchase_return.create",
   "procurement.purchase_order.approve",
 ] as const
@@ -363,6 +364,7 @@ export const CapabilityDefinitions: ReadonlyArray<CapabilityDefinition> = [
   definition("approvals.policy.configure", "approvals", "policy", "configure"),
   definition("approvals.request.read", "approvals", "request", "read"),
   definition("procurement.supplier_price.configure", "procurement", "supplier_price", "configure"),
+  definition("procurement.supplier_price.read", "procurement", "supplier_price", "read"),
   definition("procurement.purchase_return.create", "procurement", "purchase_return", "create"),
   definition("procurement.purchase_order.approve", "procurement", "purchase_order", "approve"),
 ]
