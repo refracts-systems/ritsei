@@ -12,8 +12,9 @@ const stages: Readonly<Record<DocumentNodeType, number>> = {
   "billing.customer_credit_note": 4,
   "procurement.purchase_order": 0,
   "procurement.receipt": 1,
-  "billing.supplier_bill": 2,
-  "billing.supplier_credit_note": 3,
+  "procurement.return": 2,
+  "billing.supplier_bill": 3,
+  "billing.supplier_credit_note": 4,
   "settlement.payment": 5,
 }
 

@@ -28,17 +28,17 @@ another module's tables, so the chain needs a reader that joins public contracts
 2. **A chain starts from a quotation, a sales order, a billing document, or a purchase order.** The
    service traces the entry document back to the first document it can find, then lists everything
    downstream of it: quotation, order, deliveries, invoices, credit notes, and payments for
-   receivables; purchase order, receipts, bills, credit notes, and payments for payables. Nodes carry
+   receivables; purchase order, receipts, returns, bills, credit notes, and payments for payables. Nodes carry
    type, id, number, state, amount, and date, in document order, with the requested document marked.
 3. **Authorization stays with the owners.** The module declares no capability. Each read runs through
    the owning service with the caller's principal, so a caller who may not read a kind of document
    gets that owner's authorization failure instead of a partial chain.
 4. **Owners add the narrow reads the chain needs**, each with its own authorization: a billing
    listing filtered by source document or credited invoice, a settlement payment listing filtered by
-   settled document, a sales order listing filtered by quotation, and a sales delivery listing for an
-   order.
-5. **Purchase returns are not in the chain yet.** Procurement has no read for them; they join when it
-   exposes one.
+   settled document, a sales order listing filtered by quotation, a sales delivery listing for an
+   order, and a Procurement listing of the returns of an order.
+5. **Purchase returns are in the chain** through a Procurement read of the returns of an order,
+   listed after the receipts.
 
 ## Consequences
 

@@ -240,6 +240,36 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
     )
   })
 
+  const listPurchaseReturns = Effect.fn("PurchaseDocumentService.listPurchaseReturns")(function* (
+    input: Schema.Codec.Encoded<typeof PurchaseOrderQueryInput>,
+  ) {
+    const decoded = yield* authorized(
+      PurchaseOrderQueryInput,
+      ProcurementCapabilities.purchaseOrderRead,
+    )(input)
+
+    return yield* database.query(
+      (db) =>
+        db
+          .select({
+            id: purchaseReturns.id,
+            purchaseOrderId: purchaseReturns.purchaseOrderId,
+            number: purchaseReturns.number,
+            returnDate: purchaseReturns.returnDate,
+          })
+          .from(purchaseReturns)
+          .where(
+            and(
+              eq(purchaseReturns.tenantId, decoded.tenantId),
+              eq(purchaseReturns.purchaseOrderId, decoded.purchaseOrderId),
+            ),
+          )
+          .orderBy(asc(purchaseReturns.returnDate), asc(purchaseReturns.number))
+          .limit(200),
+      "procurement.purchase_return.list",
+    )
+  })
+
   const setSupplierPrice = Effect.fn("PurchaseDocumentService.setSupplierPrice")(function* (
     input: Schema.Codec.Encoded<typeof SetSupplierPriceInput>,
   ) {
@@ -754,6 +784,7 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
   return {
     setSupplierPrice,
     listSupplierPrices,
+    listPurchaseReturns,
     draftPurchaseOrder,
     releasePurchaseOrder,
     getMatching,
