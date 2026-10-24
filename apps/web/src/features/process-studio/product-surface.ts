@@ -1,5 +1,6 @@
 import {
   applyDesignerAction,
+  DesignerAction,
   type DesignerModel,
   makeInitialDesignerModel,
   serializeProcessIr,
@@ -49,7 +50,7 @@ const templateModel = (
   label: string,
 ): DesignerModel => {
   const initial = makeInitialDesignerModel()
-  const withNode = applyDesignerAction(initial, { _tag: "add_node", kind })
+  const withNode = applyDesignerAction(initial, DesignerAction.AddNode({ kind }))
   const node = withNode.nodes.find((candidate) => candidate.kind === kind)
   return node === undefined
     ? withNode

@@ -1,3 +1,4 @@
+import * as Data from "effect/Data"
 import * as Match from "effect/Match"
 
 // The process designer keeps only typed mapping and deterministic Process IR in the browser.
@@ -49,17 +50,15 @@ export type ProcessDesignIr = DesignerModel & {
   readonly checksum: string
 }
 
-export type DesignerAction =
-  | { readonly _tag: "add_node"; readonly kind: ProcessNodeKind }
-  | { readonly _tag: "reorder_node"; readonly nodeId: string; readonly direction: "up" | "down" }
-  | { readonly _tag: "move_node"; readonly sourceId: string; readonly targetId: string }
-  | { readonly _tag: "set_label"; readonly nodeId: string; readonly label: string }
-  | {
-      readonly _tag: "set_capability"
-      readonly nodeId: string
-      readonly capability?: CatalogReference
-    }
-  | { readonly _tag: "add_mapping"; readonly nodeId: string; readonly mapping: TypedMapping }
+export type DesignerAction = Data.TaggedEnum<{
+  AddNode: { readonly kind: ProcessNodeKind }
+  ReorderNode: { readonly nodeId: string; readonly direction: "up" | "down" }
+  MoveNode: { readonly sourceId: string; readonly targetId: string }
+  SetLabel: { readonly nodeId: string; readonly label: string }
+  SetCapability: { readonly nodeId: string; readonly capability?: CatalogReference }
+  AddMapping: { readonly nodeId: string; readonly mapping: TypedMapping }
+}>
+export const DesignerAction = Data.taggedEnum<DesignerAction>()
 
 export type DesignerValidationIssue = {
   readonly code:
@@ -203,25 +202,15 @@ export const addTypedMapping = (
   ),
 })
 
-export const applyDesignerAction = (
-  model: DesignerModel,
-  action: DesignerAction,
-): DesignerModel => {
-  switch (action._tag) {
-    case "add_node":
-      return addNode(model, action.kind)
-    case "reorder_node":
-      return reorderNode(model, action.nodeId, action.direction)
-    case "move_node":
-      return moveNodeTo(model, action.sourceId, action.targetId)
-    case "set_label":
-      return setNodeLabel(model, action.nodeId, action.label)
-    case "set_capability":
-      return setNodeCapability(model, action.nodeId, action.capability)
-    case "add_mapping":
-      return addTypedMapping(model, action.nodeId, action.mapping)
-  }
-}
+export const applyDesignerAction = (model: DesignerModel, action: DesignerAction): DesignerModel =>
+  DesignerAction.$match(action, {
+    AddNode: (action) => addNode(model, action.kind),
+    ReorderNode: (action) => reorderNode(model, action.nodeId, action.direction),
+    MoveNode: (action) => moveNodeTo(model, action.sourceId, action.targetId),
+    SetLabel: (action) => setNodeLabel(model, action.nodeId, action.label),
+    SetCapability: (action) => setNodeCapability(model, action.nodeId, action.capability),
+    AddMapping: (action) => addTypedMapping(model, action.nodeId, action.mapping),
+  })
 
 const compare = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0)
 const canonical = (model: DesignerModel) => ({

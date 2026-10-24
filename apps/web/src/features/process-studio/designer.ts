@@ -4,6 +4,7 @@ import { createEffect, createRoot, createSignal } from "solid-js"
 import type { ProcessCatalogDescriptor } from "../../shared/contracts/generated/process.ts"
 import {
   applyDesignerAction,
+  DesignerAction,
   type CatalogReference,
   type DesignerModel,
   type DesignerNode,
@@ -455,23 +456,28 @@ export const mountProcessDesigner = (
     }
     const handlers: Handlers = {
       add: (kind) => {
-        const next = applyDesignerAction(model(), { _tag: "add_node", kind })
+        const next = applyDesignerAction(model(), DesignerAction.AddNode({ kind }))
         update(next)
         setSelected(next.nodes.at(-2)?.id ?? "")
       },
       select: setSelected,
       move: (id, direction) =>
-        update(applyDesignerAction(model(), { _tag: "reorder_node", nodeId: id, direction })),
+        update(applyDesignerAction(model(), DesignerAction.ReorderNode({ nodeId: id, direction }))),
       drop: (sourceId, targetId) =>
-        update(applyDesignerAction(model(), { _tag: "move_node", sourceId, targetId })),
+        update(applyDesignerAction(model(), DesignerAction.MoveNode({ sourceId, targetId }))),
       label: (id, value) =>
-        update(applyDesignerAction(model(), { _tag: "set_label", nodeId: id, label: value })),
+        update(applyDesignerAction(model(), DesignerAction.SetLabel({ nodeId: id, label: value }))),
       capability: (id, value) =>
         update(
-          applyDesignerAction(model(), { _tag: "set_capability", nodeId: id, capability: value }),
+          applyDesignerAction(
+            model(),
+            DesignerAction.SetCapability({ nodeId: id, capability: value }),
+          ),
         ),
       mapping: (id, value) =>
-        update(applyDesignerAction(model(), { _tag: "add_mapping", nodeId: id, mapping: value })),
+        update(
+          applyDesignerAction(model(), DesignerAction.AddMapping({ nodeId: id, mapping: value })),
+        ),
       validate: () => {
         const nextIssues = validateDesignerModel(model())
         setIssues(nextIssues)

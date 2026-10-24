@@ -3,7 +3,7 @@
 // and interruption finalizers (onInterrupt) — all declared on the program,
 // none of it visible to the Solid components that consume them.
 
-import { Context, Data, Effect, Layer, Schedule } from "effect"
+import { Context, Data, Effect, Layer, Predicate, Schedule } from "effect"
 import { log } from "./log"
 
 // ---------------------------------------------------------------------------
@@ -209,7 +209,7 @@ export function searchPackages(query: string) {
       Effect.retry({
         schedule: Schedule.exponential(150),
         times: 3,
-        while: (e) => e._tag === "TransientNetwork",
+        while: (e) => Predicate.isTagged(e, "TransientNetwork"),
       }),
     )
   }).pipe(

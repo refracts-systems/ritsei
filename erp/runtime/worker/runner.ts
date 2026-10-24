@@ -1,5 +1,6 @@
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
+import * as Match from "effect/Match"
 import * as Layer from "effect/Layer"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
@@ -58,24 +59,19 @@ type FinancialOperationFailure = Effect.Error<
   ReturnType<FinancialOperationService["submitFinancialOperation"]>
 >
 
-const isPermanentFinancialOperationFailure = (error: FinancialOperationFailure): boolean => {
-  switch (error._tag) {
-    case "FinancialOperationFenceRejected":
-    case "FinancialOperationNotFound":
-    case "SchemaError":
-      return true
-    case "AuthorizationDenied":
-    case "EventIdempotencyConflict":
-    case "FinancialLedgerNotConfigured":
-    case "FinancialLedgerNotActivated":
-    case "FinancialOperationReconciliationConflict":
-    case "DatabaseFailure":
-    case "FinancialOperationInjectedFailure":
-      return false
-  }
-  const exhaustive: never = error
-  return exhaustive
-}
+const isPermanentFinancialOperationFailure = (error: FinancialOperationFailure): boolean =>
+  Match.valueTags(error, {
+    FinancialOperationFenceRejected: () => true,
+    FinancialOperationNotFound: () => true,
+    SchemaError: () => true,
+    AuthorizationDenied: () => false,
+    EventIdempotencyConflict: () => false,
+    FinancialLedgerNotConfigured: () => false,
+    FinancialLedgerNotActivated: () => false,
+    FinancialOperationReconciliationConflict: () => false,
+    DatabaseFailure: () => false,
+    FinancialOperationInjectedFailure: () => false,
+  })
 
 /** A claimed job is leased, and ProcessJob requires a leased job to carry its lease token. */
 const leaseTokenOf = (job: { readonly leaseToken: string | null }) =>
