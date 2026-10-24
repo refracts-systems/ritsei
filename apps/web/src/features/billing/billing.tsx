@@ -1,6 +1,6 @@
 import { useNavigate } from "@solidjs/router"
 import * as Predicate from "effect/Predicate"
-import { For, Show, useContext } from "solid-js"
+import { createMemo, For, Show, useContext } from "solid-js"
 import { QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
 import { ApiRuntime } from "../../shared/runtime.ts"
 import { formatDecimal } from "../../ui/foundations/format.ts"
@@ -14,10 +14,12 @@ import { Form, type FormValue } from "../../ui/primitives/form.tsx"
 import { Reference } from "../../ui/primitives/reference.tsx"
 import { Select } from "../../ui/primitives/select.tsx"
 import { surface } from "../../ui/recipes/surface.ts"
+import type { PartyDirectoryEntry } from "../../shared/contracts/generated/party.ts"
 import {
   createBillingDocumentQuery,
   createBillingDocumentsQuery,
   createLegalEntitiesQuery,
+  createPartyDirectoryQuery,
 } from "./queries.ts"
 import type { BillingDocument, BillingSide } from "./service.ts"
 
@@ -49,6 +51,21 @@ function DocumentStatus(props: { document: BillingDocument }) {
   )
 }
 
+/** Names resolved from the party directory; an unresolved id falls back to the identifier. */
+interface Names {
+  readonly parties: ReadonlyMap<string, string>
+  readonly legalEntities: ReadonlyMap<string, string>
+}
+
+const namesFrom = (entries: readonly PartyDirectoryEntry[]): Names => ({
+  parties: new Map(entries.map((entry) => [entry.party.id, entry.party.name])),
+  legalEntities: new Map(
+    entries.flatMap((entry) =>
+      entry.legalEntityId === null ? [] : [[entry.legalEntityId, entry.party.name] as const],
+    ),
+  ),
+})
+
 const text = (value: FormValue[string] | undefined) =>
   Predicate.isString(value) ? value.trim() : ""
 
@@ -60,6 +77,7 @@ function documentHref(id: string, legalEntityId: string, side: BillingSide) {
 }
 
 function BillingFilters(props: {
+  names: Names
   legalEntities: readonly { readonly legalEntityId: string }[]
   legalEntityId: string
   side: BillingSide
@@ -85,7 +103,7 @@ function BillingFilters(props: {
             name="legalEntityId"
             options={props.legalEntities.map((entity) => ({
               value: entity.legalEntityId,
-              label: entity.legalEntityId,
+              label: props.names.legalEntities.get(entity.legalEntityId) ?? entity.legalEntityId,
             }))}
             value={props.legalEntityId}
           />
@@ -104,6 +122,7 @@ function BillingFilters(props: {
 }
 
 function DocumentTable(props: {
+  names: Names
   documents: readonly BillingDocument[]
   legalEntityId: string
   side: BillingSide
@@ -138,7 +157,9 @@ function DocumentTable(props: {
         {
           id: "party",
           header: props.side === "receivable" ? "Customer" : "Supplier",
-          cell: (document) => <Reference id={document.partyId} />,
+          cell: (document) => (
+            <Reference id={document.partyId} label={props.names.parties.get(document.partyId)} />
+          ),
         },
         {
           id: "total",
@@ -162,7 +183,7 @@ function DocumentTable(props: {
   )
 }
 
-function DocumentDetail(props: { document: BillingDocument }) {
+function DocumentDetail(props: { document: BillingDocument; names: Names }) {
   return (
     <section class={layout.stack} aria-labelledby="billing-document-heading">
       <h2 id="billing-document-heading">
@@ -173,6 +194,17 @@ function DocumentDetail(props: { document: BillingDocument }) {
           <dt class={layout.detailTerm}>Status</dt>
           <dd class={layout.detailValue}>
             <DocumentStatus document={props.document} />
+          </dd>
+        </div>
+        <div class={layout.detailItem}>
+          <dt class={layout.detailTerm}>
+            {props.document.kind.startsWith("customer") ? "Customer" : "Supplier"}
+          </dt>
+          <dd class={layout.detailValue}>
+            <Reference
+              id={props.document.partyId}
+              label={props.names.parties.get(props.document.partyId)}
+            />
           </dd>
         </div>
         <div class={layout.detailItem}>
@@ -268,18 +300,19 @@ function DocumentDetail(props: { document: BillingDocument }) {
   )
 }
 
-function SelectedDocument(props: { id: string }) {
+function SelectedDocument(props: { id: string; names: Names }) {
   const scope = useContext(ApiRuntime)
   const query = createBillingDocumentQuery(scope, props.id)
 
   return (
     <QueryBoundary label="document" retry={() => reloaded(query.refetch())}>
-      <DocumentDetail document={query.data} />
+      <DocumentDetail document={query.data} names={props.names} />
     </QueryBoundary>
   )
 }
 
 function DocumentList(props: {
+  names: Names
   legalEntityId: string
   side: BillingSide
   selectedDocumentId?: string | undefined
@@ -310,6 +343,7 @@ function DocumentList(props: {
         }
       >
         <DocumentTable
+          names={props.names}
           documents={query.data}
           legalEntityId={props.legalEntityId}
           side={props.side}
@@ -327,6 +361,8 @@ export function Billing(props: {
 }) {
   const scope = useContext(ApiRuntime)
   const entities = createLegalEntitiesQuery(scope)
+  const directory = createPartyDirectoryQuery(scope)
+  const names = createMemo(() => namesFrom(directory.data))
   const side = () => props.side ?? "receivable"
 
   return (
@@ -361,6 +397,7 @@ export function Billing(props: {
               }
               toolbar={
                 <BillingFilters
+                  names={names()}
                   legalEntities={entities.data}
                   legalEntityId={legalEntityId()}
                   side={side()}
@@ -368,11 +405,12 @@ export function Billing(props: {
               }
               aside={
                 props.selectedDocumentId ? (
-                  <SelectedDocument id={props.selectedDocumentId} />
+                  <SelectedDocument id={props.selectedDocumentId} names={names()} />
                 ) : undefined
               }
             >
               <DocumentList
+                names={names()}
                 legalEntityId={legalEntityId()}
                 side={side()}
                 selectedDocumentId={props.selectedDocumentId}

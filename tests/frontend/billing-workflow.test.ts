@@ -7,6 +7,7 @@ import { builtApp, connectToTenant, forbiddenBody } from "./browser.ts"
 const tenantId = "01900000-0000-7000-8000-000000000010"
 const legalEntityId = "01900000-0000-7000-8000-000000000020"
 const partyId = "01900000-0000-7000-8000-000000000021"
+const orgId = "01900000-0000-7000-8000-000000000023"
 const orderId = "01900000-0000-7000-8000-000000000022"
 const invoiceId = "01900000-0000-7000-8000-000000000030"
 const lineId = "01900000-0000-7000-8000-000000000031"
@@ -55,6 +56,17 @@ const invoice = {
   ],
 }
 
+const directory = [
+  {
+    party: { id: partyId, tenantId, kind: "organization", name: "PT Pembeli" },
+    legalEntityId: null,
+  },
+  {
+    party: { id: orgId, tenantId, kind: "organization", name: "PT Demo Trading" },
+    legalEntityId,
+  },
+]
+
 const fulfillJson = <Body>(route: Route, status: number, body: Body) =>
   route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) })
 
@@ -78,6 +90,8 @@ it.effect(
           requests.push({ path, search: requestUrl.search })
 
           if (path === "/user-accounts") return fulfillJson(route, 200, [])
+
+          if (path === "/parties") return fulfillJson(route, 200, directory)
 
           if (path === "/accounting/configurations") return fulfillJson(route, 200, [configuration])
 
@@ -106,6 +120,8 @@ it.effect(
           ),
         )
         await page.getByText("Open", { exact: true }).first().waitFor()
+        await page.getByText("PT Pembeli", { exact: true }).first().waitFor()
+        await page.getByRole("option", { name: "PT Demo Trading" }).waitFor({ state: "attached" })
         assert.deepEqual(
           (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()).violations,
           [],
@@ -142,6 +158,8 @@ const mockBilling = (
     const path = new URL(route.request().url()).pathname.replace(/^\/api/, "")
 
     if (path === "/user-accounts") return fulfillJson(route, 200, [])
+
+    if (path === "/parties") return fulfillJson(route, 200, directory)
 
     if (path === "/accounting/configurations") {
       return fulfillJson(route, 200, options.configurations)
