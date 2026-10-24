@@ -8,7 +8,10 @@ import * as HttpClientRequest from "effect/http/HttpClientRequest"
 import * as Layer from "effect/Layer"
 import * as Path from "effect/Path"
 
+import { partial } from "../../../tests/support/partial.ts"
 import {
+  OrderToCashService,
+  type OrderToCashServiceContract,
   type ProcessCatalogDescriptorType,
   type ProcessJobInboxItemType,
   type ProcessOperatorControlType,
@@ -126,6 +129,24 @@ const processService: ProcessServiceContract = {
   failJob: unused,
 }
 
+const deliveredOrder = {
+  delivery: {
+    id: "018f4000-0000-7000-8000-000000000099",
+    tenantId,
+    number: "DO/2026/00001",
+    orderId: "018f4000-0000-7000-8000-000000000098",
+    legalEntityId: "018f4000-0000-7000-8000-000000000097",
+    warehouseId: "018f4000-0000-7000-8000-000000000096",
+    deliveryDate: "2026-10-24",
+    lines: [],
+  },
+  stock: null,
+}
+
+const orderToCash = partial<OrderToCashServiceContract>()({
+  deliverOrder: () => Effect.succeed(deliveredOrder),
+})
+
 const TestHttpServices = Layer.mergeAll(Path.layer, Etag.layerWeak, HttpPlatform.layer).pipe(
   Layer.provideMerge(FileSystem.layerNoop({})),
 )
@@ -191,6 +212,7 @@ it.layer(TestHttpServices)("Process API", (it) => {
       const handlers = ProcessHandlers.pipe(
         Layer.provide(bearer),
         Layer.provide(Layer.succeed(ProcessService, processService)),
+        Layer.provide(Layer.succeed(OrderToCashService, orderToCash)),
         Layer.provide(Layer.succeed(ProcessStudioService, studio)),
       )
 
@@ -198,6 +220,18 @@ it.layer(TestHttpServices)("Process API", (it) => {
         Effect.provide(Layer.mergeAll(handlers, bearerClient, bearer)),
       )
 
+      assert.deepStrictEqual(
+        yield* client.Process.deliverOrder({
+          headers: { "x-tenant-id": tenantId },
+          payload: {
+            orderId: deliveredOrder.delivery.orderId,
+            warehouseId: deliveredOrder.delivery.warehouseId,
+            deliveryDate: "2026-10-24",
+            lines: [{ orderLineId: "018f4000-0000-7000-8000-000000000095", quantity: "2" }],
+          },
+        }),
+        deliveredOrder,
+      )
       assert.deepStrictEqual(
         yield* client.Process.listCatalog({
           headers: { "x-tenant-id": tenantId },

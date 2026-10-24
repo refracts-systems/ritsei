@@ -6,6 +6,7 @@ import * as HttpApiGroup from "effect/http-api/HttpApiGroup"
 import * as HttpApiSchema from "effect/http-api/HttpApiSchema"
 import * as Schema from "effect/Schema"
 
+import { CalendarDate, PositiveQuantity } from "../../../framework/foundation/mod.ts"
 import {
   ApiErrors as errors,
   BaseApiErrorPolicy,
@@ -26,6 +27,8 @@ import {
   OrderCancellationResult,
   OrderConfirmationPayload,
   OrderConfirmationResult,
+  OrderDelivery,
+  OrderToCashService,
   OrderFulfillmentPayload,
   OrderFulfillmentResult,
   ProcessCatalogCapabilityKind,
@@ -45,6 +48,7 @@ import {
 const CreatedOrderConfirmation = OrderConfirmationResult.pipe(HttpApiSchema.status(201))
 const CreatedOrderCancellation = OrderCancellationResult.pipe(HttpApiSchema.status(201))
 const CreatedOrderFulfillment = OrderFulfillmentResult.pipe(HttpApiSchema.status(201))
+const CreatedOrderDelivery = OrderDelivery.pipe(HttpApiSchema.status(201))
 
 const ProcessInboxResponse = Schema.Struct({
   runtimeInstances: BoundedArray(ProcessRuntimeInstance),
@@ -70,6 +74,20 @@ export const ProcessHttpGroup = HttpApiGroup.make("Process").add(
     headers: tenantHeaders,
     payload: OrderFulfillmentPayload,
     success: CreatedOrderFulfillment,
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.post("deliverOrder", "/process/order-deliveries", {
+    headers: tenantHeaders,
+    payload: Schema.Struct({
+      orderId: Uuid,
+      deliveryId: Schema.optionalKey(Uuid),
+      warehouseId: Uuid,
+      deliveryDate: CalendarDate,
+      lines: BoundedArray(Schema.Struct({ orderLineId: Uuid, quantity: PositiveQuantity })).check(
+        Schema.isMinLength(1),
+      ),
+    }),
+    success: CreatedOrderDelivery,
     error: errors,
   }).middleware(BearerAuth),
   HttpApiEndpoint.post("recoverOrder", "/process/order-confirmations/recover", {
@@ -153,7 +171,18 @@ const ProcessHttpApi = moduleApi(ProcessHttpGroup)
 
 export const ProcessHttpErrors = apiErrorMapping({
   ...BaseApiErrorPolicy,
+  AccountNotFound: "not_found",
+  AccountingLegalEntityNotFound: "not_found",
   AccountingPeriodNotOpen: "conflict",
+  CustomerLegalEntityRequired: "conflict",
+  DeliveryExceedsOrder: "conflict",
+  InventoryReferenceNotFound: "not_found",
+  InvalidJournalLine: "conflict",
+  OrderLineNotFound: "not_found",
+  PostingRuleNotFound: "conflict",
+  ProductNotFound: "not_found",
+  StockValuationUnavailable: "conflict",
+  UnbalancedJournal: "conflict",
   FinancialEngineActivated: "conflict",
   JournalIdempotencyConflict: "conflict",
   RevenueJournalNotFound: "not_found",
@@ -190,6 +219,7 @@ export const ProcessHttpHandlers = HttpApiBuilder.group(ProcessHttpApi, "Process
   Effect.gen(function* () {
     const process = yield* ProcessService
     const studio = yield* ProcessStudioService
+    const orderToCash = yield* OrderToCashService
 
     return handlers
       .handle(
@@ -199,6 +229,16 @@ export const ProcessHttpHandlers = HttpApiBuilder.group(ProcessHttpApi, "Process
 
           return yield* coreApiEffect(
             process.confirmOrder({ principal, tenantId: headers["x-tenant-id"], ...payload }),
+          )
+        }),
+      )
+      .handle(
+        "deliverOrder",
+        Effect.fn("Http.Process.deliverOrder")(function* ({ headers, payload }) {
+          const principal = yield* CurrentPrincipal
+
+          return yield* coreApiEffect(
+            orderToCash.deliverOrder({ principal, tenantId: headers["x-tenant-id"], ...payload }),
           )
         }),
       )
