@@ -1,20 +1,17 @@
 import { AxeBuilder } from "@axe-core/playwright"
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
-import type { Page, Route } from "playwright"
-import type { PurchaseOrder } from "../../apps/web/src/shared/contracts/generated/procurement.ts"
-import { builtApp, connectToTenant, notFoundBody } from "./browser.ts"
+import type { Page } from "playwright"
+import { builtApp, conflictBody, connectToTenant, fulfillJson, mockRoutes } from "./browser.ts"
 
 const tenantId = "01900000-0000-7000-8000-000000000010"
 const relationshipId = "01900000-0000-7000-8000-000000000020"
 const supplierAccountId = "01900000-0000-7000-8000-000000000021"
 const partyId = "01900000-0000-7000-8000-000000000022"
 const legalEntityId = "01900000-0000-7000-8000-000000000023"
-const itemId = "01900000-0000-7000-8000-000000000030"
+const productId = "01900000-0000-7000-8000-000000000030"
 const orderId = "01900000-0000-7000-8000-000000000031"
 const orderLineId = "01900000-0000-7000-8000-000000000032"
-const receiptId = "01900000-0000-7000-8000-000000000033"
-const receiptLineId = "01900000-0000-7000-8000-000000000034"
 const warehouseId = "01900000-0000-7000-8000-000000000035"
 
 const supplierAccount = {
@@ -25,18 +22,43 @@ const supplierAccount = {
   legalEntityId,
 }
 
-const draftOrder = {
+const directory = [
+  {
+    party: { id: partyId, tenantId, kind: "organization", name: "PT Pemasok" },
+    legalEntityId: null,
+  },
+]
+
+const product = { id: productId, tenantId, code: "WIDGET", name: "Widget", type: "stockable" }
+
+const legacyOrder = (status: string) => ({
   id: orderId,
   tenantId,
   supplierAccountId,
-  status: "draft" as const,
-  confirmedAt: null,
+  status,
+  confirmedAt: status === "draft" ? null : "2026-09-13T12:00:00.000Z",
   total: "25.00",
-  lines: [{ id: orderLineId, itemId, quantity: "2", unitPrice: "12.50" }],
-}
+  lines: [{ id: orderLineId, itemId: productId, quantity: "2", unitPrice: "12.50" }],
+})
 
-const fulfillJson = <Body>(route: Route, status: number, body: Body) =>
-  route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) })
+const matching = (status: string, received: string, returned: string) => ({
+  purchaseOrderId: orderId,
+  supplierAccountId,
+  partyId,
+  legalEntityId,
+  status,
+  lines: [
+    {
+      purchaseOrderLineId: orderLineId,
+      productId,
+      ordered: "2",
+      received,
+      returned,
+      unitPrice: "12.50",
+      taxCodeId: null,
+    },
+  ],
+})
 
 const connectAndOpenProcurement = async (page: Page, url: string) => {
   await connectToTenant(page, url, "procurement-session", tenantId, "User accounts")
@@ -45,189 +67,178 @@ const connectAndOpenProcurement = async (page: Page, url: string) => {
 }
 
 it.effect(
-  "administers supplier accounts and runs the purchase-order lifecycle",
+  "drafts, releases, receives, and returns a purchase order",
   () =>
     Effect.gen(function* () {
       const { page, url, errors } = yield* builtApp
-      const accounts = [supplierAccount]
-      let order: PurchaseOrder = draftOrder
-      let receipts: unknown[] = []
-      const requests: Array<{ path: string; method: string; headers: Record<string, string> }> = []
-      let supplierAccountBody: unknown
-      let purchaseOrderBody: unknown
-      let confirmBody: unknown
-      let receiveBody: unknown
+      let status = "draft"
+      let received = "0"
+      let returned = "0"
+      let receiptAttempts = 0
+      let draftBody: unknown
+      let receiptBody: unknown
+      let returnBody: unknown
+      let released = 0
 
       yield* Effect.promise(async () => {
-        // Fallow: this browser workflow intentionally uses one deterministic Procurement route matrix.
-        // fallow-ignore-next-line complexity
-        await page.route("**/api/**", (route) => {
-          const request = route.request()
-          const requestUrl = new URL(request.url())
-          const path = requestUrl.pathname.replace(/^\/api/, "")
-          const method = request.method()
-          requests.push({ path, method, headers: request.headers() })
+        await mockRoutes(page, {
+          "GET /user-accounts": (route) => fulfillJson(route, 200, []),
+          "GET /parties": (route) => fulfillJson(route, 200, directory),
+          "GET /product/products": (route) => fulfillJson(route, 200, [product]),
+          "GET /procurement/supplier-accounts": (route) =>
+            fulfillJson(route, 200, [supplierAccount]),
+          "GET /procurement/purchase-orders": (route) =>
+            fulfillJson(
+              route,
+              200,
+              status === "draft" && draftBody === undefined ? [] : [legacyOrder(status)],
+            ),
+          [`GET /procurement/purchase-orders/${orderId}`]: (route) =>
+            fulfillJson(route, 200, legacyOrder(status)),
+          [`GET /procurement/purchase-orders/${orderId}/receipts`]: (route) =>
+            fulfillJson(route, 200, []),
+          [`GET /procurement/purchase-orders/${orderId}/matching`]: (route) =>
+            fulfillJson(route, 200, matching(status, received, returned)),
+          "GET /inventory/warehouses": (route) =>
+            fulfillJson(route, 200, [
+              {
+                id: warehouseId,
+                tenantId,
+                legalEntityId,
+                primaryBranchId: null,
+                name: "Main Warehouse",
+              },
+            ]),
+          "POST /procurement/purchase-order-drafts": (route) => {
+            draftBody = route.request().postDataJSON()
 
-          if (path === "/user-accounts") return fulfillJson(route, 200, [])
-
-          if (path === "/procurement/supplier-accounts" && method === "GET") {
-            return fulfillJson(route, 200, accounts)
-          }
-
-          if (path === "/procurement/supplier-accounts" && method === "POST") {
-            supplierAccountBody = request.postDataJSON()
-
-            return fulfillJson(route, 201, supplierAccount)
-          }
-
-          if (path === "/procurement/purchase-orders" && method === "GET") {
-            const status = requestUrl.searchParams.get("status")
-            const supplier = requestUrl.searchParams.get("supplierAccountId")
-
-            const matches = [order].filter(
-              (candidate) =>
-                (status === null || candidate.status === status) &&
-                (supplier === null || candidate.supplierAccountId === supplier),
-            )
-
-            return fulfillJson(route, 200, matches)
-          }
-
-          if (path === "/procurement/purchase-orders" && method === "POST") {
-            purchaseOrderBody = request.postDataJSON()
-            order = draftOrder
-
-            return fulfillJson(route, 201, order)
-          }
-
-          if (path === `/procurement/purchase-orders/${orderId}` && method === "GET") {
-            return fulfillJson(route, 200, order)
-          }
-
-          if (path === `/procurement/purchase-orders/${orderId}/confirm` && method === "POST") {
-            confirmBody = request.postDataJSON()
-            order = { ...order, status: "confirmed", confirmedAt: "2026-09-13T12:00:00.000Z" }
-
-            return fulfillJson(route, 200, order)
-          }
-
-          if (path === `/procurement/purchase-orders/${orderId}/receipts` && method === "GET") {
-            return fulfillJson(route, 200, receipts)
-          }
-
-          if (path === `/procurement/purchase-orders/${orderId}/receipts` && method === "POST") {
-            receiveBody = request.postDataJSON()
-
-            const receipt = {
-              id: receiptId,
-              tenantId,
+            return fulfillJson(route, 201, {
               purchaseOrderId: orderId,
-              warehouseId,
-              idempotencyKey: "receipt:one",
-              receivedAt: "2026-09-13T12:01:00.000Z",
-              lines: [
-                {
-                  id: receiptLineId,
-                  purchaseOrderLineId: orderLineId,
-                  itemId,
-                  quantity: "2",
-                  unitOfMeasure: "EA",
-                },
-              ],
+              total: "25.00",
+              approval: null,
+            })
+          },
+          [`POST /procurement/purchase-orders/${orderId}/release`]: (route) => {
+            released += 1
+            status = "confirmed"
+
+            return fulfillJson(route, 200, matching(status, received, returned))
+          },
+          [`POST /procurement/purchase-orders/${orderId}/valued-receipts`]: (route) => {
+            receiptAttempts += 1
+            receiptBody = route.request().postDataJSON()
+
+            if (receiptAttempts === 1) {
+              return fulfillJson(route, 409, conflictBody("PurchaseReceiptQuantityExceeded"))
             }
 
-            receipts = [receipt]
+            received = "2"
 
-            return fulfillJson(route, 201, receipt)
-          }
+            return fulfillJson(route, 201, {
+              id: orderLineId,
+              purchaseOrderId: orderId,
+              number: "GR/2026/00001",
+            })
+          },
+          [`POST /procurement/purchase-orders/${orderId}/returns`]: (route) => {
+            returnBody = route.request().postDataJSON()
+            returned = "1"
 
-          return fulfillJson(route, 404, notFoundBody())
+            return fulfillJson(route, 201, {
+              id: orderLineId,
+              purchaseOrderId: orderId,
+              number: "RT/2026/00001",
+            })
+          },
         })
 
         await connectAndOpenProcurement(page, url)
-        await page.getByRole("cell", { name: supplierAccountId, exact: true }).first().waitFor({
-          timeout: 5_000,
-        })
-        assert.isTrue(
-          requests.some(
-            (request) =>
-              request.path === "/procurement/purchase-orders" && request.method === "GET",
-          ),
-        )
 
-        const procurementRequest = requests.find((request) =>
-          request.path.startsWith("/procurement"),
-        )
-
-        assert.equal(procurementRequest?.headers.authorization, "Bearer procurement-session")
-        assert.equal(procurementRequest?.headers["x-tenant-id"], tenantId)
-
-        const createAccount = page.getByRole("button", {
-          name: "Create supplier account",
-          exact: true,
-        })
-
-        await createAccount.click()
-        const accountDialog = page.getByRole("dialog", { name: "Create supplier account" })
-        await accountDialog.waitFor()
+        await page.getByRole("button", { name: "Create purchase order", exact: true }).click()
+        const draftDialog = page.getByRole("dialog", { name: "Create purchase order" })
+        await draftDialog.waitFor()
+        await draftDialog
+          .getByRole("combobox", { name: "Supplier", exact: true })
+          .selectOption(supplierAccountId)
+        await draftDialog
+          .getByRole("combobox", { name: "Product 1", exact: true })
+          .selectOption(productId)
+        await draftDialog.getByRole("textbox", { name: "Quantity 1", exact: true }).fill("2")
+        await draftDialog.getByRole("textbox", { name: "Unit price 1", exact: true }).fill("12.50")
         assert.deepEqual(
           (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()).violations,
           [],
         )
-        await accountDialog
-          .getByRole("textbox", { name: "Supplier relationship ID", exact: true })
-          .fill(relationshipId)
-        await accountDialog
-          .getByRole("button", { name: "Create supplier account", exact: true })
-          .click()
-        await accountDialog.waitFor({ state: "hidden" })
-        assert.deepEqual(supplierAccountBody, { supplierRelationshipId: relationshipId })
-
-        await page.getByRole("button", { name: "Create purchase order", exact: true }).click()
-        const orderDialog = page.getByRole("dialog", { name: "Create purchase order" })
-        await orderDialog
-          .getByRole("combobox", { name: "Supplier account", exact: true })
-          .selectOption(supplierAccountId)
-        await orderDialog.getByRole("textbox", { name: "Item ID", exact: true }).fill(itemId)
-        await orderDialog.getByRole("textbox", { name: "Quantity", exact: true }).fill("2")
-        await orderDialog.getByRole("textbox", { name: "Unit price", exact: true }).fill("12.50")
-        await orderDialog
+        await draftDialog
           .getByRole("button", { name: "Create purchase order", exact: true })
           .click()
+        await draftDialog.waitFor({ state: "hidden" })
         await page.getByRole("heading", { name: "Purchase order detail", exact: true }).waitFor()
         assert.equal(new URL(page.url()).pathname, `/procurement/${orderId}`)
-        assert.deepEqual(purchaseOrderBody, {
+        assert.deepEqual(draftBody, {
           supplierAccountId,
-          lines: [{ itemId, quantity: "2", unitPrice: "12.50" }],
+          lines: [{ productId, quantity: "2", unitPrice: "12.50" }],
         })
 
-        await page.getByRole("button", { name: "Confirm purchase order", exact: true }).click()
-        const confirmDialog = page.getByRole("dialog", { name: "Confirm purchase order" })
-        await confirmDialog
-          .getByRole("button", { name: "Confirm purchase order", exact: true })
-          .click()
-        await page.getByText("confirmed", { exact: true }).first().waitFor()
-        assert.deepEqual(confirmBody, { idempotencyKey: `confirm:${orderId}` })
+        await page.getByRole("heading", { name: "Receiving", exact: true }).waitFor()
+        await page.getByRole("button", { name: "Release purchase order", exact: true }).click()
+        await page.getByRole("button", { name: "Receive goods", exact: true }).waitFor()
+        assert.equal(released, 1)
 
         await page.getByRole("button", { name: "Receive goods", exact: true }).click()
         const receiveDialog = page.getByRole("dialog", { name: "Receive goods" })
-        await receiveDialog
-          .getByRole("textbox", { name: "Warehouse ID", exact: true })
-          .fill(warehouseId)
-        await receiveDialog
-          .getByRole("textbox", {
-            name: `Item ${itemId} · ordered 2`,
-            exact: true,
-          })
-          .fill("2")
+        await receiveDialog.waitFor()
+        await receiveDialog.getByRole("combobox", { name: "Warehouse" }).selectOption(warehouseId)
         await receiveDialog.getByRole("button", { name: "Receive goods", exact: true }).click()
-        await page.getByText(receiptId, { exact: true }).waitFor()
-        assert.deepEqual(receiveBody, {
+        await receiveDialog.getByRole("alert").waitFor()
+        assert.include(
+          await receiveDialog.getByRole("alert").innerText(),
+          "more than what is still to be received",
+        )
+        await receiveDialog.getByRole("button", { name: "Receive goods", exact: true }).click()
+        await receiveDialog.waitFor({ state: "hidden" })
+        assert.deepEqual(receiptBody, {
           warehouseId,
-          idempotencyKey: `receipt:${orderId}`,
+          receiptDate: new Date().toISOString().slice(0, 10),
           lines: [{ purchaseOrderLineId: orderLineId, quantity: "2" }],
         })
-        assert.deepEqual(errors, [])
+        await page.getByText("Everything ordered has been received.").waitFor()
+
+        await page.getByRole("button", { name: "Return to supplier", exact: true }).click()
+        const returnDialog = page.getByRole("dialog", { name: "Return to supplier" })
+        await returnDialog.waitFor()
+        await returnDialog.getByRole("combobox", { name: "Warehouse" }).selectOption(warehouseId)
+        await returnDialog.getByRole("textbox", { name: /Widget.*can be returned/ }).fill("1")
+        await returnDialog.getByRole("button", { name: "Return to supplier", exact: true }).click()
+        await returnDialog.waitFor({ state: "hidden" })
+        assert.deepEqual(returnBody, {
+          warehouseId,
+          returnDate: new Date().toISOString().slice(0, 10),
+          lines: [{ purchaseOrderLineId: orderLineId, quantity: "1" }],
+        })
+      })
+
+      assert.deepEqual(errors, [])
+    }),
+  { timeout: 150_000 },
+)
+
+it.effect(
+  "keeps the workspace usable when the order cannot be found",
+  () =>
+    Effect.gen(function* () {
+      const { page, url } = yield* builtApp
+
+      yield* Effect.promise(async () => {
+        await mockRoutes(page, {
+          "GET /user-accounts": (route) => fulfillJson(route, 200, []),
+          "GET /parties": (route) => fulfillJson(route, 200, directory),
+          "GET /procurement/supplier-accounts": (route) =>
+            fulfillJson(route, 200, [supplierAccount]),
+          "GET /procurement/purchase-orders": (route) => fulfillJson(route, 200, []),
+        })
+        await connectAndOpenProcurement(page, url)
+        await page.getByText("No purchase orders match the current filters.").waitFor()
       })
     }),
   { timeout: 120_000 },

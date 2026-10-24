@@ -1,6 +1,7 @@
 import { useNavigate } from "@solidjs/router"
 import { createSignal, For, Show, useContext } from "solid-js"
 import { CommandFeedback, QueryBoundary } from "../../shared/request-feedback.tsx"
+import { createProductsQuery } from "../../shared/lookups.ts"
 import { ApiRuntime } from "../../shared/runtime.ts"
 import type { Customer } from "../../shared/contracts/generated/sales.ts"
 import { layout } from "../../ui/foundations/layout.ts"
@@ -11,7 +12,7 @@ import { Form } from "../../ui/primitives/form.tsx"
 import { Input } from "../../ui/primitives/input.tsx"
 import { Select } from "../../ui/primitives/select.tsx"
 import { quotationPayload } from "./documents-payloads.ts"
-import { createDraftQuotationMutation, createProductsQuery } from "./documents-queries.ts"
+import { createDraftQuotationMutation } from "./documents-queries.ts"
 import { quotationFailureMessages } from "./documents.ts"
 
 const inThirtyDays = () => new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10)

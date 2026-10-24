@@ -6,7 +6,6 @@ import {
   AccountingConfiguration,
   accountingRoutes,
 } from "../../shared/contracts/generated/accounting.ts"
-import { PartyDirectoryEntry, partyRoutes } from "../../shared/contracts/generated/party.ts"
 
 /** Browser view of the Settlement transport contract served by the settlement module. */
 export const PaymentDirection = Schema.Literals(["incoming", "outgoing"])
@@ -79,7 +78,6 @@ export type CustomerStatement = Schema.Schema.Type<typeof CustomerStatement>
 
 const PaymentList = Schema.Array(Payment).check(Schema.isMaxLength(200))
 const ConfigurationList = Schema.Array(AccountingConfiguration).check(Schema.isMaxLength(200))
-const PartyDirectory = Schema.Array(PartyDirectoryEntry).check(Schema.isMaxLength(200))
 
 const DocumentNumbers = Schema.Array(
   Schema.Struct({ id: Uuid, number: Schema.String, partyId: Uuid }),
@@ -134,12 +132,6 @@ export const listLegalEntities = Effect.fn("Frontend.Settlement.listLegalEntitie
   const body = yield* requestJson(accountingRoutes.listConfigurations)
 
   return yield* decodeResponse(ConfigurationList, body)
-})
-
-export const listPartyDirectory = Effect.fn("Frontend.Settlement.listPartyDirectory")(function* () {
-  const body = yield* requestJson(`${partyRoutes.list}${querySuffix({ limit: 200 })}`)
-
-  return yield* decodeResponse(PartyDirectory, body)
 })
 
 /** Document numbers by id, so allocations show which document they settled. */

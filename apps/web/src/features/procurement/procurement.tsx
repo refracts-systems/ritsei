@@ -1,7 +1,7 @@
 import * as Predicate from "effect/Predicate"
 import * as Match from "effect/Match"
 import { useNavigate } from "@solidjs/router"
-import { createSignal, For, Show, untrack, useContext } from "solid-js"
+import { createSignal, Show, untrack, useContext } from "solid-js"
 import type {
   GoodsReceipt,
   PurchaseOrder,
@@ -24,16 +24,15 @@ import { Select } from "../../ui/primitives/select.tsx"
 import { surface } from "../../ui/recipes/surface.ts"
 import {
   createCancelPurchaseOrderMutation,
-  createConfirmPurchaseOrderMutation,
-  createPurchaseOrderMutation,
   createPurchaseOrderQuery,
   createPurchaseOrdersQuery,
   createPurchaseReceiptsQuery,
-  createReceivePurchaseOrderMutation,
   createSupplierAccountMutation,
   createSupplierAccountsQuery,
 } from "./queries.ts"
 import { definedFields } from "../../shared/api.ts"
+import { DraftPurchaseOrderDialog } from "./draft-purchase-order-dialog.tsx"
+import { OrderDocuments } from "./order-documents.tsx"
 
 const statusOptions = [
   { value: "draft", label: "Draft" },
@@ -42,8 +41,6 @@ const statusOptions = [
 ] as const
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-const quantityPattern = /^[1-9]\d*$/
-const moneyPattern = /^\d+\.\d{2}$/
 
 const requiredText = (value: FormDataEntryValue | null | undefined): string | null =>
   Predicate.isString(value) && /\S/.test(value) ? value.trim() : null
@@ -148,286 +145,6 @@ function CreateSupplierAccountDialog(props: { reload: () => Promise<void> }) {
   )
 }
 
-function CreatePurchaseOrderDialog(props: {
-  supplierAccounts: () => readonly SupplierAccount[]
-  reload: () => Promise<void>
-}) {
-  const scope = useContext(ApiRuntime)
-  const navigate = useNavigate()
-  const [open, setOpen] = createSignal(false)
-  const [invalid, setInvalid] = createSignal(false)
-  const [lineIndexes, setLineIndexes] = createSignal([0])
-
-  const mutation = createPurchaseOrderMutation(scope, (order) => {
-    setOpen(false)
-    navigate(`/procurement/${encodeURIComponent(order.id)}`)
-  })
-
-  return (
-    <Dialog
-      open={open()}
-      onOpenChange={createDialogOpenChange(mutation, setOpen, setInvalid, () =>
-        setLineIndexes([0]),
-      )}
-      trigger={<span>Create purchase order</span>}
-      triggerVariant="primary"
-      title="Create purchase order"
-      description="Create a draft purchase order. Total is derived from the submitted quantities and exact two-decimal unit prices."
-    >
-      <Show
-        when={props.supplierAccounts().length > 0}
-        fallback={
-          <p role="status">
-            No supplier accounts are available in this tenant. Create one before creating a purchase
-            order.
-          </p>
-        }
-      >
-        <Form
-          class={layout.stack}
-          onSubmit={
-            // Fallow: this form intentionally keeps purchase-order line validation at the UI boundary.
-            // fallow-ignore-next-line complexity
-            (value, _event, form) => {
-              if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
-              const supplierAccountId = requiredText(value.supplierAccountId)
-
-              const lines = lineIndexes().flatMap((index) => {
-                const itemId = requiredText(form.get(`itemId-${index}`))
-                const quantity = requiredText(form.get(`quantity-${index}`))
-                const unitPrice = requiredText(form.get(`unitPrice-${index}`))
-
-                if (itemId === null && quantity === null && unitPrice === null) return []
-
-                return [{ itemId, quantity, unitPrice }]
-              })
-
-              // Fallow: purchase-order line validation intentionally remains adjacent to submission.
-              const validLines = lines.every(
-                // fallow-ignore-next-line complexity
-                (line) =>
-                  line.itemId !== null &&
-                  uuidPattern.test(line.itemId) &&
-                  line.quantity !== null &&
-                  quantityPattern.test(line.quantity) &&
-                  line.unitPrice !== null &&
-                  moneyPattern.test(line.unitPrice),
-              )
-
-              if (
-                supplierAccountId === null ||
-                !uuidPattern.test(supplierAccountId) ||
-                lines.length === 0 ||
-                !validLines
-              ) {
-                setInvalid(true)
-
-                return
-              }
-
-              setInvalid(false)
-              mutation.mutate({
-                supplierAccountId,
-                lines: lines.map((line) => ({
-                  itemId: line.itemId!,
-                  quantity: line.quantity!,
-                  unitPrice: line.unitPrice!,
-                })),
-              })
-            }
-          }
-        >
-          <FormField
-            label="Supplier account"
-            required
-            error={invalid() ? "Choose a supplier account and complete every line." : undefined}
-          >
-            {(fieldProps) => (
-              <Select
-                {...fieldProps}
-                name="supplierAccountId"
-                options={props.supplierAccounts().map((account) => ({
-                  value: account.id,
-                  label: `${account.id} · relationship ${account.supplierRelationshipId}`,
-                }))}
-                placeholder="Choose supplier account"
-                required
-                disabled={mutation.isPending}
-              />
-            )}
-          </FormField>
-          <div class={layout.stack}>
-            <div class={layout.row}>
-              <h3>Order lines</h3>
-              <Button
-                type="button"
-                onClick={() => setLineIndexes([...lineIndexes(), lineIndexes().length])}
-                disabled={mutation.isPending}
-              >
-                Add line
-              </Button>
-            </div>
-            <For each={lineIndexes()}>
-              {(index, position) => (
-                <fieldset class={[surface(), layout.stack]}>
-                  <legend>Line {position() + 1}</legend>
-                  <FormField
-                    label="Item ID"
-                    required
-                    helperText="Inventory identity remains authoritative outside Procurement."
-                  >
-                    {(fieldProps) => (
-                      <Input
-                        {...fieldProps}
-                        name={`itemId-${index}`}
-                        autocomplete="off"
-                        spellcheck={false}
-                        required
-                        disabled={mutation.isPending}
-                      />
-                    )}
-                  </FormField>
-                  <FormField label="Quantity" required>
-                    {(fieldProps) => (
-                      <Input
-                        {...fieldProps}
-                        name={`quantity-${index}`}
-                        inputmode="numeric"
-                        autocomplete="off"
-                        required
-                        disabled={mutation.isPending}
-                      />
-                    )}
-                  </FormField>
-                  <FormField
-                    label="Unit price"
-                    required
-                    helperText="Exact major amount, for example 12.50."
-                  >
-                    {(fieldProps) => (
-                      <Input
-                        {...fieldProps}
-                        name={`unitPrice-${index}`}
-                        inputmode="decimal"
-                        autocomplete="off"
-                        required
-                        disabled={mutation.isPending}
-                      />
-                    )}
-                  </FormField>
-                  <Show when={lineIndexes().length > 1}>
-                    <Button
-                      type="button"
-                      onClick={() =>
-                        setLineIndexes(lineIndexes().filter((lineIndex) => lineIndex !== index))
-                      }
-                      disabled={mutation.isPending}
-                    >
-                      Remove line
-                    </Button>
-                  </Show>
-                </fieldset>
-              )}
-            </For>
-          </div>
-          <Show when={invalid()}>
-            <p role="alert">Complete a supplier account and every line with valid values.</p>
-          </Show>
-          <CommandFeedback
-            error={mutation.error}
-            pending={mutation.isPending}
-            success={mutation.isSuccess}
-            successMessage="Purchase order created."
-            reload={props.reload}
-            reset={() => mutation.reset()}
-          />
-          <Button
-            variant="primary"
-            type="submit"
-            loading={mutation.isPending}
-            disabled={mutation.error?.kind === "unknown-outcome"}
-          >
-            Create purchase order
-          </Button>
-        </Form>
-      </Show>
-    </Dialog>
-  )
-}
-
-function ConfirmPurchaseOrderDialog(props: { order: PurchaseOrder; reload: () => Promise<void> }) {
-  const scope = useContext(ApiRuntime)
-  const [open, setOpen] = createSignal(false)
-  const mutation = createConfirmPurchaseOrderMutation(scope, () => setOpen(false))
-  const [invalid, setInvalid] = createSignal(false)
-
-  return (
-    <Dialog
-      open={open()}
-      onOpenChange={createDialogOpenChange(mutation, setOpen, setInvalid)}
-      trigger={<span>Confirm purchase order</span>}
-      triggerVariant="primary"
-      title="Confirm purchase order"
-      description="Confirmation freezes the purchase-order snapshot and publishes the owner-controlled confirmation fact. It is not supplier acceptance or receipt."
-    >
-      <Form
-        class={layout.stack}
-        onSubmit={
-          // Fallow: this form intentionally keeps purchase-order confirmation validation at the UI boundary.
-          // fallow-ignore-next-line complexity
-          (value) => {
-            if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
-            const idempotencyKey = requiredText(value.idempotencyKey)
-
-            if (idempotencyKey === null) {
-              setInvalid(true)
-
-              return
-            }
-
-            setInvalid(false)
-            mutation.mutate({ id: props.order.id, idempotencyKey })
-          }
-        }
-      >
-        <FormField
-          label="Confirmation key"
-          required
-          helperText="Reuse this key if the response is lost; do not invent a new key for a retry."
-          error={invalid() ? "Enter a nonblank confirmation key." : undefined}
-        >
-          {(fieldProps) => (
-            <Input
-              {...fieldProps}
-              name="idempotencyKey"
-              value={`confirm:${props.order.id}`}
-              autocomplete="off"
-              required
-              disabled={mutation.isPending}
-            />
-          )}
-        </FormField>
-        <CommandFeedback
-          error={mutation.error}
-          pending={mutation.isPending}
-          success={mutation.isSuccess}
-          successMessage="Purchase order confirmed."
-          reload={props.reload}
-          reset={() => mutation.reset()}
-        />
-        <Button
-          variant="primary"
-          type="submit"
-          loading={mutation.isPending}
-          disabled={mutation.error?.kind === "unknown-outcome"}
-        >
-          Confirm purchase order
-        </Button>
-      </Form>
-    </Dialog>
-  )
-}
-
 function CancelPurchaseOrderDialog(props: { order: PurchaseOrder; reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
@@ -462,137 +179,6 @@ function CancelPurchaseOrderDialog(props: { order: PurchaseOrder; reload: () => 
           Cancel purchase order
         </Button>
       </div>
-    </Dialog>
-  )
-}
-
-function ReceivePurchaseOrderDialog(props: { order: PurchaseOrder; reload: () => Promise<void> }) {
-  const scope = useContext(ApiRuntime)
-  const [open, setOpen] = createSignal(false)
-  const [invalid, setInvalid] = createSignal(false)
-  const mutation = createReceivePurchaseOrderMutation(scope, () => setOpen(false))
-
-  return (
-    <Dialog
-      open={open()}
-      onOpenChange={createDialogOpenChange(mutation, setOpen, setInvalid)}
-      trigger={<span>Receive goods</span>}
-      triggerVariant="primary"
-      title="Receive goods"
-      description="Record bounded receipt evidence and invoke Inventory's authoritative stock receipt. Leave a line blank when it is not part of this partial receipt."
-    >
-      <Form
-        class={layout.stack}
-        onSubmit={
-          // Fallow: this form intentionally keeps receipt evidence validation at the UI boundary.
-          // fallow-ignore-next-line complexity
-          (value, _event, form) => {
-            if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
-            const warehouseId = requiredText(value.warehouseId)
-            const idempotencyKey = requiredText(value.idempotencyKey)
-
-            const lines = props.order.lines.flatMap((line) => {
-              const quantity = requiredText(form.get(`receipt-quantity-${line.id}`))
-
-              return quantity === null ? [] : [{ purchaseOrderLineId: line.id, quantity }]
-            })
-
-            const valid =
-              warehouseId !== null &&
-              uuidPattern.test(warehouseId) &&
-              idempotencyKey !== null &&
-              lines.length > 0 &&
-              lines.every((line) => quantityPattern.test(line.quantity))
-
-            if (!valid) {
-              setInvalid(true)
-
-              return
-            }
-
-            setInvalid(false)
-            mutation.mutate({
-              id: props.order.id,
-              warehouseId,
-              idempotencyKey,
-              lines,
-            })
-          }
-        }
-      >
-        <FormField
-          label="Warehouse ID"
-          required
-          helperText="Use a tenant-local warehouse aligned with the supplier account legal entity."
-        >
-          {(fieldProps) => (
-            <Input
-              {...fieldProps}
-              name="warehouseId"
-              autocomplete="off"
-              spellcheck={false}
-              required
-              disabled={mutation.isPending}
-            />
-          )}
-        </FormField>
-        <FormField
-          label="Receipt idempotency key"
-          required
-          helperText="Use a new key for a new receipt; reuse it only to retry the same receipt."
-        >
-          {(fieldProps) => (
-            <Input
-              {...fieldProps}
-              name="idempotencyKey"
-              value={`receipt:${props.order.id}`}
-              autocomplete="off"
-              required
-              disabled={mutation.isPending}
-            />
-          )}
-        </FormField>
-        <fieldset class={layout.stack}>
-          <legend>Receipt quantities</legend>
-          <For each={props.order.lines}>
-            {(line) => (
-              <FormField
-                label={`Item ${line.itemId} · ordered ${line.quantity}`}
-                helperText={`Purchase-order line ${line.id}`}
-              >
-                {(fieldProps) => (
-                  <Input
-                    {...fieldProps}
-                    name={`receipt-quantity-${line.id}`}
-                    inputmode="numeric"
-                    autocomplete="off"
-                    disabled={mutation.isPending}
-                  />
-                )}
-              </FormField>
-            )}
-          </For>
-        </fieldset>
-        <Show when={invalid()}>
-          <p role="alert">Enter a valid warehouse, key, and at least one positive quantity.</p>
-        </Show>
-        <CommandFeedback
-          error={mutation.error}
-          pending={mutation.isPending}
-          success={mutation.isSuccess}
-          successMessage="Goods receipt recorded."
-          reload={props.reload}
-          reset={() => mutation.reset()}
-        />
-        <Button
-          variant="primary"
-          type="submit"
-          loading={mutation.isPending}
-          disabled={mutation.error?.kind === "unknown-outcome"}
-        >
-          Receive goods
-        </Button>
-      </Form>
     </Dialog>
   )
 }
@@ -863,15 +449,11 @@ function PurchaseOrderDetail(props: { id: string }) {
               <section class={[surface(), layout.stack]} aria-labelledby="order-commands-heading">
                 <h3 id="order-commands-heading">Eligible commands</h3>
                 <p>
-                  Procurement owns the order snapshot. Confirmation, cancellation, and receipt
-                  commands are checked again by the backend and never mutate Inventory directly.
+                  Procurement owns the order snapshot. Release, receipt, return, and cancellation
+                  are checked again by the backend, which also posts the stock and ledger effects.
                 </p>
                 <div class={layout.row}>
-                  <Show when={order.status === "draft"}>
-                    <ConfirmPurchaseOrderDialog order={order} reload={reload} />
-                  </Show>
                   <Show when={order.status === "confirmed"}>
-                    <ReceivePurchaseOrderDialog order={order} reload={reload} />
                     <CancelPurchaseOrderDialog order={order} reload={reload} />
                   </Show>
                   <Show when={order.status === "cancelled"}>
@@ -879,6 +461,7 @@ function PurchaseOrderDetail(props: { id: string }) {
                   </Show>
                 </div>
               </section>
+              <OrderDocuments id={order.id} reloadOrder={reload} />
               <QueryBoundary label="receipt evidence" retry={() => reloaded(receipts.refetch())}>
                 <ReceiptTable receipts={receipts.data} />
               </QueryBoundary>
@@ -941,7 +524,7 @@ export function Procurement(props: {
       headerActions={
         <div class={layout.row}>
           <CreateSupplierAccountDialog reload={() => reloaded(supplierAccounts.refetch())} />
-          <CreatePurchaseOrderDialog
+          <DraftPurchaseOrderDialog
             supplierAccounts={() => supplierAccounts.data}
             reload={() => reloaded(orders.refetch())}
           />

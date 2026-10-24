@@ -2,21 +2,24 @@ import { useMutation, useQueryClient } from "@tanstack/solid-query"
 import * as Effect from "effect/Effect"
 import { type RequestFailure } from "../../shared/api.ts"
 import type { AccountingConfiguration } from "../../shared/contracts/generated/accounting.ts"
-import type { PartyDirectoryEntry } from "../../shared/contracts/generated/party.ts"
+import type { PurchaseOrder } from "../../shared/contracts/generated/procurement.ts"
 import type { Customer, SalesOrder } from "../../shared/contracts/generated/sales.ts"
 import { type ApiScope, runRequest } from "../../shared/runtime.ts"
 import { createServerQuery, serverQueryKey } from "../../shared/server-query.ts"
 import {
   type BillingDocument,
+  type OrderMatching,
   type RecordedPayment,
+  billPurchaseOrder,
   getBillingDocument,
+  getOrderMatching,
   invoiceSalesOrder,
   listBillingDocuments,
   listConfirmedOrders,
+  listReleasedOrders,
   listCustomers,
   recordPayment,
   listLegalEntities,
-  listPartyDirectory,
 } from "./service.ts"
 
 const billingKey = ["billing"] as const
@@ -27,17 +30,6 @@ export function createLegalEntitiesQuery(scope: ApiScope) {
     key: [...billingKey, "legal_entities"],
     cache: "lookup",
     load: ({ signal }) => runRequest(scope, listLegalEntities(), signal),
-  })
-}
-
-export function createPartyDirectoryQuery(scope: ApiScope) {
-  return createServerQuery<readonly PartyDirectoryEntry[], RequestFailure>({
-    tenantId: scope.tenantId,
-    key: [...billingKey, "party_directory"],
-    cache: "lookup",
-    // Names are a convenience: if the directory cannot load, documents still show identifiers.
-    load: ({ signal }) =>
-      runRequest(scope, listPartyDirectory().pipe(Effect.catch(() => Effect.succeed([]))), signal),
   })
 }
 
@@ -105,4 +97,36 @@ export function createPaymentMutation(scope: ApiScope, afterSuccess?: () => void
       afterSuccess?.()
     },
   }))
+}
+
+export function createReleasedOrdersQuery(scope: ApiScope) {
+  return createServerQuery<readonly PurchaseOrder[], RequestFailure>({
+    tenantId: scope.tenantId,
+    key: [...billingKey, "released_orders"],
+    cache: "collection",
+    load: ({ signal }) => runRequest(scope, listReleasedOrders(), signal),
+  })
+}
+
+export function createOrderMatchingQuery(scope: ApiScope, id: string) {
+  return createServerQuery<OrderMatching, RequestFailure>({
+    tenantId: scope.tenantId,
+    key: [...billingKey, "order_matching", id],
+    cache: "detail",
+    load: ({ signal }) => runRequest(scope, getOrderMatching(id), signal),
+  })
+}
+
+export function createBillMutation(scope: ApiScope, afterSuccess?: (id: string) => void) {
+  const client = useQueryClient()
+
+  return useMutation<BillingDocument, RequestFailure, Parameters<typeof billPurchaseOrder>[0]>(
+    () => ({
+      mutationFn: (input) => runRequest(scope, billPurchaseOrder(input)),
+      onSuccess: async (document) => {
+        await client.invalidateQueries({ queryKey: serverQueryKey(scope.tenantId, billingKey) })
+        afterSuccess?.(document.id)
+      },
+    }),
+  )
 }

@@ -3,6 +3,7 @@ import { createMemo, For, Show, useContext } from "solid-js"
 import { formText as text } from "../../shared/form-values.ts"
 import { type Names, namesFrom } from "../../shared/party-names.ts"
 import { QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
+import { createPartyDirectoryQuery } from "../../shared/lookups.ts"
 import { ApiRuntime } from "../../shared/runtime.ts"
 import { formatDecimal } from "../../ui/foundations/format.ts"
 import { layout } from "../../ui/foundations/layout.ts"
@@ -19,9 +20,9 @@ import {
   createBillingDocumentQuery,
   createBillingDocumentsQuery,
   createLegalEntitiesQuery,
-  createPartyDirectoryQuery,
 } from "./queries.ts"
 import { InvoiceOrderDialog } from "./invoice-order-dialog.tsx"
+import { SupplierBillDialog } from "./supplier-bill-dialog.tsx"
 import { canRecordPayment, RecordPaymentDialog } from "./record-payment-dialog.tsx"
 import type { BillingDocument, BillingSide } from "./service.ts"
 
@@ -391,7 +392,9 @@ export function Billing(props: {
                   Posted invoices, credit notes, and supplier bills with what is still open on each.
                 </p>
               }
-              headerActions={<InvoiceOrderDialog />}
+              headerActions={
+                side() === "receivable" ? <InvoiceOrderDialog /> : <SupplierBillDialog />
+              }
               toolbar={
                 <BillingFilters
                   names={names()}

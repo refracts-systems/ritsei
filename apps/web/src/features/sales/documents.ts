@@ -4,11 +4,9 @@ import {
   decodeInput,
   decodeResponse,
   mutationRequest,
-  querySuffix,
   requestJson,
   routeWithId,
 } from "../../shared/api.ts"
-import { Warehouse, inventoryRoutes } from "../../shared/contracts/generated/inventory.ts"
 import { Amount, CalendarDate, Uuid } from "../../shared/schemas.ts"
 
 /** Browser view of the Sales document contract (quotations with lines, order fulfillment). */
@@ -62,18 +60,6 @@ export type OrderFulfillment = Schema.Schema.Type<typeof OrderFulfillment>
 const DeliveredOrder = Schema.Struct({
   delivery: Schema.Struct({ id: Uuid, number: Schema.String, deliveryDate: CalendarDate }),
 })
-
-const Product = Schema.Struct({
-  id: Uuid,
-  code: Schema.String,
-  name: Schema.String,
-  type: Schema.Literals(["stockable", "consumable", "service"]),
-})
-
-export type Product = Schema.Schema.Type<typeof Product>
-
-const ProductList = Schema.Array(Product).check(Schema.isMaxLength(200))
-const WarehouseList = Schema.Array(Warehouse).check(Schema.isMaxLength(200))
 
 const DraftQuotationInput = Schema.Struct({
   customerId: Uuid,
@@ -158,18 +144,6 @@ export const deliverOrder = Effect.fn("Frontend.Sales.deliverOrder")(function* (
   const body = yield* mutationRequest("/process/order-deliveries", decoded)
 
   return yield* decodeResponse(DeliveredOrder, body, "unknown-outcome")
-})
-
-export const listProducts = Effect.fn("Frontend.Sales.listProducts")(function* () {
-  const body = yield* requestJson(`/product/products${querySuffix({ limit: 200 })}`)
-
-  return yield* decodeResponse(ProductList, body)
-})
-
-export const listWarehouses = Effect.fn("Frontend.Sales.listWarehouses")(function* () {
-  const body = yield* requestJson(`${inventoryRoutes.listWarehouses}${querySuffix({ limit: 200 })}`)
-
-  return yield* decodeResponse(WarehouseList, body)
 })
 
 /** What the user is told for the business failures quotation documents can return. */

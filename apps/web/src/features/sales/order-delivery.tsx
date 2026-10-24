@@ -1,6 +1,7 @@
 import { createSignal, For, Show, useContext } from "solid-js"
 import { today } from "../../shared/form-values.ts"
 import { CommandFeedback, QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
+import { createProductsQuery, createWarehousesQuery } from "../../shared/lookups.ts"
 import { ApiRuntime } from "../../shared/runtime.ts"
 import { formatDecimal } from "../../ui/foundations/format.ts"
 import { layout } from "../../ui/foundations/layout.ts"
@@ -12,12 +13,7 @@ import { Input } from "../../ui/primitives/input.tsx"
 import { Select } from "../../ui/primitives/select.tsx"
 import { surface } from "../../ui/recipes/surface.ts"
 import { deliveryPayload, remainingQuantity } from "./documents-payloads.ts"
-import {
-  createDeliveryMutation,
-  createOrderFulfillmentQuery,
-  createProductsQuery,
-  createWarehousesQuery,
-} from "./documents-queries.ts"
+import { createDeliveryMutation, createOrderFulfillmentQuery } from "./documents-queries.ts"
 import { deliveryFailureMessages, type OrderFulfillment } from "./documents.ts"
 
 const hasUndelivered = (fulfillment: OrderFulfillment) =>

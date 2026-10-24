@@ -2,17 +2,14 @@ import { useNavigate } from "@solidjs/router"
 import * as Predicate from "effect/Predicate"
 import { For, Show, useContext } from "solid-js"
 import { CommandFeedback, QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
+import { createProductsQuery } from "../../shared/lookups.ts"
 import { ApiRuntime } from "../../shared/runtime.ts"
 import { formatDecimal } from "../../ui/foundations/format.ts"
 import { layout } from "../../ui/foundations/layout.ts"
 import { Badge } from "../../ui/primitives/badge.tsx"
 import { Button } from "../../ui/primitives/button.tsx"
 import { surface } from "../../ui/recipes/surface.ts"
-import {
-  createProductsQuery,
-  createQuotationActionMutation,
-  createQuotationDocumentQuery,
-} from "./documents-queries.ts"
+import { createQuotationActionMutation, createQuotationDocumentQuery } from "./documents-queries.ts"
 import {
   type QuotationAction,
   type QuotationDocument,
