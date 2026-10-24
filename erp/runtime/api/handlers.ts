@@ -5,6 +5,7 @@ import * as Layer from "effect/Layer"
 import * as Redacted from "effect/Redacted"
 
 import { DatabaseFailure } from "../../../framework/foundation/mod.ts"
+import { ApprovalService } from "../../../framework/modules/approvals/mod.ts"
 import {
   AuthService,
   ExternalProviderUnavailable,
@@ -41,7 +42,11 @@ import {
 // in its http.ts (ADR-0094).
 const coreApiErrorPolicy = {
   ...BaseApiErrorPolicy,
+  ApprovalAlreadyDecided: "conflict",
+  ApprovalPolicyNotFound: "conflict",
+  ApprovalRequestNotFound: "not_found",
   CapabilityAlreadyGranted: "conflict",
+  SelfApprovalForbidden: "conflict",
   IdentityAuthorizationDenied: "forbidden",
   TenantMembershipAlreadyExists: "conflict",
   TenantMembershipNotActive: "conflict",
@@ -522,10 +527,44 @@ export const AuthorizationHandlers = HttpApiBuilder.group(RitseiApi, "Authorizat
   }),
 )
 
+export const ApprovalHandlers = HttpApiBuilder.group(RitseiApi, "Approvals", (handlers) =>
+  Effect.gen(function* () {
+    const approvals = yield* ApprovalService
+
+    return handlers
+      .handle(
+        "listApprovalRequests",
+        Effect.fn("Http.Approvals.listApprovalRequests")(function* ({ headers, query }) {
+          const principal = yield* CurrentPrincipal
+
+          return yield* coreApiEffect(
+            approvals.list({ principal, tenantId: headers["x-tenant-id"], ...query }),
+          )
+        }),
+      )
+      .handle(
+        "decideApprovalRequest",
+        Effect.fn("Http.Approvals.decideApprovalRequest")(function* ({ headers, params, payload }) {
+          const principal = yield* CurrentPrincipal
+
+          return yield* coreApiEffect(
+            approvals.decide({
+              principal,
+              tenantId: headers["x-tenant-id"],
+              requestId: params.id,
+              decision: payload.decision,
+            }),
+          )
+        }),
+      )
+  }),
+)
+
 export const ApiHandlers = Layer.mergeAll(
   AuthenticationHandlers,
   HealthHandlers,
   UserAccountHandlers,
   AuthorizationHandlers,
+  ApprovalHandlers,
   ...ErpHttpHandlers,
 )

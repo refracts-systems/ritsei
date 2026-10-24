@@ -19,6 +19,7 @@ import { ApplicationShell } from "./shell.tsx"
 
 const AccessRoute = lazy(() => import("./access-route.tsx"))
 const AccountsRoute = lazy(() => import("./accounts-route.tsx"))
+const ApprovalsRoute = lazy(() => import("./approvals-route.tsx"))
 
 const workspaceDirectory: readonly Readonly<{
   href: string
@@ -27,6 +28,12 @@ const workspaceDirectory: readonly Readonly<{
   icon: IconName
 }>[] = [
   ...moduleWorkspaces,
+  {
+    href: "/approvals",
+    label: "Approvals",
+    description: "Requests waiting for a decision.",
+    icon: "status.success",
+  },
   {
     href: "/user-accounts",
     label: "User accounts",
@@ -109,6 +116,7 @@ const Router = createRouter({
     { path: "/", component: HomeRoute },
     { path: "/login", component: Connection },
     { path: "/auth/callback", component: AuthCallback },
+    { path: "/approvals", component: ApprovalsRoute },
     { path: "/user-accounts", component: AccountsRoute },
     { path: "/user-accounts/:id", component: AccountsRoute },
     { path: "/access", component: AccessRoute },
