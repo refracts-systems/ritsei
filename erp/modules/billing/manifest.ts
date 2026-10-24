@@ -11,5 +11,5 @@ export const BillingModule = defineModule({
   events: [],
   consumes: [],
   http: ["Billing"],
-  pages: [],
+  pages: ["/billing", "/billing/:id"],
 })
