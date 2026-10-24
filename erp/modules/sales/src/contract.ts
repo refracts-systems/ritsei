@@ -12,6 +12,7 @@ import {
   EventIdempotencyConflict,
 } from "../../../../framework/modules/messaging/mod.ts"
 import {
+  CreditLimitExceeded,
   CustomerAlreadyExists,
   CustomerNotFound,
   QuotationCustomerMismatch,
@@ -254,6 +255,7 @@ export interface SalesService {
     input: Schema.Codec.Encoded<typeof ConfirmOrderInput>,
   ) => Effect.Effect<
     SalesOrder,
+    | CreditLimitExceeded
     | EventIdempotencyConflict
     | SalesOrderConfirmationIdempotencyConflict
     | SalesOrderInvalidState
@@ -269,6 +271,7 @@ export interface SalesService {
 }
 
 export {
+  CreditLimitExceeded,
   CustomerAlreadyExists,
   CustomerNotFound,
   QuotationCustomerMismatch,

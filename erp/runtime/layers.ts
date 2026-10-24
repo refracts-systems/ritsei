@@ -48,7 +48,7 @@ import { identityProviderLayer } from "./authentication/oidc.ts"
 import type { RitseiRuntimeConfiguration } from "./config.ts"
 import { ProductLive } from "../modules/product/mod.ts"
 import { TaxLive } from "../modules/tax/mod.ts"
-import { BillingLive } from "../modules/billing/mod.ts"
+import { BillingCreditExposureLive, BillingLive } from "../modules/billing/mod.ts"
 import { SettlementLive } from "../modules/settlement/mod.ts"
 import { DocumentsLive } from "../modules/documents/mod.ts"
 
@@ -98,8 +98,10 @@ export const serviceLayers = (
 
   const PartyContactServiceLive = PartyContactsLive.pipe(Layer.provide(BusinessRequirements))
 
+  const CreditExposureLive = BillingCreditExposureLive.pipe(Layer.provide(BusinessRequirements))
+
   const SalesLive = SalesServiceLayer.pipe(
-    Layer.provide(Layer.merge(BusinessRequirements, MessagingLive)),
+    Layer.provide(Layer.mergeAll(BusinessRequirements, MessagingLive, CreditExposureLive)),
   )
 
   const InventoryLive = InventoryServiceLayer.pipe(
@@ -185,7 +187,13 @@ export const serviceLayers = (
 
   const SalesDocumentServiceLive = SalesDocumentsLive.pipe(
     Layer.provide(
-      Layer.mergeAll(BusinessRequirements, PartyLive, TaxServiceLive, NumberingServiceLive),
+      Layer.mergeAll(
+        CreditExposureLive,
+        BusinessRequirements,
+        PartyLive,
+        TaxServiceLive,
+        NumberingServiceLive,
+      ),
     ),
   )
 

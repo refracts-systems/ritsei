@@ -27,6 +27,7 @@ import {
   EventIdempotencyConflict,
 } from "../../../../framework/modules/messaging/mod.ts"
 import {
+  CreditLimitExceeded,
   SalesOrder,
   SalesOrderConfirmationIdempotencyConflict,
   SalesOrderInvalidState,
@@ -289,6 +290,7 @@ export type OrderFulfillmentResult = Schema.Schema.Type<typeof OrderFulfillmentR
 
 type OrderConfirmationFailure =
   | AccountingPeriodNotOpen
+  | CreditLimitExceeded
   | FinancialEngineActivated
   | AuthorizationDenied
   | DatabaseFailure

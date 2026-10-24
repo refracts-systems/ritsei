@@ -41,6 +41,7 @@ export type {
 } from "./src/contract.ts"
 
 export {
+  CreditLimitExceeded,
   CustomerAlreadyExists,
   CustomerNotFound,
   QuotationCustomerMismatch,
@@ -52,12 +53,18 @@ export {
 
 export { makeSalesService, makeSalesTestLayer, SalesLive } from "./src/layers.ts"
 
+export { CreditExposure, CreditStanding, NoCreditExposureLive } from "./src/credit.ts"
+
+export type { CreditStanding as CreditStandingType } from "./src/credit.ts"
+
 export { SalesModule } from "./manifest.ts"
 
 export {
   AssignCustomerPriceListInput,
   CreatePartyCustomerInput,
   CreatePriceListInput,
+  CreditStandingInput,
+  SetCreditLimitInput,
   Delivery,
   DiscountPercent,
   DraftQuotationInput,

@@ -131,5 +131,6 @@ current system; ADRs preserve decision history.
 | [`0105`](./0105-type-service-inputs-at-the-contract.md)                                       | Type service inputs at the contract                                                              | Accepted   |
 | [`0106`](./0106-validate-service-inputs-once-with-schema-classes.md)                          | Validate service inputs once with Schema classes                                                 | Proposed   |
 | [`0107`](./0107-read-document-chains-through-a-documents-module.md)                          | Read document chains through a documents module                                                  | Proposed   |
+| [`0108`](./0108-gate-order-confirmation-on-customer-credit-limit.md)                          | Gate order confirmation on a customer credit limit                                               | Proposed   |
 
 Accepted ADRs must not be rewritten to alter history. Create a new ADR and use `Supersedes`.

@@ -37,6 +37,8 @@ import {
 } from "./queries.ts"
 import { presentFields, definedFields } from "../../shared/api.ts"
 import { DraftQuotationDialog } from "./draft-quotation-dialog.tsx"
+import { CustomerCredit } from "./customer-credit.tsx"
+import { confirmFailureMessages } from "./documents.ts"
 import { OrderDelivery } from "./order-delivery.tsx"
 import { QuotationLifecycle } from "./quotation-lifecycle.tsx"
 import { DocumentFlow } from "../documents/document-flow.tsx"
@@ -361,6 +363,7 @@ function ConfirmOrderDialog(props: { order: SalesOrder; reload: () => Promise<vo
           error={mutation.error}
           pending={mutation.isPending}
           success={mutation.isSuccess}
+          messages={confirmFailureMessages}
           successMessage="Sales order confirmed."
           reload={props.reload}
           reset={() => mutation.reset()}
@@ -602,6 +605,7 @@ function CustomerDetail(props: { id: string }) {
           )}
         </Show>
       </QueryBoundary>
+      <CustomerCredit customerId={id} />
     </section>
   )
 }

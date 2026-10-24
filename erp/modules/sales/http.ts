@@ -25,6 +25,7 @@ import {
   moduleApi,
 } from "../../../framework/modules/http/mod.ts"
 import {
+  CreditStanding,
   Customer,
   DiscountPercent,
   OrderFulfillment,
@@ -170,6 +171,19 @@ export const SalesHttpGroup = HttpApiGroup.make("Sales").add(
     success: SalesQuotation,
     error: errors,
   }).middleware(BearerAuth),
+  HttpApiEndpoint.get("getCreditStanding", "/sales/customers/:id/credit", {
+    params: { id: Uuid },
+    headers: tenantHeaders,
+    success: CreditStanding,
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.post("setCreditLimit", "/sales/customers/:id/credit-limit", {
+    params: { id: Uuid },
+    headers: tenantHeaders,
+    payload: Schema.Struct({ creditLimit: Schema.NullOr(FinancialMajorAmount) }),
+    success: CreditStanding,
+    error: errors,
+  }).middleware(BearerAuth),
   HttpApiEndpoint.post("sendQuotation", "/sales/quotation-documents/:id/send", {
     params: { id: Uuid },
     headers: tenantHeaders,
@@ -216,6 +230,7 @@ export const SalesHttpErrors = apiErrorMapping({
   QuotationInvalidState: "conflict",
   QuotationNotFound: "not_found",
   SalesOrderConfirmationIdempotencyConflict: "conflict",
+  CreditLimitExceeded: "conflict",
   SalesOrderInvalidState: "conflict",
   SalesOrderNotFound: "not_found",
 })
@@ -379,6 +394,35 @@ export const SalesHttpHandlers = HttpApiBuilder.group(SalesHttpApi, "Sales", (ha
               principal,
               tenantId: headers["x-tenant-id"],
               quotationId: params.id,
+            }),
+          )
+        }),
+      )
+      .handle(
+        "getCreditStanding",
+        Effect.fn("Http.Sales.getCreditStanding")(function* ({ headers, params }) {
+          const principal = yield* CurrentPrincipal
+
+          return yield* coreApiEffect(
+            documents.getCreditStanding({
+              principal,
+              tenantId: headers["x-tenant-id"],
+              customerId: params.id,
+            }),
+          )
+        }),
+      )
+      .handle(
+        "setCreditLimit",
+        Effect.fn("Http.Sales.setCreditLimit")(function* ({ headers, params, payload }) {
+          const principal = yield* CurrentPrincipal
+
+          return yield* coreApiEffect(
+            documents.setCreditLimit({
+              principal,
+              tenantId: headers["x-tenant-id"],
+              customerId: params.id,
+              ...payload,
             }),
           )
         }),

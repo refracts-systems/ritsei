@@ -4,14 +4,17 @@ import { type ApiScope, runRequest } from "../../shared/runtime.ts"
 import { createServerQuery, serverQueryKey } from "../../shared/server-query.ts"
 import {
   advanceQuotation,
+  type CreditStanding,
   deliverOrder,
   draftQuotation,
+  getCreditStanding,
   getOrderFulfillment,
   getQuotationDocument,
   type OrderFulfillment,
   type QuotationAction,
   type QuotationActionResult,
   type QuotationDocument,
+  setCreditLimit,
 } from "./documents.ts"
 
 const salesKey = ["sales"] as const
@@ -75,6 +78,27 @@ export function createDeliveryMutation(scope: ApiScope, afterSuccess?: () => voi
 
   return useMutation<unknown, RequestFailure, Parameters<typeof deliverOrder>[0]>(() => ({
     mutationFn: (input) => runRequest(scope, deliverOrder(input)),
+    onSuccess: async () => {
+      await refresh(client, scope)
+      afterSuccess?.()
+    },
+  }))
+}
+
+export function createCreditStandingQuery(scope: ApiScope, customerId: string) {
+  return createServerQuery<CreditStanding, RequestFailure>({
+    tenantId: scope.tenantId,
+    key: [...salesKey, "credit_standing", customerId],
+    cache: "detail",
+    load: ({ signal }) => runRequest(scope, getCreditStanding(customerId), signal),
+  })
+}
+
+export function createSetCreditLimitMutation(scope: ApiScope, afterSuccess?: () => void) {
+  const client = useQueryClient()
+
+  return useMutation<CreditStanding, RequestFailure, Parameters<typeof setCreditLimit>[0]>(() => ({
+    mutationFn: (input) => runRequest(scope, setCreditLimit(input)),
     onSuccess: async () => {
       await refresh(client, scope)
       afterSuccess?.()

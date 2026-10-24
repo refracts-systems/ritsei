@@ -1,6 +1,11 @@
 import { assert, describe, it } from "@effect/vitest"
 import type { OrderFulfillment } from "./documents.ts"
-import { deliveryPayload, quotationPayload, remainingQuantity } from "./documents-payloads.ts"
+import {
+  creditLimitPayload,
+  deliveryPayload,
+  quotationPayload,
+  remainingQuantity,
+} from "./documents-payloads.ts"
 
 const fulfillment: OrderFulfillment = {
   orderId: "01900000-0000-7000-8000-000000000001",
@@ -99,5 +104,20 @@ describe("delivery payload", () => {
       deliveryPayload({ deliveryDate: "2026-10-24", "quantity-line-a": "1" }, fulfillment),
     )
     assert.isUndefined(deliveryPayload({ warehouseId: "w1", "quantity-line-a": "1" }, fulfillment))
+  })
+})
+
+describe("creditLimitPayload", () => {
+  it("sets a limit, or removes it when the field is empty", () => {
+    assert.deepStrictEqual(creditLimitPayload({ creditLimit: " 5000.50 " }), {
+      creditLimit: "5000.50",
+    })
+    assert.deepStrictEqual(creditLimitPayload({ creditLimit: "" }), { creditLimit: null })
+  })
+
+  it("rejects what is not an amount", () => {
+    assert.isUndefined(creditLimitPayload({ creditLimit: "5000.555" }))
+    assert.isUndefined(creditLimitPayload({ creditLimit: "-1" }))
+    assert.isUndefined(creditLimitPayload({ creditLimit: "abc" }))
   })
 })

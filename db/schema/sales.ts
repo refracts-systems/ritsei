@@ -44,6 +44,8 @@ export const customers = salesSchema.table(
     partyRelationshipId: uuid("party_relationship_id"),
     legalEntityId: uuid("legal_entity_id"),
     priceListId: uuid("price_list_id"),
+    // The most this customer may owe on open invoices, confirmed orders included; null means no limit.
+    creditLimit: numeric("credit_limit", { precision: 24, scale: 2 }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -64,6 +66,10 @@ export const customers = salesSchema.table(
       "customers_party_role_check",
       sql`(${table.partyId} is null and ${table.partyRelationshipId} is null and ${table.legalEntityId} is null) or
       (${table.partyId} is not null and ${table.partyRelationshipId} is not null and ${table.legalEntityId} is not null)`,
+    ),
+    check(
+      "customers_credit_limit_check",
+      sql`${table.creditLimit} is null or ${table.creditLimit} >= 0`,
     ),
     unique("customers_tenant_email_key").on(table.tenantId, table.email),
     check(
