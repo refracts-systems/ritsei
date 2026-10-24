@@ -17,7 +17,6 @@ import {
   ConfirmOrderInput,
   CreateCustomerInput,
   CreateOrderInput,
-  CreateQuotationInput,
   Customer,
   GetCustomerInput,
   GetOrderInput,
@@ -122,28 +121,6 @@ export const getQuotation = Effect.fn("Frontend.Sales.getQuotation")(function* (
     })
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "invalid-response" }))
-  }
-
-  return quotation
-})
-
-export const createQuotation = Effect.fn("Frontend.Sales.createQuotation")(function* (
-  input: Schema.Codec.Encoded<typeof CreateQuotationInput>,
-) {
-  const decoded = yield* decodeInput(CreateQuotationInput, input)
-  const connection = yield* BrowserConnection
-  const body = yield* mutationRequest(salesRoutes.createQuotation, decoded)
-  const quotation = yield* decodeResponse(Quotation, body, "unknown-outcome")
-
-  if (
-    !responseMatches(quotation, {
-      tenantId: connection.tenantId,
-      customerId: decoded.customerId,
-      status: "draft",
-      total: decoded.total,
-    })
-  ) {
-    return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
   }
 
   return quotation

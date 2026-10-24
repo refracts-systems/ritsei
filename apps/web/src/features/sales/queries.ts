@@ -4,7 +4,6 @@ import type {
   ConfirmOrderInput,
   CreateCustomerInput,
   CreateOrderInput,
-  CreateQuotationInput,
   Customer,
   ListCustomersInput,
   ListOrdersInput,
@@ -19,7 +18,6 @@ import {
   confirmOrder,
   createCustomer,
   createOrder,
-  createQuotation,
   getCustomer,
   getOrder,
   getQuotation,
@@ -108,25 +106,6 @@ export function createCustomerMutation(
       afterSuccess?.(customer)
 
       return invalidate(client, scope.tenantId, customersKey)
-    },
-  }))
-}
-
-export function createQuotationMutation(
-  scope: ApiScope,
-  afterSuccess?: (quotation: Quotation) => void,
-) {
-  const client = useQueryClient()
-
-  return useMutation<Quotation, RequestFailure, CreateQuotationInput>(() => ({
-    mutationFn: (input) => runRequest(scope, createQuotation(input)),
-    onSuccess: (quotation) => {
-      afterSuccess?.(quotation)
-
-      return Promise.all([
-        invalidate(client, scope.tenantId, quotationsKey),
-        invalidate(client, scope.tenantId, customersKey),
-      ])
     },
   }))
 }
