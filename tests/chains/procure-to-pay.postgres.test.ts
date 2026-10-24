@@ -193,6 +193,15 @@ it.effect.skipIf(databaseUrl === undefined)(
 
           assert.strictEqual(legacyRequest?.status, "pending")
 
+          // The request register lists both pending requests, newest first, and filters by status.
+          const pending = yield* approvals.list({ ...scope, status: "pending" })
+
+          assert.deepStrictEqual(
+            pending.map((request) => request.subjectId),
+            [legacyOrder.id, drafted.purchaseOrderId],
+          )
+          assert.deepStrictEqual(yield* approvals.list({ ...scope, status: "approved" }), [])
+
           const selfApproval = yield* Effect.flip(
             approvals.decide({ ...scope, requestId: drafted.approval!.id, decision: "approve" }),
           )

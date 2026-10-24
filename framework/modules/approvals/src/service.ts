@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm"
+import { and, desc, eq } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
@@ -11,6 +11,7 @@ import {
   ApprovalService,
   ConfigurePolicyInput,
   DecideApprovalInput,
+  ListApprovalsInput,
   RequirementInput,
   SubjectInput,
   SubmitApprovalInput,
@@ -24,6 +25,7 @@ import {
 
 export const ApprovalCapabilities = {
   policyConfigure: "approvals.policy.configure",
+  requestRead: "approvals.request.read",
 } as const
 
 const normalize = (value: string) => formatSignedMinor(requireExactMajorToMinor(value, 2), 2)
@@ -237,6 +239,36 @@ export const makeApprovalService = Effect.gen(function* () {
     )
   })
 
+  const list = Effect.fn("ApprovalService.list")(function* (
+    input: Schema.Codec.Encoded<typeof ListApprovalsInput>,
+  ) {
+    const decoded = yield* Schema.decodeUnknownEffect(ListApprovalsInput)(input)
+    yield* authorization.authorize({
+      principal: decoded.principal,
+      tenantId: decoded.tenantId,
+      capability: ApprovalCapabilities.requestRead,
+    })
+    const rows = yield* database.query(
+      (db) =>
+        db
+          .select()
+          .from(approvalRequests)
+          .where(
+            and(
+              eq(approvalRequests.tenantId, decoded.tenantId),
+              ...(decoded.status === undefined
+                ? []
+                : [eq(approvalRequests.status, decoded.status)]),
+            ),
+          )
+          .orderBy(desc(approvalRequests.createdAt), desc(approvalRequests.id))
+          .limit(decoded.limit ?? 100),
+      "approvals.request.list",
+    )
+
+    return rows.map(toRequest)
+  })
+
   const getForSubject = Effect.fn("ApprovalService.getForSubject")(function* (
     input: Schema.Codec.Encoded<typeof SubjectInput>,
   ) {
@@ -245,7 +277,14 @@ export const makeApprovalService = Effect.gen(function* () {
     return yield* loadForSubject(decoded.tenantId, decoded.subjectType, decoded.subjectId)
   })
 
-  return { configurePolicy, isRequired, submit, decide, getForSubject } satisfies ApprovalService
+  return {
+    configurePolicy,
+    isRequired,
+    submit,
+    decide,
+    list,
+    getForSubject,
+  } satisfies ApprovalService
 })
 
 export const ApprovalsLive = Layer.effect(ApprovalService, makeApprovalService)

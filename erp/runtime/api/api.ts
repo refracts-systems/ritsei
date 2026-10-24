@@ -6,6 +6,7 @@ import * as HttpApiSchema from "effect/http-api/HttpApiSchema"
 import * as OpenApi from "effect/http-api/OpenApi"
 import * as Schema from "effect/Schema"
 
+import { ApprovalRequest, ApprovalStatus } from "../../../framework/modules/approvals/mod.ts"
 import {
   Capability,
   CapabilityCatalog,
@@ -203,8 +204,32 @@ const Authorization = HttpApiGroup.make("Authorization").add(
   }).middleware(BearerAuth),
 )
 
+const Approvals = HttpApiGroup.make("Approvals").add(
+  HttpApiEndpoint.get("listApprovalRequests", "/approvals/requests", {
+    headers: tenantHeaders,
+    query: {
+      status: Schema.optionalKey(ApprovalStatus),
+      limit: Schema.optionalKey(
+        Schema.NumberFromString.pipe(
+          Schema.check(Schema.isInt()),
+          Schema.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
+        ),
+      ),
+    },
+    success: Schema.Array(ApprovalRequest),
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.post("decideApprovalRequest", "/approvals/requests/:id/decision", {
+    params: { id: Uuid },
+    headers: tenantHeaders,
+    payload: Schema.Struct({ decision: Schema.Literals(["approve", "reject"]) }),
+    success: ApprovalRequest,
+    error: errors,
+  }).middleware(BearerAuth),
+)
+
 export const RitseiApi = HttpApi.make(RitseiApiId)
-  .add(Authentication, Health, UserAccounts, Authorization, ...ErpHttpGroups)
+  .add(Authentication, Health, UserAccounts, Authorization, Approvals, ...ErpHttpGroups)
   .annotate(OpenApi.Title, "RITSEI API")
   .annotate(OpenApi.Version, "0.1.0")
   .annotate(OpenApi.Description, "Typed modular-monolith ERP API")

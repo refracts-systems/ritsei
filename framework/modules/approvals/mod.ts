@@ -5,6 +5,7 @@ export {
   ApprovalStatus,
   ConfigurePolicyInput,
   DecideApprovalInput,
+  ListApprovalsInput,
   RequirementInput,
   SubjectInput,
   SubjectType,

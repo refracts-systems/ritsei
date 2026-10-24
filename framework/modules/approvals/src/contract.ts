@@ -71,6 +71,12 @@ export const DecideApprovalInput = Schema.Struct({
   decision: Schema.Literals(["approve", "reject"]),
 })
 
+export const ListApprovalsInput = Schema.Struct({
+  ...ScopedInput,
+  status: Schema.optionalKey(ApprovalStatus),
+  limit: Schema.optionalKey(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 200 }))),
+})
+
 export const SubjectInput = Schema.Struct({
   ...ScopedInput,
   subjectType: SubjectType,
@@ -111,6 +117,10 @@ export interface ApprovalService {
     | SelfApprovalForbidden
     | CommonFailure
   >
+  /** Requests newest first, so approvers see what is waiting; needs the request-read capability. */
+  readonly list: (
+    input: Schema.Codec.Encoded<typeof ListApprovalsInput>,
+  ) => Effect.Effect<ReadonlyArray<ApprovalRequest>, CommonFailure>
   readonly getForSubject: (
     input: Schema.Codec.Encoded<typeof SubjectInput>,
   ) => Effect.Effect<ApprovalRequest | null, CommonFailure>
