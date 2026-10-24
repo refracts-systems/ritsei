@@ -22,6 +22,7 @@ import {
 const principal = { userAccountId: "contacts-user", sessionId: "contacts-session" }
 const tenantId = "018f2000-0000-7000-8000-0000000000d1"
 const partyId = "018f2000-0000-7000-8000-0000000000d2"
+
 const capabilities = [
   PartyCapabilities.partyRead,
   PartyCapabilities.partyAddressAdd,
@@ -42,6 +43,7 @@ const exerciseContactBook = (scope: { tenantId: string; partyId: string }) =>
       countryCode: "ID",
       primary: true,
     })
+
     const second = yield* contacts.addAddress({
       ...base,
       purpose: "billing",
@@ -51,6 +53,7 @@ const exerciseContactBook = (scope: { tenantId: string; partyId: string }) =>
       countryCode: "ID",
       primary: true,
     })
+
     yield* contacts.addAddress({
       ...base,
       purpose: "shipping",
@@ -58,12 +61,14 @@ const exerciseContactBook = (scope: { tenantId: string; partyId: string }) =>
       city: "Bekasi",
       countryCode: "ID",
     })
+
     const contact = yield* contacts.addContact({
       ...base,
       name: "Siti Rahma",
       jobTitle: "Finance",
       email: "siti@example.test",
     })
+
     const account = yield* contacts.addBankAccount({
       ...base,
       bankName: "Bank Central",
@@ -71,6 +76,7 @@ const exerciseContactBook = (scope: { tenantId: string; partyId: string }) =>
       accountHolder: "PT Contoh",
       currency: "IDR",
     })
+
     const duplicate = yield* Effect.flip(
       contacts.addBankAccount({
         ...base,
@@ -80,11 +86,15 @@ const exerciseContactBook = (scope: { tenantId: string; partyId: string }) =>
         currency: "IDR",
       }),
     )
+
     assert.instanceOf(duplicate, PartyBankAccountAlreadyExists)
+
     const unknownParty = yield* Effect.flip(
       contacts.addContact({ ...base, partyId: uuidv7(), name: "Nobody" }),
     )
+
     assert.instanceOf(unknownParty, PartyNotFound)
+
     const badCountry = yield* Effect.flip(
       contacts.addAddress({
         ...base,
@@ -94,6 +104,7 @@ const exerciseContactBook = (scope: { tenantId: string; partyId: string }) =>
         countryCode: "id",
       }),
     )
+
     assert.strictEqual(badCountry._tag, "SchemaError")
 
     const book = yield* contacts.getContactBook(base)
@@ -128,9 +139,11 @@ describe("party contact book", () => {
   it.effect("denies changes without the capability", () =>
     Effect.gen(function* () {
       const contacts = yield* PartyContactService
+
       const denied = yield* Effect.flip(
         contacts.addContact({ principal, tenantId, partyId, name: "Siti" }),
       )
+
       assert.instanceOf(denied, AuthorizationDenied)
     }).pipe(
       Effect.provide(
@@ -155,6 +168,7 @@ it.effect.skipIf(databaseUrl === undefined)(
       Effect.gen(function* () {
         yield* runMigrations(client)
         const fixture = yield* seedErpFixture(client)
+
         const layer = PartyContactsLive.pipe(
           Layer.provide(
             Layer.mergeAll(
@@ -165,6 +179,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             ),
           ),
         )
+
         yield* exerciseContactBook({
           tenantId: fixture.tenantId,
           partyId: fixture.organizationId,
@@ -178,6 +193,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           // SAFETY: driver errors carry the violated constraint name.
           catch: (cause) => cause as { constraint_name?: string },
         }).pipe(Effect.flip)
+
         assert.strictEqual(secondPrimary.constraint_name, "party_addresses_primary_purpose_key")
       }),
     ),

@@ -25,6 +25,7 @@ export function log(kind: LogKind, message: string) {
   const time = ((performance.now() - start) / 1000).toFixed(2) + "s"
   setEntries((list) => {
     list.push({ id: nextId++, time, kind, message })
+
     if (list.length > 100) list.splice(0, list.length - 100)
   })
 }

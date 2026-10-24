@@ -5,9 +5,11 @@ import * as PlatformError from "effect/PlatformError"
 
 const randomBytes = (size: number) => {
   const bytes = new Uint8Array(size)
+
   for (let offset = 0; offset < bytes.length; offset += 65_536) {
     globalThis.crypto.getRandomValues(bytes.subarray(offset, offset + 65_536))
   }
+
   return bytes
 }
 

@@ -54,13 +54,16 @@ export function createRuntime<R>(layer: Layer.Layer<R>): ManagedRuntime.ManagedR
   const parent = useContext(RuntimeContext)
   const runtime = ManagedRuntime.make(layer, parent ? { memoMap: parent.memoMap } : undefined)
   onCleanup(() => void runtime.dispose())
+
   return runtime
 }
 
 /** Resolve the nearest runtime at the boundary where the Effect is created. */
 function resolveRuntime(): SolidEffectRuntime {
   const runtime = useContext(RuntimeContext)
+
   if (!runtime) throw new MissingRuntimeContextError()
+
   return runtime
 }
 
@@ -70,6 +73,7 @@ function resolveRuntime(): SolidEffectRuntime {
  */
 function resolveFork() {
   const runtime = resolveRuntime()
+
   return <A, E, R>(effect: Effect.Effect<A, E, R>) =>
     // RuntimeContext intentionally erases the provider's concrete R so nested
     // providers can carry different service sets through one Solid context.
@@ -87,6 +91,7 @@ function resolveFork() {
  */
 export function runEffect<A, E, R = never>(effect: Effect.Effect<A, E, R>): AsyncIterable<A> {
   const fork = resolveFork()
+
   return {
     [Symbol.asyncIterator]() {
       const fiber = fork(effect)
@@ -95,21 +100,29 @@ export function runEffect<A, E, R = never>(effect: Effect.Effect<A, E, R>): Asyn
       let yielded = false
       let closed = false
       const done = { done: true, value: undefined } as const
+
       return {
         async next(): Promise<IteratorResult<A>> {
           if (yielded || closed) return done
           const exit = await Effect.runPromise(Fiber.await(fiber))
+
           if (closed) return done
+
           if (Exit.isSuccess(exit)) {
             yielded = true
+
             return { done: false, value: exit.value }
           }
+
           closed = true
+
           if (Exit.isFailure(exit)) {
             const cause = exit.cause
+
             if (Exit.hasInterrupts(exit)) return done
             throw Cause.squash(cause)
           }
+
           return done
         },
         // Solid calls return() when the flight is superseded or its owner is
@@ -119,6 +132,7 @@ export function runEffect<A, E, R = never>(effect: Effect.Effect<A, E, R>): Asyn
           if (yielded || closed) return done
           closed = true
           await Effect.runPromise(Fiber.interrupt(fiber))
+
           return done
         },
       }
@@ -169,16 +183,20 @@ export function effectAction<Args extends unknown[], A, R = never>(
   const base = action(function* (...args: Args) {
     const iterator = genFn(...args)
     let step = iterator.next()
+
     while (!step.done) {
       const fiber = fork(step.value)
       inFlight = fiber
       const exit: Exit.Exit<unknown, unknown> = yield Effect.runPromise(Fiber.await(fiber))
+
       if (inFlight === fiber) inFlight = null
+
       if (Exit.isSuccess(exit)) {
         // SAFETY: the saga generator is typed to receive the value of the step it yielded.
         step = iterator.next(exit.value as never)
       } else if (Exit.isFailure(exit)) {
         const cause = exit.cause
+
         if (Exit.hasInterrupts(exit)) {
           step = iterator.throw(new ActionInterruptedError())
         } else {
@@ -186,6 +204,7 @@ export function effectAction<Args extends unknown[], A, R = never>(
         }
       }
     }
+
     return step.value
   })
 
@@ -193,12 +212,16 @@ export function effectAction<Args extends unknown[], A, R = never>(
   // allowing two workflow flights to race silently.
   const invoke = (...args: Args) => {
     invoke.interrupt()
+
     return base(...args)
   }
+
   invoke.interrupt = () => {
     const fiber = inFlight
     inFlight = null
+
     if (fiber) void Effect.runPromise(Fiber.interrupt(fiber))
   }
+
   return invoke
 }

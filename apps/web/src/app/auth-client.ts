@@ -15,6 +15,7 @@ const OidcTokenResponse = Schema.Struct({
     Schema.Number.check(Schema.isInt(), Schema.isBetween({ minimum: 1, maximum: 86_400 })),
   ),
 })
+
 const MaxAuthResponseLength = 1_048_576
 
 export class AuthClientFailure extends Error {
@@ -28,18 +29,26 @@ const decodeJson = async <S extends Schema.ConstraintDecoder<unknown, never>>(
   response: Response,
 ): Promise<S["Type"]> => {
   if (response.status === 401) throw new AuthClientFailure("unauthorized")
+
   if (response.status >= 500) throw new AuthClientFailure("unavailable")
+
   if (!response.ok) throw new AuthClientFailure("invalid-response")
   const contentLength = Number(response.headers.get("content-length"))
+
   if (Number.isFinite(contentLength) && contentLength > MaxAuthResponseLength) {
     throw new AuthClientFailure("invalid-response")
   }
+
   const body = await response.text().catch(() => "")
+
   if (body.length > MaxAuthResponseLength) throw new AuthClientFailure("invalid-response")
+
   const decoded = await Effect.runPromiseExit(
     Schema.decodeUnknownEffect(Schema.fromJsonString(schema))(body),
   )
+
   if (Exit.isFailure(decoded)) throw new AuthClientFailure("invalid-response")
+
   return decoded.value
 }
 
@@ -91,6 +100,7 @@ const encodeBase64Url = (bytes: Uint8Array) =>
 const randomBase64Url = (size: number) => {
   const bytes = new Uint8Array(size)
   crypto.getRandomValues(bytes)
+
   return encodeBase64Url(bytes)
 }
 
@@ -138,6 +148,7 @@ export const finishOidcLogin = async (configuration: AuthConfiguration) => {
   const verifier = sessionStorage.getItem("ritsei.auth.verifier")
   sessionStorage.removeItem("ritsei.auth.state")
   sessionStorage.removeItem("ritsei.auth.verifier")
+
   if (
     code === null ||
     state === null ||
@@ -147,11 +158,13 @@ export const finishOidcLogin = async (configuration: AuthConfiguration) => {
   ) {
     throw new AuthClientFailure("invalid-response")
   }
+
   globalThis.history.replaceState(
     null,
     "",
     `${globalThis.location.pathname}${globalThis.location.hash}`,
   )
+
   const body = new URLSearchParams({
     grant_type: "authorization_code",
     client_id: configuration.clientId,
@@ -159,6 +172,7 @@ export const finishOidcLogin = async (configuration: AuthConfiguration) => {
     code,
     code_verifier: verifier,
   })
+
   const response = await fetch(configuration.tokenEndpoint, {
     method: "POST",
     headers: { Accept: "application/json", "Content-Type": "application/x-www-form-urlencoded" },
@@ -169,6 +183,8 @@ export const finishOidcLogin = async (configuration: AuthConfiguration) => {
   }).catch(() => {
     throw new AuthClientFailure("network")
   })
+
   const token = await decodeJson(OidcTokenResponse, response)
+
   return token.access_token
 }

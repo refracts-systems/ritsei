@@ -16,8 +16,11 @@ class AuthorizationDenied extends Schema.TaggedError<AuthorizationDenied>()(
   "AuthorizationDenied",
   {},
 ) {}
+
 class OrderNotFound extends Schema.TaggedError<OrderNotFound>()("OrderNotFound", {}) {}
+
 class OrderLocked extends Schema.TaggedError<OrderLocked>()("OrderLocked", {}) {}
+
 class DatabaseFailure extends Schema.TaggedError<DatabaseFailure>()("DatabaseFailure", {}) {}
 
 const { toApiError, apiEffect } = apiErrorMapping({
@@ -54,6 +57,7 @@ describe("API error mapping", () => {
       assert.instanceOf(error, ApiConflict)
       assert.strictEqual(error.code, "invalid_consistency_token")
     }
+
     assert.instanceOf(
       toApiError(new ReplicaConsistencyFailure({ reason: "timeout" })),
       ApiServiceUnavailable,

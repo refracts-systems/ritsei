@@ -48,6 +48,7 @@ describe("repository tooling", () => {
 
   it("reserves a module's http.ts entry for the composition root", () => {
     const httpImport = 'import { SalesHttpGroup } from "../../modules/sales/http.ts"'
+
     const failures = analyzePublicPackageImports(
       [
         { path: "erp/runtime/api/api.ts", source: httpImport },

@@ -12,9 +12,11 @@ export const CatalogStabilitySchema = Schema.Literals([
   "DEPRECATED",
   "RETIRED",
 ])
+
 export type CatalogStability = Schema.Schema.Type<typeof CatalogStabilitySchema>
 
 export const ActionIdempotencySchema = Schema.Literals(["required", "inherent", "unsupported"])
+
 export type ActionIdempotency = Schema.Schema.Type<typeof ActionIdempotencySchema>
 
 export type ActionTransactionSemantics =
@@ -33,6 +35,7 @@ export const ActionCompensationSchema = Schema.Union([
     recovery: Schema.Literal("manual"),
   }),
 ])
+
 export type ActionCompensation = Schema.Schema.Type<typeof ActionCompensationSchema>
 
 export const CompatibilityRangeSchema = Schema.Struct({
@@ -48,6 +51,7 @@ export const CompatibilityRangeSchema = Schema.Struct({
         },
   ),
 )
+
 export type CompatibilityRange = Schema.Schema.Type<typeof CompatibilityRangeSchema>
 
 export type ActionPrecondition =
@@ -74,6 +78,7 @@ export type ActionEffect =
   | "financial_intent_recorded"
 
 export type EventDeliveryExpectation = "at_least_once"
+
 export type EventSensitivity = "business_internal_minimized"
 
 export interface DomainActionCatalogEntry {
@@ -119,6 +124,7 @@ export interface DomainEventCatalogEntry {
 }
 
 export type ActionCatalogEntry = DomainActionCatalogEntry
+
 export type EventCatalogEntry = DomainEventCatalogEntry
 
 export const defineActionCatalogEntry = <const Entry extends DomainActionCatalogEntry>(

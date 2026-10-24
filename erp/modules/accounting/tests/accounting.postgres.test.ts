@@ -49,6 +49,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               insert into auth.tenants (slug) values (${uuidv7()}) returning id
             `,
         )
+
         const [organization] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -56,6 +57,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${tenant!.id}, 'organization', 'Accounting Organization') returning id
             `,
         )
+
         const [legalEntity] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -84,6 +86,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                 fiscal_year_start_month, posting_enabled
             `,
         )
+
         assert.strictEqual(configuration!.tenant_id, tenant!.id)
         assert.strictEqual(configuration!.legal_entity_id, legalEntity!.id)
         assert.strictEqual(configuration!.base_currency, "USD")
@@ -99,6 +102,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and legal_entity_id = ${legalEntity!.id}
             `,
         )
+
         const [evidenceArtifact] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -121,6 +125,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               ) returning id
             `,
         )
+
         yield* Effect.promise(
           () =>
             client`
@@ -157,6 +162,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and legal_entity_id = ${legalEntity!.id}
             `,
         )
+
         const engineDowngrade = yield* postgresFailure(
           () =>
             client`
@@ -165,6 +171,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and legal_entity_id = ${legalEntity!.id}
             `,
         )
+
         assert.strictEqual(postgresCode(engineDowngrade), "23514")
         assert.strictEqual(
           postgresConstraint(engineDowngrade),
@@ -179,6 +186,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and legal_entity_id = ${legalEntity!.id}
             `,
         )
+
         assert.strictEqual(postgresCode(unsupportedPrecision), "23514")
         assert.strictEqual(
           postgresConstraint(unsupportedPrecision),
@@ -194,6 +202,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${tenant!.id}, ${legalEntity!.id}, 'USD', 2, 1, true)
             `,
         )
+
         assert.strictEqual(postgresCode(duplicate), "23505")
         assert.strictEqual(
           postgresConstraint(duplicate),
@@ -206,6 +215,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               insert into auth.tenants (slug) values (${uuidv7()}) returning id
             `,
         )
+
         const crossTenant = yield* postgresFailure(
           () =>
             client`
@@ -215,6 +225,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${otherTenant!.id}, ${legalEntity!.id}, 'USD', 2, 1, true)
             `,
         )
+
         assert.strictEqual(postgresCode(crossTenant), "23503")
         assert.strictEqual(
           postgresConstraint(crossTenant),
@@ -231,12 +242,14 @@ it.effect.skipIf(databaseUrl === undefined)(
       Effect.gen(function* () {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
+
         const [tenant] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
               insert into auth.tenants (slug) values (${uuidv7()}) returning id
             `,
         )
+
         const [organization] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -244,6 +257,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${tenant!.id}, 'organization', 'Atomic Revenue Organization') returning id
             `,
         )
+
         const [legalEntity] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -251,12 +265,14 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${tenant!.id}, ${organization!.id}) returning id
             `,
         )
+
         const [otherTenant] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
               insert into auth.tenants (slug) values (${uuidv7()}) returning id
             `,
         )
+
         const [otherOrganization] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -264,6 +280,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${otherTenant!.id}, 'organization', 'Other Revenue Organization') returning id
             `,
         )
+
         const [otherLegalEntity] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -271,6 +288,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${otherTenant!.id}, ${otherOrganization!.id}) returning id
             `,
         )
+
         const accounts = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -281,6 +299,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               returning id
             `,
         )
+
         yield* Effect.promise(
           () =>
             client`
@@ -306,6 +325,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${tenant!.id}, ${legalEntity!.id}, '1900-01-01', '2100-12-31')
             `,
         )
+
         const otherAccounts = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -316,6 +336,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               returning id
             `,
         )
+
         yield* Effect.promise(
           () =>
             client`
@@ -344,6 +365,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             `,
         )
         const principal = { userAccountId: "accounting-atomic", sessionId: "session" }
+
         const authorizationLayer = makeAuthorizationTestLayer([
           {
             userAccountId: principal.userAccountId,
@@ -374,16 +396,20 @@ it.effect.skipIf(databaseUrl === undefined)(
 
         yield* Effect.gen(function* () {
           const authorization = yield* AuthorizationService
+
           const messaging = yield* makeMessagingService.pipe(
             Effect.provideService(Database, database),
           )
+
           const requirements = Layer.mergeAll(
             Layer.succeed(Database, database),
             Layer.succeed(AuthorizationService, authorization),
             Layer.succeed(MessagingService, messaging),
             Layer.succeed(SalesService, salesFacts),
           )
+
           const accounting = yield* Effect.provide(makeAccountingService, requirements)
+
           const input = {
             principal,
             tenantId: tenant!.id,
@@ -394,6 +420,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             correlationId: "revenue-correlation-atomic",
             causationId: "order-confirmed-atomic",
           }
+
           assert.instanceOf(
             yield* Effect.flip(
               accounting.configureRevenuePosting({
@@ -406,11 +433,14 @@ it.effect.skipIf(databaseUrl === undefined)(
             ),
             AccountNotFound,
           )
+
           const [journal, concurrent] = yield* Effect.all(
             [accounting.postRevenueForOrder(input), accounting.postRevenueForOrder(input)],
             { concurrency: "unbounded" },
           )
+
           assert.strictEqual(concurrent.id, journal.id)
+
           const otherJournal = yield* accounting.postRevenueForOrder({
             ...input,
             tenantId: otherTenant!.id,
@@ -418,24 +448,30 @@ it.effect.skipIf(databaseUrl === undefined)(
             commandId: "other-revenue-command-atomic",
             correlationId: "other-revenue-correlation-atomic",
           })
+
           assert.notStrictEqual(otherJournal.id, journal.id)
           assert.strictEqual(otherJournal.tenantId, otherTenant!.id)
           assert.strictEqual(otherJournal.lines[0]?.accountId, otherAccounts[0]!.id)
           assert.notStrictEqual(otherAccounts[0]!.id, accounts[0]!.id)
+
           const otherReversal = yield* accounting.reverseRevenueForOrder({
             principal,
             tenantId: otherTenant!.id,
             legalEntityId: otherLegalEntity!.id,
             orderId: input.orderId,
           })
+
           assert.strictEqual(otherReversal.status, "reversed")
           assert.notStrictEqual(otherReversal.id, otherJournal.id)
+
           const replay = yield* accounting.postRevenueForOrder({
             ...input,
             commandId: "revenue-command-retry",
             correlationId: "revenue-correlation-retry",
           })
+
           assert.strictEqual(replay.id, journal.id)
+
           const [reversal, concurrentReversal] = yield* Effect.all(
             [
               accounting.reverseRevenueForOrder({
@@ -453,9 +489,11 @@ it.effect.skipIf(databaseUrl === undefined)(
             ],
             { concurrency: "unbounded" },
           )
+
           assert.strictEqual(concurrentReversal.id, reversal.id)
           assert.strictEqual(reversal.status, "reversed")
           const corruptReversalOrderId = uuidv7()
+
           const [corruptReversal] = yield* Effect.promise(
             () =>
               client<{ id: string }[]>`
@@ -466,6 +504,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                 returning id
               `,
           )
+
           assert.notStrictEqual(corruptReversal?.id, undefined)
           yield* Effect.promise(
             () =>
@@ -497,6 +536,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             JournalIdempotencyConflict,
           )
           const mismatchedReversalOrderId = uuidv7()
+
           const [mismatchedSource] = yield* Effect.promise(
             () =>
               client<{ id: string }[]>`
@@ -505,6 +545,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                 returning id
               `,
           )
+
           yield* Effect.promise(
             () =>
               client`
@@ -523,6 +564,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                 where tenant_id = ${tenant!.id} and id = ${mismatchedSource!.id}
               `,
           )
+
           const [mismatchedReversal] = yield* Effect.promise(
             () =>
               client<{ id: string }[]>`
@@ -533,6 +575,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                 returning id
               `,
           )
+
           yield* Effect.promise(
             () =>
               client`
@@ -586,6 +629,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             JournalIdempotencyConflict,
           )
           const corruptRevenueOrderId = uuidv7()
+
           const [corruptRevenue] = yield* Effect.promise(
             () =>
               client<{ id: string }[]>`
@@ -594,6 +638,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                 returning id
               `,
           )
+
           yield* Effect.promise(
             () =>
               client`
@@ -669,7 +714,9 @@ it.effect.skipIf(databaseUrl === undefined)(
                   and event_type = ${AccountingRevenuePostedEvent.id}
               `,
           )
+
           assert.strictEqual(events.length, 1)
+
           const otherEvents = yield* Effect.promise(
             () =>
               client<{ id: string; idempotency_key: string }[]>`
@@ -679,6 +726,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                   and event_type = ${AccountingRevenuePostedEvent.id}
               `,
           )
+
           assert.strictEqual(otherEvents.length, 1)
           assert.strictEqual(otherEvents[0]?.idempotency_key, input.orderId)
           assert.notStrictEqual(otherEvents[0]?.id, events[0]?.id)
@@ -713,15 +761,18 @@ it.effect.skipIf(databaseUrl === undefined)(
             ]).size,
             4,
           )
+
           const replayedWithTamperedAmount = yield* accounting.postRevenueForOrder({
             ...input,
             amount: "99.99",
             commandId: "tampered-replay-command",
             correlationId: "tampered-replay-correlation",
           })
+
           assert.strictEqual(replayedWithTamperedAmount.id, journal.id)
           assert.strictEqual(replayedWithTamperedAmount.lines[0]?.debit, "10.00")
           assert.strictEqual(replayedWithTamperedAmount.lines[1]?.credit, "10.00")
+
           const tamperedJournal = yield* accounting.postRevenueForOrder({
             ...input,
             orderId: uuidv7(),
@@ -729,6 +780,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             commandId: "tampered-revenue-command",
             correlationId: "tampered-revenue-correlation",
           })
+
           assert.deepStrictEqual(
             tamperedJournal.lines.map(({ debit, credit }) => ({ debit, credit })),
             [
@@ -752,6 +804,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               Layer.succeed(SalesService, salesFacts),
             ),
           )
+
           assert.instanceOf(
             yield* Effect.flip(
               failingAccounting.postRevenueForOrder({
@@ -763,6 +816,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             ),
             DatabaseFailure,
           )
+
           const [rolledBack] = yield* Effect.promise(
             () =>
               client<{ journals: string; lines: string; events: string }[]>`
@@ -783,6 +837,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                       and idempotency_key = 'revenue-order-rollback') as events
               `,
           )
+
           assert.deepStrictEqual(rolledBack, { journals: "0", lines: "0", events: "0" })
         }).pipe(Effect.provide(authorizationLayer))
       }),
@@ -796,12 +851,14 @@ it.effect.skipIf(databaseUrl === undefined)(
       Effect.gen(function* () {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
+
         const [tenant] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
               insert into auth.tenants (slug) values (${uuidv7()}) returning id
             `,
         )
+
         const [organization] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -809,6 +866,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${tenant!.id}, 'organization', 'Accounting Service Organization') returning id
             `,
         )
+
         const [legalEntity] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -816,6 +874,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${tenant!.id}, ${organization!.id}) returning id
             `,
         )
+
         const accounts = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -826,6 +885,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               returning id
             `,
         )
+
         yield* Effect.promise(
           () =>
             client`
@@ -843,6 +903,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${tenant!.id}, ${legalEntity!.id}, ${accounts[0]!.id}, ${accounts[1]!.id})
             `,
         )
+
         const [period] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -852,7 +913,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               returning id
             `,
         )
+
         const principal = { userAccountId: "accounting-service", sessionId: "session" }
+
         const authorizationLayer = makeAuthorizationTestLayer(
           [AccountingCapabilities.periodClose, AccountingCapabilities.revenuePost].map(
             (capability) => ({
@@ -865,9 +928,11 @@ it.effect.skipIf(databaseUrl === undefined)(
 
         yield* Effect.gen(function* () {
           const authorization = yield* AuthorizationService
+
           const messaging = yield* makeMessagingService.pipe(
             Effect.provideService(Database, database),
           )
+
           const accounting = yield* Effect.provide(
             makeAccountingService,
             Layer.mergeAll(
@@ -877,6 +942,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               Layer.succeed(SalesService, salesFacts),
             ),
           )
+
           const [closeResult, postResult] = yield* Effect.all(
             [
               accounting
@@ -904,11 +970,13 @@ it.effect.skipIf(databaseUrl === undefined)(
           )
 
           assert.isTrue(Result.isSuccess(closeResult))
+
           if (Result.isFailure(postResult)) {
             assert.instanceOf(postResult.failure, AccountingPeriodNotOpen)
           } else {
             assert.strictEqual(postResult.success.status, "posted")
           }
+
           assert.instanceOf(
             yield* Effect.flip(
               accounting.postRevenueForOrder({
@@ -942,6 +1010,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               insert into auth.tenants (slug) values (${uuidv7()}) returning id
             `,
         )
+
         const [organization] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -949,6 +1018,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${tenant!.id}, 'organization', 'Accounting State Organization') returning id
             `,
         )
+
         const [legalEntity] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -956,6 +1026,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${tenant!.id}, ${organization!.id}) returning id
             `,
         )
+
         const invalidPeriodInsert = yield* postgresFailure(
           () =>
             client`
@@ -964,11 +1035,13 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${tenant!.id}, ${legalEntity!.id}, '2026-01-01', '2026-12-31', 'closed')
             `,
         )
+
         assert.strictEqual(postgresCode(invalidPeriodInsert), "23514")
         assert.strictEqual(
           postgresConstraint(invalidPeriodInsert),
           "accounting_period_state_transition_check",
         )
+
         const [period] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -978,6 +1051,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               returning id
             `,
         )
+
         yield* Effect.promise(
           () =>
             client`
@@ -985,6 +1059,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               where id = ${period!.id}
             `,
         )
+
         const reopenedPeriod = yield* postgresFailure(
           () =>
             client`
@@ -992,11 +1067,13 @@ it.effect.skipIf(databaseUrl === undefined)(
               where id = ${period!.id}
             `,
         )
+
         assert.strictEqual(postgresCode(reopenedPeriod), "23514")
         assert.strictEqual(
           postgresConstraint(reopenedPeriod),
           "accounting_period_state_transition_check",
         )
+
         const accounts = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -1007,6 +1084,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               returning id
             `,
         )
+
         const invalidJournalInsert = yield* postgresFailure(
           () =>
             client`
@@ -1015,11 +1093,13 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${tenant!.id}, 'INVALID-INITIAL-JOURNAL', 'posted', now())
             `,
         )
+
         assert.strictEqual(postgresCode(invalidJournalInsert), "23514")
         assert.strictEqual(
           postgresConstraint(invalidJournalInsert),
           "accounting_journal_state_transition_check",
         )
+
         const blankReference = yield* postgresFailure(
           () =>
             client`
@@ -1027,8 +1107,10 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${tenant!.id}, '   ')
             `,
         )
+
         assert.strictEqual(postgresCode(blankReference), "23514")
         assert.strictEqual(postgresConstraint(blankReference), "journal_entries_reference_check")
+
         const [source] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -1036,6 +1118,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${tenant!.id}, 'REVERSAL-SOURCE') returning id
             `,
         )
+
         const invalidReversalState = yield* postgresFailure(
           () =>
             client`
@@ -1044,11 +1127,13 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${tenant!.id}, 'INVALID-REVERSAL-STATE', ${source!.id})
             `,
         )
+
         assert.strictEqual(postgresCode(invalidReversalState), "23514")
         assert.strictEqual(
           postgresConstraint(invalidReversalState),
           "journal_entries_reversal_state_check",
         )
+
         const [unpostedReversal] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -1056,6 +1141,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${tenant!.id}, 'UNPOSTED-REVERSAL') returning id
             `,
         )
+
         const unpostedSourceReversal = yield* postgresFailure(
           () =>
             client`
@@ -1064,11 +1150,13 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and id = ${unpostedReversal!.id}
             `,
         )
+
         assert.strictEqual(postgresCode(unpostedSourceReversal), "23514")
         assert.strictEqual(
           postgresConstraint(unpostedSourceReversal),
           "journal_entries_reversal_source_check",
         )
+
         const selfReversalState = yield* postgresFailure(
           () =>
             client`
@@ -1077,6 +1165,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant!.id} and id = ${source!.id}
             `,
         )
+
         assert.strictEqual(postgresCode(selfReversalState), "23514")
         assert.strictEqual(
           postgresConstraint(selfReversalState),
@@ -1089,6 +1178,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                 insert into accounting.journal_entries (tenant_id, reference)
                 values (${tenant!.id}, 'UNBALANCED') returning id
               `
+
             await transaction`
                 insert into accounting.journal_lines
                   (tenant_id, entry_id, account_id, debit, credit)
@@ -1101,6 +1191,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               `
           }),
         )
+
         assert.strictEqual(postgresCode(unbalanced), "23514")
         assert.strictEqual(postgresConstraint(unbalanced), "journal_entries_balanced_check")
 
@@ -1110,6 +1201,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                 insert into accounting.journal_entries (tenant_id, reference)
                 values (${tenant!.id}, 'POSTED') returning id
               `
+
             await transaction`
                 insert into accounting.journal_lines
                   (tenant_id, entry_id, account_id, debit, credit)
@@ -1122,9 +1214,11 @@ it.effect.skipIf(databaseUrl === undefined)(
                 set status = 'posted', posted_at = now()
                 where id = ${entry!.id}
               `
+
             return [entry]
           }),
         )
+
         const immutable = yield* postgresFailure(
           () =>
             client`
@@ -1133,6 +1227,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               where entry_id = ${posted!.id} and debit > 0
             `,
         )
+
         assert.strictEqual(postgresCode(immutable), "55000")
         assert.strictEqual(
           postgresConstraint(immutable),
@@ -1146,6 +1241,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${tenant!.id}, 'DRAFT-LINE') returning id
             `,
         )
+
         yield* Effect.promise(
           () =>
             client`
@@ -1154,6 +1250,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${tenant!.id}, ${draft!.id}, ${accounts[0]!.id}, 1, 0)
             `,
         )
+
         const reparented = yield* postgresFailure(
           () =>
             client`
@@ -1162,6 +1259,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               where entry_id = ${draft!.id}
             `,
         )
+
         assert.strictEqual(postgresCode(reparented), "55000")
         assert.strictEqual(
           postgresConstraint(reparented),
@@ -1176,6 +1274,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${tenant!.id}, ${posted!.id}, ${accounts[0]!.id}, 1, 0)
             `,
         )
+
         assert.strictEqual(postgresCode(inserted), "55000")
         assert.strictEqual(
           postgresConstraint(inserted),
@@ -1190,6 +1289,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               where id = ${posted!.id}
             `,
         )
+
         assert.strictEqual(postgresCode(entryMutation), "55000")
         assert.strictEqual(postgresConstraint(entryMutation), "accounting_posted_journal_immutable")
       }),
@@ -1207,6 +1307,7 @@ it.effect.skipIf(databaseUrl === undefined)("rejects journal reversal cycles in 
               insert into auth.tenants (slug) values (${uuidv7()}) returning id
             `,
       )
+
       const accounts = yield* Effect.promise(
         () =>
           client<{ id: string }[]>`
@@ -1217,16 +1318,19 @@ it.effect.skipIf(databaseUrl === undefined)("rejects journal reversal cycles in 
               returning id
             `,
       )
+
       const entries = yield* Effect.promise(() =>
         client.begin(async (transaction) => {
           const [first] = await transaction<{ id: string }[]>`
                 insert into accounting.journal_entries (tenant_id, reference)
                 values (${tenant!.id}, 'REVERSAL-CYCLE-A') returning id
               `
+
           const [second] = await transaction<{ id: string }[]>`
                 insert into accounting.journal_entries (tenant_id, reference)
                 values (${tenant!.id}, 'REVERSAL-CYCLE-B') returning id
               `
+
           await transaction`
                 insert into accounting.journal_lines
                   (tenant_id, entry_id, account_id, debit, credit)
@@ -1241,6 +1345,7 @@ it.effect.skipIf(databaseUrl === undefined)("rejects journal reversal cycles in 
                 set status = 'posted', posted_at = now()
                 where tenant_id = ${tenant!.id} and id = ${second!.id}
               `
+
           return { reversalId: first!.id, sourceId: second!.id }
         }),
       )
@@ -1262,6 +1367,7 @@ it.effect.skipIf(databaseUrl === undefined)("rejects journal reversal cycles in 
               where tenant_id = ${tenant!.id} and id = ${entries.reversalId}
             `,
       )
+
       assert.deepStrictEqual(reversalState, {
         status: "reversed",
         reverses_entry_id: entries.sourceId,
@@ -1275,6 +1381,7 @@ it.effect.skipIf(databaseUrl === undefined)("rejects journal reversal cycles in 
               where tenant_id = ${tenant!.id} and id = ${entries.sourceId}
             `,
       )
+
       assert.strictEqual(postgresCode(cycle), "23514")
       assert.strictEqual(postgresConstraint(cycle), "journal_entries_reversal_source_check")
 
@@ -1286,6 +1393,7 @@ it.effect.skipIf(databaseUrl === undefined)("rejects journal reversal cycles in 
               where tenant_id = ${tenant!.id} and id = ${entries.sourceId}
             `,
       )
+
       assert.deepStrictEqual(state, { status: "posted", reverses_entry_id: null })
     }),
   ),

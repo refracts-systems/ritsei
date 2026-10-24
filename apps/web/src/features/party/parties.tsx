@@ -41,6 +41,7 @@ const kindOptions = [
   { value: "person", label: "Person" },
   { value: "organization", label: "Organization" },
 ] as const
+
 const roleOptions = [
   { value: "customer", label: "Customer" },
   { value: "supplier", label: "Supplier" },
@@ -53,6 +54,7 @@ const requiredText = (value: FormValue[string]): string | null =>
 
 const optionalText = (value: FormValue[string]): string | undefined => {
   const text = requiredText(value)
+
   return text === null ? undefined : text
 }
 
@@ -100,11 +102,14 @@ function CreatePartyDialog(props: { reload: () => Promise<void> }) {
   const navigate = useNavigate()
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
+
   const mutation = createPartyMutation(scope, (party) => {
     setOpen(false)
     navigate(`/parties/${encodeURIComponent(party.id)}`)
   })
+
   let nameInput: HTMLInputElement | undefined
+
   return (
     <Dialog
       open={open()}
@@ -123,11 +128,14 @@ function CreatePartyDialog(props: { reload: () => Promise<void> }) {
             if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
             const name = requiredText(value.name)
             const kind = value.kind
+
             if (name === null || (kind !== "person" && kind !== "organization")) {
               setInvalid(true)
               nameInput?.focus()
+
               return
             }
+
             setInvalid(false)
             mutation.mutate({ name, kind })
           }
@@ -186,6 +194,7 @@ function CreatePartyDialog(props: { reload: () => Promise<void> }) {
 
 function PartyFilters(props: { search?: string; kind?: PartyKind }) {
   const navigate = useNavigate()
+
   return (
     <Form
       class={layout.row}
@@ -197,7 +206,9 @@ function PartyFilters(props: { search?: string; kind?: PartyKind }) {
           const query = new URLSearchParams()
           const search = optionalText(value.search)
           const kind = value.kind
+
           if (search !== undefined) query.set("search", search)
+
           if (kind === "person" || kind === "organization") query.set("kind", kind)
           navigate(query.size === 0 ? "/parties" : `/parties?${query}`)
         }
@@ -284,6 +295,7 @@ function CreateLegalEntityCommand(props: {
 }) {
   const scope = useContext(ApiRuntime)
   const mutation = createLegalEntityMutation(scope)
+
   return (
     <section class={layout.stack} aria-labelledby="legal-entity-command-heading">
       <h3 id="legal-entity-command-heading">Legal entity</h3>
@@ -322,6 +334,7 @@ function AssignRoleCommand(props: { detail: PartyDetailValue; reload: () => Prom
   const scope = useContext(ApiRuntime)
   const mutation = assignPartyRoleMutation(scope)
   const options = () => roleOptions.filter((option) => !props.detail.roles.includes(option.value))
+
   return (
     <details>
       <summary>Assign business role</summary>
@@ -339,6 +352,7 @@ function AssignRoleCommand(props: { detail: PartyDetailValue; reload: () => Prom
               (value) => {
                 if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
                 const role = roleOptions.find((option) => option.value === value.role)?.value
+
                 if (role === undefined) return
                 mutation.mutate({ partyId: props.detail.party.id, role })
               }
@@ -382,6 +396,7 @@ function AttachIdentifierCommand(props: {
   // fallow-ignore-next-line code-duplication
   const mutation = attachPartyIdentifierMutation(scope)
   const [invalid, setInvalid] = createSignal(false)
+
   return (
     <details>
       <summary>Attach external identifier</summary>
@@ -396,6 +411,7 @@ function AttachIdentifierCommand(props: {
             const scheme = requiredText(value.scheme)
             const scopeValue = requiredText(value.scope)
             const identifierValue = requiredText(value.value)
+
             if (
               provider === null ||
               scheme === null ||
@@ -403,8 +419,10 @@ function AttachIdentifierCommand(props: {
               identifierValue === null
             ) {
               setInvalid(true)
+
               return
             }
+
             setInvalid(false)
             mutation.mutate({
               partyId: props.detail.party.id,
@@ -478,8 +496,10 @@ function CreateRelationshipCommand(props: {
 }) {
   const scope = useContext(ApiRuntime)
   const mutation = createPartyRelationshipMutation(scope)
+
   const eligibleKinds = () =>
     roleOptions.filter((option) => props.detail.roles.includes(option.value))
+
   return (
     <details>
       <summary>Create legal-entity relationship</summary>
@@ -498,6 +518,7 @@ function CreateRelationshipCommand(props: {
                 if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
                 const legalEntityId = requiredText(value.legalEntityId)
                 const kind = eligibleKinds().find((option) => option.value === value.kind)?.value
+
                 if (legalEntityId === null || kind === undefined) return
                 mutation.mutate({ partyId: props.detail.party.id, legalEntityId, kind })
               }
@@ -541,6 +562,7 @@ function CreateBranchCommand(props: { detail: PartyDetailValue; reload: () => Pr
   const scope = useContext(ApiRuntime)
   const mutation = createBranchMutation(scope)
   const [invalid, setInvalid] = createSignal(false)
+
   return (
     <details>
       <summary>Create branch</summary>
@@ -558,10 +580,13 @@ function CreateBranchCommand(props: { detail: PartyDetailValue; reload: () => Pr
               (value) => {
                 if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
                 const name = requiredText(value.name)
+
                 if (name === null) {
                   setInvalid(true)
+
                   return
                 }
+
                 setInvalid(false)
                 mutation.mutate({
                   legalEntityId: legalEntity.id,
@@ -618,6 +643,7 @@ function CreateRepresentationCommand(props: {
   // fallow-ignore-next-line code-duplication
   const mutation = createPartyRepresentationMutation(scope)
   const [invalid, setInvalid] = createSignal(false)
+
   return (
     <details>
       <summary>Link user account representation</summary>
@@ -630,10 +656,13 @@ function CreateRepresentationCommand(props: {
             if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
             const userAccountId = requiredText(value.userAccountId)
             const kind = requiredText(value.kind)
+
             if (userAccountId === null || kind === null) {
               setInvalid(true)
+
               return
             }
+
             setInvalid(false)
             mutation.mutate({ partyId: props.detail.party.id, userAccountId, kind })
           }
@@ -672,6 +701,7 @@ function CreateRepresentationCommand(props: {
 function RepresentationTable(props: { detail: PartyDetailValue; reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const mutation = setPartyRepresentationActiveMutation(scope)
+
   return (
     <section class={[surface(), layout.stack]} aria-labelledby="representations-heading">
       <h3 id="representations-heading">User-account representations</h3>
@@ -742,8 +772,10 @@ function RepresentationTable(props: { detail: PartyDetailValue; reload: () => Pr
 function RelatedPaths(props: { partyId: string; legalEntities: PartyDirectoryAccessor }) {
   const scope = useContext(ApiRuntime)
   const query = createRelatedPartyPathsQuery(scope, props.partyId, { limit: 100 })
+
   const nameForParty = (partyId: string) =>
     props.legalEntities().find((entry) => entry.party.id === partyId)?.party.name ?? partyId
+
   return (
     <section class={[surface(), layout.stack]} aria-labelledby="related-paths-heading">
       <div class={layout.row}>
@@ -782,6 +814,7 @@ function PartyFacts(props: {
   const nameForLegalEntity = (legalEntityId: string) =>
     props.legalEntities().find((entry) => entry.legalEntityId === legalEntityId)?.party.name ??
     legalEntityId
+
   return (
     <div class={layout.stack}>
       <dl class={layout.detailList}>
@@ -939,6 +972,7 @@ function PartyDetail(props: { id: string }) {
   const id = untrack(() => props.id)
   const query = createPartyDetailQuery(scope, id)
   const directory = createPartiesQuery(scope, { limit: 200 })
+
   return (
     <section class={layout.stack} aria-labelledby="party-detail-heading">
       <div class={layout.row}>
@@ -971,12 +1005,15 @@ function PartyDetail(props: { id: string }) {
 
 export function Parties(props: { selectedPartyId?: string; search?: string; kind?: PartyKind }) {
   const scope = useContext(ApiRuntime)
+
   const input: ListPartiesInput = {
     ...definedFields({ search: props.search }),
     ...definedFields({ kind: props.kind }),
     limit: 200,
   }
+
   const query = createPartiesQuery(scope, input)
+
   return (
     <EntityWorkspace
       title="Parties"

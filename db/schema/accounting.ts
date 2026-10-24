@@ -23,6 +23,7 @@ import { createdAt, id, money, updatedAt, uuidv7 } from "./common.ts"
 import { legalEntities } from "./party.ts"
 
 export const accountingSchema = pgSchema("accounting")
+
 export const accountType = accountingSchema.enum("account_type", [
   "asset",
   "liability",
@@ -30,15 +31,18 @@ export const accountType = accountingSchema.enum("account_type", [
   "revenue",
   "expense",
 ])
+
 export const journalStatus = accountingSchema.enum("journal_status", [
   "draft",
   "posted",
   "reversed",
 ])
+
 export const accountingPeriodStatus = accountingSchema.enum("accounting_period_status", [
   "open",
   "closed",
 ])
+
 /** Account roles that posting rules map to accounts per legal entity (ADR-0096). */
 export const postingRole = accountingSchema.enum("posting_role", [
   "receivable",
@@ -53,10 +57,12 @@ export const postingRole = accountingSchema.enum("posting_role", [
   "inventory_adjustment",
   "cash",
 ])
+
 export const financialEngine = accountingSchema.enum("financial_engine", [
   "postgresql",
   "tigerbeetle",
 ])
+
 export const financialCutoverStatus = accountingSchema.enum("financial_cutover_status", [
   "postgresql",
   "preparing_tigerbeetle",
@@ -65,6 +71,7 @@ export const financialCutoverStatus = accountingSchema.enum("financial_cutover_s
   "activating",
   "tigerbeetle",
 ])
+
 export const financialVerificationKind = accountingSchema.enum("financial_verification_kind", [
   "opening_balance",
   "historical_boundary",
@@ -74,27 +81,33 @@ export const financialVerificationKind = accountingSchema.enum("financial_verifi
   "cutover_rehearsal",
   "observability",
 ])
+
 export const financialVerificationCompleteness = accountingSchema.enum(
   "financial_verification_completeness",
   ["bounded", "full", "fenced"],
 )
+
 export const financialVerificationStatus = accountingSchema.enum("financial_verification_status", [
   "verified",
   "rejected",
 ])
+
 export const financialReconciliationCheckpointStatus = accountingSchema.enum(
   "financial_reconciliation_checkpoint_status",
   ["verified", "blocked"],
 )
+
 export const financialOrphanTransferStatus = accountingSchema.enum(
   "financial_orphan_transfer_status",
   ["open", "resolved", "quarantined"],
 )
+
 export const financialOperationType = accountingSchema.enum("financial_operation_type", [
   "journal_post",
   "journal_reverse",
   "revenue_post",
 ])
+
 export const financialOperationStatus = accountingSchema.enum("financial_operation_status", [
   "intent",
   "submitted",
@@ -104,6 +117,7 @@ export const financialOperationStatus = accountingSchema.enum("financial_operati
   "manual_recovery",
   "reconciled",
 ])
+
 export const financialTransferStatus = accountingSchema.enum("financial_transfer_status", [
   "unresolved",
   "accepted",

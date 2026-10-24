@@ -56,6 +56,7 @@ it.layer(TestHttpServices)("identity tenant API authorization", (it) => {
     Effect.gen(function* () {
       let allowedCapability: CapabilityType | null = IdentityCapabilities.userAccountRead
       const observed: CapabilityType[] = []
+
       const authorization: AuthorizationServiceContract = {
         authorize: (input) => {
           // SAFETY: the test calls this double only with inputs of the shape it reads.
@@ -63,7 +64,9 @@ it.layer(TestHttpServices)("identity tenant API authorization", (it) => {
             readonly tenantId: string
             readonly capability: CapabilityType
           }
+
           observed.push(request.capability)
+
           return request.tenantId === tenantId && request.capability === allowedCapability
             ? Effect.succeed({
                 allowed: true as const,
@@ -91,17 +94,21 @@ it.layer(TestHttpServices)("identity tenant API authorization", (it) => {
         removeMember: unused,
         grant: unused,
       }
+
       const bearer = Layer.succeed(BearerAuth, {
         bearer: (effect) => Effect.provideService(effect, CurrentPrincipal, principal),
       })
+
       const bearerClient = HttpApiMiddleware.layerClient(BearerAuth, ({ request, next }) =>
         next(HttpClientRequest.bearerToken(request, "test-token")),
       )
+
       const handlers = UserAccountHandlers.pipe(
         Layer.provide(bearer),
         Layer.provide(Layer.succeed(AuthorizationService, authorization)),
         Layer.provide(Layer.succeed(UserAccountService, userAccounts)),
       )
+
       const client = yield* HttpApiTest.groups(RitseiApi, ["UserAccounts"]).pipe(
         Effect.provide(Layer.mergeAll(handlers, bearerClient, bearer)),
       )
@@ -109,23 +116,28 @@ it.layer(TestHttpServices)("identity tenant API authorization", (it) => {
       const listed = yield* client.UserAccounts.list({
         headers: { "x-tenant-id": tenantId },
       })
+
       assert.deepStrictEqual(listed, [account()])
 
       const detail = yield* client.UserAccounts.get({
         params: { id: accountId },
         headers: { "x-tenant-id": tenantId },
       })
+
       assert.deepStrictEqual(detail, account())
 
       allowedCapability = IdentityCapabilities.userAccountUpdate
+
       const updated = yield* client.UserAccounts.update({
         params: { id: accountId },
         headers: { "x-tenant-id": tenantId },
         payload: { email: updatedEmail },
       })
+
       assert.deepStrictEqual(updated, account(updatedEmail))
 
       allowedCapability = null
+
       const denied = yield* Effect.flip(
         client.UserAccounts.update({
           params: { id: accountId },
@@ -133,15 +145,18 @@ it.layer(TestHttpServices)("identity tenant API authorization", (it) => {
           payload: { email: updatedEmail },
         }),
       )
+
       assert.strictEqual(denied._tag, "ApiForbidden")
 
       allowedCapability = IdentityCapabilities.userAccountRead
+
       const wrongTenant = yield* Effect.flip(
         client.UserAccounts.get({
           params: { id: accountId },
           headers: { "x-tenant-id": otherTenantId },
         }),
       )
+
       assert.strictEqual(wrongTenant._tag, "ApiForbidden")
       assert.deepStrictEqual(observed, [
         IdentityCapabilities.userAccountRead,

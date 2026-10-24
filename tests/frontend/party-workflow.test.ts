@@ -22,6 +22,7 @@ const northwind = {
   kind: "organization" as const,
   name: "Northwind Holdings",
 }
+
 const createdParty = {
   id: createdPartyId,
   tenantId,
@@ -47,10 +48,12 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const { page, url, errors } = yield* builtApp
+
       const entries: Array<{
         party: typeof northwind
         legalEntityId: string | null
       }> = [{ party: northwind, legalEntityId: northwindLegalEntityId }]
+
       const detail = {
         party: createdParty,
         roles: new Array<string>(),
@@ -69,6 +72,7 @@ it.effect(
           active: boolean
         }>,
       }
+
       let createBody: unknown
       let roleBody: unknown
       let identifierBody: unknown
@@ -88,12 +92,15 @@ it.effect(
           const method = request.method()
 
           if (path === "/user-accounts") return fulfillJson(route, 200, [])
+
           if (path.startsWith("/parties") || path.startsWith("/legal-entities")) {
             partyHeaders = request.headers()
           }
+
           if (path === "/parties" && method === "GET") {
             const search = url.searchParams.get("search")?.toLocaleLowerCase()
             const kind = url.searchParams.get("kind")
+
             return fulfillJson(
               route,
               200,
@@ -104,14 +111,18 @@ it.effect(
               ),
             )
           }
+
           if (path === "/parties" && method === "POST") {
             createBody = request.postDataJSON()
             entries.push({ party: createdParty, legalEntityId: null })
+
             return fulfillJson(route, 201, createdParty)
           }
+
           if (path === `/parties/${createdPartyId}` && method === "GET") {
             return fulfillJson(route, 200, detail)
           }
+
           if (path === `/parties/${createdPartyId}/legal-entity` && method === "POST") {
             detail.legalEntity = {
               id: createdLegalEntityId,
@@ -119,10 +130,13 @@ it.effect(
               organizationId: createdPartyId,
             }
             entries[1] = { party: createdParty, legalEntityId: createdLegalEntityId }
+
             return fulfillJson(route, 201, detail.legalEntity)
           }
+
           if (path === `/legal-entities/${createdLegalEntityId}/branches` && method === "POST") {
             branchBody = request.postDataJSON()
+
             const branch = {
               id: branchId,
               tenantId,
@@ -132,16 +146,22 @@ it.effect(
               localTaxRegistration: "ID-JKT-001",
               dedicatedJournalCode: "JKT",
             }
+
             detail.branches = [branch]
+
             return fulfillJson(route, 201, branch)
           }
+
           if (path === `/parties/${createdPartyId}/roles` && method === "POST") {
             roleBody = request.postDataJSON()
             detail.roles = ["supplier"]
+
             return route.fulfill({ status: 204 })
           }
+
           if (path === `/parties/${createdPartyId}/identifiers` && method === "POST") {
             identifierBody = request.postDataJSON()
+
             const identifier = {
               id: identifierId,
               tenantId,
@@ -152,11 +172,15 @@ it.effect(
               legalEntityId: null,
               value: "S-001",
             }
+
             detail.identifiers = [identifier]
+
             return fulfillJson(route, 201, identifier)
           }
+
           if (path === `/parties/${createdPartyId}/relationships` && method === "POST") {
             relationshipBody = request.postDataJSON()
+
             const relationship = {
               id: relationshipId,
               tenantId,
@@ -165,11 +189,15 @@ it.effect(
               kind: "supplier",
               active: true,
             }
+
             detail.relationships = [relationship]
+
             return fulfillJson(route, 201, relationship)
           }
+
           if (path === `/parties/${createdPartyId}/representations` && method === "POST") {
             representationBody = request.postDataJSON()
+
             const representation = {
               id: representationId,
               tenantId,
@@ -178,14 +206,19 @@ it.effect(
               kind: "self",
               active: true,
             }
+
             detail.representations = [representation]
+
             return fulfillJson(route, 201, representation)
           }
+
           if (path === `/party-representations/${representationId}` && method === "PATCH") {
             representationPatchBody = request.postDataJSON()
             detail.representations[0]!.active = false
+
             return fulfillJson(route, 200, detail.representations[0])
           }
+
           if (path === `/parties/${createdPartyId}/related-paths` && method === "GET") {
             return fulfillJson(
               route,
@@ -205,6 +238,7 @@ it.effect(
                   ],
             )
           }
+
           return fulfillJson(route, 404, notFoundBody())
         })
 
@@ -284,6 +318,7 @@ it.effect(
         const relationshipCommand = page.locator("summary").filter({
           hasText: "Create legal-entity relationship",
         })
+
         await relationshipCommand.click()
         await page
           .getByRole("combobox", { name: "Relationship kind", exact: true })
@@ -348,17 +383,23 @@ it.effect(
         await page.route("**/api/**", (route) => {
           const request = route.request()
           const path = new URL(request.url()).pathname.replace(/^\/api/, "")
+
           if (path === "/user-accounts") return fulfillJson(route, 200, [])
+
           if (path === "/parties" && request.method() === "GET") {
             if (mode === "forbidden") {
               return fulfillJson(route, 403, forbiddenBody())
             }
+
             if (mode === "malformed") return fulfillJson(route, 200, { parties: [] })
+
             return fulfillJson(route, 200, [{ party: northwind, legalEntityId: null }])
           }
+
           if (path === "/parties" && request.method() === "POST" && mode === "unknown-create") {
             return route.abort("connectionreset")
           }
+
           return fulfillJson(route, 404, notFoundBody())
         })
 

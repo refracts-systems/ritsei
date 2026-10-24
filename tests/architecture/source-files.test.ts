@@ -16,6 +16,7 @@ describe("source collection exclusions", () => {
       assert.isTrue(isIgnoredSourcePath(`/repo/${path}`), path)
       assert.isTrue(isIgnoredSourcePath(path.replaceAll("/", "\\")), path)
     }
+
     for (const path of [
       "framework/modules/identity/src/generated/policy.ts",
       "apps/web/src/features/identity/generated/policy.ts",

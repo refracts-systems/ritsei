@@ -1,4 +1,5 @@
 export { InventoryCapabilities } from "./src/capabilities.ts"
+
 export {
   InventoryAdjustStockAction,
   InventoryStockCorrectedEvent,
@@ -38,6 +39,7 @@ export {
   UnitOfMeasure,
   Warehouse,
 } from "./src/contract.ts"
+
 export type {
   InventoryService as InventoryServiceContract,
   Item as ItemType,
@@ -49,6 +51,7 @@ export type {
   StockTransferLine as StockTransferLineType,
   Warehouse as WarehouseType,
 } from "./src/contract.ts"
+
 export {
   InventoryReferenceNotFound,
   InventoryUnitOfMeasureMismatch,
@@ -71,8 +74,11 @@ export {
   WarehouseBranchNotFound,
   WarehouseLegalEntityNotFound,
 } from "./src/errors.ts"
+
 export { InventoryLive, makeInventoryService, makeInventoryTestLayer } from "./src/layers.ts"
+
 export { InventoryModule } from "./manifest.ts"
+
 export {
   CountStockInput,
   IssueValuedStockInput,
@@ -84,10 +90,13 @@ export {
   ValuationReportInput,
   ValuedStockMovement,
 } from "./src/stock-keeping-contract.ts"
+
 export type {
   StockKeepingService as StockKeepingServiceContract,
   StockValuation as StockValuationType,
   ValuedStockMovement as ValuedStockMovementType,
 } from "./src/stock-keeping-contract.ts"
+
 export { StockNotStockable, StockValuationUnavailable } from "./src/errors.ts"
+
 export { StockKeepingLive } from "./src/stock-keeping.ts"

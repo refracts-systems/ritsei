@@ -70,14 +70,17 @@ const normalizeMoney = (value: string) => major(minor(value))
 /** Discount `12.5` percent → 1250 basis points. */
 const basisPoints = (percent: string) => {
   const [whole = "0", fraction = ""] = percent.split(".")
+
   return BigInt(whole) * 100n + BigInt(fraction.padEnd(2, "0").slice(0, 2))
 }
+
 const formatPercent = (points: bigint) =>
   `${points / 100n}.${(points % 100n).toString().padStart(2, "0")}`
 
 /** Net unit price after a discount, rounded half up to the cent. */
 export const discountedPrice = (listPrice: string, discountPercent: string) => {
   const numerator = minor(listPrice) * (10_000n - basisPoints(discountPercent))
+
   return major((numerator * 2n + 10_000n) / 20_000n)
 }
 
@@ -129,12 +132,15 @@ export const makeSalesDocumentService = Effect.gen(function* () {
             .where(and(eq(customers.tenantId, tenantId), eq(customers.id, customerId))),
         "sales.customer.get",
       ))[0]
+
       if (row === undefined)
         return yield* Effect.fail(new CustomerNotFound({ tenantId, customerId }))
       const customer = toPartyCustomer(row)
+
       if (customer === undefined) {
         return yield* Effect.fail(new CustomerLegalEntityRequired({ tenantId, customerId }))
       }
+
       return customer
     })
 
@@ -145,8 +151,11 @@ export const makeSalesDocumentService = Effect.gen(function* () {
           .select()
           .from(quotations)
           .where(and(eq(quotations.tenantId, tenantId), eq(quotations.id, quotationId)))
+
         const header = (await (lock ? query.for("update") : query))[0]
+
         if (header === undefined) return undefined
+
         const lines = await tx
           .select()
           .from(quotationLines)
@@ -154,8 +163,10 @@ export const makeSalesDocumentService = Effect.gen(function* () {
             and(eq(quotationLines.tenantId, tenantId), eq(quotationLines.quotationId, quotationId)),
           )
           .orderBy(asc(quotationLines.id))
+
         return { header, lines }
       }, "sales.quotation.load")
+
       // Quotations created before priced lines carry no legal entity or validity.
       if (
         loaded === undefined ||
@@ -164,7 +175,9 @@ export const makeSalesDocumentService = Effect.gen(function* () {
       ) {
         return yield* Effect.fail(new QuotationNotFound({ tenantId, quotationId }))
       }
+
       const { header, lines } = loaded
+
       return {
         id: header.id,
         tenantId: header.tenantId,
@@ -194,10 +207,13 @@ export const makeSalesDocumentService = Effect.gen(function* () {
   ) =>
     Effect.gen(function* () {
       const decoded = yield* authorized(QuotationCommandInput, capability)(input)
+
       return yield* database.withTransaction(
         Effect.gen(function* () {
           const quotation = yield* loadQuotation(decoded.tenantId, decoded.quotationId, true)
+
           if (quotation.status === to) return quotation
+
           if (quotation.status !== from) {
             return yield* Effect.fail(
               new QuotationInvalidState({
@@ -207,6 +223,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
               }),
             )
           }
+
           const now = new Date()
           yield* database.query(
             (db) =>
@@ -225,6 +242,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
                 ),
             "sales.quotation.transition",
           )
+
           return { ...quotation, status: to }
         }),
         "sales.quotation.transition.atomic",
@@ -238,11 +256,13 @@ export const makeSalesDocumentService = Effect.gen(function* () {
       CreatePartyCustomerInput,
       SalesCapabilities.customerCreate,
     )(input)
+
     const relationship = yield* party.getRelationship({
       principal: decoded.principal,
       tenantId: decoded.tenantId,
       relationshipId: decoded.partyRelationshipId,
     })
+
     if (relationship.kind !== "customer" || !relationship.active) {
       return yield* Effect.fail(
         new CustomerPartyRoleInvalid({
@@ -251,6 +271,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
         }),
       )
     }
+
     const existing = (yield* database.query(
       (db) =>
         db
@@ -264,13 +285,17 @@ export const makeSalesDocumentService = Effect.gen(function* () {
           ),
       "sales.customer.by_relationship",
     ))[0]
+
     if (existing !== undefined) return toPartyCustomer(existing)!
+
     const detail = yield* party.getDetail({
       principal: decoded.principal,
       tenantId: decoded.tenantId,
       partyId: relationship.partyId,
     })
+
     const email = decoded.email.trim().toLowerCase()
+
     const rows = yield* database
       .query(
         (db) =>
@@ -294,6 +319,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
             : error,
         ),
       )
+
     return toPartyCustomer(rows[0]!)!
   })
 
@@ -304,6 +330,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
       CreatePriceListInput,
       SalesCapabilities.priceListConfigure,
     )(input)
+
     const rows = yield* database
       .query(
         (db) =>
@@ -325,6 +352,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
             : error,
         ),
       )
+
     return rows[0]!
   })
 
@@ -361,15 +389,18 @@ export const makeSalesDocumentService = Effect.gen(function* () {
               priceListId: decoded.priceListId,
             })
           }
+
           if (isDatabaseConstraint(error, "price_list_items_product_fkey", "23503")) {
             return new ProductPriceNotFound({
               tenantId: decoded.tenantId,
               productId: decoded.productId,
             })
           }
+
           return error
         }),
       )
+
     return {
       priceListId: decoded.priceListId,
       productId: decoded.productId,
@@ -383,6 +414,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
         AssignCustomerPriceListInput,
         SalesCapabilities.priceListConfigure,
       )(input)
+
       const list = yield* database.query(
         (db) =>
           db
@@ -396,11 +428,13 @@ export const makeSalesDocumentService = Effect.gen(function* () {
             ),
         "sales.price_list.get",
       )
+
       if (list[0] === undefined) {
         return yield* Effect.fail(
           new PriceListNotFound({ tenantId: decoded.tenantId, priceListId: decoded.priceListId }),
         )
       }
+
       const customer = yield* loadCustomer(decoded.tenantId, decoded.customerId).pipe(
         Effect.catchTag("CustomerLegalEntityRequired", () =>
           Effect.fail(
@@ -408,6 +442,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
           ),
         ),
       )
+
       yield* database.query(
         (db) =>
           db
@@ -416,6 +451,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
             .where(and(eq(customers.tenantId, decoded.tenantId), eq(customers.id, customer.id))),
         "sales.customer.assign_price_list",
       )
+
       return { ...customer, priceListId: decoded.priceListId }
     },
   )
@@ -426,6 +462,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
     const decoded = yield* authorized(DraftQuotationInput, SalesCapabilities.quotationCreate)(input)
     const customer = yield* loadCustomer(decoded.tenantId, decoded.customerId)
     const productIds = [...new Set(decoded.lines.map((line) => line.productId))]
+
     const listed =
       customer.priceListId === null
         ? []
@@ -446,7 +483,9 @@ export const makeSalesDocumentService = Effect.gen(function* () {
                 ),
             "sales.price_list.prices",
           )
+
     const prices = new Map(listed.map((row) => [row.productId, normalizeMoney(row.unitPrice)]))
+
     const defaults = decoded.lines.some((line) => line.taxCodeId === undefined)
       ? yield* tax.determineTaxCodes({
           principal: decoded.principal,
@@ -455,14 +494,18 @@ export const makeSalesDocumentService = Effect.gen(function* () {
           productIds,
         })
       : new Map<string, string | null>()
+
     const lines = []
+
     for (const line of decoded.lines) {
       const listPrice = line.listPrice ?? prices.get(line.productId)
+
       if (listPrice === undefined) {
         return yield* Effect.fail(
           new ProductPriceNotFound({ tenantId: decoded.tenantId, productId: line.productId }),
         )
       }
+
       const discountPercent = line.discountPercent ?? "0"
       lines.push({
         id: uuidv7(),
@@ -475,10 +518,12 @@ export const makeSalesDocumentService = Effect.gen(function* () {
           line.taxCodeId === undefined ? (defaults.get(line.productId) ?? null) : line.taxCodeId,
       })
     }
+
     const priced = lines.map((line) => ({
       ...line,
       lineTotal: major(minor(line.unitPrice) * BigInt(line.quantity)),
     }))
+
     const total = major(priced.reduce((sum, line) => sum + minor(line.lineTotal), 0n))
     const quotationId = uuidv7()
     yield* database.transaction(async (tx) => {
@@ -504,6 +549,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
         })),
       )
     }, "sales.quotation.draft")
+
     return {
       id: quotationId,
       tenantId: decoded.tenantId,
@@ -520,6 +566,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
     input: Schema.Codec.Encoded<typeof QuotationCommandInput>,
   ) {
     const decoded = yield* authorized(QuotationCommandInput, SalesCapabilities.quotationRead)(input)
+
     return yield* loadQuotation(decoded.tenantId, decoded.quotationId, false)
   })
 
@@ -530,7 +577,9 @@ export const makeSalesDocumentService = Effect.gen(function* () {
       ExpireQuotationsInput,
       SalesCapabilities.quotationDecide,
     )(input)
+
     const now = new Date()
+
     const rows = yield* database.query(
       (db) =>
         db
@@ -546,6 +595,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
           .returning({ id: quotations.id }),
       "sales.quotation.expire",
     )
+
     return rows.map((row) => row.id).toSorted()
   })
 
@@ -553,9 +603,11 @@ export const makeSalesDocumentService = Effect.gen(function* () {
     input: Schema.Codec.Encoded<typeof QuotationCommandInput>,
   ) {
     const decoded = yield* authorized(QuotationCommandInput, SalesCapabilities.orderCreate)(input)
+
     return yield* database.withTransaction(
       Effect.gen(function* () {
         const quotation = yield* loadQuotation(decoded.tenantId, decoded.quotationId, true)
+
         const existing = yield* database.query(
           (db) =>
             db
@@ -566,7 +618,9 @@ export const makeSalesDocumentService = Effect.gen(function* () {
               ),
           "sales.order.by_quotation",
         )
+
         if (existing[0] !== undefined) return { orderId: existing[0].id }
+
         if (quotation.status !== "accepted") {
           return yield* Effect.fail(
             new QuotationInvalidState({
@@ -576,6 +630,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
             }),
           )
         }
+
         const orderId = uuidv7()
         yield* database.transaction(async (tx) => {
           await tx.insert(orders).values({
@@ -607,6 +662,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
             })),
           )
         }, "sales.order.from_quotation")
+
         return { orderId }
       }),
       "sales.quotation.convert",
@@ -625,14 +681,18 @@ export const makeSalesDocumentService = Effect.gen(function* () {
           })
           .from(orders)
           .where(and(eq(orders.tenantId, tenantId), eq(orders.id, orderId)))
+
         const order = (await (lock ? query.for("update") : query))[0]
+
         if (order === undefined) return undefined
+
         const customer = (
           await tx
             .select({ partyId: customers.partyId, legalEntityId: customers.legalEntityId })
             .from(customers)
             .where(and(eq(customers.tenantId, tenantId), eq(customers.id, order.customerId)))
         )[0]
+
         const lines = await tx
           .select({
             orderLineId: orderLines.id,
@@ -651,26 +711,33 @@ export const makeSalesDocumentService = Effect.gen(function* () {
           )
           .where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, orderId)))
           .orderBy(asc(orderLines.id))
+
         const delivered = await tx
           .select({ orderLineId: deliveryLines.orderLineId, quantity: sum(deliveryLines.quantity) })
           .from(deliveryLines)
           .where(and(eq(deliveryLines.tenantId, tenantId), eq(deliveryLines.orderId, orderId)))
           .groupBy(deliveryLines.orderLineId)
+
         return { order, customer, lines, delivered }
       }, "sales.order.fulfillment")
+
       if (loaded === undefined) {
         return yield* Effect.fail(new SalesOrderNotFound({ tenantId, orderId }))
       }
+
       const legalEntityId = loaded.order.legalEntityId ?? loaded.customer?.legalEntityId ?? null
       const partyId = loaded.customer?.partyId ?? null
+
       if (legalEntityId === null || partyId === null) {
         return yield* Effect.fail(
           new CustomerLegalEntityRequired({ tenantId, customerId: loaded.order.customerId }),
         )
       }
+
       const deliveredByLine = new Map(
         loaded.delivered.map((row) => [row.orderLineId, row.quantity ?? "0"]),
       )
+
       return {
         orderId: loaded.order.id,
         tenantId,
@@ -693,6 +760,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
     input: Schema.Codec.Encoded<typeof OrderQueryInput>,
   ) {
     const decoded = yield* authorized(OrderQueryInput, SalesCapabilities.orderRead)(input)
+
     return yield* loadFulfillment(decoded.tenantId, decoded.orderId, false)
   })
 
@@ -704,7 +772,9 @@ export const makeSalesDocumentService = Effect.gen(function* () {
           .from(deliveries)
           .where(and(eq(deliveries.tenantId, tenantId), eq(deliveries.id, deliveryId)))
       )[0]
+
       if (header === undefined) return undefined
+
       const lines = await tx
         .select({
           orderLineId: deliveryLines.orderLineId,
@@ -721,6 +791,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
         )
         .where(and(eq(deliveryLines.tenantId, tenantId), eq(deliveryLines.deliveryId, deliveryId)))
         .orderBy(asc(deliveryLines.id))
+
       return {
         id: header.id,
         tenantId: header.tenantId,
@@ -737,14 +808,18 @@ export const makeSalesDocumentService = Effect.gen(function* () {
     input: Schema.Codec.Encoded<typeof RecordDeliveryInput>,
   ) {
     const decoded = yield* authorized(RecordDeliveryInput, SalesCapabilities.deliveryRecord)(input)
+
     return yield* database.withTransaction(
       Effect.gen(function* () {
         // Locking the order serializes deliveries, so the cumulative guard holds.
         const fulfillment = yield* loadFulfillment(decoded.tenantId, decoded.orderId, true)
+
         if (decoded.deliveryId !== undefined) {
           const recorded = yield* loadDelivery(decoded.tenantId, decoded.deliveryId)
+
           if (recorded !== undefined) return recorded
         }
+
         if (fulfillment.status !== "confirmed") {
           return yield* Effect.fail(
             new SalesOrderInvalidState({
@@ -754,9 +829,12 @@ export const makeSalesDocumentService = Effect.gen(function* () {
             }),
           )
         }
+
         const byLine = new Map(fulfillment.lines.map((line) => [line.orderLineId, line]))
+
         for (const line of decoded.lines) {
           const ordered = byLine.get(line.orderLineId)
+
           if (ordered === undefined) {
             return yield* Effect.fail(
               new OrderLineNotFound({
@@ -766,6 +844,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
               }),
             )
           }
+
           if (BigInt(ordered.delivered) + BigInt(line.quantity) > BigInt(ordered.quantity)) {
             return yield* Effect.fail(
               new DeliveryExceedsOrder({
@@ -777,7 +856,9 @@ export const makeSalesDocumentService = Effect.gen(function* () {
             )
           }
         }
+
         const deliveryId = decoded.deliveryId ?? uuidv7()
+
         const allocated = yield* numbering
           .allocate({
             tenantId: decoded.tenantId,
@@ -788,6 +869,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
             prefix: "DO/",
           })
           .pipe(Effect.catchTag("SchemaError", (error) => Effect.die(error)))
+
         yield* database.transaction(async (tx) => {
           await tx.insert(deliveries).values({
             id: deliveryId,
@@ -808,6 +890,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
             })),
           )
         }, "sales.delivery.record")
+
         return {
           id: deliveryId,
           tenantId: decoded.tenantId,

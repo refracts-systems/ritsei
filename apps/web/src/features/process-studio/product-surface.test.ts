@@ -15,6 +15,7 @@ describe("Process Studio product surface", () => {
       new Set(ProcessStudioTemplates.map((template) => template.model.definitionId)).size,
       ProcessStudioTemplates.length,
     )
+
     for (const template of ProcessStudioTemplates) {
       assert.deepStrictEqual(validateDesignerModel(template.model), [])
       assert.isDefined(getProcessStudioTemplate(template.id))
@@ -22,6 +23,7 @@ describe("Process Studio product surface", () => {
       assert.isFalse(JSON.stringify(template.model).includes("inventory.stock.adjust"))
       assert.isFalse(JSON.stringify(template.model).includes("accounting.revenue.post"))
     }
+
     const review = getProcessStudioTemplate("review-draft")!
     assert.deepStrictEqual(
       review.nodes.filter((node) => node.kind === "HumanTask").map((node) => node.label),

@@ -11,6 +11,7 @@ import { isMain } from "../../../tooling/entrypoint.ts"
 const Uuid = Schema.String.check(
   Schema.isPattern(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i),
 )
+
 const NonBlankString = Schema.String.check(Schema.isPattern(/\S/))
 
 const WarehouseScope = Schema.Struct({
@@ -59,11 +60,14 @@ const key = (tenantId: string, id: string) => `${tenantId}:${id}`
 const duplicateKeys = (values: readonly { tenantId: string; id: string }[]) => {
   const seen = new Set<string>()
   const duplicates = new Set<string>()
+
   for (const value of values) {
     const valueKey = key(value.tenantId, value.id)
+
     if (seen.has(valueKey)) duplicates.add(valueKey)
     else seen.add(valueKey)
   }
+
   return [...duplicates]
 }
 
@@ -77,6 +81,7 @@ const assertExactCoverage = (
   const missing = [...actual].filter((value) => !provided.has(value))
   const unknown = [...provided].filter((value) => !actual.has(value))
   const duplicates = duplicateKeys(mappings)
+
   if (missing.length > 0 || unknown.length > 0 || duplicates.length > 0) {
     throw new P0BackfillFailure(
       `${resource} mapping must cover each row exactly once; missing=${missing.join(",")}; ` +
@@ -116,6 +121,7 @@ export const decodeP0BackfillJson = (text: string, path: string) => {
       new P0BackfillFailure(`${path}: mapping file exceeds ${MAX_P0_BACKFILL_BYTES} bytes`),
     )
   }
+
   return Effect.try({
     try: () => JSON.parse(text),
     catch: (cause) => new P0BackfillFailure(`${path}: malformed JSON: ${failureMessage(cause)}`),
@@ -131,9 +137,11 @@ export const applyP0Backfill = (client: Sql, input: Schema.Json) =>
           const warehouses = await tx.unsafe<Row[]>(
             `select tenant_id, id from inventory.warehouses order by tenant_id, id`,
           )
+
           const transfers = await tx.unsafe<Row[]>(
             `select tenant_id, id from inventory.stock_transfers order by tenant_id, id`,
           )
+
           const identifiers = await tx.unsafe<Row[]>(
             `select tenant_id, id from party.party_identifiers order by tenant_id, id`,
           )
@@ -201,6 +209,7 @@ const readBoundedTextFile = (path: string): Promise<string> =>
     const stream = createReadStream(path, { highWaterMark: 64 * 1024 })
     let total = 0
     let text = ""
+
     const decode = (chunk: Buffer | undefined, streaming: boolean) => {
       try {
         return decoder.decode(chunk, { stream: streaming })
@@ -208,6 +217,7 @@ const readBoundedTextFile = (path: string): Promise<string> =>
         return undefined
       }
     }
+
     stream.on("error", (cause) =>
       reject(
         cause instanceof P0BackfillFailure
@@ -219,30 +229,41 @@ const readBoundedTextFile = (path: string): Promise<string> =>
       if (Predicate.isString(data)) {
         stream.destroy()
         reject(new P0BackfillFailure(`${path}: mapping file is not valid UTF-8`))
+
         return
       }
+
       total += data.byteLength
+
       if (total > MAX_P0_BACKFILL_BYTES) {
         stream.destroy()
         reject(
           new P0BackfillFailure(`${path}: mapping file exceeds ${MAX_P0_BACKFILL_BYTES} bytes`),
         )
+
         return
       }
+
       const decoded = decode(data, true)
+
       if (decoded === undefined) {
         stream.destroy()
         reject(new P0BackfillFailure(`${path}: mapping file is not valid UTF-8`))
+
         return
       }
+
       text += decoded
     })
     stream.on("end", () => {
       const tail = decode(undefined, false)
+
       if (tail === undefined) {
         reject(new P0BackfillFailure(`${path}: mapping file is not valid UTF-8`))
+
         return
       }
+
       resolve(text + tail)
     })
   })
@@ -259,25 +280,30 @@ export const readP0BackfillFile = (path: string) =>
 if (isMain(import.meta.url)) {
   const databaseUrl = process.env["DATABASE_URL"]
   const inputPath = process.argv[2] ?? process.env["P0_BACKFILL_FILE"]
+
   if (databaseUrl === undefined || databaseUrl.trim() === "") {
     console.error("DATABASE_URL is required; Varlock loads .env.local automatically")
     process.exit(1)
   }
+
   if (inputPath === undefined || inputPath.trim() === "") {
     console.error("Usage: pnpm p0:backfill -- <mapping.json>")
     process.exit(1)
   }
 
   const client = postgres(databaseUrl)
+
   const result = await Effect.runPromiseExit(
     readP0BackfillFile(inputPath).pipe(
       Effect.flatMap((input) => applyP0Backfill(client, input)),
       Effect.ensuring(Effect.promise(() => client.end())),
     ),
   )
+
   if (Exit.isFailure(result)) {
     console.error(result.cause)
     process.exit(1)
   }
+
   console.log("P0 backfill completed")
 }

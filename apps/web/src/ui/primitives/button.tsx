@@ -30,6 +30,7 @@ const styles = {
 
 export function Button(props: ButtonProps) {
   const buttonProps = omit(props, "variant", "size", "loading", "iconOnly", "class", "children")
+
   return (
     <button
       {...buttonProps}

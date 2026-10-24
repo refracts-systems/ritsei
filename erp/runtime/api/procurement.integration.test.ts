@@ -59,6 +59,7 @@ const makeProcurementStub = (
   getPurchaseOrder: () =>
     Effect.gen(function* () {
       observedTokens.push(yield* CurrentConsistencyToken)
+
       return order
     }),
   listPurchaseOrders: () => Effect.succeed([order]),
@@ -100,25 +101,31 @@ it.layer(TestHttpServices)("procurement API consistency headers", (it) => {
     Effect.gen(function* () {
       const observedTokens: Array<string | undefined> = []
       let capturedTenantId: string | undefined
+
       const readYourWrites: PostgresReadYourWritesService = {
         capture: (captured) => {
           capturedTenantId = captured
+
           return Effect.succeed(consistencyToken)
         },
         wait: () => Effect.die(new Error("wait is owned by the procurement service")),
       }
+
       const bearer = Layer.succeed(BearerAuth, {
         bearer: (effect) => Effect.provideService(effect, CurrentPrincipal, principal),
       })
+
       const bearerClient = HttpApiMiddleware.layerClient(BearerAuth, ({ request, next }) =>
         next(HttpClientRequest.bearerToken(request, "test-token")),
       )
+
       const handlers = ProcurementHandlers.pipe(
         Layer.provide(bearer),
         Layer.provide(provideInventory.layer),
         Layer.provide(Layer.succeed(PostgresReadYourWrites, readYourWrites)),
         Layer.provide(Layer.succeed(ProcurementService, makeProcurementStub(observedTokens))),
       )
+
       const client = yield* HttpApiTest.groups(RitseiApi, ["Procurement"]).pipe(
         Effect.provide(Layer.mergeAll(handlers, bearerClient, bearer)),
       )
@@ -131,6 +138,7 @@ it.layer(TestHttpServices)("procurement API consistency headers", (it) => {
         },
         responseMode: "decoded-and-response",
       })
+
       assert.deepStrictEqual(created.body, order)
       assert.strictEqual(created.headers["x-ritsei-consistency-token"], consistencyToken)
       assert.strictEqual(createResponse.status, 201)
@@ -166,6 +174,7 @@ it.layer(TestHttpServices)("procurement API consistency headers", (it) => {
           "x-ritsei-consistency-token": consistencyToken,
         },
       })
+
       assert.deepStrictEqual(read, order)
       assert.strictEqual(observedTokens.at(-1), consistencyToken)
     }),

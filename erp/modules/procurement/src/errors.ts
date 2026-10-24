@@ -1,11 +1,13 @@
 import * as Schema from "effect/Schema"
 
 const Uuid = Schema.String.check(Schema.isUUID())
+
 const TrimmedNonEmptyString = Schema.String.check(
   Schema.makeFilter((value) => /\S/.test(value) && value === value.trim(), {
     expected: "a trimmed nonblank string",
   }),
 )
+
 const Quantity = Schema.String.check(
   Schema.makeFilter(
     (value) => /^[1-9]\d*$/.test(value) && BigInt(value) <= 9_223_372_036_854_775_807n,
@@ -127,21 +129,25 @@ export class PurchaseReceiptWarehouseLegalEntityMismatch extends Schema.TaggedEr
     legalEntityId: Uuid,
   },
 ) {}
+
 /** No explicit price and no supplier price for the product. */
 export class SupplierPriceNotFound extends Schema.TaggedError<SupplierPriceNotFound>()(
   "SupplierPriceNotFound",
   { tenantId: Uuid, supplierAccountId: Uuid, productId: Uuid },
 ) {}
+
 /** Valued purchasing covers stockable products; other purchases are not valued yet. */
 export class PurchaseLineNotStockable extends Schema.TaggedError<PurchaseLineNotStockable>()(
   "PurchaseLineNotStockable",
   { tenantId: Uuid, productId: Uuid },
 ) {}
+
 /** The purchase order total exceeds the approval threshold and is not approved. */
 export class PurchaseOrderApprovalRequired extends Schema.TaggedError<PurchaseOrderApprovalRequired>()(
   "PurchaseOrderApprovalRequired",
   { tenantId: Uuid, purchaseOrderId: Uuid, status: Schema.String },
 ) {}
+
 /** Returning more than was received, net of earlier returns. */
 export class PurchaseReturnExceedsReceipt extends Schema.TaggedError<PurchaseReturnExceedsReceipt>()(
   "PurchaseReturnExceedsReceipt",

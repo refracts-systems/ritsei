@@ -37,10 +37,12 @@ function LogPanel() {
 
 export function App() {
   const [tab, setTab] = createSignal<Tab>("typeahead")
+
   return (
     <Errored
       fallback={(err, reset) => {
         console.error("solid-effect-render-error", err())
+
         return (
           <div class="error-box app-error">
             <p>Something went wrong: {String(err())}</p>

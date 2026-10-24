@@ -54,7 +54,9 @@ const renderInput = () =>
       schemaVersion: 1,
       payload: { status: "confirmed", total: "25.00" },
     })
+
     const context = documentContextFromSnapshot(snapshot)
+
     const ast = yield* createDocumentAst({
       astId,
       snapshotId,
@@ -74,6 +76,7 @@ const renderInput = () =>
         DocumentSignatureNode.make({ assetId: "signature-v1", label: "Approved by" }),
       ],
     })
+
     const request = yield* createDocumentRenderRequest({
       tenantId,
       snapshotId,
@@ -92,6 +95,7 @@ const renderInput = () =>
       assetBytes: pngBytes.byteLength * 2,
       correlationId: "pdfnative-conformance",
     })
+
     return { context, ast, request } satisfies DocumentRenderInput
   })
 
@@ -120,6 +124,7 @@ describe("pdfnative document renderer", () => {
       const text = extractText(first.bytes)
         .map((page) => page.text)
         .join("\n")
+
       assert.include(text, "PURCHASE ORDER")
       assert.isTrue(validatePdfUA(first.bytes).valid)
     }),
@@ -128,12 +133,14 @@ describe("pdfnative document renderer", () => {
   it.effect("fails closed when the native policy does not support a capability", () =>
     Effect.gen(function* () {
       const input = yield* renderInput()
+
       const unsupported = yield* Effect.flip(
         renderer.render({
           ...input,
           request: { ...input.request, capabilities: ["paged-media"] },
         }),
       )
+
       assert.instanceOf(unsupported, UnsupportedDocumentCapability)
     }),
   )
@@ -141,10 +148,12 @@ describe("pdfnative document renderer", () => {
   it.effect("reports a missing asset as a typed failure", () =>
     Effect.gen(function* () {
       const input = yield* renderInput()
+
       const missingAssetRenderer = makePdfNativeDocumentRenderer({
         policy,
         resolveAsset: () => Effect.succeed(undefined),
       })
+
       const missing = yield* Effect.flip(missingAssetRenderer.render(input))
       assert.instanceOf(missing, DocumentAssetUnavailable)
     }),

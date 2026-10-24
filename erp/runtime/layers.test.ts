@@ -21,6 +21,7 @@ it.effect("composes the PostgreSQL financial ledger", () =>
       }),
       financialLedgerLayer(unusedDatabase),
     )
+
     assert.strictEqual(ledger.authority, "postgresql")
   }),
 )

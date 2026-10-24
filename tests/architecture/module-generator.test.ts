@@ -17,6 +17,7 @@ describe("ritsei new module", () => {
     )
     const manifest = files[0]!.content
     assert.include(manifest, "export const SupplierContractModule = defineModule({")
+
     for (const empty of [
       "schemas: []",
       "capabilities: {}",
@@ -26,6 +27,7 @@ describe("ritsei new module", () => {
     ]) {
       assert.include(manifest, empty)
     }
+
     assert.notInclude(files.map(({ content }) => content).join("\n"), "pgSchema")
   })
 

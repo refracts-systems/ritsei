@@ -14,6 +14,7 @@ import {
 import { partial } from "../../../../tests/support/partial.ts"
 
 const principal = { userAccountId: "admin", sessionId: "session" }
+
 const initialGrant = {
   userAccountId: principal.userAccountId,
   tenantId: "tenant-a",
@@ -28,11 +29,13 @@ describe("authorization contract", () => {
     withAuthorization(
       Effect.gen(function* () {
         const service = yield* AuthorizationService
+
         const decision = yield* service.authorize({
           principal,
           tenantId: "tenant-a",
           capability: IdentityCapabilities.userAccountRead,
         })
+
         assert.strictEqual(decision.allowed, true)
         assert.strictEqual(decision.grant, "membership")
       }),
@@ -43,6 +46,7 @@ describe("authorization contract", () => {
     Effect.provide(
       Effect.gen(function* () {
         const service = yield* AuthorizationService
+
         for (const capability of ["process.catalog.read", "process.runtime.retry"] as const) {
           assert.strictEqual(
             (yield* service.authorize({
@@ -66,6 +70,7 @@ describe("authorization contract", () => {
     withAuthorization(
       Effect.gen(function* () {
         const service = yield* AuthorizationService
+
         const error = yield* Effect.flip(
           service.authorize({
             principal,
@@ -73,6 +78,7 @@ describe("authorization contract", () => {
             capability: IdentityCapabilities.userAccountRead,
           }),
         )
+
         assert.instanceOf(error, AuthorizationDenied)
       }),
     ),
@@ -226,10 +232,12 @@ describe("authorization contract", () => {
     Effect.provide(
       Effect.gen(function* () {
         const service = yield* AuthorizationService
+
         const added = yield* service.addMember({
           userAccountId: "new-user",
           tenantId: "tenant-a",
         })
+
         assert.strictEqual(added.status, "active")
         assert.instanceOf(
           yield* Effect.flip(

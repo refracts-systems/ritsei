@@ -5,6 +5,7 @@ import { useDialogInitialFocus } from "../primitives/dialog.tsx"
 function KobalteDialogContent() {
   const dialog = useDialogContext()
   useDialogInitialFocus(dialog)
+
   return (
     <Dialog.Content
       onEscapeKeyDown={() => dialog.close()}

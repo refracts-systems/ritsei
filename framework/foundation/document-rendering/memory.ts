@@ -34,8 +34,10 @@ const decodeArtifactWrite = (input: DocumentArtifactWrite) =>
         }),
       )
     }
+
     // Every field is still checked: callers outside TypeScript may send anything.
     const write: Partial<DocumentArtifactWrite> = input
+
     if (!(write.bytes instanceof Uint8Array)) {
       return yield* Effect.fail(
         new DocumentArtifactInvalidContent({
@@ -44,8 +46,10 @@ const decodeArtifactWrite = (input: DocumentArtifactWrite) =>
         }),
       )
     }
+
     const metadata = yield* Schema.decodeUnknownEffect(DocumentArtifact)(write.metadata)
     const fencing = yield* Schema.decodeUnknownEffect(FencingContext)(write.fencing)
+
     return { metadata, bytes: write.bytes, fencing } satisfies DocumentArtifactWrite
   })
 
@@ -59,6 +63,7 @@ const persistArtifact = (
     const key = artifactKey(write.metadata.tenantId, write.metadata.renderFingerprint)
     const existing = artifacts.get(key)
     const existingFingerprint = artifactIds.get(write.metadata.artifactId)
+
     if (
       existingFingerprint !== undefined &&
       existingFingerprint !== write.metadata.renderFingerprint
@@ -71,6 +76,7 @@ const persistArtifact = (
         }),
       )
     }
+
     if (existing !== undefined) {
       if (
         existing.metadata.contentHash !== write.metadata.contentHash ||
@@ -84,7 +90,9 @@ const persistArtifact = (
           }),
         )
       }
+
       generations.set(write.fencing.scope, BigInt(write.fencing.generation))
+
       return existing.metadata
     }
 
@@ -92,9 +100,11 @@ const persistArtifact = (
       metadata: write.metadata,
       bytes: write.bytes.slice(),
     }
+
     artifacts.set(key, stored)
     artifactIds.set(write.metadata.artifactId, write.metadata.renderFingerprint)
     generations.set(write.fencing.scope, BigInt(write.fencing.generation))
+
     return write.metadata
   })
 
@@ -108,6 +118,7 @@ export const makeMemoryDocumentArtifactStore = (): DocumentArtifactStore => {
   ) {
     const write = yield* decodeArtifactWrite(input)
     const contentHash = yield* sha256Hex(write.bytes)
+
     if (
       contentHash !== write.metadata.contentHash ||
       write.bytes.byteLength !== write.metadata.byteLength
@@ -119,8 +130,10 @@ export const makeMemoryDocumentArtifactStore = (): DocumentArtifactStore => {
         }),
       )
     }
+
     const incomingGeneration = BigInt(write.fencing.generation)
     const currentGeneration = generations.get(write.fencing.scope)
+
     if (currentGeneration !== undefined && incomingGeneration < currentGeneration) {
       return yield* Effect.fail(
         new DocumentArtifactStaleWriter({
@@ -130,6 +143,7 @@ export const makeMemoryDocumentArtifactStore = (): DocumentArtifactStore => {
         }),
       )
     }
+
     return yield* persistArtifact(artifacts, artifactIds, generations, write)
   })
 
@@ -138,6 +152,7 @@ export const makeMemoryDocumentArtifactStore = (): DocumentArtifactStore => {
   ) {
     const decoded = yield* Schema.decodeUnknownEffect(DocumentArtifactLookup)(input)
     const found = artifacts.get(artifactKey(decoded.tenantId, decoded.renderFingerprint))
+
     return found === undefined
       ? undefined
       : { metadata: found.metadata, bytes: found.bytes.slice() }

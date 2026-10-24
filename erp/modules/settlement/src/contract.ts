@@ -24,8 +24,11 @@ const Text = TrimmedText(128)
 const ScopedInput = { principal: Principal, tenantId: Uuid }
 
 export const SettlementSide = Schema.Literals(["receivable", "payable"])
+
 export type SettlementSide = Schema.Schema.Type<typeof SettlementSide>
+
 export const PaymentDirection = Schema.Literals(["incoming", "outgoing"])
+
 export type PaymentDirection = Schema.Schema.Type<typeof PaymentDirection>
 
 export const PaymentTerm = Schema.Struct({
@@ -35,6 +38,7 @@ export const PaymentTerm = Schema.Struct({
   name: Text,
   netDays: Schema.Int,
 })
+
 export type PaymentTerm = Schema.Schema.Type<typeof PaymentTerm>
 
 export const Allocation = Schema.Struct({ invoiceId: Uuid, amount: FinancialMajorAmount })
@@ -53,6 +57,7 @@ export const Payment = Schema.Struct({
   journalEntryId: Uuid,
   allocations: Schema.Array(Allocation),
 })
+
 export type Payment = Schema.Schema.Type<typeof Payment>
 
 const Buckets = {
@@ -65,6 +70,7 @@ const Buckets = {
   unapplied: SignedAmount,
   total: SignedAmount,
 }
+
 export const AgingReport = Schema.Struct({
   legalEntityId: Uuid,
   side: SettlementSide,
@@ -72,6 +78,7 @@ export const AgingReport = Schema.Struct({
   rows: Schema.Array(Schema.Struct({ partyId: Uuid, ...Buckets })),
   totals: Schema.Struct(Buckets),
 })
+
 export type AgingReport = Schema.Schema.Type<typeof AgingReport>
 
 export const StatementEntry = Schema.Struct({
@@ -83,6 +90,7 @@ export const StatementEntry = Schema.Struct({
   amount: SignedAmount,
   balance: SignedAmount,
 })
+
 export const CustomerStatement = Schema.Struct({
   legalEntityId: Uuid,
   partyId: Uuid,
@@ -92,6 +100,7 @@ export const CustomerStatement = Schema.Struct({
   entries: Schema.Array(StatementEntry),
   closingBalance: SignedAmount,
 })
+
 export type CustomerStatement = Schema.Schema.Type<typeof CustomerStatement>
 
 export const CreatePaymentTermInput = Schema.Struct({
@@ -100,12 +109,14 @@ export const CreatePaymentTermInput = Schema.Struct({
   name: Text,
   netDays: Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: 3650 })),
 })
+
 export const AssignPartyTermInput = Schema.Struct({
   ...ScopedInput,
   partyId: Uuid,
   side: SettlementSide,
   paymentTermId: Uuid,
 })
+
 const PaymentFields = {
   ...ScopedInput,
   /** Client-chosen id that makes a retried command return the recorded payment. */
@@ -126,8 +137,10 @@ const PaymentFields = {
     ),
   ),
 }
+
 export const ReceivePaymentInput = Schema.Struct(PaymentFields)
 export const MakePaymentInput = Schema.Struct(PaymentFields)
+
 export const AllocatePaymentInput = Schema.Struct({
   ...ScopedInput,
   paymentId: Uuid,
@@ -135,12 +148,14 @@ export const AllocatePaymentInput = Schema.Struct({
   allocatedOn: CalendarDate,
   allocations: Schema.Array(Allocation).check(Schema.isMinLength(1)),
 })
+
 export const AgingInput = Schema.Struct({
   ...ScopedInput,
   legalEntityId: Uuid,
   side: SettlementSide,
   asOf: CalendarDate,
 })
+
 export const StatementInput = Schema.Struct({
   ...ScopedInput,
   legalEntityId: Uuid,
@@ -150,6 +165,7 @@ export const StatementInput = Schema.Struct({
 })
 
 type CommonFailure = AuthorizationDenied | DatabaseFailure | Schema.SchemaError
+
 export type PaymentFailure =
   | SettlementErrors.AllocationBeforePayment
   | SettlementErrors.AllocationExceedsPayment

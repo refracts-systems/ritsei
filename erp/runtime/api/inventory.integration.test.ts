@@ -35,7 +35,9 @@ const warehouse = {
   primaryBranchId: null,
   name: "Main",
 }
+
 const item = { id: itemId, tenantId, sku: "SKU-1", name: "Widget", unitOfMeasure: "EA" }
+
 const balance = {
   tenantId,
   warehouseId,
@@ -44,6 +46,7 @@ const balance = {
   reserved: "2",
   unitOfMeasure: "EA",
 }
+
 const reservation = {
   id: reservationId,
   tenantId,
@@ -53,6 +56,7 @@ const reservation = {
   idempotencyKey: "reserve-1",
   status: "active" as const,
 }
+
 const transfer = {
   id: transferId,
   tenantId,
@@ -64,6 +68,7 @@ const transfer = {
   completedAt: null,
   lines: [{ itemId, quantity: "1" }],
 }
+
 const movement = {
   id: movementId,
   tenantId,
@@ -108,9 +113,11 @@ it.layer(TestHttpServices)("inventory API read projections", (it) => {
       const bearer = Layer.succeed(BearerAuth, {
         bearer: (effect) => Effect.provideService(effect, CurrentPrincipal, principal),
       })
+
       const bearerClient = HttpApiMiddleware.layerClient(BearerAuth, ({ request, next }) =>
         next(HttpClientRequest.bearerToken(request, "inventory-token")),
       )
+
       const handlers = InventoryHandlers.pipe(
         Layer.provide(bearer),
         Layer.provide(Layer.succeed(InventoryService, inventoryService)),
@@ -121,6 +128,7 @@ it.layer(TestHttpServices)("inventory API read projections", (it) => {
           ),
         ),
       )
+
       const client = yield* HttpApiTest.groups(RitseiApi, ["Inventory"]).pipe(
         Effect.provide(Layer.mergeAll(handlers, bearerClient, bearer)),
       )

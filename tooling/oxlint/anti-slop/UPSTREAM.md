@@ -21,7 +21,7 @@ formatting, and Fallow because it keeps upstream's tab-indented style.
 `anti-slop/no-widen-then-assert`, `anti-slop-effect/no-manual-effect-error-tag`,
 `anti-slop-effect/prefer-effect-match`, `anti-slop/no-chained-type-assertions`,
 `anti-slop/no-unsafe-dictionary-type`, `anti-slop/no-runtime-typeof`, `anti-slop/no-unknown-returns`, and
-`anti-slop/require-safety-comment-for-type-assertion` (everywhere, tests included), `anti-slop-effect/no-service-constructor-imports`, `anti-slop/no-shape-in-symbol-names`, `anti-slop/no-conditional-empty-object-spread`, `anti-slop/no-unknown-parameters`, `anti-slop-effect/no-manual-tag-comparison`, `anti-slop-effect/no-manual-tagged-construction`.
+`anti-slop/require-safety-comment-for-type-assertion` (everywhere, tests included), `anti-slop-effect/no-service-constructor-imports`, `anti-slop/no-shape-in-symbol-names`, `anti-slop/no-conditional-empty-object-spread`, `anti-slop/no-unknown-parameters`, `anti-slop-effect/no-manual-tag-comparison`, `anti-slop-effect/no-manual-tagged-construction`, `anti-slop/require-readable-spacing`.
 
 `pnpm run lint` passes with this set. Fixes made when enabling it:
 
@@ -100,12 +100,9 @@ formatting, and Fallow because it keeps upstream's tab-indented style.
   that hand-matched outcome unions were a repo convention was wrong: no ADR required them.
 - `no-reflect-get` (1 site): the `Proxy` default branch in `request-limits.ts` reads the wrapped
   request directly, with a `SAFETY:` comment.
+- `require-readable-spacing` (8468 sites): the autofix only inserts blank lines, which oxfmt keeps, so
+  the rule and the formatter agree. It ran as one commit that is listed in `.git-blame-ignore-revs`.
 
 ## Rules left off, and why
 
-Counts are Oxlint findings when each rule was enabled alone. Enable a rule only together with the
-cleanup it needs.
-
-| Rule | Findings | Reason |
-| --- | --- | --- |
-| `require-readable-spacing` | 8468 | Formatting belongs to oxfmt; the autofix would rewrite most files and fight the formatter. |
+None: every rule in the upstream package is enabled.

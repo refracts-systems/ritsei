@@ -9,6 +9,7 @@ import { makePartyPostgresStore } from "./postgres.ts"
 import { makePartyServiceFromStore } from "./service.ts"
 
 export const makePartyService = makePartyServiceFromStore(makePartyPostgresStore)
+
 export const PartyEventPublisherLive = Layer.effect(
   PartyEventPublisher,
   Effect.map(MessagingService, (messaging) => ({ append: messaging.append })),

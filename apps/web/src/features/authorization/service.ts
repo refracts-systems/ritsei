@@ -37,6 +37,7 @@ export const listMemberships = Effect.fn("Frontend.Authorization.listMemberships
   const connection = yield* BrowserConnection
   const body = yield* requestJson(`${authorizationRoutes.list}${querySuffix(decoded)}`)
   const memberships = yield* decodeResponse(MembershipList, body, "invalid-response")
+
   if (
     !responseListMatches(memberships, {
       tenantId: connection.tenantId,
@@ -50,6 +51,7 @@ export const listMemberships = Effect.fn("Frontend.Authorization.listMemberships
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "invalid-response" }))
   }
+
   return memberships
 })
 
@@ -60,6 +62,7 @@ export const getMembership = Effect.fn("Frontend.Authorization.getMembership")(f
   const connection = yield* BrowserConnection
   const body = yield* requestJson(routeWithUserAccountId(authorizationRoutes.get, decodedId))
   const membership = yield* decodeResponse(TenantMembership, body, "invalid-response")
+
   if (
     !responseMatches(membership, {
       userAccountId: decodedId,
@@ -68,6 +71,7 @@ export const getMembership = Effect.fn("Frontend.Authorization.getMembership")(f
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "invalid-response" }))
   }
+
   return membership
 })
 
@@ -76,10 +80,13 @@ export const listDirectGrants = Effect.fn("Frontend.Authorization.listDirectGran
 ) {
   const decodedId = yield* decodeInput(Uuid, userAccountId)
   const connection = yield* BrowserConnection
+
   const body = yield* requestJson(
     routeWithUserAccountId(authorizationRoutes.listDirectGrants, decodedId),
   )
+
   const grants = yield* decodeResponse(DirectGrantList, body, "invalid-response")
+
   if (
     !responseListMatches(grants, {
       userAccountId: decodedId,
@@ -88,6 +95,7 @@ export const listDirectGrants = Effect.fn("Frontend.Authorization.listDirectGran
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "invalid-response" }))
   }
+
   return grants
 })
 
@@ -95,6 +103,7 @@ export const listCapabilityDefinitions = Effect.fn(
   "Frontend.Authorization.listCapabilityDefinitions",
 )(function* () {
   const body = yield* requestJson(authorizationRoutes.listCapabilityDefinitions)
+
   return yield* decodeResponse(CapabilityCatalog, body, "invalid-response")
 })
 
@@ -105,6 +114,7 @@ export const addMembership = Effect.fn("Frontend.Authorization.addMembership")(f
   const connection = yield* BrowserConnection
   const body = yield* mutationRequest(authorizationRoutes.add, "POST", decoded)
   const membership = yield* decodeResponse(TenantMembership, body, "unknown-outcome")
+
   if (
     !responseMatches(membership, {
       userAccountId: decoded.userAccountId,
@@ -113,6 +123,7 @@ export const addMembership = Effect.fn("Frontend.Authorization.addMembership")(f
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
   }
+
   return membership
 })
 
@@ -121,11 +132,14 @@ export const suspendMembership = Effect.fn("Frontend.Authorization.suspendMember
 ) {
   const decodedId = yield* decodeInput(Uuid, userAccountId)
   const connection = yield* BrowserConnection
+
   const body = yield* mutationRequest(
     routeWithUserAccountId(authorizationRoutes.suspend, decodedId),
     "POST",
   )
+
   const membership = yield* decodeResponse(TenantMembership, body, "unknown-outcome")
+
   if (
     !responseMatches(membership, {
       userAccountId: decodedId,
@@ -135,6 +149,7 @@ export const suspendMembership = Effect.fn("Frontend.Authorization.suspendMember
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
   }
+
   return membership
 })
 
@@ -143,11 +158,14 @@ export const activateMembership = Effect.fn("Frontend.Authorization.activateMemb
 ) {
   const decodedId = yield* decodeInput(Uuid, userAccountId)
   const connection = yield* BrowserConnection
+
   const body = yield* mutationRequest(
     routeWithUserAccountId(authorizationRoutes.activate, decodedId),
     "POST",
   )
+
   const membership = yield* decodeResponse(TenantMembership, body, "unknown-outcome")
+
   if (
     !responseMatches(membership, {
       userAccountId: decodedId,
@@ -157,6 +175,7 @@ export const activateMembership = Effect.fn("Frontend.Authorization.activateMemb
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
   }
+
   return membership
 })
 

@@ -40,6 +40,7 @@ export type PostEntryOutcome = Data.TaggedEnum<{
   AccountMissing: {}
   IdempotencyConflict: {}
 }>
+
 export const PostEntryOutcome = Data.taggedEnum<PostEntryOutcome>()
 
 export type AccountActivity = {

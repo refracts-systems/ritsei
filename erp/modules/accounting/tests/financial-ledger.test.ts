@@ -18,6 +18,7 @@ import {
 
 const tenantId = "tenant-a"
 const legalEntityId = "legal-entity-a"
+
 const account = (accountId: string) => ({
   tenantId,
   legalEntityId,
@@ -25,6 +26,7 @@ const account = (accountId: string) => ({
   currency: "USD",
   mappingVersion: 1,
 })
+
 const journal = (operationId = "operation-1") => ({
   tenantId,
   legalEntityId,
@@ -77,6 +79,7 @@ describe("financial ledger contract", () => {
 
         const first = yield* ledger.postJournal(journal())
         const replay = yield* ledger.postJournal(journal())
+
         const conflict = yield* ledger.postJournal({
           ...journal(),
           lines: [
@@ -86,6 +89,7 @@ describe("financial ledger contract", () => {
         })
 
         assert.strictEqual(first._tag, "accepted")
+
         if (!FinancialExecutionOutcome.guards.accepted(first)) return
         assert.strictEqual(first.transferCount, 1)
         assert.deepStrictEqual(replay, first)
@@ -127,6 +131,7 @@ describe("financial ledger contract", () => {
     withLedger(
       Effect.gen(function* () {
         const ledger = yield* FinancialLedgerPort
+
         const unbalanced = yield* ledger.postJournal({
           ...journal("unbalanced"),
           lines: [
@@ -134,6 +139,7 @@ describe("financial ledger contract", () => {
             { accountId: "revenue", debitMinor: "0", creditMinor: "12000" },
           ],
         })
+
         assert.deepStrictEqual(
           unbalanced,
           FinancialExecutionRejected.make({ operationId: "unbalanced", reason: "unbalanced" }),
@@ -154,6 +160,7 @@ describe("financial ledger contract", () => {
             lines: [{ accountId: "cash", debitMinor: "-1", creditMinor: "0" }],
           }),
         )
+
         assert.strictEqual(invalidInput._tag, "SchemaError")
       }),
     ),
@@ -214,9 +221,11 @@ describe("financial ledger contract", () => {
       Effect.gen(function* () {
         const ledger = yield* FinancialLedgerPort
         yield* ledger.createExecutionAccount(account("cash"))
+
         const balance = yield* ledger.getBalance({
           ...account("cash"),
         })
+
         assert.deepStrictEqual(
           balance,
           FinancialBalanceAvailable.make({

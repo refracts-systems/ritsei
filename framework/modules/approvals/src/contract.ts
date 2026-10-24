@@ -17,6 +17,7 @@ import type {
 } from "./errors.ts"
 
 const Uuid = Schema.String.check(Schema.isUUID())
+
 /** A dotted subject type owned by the caller, such as `procurement.purchase_order`. */
 export const SubjectType = Schema.String.check(Schema.isPattern(/^[a-z][a-z0-9_.]*$/))
 const ScopedInput = { principal: Principal, tenantId: Uuid }
@@ -29,6 +30,7 @@ export const ApprovalPolicy = Schema.Struct({
   threshold: FinancialMajorAmount,
   approverCapability: Schema.String,
 })
+
 export type ApprovalPolicy = Schema.Schema.Type<typeof ApprovalPolicy>
 
 export const ApprovalRequest = Schema.Struct({
@@ -43,6 +45,7 @@ export const ApprovalRequest = Schema.Struct({
   decidedBy: Schema.NullOr(Schema.String),
   decidedAt: Schema.NullOr(InstantString),
 })
+
 export type ApprovalRequest = Schema.Schema.Type<typeof ApprovalRequest>
 
 export const ConfigurePolicyInput = Schema.Struct({
@@ -53,6 +56,7 @@ export const ConfigurePolicyInput = Schema.Struct({
     Schema.isPattern(/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*){1,2}$/),
   ),
 })
+
 export const SubmitApprovalInput = Schema.Struct({
   ...ScopedInput,
   subjectType: SubjectType,
@@ -60,16 +64,19 @@ export const SubmitApprovalInput = Schema.Struct({
   amount: FinancialMajorAmount,
   reason: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(500)),
 })
+
 export const DecideApprovalInput = Schema.Struct({
   ...ScopedInput,
   requestId: Uuid,
   decision: Schema.Literals(["approve", "reject"]),
 })
+
 export const SubjectInput = Schema.Struct({
   ...ScopedInput,
   subjectType: SubjectType,
   subjectId: Uuid,
 })
+
 export const RequirementInput = Schema.Struct({
   ...ScopedInput,
   subjectType: SubjectType,

@@ -79,6 +79,7 @@ export const makePostgresMessagingService = Effect.fn("Messaging.makePostgresSer
     ) {
       const decoded = yield* Schema.decodeUnknownEffect(AppendEventInput)(input)
       const occurredAt = new Date(decoded.occurredAt)
+
       return yield* database.withTransaction(
         Effect.gen(function* () {
           const inserted = yield* database.query(
@@ -104,9 +105,11 @@ export const makePostgresMessagingService = Effect.fn("Messaging.makePostgresSer
                 .returning(selectEvent),
             "messaging.event.append",
           )
+
           if (inserted[0] !== undefined) {
             return yield* decodePersistedEvent(inserted[0], "messaging.event.append.decode")
           }
+
           const existing = yield* database.query(
             (db) =>
               db
@@ -128,11 +131,14 @@ export const makePostgresMessagingService = Effect.fn("Messaging.makePostgresSer
                 ),
             "messaging.event.get-existing",
           )
+
           if (existing.length !== 1) return yield* Effect.fail(conflict(decoded))
+
           const event = yield* decodePersistedEvent(
             existing[0]!,
             "messaging.event.append.decode-existing",
           )
+
           return envelopeMatches(decoded, event) ? event : yield* Effect.fail(conflict(decoded))
         }),
         "messaging.event.append-transaction",
@@ -143,6 +149,7 @@ export const makePostgresMessagingService = Effect.fn("Messaging.makePostgresSer
       input: Schema.Codec.Encoded<typeof GetEventInput>,
     ) {
       const decoded = yield* Schema.decodeUnknownEffect(GetEventInput)(input)
+
       const rows = yield* database.query(
         (db) =>
           db
@@ -153,6 +160,7 @@ export const makePostgresMessagingService = Effect.fn("Messaging.makePostgresSer
             ),
         "messaging.event.get",
       )
+
       return rows[0] === undefined
         ? undefined
         : yield* decodePersistedEvent(rows[0], "messaging.event.get.decode")
@@ -164,10 +172,12 @@ export const makePostgresMessagingService = Effect.fn("Messaging.makePostgresSer
     ) =>
       Effect.fn("MessagingService.consumeOnce")(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(ConsumeOnceInput)(input)
+
         const result = yield* database
           .withTransaction(
             Effect.gen(function* () {
               const source = yield* findEventIdentity(decoded)
+
               if (source === undefined) {
                 return yield* Effect.fail(
                   new DatabaseFailure({
@@ -176,14 +186,19 @@ export const makePostgresMessagingService = Effect.fn("Messaging.makePostgresSer
                   }),
                 )
               }
+
               const existing = yield* findReceipt(decoded)
+
               if (existing !== undefined) {
                 if (!receiptMatchesEvent(existing, source)) {
                   return yield* Effect.fail(identityFailure())
                 }
+
                 return { duplicate: true as const, receipt: existing }
               }
+
               const value = yield* effect
+
               const rows = yield* database.query(
                 (db) =>
                   db
@@ -192,22 +207,29 @@ export const makePostgresMessagingService = Effect.fn("Messaging.makePostgresSer
                     .returning(selectReceipt),
                 "messaging.receipt.complete",
               )
+
               return { duplicate: false as const, value, receipt: toReceipt(rows[0]!) }
             }),
             "messaging.consume-once",
           )
           .pipe(Effect.result)
+
         if (Result.isSuccess(result)) return result.success
+
         if (isDatabaseConstraint(result.failure, "consumer_receipts_pkey")) {
           const receipt = yield* findReceipt(decoded)
+
           if (receipt !== undefined) {
             const source = yield* findEventIdentity(decoded)
+
             if (source !== undefined && receiptMatchesEvent(receipt, source)) {
               return { duplicate: true as const, receipt }
             }
+
             if (source !== undefined) return yield* Effect.fail(identityFailure())
           }
         }
+
         return yield* Effect.fail(result.failure)
       })()
 

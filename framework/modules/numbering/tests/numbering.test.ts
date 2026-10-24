@@ -37,9 +37,11 @@ describe("numbering", () => {
       const first = yield* numbering.allocate(request())
       const second = yield* numbering.allocate(request())
       const otherScope = yield* numbering.allocate(request({ scopeId: otherScopeId }))
+
       const otherType = yield* numbering.allocate(
         request({ documentType: "accounting.journal", prefix: "JE/" }),
       )
+
       const nextYear = yield* numbering.allocate(request({ documentDate: "2027-01-02" }))
       assert.deepStrictEqual(
         [first.number, second.number, otherScope.number, otherType.number, nextYear.number],
@@ -64,9 +66,11 @@ describe("numbering", () => {
     Effect.gen(function* () {
       const numbering = yield* NumberingService
       const badType = yield* Effect.flip(numbering.allocate(request({ documentType: "Invoice" })))
+
       const badDate = yield* Effect.flip(
         numbering.allocate(request({ documentDate: "2026-02-30" })),
       )
+
       assert.strictEqual(badType._tag, "SchemaError")
       assert.strictEqual(badDate._tag, "SchemaError")
     }).pipe(Effect.provide(makeNumberingTestLayer())),

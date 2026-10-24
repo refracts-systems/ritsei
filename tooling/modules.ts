@@ -14,20 +14,24 @@ const isTestPath = (path: string) => /\/tests\/|\.test\.tsx?$/.test(path)
 
 const moduleDirectories = async () => {
   const names: string[] = []
+
   for (const entry of await readdir(moduleRoot, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue
+
     try {
       if ((await stat(`${moduleRoot}/${entry.name}/mod.ts`)).isFile()) names.push(entry.name)
     } catch (cause) {
       if (!hasErrnoCode(cause, "ENOENT")) throw cause
     }
   }
+
   return names
 }
 
 const sameSet = (left: Iterable<string>, right: Iterable<string>) => {
   const a = [...new Set(left)].toSorted()
   const b = [...new Set(right)].toSorted()
+
   return a.length === b.length && a.every((value, index) => value === b[index])
 }
 
@@ -54,6 +58,7 @@ const schemaFailures = (manifests: Manifests, ownership: ReadonlyMap<string, str
       .filter(([, owner]) => owner === `${moduleRoot}/${name}`)
       .map(([schema]) => schema)
       .toArray()
+
     return sameSet(owned, schemas)
       ? []
       : [
@@ -67,7 +72,9 @@ const importFailures = (files: ReadonlyArray<SourceFile>, manifests: Manifests) 
     const path = file.path.replaceAll("\\", "/")
     const source = moduleOf(path)
     const manifest = source === undefined ? undefined : manifests.get(source)
+
     if (manifest === undefined || isTestPath(path)) return []
+
     return extractModuleImports(file)
       .map(({ specifier }) => moduleOf(resolveLocal(path, specifier)))
       .filter((target) => target !== undefined && target !== source)
@@ -104,12 +111,14 @@ export const checkModules = async (
   manifests: ReadonlyArray<ModuleManifest>,
 ): Promise<readonly string[]> => {
   const byName: Manifests = new Map(manifests.map((manifest) => [manifest.name, manifest]))
+
   const [directories, ownership, files, adapters] = await Promise.all([
     moduleDirectories(),
     readFile("db/ownership.toml", "utf8").then(parseOwnership),
     collectSourceFiles(moduleRoot, [".ts", ".tsx"]),
     httpAdapters(manifests),
   ])
+
   const failures = [
     ...validateModuleRegistry(manifests),
     ...registrationFailures(directories, byName),
@@ -117,15 +126,18 @@ export const checkModules = async (
     ...importFailures(files, byName),
     ...surfaceFailures(byName, adapters),
   ]
+
   return [...new Set(failures)].toSorted()
 }
 
 if (isMain(import.meta.url)) {
   const { ErpModules } = await import("../erp/runtime/modules.gen.ts")
   const failures = await checkModules(ErpModules)
+
   if (failures.length > 0) {
     console.error(failures.join("\n"))
     process.exit(1)
   }
+
   console.log("module manifests valid")
 }

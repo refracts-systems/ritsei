@@ -56,14 +56,17 @@ const AccountingReadLimit = Schema.optionalKey(
     Schema.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
   ),
 )
+
 const CreatedFinancialVerificationArtifact = FinancialVerificationArtifact.pipe(
   HttpApiSchema.status(201),
 )
+
 const FinancialStagingEvidenceAppendPayload = Schema.Struct({
   evidence: FinancialStagingEvidence,
   canonicalizationVersion: Schema.Literal(FINANCIAL_STAGING_EVIDENCE_CANONICALIZATION_VERSION),
   evidenceHash: Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/), Schema.isMaxLength(64)),
 })
+
 const FinancialStagingEvidenceLookupQuery = Schema.Struct({
   legalEntityId: Schema.optionalKey(Uuid),
   gateId: Schema.optionalKey(ShortString),
@@ -79,6 +82,7 @@ const FinancialStagingEvidenceLookupQuery = Schema.Struct({
     { expected: "staging evidence lookup requires gate, cohort, or deployment scope" },
   ),
 )
+
 const FinancialStagingEvidenceList = BoundedArray(FinancialStagingEvidenceRecord)
 const FiscalYearStartMonth = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 12 }))
 const CreatedAccountingConfiguration = AccountingConfiguration.pipe(HttpApiSchema.status(201))
@@ -436,6 +440,7 @@ export const AccountingHttpErrors = apiErrorMapping({
   TigerBeetleConfigurationFailure: "conflict",
   UnbalancedJournal: "conflict",
 })
+
 const coreApiEffect = AccountingHttpErrors.apiEffect
 
 export const AccountingHttpHandlers = HttpApiBuilder.group(
@@ -446,11 +451,13 @@ export const AccountingHttpHandlers = HttpApiBuilder.group(
       const accounting = yield* AccountingService
       const financialOperations = yield* FinancialOperationService
       const ledger = yield* GeneralLedgerService
+
       return handlers
         .handle(
           "listChart",
           Effect.fn("Http.Accounting.listChart")(function* ({ headers }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               ledger.listChart({ principal, tenantId: headers["x-tenant-id"] }),
             )
@@ -460,6 +467,7 @@ export const AccountingHttpHandlers = HttpApiBuilder.group(
           "applyChartTemplate",
           Effect.fn("Http.Accounting.applyChartTemplate")(function* ({ headers, payload }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               ledger.applyChartTemplate({
                 principal,
@@ -473,6 +481,7 @@ export const AccountingHttpHandlers = HttpApiBuilder.group(
           "createLedgerAccount",
           Effect.fn("Http.Accounting.createLedgerAccount")(function* ({ headers, payload }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               ledger.createAccount({ principal, tenantId: headers["x-tenant-id"], ...payload }),
             )
@@ -482,6 +491,7 @@ export const AccountingHttpHandlers = HttpApiBuilder.group(
           "listPostingRules",
           Effect.fn("Http.Accounting.listPostingRules")(function* ({ headers, params }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               ledger.listPostingRules({
                 principal,
@@ -499,6 +509,7 @@ export const AccountingHttpHandlers = HttpApiBuilder.group(
             payload,
           }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               ledger.configurePostingRule({
                 principal,
@@ -514,6 +525,7 @@ export const AccountingHttpHandlers = HttpApiBuilder.group(
           "postLedgerEntry",
           Effect.fn("Http.Accounting.postLedgerEntry")(function* ({ headers, params, payload }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               ledger.postManualEntry({
                 principal,
@@ -528,6 +540,7 @@ export const AccountingHttpHandlers = HttpApiBuilder.group(
           "trialBalance",
           Effect.fn("Http.Accounting.trialBalance")(function* ({ headers, params, query }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               ledger.trialBalance({
                 principal,
@@ -542,6 +555,7 @@ export const AccountingHttpHandlers = HttpApiBuilder.group(
           "generalLedger",
           Effect.fn("Http.Accounting.generalLedger")(function* ({ headers, params, query }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               ledger.generalLedger({
                 principal,
@@ -557,6 +571,7 @@ export const AccountingHttpHandlers = HttpApiBuilder.group(
           "listConfigurations",
           Effect.fn("Http.Accounting.listConfigurations")(function* ({ headers, query }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               accounting.listAccountingConfigurations({
                 principal,
@@ -570,6 +585,7 @@ export const AccountingHttpHandlers = HttpApiBuilder.group(
           "listAccounts",
           Effect.fn("Http.Accounting.listAccounts")(function* ({ headers, query }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               accounting.listAccounts({
                 principal,
@@ -583,6 +599,7 @@ export const AccountingHttpHandlers = HttpApiBuilder.group(
           "listPeriods",
           Effect.fn("Http.Accounting.listPeriods")(function* ({ headers, query }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               accounting.listAccountingPeriods({
                 principal,
@@ -596,6 +613,7 @@ export const AccountingHttpHandlers = HttpApiBuilder.group(
           "listRevenuePostingProfiles",
           Effect.fn("Http.Accounting.listRevenuePostingProfiles")(function* ({ headers, query }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               accounting.listRevenuePostingProfiles({
                 principal,
@@ -609,6 +627,7 @@ export const AccountingHttpHandlers = HttpApiBuilder.group(
           "listJournals",
           Effect.fn("Http.Accounting.listJournals")(function* ({ headers, query }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               accounting.listJournalEntries({
                 principal,
@@ -622,6 +641,7 @@ export const AccountingHttpHandlers = HttpApiBuilder.group(
           "prepareTigerBeetleCutover",
           Effect.fn("Http.Accounting.prepareTigerBeetleCutover")(function* ({ headers, params }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               accounting.prepareTigerBeetleCutover({
                 principal,
@@ -638,6 +658,7 @@ export const AccountingHttpHandlers = HttpApiBuilder.group(
             payload,
           }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               accounting.recordFinancialVerificationArtifact({
                 principal,
@@ -654,6 +675,7 @@ export const AccountingHttpHandlers = HttpApiBuilder.group(
             payload,
           }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               accounting.recordFinancialStagingEvidence({
                 principal,
@@ -667,6 +689,7 @@ export const AccountingHttpHandlers = HttpApiBuilder.group(
           "listFinancialStagingEvidence",
           Effect.fn("Http.Accounting.listFinancialStagingEvidence")(function* ({ headers, query }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               accounting.listFinancialStagingEvidence({
                 principal,
@@ -684,6 +707,7 @@ export const AccountingHttpHandlers = HttpApiBuilder.group(
             payload,
           }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               accounting.approveTigerBeetleCutover({
                 principal,
@@ -698,6 +722,7 @@ export const AccountingHttpHandlers = HttpApiBuilder.group(
           "activateTigerBeetleCutover",
           Effect.fn("Http.Accounting.activateTigerBeetleCutover")(function* ({ headers, params }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               accounting.activateTigerBeetleCutover({
                 principal,
@@ -715,6 +740,7 @@ export const AccountingHttpHandlers = HttpApiBuilder.group(
             payload,
           }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               accounting.configureLegalEntity({
                 principal,
@@ -729,6 +755,7 @@ export const AccountingHttpHandlers = HttpApiBuilder.group(
           "createAccount",
           Effect.fn("Http.Accounting.createAccount")(function* ({ headers, payload }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               accounting.createAccount({ principal, tenantId: headers["x-tenant-id"], ...payload }),
             )
@@ -738,6 +765,7 @@ export const AccountingHttpHandlers = HttpApiBuilder.group(
           "postJournal",
           Effect.fn("Http.Accounting.postJournal")(function* ({ headers, payload }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               accounting.postJournal({ principal, tenantId: headers["x-tenant-id"], ...payload }),
             )
@@ -747,6 +775,7 @@ export const AccountingHttpHandlers = HttpApiBuilder.group(
           "configureRevenuePosting",
           Effect.fn("Http.Accounting.configureRevenuePosting")(function* ({ headers, payload }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               accounting.configureRevenuePosting({
                 principal,
@@ -760,6 +789,7 @@ export const AccountingHttpHandlers = HttpApiBuilder.group(
           "openPeriod",
           Effect.fn("Http.Accounting.openPeriod")(function* ({ headers, payload }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               accounting.openPeriod({
                 principal,
@@ -773,6 +803,7 @@ export const AccountingHttpHandlers = HttpApiBuilder.group(
           "closePeriod",
           Effect.fn("Http.Accounting.closePeriod")(function* ({ headers, params, payload }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               accounting.closePeriod({
                 principal,
@@ -790,6 +821,7 @@ export const AccountingHttpHandlers = HttpApiBuilder.group(
             payload,
           }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               financialOperations.rebuildFinancialProjections({
                 principal,
@@ -806,6 +838,7 @@ export const AccountingHttpHandlers = HttpApiBuilder.group(
             payload,
           }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               financialOperations.reconcileFinancialCheckpoint({
                 principal,
@@ -822,6 +855,7 @@ export const AccountingHttpHandlers = HttpApiBuilder.group(
             payload,
           }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               financialOperations.createJournalIntent({
                 principal,
@@ -838,6 +872,7 @@ export const AccountingHttpHandlers = HttpApiBuilder.group(
             payload,
           }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               financialOperations.createRevenueIntent({
                 principal,
@@ -854,6 +889,7 @@ export const AccountingHttpHandlers = HttpApiBuilder.group(
             payload,
           }) {
             const principal = yield* CurrentPrincipal
+
             return yield* coreApiEffect(
               financialOperations.createReversalIntent({
                 principal,

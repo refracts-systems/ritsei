@@ -29,23 +29,27 @@ it.effect("maps framework and module failures to stable HTTP errors", () =>
     const forbidden = toCoreApiError(
       new AuthorizationDenied({ tenantId, capability: "party.branch.create" }),
     )
+
     assert.instanceOf(forbidden, ApiForbidden)
 
     const notFound = SalesHttpErrors.toApiError(
       new SalesOrderNotFound({ tenantId, orderId: entityId }),
     )
+
     assert.instanceOf(notFound, ApiNotFound)
     assert.strictEqual(notFound.code, "SalesOrderNotFound")
 
     const conflict = InventoryHttpErrors.toApiError(
       new StockUnavailable({ tenantId, warehouseId: entityId, itemId: entityId, requested: "1" }),
     )
+
     assert.instanceOf(conflict, ApiConflict)
     assert.strictEqual(conflict.code, "StockUnavailable")
 
     const procurementNotFound = ProcurementHttpErrors.toApiError(
       new PurchaseOrderNotFound({ tenantId, purchaseOrderId: entityId }),
     )
+
     assert.instanceOf(procurementNotFound, ApiNotFound)
     assert.strictEqual(procurementNotFound.code, "PurchaseOrderNotFound")
 
@@ -59,6 +63,7 @@ it.effect("maps framework and module failures to stable HTTP errors", () =>
         requested: "1",
       }),
     )
+
     assert.instanceOf(procurementConflict, ApiConflict)
     assert.strictEqual(procurementConflict.code, "PurchaseReceiptQuantityExceeded")
 
@@ -69,6 +74,7 @@ it.effect("maps framework and module failures to stable HTTP errors", () =>
         reason: "different_content",
       }),
     )
+
     assert.instanceOf(stagingEvidenceConflict, ApiConflict)
     assert.strictEqual(stagingEvidenceConflict.code, "FinancialStagingEvidenceConflict")
 
@@ -79,12 +85,14 @@ it.effect("maps framework and module failures to stable HTTP errors", () =>
         reason: "hash_mismatch",
       }),
     )
+
     assert.instanceOf(stagingEvidenceInvalid, ApiConflict)
     assert.strictEqual(stagingEvidenceInvalid.code, "FinancialStagingEvidenceInvalid")
 
     const invalidRequest = toCoreApiError(
       yield* Effect.flip(Schema.decodeUnknownEffect(Schema.String)(1)),
     )
+
     assert.instanceOf(invalidRequest, ApiConflict)
     assert.strictEqual(invalidRequest.code, "invalid_request")
 
@@ -97,6 +105,7 @@ it.effect("maps framework and module failures to stable HTTP errors", () =>
     const invalidReplicaToken = toCoreApiError(
       new ReplicaConsistencyFailure({ reason: "tenant_mismatch" }),
     )
+
     assert.instanceOf(invalidReplicaToken, ApiConflict)
     assert.strictEqual(invalidReplicaToken.code, "invalid_consistency_token")
   }),

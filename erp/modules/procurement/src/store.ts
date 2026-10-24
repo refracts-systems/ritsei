@@ -22,6 +22,7 @@ import type {
 import { SupplierRelationshipNotEligible } from "./errors.ts"
 
 export type ProcurementStore = import("./contract.ts").ProcurementService
+
 type CreateSupplierAccount = Schema.Schema.Type<typeof CreateSupplierAccountInput>
 
 export const loadSupplierRelationship = (party: PartyService, input: CreateSupplierAccount) =>
@@ -145,13 +146,16 @@ export const sameReceiptLines = (
   right: ReadonlyArray<GoodsReceiptLine>,
 ) => {
   const orderedLeft = canonicalReceiptLines(left)
+
   const orderedRight = [...right].sort((a, b) =>
     a.purchaseOrderLineId.localeCompare(b.purchaseOrderLineId),
   )
+
   return (
     orderedLeft.length === orderedRight.length &&
     orderedLeft.every((line, index) => {
       const existing = orderedRight[index]!
+
       return (
         line.purchaseOrderLineId === existing.purchaseOrderLineId &&
         line.quantity === existing.quantity
@@ -185,6 +189,7 @@ export const deriveTotal = (lines: ReadonlyArray<PurchaseOrderLine>): string => 
     (total, line) => total + BigInt(line.quantity) * requireExactMajorToMinor(line.unitPrice, 2),
     0n,
   )
+
   return `${minor / 100n}.${(minor % 100n).toString().padStart(2, "0")}`
 }
 

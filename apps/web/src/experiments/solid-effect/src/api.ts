@@ -191,13 +191,17 @@ export function searchPackages(query: string) {
   const attempt = Effect.gen(function* () {
     const { flakiness, baseLatencyMs } = yield* SearchConfig
     yield* Effect.sleep(baseLatencyMs + Math.random() * 550)
+
     if (Math.random() < flakiness) {
       yield* Effect.sync(() =>
         log("retry", `search "${query}" hit a transient error — retrying with backoff`),
       )
+
       return yield* new TransientNetworkError({ query })
     }
+
     const q = query.toLowerCase()
+
     return REGISTRY.filter(
       (p) => p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q),
     ).sort((a, b) => b.downloads - a.downloads)
@@ -205,6 +209,7 @@ export function searchPackages(query: string) {
 
   return Effect.gen(function* () {
     yield* Effect.sync(() => log("start", `search "${query}" — fiber started`))
+
     return yield* attempt.pipe(
       Effect.retry({
         schedule: Schedule.exponential(150),
@@ -275,6 +280,7 @@ export function reserveInventory(items: CartItem[]) {
     yield* Effect.sleep(900)
     const reservation: Reservation = { id: `rsv_${++seq}`, items }
     yield* Effect.sync(() => log("success", `reserveInventory → ${reservation.id} held`))
+
     return reservation
   }).pipe(
     Effect.onInterrupt(() =>
@@ -317,14 +323,17 @@ export function refundCharge(charge: Charge) {
 export function chargeCard(amount: number, declineCard: boolean) {
   const attempt = Effect.gen(function* () {
     yield* Effect.sleep(2600)
+
     if (declineCard) return yield* new CardDeclinedError({ amount })
     const charge: Charge = { id: `ch_${++seq}`, amount }
     yield* Effect.sync(() => log("success", `chargeCard → ${charge.id} for $${amount.toFixed(2)}`))
+
     return charge
   })
 
   return Effect.gen(function* () {
     yield* Effect.sync(() => log("start", `chargeCard — authorizing $${amount.toFixed(2)}`))
+
     return yield* attempt
   }).pipe(
     Effect.tapError((e) =>
@@ -343,14 +352,17 @@ export function createOrder(items: CartItem[], reservation: Reservation, charge:
       log("start", `createOrder — committing ${reservation.id} + ${charge.id}`),
     )
     yield* Effect.sleep(700)
+
     const order: Order = {
       id: `ord_${++seq}`,
       items,
       total: charge.amount,
       placedAt: new Date().toLocaleTimeString(),
     }
+
     ORDERS = [order, ...ORDERS]
     yield* Effect.sync(() => log("success", `createOrder → ${order.id} confirmed`))
+
     return order
   }).pipe(
     Effect.onInterrupt(() =>

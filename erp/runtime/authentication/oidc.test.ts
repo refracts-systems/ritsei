@@ -50,6 +50,7 @@ it.effect("accepts a valid OIDC assertion and rejects invalid claims", () =>
         ["sign", "verify"],
       ),
     )
+
     const publicJwk = yield* Effect.promise(() => crypto.subtle.exportKey("jwk", keys.publicKey))
     const jwk = { ...publicJwk, kid: "test-key", alg: "RS256", use: "sig" }
     const originalFetch = globalThis.fetch
@@ -63,6 +64,7 @@ it.effect("accepts a valid OIDC assertion and rejects invalid claims", () =>
 
     const now = Math.floor(Date.now() / 1_000)
     const header = encode({ alg: "RS256", kid: "test-key", typ: "JWT" })
+
     const payload = encode({
       iss: oidcConfiguration.issuerUrl,
       sub: "subject-123",
@@ -74,7 +76,9 @@ it.effect("accepts a valid OIDC assertion and rejects invalid claims", () =>
       tenantId: "attacker-tenant",
       capabilities: ["accounting.post"],
     })
+
     const signingInput = `${header}.${payload}`
+
     const signature = yield* Effect.promise(() =>
       crypto.subtle.sign(
         { name: "RSASSA-PKCS1-v1_5" },
@@ -82,6 +86,7 @@ it.effect("accepts a valid OIDC assertion and rejects invalid claims", () =>
         new TextEncoder().encode(signingInput),
       ),
     )
+
     const signaturePart = encodeBytes(new Uint8Array(signature))
     const token = `${signingInput}.${signaturePart}`
     const identity = yield* withProvider(token)
@@ -98,6 +103,7 @@ it.effect("accepts a valid OIDC assertion and rejects invalid claims", () =>
       iat: 1,
       exp: 1,
     })
+
     assert.instanceOf(
       yield* Effect.flip(withProvider(`${header}.${expiredPayload}.${signaturePart}`)),
       InvalidExternalAssertion,
@@ -111,6 +117,7 @@ it.effect("accepts a valid OIDC assertion and rejects invalid claims", () =>
       exp: now + 300,
       nbf: "now",
     })
+
     assert.instanceOf(
       yield* Effect.flip(withProvider(`${header}.${malformedNbfPayload}.${signaturePart}`)),
       InvalidExternalAssertion,

@@ -59,6 +59,7 @@ export function QueryBoundary(props: QueryBoundaryProps) {
       : props.errorPrefix === undefined
         ? ""
         : `${props.errorPrefix} `
+
   const retryLabel = () =>
     props.retryLabel ??
     (props.variant === "retry"
@@ -66,6 +67,7 @@ export function QueryBoundary(props: QueryBoundaryProps) {
       : props.retryPrefix === undefined
         ? `Try loading ${props.label} again`
         : `${props.retryPrefix} ${props.label}`)
+
   return (
     <Errored
       fallback={(error, reset) => (

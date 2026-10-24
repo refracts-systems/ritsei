@@ -17,13 +17,16 @@ const snapshotId = "018f0000-0000-7000-8000-000000000014"
 const astId = "018f0000-0000-7000-8000-000000000015"
 const sourceId = "018f0000-0000-7000-8000-000000000016"
 const timestamp = "2026-09-06T00:00:00.000Z"
+
 const samplePng = Uint8Array.from(
   atob(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR42mNk+M/wHwAF/gL+U5gAAAAASUVORK5CYII=",
   ),
   (character) => character.charCodeAt(0),
 )
+
 const parsedIterations = Number(process.argv.slice(2)[0] ?? "10")
+
 const iterations =
   Number.isInteger(parsedIterations) && parsedIterations > 0 ? parsedIterations : 10
 
@@ -61,6 +64,7 @@ const benchmarkFixture = (fixture: BenchmarkFixture) =>
           schemaVersion: 1,
           payload: { fixture: fixture.name, version: 1 },
         })
+
         const context = documentContextFromSnapshot(snapshot)
         const startedAt = performance.now()
         let lastBytes = 0
@@ -75,6 +79,7 @@ const benchmarkFixture = (fixture: BenchmarkFixture) =>
             astVersion: 1,
             nodes: fixture.nodes,
           })
+
           const request = yield* createDocumentRenderRequest({
             tenantId,
             snapshotId,
@@ -93,6 +98,7 @@ const benchmarkFixture = (fixture: BenchmarkFixture) =>
             assetBytes: fixture.assetBytes,
             correlationId: `document-benchmark:${fixture.name}:${index}`,
           })
+
           const output = yield* renderer.render({ context, ast, request })
           lastBytes = output.bytes.byteLength
           lastPages = output.metadata.pageCount
@@ -100,6 +106,7 @@ const benchmarkFixture = (fixture: BenchmarkFixture) =>
         }
 
         const elapsedMs = Number((performance.now() - startedAt).toFixed(3))
+
         return {
           name: fixture.name,
           iterations,

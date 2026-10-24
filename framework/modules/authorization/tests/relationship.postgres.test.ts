@@ -18,18 +18,23 @@ it.effect.skipIf(databaseUrl === undefined)(
       Effect.gen(function* () {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
+
         const userAccounts = yield* makeUserAccountService.pipe(
           Effect.provideService(Database, database),
         )
+
         const user = yield* userAccounts.create({ email: `relationship-${uuidv7()}@example.test` })
+
         const auth = yield* makeAuthService.pipe(
           Effect.provideService(Database, database),
           Effect.provide(WebCryptoLive),
           Effect.provideService(UserAccountService, userAccounts),
         )
+
         const authorization = yield* makeAuthorizationService.pipe(
           Effect.provideService(Database, database),
         )
+
         const tenant = yield* auth.createTenant({ slug: `relationship-${uuidv7()}` })
         const engine = makePostgresRelationshipEngine(database)
         const principal = { userAccountId: user.id, sessionId: "relationship-session" }
@@ -41,10 +46,12 @@ it.effect.skipIf(databaseUrl === undefined)(
           resourceId: tenant.id,
           relationship: "member",
         })
+
         assert.strictEqual(before.allowed, false)
         assert.strictEqual(before.result, "denied")
 
         yield* authorization.addMember({ userAccountId: user.id, tenantId: tenant.id })
+
         const allowed = yield* engine.evaluate({
           principal,
           tenantId: tenant.id,
@@ -52,6 +59,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           resourceId: tenant.id,
           relationship: "member",
         })
+
         assert.strictEqual(allowed.allowed, true)
         assert.strictEqual(allowed.consistency, "current")
 
@@ -62,6 +70,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           resourceId: "invoice-1",
           relationship: "approver",
         })
+
         assert.strictEqual(unknown.allowed, false)
         assert.strictEqual(unknown.result, "unknown")
       }),

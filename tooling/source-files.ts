@@ -7,6 +7,7 @@ export interface SourceFile {
 }
 
 const ignoredDirectories = new Set(["node_modules", "vendor", ".auto"])
+
 const ignoredPaths = [
   "apps/web/src/ui/generated",
   "apps/web/src/shared/contracts/generated",
@@ -16,6 +17,7 @@ const ignoredPaths = [
 
 export const isIgnoredSourcePath = (path: string): boolean => {
   const normalized = path.replaceAll("\\", "/").replace(/^\.\//, "").replace(/\/$/, "")
+
   return (
     normalized.split("/").some((part) => ignoredDirectories.has(part)) ||
     ignoredPaths.some(
@@ -33,10 +35,13 @@ export const collectSourceFiles = async (
   extensions?: readonly string[],
 ): Promise<readonly SourceFile[]> => {
   const files: SourceFile[] = []
+
   const visit = async (path: string): Promise<void> => {
     if (isIgnoredSourcePath(path)) return
+
     for (const entry of await readdir(path, { withFileTypes: true })) {
       const child = `${path}/${entry.name}`
+
       if (entry.isDirectory()) {
         await visit(child)
       } else if (
@@ -56,5 +61,6 @@ export const collectSourceFiles = async (
   } catch (cause) {
     if (!hasErrnoCode(cause, "ENOENT")) throw cause
   }
+
   return files
 }

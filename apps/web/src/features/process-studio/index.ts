@@ -11,6 +11,7 @@ export {
   toProcessIr,
   validateDesignerModel,
 } from "./designer-model.ts"
+
 export type {
   CatalogReference,
   DesignerAction,
@@ -20,8 +21,11 @@ export type {
   ProcessDesignIr,
   TypedMapping,
 } from "./designer-model.ts"
+
 export { mountProcessDesigner } from "./designer.ts"
+
 export type { ProcessDesignerMount } from "./designer.ts"
+
 export {
   getProcessStudioTemplate,
   makeProcessStudioDraft,
@@ -32,6 +36,7 @@ export {
   ProcessStudioTemplates,
   serializeProcessStudioDraft,
 } from "./product-surface.ts"
+
 export type {
   ProcessDraftMetadata,
   ProcessDraftSource,

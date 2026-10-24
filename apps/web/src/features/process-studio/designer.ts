@@ -30,21 +30,26 @@ import {
 
 const tag = <K extends keyof HTMLElementTagNameMap>(name: K): HTMLElementTagNameMap[K] =>
   document.createElement(name)
+
 const text = (value: string): HTMLSpanElement => {
   const node = tag("span")
   node.textContent = value
+
   return node
 }
+
 const button = (value: string, action: () => void, className = ""): HTMLButtonElement => {
   const node = tag("button")
   node.type = "button"
   node.className = className
   node.textContent = value
   node.addEventListener("click", action)
+
   return node
 }
 
 const styleId = "ritsei-process-designer-style"
+
 const ensureStyle = (): void => {
   if (document.getElementById(styleId) !== null) return
   const style = tag("style")
@@ -97,6 +102,7 @@ const enableDrag = (item: HTMLLIElement, node: DesignerNode, handlers: Handlers)
   item.addEventListener("drop", (event) => {
     event.preventDefault()
     const source = event.dataTransfer?.getData("text/plain")
+
     if (source) handlers.drop(source, node.id)
   })
 }
@@ -107,17 +113,21 @@ const appendCapability = (
   catalog: readonly ProcessCatalogDescriptor[],
 ): void => {
   if (node.capability === undefined) return
+
   const ref = text(
     `${node.capability.kind}: ${node.capability.id || "unassigned"} v${node.capability.version}`,
   )
+
   ref.className = "capability"
   card.append(ref)
+
   const found = catalog.find(
     (entry) =>
       entry.kind === node.capability?.kind &&
       entry.id === node.capability.id &&
       entry.version === node.capability.version,
   )
+
   if (found !== undefined) {
     const description = text(found.title)
     description.className = "catalog-description"
@@ -144,6 +154,7 @@ const nodeView = (
   card.append(meta)
   appendCapability(card, node, catalog)
   item.append(card)
+
   return item
 }
 
@@ -158,6 +169,7 @@ const appendMappings = (fields: HTMLElement, node: DesignerNode): void => {
     const row = text(
       `${mapping.sourcePath} (${mapping.sourceType}) → ${mapping.targetPath} (${mapping.targetType})`,
     )
+
     row.className = "mapping"
     fields.append(row)
   }
@@ -171,10 +183,12 @@ const catalogEditor = (
   const fields = tag("div")
   fields.className = "inspector-fields"
   const capabilityKind = catalogKind(node)
+
   const selected =
     node.capability === undefined
       ? ""
       : `${node.capability.kind}:${node.capability.id}:${node.capability.version}`
+
   const catalogLabel = tag("label")
   catalogLabel.append(text(`Backend catalog ${catalogKindLabel(capabilityKind)}`))
   const catalogSelect = tag("select")
@@ -195,14 +209,17 @@ const catalogEditor = (
   catalogSelect.value = selected
   catalogSelect.addEventListener("change", () => {
     const [kind, id, version] = catalogSelect.value.split(":")
+
     if (
       (kind !== "DomainAction" && kind !== "DomainEvent") ||
       id === undefined ||
       version === undefined
     ) {
       handlers.capability(node.id, undefined)
+
       return
     }
+
     handlers.capability(node.id, { kind, id, version: Number(version) })
   })
   catalogLabel.append(catalogSelect)
@@ -218,6 +235,7 @@ const catalogEditor = (
       }),
     ),
   )
+
   return fields
 }
 
@@ -231,10 +249,13 @@ const inspector = (
   const heading = tag("h2")
   heading.textContent = "Inspector"
   panel.append(heading)
+
   if (node === undefined) {
     panel.append(text("Select a node to edit the structured definition."))
+
     return panel
   }
+
   const form = tag("form")
   form.className = "inspector"
   const name = tag("label")
@@ -245,9 +266,11 @@ const inspector = (
   name.append(nameInput)
   form.append(name)
   form.append(text(`Kind: ${node.kind}`))
+
   if (node.kind === "DomainCommand" || node.kind === "WaitForEvent") {
     form.append(catalogEditor(node, catalog, handlers))
   }
+
   const move = tag("div")
   move.className = "move"
   move.append(
@@ -256,6 +279,7 @@ const inspector = (
   )
   form.append(move)
   panel.append(form)
+
   return panel
 }
 
@@ -267,23 +291,28 @@ const laneStatus = (lane: ProcessStudioLane): string =>
 const laneNavigation = (draft: ProcessStudioDraft, handlers: Handlers): HTMLElement => {
   const lanes = tag("nav")
   lanes.setAttribute("aria-label", "Process Studio lanes")
+
   for (const lane of ProcessStudioLanes) {
     const laneButton = button(ProcessStudioLaneLabels[lane], () => handlers.lane(lane))
     laneButton.setAttribute("aria-pressed", String(draft.lane === lane))
     lanes.append(laneButton)
   }
+
   return lanes
 }
 
 const templateList = (handlers: Handlers): HTMLElement => {
   const templates = tag("div")
   templates.className = "template-list"
+
   for (const template of ProcessStudioTemplates) {
     const option = tag("div")
     option.className = "template-option"
+
     const load = button(`Load ${template.name} · v${template.version}`, () =>
       handlers.template(template.id),
     )
+
     load.setAttribute(
       "aria-label",
       `Load ${template.name} version ${template.version}: ${template.description}`,
@@ -293,6 +322,7 @@ const templateList = (handlers: Handlers): HTMLElement => {
     option.append(description)
     templates.append(option)
   }
+
   return templates
 }
 
@@ -303,10 +333,13 @@ const nodePalette = (handlers: Handlers): HTMLElement => {
   palette.append(heading)
   const buttons = tag("div")
   buttons.className = "palette"
+
   for (const kind of ProcessDesignerNodeKinds) {
     buttons.append(button(`＋ ${labelForNodeKind(kind)}`, () => handlers.add(kind)))
   }
+
   palette.append(buttons)
+
   return palette
 }
 
@@ -320,6 +353,7 @@ const nodeList = (
   nodes.className = "nodes"
   model.nodes.forEach((node, index) => {
     nodes.append(nodeView(node, node.id === selected, handlers, catalog))
+
     if (index < model.nodes.length - 1) {
       const arrow = tag("li")
       arrow.className = "arrow"
@@ -328,6 +362,7 @@ const nodeList = (
       nodes.append(arrow)
     }
   })
+
   return nodes
 }
 
@@ -337,6 +372,7 @@ const validationPanel = (
   const validation = tag("div")
   validation.className = "validation"
   validation.setAttribute("aria-live", "polite")
+
   if (issues.length === 0) {
     validation.classList.add("valid")
     validation.textContent =
@@ -344,13 +380,16 @@ const validationPanel = (
   } else {
     validation.append(text(`${issues.length} validation issue${issues.length === 1 ? "" : "s"}`))
     const list = tag("ul")
+
     for (const issue of issues) {
       const item = tag("li")
       item.textContent = issue.message
       list.append(item)
     }
+
     validation.append(list)
   }
+
   return validation
 }
 
@@ -385,6 +424,7 @@ const view = (
   status.setAttribute("role", "status")
   status.setAttribute("aria-live", "polite")
   shell.append(status)
+
   if (draft.lane === "templates") shell.append(templateList(handlers))
   const grid = tag("div")
   grid.className = "grid"
@@ -408,6 +448,7 @@ const view = (
     ),
   )
   shell.append(grid)
+
   return shell
 }
 
@@ -423,13 +464,16 @@ export const mountProcessDesigner = (
   options: DesignerModel | ProcessDesignerOptions = {},
 ): ProcessDesignerMount => {
   ensureStyle()
+
   const normalized: ProcessDesignerOptions =
     "nodes" in options ? { initialModel: options } : options
+
   const initialModel = normalized.initialModel ?? makeInitialDesignerModel()
   const catalog = normalized.catalog ?? []
   let currentDraft = makeProcessStudioDraft(initialModel)
   let currentIr = serializeProcessStudioDraft(currentDraft)
   let updateCatalog: (nextCatalog: readonly ProcessCatalogDescriptor[]) => void = () => {}
+
   const dispose = createRoot((rootDispose) => {
     const [model, setModel] = createSignal(initialModel)
     const [lane, setLane] = createSignal<ProcessStudioLane>(currentDraft.lane)
@@ -438,6 +482,7 @@ export const mountProcessDesigner = (
     const [issues, setIssues] = createSignal(validateDesignerModel(initialModel))
     const [catalogState, setCatalogState] = createSignal(catalog)
     updateCatalog = setCatalogState
+
     const update = (
       next: DesignerModel,
       nextLane: ProcessStudioLane = lane(),
@@ -454,6 +499,7 @@ export const mountProcessDesigner = (
       }
       currentIr = serializeProcessStudioDraft(currentDraft)
     }
+
     const handlers: Handlers = {
       add: (kind) => {
         const next = applyDesignerAction(model(), DesignerAction.AddNode({ kind }))
@@ -489,6 +535,7 @@ export const mountProcessDesigner = (
       },
       template: (id) => {
         const next = getProcessStudioTemplate(id)
+
         if (next === undefined) return
         setLane("templates")
         setSource("template")
@@ -496,6 +543,7 @@ export const mountProcessDesigner = (
         setSelected(next.nodes[0]?.id ?? "")
       },
     }
+
     createEffect(
       () => ({
         draft: {
@@ -512,8 +560,10 @@ export const mountProcessDesigner = (
           view(current.draft, current.selected, current.issues, current.catalog, handlers),
         ),
     )
+
     return rootDispose
   })
+
   return {
     dispose: () => {
       dispose()

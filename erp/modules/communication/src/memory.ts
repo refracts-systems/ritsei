@@ -97,6 +97,7 @@ const sha256Hex = (value: string) =>
   Effect.tryPromise({
     try: async () => {
       const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value))
+
       return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("")
     },
     catch: (cause) =>
@@ -115,6 +116,7 @@ export const makeCommunicationTestLayer = (options: CommunicationTestLayerOption
       "CommunicationPolicy.test.derivePurchaseOrderConfirmed",
     )(function* (input: Schema.Codec.Encoded<typeof EventEnvelope>) {
       const event = yield* Schema.decodeUnknownEffect(EventEnvelope)(input)
+
       if (
         event.eventType !== ProcurementPurchaseOrderConfirmedEvent.id ||
         event.eventVersion !== ProcurementPurchaseOrderConfirmedEvent.version
@@ -126,6 +128,7 @@ export const makeCommunicationTestLayer = (options: CommunicationTestLayerOption
           }),
         )
       }
+
       return yield* createCommunicationIntent({
         tenantId: event.tenantId,
         intentType: "purchase-order-confirmed",
@@ -165,6 +168,7 @@ export const makeCommunicationTestLayer = (options: CommunicationTestLayerOption
       input: Schema.Codec.Encoded<typeof CommunicationIntent>,
     ) {
       const intent = yield* Schema.decodeUnknownEffect(CommunicationIntent)(input)
+
       const snapshot: RecipientSnapshot = {
         audience: intent.audience,
         to: [recipient],
@@ -174,6 +178,7 @@ export const makeCommunicationTestLayer = (options: CommunicationTestLayerOption
         resolverVersion: 1,
         resolvedAt: now(),
       }
+
       return snapshot
     }),
   }
@@ -183,6 +188,7 @@ export const makeCommunicationTestLayer = (options: CommunicationTestLayerOption
       input: Schema.Codec.Encoded<typeof CommunicationContextInput>,
     ) {
       const decoded = yield* Schema.decodeUnknownEffect(CommunicationContextInput)(input)
+
       const context: CommunicationContext = {
         contextType: "purchase-order-confirmed-context",
         contextVersion: 1,
@@ -192,6 +198,7 @@ export const makeCommunicationTestLayer = (options: CommunicationTestLayerOption
         timezone: decoded.intent.timezone ?? "UTC",
         data: decoded.data,
       }
+
       return context
     }),
   }
@@ -203,6 +210,7 @@ export const makeCommunicationTestLayer = (options: CommunicationTestLayerOption
       const decoded = yield* Schema.decodeUnknownEffect(EmailRenderInput)(input)
       const html = decoded.message.nodes.map(renderHtmlNode).join("")
       const text = decoded.message.nodes.map(renderTextNode).filter(Boolean).join("\n\n")
+
       const artifact: CommunicationArtifact = {
         artifactId: uuidv7(),
         communicationId: decoded.intent.communicationId,
@@ -218,6 +226,7 @@ export const makeCommunicationTestLayer = (options: CommunicationTestLayerOption
         rendererVersion: "email-ast-test@1",
         createdAt: now(),
       }
+
       return artifact
     }),
   }
@@ -230,6 +239,7 @@ export const makeCommunicationTestLayer = (options: CommunicationTestLayerOption
       sent.push(prepared)
       const status = statuses[Math.min(deliveryIndex, statuses.length - 1)] ?? "accepted"
       deliveryIndex += 1
+
       return {
         communicationId: prepared.communicationId,
         attemptId: uuidv7(),
@@ -250,8 +260,10 @@ export const makeCommunicationTestLayer = (options: CommunicationTestLayerOption
     Layer.succeed(EmailTransport, transport),
     Layer.succeed(CommunicationTestTransportTag, { sent }),
   )
+
   const service = Layer.effect(CommunicationService, makeCommunicationService).pipe(
     Layer.provide(dependencies),
   )
+
   return Layer.merge(dependencies, service)
 }

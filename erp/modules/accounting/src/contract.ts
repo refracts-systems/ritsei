@@ -23,27 +23,33 @@ import {
 } from "./financial-store-contract.ts"
 
 const NonEmptyString = Schema.String.check(Schema.isPattern(/\S/))
+
 const TrimmedNonEmptyString = Schema.String.check(
   Schema.makeFilter((value) => /\S/.test(value) && value === value.trim(), {
     expected: "a trimmed nonblank string",
   }),
 )
+
 const UpperNonEmptyString = Schema.String.check(
   Schema.makeFilter(
     (value) => /\S/.test(value) && value === value.trim() && value === value.toUpperCase(),
     { expected: "a trimmed uppercase nonblank string" },
   ),
 )
+
 const Uuid = Schema.String.check(Schema.isUUID())
+
 const Uuidv7 = Schema.String.check(
   Schema.isPattern(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i),
 )
+
 const Hash = Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/))
 const NonNegativeInt = Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: 0x7fffffff }))
 const Money = FinancialMajorAmount
 const CurrencyCode = Schema.String.check(Schema.isPattern(/^[A-Za-z]{3}$/))
 const UpperCurrencyCode = Schema.String.check(Schema.isPattern(/^[A-Z]{3}$/))
 const FinancialEngine = Schema.Literals(["postgresql", "tigerbeetle"])
+
 const FinancialCutoverStatus = Schema.Literals([
   "postgresql",
   "preparing_tigerbeetle",
@@ -52,6 +58,7 @@ const FinancialCutoverStatus = Schema.Literals([
   "activating",
   "tigerbeetle",
 ])
+
 const Precision = Schema.Literal(2)
 const FiscalYearStartMonth = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 12 }))
 const IsoDate = CalendarDate
@@ -84,6 +91,7 @@ export const JournalLine = Schema.Struct({
     (line) => {
       const debit = requireExactMajorToMinor(line.debit, 2)
       const credit = requireExactMajorToMinor(line.credit, 2)
+
       return (debit > 0n && credit === 0n) || (credit > 0n && debit === 0n)
     },
     { expected: "exactly one journal line amount must be positive" },
@@ -118,6 +126,7 @@ export const JournalEntry = Schema.Struct({
           }),
           { debit: 0n, credit: 0n },
         )
+
         return totals.debit === totals.credit
       },
       { expected: "journal entry debits and credits must balance" },
@@ -149,10 +158,15 @@ export const RevenuePostingProfile = Schema.Struct({
 )
 
 export type AccountingConfiguration = Schema.Schema.Type<typeof AccountingConfiguration>
+
 export type Account = Schema.Schema.Type<typeof Account>
+
 export type JournalLine = Schema.Schema.Type<typeof JournalLine>
+
 export type JournalEntry = Schema.Schema.Type<typeof JournalEntry>
+
 export type AccountingPeriod = Schema.Schema.Type<typeof AccountingPeriod>
+
 export type RevenuePostingProfile = Schema.Schema.Type<typeof RevenuePostingProfile>
 
 const ScopedInput = { principal: Principal, tenantId: Uuid }
@@ -202,6 +216,7 @@ export const FinancialCutoverControl = Schema.Struct({
       { expected: "cutover activation metadata consistent with status" },
     ),
   )
+
 export type FinancialCutoverControl = Schema.Schema.Type<typeof FinancialCutoverControl>
 
 export const FinancialVerificationArtifact = Schema.Struct({
@@ -217,6 +232,7 @@ export const FinancialVerificationArtifact = Schema.Struct({
   producerPrincipalId: NonEmptyString,
   createdAt: InstantString,
 })
+
 export type FinancialVerificationArtifact = Schema.Schema.Type<typeof FinancialVerificationArtifact>
 
 export const FinancialStagingEvidenceRecord = Schema.Struct({
@@ -232,6 +248,7 @@ export const FinancialStagingEvidenceRecord = Schema.Struct({
   evidence: KernelFinancialStagingEvidence,
   persistedAt: InstantString,
 })
+
 export type FinancialStagingEvidenceRecord = Schema.Schema.Type<
   typeof FinancialStagingEvidenceRecord
 >
@@ -387,11 +404,15 @@ export const ListJournalEntriesInput = Schema.Struct({
 export type ListAccountingConfigurationsInput = Schema.Schema.Type<
   typeof ListAccountingConfigurationsInput
 >
+
 export type ListAccountsInput = Schema.Schema.Type<typeof ListAccountsInput>
+
 export type ListAccountingPeriodsInput = Schema.Schema.Type<typeof ListAccountingPeriodsInput>
+
 export type ListRevenuePostingProfilesInput = Schema.Schema.Type<
   typeof ListRevenuePostingProfilesInput
 >
+
 export type ListJournalEntriesInput = Schema.Schema.Type<typeof ListJournalEntriesInput>
 
 type CommonFailure = AuthorizationDenied | DatabaseFailure | Schema.SchemaError

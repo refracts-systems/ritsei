@@ -1,12 +1,14 @@
 import * as Schema from "effect/Schema"
 
 const Uuid = Schema.String.check(Schema.isUUID())
+
 const LowercaseTrimmedNonEmptyString = Schema.String.check(
   Schema.makeFilter(
     (value) => /\S/.test(value) && value === value.trim() && value === value.toLowerCase(),
     { expected: "a trimmed lowercase nonblank string" },
   ),
 )
+
 const TrimmedNonEmptyString = Schema.String.check(
   Schema.makeFilter((value) => /\S/.test(value) && value === value.trim(), {
     expected: "a trimmed nonblank string",

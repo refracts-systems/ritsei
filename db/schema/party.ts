@@ -18,6 +18,7 @@ import { userAccounts } from "./identity.ts"
 
 export const partySchema = pgSchema("party")
 export const partyKind = partySchema.enum("party_kind", ["person", "organization"])
+
 export const partyRole = partySchema.enum("party_role", [
   "customer",
   "supplier",

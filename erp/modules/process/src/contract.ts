@@ -48,43 +48,53 @@ import {
 } from "./errors.ts"
 
 const NonEmptyString = Schema.String.check(Schema.isPattern(/\S/))
+
 const PostgresInt = Schema.Int.check(
   Schema.isGreaterThanOrEqualTo(-2_147_483_648),
   Schema.isLessThanOrEqualTo(2_147_483_647),
 )
+
 const NonNegativeInt = PostgresInt.check(Schema.isGreaterThanOrEqualTo(0))
 const Uuid = EventEnvelope.fields.eventId
 const InstantString = EventEnvelope.fields.occurredAt
+
 export const ProcessWorkflowTypes = {
   confirmation: "sales.order.confirmation",
   cancellation: "sales.order.cancellation",
   fulfillment: "sales.order.fulfillment",
 } as const
+
 export const ProcessWorkflowType = Schema.Literals([
   ProcessWorkflowTypes.confirmation,
   ProcessWorkflowTypes.cancellation,
   ProcessWorkflowTypes.fulfillment,
 ])
+
 export const ProcessLifecycleJobPriority = 100
 export const ProcessJobMaxAttempts = 3
+
 export const ProcessPostCommitJobTypes = {
   confirmation: "process.order_confirmation.post_commit",
   cancellation: "process.order_cancellation.post_commit",
   fulfillment: "process.order_fulfillment.post_commit",
 } as const
+
 export const ProcessPostCommitJobType = Schema.Literals([
   ProcessPostCommitJobTypes.confirmation,
   ProcessPostCommitJobTypes.cancellation,
   ProcessPostCommitJobTypes.fulfillment,
 ])
+
 export const ProcessFinancialJobTypes = {
   submit: "accounting.financial_operation.submit",
   reconcile: "accounting.financial_operation.reconcile",
 } as const
+
 export const ProcessFinancialJobType = Schema.Literals([
   ProcessFinancialJobTypes.submit,
   ProcessFinancialJobTypes.reconcile,
 ])
+
 export const ProcessJobType = Schema.Literals([
   ProcessPostCommitJobTypes.confirmation,
   ProcessPostCommitJobTypes.cancellation,
@@ -114,6 +124,7 @@ export const ConfirmOrderConfirmationInput = Schema.Struct({
   ...ScopedInput,
   ...OrderConfirmationPayload.fields,
 })
+
 export const RecoverOrderConfirmationInput = ConfirmOrderConfirmationInput
 
 const OrderLifecyclePayloadFields = {
@@ -127,15 +138,19 @@ const OrderLifecyclePayloadFields = {
 }
 
 export const OrderCancellationPayload = Schema.Struct(OrderLifecyclePayloadFields)
+
 export const CancelOrderInput = Schema.Struct({
   ...ScopedInput,
   ...OrderCancellationPayload.fields,
 })
+
 export const OrderFulfillmentPayload = Schema.Struct(OrderLifecyclePayloadFields)
+
 export const FulfillOrderInput = Schema.Struct({
   ...ScopedInput,
   ...OrderFulfillmentPayload.fields,
 })
+
 export const ManualRecoveryInput = Schema.Struct({
   ...ScopedInput,
   idempotencyKey: NonEmptyString,
@@ -143,6 +158,7 @@ export const ManualRecoveryInput = Schema.Struct({
 })
 
 export const DomainEventEnvelope = EventEnvelope
+
 export const ProcessPostCommitJobPayload = Schema.Struct({
   eventId: Uuid,
   workflowRunId: Uuid,
@@ -159,6 +175,7 @@ export const ProcessJobStatus = Schema.Literals([
   "failed",
   "manual_recovery",
 ])
+
 export const ProcessJob = Schema.Struct({
   jobId: Uuid,
   tenantId: Uuid,
@@ -192,6 +209,7 @@ export const ProcessJobClaimInput = Schema.Struct({
   workerId: NonEmptyString,
   jobType: Schema.NullOr(ProcessJobType).pipe(Schema.withDecodingDefaultKey(Effect.succeed(null))),
 })
+
 export const ProcessJobRenewInput = Schema.Struct({
   tenantId: Uuid,
   workerId: NonEmptyString,
@@ -199,7 +217,9 @@ export const ProcessJobRenewInput = Schema.Struct({
   leaseToken: Uuid,
   leaseGeneration: LeaseGeneration,
 })
+
 export const ProcessJobCompleteInput = ProcessJobRenewInput
+
 export const ProcessJobFailInput = Schema.Struct({
   tenantId: Uuid,
   workerId: NonEmptyString,
@@ -239,6 +259,7 @@ export const OrderConfirmationResult = Schema.Struct({
   eventId: Uuid,
   jobId: Uuid,
 })
+
 export const OrderCancellationResult = Schema.Struct({
   workflowRunId: Uuid,
   order: SalesOrder,
@@ -247,6 +268,7 @@ export const OrderCancellationResult = Schema.Struct({
   eventId: Uuid,
   jobId: Uuid,
 })
+
 export const OrderFulfillmentResult = Schema.Struct({
   workflowRunId: Uuid,
   order: SalesOrder,
@@ -256,9 +278,13 @@ export const OrderFulfillmentResult = Schema.Struct({
 })
 
 export type ProcessJob = Schema.Schema.Type<typeof ProcessJob>
+
 export type WorkflowRun = Schema.Schema.Type<typeof WorkflowRun>
+
 export type OrderConfirmationResult = Schema.Schema.Type<typeof OrderConfirmationResult>
+
 export type OrderCancellationResult = Schema.Schema.Type<typeof OrderCancellationResult>
+
 export type OrderFulfillmentResult = Schema.Schema.Type<typeof OrderFulfillmentResult>
 
 type OrderConfirmationFailure =

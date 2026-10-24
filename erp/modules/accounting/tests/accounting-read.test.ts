@@ -17,6 +17,7 @@ const otherTenantId = "01900000-0000-7000-8000-000000000002"
 const legalEntityId = "01900000-0000-7000-8000-000000000010"
 const otherLegalEntityId = "01900000-0000-7000-8000-000000000011"
 const capabilities = Object.values(AccountingCapabilities)
+
 const salesFacts = partial<SalesService>()({
   getConfirmedOrderTotal: () => Effect.succeed("125.00"),
 })
@@ -61,10 +62,13 @@ describe("Accounting read projections", () => {
     withAccounting(
       Effect.gen(function* () {
         const accounting = yield* AccountingService
+
         const configuration = yield* accounting.configureLegalEntity(
           configure(tenantId, legalEntityId),
         )
+
         yield* accounting.configureLegalEntity(configure(otherTenantId, otherLegalEntityId))
+
         const cash = yield* accounting.createAccount({
           principal,
           tenantId,
@@ -72,6 +76,7 @@ describe("Accounting read projections", () => {
           name: "Cash",
           type: "asset",
         })
+
         const revenue = yield* accounting.createAccount({
           principal,
           tenantId,
@@ -79,6 +84,7 @@ describe("Accounting read projections", () => {
           name: "Revenue",
           type: "revenue",
         })
+
         const period = yield* accounting.openPeriod({
           principal,
           tenantId,
@@ -86,6 +92,7 @@ describe("Accounting read projections", () => {
           startsOn: "2026-01-01",
           endsOn: "2026-12-31",
         })
+
         const profile = yield* accounting.configureRevenuePosting({
           principal,
           tenantId,
@@ -93,6 +100,7 @@ describe("Accounting read projections", () => {
           receivableAccountId: cash.id,
           revenueAccountId: revenue.id,
         })
+
         const journal = yield* accounting.postJournal({
           principal,
           tenantId,
@@ -155,9 +163,11 @@ describe("Accounting read projections", () => {
     withAccounting(
       Effect.gen(function* () {
         const accounting = yield* AccountingService
+
         const error = yield* Effect.flip(
           accounting.listAccounts({ principal, tenantId, limit: 200 }),
         )
+
         assert.instanceOf(error, AuthorizationDenied)
       }),
       [],
@@ -168,9 +178,11 @@ describe("Accounting read projections", () => {
     withAccounting(
       Effect.gen(function* () {
         const accounting = yield* AccountingService
+
         const error = yield* Effect.flip(
           accounting.listAccounts({ principal, tenantId, limit: 200 }),
         )
+
         assert.instanceOf(error, AuthorizationDenied)
       }),
       [AccountingCapabilities.accountCreate],

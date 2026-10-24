@@ -25,6 +25,7 @@ const customer = {
   name: "Sales Customer",
   email: "sales@example.test",
 }
+
 const quotation = {
   id: quotationId,
   tenantId,
@@ -32,6 +33,7 @@ const quotation = {
   status: "draft" as const,
   total: "10.00",
 }
+
 const draftOrder = {
   id: orderId,
   tenantId,
@@ -42,17 +44,20 @@ const draftOrder = {
   total: "10.00",
   lines: [{ itemId, quantity: "1", unitPrice: "10.00" }],
 }
+
 const confirmedOrder = {
   ...draftOrder,
   status: "confirmed" as const,
   confirmedAt: "2026-09-13T00:00:00.000Z",
 }
+
 const cancelledOrder = { ...confirmedOrder, status: "cancelled" as const }
 
 const salesService = (observedInputs: unknown[]): SalesServiceContract => ({
   listCustomers: (input) =>
     Effect.sync(() => {
       observedInputs.push(input)
+
       return [customer]
     }),
   getCustomer: () => Effect.succeed(customer),
@@ -76,19 +81,24 @@ it.layer(TestHttpServices)("sales API contracts", (it) => {
   it.effect("forwards tenant and bearer context across Sales reads and commands", () =>
     Effect.gen(function* () {
       const observedInputs: unknown[] = []
+
       const bearer = Layer.succeed(BearerAuth, {
         bearer: (effect) => Effect.provideService(effect, CurrentPrincipal, principal),
       })
+
       const bearerClient = HttpApiMiddleware.layerClient(BearerAuth, ({ request, next }) =>
         next(HttpClientRequest.bearerToken(request, "sales-token")),
       )
+
       const handlers = SalesHandlers.pipe(
         Layer.provide(bearer),
         Layer.provide(Layer.succeed(SalesService, salesService(observedInputs))),
       )
+
       const client = yield* HttpApiTest.groups(RitseiApi, ["Sales"]).pipe(
         Effect.provide(Layer.mergeAll(handlers, bearerClient, bearer)),
       )
+
       const headers = { "x-tenant-id": tenantId }
 
       assert.deepStrictEqual(

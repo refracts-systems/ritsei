@@ -47,14 +47,17 @@ export class CurrentRuntimeConfiguration extends Context.Service<
 
 const BoundedAuthArray = <S extends Schema.Constraint>(schema: S) =>
   Schema.Array(schema).check(Schema.isMaxLength(32))
+
 const authSessionHeaders = { "x-tenant-id": Schema.optionalKey(Uuid) }
 const CreatedUserAccount = UserAccount.pipe(HttpApiSchema.status(201))
 const CreatedTenantMembership = TenantMembership.pipe(HttpApiSchema.status(201))
 export const AuthProfile = Schema.Literals(["transitional-local", "oidc"])
+
 const LocalAuthConfiguration = Schema.Struct({
   profile: Schema.Literal("transitional-local"),
   scopes: BoundedAuthArray(ShortString),
 })
+
 const OidcAuthConfiguration = Schema.Struct({
   profile: Schema.Literal("oidc"),
   issuerUrl: NonEmptyString,
@@ -64,12 +67,15 @@ const OidcAuthConfiguration = Schema.Struct({
   redirectUri: NonEmptyString,
   scopes: BoundedAuthArray(ShortString),
 })
+
 export const AuthConfiguration = Schema.Union([LocalAuthConfiguration, OidcAuthConfiguration])
 const AuthToken = Schema.String.check(Schema.isPattern(/\S/), Schema.isMaxLength(4_096))
+
 export const AuthLoginResult = Schema.Struct({
   token: AuthToken,
   expiresAt: NonEmptyString,
 })
+
 export const AuthSession = Schema.Struct({
   user: UserAccount,
   memberships: BoundedArray(TenantMembership),

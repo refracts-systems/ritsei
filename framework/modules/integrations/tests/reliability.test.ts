@@ -43,6 +43,7 @@ it.effect("checks compatibility and payload limit with redaction", () =>
         connectorVersion: 2,
       }),
     )
+
     assert.instanceOf(incompatible, ExternalCompatibilityMismatch)
 
     const tooLarge = yield* Effect.flip(
@@ -51,6 +52,7 @@ it.effect("checks compatibility and payload limit with redaction", () =>
         maxPayloadBytes: 1,
       }),
     )
+
     assert.instanceOf(tooLarge, ExternalPayloadLimitExceeded)
   }),
 )

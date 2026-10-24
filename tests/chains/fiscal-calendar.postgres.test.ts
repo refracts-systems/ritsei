@@ -30,6 +30,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             where tenant_id = ${tenantId} and legal_entity_id = ${legalEntityId}
           `,
         )
+
         const grants = [
           ...Object.values(AccountingCapabilities),
           ...Object.values(PartyCapabilities),
@@ -53,17 +54,20 @@ it.effect.skipIf(databaseUrl === undefined)(
               documentDate,
               prefix: "DO/",
             })
+
           assert.strictEqual((yield* delivery("2026-03-31")).number, "DO/2025/00001")
           assert.strictEqual((yield* delivery("2026-04-01")).number, "DO/2026/00001")
           assert.strictEqual((yield* delivery("2026-04-02")).number, "DO/2026/00002")
 
           // The same calendar reaches real documents, here receipts through Settlement.
           yield* ledger.applyChartTemplate({ ...scope, legalEntityId, template: "neutral_trading" })
+
           const customer = yield* party.create({
             ...scope,
             kind: "organization",
             name: "PT Pembeli",
           })
+
           const receipt = (paymentDate: string) =>
             settlement.receivePayment({
               ...scope,
@@ -73,6 +77,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               amount: "10.00",
               allocations: [],
             })
+
           assert.strictEqual((yield* receipt("2026-03-31")).number, "RCV/2025/00001")
           assert.strictEqual((yield* receipt("2026-04-01")).number, "RCV/2026/00001")
 
@@ -83,6 +88,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenantId} order by posting_date, number
             `,
           )
+
           assert.deepStrictEqual(
             journals.map((journal) => journal.number),
             ["JE/2025/00001", "JE/2026/00001"],

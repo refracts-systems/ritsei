@@ -37,6 +37,7 @@ export const HttpsWebhookLimits = {
 
 const eventIdentifier = (event: { readonly id?: unknown } | null | undefined): string => {
   const id = Predicate.isString(event?.id) && event.id.trim() !== "" ? event.id : undefined
+
   return id === undefined ? "external-event" : id.slice(0, 256)
 }
 
@@ -117,6 +118,7 @@ export const makeHttpsConnectorRuntime = (options: {
   readonly verifySignature: HttpsSignatureVerifier
 }): HttpsConnectorRuntime => {
   const deliveryStore = options.deliveryStore ?? makeMemoryExternalDeliveryStore()
+
   const runtime: ExternalConnectorRuntime = makeExternalConnectorRuntime({
     store: options.store,
     authorizeScope: options.authorizeScope,
@@ -126,6 +128,7 @@ export const makeHttpsConnectorRuntime = (options: {
   const ingestWebhook = (input: HttpsWebhookInput) =>
     Effect.gen(function* () {
       const identifier = eventIdentifier(input.event)
+
       if (!isValidWebhookInput(input)) {
         return yield* Effect.fail(
           new ExternalPayloadInvalid({
@@ -134,6 +137,7 @@ export const makeHttpsConnectorRuntime = (options: {
           }),
         )
       }
+
       // verify signature on the raw body before parsing; deduplicate only after verification.
       const verified = yield* Effect.timeoutOrElse(
         options.verifySignature({
@@ -152,6 +156,7 @@ export const makeHttpsConnectorRuntime = (options: {
             ),
         },
       )
+
       if (!verified) {
         return yield* Effect.fail(
           new ExternalPayloadInvalid({
@@ -160,7 +165,9 @@ export const makeHttpsConnectorRuntime = (options: {
           }),
         )
       }
+
       const envelope = yield* decodeWebhookBody(input.body, identifier)
+
       const suppliedEnvelope = yield* Schema.decodeUnknownEffect(WebhookIngestion)(
         input.envelope,
       ).pipe(
@@ -172,6 +179,7 @@ export const makeHttpsConnectorRuntime = (options: {
             }),
         ),
       )
+
       if (!sameWebhookEnvelope(envelope, suppliedEnvelope)) {
         return yield* Effect.fail(
           new ExternalPayloadInvalid({
@@ -180,11 +188,13 @@ export const makeHttpsConnectorRuntime = (options: {
           }),
         )
       }
+
       const result = yield* runtime.ingestEvent({
         tenantId: input.tenantId,
         event: input.event,
         envelope,
       })
+
       yield* deliveryStore.put({
         tenantId: input.tenantId,
         connectorId: input.event.connectorId,
@@ -193,6 +203,7 @@ export const makeHttpsConnectorRuntime = (options: {
         status: result.duplicate ? "duplicate" : "accepted",
         correlationId: input.correlationId,
       })
+
       return result
     })
 

@@ -45,11 +45,13 @@ const quotationStatusOptions = [
   { value: "rejected", label: "Rejected" },
   { value: "expired", label: "Expired" },
 ] as const
+
 const orderStatusOptions = [
   { value: "draft", label: "Draft" },
   { value: "confirmed", label: "Confirmed" },
   { value: "cancelled", label: "Cancelled" },
 ] as const
+
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const moneyPattern = /^\d+\.\d{2}$/
 const quantityPattern = /^[1-9]\d*$/
@@ -64,6 +66,7 @@ const quotationTone = (status: QuotationStatus): "neutral" | "success" | "warnin
     : status === "rejected" || status === "expired"
       ? "warning"
       : "neutral"
+
 const orderTone = (status: SalesOrderStatus) =>
   Match.value(status).pipe(
     Match.when("draft", () => "neutral" as const),
@@ -76,10 +79,12 @@ function CreateCustomerDialog(props: { reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
+
   const mutation = createCustomerMutation(scope, () => {
     setOpen(false)
     void props.reload()
   })
+
   return (
     <Dialog
       open={open()}
@@ -97,10 +102,13 @@ function CreateCustomerDialog(props: { reload: () => Promise<void> }) {
             if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
             const name = requiredText(value.name)
             const email = requiredText(value.email)
+
             if (name === null || email === null || !emailPattern.test(email)) {
               setInvalid(true)
+
               return
             }
+
             setInvalid(false)
             mutation.mutate({ name, email })
           }
@@ -164,10 +172,12 @@ function CreateQuotationDialog(props: {
   const navigate = useNavigate()
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
+
   const mutation = createQuotationMutation(scope, (quotation) => {
     setOpen(false)
     navigate(`/sales/quotations/${encodeURIComponent(quotation.id)}`)
   })
+
   return (
     <Dialog
       open={open()}
@@ -189,6 +199,7 @@ function CreateQuotationDialog(props: {
               if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
               const customerId = requiredText(value.customerId)
               const total = requiredText(value.total)
+
               if (
                 customerId === null ||
                 !uuidPattern.test(customerId) ||
@@ -196,8 +207,10 @@ function CreateQuotationDialog(props: {
                 !moneyPattern.test(total)
               ) {
                 setInvalid(true)
+
                 return
               }
+
               setInvalid(false)
               mutation.mutate({ customerId, total })
             }
@@ -270,10 +283,12 @@ function CreateOrderDialog(props: {
   const navigate = useNavigate()
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
+
   const mutation = createOrderMutation(scope, (order) => {
     setOpen(false)
     navigate(`/sales/orders/${encodeURIComponent(order.id)}`)
   })
+
   return (
     <Dialog
       open={open()}
@@ -299,6 +314,7 @@ function CreateOrderDialog(props: {
               const itemId = requiredText(form.get("itemId"))
               const quantity = requiredText(form.get("quantity"))
               const unitPrice = requiredText(form.get("unitPrice"))
+
               const valid =
                 customerId !== null &&
                 uuidPattern.test(customerId) &&
@@ -309,10 +325,13 @@ function CreateOrderDialog(props: {
                 quantityPattern.test(quantity) &&
                 unitPrice !== null &&
                 moneyPattern.test(unitPrice)
+
               if (!valid) {
                 setInvalid(true)
+
                 return
               }
+
               setInvalid(false)
               mutation.mutate({
                 customerId,
@@ -422,11 +441,14 @@ function CreateOrderDialog(props: {
 function ConfirmOrderDialog(props: { order: SalesOrder; reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
+
   const mutation = createConfirmOrderMutation(scope, () => {
     setOpen(false)
     void props.reload()
   })
+
   const key = () => `sales-confirm:${props.order.id}`
+
   return (
     <Dialog
       open={open()}
@@ -476,10 +498,12 @@ function ConfirmOrderDialog(props: { order: SalesOrder; reload: () => Promise<vo
 function CancelOrderDialog(props: { order: SalesOrder; reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
+
   const mutation = createCancelOrderMutation(scope, () => {
     setOpen(false)
     void props.reload()
   })
+
   return (
     <Dialog
       open={open()}
@@ -647,6 +671,7 @@ function CustomerDetail(props: { id: string }) {
   const scope = useContext(ApiRuntime)
   const id = untrack(() => props.id)
   const query = createCustomerQuery(scope, id)
+
   return (
     <section class={layout.stack} aria-labelledby="sales-customer-detail-heading">
       <div class={layout.row}>
@@ -691,6 +716,7 @@ function QuotationDetail(props: { id: string }) {
   const scope = useContext(ApiRuntime)
   const id = untrack(() => props.id)
   const query = createQuotationQuery(scope, id)
+
   return (
     <section class={layout.stack} aria-labelledby="sales-quotation-detail-heading">
       <div class={layout.row}>
@@ -740,6 +766,7 @@ function OrderDetail(props: { id: string; reloadLists: () => Promise<void> }) {
   const id = untrack(() => props.id)
   const query = createOrderQuery(scope, id)
   const reload = () => reloaded(Promise.all([query.refetch(), props.reloadLists()]))
+
   return (
     <section class={layout.stack} aria-labelledby="sales-order-detail-heading">
       <div class={layout.row}>
@@ -849,6 +876,7 @@ function SalesFilters(props: {
   search?: string
 }) {
   const navigate = useNavigate()
+
   return (
     <Form
       class={layout.row}
@@ -862,16 +890,21 @@ function SalesFilters(props: {
           const search = requiredText(value.search)
           const quotationStatus = value.quotationStatus
           const orderStatus = value.orderStatus
+
           if (customerId !== null && uuidPattern.test(customerId)) {
             query.set("customerId", customerId)
           }
+
           if (search !== null) query.set("search", search)
+
           if (quotationStatusOptions.some((option) => option.value === quotationStatus)) {
             query.set("quotationStatus", String(quotationStatus))
           }
+
           if (orderStatusOptions.some((option) => option.value === orderStatus)) {
             query.set("orderStatus", String(orderStatus))
           }
+
           navigate(query.size === 0 ? "/sales" : `/sales?${query}`)
         }
       }
@@ -935,25 +968,31 @@ export function Sales(props: {
   search?: string
 }) {
   const scope = useContext(ApiRuntime)
+
   const customers = createCustomersQuery(scope, {
     ...definedFields({ search: props.search }),
     limit: 200,
   })
+
   const quotations = createQuotationsQuery(scope, {
     ...definedFields({ customerId: props.customerId }),
     ...definedFields({ status: props.quotationStatus }),
     limit: 200,
   })
+
   const orders = createOrdersQuery(scope, {
     ...definedFields({ customerId: props.customerId }),
     ...definedFields({ status: props.orderStatus }),
     limit: 200,
   })
+
   const customerData = () => customers.data ?? []
   const quotationData = () => quotations.data ?? []
   const orderData = () => orders.data ?? []
+
   const reload = () =>
     reloaded(Promise.all([customers.refetch(), quotations.refetch(), orders.refetch()]))
+
   return (
     <EntityWorkspace
       title="Sales"

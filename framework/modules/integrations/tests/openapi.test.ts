@@ -48,12 +48,14 @@ it.effect("rejects an unallowlisted operation and missing side-effect idempotenc
         allowlisted: false,
       }),
     )
+
     const missingIdempotency = yield* Effect.flip(
       validateOpenApiImport({
         ...baseInput,
         operation: { ...baseInput.operation, idempotencyKeyRequired: false },
       }),
     )
+
     assert.instanceOf(unallowlisted, ExternalActionNotAllowlisted)
     assert.instanceOf(missingIdempotency, ExternalPayloadInvalid)
   }),
@@ -74,6 +76,7 @@ it.effect("rejects an operation that is absent from the imported document", () =
         operation: { ...baseInput.operation, operationId: "missingPayment" },
       }),
     )
+
     assert.isTrue(Result.isFailure(result))
   }),
 )
@@ -90,6 +93,7 @@ it.effect("rejects paths containing whitespace", () =>
         operation: { ...baseInput.operation, path: "/payments " },
       }),
     )
+
     assert.isTrue(Result.isFailure(result))
   }),
 )
@@ -104,6 +108,7 @@ it.effect("rejects an oversized document section", () =>
         }),
       ),
     )
+
     assert.isTrue(Result.isFailure(result))
   }),
 )

@@ -7,9 +7,11 @@ import { Principal } from "../../auth/mod.ts"
 import { Capability as CapabilitySchema } from "./capabilities.ts"
 
 export const Capability = CapabilitySchema
+
 export type Capability = Schema.Schema.Type<typeof Capability>
 
 export const TenantMembershipStatus = Schema.Literals(["active", "suspended"])
+
 export type TenantMembershipStatus = Schema.Schema.Type<typeof TenantMembershipStatus>
 
 export const TenantMembership = Schema.Struct({
@@ -45,6 +47,7 @@ export const TenantMembershipInput = Schema.Struct({
 export const ListAccessibleTenantsInput = Schema.Struct({
   userAccountId: Schema.String,
 })
+
 export type ListAccessibleTenantsInput = Schema.Schema.Type<typeof ListAccessibleTenantsInput>
 
 const TenantMembershipSearch = Schema.Trim.pipe(
@@ -58,6 +61,7 @@ export const ListTenantMembershipsInput = Schema.Struct({
   status: Schema.optionalKey(TenantMembershipStatus),
   limit: Schema.optionalKey(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 200 }))),
 })
+
 export type ListTenantMembershipsInput = Schema.Schema.Type<typeof ListTenantMembershipsInput>
 
 export const DirectCapabilityGrant = Schema.Struct({
@@ -66,6 +70,7 @@ export const DirectCapabilityGrant = Schema.Struct({
   capability: Capability,
   scope: Schema.Literal("tenant"),
 })
+
 export type DirectCapabilityGrant = Schema.Schema.Type<typeof DirectCapabilityGrant>
 
 export const AuthorizationDecision = Schema.Struct({

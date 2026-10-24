@@ -35,14 +35,17 @@ export const InvoiceKind = Schema.Literals([
   "supplier_bill",
   "supplier_credit_note",
 ])
+
 export type InvoiceKind = Schema.Schema.Type<typeof InvoiceKind>
 
 /** Receivable documents raise what customers owe; payable documents what is owed to suppliers. */
 export const BillingSide = Schema.Literals(["receivable", "payable"])
+
 export type BillingSide = Schema.Schema.Type<typeof BillingSide>
 
 export const sideOf = (kind: InvoiceKind): BillingSide =>
   kind === "customer_invoice" || kind === "customer_credit_note" ? "receivable" : "payable"
+
 export const isCreditNote = (kind: InvoiceKind) =>
   kind === "customer_credit_note" || kind === "supplier_credit_note"
 
@@ -79,6 +82,7 @@ export const BillingDocument = Schema.Struct({
   journalEntryId: Uuid,
   lines: Schema.Array(BillingDocumentLine),
 })
+
 export type BillingDocument = Schema.Schema.Type<typeof BillingDocument>
 
 /** An open document; credit notes carry a negative open amount. */
@@ -91,6 +95,7 @@ export const OpenItem = Schema.Struct({
   total: FinancialMajorAmount,
   openAmount: SignedAmount,
 })
+
 export type OpenItem = Schema.Schema.Type<typeof OpenItem>
 
 export const InvoiceSalesOrderInput = Schema.Struct({
@@ -100,6 +105,7 @@ export const InvoiceSalesOrderInput = Schema.Struct({
   /** Client-chosen id that makes a retried command return the posted invoice. */
   invoiceId: Schema.optionalKey(Uuid),
 })
+
 /** A supplier bill matched against a purchase order and its receipts (three-way match). */
 export const BillPurchaseOrderInput = Schema.Struct({
   ...ScopedInput,
@@ -129,6 +135,7 @@ export const CreditInvoiceInput = Schema.Struct({
     Schema.isMinLength(1),
   ),
 })
+
 export const ApplySettlementInput = Schema.Struct({
   ...ScopedInput,
   invoiceId: Uuid,
@@ -137,7 +144,9 @@ export const ApplySettlementInput = Schema.Struct({
   /** The business date the amount is applied, which open items as of a date respect. */
   settledOn: CalendarDate,
 })
+
 export const GetBillingDocumentInput = Schema.Struct({ ...ScopedInput, invoiceId: Uuid })
+
 export const ListOpenItemsInput = Schema.Struct({
   ...ScopedInput,
   legalEntityId: Uuid,
@@ -145,6 +154,7 @@ export const ListOpenItemsInput = Schema.Struct({
   partyId: Schema.optionalKey(Uuid),
   asOf: CalendarDate,
 })
+
 export const ListBillingDocumentsInput = Schema.Struct({
   ...ScopedInput,
   legalEntityId: Uuid,

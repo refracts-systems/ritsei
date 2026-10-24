@@ -23,13 +23,16 @@ export const seedErpFixture = (
     const [tenant] = await client<{ id: string }[]>`
       insert into auth.tenants (slug) values (${uuidv7()}) returning id
     `
+
     const legalEntity = await seedLegalEntity(client, tenant!.id, "Fixture Trading")
+
     const [period] = await client<{ id: string }[]>`
       insert into accounting.accounting_periods (tenant_id, legal_entity_id, starts_on, ends_on)
       values (${tenant!.id}, ${legalEntity.legalEntityId},
         ${options.periodStartsOn ?? "2026-01-01"}, ${options.periodEndsOn ?? "2026-12-31"})
       returning id
     `
+
     return { tenantId: tenant!.id, ...legalEntity, periodId: period!.id }
   })
 
@@ -38,16 +41,19 @@ export const seedLegalEntity = async (client: Sql, tenantId: string, name: strin
     insert into party.parties (tenant_id, kind, name)
     values (${tenantId}, 'organization', ${name}) returning id
   `
+
   const [legalEntity] = await client<{ id: string }[]>`
     insert into party.legal_entities (tenant_id, organization_party_id)
     values (${tenantId}, ${organization!.id}) returning id
   `
+
   await client`
     insert into accounting.legal_entity_accounting_configurations
       (tenant_id, legal_entity_id, base_currency, decimal_precision, fiscal_year_start_month,
        posting_enabled)
     values (${tenantId}, ${legalEntity!.id}, 'IDR', 2, 1, true)
   `
+
   return { organizationId: organization!.id, legalEntityId: legalEntity!.id }
 }
 

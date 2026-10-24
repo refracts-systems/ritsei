@@ -7,14 +7,17 @@ import type { IdentityAuthorizationDenied, UserAccountAlreadyExists } from "./er
 import { IdentityPrincipal } from "./events.ts"
 
 export const UserAccountStatus = Schema.Literals(["active", "disabled"])
+
 export type UserAccountStatus = Schema.Schema.Type<typeof UserAccountStatus>
 
 const NonEmptyString = Schema.String.check(Schema.isPattern(/\S/))
+
 const LowercaseTrimmedNonEmptyString = Schema.String.check(
   Schema.isPattern(/\S/),
   Schema.isTrimmed(),
   Schema.isLowercased(),
 )
+
 const InstantString = EventEnvelope.fields.occurredAt
 const Uuid = Schema.String.check(Schema.isUUID())
 const ExternalSubjectPart = Schema.String.check(Schema.isPattern(/\S/), Schema.isTrimmed())
@@ -59,6 +62,7 @@ export const UserAccountAuthenticationState = Schema.Struct({
 })
 
 export type UserAccount = Schema.Schema.Type<typeof UserAccount>
+
 export type UserAccountAuthenticationState = Schema.Schema.Type<
   typeof UserAccountAuthenticationState
 >

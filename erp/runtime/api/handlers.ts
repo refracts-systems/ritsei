@@ -63,9 +63,11 @@ const AuthenticationHandlers = HttpApiBuilder.group(RitseiApi, "Authentication",
     const userAccounts = yield* UserAccountService
     const authorization = yield* AuthorizationService
     const configuration = yield* CurrentRuntimeConfiguration
+
     return handlers
       .handle("config", () => {
         const authentication = configuration.authentication
+
         if (authentication?.profile === "oidc") {
           return Effect.succeed({
             profile: "oidc" as const,
@@ -77,16 +79,20 @@ const AuthenticationHandlers = HttpApiBuilder.group(RitseiApi, "Authentication",
             scopes: authentication.scopes,
           })
         }
+
         if (authentication?.profile === "transitional-local") {
           return Effect.succeed({ profile: "transitional-local" as const, scopes: [] as const })
         }
+
         return Effect.fail(new ApiServiceUnavailable({ code: "service_unavailable" }))
       })
       .handle("devLogin", () => {
         const authentication = configuration.authentication
+
         if (authentication?.profile !== "transitional-local") {
           return Effect.fail(new ApiForbidden({ code: "forbidden" }))
         }
+
         const account =
           authentication.userAccountId === undefined &&
           authentication.userAccountEmail !== undefined
@@ -94,12 +100,15 @@ const AuthenticationHandlers = HttpApiBuilder.group(RitseiApi, "Authentication",
                 accounts.find((candidate) => candidate.email === authentication.userAccountEmail),
               )
             : Effect.succeed(undefined)
+
         return Effect.gen(function* () {
           const resolved = yield* account
           const userAccountId = authentication.userAccountId ?? resolved?.id
+
           if (userAccountId === undefined) {
             return yield* Effect.fail(new ApiForbidden({ code: "forbidden" }))
           }
+
           return yield* auth.issueSession({ userAccountId, ttlSeconds: 3_600 })
         }).pipe(
           Effect.map(({ token, session }) => ({ token, expiresAt: session.expiresAt })),
@@ -114,18 +123,23 @@ const AuthenticationHandlers = HttpApiBuilder.group(RitseiApi, "Authentication",
         Effect.gen(function* () {
           const principal = yield* CurrentPrincipal
           const userAccount = yield* userAccounts.getById(principal.userAccountId)
+
           const memberships = yield* authorization.listAccessibleTenants({
             userAccountId: principal.userAccountId,
           })
+
           const requestedTenantId = request.headers["x-tenant-id"]
+
           const activeTenant =
             requestedTenantId === undefined
               ? (memberships[0] ?? null)
               : (memberships.find((membership) => membership.tenantId === requestedTenantId) ??
                 null)
+
           if (requestedTenantId !== undefined && activeTenant === null) {
             return yield* Effect.fail(new ApiForbidden({ code: "forbidden" }))
           }
+
           const grants =
             activeTenant === null
               ? []
@@ -133,6 +147,7 @@ const AuthenticationHandlers = HttpApiBuilder.group(RitseiApi, "Authentication",
                   userAccountId: principal.userAccountId,
                   tenantId: activeTenant.tenantId,
                 })
+
           return {
             user: userAccount,
             memberships,
@@ -178,6 +193,7 @@ export const BearerAuthLive = Layer.effect(
   BearerAuth,
   Effect.gen(function* () {
     const auth = yield* AuthService
+
     return {
       bearer: (effect, options) =>
         Effect.provideServiceEffect(
@@ -205,11 +221,13 @@ export const UserAccountHandlers = HttpApiBuilder.group(RitseiApi, "UserAccounts
   Effect.gen(function* () {
     const authorization = yield* AuthorizationService
     const userAccounts = yield* UserAccountService
+
     return handlers
       .handle(
         "create",
         Effect.fn("Http.UserAccounts.create")(function* ({ headers, payload }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             Effect.gen(function* () {
               const userAccount = yield* userAccounts.createForTenant({
@@ -217,10 +235,12 @@ export const UserAccountHandlers = HttpApiBuilder.group(RitseiApi, "UserAccounts
                 tenantId: headers["x-tenant-id"],
                 ...payload,
               })
+
               yield* authorization.addMember({
                 userAccountId: userAccount.id,
                 tenantId: headers["x-tenant-id"],
               })
+
               return userAccount
             }),
           )
@@ -230,6 +250,7 @@ export const UserAccountHandlers = HttpApiBuilder.group(RitseiApi, "UserAccounts
         "list",
         Effect.fn("Http.UserAccounts.list")(function* ({ headers }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             Effect.gen(function* () {
               yield* authorization.authorize({
@@ -237,10 +258,12 @@ export const UserAccountHandlers = HttpApiBuilder.group(RitseiApi, "UserAccounts
                 tenantId: headers["x-tenant-id"],
                 capability: IdentityCapabilities.userAccountRead,
               })
+
               const members = yield* authorization.listMembers({
                 tenantId: headers["x-tenant-id"],
                 limit: 200,
               })
+
               return yield* userAccounts.getByIds(members.map((member) => member.userAccountId))
             }),
           )
@@ -250,6 +273,7 @@ export const UserAccountHandlers = HttpApiBuilder.group(RitseiApi, "UserAccounts
         "get",
         Effect.fn("Http.UserAccounts.get")(function* ({ headers, params }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             Effect.gen(function* () {
               yield* authorization.authorize({
@@ -261,6 +285,7 @@ export const UserAccountHandlers = HttpApiBuilder.group(RitseiApi, "UserAccounts
                 userAccountId: params.id,
                 tenantId: headers["x-tenant-id"],
               })
+
               return yield* userAccounts.getById(params.id)
             }),
           )
@@ -270,6 +295,7 @@ export const UserAccountHandlers = HttpApiBuilder.group(RitseiApi, "UserAccounts
         "update",
         Effect.fn("Http.UserAccounts.update")(function* ({ headers, params, payload }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             Effect.gen(function* () {
               yield* authorization.authorize({
@@ -281,6 +307,7 @@ export const UserAccountHandlers = HttpApiBuilder.group(RitseiApi, "UserAccounts
                 userAccountId: params.id,
                 tenantId: headers["x-tenant-id"],
               })
+
               return yield* userAccounts.update({ id: params.id, email: payload.email })
             }),
           )
@@ -292,16 +319,19 @@ export const UserAccountHandlers = HttpApiBuilder.group(RitseiApi, "UserAccounts
 export const AuthorizationHandlers = HttpApiBuilder.group(RitseiApi, "Authorization", (handlers) =>
   Effect.gen(function* () {
     const authorization = yield* AuthorizationService
+
     const authorize = (
       principal: typeof CurrentPrincipal.Service,
       tenantId: string,
       capability: CapabilityType,
     ) => authorization.authorize({ principal, tenantId, capability })
+
     return handlers
       .handle(
         "addMember",
         Effect.fn("Http.Authorization.addMember")(function* ({ headers, payload }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             Effect.gen(function* () {
               yield* authorize(
@@ -309,6 +339,7 @@ export const AuthorizationHandlers = HttpApiBuilder.group(RitseiApi, "Authorizat
                 headers["x-tenant-id"],
                 AuthorizationCapabilities.tenantMembershipAdd,
               )
+
               return yield* authorization.addMember({
                 userAccountId: payload.userAccountId,
                 tenantId: headers["x-tenant-id"],
@@ -321,6 +352,7 @@ export const AuthorizationHandlers = HttpApiBuilder.group(RitseiApi, "Authorizat
         "listMembers",
         Effect.fn("Http.Authorization.listMembers")(function* ({ headers, query }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             Effect.gen(function* () {
               yield* authorize(
@@ -328,6 +360,7 @@ export const AuthorizationHandlers = HttpApiBuilder.group(RitseiApi, "Authorizat
                 headers["x-tenant-id"],
                 AuthorizationCapabilities.tenantMembershipRead,
               )
+
               return yield* authorization.listMembers({
                 tenantId: headers["x-tenant-id"],
                 ...query,
@@ -340,6 +373,7 @@ export const AuthorizationHandlers = HttpApiBuilder.group(RitseiApi, "Authorizat
         "getMember",
         Effect.fn("Http.Authorization.getMember")(function* ({ headers, params }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             Effect.gen(function* () {
               yield* authorize(
@@ -347,6 +381,7 @@ export const AuthorizationHandlers = HttpApiBuilder.group(RitseiApi, "Authorizat
                 headers["x-tenant-id"],
                 AuthorizationCapabilities.tenantMembershipRead,
               )
+
               return yield* authorization.getMember({
                 userAccountId: params.userAccountId,
                 tenantId: headers["x-tenant-id"],
@@ -359,6 +394,7 @@ export const AuthorizationHandlers = HttpApiBuilder.group(RitseiApi, "Authorizat
         "listDirectGrants",
         Effect.fn("Http.Authorization.listDirectGrants")(function* ({ headers, params }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             Effect.gen(function* () {
               yield* authorize(
@@ -371,6 +407,7 @@ export const AuthorizationHandlers = HttpApiBuilder.group(RitseiApi, "Authorizat
                 headers["x-tenant-id"],
                 AuthorizationCapabilities.capabilityGrant,
               )
+
               return yield* authorization.listDirectGrants({
                 userAccountId: params.userAccountId,
                 tenantId: headers["x-tenant-id"],
@@ -383,6 +420,7 @@ export const AuthorizationHandlers = HttpApiBuilder.group(RitseiApi, "Authorizat
         "listCapabilityDefinitions",
         Effect.fn("Http.Authorization.listCapabilityDefinitions")(function* ({ headers }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             Effect.gen(function* () {
               yield* authorize(
@@ -390,6 +428,7 @@ export const AuthorizationHandlers = HttpApiBuilder.group(RitseiApi, "Authorizat
                 headers["x-tenant-id"],
                 AuthorizationCapabilities.capabilityGrant,
               )
+
               return CapabilityDefinitions
             }),
           )
@@ -399,6 +438,7 @@ export const AuthorizationHandlers = HttpApiBuilder.group(RitseiApi, "Authorizat
         "suspendMember",
         Effect.fn("Http.Authorization.suspendMember")(function* ({ headers, params }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             Effect.gen(function* () {
               yield* authorize(
@@ -406,6 +446,7 @@ export const AuthorizationHandlers = HttpApiBuilder.group(RitseiApi, "Authorizat
                 headers["x-tenant-id"],
                 AuthorizationCapabilities.tenantMembershipSuspend,
               )
+
               return yield* authorization.suspendMember({
                 userAccountId: params.userAccountId,
                 tenantId: headers["x-tenant-id"],
@@ -418,6 +459,7 @@ export const AuthorizationHandlers = HttpApiBuilder.group(RitseiApi, "Authorizat
         "activateMember",
         Effect.fn("Http.Authorization.activateMember")(function* ({ headers, params }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             Effect.gen(function* () {
               yield* authorize(
@@ -425,6 +467,7 @@ export const AuthorizationHandlers = HttpApiBuilder.group(RitseiApi, "Authorizat
                 headers["x-tenant-id"],
                 AuthorizationCapabilities.tenantMembershipActivate,
               )
+
               return yield* authorization.activateMember({
                 userAccountId: params.userAccountId,
                 tenantId: headers["x-tenant-id"],
@@ -437,6 +480,7 @@ export const AuthorizationHandlers = HttpApiBuilder.group(RitseiApi, "Authorizat
         "removeMember",
         Effect.fn("Http.Authorization.removeMember")(function* ({ headers, params }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             Effect.gen(function* () {
               yield* authorize(
@@ -444,6 +488,7 @@ export const AuthorizationHandlers = HttpApiBuilder.group(RitseiApi, "Authorizat
                 headers["x-tenant-id"],
                 AuthorizationCapabilities.tenantMembershipRemove,
               )
+
               return yield* authorization.removeMember({
                 userAccountId: params.userAccountId,
                 tenantId: headers["x-tenant-id"],
@@ -456,6 +501,7 @@ export const AuthorizationHandlers = HttpApiBuilder.group(RitseiApi, "Authorizat
         "grant",
         Effect.fn("Http.Authorization.grant")(function* ({ headers, payload }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             Effect.gen(function* () {
               yield* authorize(
@@ -463,6 +509,7 @@ export const AuthorizationHandlers = HttpApiBuilder.group(RitseiApi, "Authorizat
                 headers["x-tenant-id"],
                 AuthorizationCapabilities.capabilityGrant,
               )
+
               return yield* authorization.grant({
                 userAccountId: payload.userAccountId,
                 tenantId: headers["x-tenant-id"],
@@ -474,6 +521,7 @@ export const AuthorizationHandlers = HttpApiBuilder.group(RitseiApi, "Authorizat
       )
   }),
 )
+
 export const ApiHandlers = Layer.mergeAll(
   AuthenticationHandlers,
   HealthHandlers,

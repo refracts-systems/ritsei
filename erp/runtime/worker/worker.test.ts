@@ -51,6 +51,7 @@ const workerOperation = (status: "reconciled" | "unknown") => ({
 
 it.effect("claims a financial job and completes it through the Accounting contract", () => {
   let completed = false
+
   const job = {
     jobId,
     tenantId,
@@ -68,11 +69,13 @@ it.effect("claims a financial job and completes it through the Accounting contra
     payload: { tenantId, operationId },
     correlationId: operationId,
   }
+
   const process = partial<ProcessService>()({
     claimJob: () => Effect.succeed(job),
     completeJob: (input: { leaseToken: string }) => {
       assert.strictEqual(input.leaseToken, leaseToken)
       completed = true
+
       return Effect.succeed({
         ...job,
         status: "completed" as const,
@@ -83,6 +86,7 @@ it.effect("claims a financial job and completes it through the Accounting contra
     renewJob: () => Effect.succeed(job),
     failJob: () => Effect.succeed(job),
   })
+
   const accounting = partial<FinancialOperationService>()({
     submitFinancialOperation: () =>
       Effect.gen(function* () {
@@ -91,6 +95,7 @@ it.effect("claims a financial job and completes it through the Accounting contra
           scope: `accounting.financial_operation:${tenantId}:${operationId}`,
           generation: "1",
         })
+
         return {
           id: "00000000-0000-4000-8000-000000000004",
           tenantId,
@@ -142,6 +147,7 @@ it.effect("claims a financial job and completes it through the Accounting contra
 
 it.effect("releases an unknown reconciliation for a bounded retry", () => {
   let failed = false
+
   const job = {
     jobId: "00000000-0000-4000-8000-000000000010",
     tenantId,
@@ -159,6 +165,7 @@ it.effect("releases an unknown reconciliation for a bounded retry", () => {
     payload: { tenantId, operationId },
     correlationId: operationId,
   }
+
   const process = partial<ProcessService>()({
     claimJob: () => Effect.succeed(job),
     completeJob: () => Effect.die("reconciliation must be retried"),
@@ -167,9 +174,11 @@ it.effect("releases an unknown reconciliation for a bounded retry", () => {
       assert.strictEqual(input.leaseToken, job.leaseToken)
       assert.isNotNull(input.retryAt)
       failed = true
+
       return Effect.succeed({ ...job, status: "pending" as const })
     },
   })
+
   const accounting = partial<FinancialOperationService>()({
     submitFinancialOperation: () => Effect.die("not used"),
     reconcileFinancialOperation: () =>
@@ -224,6 +233,7 @@ it.effect(
   "leaves a claimed lease untouched when the worker is terminated before Accounting",
   () => {
     let accounted = false
+
     const job = {
       jobId: "00000000-0000-4000-8000-000000000020",
       tenantId,
@@ -241,15 +251,18 @@ it.effect(
       payload: { tenantId, operationId },
       correlationId: operationId,
     }
+
     const process = partial<ProcessService>()({
       claimJob: () => Effect.succeed(job),
       completeJob: () => Effect.die("must not complete a terminated lease"),
       renewJob: () => Effect.succeed(job),
       failJob: () => Effect.die("must not mutate a terminated lease"),
     })
+
     const accounting = partial<FinancialOperationService>()({
       submitFinancialOperation: () => {
         accounted = true
+
         return Effect.succeed(workerOperation("reconciled"))
       },
       reconcileFinancialOperation: () => Effect.die("not used"),
@@ -280,6 +293,7 @@ it.effect(
 it.effect("renews a long-running financial lease with its generation", () =>
   Effect.gen(function* () {
     let renewals = 0
+
     const job = {
       jobId: "00000000-0000-4000-8000-000000000030",
       tenantId,
@@ -297,16 +311,19 @@ it.effect("renews a long-running financial lease with its generation", () =>
       payload: { tenantId, operationId },
       correlationId: operationId,
     }
+
     const process = partial<ProcessService>()({
       claimJob: () => Effect.succeed(job),
       renewJob: (input: { leaseGeneration: string }) => {
         assert.strictEqual(input.leaseGeneration, "5")
         renewals += 1
+
         return Effect.succeed(job)
       },
       completeJob: () => Effect.succeed({ ...job, status: "completed" as const }),
       failJob: () => Effect.die("must not fail a successful operation"),
     })
+
     const accounting = partial<FinancialOperationService>()({
       submitFinancialOperation: () =>
         Effect.sleep("2 minutes").pipe(Effect.as(workerOperation("reconciled"))),
@@ -315,6 +332,7 @@ it.effect("renews a long-running financial lease with its generation", () =>
       createRevenueIntent: () => Effect.die("not used"),
       createReversalIntent: () => Effect.die("not used"),
     })
+
     const fiber = yield* runFinancialOperationOnce({ tenantId, workerId: "worker-1" }).pipe(
       Effect.provide(
         Layer.mergeAll(
@@ -324,6 +342,7 @@ it.effect("renews a long-running financial lease with its generation", () =>
       ),
       Effect.forkChild,
     )
+
     yield* Effect.yieldNow
     yield* TestClock.adjust("1 minute")
     assert.isAtLeast(renewals, 1)
@@ -335,6 +354,7 @@ it.effect("renews a long-running financial lease with its generation", () =>
 
 it.effect("restarts after Accounting acceptance and fences stale duplicate completion", () => {
   let completions = 0
+
   const job = {
     jobId: "00000000-0000-4000-8000-000000000021",
     tenantId,
@@ -352,10 +372,12 @@ it.effect("restarts after Accounting acceptance and fences stale duplicate compl
     payload: { tenantId, operationId },
     correlationId: operationId,
   }
+
   const process = partial<ProcessService>()({
     claimJob: () => Effect.succeed(job),
     completeJob: () => {
       completions += 1
+
       return completions === 1
         ? Effect.fail(new ProcessJobLeaseLost({ tenantId, jobId: job.jobId }))
         : Effect.succeed({ ...job, status: "completed" as const })
@@ -363,6 +385,7 @@ it.effect("restarts after Accounting acceptance and fences stale duplicate compl
     renewJob: () => Effect.succeed(job),
     failJob: () => Effect.succeed(job),
   })
+
   const accounting = partial<FinancialOperationService>()({
     submitFinancialOperation: () => Effect.succeed(workerOperation("reconciled")),
     reconcileFinancialOperation: () => Effect.die("not used"),
@@ -370,6 +393,7 @@ it.effect("restarts after Accounting acceptance and fences stale duplicate compl
     createRevenueIntent: () => Effect.die("not used"),
     createReversalIntent: () => Effect.die("not used"),
   })
+
   const services = Layer.mergeAll(
     Layer.succeed(ProcessService, process),
     Layer.succeed(FinancialOperationService, accounting),
@@ -386,10 +410,13 @@ it.effect("restarts after Accounting acceptance and fences stale duplicate compl
         ),
       ),
     )
+
     assert.instanceOf(terminated, WorkerInjectedFailure)
+
     const staleCompletion = yield* Effect.flip(
       runFinancialOperationOnce({ tenantId, workerId: "worker-1" }).pipe(Effect.provide(services)),
     )
+
     assert.instanceOf(staleCompletion, ProcessJobLeaseLost)
     assert.strictEqual(completions, 1)
   })

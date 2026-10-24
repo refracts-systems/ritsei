@@ -89,14 +89,17 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
             ),
         "procurement.supplier_account.get",
       ))[0]
+
       if (account === undefined) {
         return yield* Effect.fail(new SupplierAccountNotFound({ tenantId, supplierAccountId }))
       }
+
       const relationship = yield* party.getRelationship({
         principal,
         tenantId,
         relationshipId: account.relationshipId,
       })
+
       return { partyId: relationship.partyId, legalEntityId: relationship.legalEntityId }
     })
 
@@ -116,8 +119,11 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
           })
           .from(purchaseOrders)
           .where(and(eq(purchaseOrders.tenantId, tenantId), eq(purchaseOrders.id, purchaseOrderId)))
+
         const order = (await (lock ? query.for("update") : query))[0]
+
         if (order === undefined) return undefined
+
         const lines = await tx
           .select({
             purchaseOrderLineId: purchaseOrderLines.id,
@@ -141,6 +147,7 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
             ),
           )
           .orderBy(asc(purchaseOrderLines.id))
+
         const received = await tx
           .select({
             lineId: purchaseReceiptLines.purchaseOrderLineId,
@@ -154,6 +161,7 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
             ),
           )
           .groupBy(purchaseReceiptLines.purchaseOrderLineId)
+
         const returned = await tx
           .select({
             lineId: purchaseReturnLines.purchaseOrderLineId,
@@ -167,18 +175,23 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
             ),
           )
           .groupBy(purchaseReturnLines.purchaseOrderLineId)
+
         return { order, lines, received, returned }
       }, "procurement.matching.load")
+
       if (loaded === undefined) {
         return yield* Effect.fail(new PurchaseOrderNotFound({ tenantId, purchaseOrderId }))
       }
+
       const supplier = yield* loadSupplier(
         principal,
         tenantId,
         loaded.order.supplierAccountId,
       ).pipe(Effect.catchTag("SupplierAccountNotFound", (error) => Effect.die(error)))
+
       const receivedBy = new Map(loaded.received.map((row) => [row.lineId, row.quantity ?? "0"]))
       const returnedBy = new Map(loaded.returned.map((row) => [row.lineId, row.quantity ?? "0"]))
+
       return {
         purchaseOrderId,
         supplierAccountId: loaded.order.supplierAccountId,
@@ -204,6 +217,7 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
       SetSupplierPriceInput,
       ProcurementCapabilities.supplierPriceConfigure,
     )(input)
+
     yield* database
       .query(
         (db) =>
@@ -233,12 +247,15 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
               supplierAccountId: decoded.supplierAccountId,
             })
           }
+
           if (isDatabaseConstraint(error, "supplier_prices_product_fkey", "23503")) {
             return new ProductNotFound({ tenantId: decoded.tenantId, productId: decoded.productId })
           }
+
           return error
         }),
       )
+
     return {
       supplierAccountId: decoded.supplierAccountId,
       productId: decoded.productId,
@@ -253,17 +270,21 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
       DraftPurchaseOrderInput,
       ProcurementCapabilities.purchaseOrderCreate,
     )(input)
+
     const scope = { principal: decoded.principal, tenantId: decoded.tenantId }
     yield* loadSupplier(decoded.principal, decoded.tenantId, decoded.supplierAccountId)
     const productIds = [...new Set(decoded.lines.map((line) => line.productId))]
+
     for (const productId of productIds) {
       const product = yield* products.getProduct({ ...scope, productId })
+
       if (product.type !== "stockable") {
         return yield* Effect.fail(
           new PurchaseLineNotStockable({ tenantId: decoded.tenantId, productId }),
         )
       }
     }
+
     const quoted = yield* database.query(
       (db) =>
         db
@@ -278,10 +299,13 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
           ),
       "procurement.supplier_price.list",
     )
+
     const prices = new Map(quoted.map((row) => [row.productId, normalize(row.unitPrice)]))
+
     const defaults = decoded.lines.some((line) => line.taxCodeId === undefined)
       ? yield* tax.determineTaxCodes({ ...scope, direction: "purchase", productIds })
       : new Map<string, string | null>()
+
     const lines: Array<{
       id: string
       productId: string
@@ -289,8 +313,10 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
       unitPrice: string
       taxCodeId: string | null
     }> = []
+
     for (const line of decoded.lines) {
       const unitPrice = line.unitPrice ?? prices.get(line.productId)
+
       if (unitPrice === undefined) {
         return yield* Effect.fail(
           new SupplierPriceNotFound({
@@ -300,6 +326,7 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
           }),
         )
       }
+
       lines.push({
         id: uuidv7(),
         productId: line.productId,
@@ -309,10 +336,13 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
           line.taxCodeId === undefined ? (defaults.get(line.productId) ?? null) : line.taxCodeId,
       })
     }
+
     const total = major(
       lines.reduce((amount, line) => amount + minor(line.unitPrice) * BigInt(line.quantity), 0n),
     )
+
     const purchaseOrderId = uuidv7()
+
     return yield* database.withTransaction(
       Effect.gen(function* () {
         yield* database.transaction(async (tx) => {
@@ -341,11 +371,13 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
             })),
           )
         }, "procurement.purchase_order.draft")
+
         const required = yield* approvals.isRequired({
           ...scope,
           subjectType: PurchaseApprovalSubject,
           amount: total,
         })
+
         const approval = required
           ? yield* approvals.submit({
               ...scope,
@@ -355,6 +387,7 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
               reason: "Purchase order total exceeds the approval threshold",
             })
           : null
+
         return { purchaseOrderId, total, approval }
       }),
       "procurement.purchase_order.draft.atomic",
@@ -368,29 +401,35 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
       ReleasePurchaseOrderInput,
       ProcurementCapabilities.purchaseOrderConfirm,
     )(input)
+
     const scope = { principal: decoded.principal, tenantId: decoded.tenantId }
+
     const matching = yield* loadMatching(
       decoded.principal,
       decoded.tenantId,
       decoded.purchaseOrderId,
     )
+
     const total = major(
       matching.lines.reduce(
         (amount, line) => amount + minor(line.unitPrice) * BigInt(line.ordered),
         0n,
       ),
     )
+
     const required = yield* approvals.isRequired({
       ...scope,
       subjectType: PurchaseApprovalSubject,
       amount: total,
     })
+
     if (required) {
       const approval = yield* approvals.getForSubject({
         ...scope,
         subjectType: PurchaseApprovalSubject,
         subjectId: decoded.purchaseOrderId,
       })
+
       // An approval covers the amount it was granted for; a larger order needs a new approval.
       if (approval?.status !== "approved" || minor(approval.amount) < minor(total)) {
         return yield* Effect.fail(
@@ -402,11 +441,13 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
         )
       }
     }
+
     yield* procurement.confirmPurchaseOrder({
       ...scope,
       purchaseOrderId: decoded.purchaseOrderId,
       idempotencyKey: decoded.idempotencyKey,
     })
+
     return yield* loadMatching(decoded.principal, decoded.tenantId, decoded.purchaseOrderId)
   })
 
@@ -417,6 +458,7 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
       PurchaseOrderQueryInput,
       ProcurementCapabilities.purchaseOrderRead,
     )(input)
+
     return yield* loadMatching(decoded.principal, decoded.tenantId, decoded.purchaseOrderId)
   })
 
@@ -436,15 +478,19 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
           }),
         )
       }
+
       const byLine = new Map(matching.lines.map((line) => [line.purchaseOrderLineId, line]))
+
       const lines: Array<{
         line: PurchaseMatching["lines"][number]
         quantity: string
         unitOfMeasure: string
       }> = []
+
       for (const requested of decoded.lines) {
         const line = byLine.get(requested.purchaseOrderLineId)
         const received = BigInt(line?.received ?? "0")
+
         if (line === undefined || received + BigInt(requested.quantity) > BigInt(line.ordered)) {
           return yield* Effect.fail(
             new PurchaseReceiptQuantityExceeded({
@@ -457,13 +503,16 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
             }),
           )
         }
+
         const product = yield* products.getProduct({
           principal: decoded.principal,
           tenantId: decoded.tenantId,
           productId: line.productId,
         })
+
         lines.push({ line, quantity: requested.quantity, unitOfMeasure: product.unitOfMeasure })
       }
+
       yield* database.transaction(async (tx) => {
         await tx.insert(purchaseReceipts).values({
           id: receiptId,
@@ -493,11 +542,14 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
       ReceiveValuedInput,
       ProcurementCapabilities.purchaseReceiptReceive,
     )(input)
+
     const scope = { principal: decoded.principal, tenantId: decoded.tenantId }
+
     return yield* database.withTransaction(
       Effect.gen(function* () {
         const receiptId = decoded.receiptId ?? uuidv7()
         const source = { type: "procurement.receipt", id: receiptId }
+
         const recorded = (yield* database.query(
           (db) =>
             db
@@ -511,14 +563,18 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
               ),
           "procurement.receipt.get",
         ))[0]
+
         const matching = yield* loadMatching(
           decoded.principal,
           decoded.tenantId,
           decoded.purchaseOrderId,
           true,
         )
+
         const byLine = new Map(matching.lines.map((line) => [line.purchaseOrderLineId, line]))
+
         if (recorded === undefined) yield* recordReceipt(decoded, receiptId, matching)
+
         // Goods enter stock at the purchase price against goods received not invoiced.
         const moved = yield* stock.receiveValued({
           ...scope,
@@ -532,6 +588,7 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
             unitCost: byLine.get(requested.purchaseOrderLineId)!.unitPrice,
           })),
         })
+
         const allocated = yield* numbering
           .allocate({
             tenantId: decoded.tenantId,
@@ -542,6 +599,7 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
             prefix: "GR/",
           })
           .pipe(Effect.catchTag("SchemaError", (error) => Effect.die(error)))
+
         return {
           id: receiptId,
           purchaseOrderId: decoded.purchaseOrderId,
@@ -560,17 +618,22 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
       ReturnToSupplierInput,
       ProcurementCapabilities.purchaseReturnCreate,
     )(input)
+
     const scope = { principal: decoded.principal, tenantId: decoded.tenantId }
+
     return yield* database.withTransaction(
       Effect.gen(function* () {
         const returnId = decoded.returnId ?? uuidv7()
+
         const matching = yield* loadMatching(
           decoded.principal,
           decoded.tenantId,
           decoded.purchaseOrderId,
           true,
         )
+
         const byLine = new Map(matching.lines.map((line) => [line.purchaseOrderLineId, line]))
+
         const recorded = (yield* database.query(
           (db) =>
             db
@@ -584,12 +647,16 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
               ),
           "procurement.return.get",
         ))[0]
+
         let number = recorded?.number
+
         if (number === undefined) {
           for (const requested of decoded.lines) {
             const line = byLine.get(requested.purchaseOrderLineId)
+
             const available =
               line === undefined ? 0n : BigInt(line.received) - BigInt(line.returned)
+
             if (BigInt(requested.quantity) > available) {
               return yield* Effect.fail(
                 new PurchaseReturnExceedsReceipt({
@@ -600,6 +667,7 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
               )
             }
           }
+
           const allocated = yield* numbering
             .allocate({
               tenantId: decoded.tenantId,
@@ -610,6 +678,7 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
               prefix: "RET/",
             })
             .pipe(Effect.catchTag("SchemaError", (error) => Effect.die(error)))
+
           number = allocated.number
           yield* database.transaction(async (tx) => {
             await tx.insert(purchaseReturns).values({
@@ -631,6 +700,7 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
             )
           }, "procurement.return.record")
         }
+
         // Returned goods leave stock at the purchase price, clearing goods received not invoiced.
         const moved = yield* stock.issueValued({
           ...scope,
@@ -644,6 +714,7 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
             unitCost: byLine.get(requested.purchaseOrderLineId)!.unitPrice,
           })),
         })
+
         return { id: returnId, purchaseOrderId: decoded.purchaseOrderId, number, stock: moved }
       }),
       "procurement.return.valued",

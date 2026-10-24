@@ -23,12 +23,16 @@ import {
 } from "./service.ts"
 
 const authorizationKey = ["authorization"] as const
+
 const membershipCollectionKey = (input: ListTenantMembershipsInput) =>
   [...authorizationKey, "memberships", input] as const
+
 const membershipDetailKey = (userAccountId: string) =>
   [...authorizationKey, "memberships", "detail", userAccountId] as const
+
 const directGrantsKey = (userAccountId: string) =>
   [...authorizationKey, "direct-grants", userAccountId] as const
+
 const capabilityCatalogKey = [...authorizationKey, "capability-definitions"] as const
 
 const invalidateAuthorization = (client: ReturnType<typeof useQueryClient>, tenantId: string) =>
@@ -78,10 +82,12 @@ export function createAddTenantMembershipMutation(
   afterSuccess?: (membership: TenantMembership) => void,
 ) {
   const client = useQueryClient()
+
   return useMutation<TenantMembership, RequestFailure, AddTenantMembershipInput>(() => ({
     mutationFn: (input) => runRequest(scope, addMembership(input)),
     onSuccess: (membership) => {
       afterSuccess?.(membership)
+
       return invalidateAuthorization(client, scope.tenantId)
     },
   }))
@@ -89,6 +95,7 @@ export function createAddTenantMembershipMutation(
 
 export function createSuspendTenantMembershipMutation(scope: ApiScope) {
   const client = useQueryClient()
+
   return useMutation<TenantMembership, RequestFailure, { userAccountId: string }>(() => ({
     mutationFn: ({ userAccountId }) => runRequest(scope, suspendMembership(userAccountId)),
     onSuccess: () => invalidateAuthorization(client, scope.tenantId),
@@ -97,6 +104,7 @@ export function createSuspendTenantMembershipMutation(scope: ApiScope) {
 
 export function createActivateTenantMembershipMutation(scope: ApiScope) {
   const client = useQueryClient()
+
   return useMutation<TenantMembership, RequestFailure, { userAccountId: string }>(() => ({
     mutationFn: ({ userAccountId }) => runRequest(scope, activateMembership(userAccountId)),
     onSuccess: () => invalidateAuthorization(client, scope.tenantId),
@@ -105,10 +113,12 @@ export function createActivateTenantMembershipMutation(scope: ApiScope) {
 
 export function createRemoveTenantMembershipMutation(scope: ApiScope, afterSuccess?: () => void) {
   const client = useQueryClient()
+
   return useMutation<void, RequestFailure, { userAccountId: string }>(() => ({
     mutationFn: ({ userAccountId }) => runRequest(scope, removeMembership(userAccountId)),
     onSuccess: () => {
       afterSuccess?.()
+
       return invalidateAuthorization(client, scope.tenantId)
     },
   }))
@@ -116,10 +126,12 @@ export function createRemoveTenantMembershipMutation(scope: ApiScope, afterSucce
 
 export function createGrantCapabilityMutation(scope: ApiScope, afterSuccess?: () => void) {
   const client = useQueryClient()
+
   return useMutation<void, RequestFailure, GrantCapabilityInput>(() => ({
     mutationFn: (input) => runRequest(scope, grantCapability(input)),
     onSuccess: () => {
       afterSuccess?.()
+
       return invalidateAuthorization(client, scope.tenantId)
     },
   }))

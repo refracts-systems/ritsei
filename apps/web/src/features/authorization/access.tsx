@@ -38,6 +38,7 @@ const statusOptions = [
   { value: "active", label: "Active" },
   { value: "suspended", label: "Suspended" },
 ] as const
+
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 const requiredText = (value: FormValue[string]): string | null =>
@@ -69,6 +70,7 @@ function MutationFeedback(props: {
 
 function MembershipFilters(props: { search?: string; status?: TenantMembershipStatus }) {
   const navigate = useNavigate()
+
   return (
     <Form
       class={layout.row}
@@ -80,7 +82,9 @@ function MembershipFilters(props: { search?: string; status?: TenantMembershipSt
           const query = new URLSearchParams()
           const search = requiredText(value.search)
           const status = value.status
+
           if (search !== null) query.set("search", search)
+
           if (status === "active" || status === "suspended") query.set("status", status)
           navigate(query.size === 0 ? "/access" : `/access?${query}`)
         }
@@ -174,11 +178,14 @@ function AddMembershipDialog(props: { reload: () => Promise<void> }) {
   const navigate = useNavigate()
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
+
   const mutation = createAddTenantMembershipMutation(scope, (membership) => {
     setOpen(false)
     navigate(`/access/${encodeURIComponent(membership.userAccountId)}`)
   })
+
   let accountInput: HTMLInputElement | undefined
+
   return (
     <Dialog
       open={open()}
@@ -196,11 +203,14 @@ function AddMembershipDialog(props: { reload: () => Promise<void> }) {
           (value) => {
             if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
             const userAccountId = requiredText(value.userAccountId)
+
             if (userAccountId === null || !uuidPattern.test(userAccountId)) {
               setInvalid(true)
               accountInput?.focus()
+
               return
             }
+
             setInvalid(false)
             mutation.mutate({ userAccountId })
           }
@@ -278,6 +288,7 @@ function ImpactDialog(props: {
 }) {
   const [open, setOpen] = createSignal(false)
   const [acknowledged, setAcknowledged] = createSignal(false)
+
   return (
     <Dialog
       open={open()}
@@ -345,6 +356,7 @@ function MembershipLifecycle(props: {
   const suspend = createSuspendTenantMembershipMutation(scope)
   const activate = createActivateTenantMembershipMutation(scope)
   const remove = createRemoveTenantMembershipMutation(scope, () => navigate("/access"))
+
   return (
     <section class={[surface(), layout.stack]} aria-labelledby="membership-commands-heading">
       <h3 id="membership-commands-heading">Membership commands</h3>
@@ -410,6 +422,7 @@ function CapabilityGrantTable(props: {
   membershipStatus: TenantMembershipStatus
 }) {
   const definitions = createMemo(() => new Map(props.definitions.map((item) => [item.id, item])))
+
   return (
     <Show
       when={props.grants.length > 0}
@@ -430,6 +443,7 @@ function CapabilityGrantTable(props: {
             header: "Business action",
             cell: (grant) => {
               const definition = definitions().get(grant.capability)
+
               return definition ? capabilityLabel(definition) : "Catalog unavailable"
             },
           },
@@ -463,12 +477,15 @@ function GrantCapabilityDialog(props: {
   const [acknowledged, setAcknowledged] = createSignal(false)
   const mutation = createGrantCapabilityMutation(scope, () => setOpen(false))
   const granted = createMemo(() => new Set(props.grants.map((grant) => grant.capability)))
+
   const publicDefinitions = createMemo(() =>
     props.definitions.filter((definition) => definition.stability === "PUBLIC"),
   )
+
   const selected = createMemo(() =>
     publicDefinitions().find((definition) => definition.id === capability()),
   )
+
   const options = createMemo(() =>
     publicDefinitions().map((definition) => ({
       value: definition.id,
@@ -478,6 +495,7 @@ function GrantCapabilityDialog(props: {
       disabled: granted().has(definition.id),
     })),
   )
+
   return (
     <Dialog
       open={open()}
@@ -564,6 +582,7 @@ function GrantCapabilityDialog(props: {
           }
           onClick={() => {
             const selectedCapability = capability()
+
             if (selectedCapability === "") return
             mutation.mutate({
               userAccountId: props.membership.userAccountId,
@@ -589,6 +608,7 @@ function MembershipDetail(props: {
   const definitions = createCapabilityDefinitionsQuery(scope)
   const reloadDetail = () => reloaded(Promise.all([membership.refetch(), grants.refetch()]))
   const reloadAfterRemoval = () => props.reloadMemberships().then(() => undefined)
+
   return (
     <section class={layout.stack} aria-labelledby="access-detail-heading">
       <div class={layout.row}>
@@ -697,11 +717,13 @@ export function Access(props: {
   const selectedUserAccountId = untrack(() => props.selectedUserAccountId)
   const search = untrack(() => props.search)
   const status = untrack(() => props.status)
+
   const query = createTenantMembershipsQuery(scope, {
     ...definedFields({ search }),
     ...definedFields({ status }),
     limit: 200,
   })
+
   return (
     <EntityWorkspace
       title="Access"

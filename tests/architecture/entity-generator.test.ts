@@ -29,8 +29,10 @@ const assertInserted = (
     partial<{ parseDiagnostics: readonly unknown[] }>()(file).parseDiagnostics,
     [],
   )
+
   for (const text of expected) assert.include(after, text)
   let remaining = after
+
   for (const text of expected) remaining = remaining.replace(text, "")
   assert.strictEqual(remaining.replace(/[\s,]/g, ""), before.replace(/[\s,]/g, ""))
 }
@@ -38,6 +40,7 @@ const assertInserted = (
 describe("ritsei new module --entity", () => {
   it("renders the module, table, endpoint, page, and tests under the owner's paths", () => {
     const paths = renderEntityModule(names).map(({ path }) => path)
+
     for (const expected of [
       "erp/modules/service_contract/manifest.ts",
       "erp/modules/service_contract/http.ts",
@@ -48,6 +51,7 @@ describe("ritsei new module --entity", () => {
     ]) {
       assert.include(paths, expected)
     }
+
     assert.isTrue(
       paths.every((path) =>
         /^(?:erp\/modules\/service_contract|db\/schema|apps\/web\/src\/(?:features|app\/modules))\//.test(
@@ -61,6 +65,7 @@ describe("ritsei new module --entity", () => {
     const capabilities = renderEntityModule(names).find(({ path }) =>
       path.endsWith("src/capabilities.ts"),
     )!.content
+
     assert.include(capabilities, '"service_contract.contract.read"')
     assert.include(capabilities, '"service_contract.contract.create"')
     assert.include(capabilities, "Deny by default")

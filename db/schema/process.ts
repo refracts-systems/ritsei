@@ -16,11 +16,13 @@ import { tenants } from "./auth.ts"
 import { createdAt, id, json, updatedAt } from "./common.ts"
 
 export const processSchema = pgSchema("process")
+
 export const workflowRunStatus = processSchema.enum("workflow_run_status", [
   "running",
   "succeeded",
   "manual_recovery",
 ])
+
 export const processJobStatus = processSchema.enum("process_job_status", [
   "pending",
   "leased",
@@ -28,6 +30,7 @@ export const processJobStatus = processSchema.enum("process_job_status", [
   "failed",
   "manual_recovery",
 ])
+
 export const processRuntimeStatus = processSchema.enum("process_runtime_status", [
   "running",
   "waiting",
@@ -35,22 +38,26 @@ export const processRuntimeStatus = processSchema.enum("process_runtime_status",
   "failed",
   "manual_recovery",
 ])
+
 export const processRuntimeFailureKind = processSchema.enum("process_runtime_failure_kind", [
   "business_failure",
   "technical_retry",
   "unknown_external_outcome",
   "compensation_failure",
 ])
+
 export const processRuntimeEnvironment = processSchema.enum("process_runtime_environment", [
   "DEV",
   "TEST",
   "PROD",
 ])
+
 export const processOperatorAction = processSchema.enum("process_operator_action", [
   "retry",
   "compensate",
   "manual_recovery",
 ])
+
 export const processReleaseAuditEvent = processSchema.enum("process_release_audit_event", [
   "approval",
   "release",

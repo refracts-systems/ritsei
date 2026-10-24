@@ -44,6 +44,7 @@ it.effect("defines versioned post-commit event and leased job contracts", () =>
       publishedAt: null,
       attempts: 0,
     })
+
     const job = yield* Schema.decodeUnknownEffect(ProcessJob)({
       jobId: "018f3f77-0c5a-7cc0-8b62-6a163d214126",
       tenantId: "018f3f77-0c5a-7cc0-8b62-6a163d214124",
@@ -66,6 +67,7 @@ it.effect("defines versioned post-commit event and leased job contracts", () =>
       4,
     )
     assert.strictEqual(job.status, "pending")
+
     const leasedJob = yield* Schema.decodeUnknownEffect(ProcessJob)({
       ...job,
       status: "leased",
@@ -73,12 +75,14 @@ it.effect("defines versioned post-commit event and leased job contracts", () =>
       leaseOwner: "worker-1",
       leaseToken: "018f3f77-0c5a-7cc0-8b62-6a163d214127",
     })
+
     const invalidLeaseState = yield* Effect.flip(
       Schema.decodeUnknownEffect(ProcessJob)({
         ...job,
         leaseUntil: "2026-08-09T00:05:00.000Z",
       }),
     )
+
     const invalidLeaseOwner = yield* Effect.flip(
       Schema.decodeUnknownEffect(ProcessJob)({
         ...job,
@@ -87,46 +91,55 @@ it.effect("defines versioned post-commit event and leased job contracts", () =>
         leaseToken: "018f3f77-0c5a-7cc0-8b62-6a163d214127",
       }),
     )
+
     assert.strictEqual(invalidLeaseOwner._tag, "SchemaError")
+
     const invalidAttempts = yield* Effect.flip(
       Schema.decodeUnknownEffect(ProcessJob)({
         ...job,
         attempts: -1,
       }),
     )
+
     const overflowingAttempts = yield* Effect.flip(
       Schema.decodeUnknownEffect(ProcessJob)({
         ...job,
         attempts: 2_147_483_648,
       }),
     )
+
     const overflowingPriority = yield* Effect.flip(
       Schema.decodeUnknownEffect(ProcessJob)({
         ...job,
         priority: 2_147_483_648,
       }),
     )
+
     const invalidSchedule = yield* Effect.flip(
       Schema.decodeUnknownEffect(ProcessJob)({
         ...job,
         scheduledAt: "2026-08-09",
       }),
     )
+
     const invalidIdentity = yield* Effect.flip(
       Schema.decodeUnknownEffect(ProcessJob)({
         ...job,
         tenantId: "not-a-uuid",
       }),
     )
+
     const invalidJobType = yield* Effect.flip(
       Schema.decodeUnknownEffect(ProcessPostCommitJobType)("process.unknown.post_commit"),
     )
+
     const invalidPayload = yield* Effect.flip(
       Schema.decodeUnknownEffect(ProcessJob)({
         ...job,
         payload: () => undefined,
       }),
     )
+
     assert.strictEqual(leasedJob.status, "leased")
     assert.strictEqual(invalidLeaseState._tag, "SchemaError")
     assert.strictEqual(invalidAttempts._tag, "SchemaError")
@@ -149,6 +162,7 @@ it.effect("validates Process post-commit job payloads", () =>
       causationId: null,
       idempotencyKey: "confirmation-1",
     }
+
     yield* Schema.decodeUnknownEffect(ProcessPostCommitJobPayload)(payload)
 
     const invalidEvent = yield* Effect.flip(
@@ -157,6 +171,7 @@ it.effect("validates Process post-commit job payloads", () =>
         eventId: "not-a-uuid",
       }),
     )
+
     assert.strictEqual(invalidEvent._tag, "SchemaError")
   }),
 )
@@ -169,6 +184,7 @@ it.effect("validates order fulfillment completed event payloads", () =>
       orderId: "018f3f77-0c5a-7cc0-8b62-6a163d214125",
       reservationIds: ["018f3f77-0c5a-7cc0-8b62-6a163d214130"],
     }
+
     yield* Schema.decodeUnknownEffect(OrderFulfillmentCompletedEventPayload)(payload)
 
     const invalidWorkflow = yield* Effect.flip(
@@ -177,6 +193,7 @@ it.effect("validates order fulfillment completed event payloads", () =>
         workflowRunId: "not-a-uuid",
       }),
     )
+
     assert.strictEqual(invalidWorkflow._tag, "SchemaError")
   }),
 )
@@ -190,6 +207,7 @@ it.effect("validates order cancellation completed event payloads", () =>
       reservationIds: ["018f3f77-0c5a-7cc0-8b62-6a163d214130"],
       reversalJournalId: "018f3f77-0c5a-7cc0-8b62-6a163d214133",
     }
+
     yield* Schema.decodeUnknownEffect(OrderCancellationCompletedEventPayload)(payload)
 
     const invalidJournal = yield* Effect.flip(
@@ -198,6 +216,7 @@ it.effect("validates order cancellation completed event payloads", () =>
         reversalJournalId: "not-a-uuid",
       }),
     )
+
     assert.strictEqual(invalidJournal._tag, "SchemaError")
   }),
 )
@@ -210,6 +229,7 @@ it.effect("validates order confirmation completed event payloads", () =>
       reservationIds: ["018f3f77-0c5a-7cc0-8b62-6a163d214130"],
       journalId: "018f3f77-0c5a-7cc0-8b62-6a163d214131",
     }
+
     yield* Schema.decodeUnknownEffect(OrderConfirmationCompletedEventPayload)(payload)
 
     const invalidReservation = yield* Effect.flip(
@@ -218,6 +238,7 @@ it.effect("validates order confirmation completed event payloads", () =>
         reservationIds: ["not-a-uuid"],
       }),
     )
+
     assert.strictEqual(invalidReservation._tag, "SchemaError")
   }),
 )
@@ -234,23 +255,29 @@ it.effect("validates workflow run identities and recovery metadata", () =>
       recoveryReason: null,
       completedAt: null,
     }
+
     yield* Schema.decodeUnknownEffect(WorkflowRun)(run)
 
     const invalidWorkflowType = yield* Effect.flip(
       Schema.decodeUnknownEffect(ProcessWorkflowType)("sales.order.unknown"),
     )
+
     const invalidIdentity = yield* Effect.flip(
       Schema.decodeUnknownEffect(WorkflowRun)({ ...run, aggregateId: "not-a-uuid" }),
     )
+
     const invalidSucceededState = yield* Effect.flip(
       Schema.decodeUnknownEffect(WorkflowRun)({ ...run, status: "succeeded" }),
     )
+
     const invalidRecoveryState = yield* Effect.flip(
       Schema.decodeUnknownEffect(WorkflowRun)({ ...run, status: "manual_recovery" }),
     )
+
     const invalidRunningRecovery = yield* Effect.flip(
       Schema.decodeUnknownEffect(WorkflowRun)({ ...run, recoveryReason: "unexpected" }),
     )
+
     const invalidSucceededRecovery = yield* Effect.flip(
       Schema.decodeUnknownEffect(WorkflowRun)({
         ...run,
@@ -259,6 +286,7 @@ it.effect("validates workflow run identities and recovery metadata", () =>
         completedAt: "2026-08-14T00:00:00.000Z",
       }),
     )
+
     const invalidCompletedRecovery = yield* Effect.flip(
       Schema.decodeUnknownEffect(WorkflowRun)({
         ...run,
@@ -267,6 +295,7 @@ it.effect("validates workflow run identities and recovery metadata", () =>
         completedAt: "2026-08-14T00:00:00.000Z",
       }),
     )
+
     assert.strictEqual(invalidWorkflowType._tag, "SchemaError")
     assert.strictEqual(invalidIdentity._tag, "SchemaError")
     assert.strictEqual(invalidSucceededState._tag, "SchemaError")
@@ -282,9 +311,11 @@ it.effect("validates lifecycle result identities", () =>
     const invalidWorkflowRunId = yield* Effect.flip(
       Schema.decodeUnknownEffect(OrderFulfillmentResult.fields.workflowRunId)("not-a-uuid"),
     )
+
     const invalidEventId = yield* Effect.flip(
       Schema.decodeUnknownEffect(OrderFulfillmentResult.fields.eventId)("not-a-uuid"),
     )
+
     const invalidJobId = yield* Effect.flip(
       Schema.decodeUnknownEffect(OrderFulfillmentResult.fields.jobId)("not-a-uuid"),
     )
@@ -308,6 +339,7 @@ it.effect("validates workflow error identities and recovery reasons", () =>
         tenantId: "not-a-uuid",
       }),
     )
+
     const invalidReason = yield* Effect.flip(
       Schema.decodeUnknownEffect(WorkflowManualRecoveryRequired)({
         ...Schema.encodeSync(WorkflowManualRecoveryRequired)(
@@ -331,6 +363,7 @@ it.effect("validates scoped workflow tenant identities", () =>
     const invalidTenant = yield* Effect.flip(
       Schema.decodeUnknownEffect(ConfirmOrderConfirmationInput.fields.tenantId)("not-a-uuid"),
     )
+
     assert.strictEqual(invalidTenant._tag, "SchemaError")
   }),
 )
@@ -343,6 +376,7 @@ it.effect("defines cancellation and fulfillment command payloads", () =>
       correlationId: "correlation-1",
       idempotencyKey: "lifecycle-1",
     }
+
     const cancellation = yield* Schema.decodeUnknownEffect(OrderCancellationPayload)(input)
     const fulfillment = yield* Schema.decodeUnknownEffect(OrderFulfillmentPayload)(input)
 
@@ -378,6 +412,7 @@ it.effect("defines the server-derived order confirmation payload", () =>
         warehouseId: "not-a-uuid",
       }),
     )
+
     assert.strictEqual(invalidIdentity._tag, "SchemaError")
   }),
 )

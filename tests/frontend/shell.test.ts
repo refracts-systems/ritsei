@@ -79,9 +79,11 @@ it.effect(
         await page.goto(`${url}/not-a-route`)
         await page.getByRole("heading", { name: "Page not found" }).waitFor()
         assert.deepEqual(errors, [])
+
         const stored = await page.evaluate(() =>
           JSON.stringify([Object.entries(localStorage), Object.entries(sessionStorage)]),
         )
+
         assert.notInclude(stored, "test-session")
         assert.notInclude(stored, "not-a-uuid")
       })
@@ -120,6 +122,7 @@ it.effect(
         let logoutAuthorization: string | undefined
         await page.route("**/api/auth/logout", (route) => {
           logoutAuthorization = route.request().headers().authorization
+
           return route.fulfill({ status: 204 })
         })
 
@@ -127,11 +130,13 @@ it.effect(
         await page.getByRole("button", { name: "Sign in locally", exact: true }).click()
         await page.getByRole("heading", { name: "My work", exact: true }).waitFor()
         const tenantSelect = page.getByRole("combobox", { name: "Active tenant", exact: true })
+
         const switched = page.waitForResponse(
           (response) =>
             new URL(response.url()).pathname === "/api/auth/session" &&
             response.request().headers()["x-tenant-id"] === secondTenant,
         )
+
         await tenantSelect.selectOption(secondTenant)
         await switched
         assert.equal(await tenantSelect.inputValue(), secondTenant)
@@ -141,6 +146,7 @@ it.effect(
           (response) =>
             new URL(response.url()).pathname === "/api/auth/logout" && response.status() === 204,
         )
+
         await page.getByRole("button", { name: "Sign out", exact: true }).click()
         const dialog = page.getByRole("dialog", { name: "Sign out of RITSEI?" })
         await dialog.getByRole("button", { name: "Sign out", exact: true }).click()

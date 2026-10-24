@@ -11,6 +11,7 @@ import {
 
 const withCommand = () =>
   applyDesignerAction(makeInitialDesignerModel(), DesignerAction.AddNode({ kind: "DomainCommand" }))
+
 const configured = () =>
   setNodeCapability(withCommand(), "node-1", {
     kind: "DomainAction",
@@ -21,6 +22,7 @@ const configured = () =>
 describe("Process Designer", () => {
   it("makes pointer and keyboard editing produce identical deterministic Process IR", () => {
     const initial = configured()
+
     const pointer = applyDesignerAction(
       initial,
       DesignerAction.ReorderNode({
@@ -28,6 +30,7 @@ describe("Process Designer", () => {
         direction: "down",
       }),
     )
+
     const keyboard = applyDesignerAction(
       initial,
       DesignerAction.ReorderNode({
@@ -35,6 +38,7 @@ describe("Process Designer", () => {
         direction: "down",
       }),
     )
+
     assert.strictEqual(
       serializeProcessIr({ ...pointer, formatVersion: 1, checksum: "same" }),
       serializeProcessIr({ ...keyboard, formatVersion: 1, checksum: "same" }),
@@ -45,22 +49,27 @@ describe("Process Designer", () => {
     assert.isTrue(
       validateDesignerModel(withCommand()).some((issue) => issue.code === "missing_capability"),
     )
+
     const invalidCapability = setNodeCapability(withCommand(), "node-1", {
       kind: "DomainEvent",
       id: "sales.order.confirmed",
       version: 1,
     })
+
     assert.isTrue(
       validateDesignerModel(invalidCapability).some((issue) => issue.code === "invalid_capability"),
     )
+
     const invalidVersion = setNodeCapability(withCommand(), "node-1", {
       kind: "DomainAction",
       id: "sales.order.confirm",
       version: Number.NaN,
     })
+
     assert.isTrue(
       validateDesignerModel(invalidVersion).some((issue) => issue.code === "missing_capability"),
     )
+
     const invalid = applyDesignerAction(
       configured(),
       DesignerAction.AddMapping({
@@ -73,6 +82,7 @@ describe("Process Designer", () => {
         },
       }),
     )
+
     assert.isTrue(validateDesignerModel(invalid).some((issue) => issue.code === "invalid_mapping"))
   })
 
@@ -83,12 +93,15 @@ describe("Process Designer", () => {
         kind: "WaitForEvent",
       }),
     )
+
     assert.isTrue(validateDesignerModel(wait).some((issue) => issue.code === "missing_capability"))
+
     const configuredWait = setNodeCapability(wait, "node-1", {
       kind: "DomainEvent",
       id: "sales.order.confirmed",
       version: 1,
     })
+
     assert.deepStrictEqual(validateDesignerModel(configuredWait), [])
   })
 
@@ -110,6 +123,7 @@ describe("Process Designer", () => {
     model = applyDesignerAction(model, DesignerAction.AddNode({ kind: "DomainCommand" }))
     model = applyDesignerAction(model, DesignerAction.AddNode({ kind: "DomainCommand" }))
     model = applyDesignerAction(model, DesignerAction.AddNode({ kind: "DomainCommand" }))
+
     const moved = applyDesignerAction(
       model,
       DesignerAction.MoveNode({

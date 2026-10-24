@@ -53,6 +53,7 @@ const navigationSections: readonly NavigationSection[] = [
         .map(({ label, icon, href }) => ({ label, icon, href })),
       ...frameworkNavigation[group],
     ]
+
     return items.length > 0 ? [{ label: group, items }] : []
   }),
 ]
@@ -91,16 +92,19 @@ const THEME_STORAGE_KEY = "ritsei.theme"
 const initialDarkTheme = (): boolean => {
   try {
     const stored = globalThis.localStorage?.getItem(THEME_STORAGE_KEY)
+
     if (stored === "dark" || stored === "light") return stored === "dark"
   } catch {
     // Storage can be unavailable (private mode, blocked site data); use the OS preference.
   }
+
   return globalThis.matchMedia("(prefers-color-scheme: dark)").matches
 }
 
 const persistTheme = (dark: boolean) => {
   // Portaled overlays (dialogs, popovers) render outside the shell, so the root carries the theme.
   document.documentElement.dataset["theme"] = dark ? "dark" : "light"
+
   try {
     globalThis.localStorage?.setItem(THEME_STORAGE_KEY, dark ? "dark" : "light")
   } catch {
@@ -140,11 +144,14 @@ function NavigationEntry(props: {
   const item = untrack(() => props.item)
   const closeMobile = untrack(() => props.closeMobile)
   const captureFirst = untrack(() => props.captureFirst)
+
   const labelClass = () => [
     layout.navigationLabel,
     props.collapsed && layout.navigationLabelCollapsed,
   ]
+
   const state = () => navigationState(props.active)
+
   return (
     <a
       ref={(element) => captureFirst?.(element)}
@@ -190,9 +197,12 @@ export function ApplicationShell(props: { children: JSX.Element }) {
     if (compact()) {
       const opening = !mobileOpen()
       setMobileOpen(opening)
+
       if (opening) queueMicrotask(() => firstNavigationLink?.focus())
+
       return
     }
+
     setCollapsed(!collapsed())
   }
 
@@ -215,18 +225,23 @@ export function ApplicationShell(props: { children: JSX.Element }) {
   onSettled(() => {
     document.documentElement.dataset["theme"] = untrack(dark) ? "dark" : "light"
     const media = globalThis.matchMedia("(max-width: 767px)")
+
     const handleViewport = (event: MediaQueryListEvent) => {
       setCompact(event.matches)
+
       if (!event.matches) setMobileOpen(false)
     }
+
     // Fallow: keyboard shortcuts intentionally combine Escape dismissal and navigation toggle paths.
     // fallow-ignore-next-line complexity
     const handleKeyboard = (event: KeyboardEvent) => {
       if (event.key === "Escape" && mobileOpen()) {
         event.preventDefault()
         dismissMobileNavigation()
+
         return
       }
+
       if (
         (event.metaKey || event.ctrlKey) &&
         event.key.toLowerCase() === "b" &&
@@ -236,8 +251,10 @@ export function ApplicationShell(props: { children: JSX.Element }) {
         toggleNavigation()
       }
     }
+
     media.addEventListener("change", handleViewport)
     document.addEventListener("keydown", handleKeyboard)
+
     return () => {
       media.removeEventListener("change", handleViewport)
       document.removeEventListener("keydown", handleKeyboard)
@@ -411,6 +428,7 @@ export function ApplicationShell(props: { children: JSX.Element }) {
                   confirmLabel="Sign out"
                   onConfirm={() => {
                     const current = session.current()
+
                     if (current !== null) void logoutSession(current.token).catch(() => undefined)
                     session.replace(null)
                     navigate("/", { replace: true })

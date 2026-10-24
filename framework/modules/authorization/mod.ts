@@ -13,6 +13,7 @@ export {
   isKnownCapability,
   LegacyCapabilityIds,
 } from "./src/capabilities.ts"
+
 export type { CapabilityDefinition as CapabilityDefinitionType } from "./src/capabilities.ts"
 
 export {
@@ -29,6 +30,7 @@ export {
   TenantMembershipInput,
   TenantMembershipStatus,
 } from "./src/contract.ts"
+
 export type {
   AuthorizationService as AuthorizationServiceContract,
   Capability as CapabilityType,
@@ -49,6 +51,7 @@ export {
 } from "./src/errors.ts"
 
 export { AuthorizationLive, makeAuthorizationTestLayer, RelationshipLive } from "./src/layers.ts"
+
 export {
   makeMemoryRelationshipEngine,
   makePostgresRelationshipEngine,
@@ -57,20 +60,25 @@ export {
   RelationshipInput,
   RelationshipResult,
 } from "./src/relationship.ts"
+
 export type {
   RelationshipDecision as RelationshipDecisionType,
   RelationshipEngine as RelationshipEngineContract,
   RelationshipInput as RelationshipInputType,
   RelationshipResult as RelationshipResultType,
 } from "./src/relationship.ts"
+
 export { makeAuthorizationService } from "./src/service.ts"
+
 export {
   evaluateSeparationOfDuties,
   SeparationOfDutiesDecision,
   SeparationOfDutiesInput,
 } from "./src/sod.ts"
+
 export type {
   SeparationOfDutiesDecision as SeparationOfDutiesDecisionType,
   SeparationOfDutiesInput as SeparationOfDutiesInputType,
 } from "./src/sod.ts"
+
 export { scopedCommand } from "./src/scoped-command.ts"

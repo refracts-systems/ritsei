@@ -13,9 +13,12 @@ it.effect.skipIf(databaseUrl === undefined)("postgres transaction commits a type
       Effect.sync(() => postgres(databaseUrl!)),
       (connection) => Effect.promise(() => connection.end()),
     )
+
     const database = makePostgresDatabase(client)
+
     const value = yield* database.transaction(async (transaction) => {
       const rows = await transaction.execute<{ value: number }>(sql`select 42 as value`)
+
       return rows[0]?.value
     })
 

@@ -41,15 +41,19 @@ export const startWorker = (
 if (isMain(import.meta.url)) {
   const url = process.env["DATABASE_URL"]
   const tenantId = process.env["WORKER_TENANT_ID"]
+
   if (url === undefined || tenantId === undefined) {
     console.error("DATABASE_URL and WORKER_TENANT_ID are required")
     process.exit(1)
   }
+
   const workerId = process.env["WORKER_ID"]?.trim()
+
   if (workerId === undefined || workerId.length === 0) {
     console.error("WORKER_ID is required")
     process.exit(1)
   }
+
   Effect.gen(function* () {
     const configuration = yield* readRuntimeConfiguration()
     yield* startWorker(url, { tenantId, workerId }, configuration)

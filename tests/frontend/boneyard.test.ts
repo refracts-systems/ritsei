@@ -20,6 +20,7 @@ it.effect(
       const result = yield* Effect.promise(probeBoneyardCoreCompatibility)
 
       assert.equal(result.build, "passed")
+
       if (result.build === "passed") assert.equal(result.productionBundle, "safe")
     }),
   { timeout: 60_000 },

@@ -11,6 +11,7 @@ export type FormProps = Omit<JSX.FormHTMLAttributes<HTMLFormElement>, "class" | 
 /** A native form shell; callers may decode the submitted value with Effect Schema. */
 export function Form(props: FormProps) {
   const formProps = omit(props, "class", "onSubmit", "children")
+
   return (
     <form
       {...formProps}

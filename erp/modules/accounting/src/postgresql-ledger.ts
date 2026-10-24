@@ -37,6 +37,7 @@ import {
 } from "./financial-ledger.ts"
 
 type AccountType = "asset" | "liability" | "equity" | "revenue" | "expense"
+
 type PostedBalance = { debitsMinor: bigint; creditsMinor: bigint }
 
 type OperationRow = {
@@ -98,18 +99,22 @@ const pairLines = (lines: readonly FinancialJournalLine[]) => {
     .filter((line) => BigInt(line.debitMinor) > 0n)
     .map((line) => ({ accountId: line.accountId, remaining: BigInt(line.debitMinor) }))
     .toArray()
+
   const credits = lines
     .values()
     .filter((line) => BigInt(line.creditMinor) > 0n)
     .map((line) => ({ accountId: line.accountId, remaining: BigInt(line.creditMinor) }))
     .toArray()
+
   const pairs: Array<{
     readonly debitAccountId: string
     readonly creditAccountId: string
     readonly amount: bigint
   }> = []
+
   let debitIndex = 0
   let creditIndex = 0
+
   while (debitIndex < debits.length && creditIndex < credits.length) {
     const debit = debits[debitIndex]!
     const credit = credits[creditIndex]!
@@ -117,9 +122,12 @@ const pairLines = (lines: readonly FinancialJournalLine[]) => {
     pairs.push({ debitAccountId: debit.accountId, creditAccountId: credit.accountId, amount })
     debit.remaining -= amount
     credit.remaining -= amount
+
     if (debit.remaining === 0n) debitIndex += 1
+
     if (credit.remaining === 0n) creditIndex += 1
   }
+
   return pairs
 }
 
@@ -129,11 +137,14 @@ const validateJournal = (
   if (input.lines.length < 2) {
     return FinancialExecutionRejected.make({ operationId: input.operationId, reason: "unbalanced" })
   }
+
   let debit = 0n
   let credit = 0n
+
   for (const line of input.lines) {
     const lineDebit = BigInt(line.debitMinor)
     const lineCredit = BigInt(line.creditMinor)
+
     if (
       lineDebit > FINANCIAL_LEDGER_MAX_MINOR ||
       lineCredit > FINANCIAL_LEDGER_MAX_MINOR ||
@@ -144,8 +155,10 @@ const validateJournal = (
         reason: "invalid_amount",
       })
     }
+
     debit += lineDebit
     credit += lineCredit
+
     if (debit > FINANCIAL_LEDGER_MAX_MINOR || credit > FINANCIAL_LEDGER_MAX_MINOR) {
       return FinancialExecutionRejected.make({
         operationId: input.operationId,
@@ -153,6 +166,7 @@ const validateJournal = (
       })
     }
   }
+
   return debit === credit
     ? undefined
     : FinancialExecutionRejected.make({ operationId: input.operationId, reason: "unbalanced" })
@@ -204,11 +218,13 @@ const transferRowsMatch = (
   input: PostFinancialJournalInput,
 ) => {
   const pairs = pairLines(input.lines)
+
   return (
     rows.length === pairs.length &&
     rows.every((row, index) => {
       const pair = pairs[index]!
       const expectedId = transferId(input, index)
+
       return (
         row.position === index &&
         row.debitAccountId === pair.debitAccountId &&
@@ -235,6 +251,7 @@ const readOperation = (
           eq(financialOperations.operationId, input.operationId),
         ),
       )
+
     return lock ? query.for("update") : query
   }, "accounting.postgresql_ledger.operation")
 
@@ -290,6 +307,7 @@ const journalLinesMatch = (
         `${right.accountId}:${right.debit}:${right.credit}`,
       ),
     )
+
   const actual = rows
     .map((line) => ({
       accountId: line.accountId,
@@ -301,10 +319,12 @@ const journalLinesMatch = (
         `${right.accountId}:${right.debit}:${right.credit}`,
       ),
     )
+
   return (
     actual.length === expected.length &&
     actual.every((line, index) => {
       const expectedLine = expected[index]!
+
       return (
         line.accountId === expectedLine.accountId &&
         line.debit === expectedLine.debit &&
@@ -366,6 +386,7 @@ const balancesFrom = (
   }[],
 ) => {
   const balances = new Map<string, PostedBalance>()
+
   for (const row of rows) {
     const current = balances.get(row.accountId) ?? { debitsMinor: 0n, creditsMinor: 0n }
     balances.set(row.accountId, {
@@ -373,6 +394,7 @@ const balancesFrom = (
       creditsMinor: current.creditsMinor + toMinor(row.credit),
     })
   }
+
   return balances
 }
 
@@ -396,6 +418,7 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
   ) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(CreateExecutionAccountInput)(input)
+
       const [account] = yield* database.query(
         (db) =>
           db
@@ -406,13 +429,16 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
             ),
         "accounting.postgresql_ledger.account",
       )
+
       if (account === undefined) {
         return ExecutionAccountRejected.make({
           accountId: decoded.accountId,
           reason: "invalid_account" as const,
         })
       }
+
       const expectedConstraint = constraintFor(account.type)
+
       if (
         decoded.balanceConstraint !== undefined &&
         decoded.balanceConstraint !== "none" &&
@@ -423,6 +449,7 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
           reason: "mapping_mismatch" as const,
         })
       }
+
       return ExecutionAccountAccepted.make({
         accountId: decoded.accountId,
         mappingVersion: decoded.mappingVersion,
@@ -441,6 +468,7 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
   const expectedTransferIds = (input: Schema.Codec.Encoded<typeof PostFinancialJournalInput>) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(PostFinancialJournalInput)(input)
+
       return pairLines(decoded.lines).map((_, index) => transferId(decoded, index))
     })
 
@@ -448,8 +476,10 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(PostFinancialJournalInput)(input)
       const validation = validateJournal(decoded)
+
       if (validation !== undefined) return validation
       const pairs = pairLines(decoded.lines)
+
       if (
         pairs.length === 0 ||
         pairs.some((pair) => pair.debitAccountId === pair.creditAccountId)
@@ -459,36 +489,44 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
           reason: "constraint_violation" as const,
         })
       }
+
       return yield* database.withTransaction(
         Effect.gen(function* () {
           const [operation] = yield* readOperation(database, decoded, true)
+
           if (operation === undefined || !operationMatches(operation, decoded)) {
             return FinancialExecutionManualRecovery.make({
               operationId: decoded.operationId,
               reason: "mapping_mismatch" as const,
             })
           }
+
           const persistedLines = yield* readJournalLines(
             database,
             decoded.tenantId,
             operation.journalId,
           )
+
           if (!journalLinesMatch(persistedLines, decoded)) {
             return FinancialExecutionManualRecovery.make({
               operationId: decoded.operationId,
               reason: "conflicting_replay" as const,
             })
           }
+
           const transfers = yield* readTransfers(database, decoded.tenantId, operation.id)
+
           if (!transferRowsMatch(transfers, decoded)) {
             return FinancialExecutionManualRecovery.make({
               operationId: decoded.operationId,
               reason: "mapping_mismatch" as const,
             })
           }
+
           if (operation.status === "accepted" || operation.status === "reconciled") {
             return acceptedOutcome(decoded, operation)
           }
+
           if (
             operation.status !== "intent" &&
             operation.status !== "submitted" &&
@@ -506,6 +544,7 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
           }
 
           const accountIds = [...new Set(decoded.lines.map((line) => line.accountId))].sort()
+
           const accountRows = yield* database.query(
             (db) =>
               db
@@ -517,12 +556,14 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
                 .for("update"),
             "accounting.postgresql_ledger.accounts",
           )
+
           if (accountRows.length !== accountIds.length) {
             return FinancialExecutionRejected.make({
               operationId: decoded.operationId,
               reason: "invalid_account" as const,
             })
           }
+
           const balanceInput = {
             tenantId: decoded.tenantId,
             legalEntityId: decoded.legalEntityId,
@@ -530,9 +571,11 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
             currency: decoded.currency,
             mappingVersion: decoded.mappingVersion,
           }
+
           const postedLines = yield* readPostedLines(database, balanceInput, accountIds)
           const balances = balancesFrom(postedLines)
           const deltas = new Map<string, PostedBalance>()
+
           for (const line of decoded.lines) {
             const current = deltas.get(line.accountId) ?? { debitsMinor: 0n, creditsMinor: 0n }
             deltas.set(line.accountId, {
@@ -540,17 +583,21 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
               creditsMinor: current.creditsMinor + BigInt(line.creditMinor),
             })
           }
+
           for (const account of accountRows) {
             const current = balances.get(account.id) ?? { debitsMinor: 0n, creditsMinor: 0n }
             const delta = deltas.get(account.id) ?? { debitsMinor: 0n, creditsMinor: 0n }
+
             const next = {
               debitsMinor: current.debitsMinor + delta.debitsMinor,
               creditsMinor: current.creditsMinor + delta.creditsMinor,
             }
+
             const violates =
               account.type === "asset" || account.type === "expense"
                 ? next.creditsMinor > next.debitsMinor
                 : next.debitsMinor > next.creditsMinor
+
             if (violates) {
               return FinancialExecutionRejected.make({
                 operationId: decoded.operationId,
@@ -561,6 +608,7 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
 
           const now = new Date()
           const acceptedAt = now.toISOString()
+
           if (operation.status === "intent" || operation.status === "unknown") {
             yield* database.query(
               (db) =>
@@ -582,6 +630,7 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
               "accounting.postgresql_ledger.submit",
             )
           }
+
           yield* database.query(
             (db) =>
               db
@@ -624,6 +673,7 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
                 ),
             "accounting.postgresql_ledger.journal",
           )
+
           for (const [position, id] of pairLines(decoded.lines)
             .map((_, index) => transferId(decoded, index))
             .entries()) {
@@ -647,6 +697,7 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
               "accounting.postgresql_ledger.transfer",
             )
           }
+
           return acceptedOutcome(decoded, {
             ...operation,
             status: "accepted",
@@ -667,8 +718,10 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(PostFinancialJournalInput)(input)
       const validation = validateJournal(decoded)
+
       if (validation !== undefined) return validation
       const pairs = pairLines(decoded.lines)
+
       if (
         pairs.length === 0 ||
         pairs.some((pair) => pair.debitAccountId === pair.creditAccountId)
@@ -678,20 +731,25 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
           reason: "constraint_violation" as const,
         })
       }
+
       const [operation] = yield* readOperation(database, decoded, false)
+
       if (operation === undefined) return unknownOutcome(decoded.operationId, "not_found")
+
       if (!operationMatches(operation, decoded)) {
         return FinancialExecutionManualRecovery.make({
           operationId: decoded.operationId,
           reason: "mapping_mismatch" as const,
         })
       }
+
       if (operation.status === "rejected") {
         return {
           ...toRejected(operation.rejectionReason),
           operationId: decoded.operationId,
         }
       }
+
       if (operation.status === "manual_recovery") {
         return FinancialExecutionManualRecovery.make({
           operationId: decoded.operationId,
@@ -701,21 +759,26 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
               : ("reconciliation_required" as const),
         })
       }
+
       if (operation.status !== "accepted" && operation.status !== "reconciled") {
         return unknownOutcome(decoded.operationId, "not_found")
       }
+
       const persistedLines = yield* readJournalLines(
         database,
         decoded.tenantId,
         operation.journalId,
       )
+
       if (!journalLinesMatch(persistedLines, decoded)) {
         return FinancialExecutionManualRecovery.make({
           operationId: decoded.operationId,
           reason: "conflicting_replay" as const,
         })
       }
+
       const transfers = yield* readTransfers(database, decoded.tenantId, operation.id)
+
       if (
         !transferRowsMatch(transfers, decoded) ||
         transfers.some((row) => row.status !== "accepted")
@@ -725,6 +788,7 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
           reason: "mapping_mismatch" as const,
         })
       }
+
       const [journal] = yield* database.query(
         (db) =>
           db
@@ -738,13 +802,16 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
             ),
         "accounting.postgresql_ledger.reconcile_journal",
       )
+
       const expectedStatus = operation.operationType === "journal_reverse" ? "reversed" : "posted"
+
       if (journal?.status !== expectedStatus) {
         return FinancialExecutionManualRecovery.make({
           operationId: decoded.operationId,
           reason: "mapping_mismatch" as const,
         })
       }
+
       return acceptedOutcome(decoded, operation)
     }).pipe(
       Effect.catchIf(
@@ -756,6 +823,7 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
   const getBalance = (input: Schema.Codec.Encoded<typeof GetFinancialBalanceInput>) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(GetFinancialBalanceInput)(input)
+
       const [account] = yield* database.query(
         (db) =>
           db
@@ -766,13 +834,16 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
             ),
         "accounting.postgresql_ledger.balance.account",
       )
+
       if (account === undefined)
         return FinancialBalanceNotFound.make({ accountId: decoded.accountId })
       const rows = yield* readPostedLines(database, decoded, [decoded.accountId])
+
       const balance = balancesFrom(rows).get(decoded.accountId) ?? {
         debitsMinor: 0n,
         creditsMinor: 0n,
       }
+
       return FinancialBalanceAvailable.make({
         accountId: decoded.accountId,
         mappingVersion: decoded.mappingVersion,

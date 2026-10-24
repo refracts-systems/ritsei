@@ -30,18 +30,22 @@ function mountRuntime<R>(layer: Layer.Layer<R>, children: () => Element) {
   createRoot((rootDispose) => {
     dispose = rootDispose
     const runtime = createRuntime(layer)
+
     const provider = createComponent(RuntimeContext, {
       value: runtime,
       get children() {
         return children()
       },
     })
+
     createRenderEffect(
       () => {
         let output: unknown = provider
+
         while (Predicate.isFunction(output)) {
           output = output()
         }
+
         return output
       },
       () => {},
@@ -65,10 +69,13 @@ describe("Solid 2 × Effect production bridge", () => {
   it.effect("resolves the Effect R channel from the scoped runtime", () =>
     Effect.promise(async () => {
       let source: AsyncIterable<number> | undefined
+
       const dispose = mountRuntime(TestServiceLive, () => {
         source = runEffect(Effect.map(TestService, (service) => service.value))
+
         return null
       })
+
       const result = await source![Symbol.asyncIterator]().next()
       assert.deepStrictEqual(result, { done: false, value: 42 })
       dispose()
@@ -78,6 +85,7 @@ describe("Solid 2 × Effect production bridge", () => {
   it.effect("disposes the Layer scope with the Solid owner", () =>
     Effect.promise(async () => {
       let released = false
+
       const layer = Layer.effect(
         TestService,
         Effect.acquireRelease(Effect.succeed({ value: 42 }), () =>
@@ -86,11 +94,15 @@ describe("Solid 2 × Effect production bridge", () => {
           }),
         ),
       )
+
       let source: AsyncIterable<number> | undefined
+
       const dispose = mountRuntime(layer, () => {
         source = runEffect(Effect.map(TestService, (service) => service.value))
+
         return null
       })
+
       assert.deepStrictEqual(await source![Symbol.asyncIterator]().next(), {
         done: false,
         value: 42,
@@ -105,6 +117,7 @@ describe("Solid 2 × Effect production bridge", () => {
     Effect.promise(async () => {
       let interrupted = false
       let source: AsyncIterable<never> | undefined
+
       const dispose = mountRuntime(Layer.empty, () => {
         source = runEffect(
           Effect.never.pipe(
@@ -115,8 +128,10 @@ describe("Solid 2 × Effect production bridge", () => {
             ),
           ),
         )
+
         return null
       })
+
       const iterator = source![Symbol.asyncIterator]()
       const pending = iterator.next()
       await new Promise((resolve) => setTimeout(resolve, 0))

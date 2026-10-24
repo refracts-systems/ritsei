@@ -25,6 +25,7 @@ import { readRuntimeConfiguration } from "../config.ts"
 import { serviceLayers } from "../layers.ts"
 
 const NonBlank = Schema.String.check(Schema.isPattern(/\S/))
+
 const BootstrapEnvironment = Schema.Struct({
   email: NonBlank,
   tenantSlug: NonBlank,
@@ -72,7 +73,9 @@ const findOrCreateUser = (input: BootstrapEnvironment) =>
     const users = yield* UserAccountService
     const email = input.email.trim().toLowerCase()
     const existing = (yield* users.list()).find((user) => user.email === email)
+
     if (existing !== undefined) return existing
+
     return yield* users.create({ email }).pipe(
       Effect.catch((error) =>
         error instanceof UserAccountAlreadyExists
@@ -93,14 +96,17 @@ const bindExternalSubject = (input: BootstrapEnvironment, userAccountId: string)
   Effect.gen(function* () {
     if (input.externalSubject === undefined) return
     const configuration = yield* readRuntimeConfiguration()
+
     const issuer =
       input.externalIssuer ??
       (configuration.authentication?.profile === "oidc"
         ? configuration.authentication.issuerUrl
         : undefined)
+
     if (issuer === undefined) {
       return yield* Effect.fail(new Error("RITSEI_BOOTSTRAP_EXTERNAL_ISSUER is required"))
     }
+
     const users = yield* UserAccountService
     yield* users.bindExternalSubject({ issuer, subject: input.externalSubject, userAccountId })
   })
@@ -108,6 +114,7 @@ const bindExternalSubject = (input: BootstrapEnvironment, userAccountId: string)
 const ensureMembershipAndCapabilities = (principal: Principal, tenantId: string) =>
   Effect.gen(function* () {
     const authorization = yield* AuthorizationService
+
     const member = yield* authorization
       .getMember({
         userAccountId: principal.userAccountId,
@@ -120,6 +127,7 @@ const ensureMembershipAndCapabilities = (principal: Principal, tenantId: string)
             : Effect.fail(error),
         ),
       )
+
     if (member === undefined) {
       yield* authorization.addMember({
         userAccountId: principal.userAccountId,
@@ -128,10 +136,12 @@ const ensureMembershipAndCapabilities = (principal: Principal, tenantId: string)
     } else if (member.status === "suspended") {
       yield* authorization.activateMember({ userAccountId: principal.userAccountId, tenantId })
     }
+
     const grants = yield* authorization.listDirectGrants({
       userAccountId: principal.userAccountId,
       tenantId,
     })
+
     for (const capability of bootstrapCapabilities) {
       if (grants.some((grant) => grant.capability === capability)) continue
       yield* authorization
@@ -155,16 +165,21 @@ const provision = (input: BootstrapEnvironment) =>
     const auth = yield* AuthService
     const user = yield* findOrCreateUser(input)
     yield* bindExternalSubject(input, user.id)
+
     const principal = {
       userAccountId: user.id,
       sessionId: `bootstrap:${input.tenantSlug}`,
     } satisfies Principal
+
     const existing = yield* auth.findTenantBySlug(input.tenantSlug)
+
     if (existing !== undefined) {
       yield* ensureMembershipAndCapabilities(principal, existing.id)
       console.log(`RITSEI bootstrap already exists for tenant '${existing.slug}'.`)
+
       return
     }
+
     const result = yield* bootstrapTenant({
       principal,
       slug: input.tenantSlug,
@@ -184,8 +199,10 @@ const provision = (input: BootstrapEnvironment) =>
         error instanceof TenantAlreadyExists ? Effect.succeed(undefined) : Effect.fail(error),
       ),
     )
+
     if (result === undefined) {
       const tenant = yield* auth.findTenantBySlug(input.tenantSlug)
+
       if (tenant !== undefined) yield* ensureMembershipAndCapabilities(principal, tenant.id)
       console.log(`RITSEI bootstrap already exists for tenant '${input.tenantSlug}'.`)
     } else {
@@ -198,9 +215,11 @@ const run = Effect.scoped(
     const input = yield* readEnvironment()
     const configuration = yield* readRuntimeConfiguration()
     const url = process.env["DATABASE_URL"]
+
     if (url === undefined || url.trim() === "") {
       return yield* Effect.fail(new Error("DATABASE_URL is required"))
     }
+
     const client = postgres(url)
     yield* Effect.addFinalizer(() => Effect.promise(() => client.end()))
     yield* validatePostgresVersion(asPostgresClient(client))

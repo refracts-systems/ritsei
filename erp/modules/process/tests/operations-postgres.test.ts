@@ -21,16 +21,20 @@ it.effect.skipIf(databaseUrl === undefined)(
     withTemporaryDatabase(databaseUrl!, (client: Sql) =>
       Effect.gen(function* () {
         yield* runMigrations(client)
+
         const [tenant] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
           `,
         )
+
         const database = makePostgresDatabase(client)
+
         const checkpointStore = yield* makePostgresProcessCheckpointStore.pipe(
           Effect.provideService(Database, database),
         )
+
         const checkpoint = yield* Schema.decodeUnknownEffect(ProcessCheckpoint)({
           instanceId: uuidv7(),
           tenantId: tenant!.id,
@@ -50,6 +54,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           causationId: null,
           executionPrincipal: "process-principal-1",
         })
+
         yield* checkpointStore.save(checkpoint)
 
         const input = {
@@ -60,14 +65,19 @@ it.effect.skipIf(databaseUrl === undefined)(
           idempotencyKey: "operator-control-1",
           reason: "provider status requires review",
         }
+
         const store = yield* makePostgresProcessOperatorStore.pipe(
           Effect.provideService(Database, database),
         )
+
         const first = yield* store.record(input)
+
         const restartedStore = yield* makePostgresProcessOperatorStore.pipe(
           Effect.provideService(Database, database),
         )
+
         const replay = yield* restartedStore.record(input)
+
         const conflict = yield* Effect.flip(
           restartedStore.record({
             ...input,

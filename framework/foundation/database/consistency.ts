@@ -9,6 +9,7 @@ const lsnPattern = /^[0-9A-F]+\/[0-9A-F]+$/i
 export const ConsistencyToken = Schema.String.check(
   Schema.isPattern(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/),
 ).check(Schema.isMaxLength(4_096))
+
 export type ConsistencyToken = Schema.Schema.Type<typeof ConsistencyToken>
 
 export type PostgresReadYourWritesConfig = {

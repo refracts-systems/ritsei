@@ -15,6 +15,7 @@ export const IdentityAccountAuthorizerLive = Layer.effect(
   IdentityAccountAuthorizer,
   Effect.gen(function* () {
     const authorization = yield* AuthorizationService
+
     return {
       authorize: (input: {
         readonly principal: { readonly userAccountId: string; readonly sessionId: string }

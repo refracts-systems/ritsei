@@ -42,6 +42,7 @@ export type SalesStoreFailure =
   | SalesOrderNotFound
   | SalesOrderInvalidState
   | SalesOrderConfirmationIdempotencyConflict
+
 export type ConfirmationMutation = Data.TaggedEnum<{
   Confirmed: { readonly order: SalesOrder }
   Existing: { readonly order: SalesOrder }
@@ -49,6 +50,7 @@ export type ConfirmationMutation = Data.TaggedEnum<{
   IdempotencyConflict: {}
   InvalidState: { readonly status: SalesOrderStatus }
 }>
+
 export const ConfirmationMutation = Data.taggedEnum<ConfirmationMutation>()
 
 export type CancellationMutation = Data.TaggedEnum<{
@@ -56,6 +58,7 @@ export type CancellationMutation = Data.TaggedEnum<{
   NotFound: {}
   InvalidState: { readonly status: SalesOrderStatus }
 }>
+
 export const CancellationMutation = Data.taggedEnum<CancellationMutation>()
 
 export type ConfirmedTotalLookup = Data.TaggedEnum<{
@@ -66,12 +69,14 @@ export type ConfirmedTotalLookup = Data.TaggedEnum<{
   }
   NotFound: {}
 }>
+
 export const ConfirmedTotalLookup = Data.taggedEnum<ConfirmedTotalLookup>()
 
 export type OrderCreation = Data.TaggedEnum<{
   Created: { readonly order: SalesOrder }
   QuotationCustomerMismatch: {}
 }>
+
 export const OrderCreation = Data.taggedEnum<OrderCreation>()
 
 export const toSalesOrder = (
@@ -152,5 +157,6 @@ export const deriveTotal = (lines: ReadonlyArray<SalesOrderLine>): string => {
     (total, line) => total + BigInt(line.quantity) * requireExactMajorToMinor(line.unitPrice, 2),
     0n,
   )
+
   return `${cents / 100n}.${(cents % 100n).toString().padStart(2, "0")}`
 }

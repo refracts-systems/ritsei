@@ -38,10 +38,12 @@ describe("financial readiness proofs", () => {
     )
     assert.strictEqual(financialFailureExecutionMatrix.length, 13)
     assert.strictEqual(new Set(financialFailureExecutionMatrix.map((row) => row.point)).size, 13)
+
     for (const row of financialFailureExecutionMatrix) {
       assert.isNotEmpty(row.hook)
       assert.isNotEmpty(row.recovery)
     }
+
     for (const row of financialFailureMatrix) {
       assert.isNotEmpty(row.expectedPostgresState)
       assert.isNotEmpty(row.expectedTigerBeetleState)
@@ -56,10 +58,13 @@ describe("financial readiness proofs", () => {
       const mappingVersionFailure = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialVerificationEvidence.fields.mappingVersion)(32768),
       )
+
       assert.strictEqual(mappingVersionFailure._tag, "SchemaError")
+
       const schemaVersionFailure = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialVerificationEvidence.fields.schemaVersion)(32768),
       )
+
       assert.strictEqual(schemaVersionFailure._tag, "SchemaError")
     }),
   )
@@ -71,6 +76,7 @@ describe("financial readiness proofs", () => {
           2_147_483_648,
         ),
       )
+
       assert.strictEqual(failure._tag, "SchemaError")
     }),
   )
@@ -90,6 +96,7 @@ describe("financial readiness proofs", () => {
           mappingVersion: 1,
         }),
       )
+
       assert.strictEqual(failure._tag, "SchemaError")
     }),
   )
@@ -100,11 +107,14 @@ describe("financial readiness proofs", () => {
         const failure = yield* Effect.flip(
           Schema.decodeUnknownEffect(FinancialTransferFact.fields[field])("not-a-uuid"),
         )
+
         assert.strictEqual(failure._tag, "SchemaError")
       }
+
       const balanceFailure = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialBalanceFact.fields.accountId)("not-a-uuid"),
       )
+
       assert.strictEqual(balanceFailure._tag, "SchemaError")
     }),
   )
@@ -114,14 +124,19 @@ describe("financial readiness proofs", () => {
       const operationFailure = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialOperationFact.fields.mappingVersion)(2_147_483_648),
       )
+
       assert.strictEqual(operationFailure._tag, "SchemaError")
+
       const transferFailure = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialTransferFact.fields.mappingVersion)(2_147_483_648),
       )
+
       assert.strictEqual(transferFailure._tag, "SchemaError")
+
       const balanceFailure = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialBalanceFact.fields.mappingVersion)(2_147_483_648),
       )
+
       assert.strictEqual(balanceFailure._tag, "SchemaError")
     }),
   )
@@ -131,10 +146,13 @@ describe("financial readiness proofs", () => {
       const negative = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialTransferFact.fields.position)(-1),
       )
+
       assert.strictEqual(negative._tag, "SchemaError")
+
       const overflow = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialTransferFact.fields.position)(2_147_483_648),
       )
+
       assert.strictEqual(overflow._tag, "SchemaError")
     }),
   )
@@ -147,6 +165,7 @@ describe("financial readiness proofs", () => {
         currency: "USD",
         mappingVersion: 1,
       })
+
       assert.strictEqual(operation.status, "rejected")
     }),
   )
@@ -156,12 +175,15 @@ describe("financial readiness proofs", () => {
       const zero = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialTransferFact.fields.amountMinor)("0"),
       )
+
       assert.strictEqual(zero._tag, "SchemaError")
+
       const overflow = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialTransferFact.fields.amountMinor)(
           "340282366920938463463374607431768211456",
         ),
       )
+
       assert.strictEqual(overflow._tag, "SchemaError")
     }),
   )
@@ -198,6 +220,7 @@ describe("financial readiness proofs", () => {
           completedAt: "2026-08-18T00:00:00.000Z",
         }),
       )
+
       assert.strictEqual(failure._tag, "SchemaError")
     }),
   )
@@ -243,18 +266,21 @@ describe("financial readiness proofs", () => {
           },
         ],
       }
+
       const target = {
         operations: [...source.operations],
         transfers: [...source.transfers],
         balances: [...source.balances],
         projections: [...source.projections],
       }
+
       const comparison = compareFinancialFactSnapshots(source, target)
       assert.isTrue(comparison.ok)
       assert.deepStrictEqual(comparison.mismatches, [])
       const sourceHash = yield* hashFinancialFactSnapshot(source)
       const targetHash = yield* hashFinancialFactSnapshot(target)
       assert.strictEqual(sourceHash, targetHash)
+
       const evidenceInput = {
         tenantId: "00000000-0000-4000-8000-000000000001",
         legalEntityId: "00000000-0000-4000-8000-000000000002",
@@ -272,7 +298,9 @@ describe("financial readiness proofs", () => {
         startedAt: "2026-08-18T00:00:00.000Z",
         completedAt: "2026-08-18T00:01:00.000Z",
       }
+
       const evidence = yield* buildFinancialVerificationEvidence(evidenceInput)
+
       const permutedEvidence = yield* buildFinancialVerificationEvidence({
         ...evidenceInput,
         source: {
@@ -290,6 +318,7 @@ describe("financial readiness proofs", () => {
           projections: [...target.projections].reverse(),
         },
       })
+
       assert.deepStrictEqual(
         [
           evidence.operationSetHash,
@@ -312,16 +341,20 @@ describe("financial readiness proofs", () => {
       assert.strictEqual(evidence.targetSnapshotRef, "target-snapshot")
       yield* Schema.decodeUnknownEffect(FinancialVerificationEvidence)(evidence)
       assert.strictEqual(evidence.sourceDebitMinor, "100")
+
       const mismatch = compareFinancialFactSnapshots(source, {
         ...target,
         transfers: [{ ...target.transfers[0]!, transferId: "unexpected-transfer" }],
       })
+
       assert.isFalse(mismatch.ok)
       assert.strictEqual(mismatch.mismatches[0]!.kind, "transfer_mismatch")
+
       const statusMismatch = compareFinancialFactSnapshots(source, {
         ...target,
         transfers: [{ ...target.transfers[0]!, status: "unresolved" }],
       })
+
       assert.isFalse(statusMismatch.ok)
       assert.strictEqual(statusMismatch.mismatches[0]!.kind, "transfer_mismatch")
 
@@ -329,6 +362,7 @@ describe("financial readiness proofs", () => {
         ...target,
         transfers: [],
       })
+
       assert.isFalse(missingTransfer.ok)
       assert.strictEqual(missingTransfer.mismatches[0]!.kind, "missing_transfer")
 
@@ -340,6 +374,7 @@ describe("financial readiness proofs", () => {
         ...target,
         balances: [{ ...target.balances[0]!, debitsPostedMinor: "101" }],
       })
+
       assert.isFalse(balanceMismatch.ok)
       assert.strictEqual(balanceMismatch.mismatches[0]!.kind, "balance_mismatch")
 
@@ -347,6 +382,7 @@ describe("financial readiness proofs", () => {
         ...target,
         projections: [{ ...target.projections[0]!, journalStatus: "reversed" }],
       })
+
       assert.isFalse(projectionMismatch.ok)
       assert.strictEqual(projectionMismatch.mismatches[0]!.kind, "projection_mismatch")
     }),
@@ -371,10 +407,12 @@ describe("financial readiness proofs", () => {
         creditsMinor: "12500",
       },
     ]
+
     const equal = verifyOpeningBalances(
       source,
       source.map((entry) => ({ ...entry })),
     )
+
     assert.isTrue(equal.ok)
     assert.deepStrictEqual(equal.mismatches, [])
     assert.strictEqual(equal.sourceDebitMinor, "12500")
@@ -384,6 +422,7 @@ describe("financial readiness proofs", () => {
       { ...source[0]!, debitsMinor: "12499" },
       source[1]!,
     ])
+
     assert.isFalse(mismatch.ok)
     assert.strictEqual(mismatch.mismatches[0]!.kind, "field_mismatch")
 

@@ -71,6 +71,7 @@ const actionLabel = (action: OperateRuntimeInput["action"] | "none"): string =>
 
 const formatTime = (value: string): string => {
   const date = new Date(value)
+
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString()
 }
 
@@ -326,10 +327,12 @@ function RuntimeActionDialog(props: {
 }) {
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
+
   const mutation = createProcessOperatorMutation(props.scope, () => {
     setOpen(false)
     void props.reload()
   })
+
   const action = () =>
     props.instance.requiredAction === "none" ? "manual_recovery" : props.instance.requiredAction
 
@@ -349,14 +352,19 @@ function RuntimeActionDialog(props: {
           // fallow-ignore-next-line complexity
           (value) => {
             if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
+
             const idempotencyKey = Predicate.isString(value.idempotencyKey)
               ? value.idempotencyKey.trim()
               : ""
+
             const reason = Predicate.isString(value.reason) ? value.reason.trim() : ""
+
             if (!/\S/.test(idempotencyKey) || !/\S/.test(reason)) {
               setInvalid(true)
+
               return
             }
+
             setInvalid(false)
             mutation.mutate({
               instanceId: props.instance.instanceId,
@@ -407,8 +415,10 @@ function DesignPanel(props: {
   let designer: ProcessDesignerMount | undefined
   const [mountedDesigner, setMountedDesigner] = createSignal<ProcessDesignerMount>()
   const [feedback, setFeedback] = createSignal("")
+
   const mountDesigner = (host: HTMLDivElement) => {
     if (designer !== undefined) return
+
     const next = mountProcessDesigner(host, {
       catalog: [],
       onValidate: (model: DesignerModel, issues: ReturnType<typeof validateDesignerModel>) => {
@@ -418,11 +428,14 @@ function DesignPanel(props: {
               issues.length === 1 ? "" : "s"
             } before backend validation.`,
           )
+
           return
         }
+
         const references = model.nodes.flatMap((node) =>
           node.capability === undefined ? [] : [node.capability],
         )
+
         setFeedback("Checking the draft against the active backend catalog…")
         props.validation.mutate({
           definitionId: model.definitionId,
@@ -432,9 +445,11 @@ function DesignPanel(props: {
         })
       },
     })
+
     designer = next
     setMountedDesigner(next)
   }
+
   createEffect(
     () => ({ designer: mountedDesigner(), catalog: props.catalog.data ?? [] }),
     ({ designer: next, catalog }) => {
@@ -442,6 +457,7 @@ function DesignPanel(props: {
     },
   )
   onSettled(() => () => designer?.dispose())
+
   return (
     <div class={layout.stack}>
       <section class={[surface(), layout.stack]} aria-labelledby="process-catalog-heading">
@@ -518,6 +534,7 @@ export function ProcessStudio() {
   const inbox = createProcessInboxQuery(scope, { limit: 200 })
   const controls = createProcessControlsQuery(scope, { limit: 200 })
   const validation = createProcessValidationMutation(scope)
+
   const reload = () =>
     reloaded(
       Promise.all([
@@ -530,6 +547,7 @@ export function ProcessStudio() {
     )
 
   const design = <DesignPanel catalog={catalog} validation={validation} />
+
   const monitor = (
     <div class={layout.stack}>
       <section class={[surface(), layout.stack]} aria-labelledby="process-runtime-heading">
@@ -575,6 +593,7 @@ export function ProcessStudio() {
       </section>
     </div>
   )
+
   const inboxView = (
     <div class={layout.stack}>
       <section class={[surface(), layout.stack]} aria-labelledby="process-inbox-heading">
@@ -622,6 +641,7 @@ export function ProcessStudio() {
       </section>
     </div>
   )
+
   const history = (
     <section class={[surface(), layout.stack]} aria-labelledby="process-history-heading">
       <div class={layout.row}>

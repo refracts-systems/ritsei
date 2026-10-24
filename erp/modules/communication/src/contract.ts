@@ -28,6 +28,7 @@ const Uuid = Schema.String.check(Schema.isUUID())
 export const ProcessPurchaseOrderConfirmedInput = Schema.Struct({
   event: EventEnvelope,
 })
+
 export type ProcessPurchaseOrderConfirmedInput = Schema.Schema.Type<
   typeof ProcessPurchaseOrderConfirmedInput
 >
@@ -35,6 +36,7 @@ export type ProcessPurchaseOrderConfirmedInput = Schema.Schema.Type<
 export const RetryCommunicationInput = Schema.Struct({
   communicationId: Uuid,
 })
+
 export type RetryCommunicationInput = Schema.Schema.Type<typeof RetryCommunicationInput>
 
 export const CommunicationProcessingResult = Schema.Struct({
@@ -45,6 +47,7 @@ export const CommunicationProcessingResult = Schema.Struct({
   attempt: Schema.NullOr(DeliveryAttempt),
   receipt: Schema.NullOr(DeliveryReceipt),
 })
+
 export type CommunicationProcessingResult = Schema.Schema.Type<typeof CommunicationProcessingResult>
 
 export interface CommunicationConfiguration {

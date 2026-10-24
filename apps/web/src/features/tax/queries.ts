@@ -17,10 +17,12 @@ export function createTaxCodesQuery(scope: ApiScope) {
 
 export function createTaxCodeMutation(scope: ApiScope, afterSuccess?: () => void) {
   const client = useQueryClient()
+
   return useMutation<TaxCode, RequestFailure, Parameters<typeof createTaxCode>[0]>(() => ({
     mutationFn: (input) => runRequest(scope, createTaxCode(input)),
     onSuccess: () => {
       afterSuccess?.()
+
       return client.invalidateQueries({ queryKey: serverQueryKey(scope.tenantId, taxCodesKey) })
     },
   }))

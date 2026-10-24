@@ -34,49 +34,63 @@ type Grant = {
  */
 export const erpChainLayers = (client: Sql, grants: ReadonlyArray<Grant>) => {
   const database = Layer.succeed(Database, makePostgresDatabase(client))
+
   const authorization = makeAuthorizationTestLayer(
     // SAFETY: the grants have the shape the test layer takes.
     grants as Parameters<typeof makeAuthorizationTestLayer>[0],
   )
+
   const platform = Layer.mergeAll(database, authorization)
+
   const numbering = NumberingLive.pipe(
     Layer.provide(
       Layer.merge(database, AccountingFiscalCalendarLive.pipe(Layer.provide(database))),
     ),
   )
+
   const ledger = GeneralLedgerLive.pipe(Layer.provide(Layer.merge(platform, numbering)))
   const product = ProductLive.pipe(Layer.provide(platform))
   const stock = StockKeepingLive.pipe(Layer.provide(Layer.mergeAll(platform, ledger, product)))
+
   const messaging = Layer.effect(MessagingService, makeMessagingService).pipe(
     Layer.provide(database),
   )
+
   const party = PartyLive.pipe(Layer.provide(Layer.mergeAll(platform, messaging)))
   const tax = TaxLive.pipe(Layer.provide(platform))
+
   const sales = SalesDocumentsLive.pipe(
     Layer.provide(Layer.mergeAll(platform, party, tax, numbering)),
   )
+
   const legacySales = SalesLive.pipe(Layer.provide(Layer.merge(platform, messaging)))
   const approvals = ApprovalsLive.pipe(Layer.provide(platform))
   const inventory = InventoryLive.pipe(Layer.provide(Layer.merge(platform, messaging)))
+
   const procurement = ProcurementLive.pipe(
     Layer.provide(Layer.mergeAll(platform, party, inventory, messaging, approvals)),
   )
+
   const purchasing = PurchaseDocumentsLive.pipe(
     Layer.provide(
       Layer.mergeAll(platform, approvals, numbering, party, product, tax, stock, procurement),
     ),
   )
+
   const billing = BillingLive.pipe(
     Layer.provide(
       Layer.mergeAll(platform, ledger, numbering, tax, sales, product, purchasing, approvals),
     ),
   )
+
   const settlement = SettlementLive.pipe(
     Layer.provide(Layer.mergeAll(platform, ledger, billing, numbering)),
   )
+
   const orderToCash = OrderToCashLive.pipe(
     Layer.provide(Layer.mergeAll(platform, sales, stock, product)),
   )
+
   return Layer.mergeAll(
     platform,
     numbering,

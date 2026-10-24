@@ -29,8 +29,10 @@ export const makeApiLayer = (
   if (configuration.postgresReadYourWrites !== undefined && replicaClient === undefined) {
     throw new Error("PostgreSQL read-your-writes requires a replica client")
   }
+
   const services = serviceLayers(client, configuration, undefined, replicaClient)
   const authMiddleware = BearerAuthLive.pipe(Layer.provide(services))
+
   const handlers = ApiHandlers.pipe(
     Layer.provide(Layer.succeed(CurrentRuntimeConfiguration)(configuration)),
     Layer.provide(authMiddleware),
@@ -56,24 +58,29 @@ export const startApi = (url: string, port = 8000) =>
       const client = postgres(url)
       yield* Effect.addFinalizer(() => Effect.promise(() => client.end()))
       yield* validatePostgresVersion(asPostgresClient(client))
+
       const replicaClient =
         configuration.postgresReadYourWrites === undefined
           ? undefined
           : postgres(configuration.postgresReadYourWrites.replicaUrl)
+
       if (replicaClient !== undefined) {
         yield* Effect.addFinalizer(() => Effect.promise(() => replicaClient.end()))
         yield* validatePostgresVersion(asPostgresClient(replicaClient))
       }
+
       yield* Layer.launch(makeApiLayer(client, configuration, port, replicaClient))
     }),
   )
 
 if (isMain(import.meta.url)) {
   const url = process.env["DATABASE_URL"]
+
   if (url === undefined || url.trim() === "") {
     console.error("DATABASE_URL is required")
     process.exit(1)
   }
+
   const port = Number.parseInt(process.env["PORT"] ?? "8000", 10)
   startApi(url, port).pipe(NodeRuntime.runMain)
 }

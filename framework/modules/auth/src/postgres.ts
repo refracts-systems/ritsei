@@ -33,6 +33,7 @@ const isMissingUserAccount = (error: DatabaseFailure) =>
 
 export const makePostgresAuthStore = Effect.gen(function* () {
   const database = yield* Database
+
   const findTenantBySlug: AuthStore["findTenantBySlug"] = (slug) =>
     database
       .query(

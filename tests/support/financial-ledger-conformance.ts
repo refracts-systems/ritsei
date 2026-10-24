@@ -12,11 +12,13 @@ export const LARGE_FINANCIAL_MAJOR = "500000000000000.00"
 export const LARGE_FINANCIAL_MINOR = "50000000000000000"
 
 type Authority = "postgresql" | "tigerbeetle"
+
 type JournalLine = {
   readonly accountId: string
   readonly debitMinor: string
   readonly creditMinor: string
 }
+
 export type ConformanceJournal = {
   readonly tenantId: string
   readonly legalEntityId: string
@@ -42,6 +44,7 @@ export const assertFinancialLedgerConformance = (
     const creditLine = input.lines.find((line) => BigInt(line.creditMinor) > 0n)
     assert.isDefined(debitLine)
     assert.isDefined(creditLine)
+
     if (debitLine === undefined || creditLine === undefined) return
     assert.strictEqual(debitLine.debitMinor, LARGE_FINANCIAL_MINOR)
     assert.strictEqual(creditLine.creditMinor, LARGE_FINANCIAL_MINOR)
@@ -72,14 +75,17 @@ export const assertFinancialLedgerConformance = (
     const first = yield* ledger.postJournal(input)
     // SAFETY: the test calls this double only with inputs of the shape it reads.
     assert.strictEqual((first as { readonly _tag?: string })._tag, "accepted")
+
     // SAFETY: the test calls this double only with inputs of the shape it reads.
     if (!FinancialExecutionOutcome.guards.accepted(first)) return
+
     // SAFETY: the test calls this double only with inputs of the shape it reads.
     const accepted = first as {
       readonly _tag: "accepted"
       readonly transferCount: number
       readonly transferIds: readonly string[]
     }
+
     assert.strictEqual(accepted.transferCount, 1)
     assert.strictEqual(accepted.transferIds.length, 1)
     assert.deepStrictEqual(yield* ledger.postJournal(input), first)
@@ -129,6 +135,7 @@ export const assertFinancialLedgerConformance = (
         { accountId: creditLine.accountId, debitMinor: "0", creditMinor: (1n << 128n).toString() },
       ],
     })
+
     assert.deepStrictEqual(
       overflow,
       FinancialExecutionRejected.make({
@@ -138,6 +145,7 @@ export const assertFinancialLedgerConformance = (
     )
 
     const u128Max = ((1n << 128n) - 1n).toString()
+
     const aggregateOverflow = yield* ledger.postJournal({
       ...input,
       operationId: `${input.operationId}:aggregate-overflow`,
@@ -149,6 +157,7 @@ export const assertFinancialLedgerConformance = (
         { accountId: `${creditLine.accountId}:2`, debitMinor: "0", creditMinor: u128Max },
       ],
     })
+
     assert.deepStrictEqual(
       aggregateOverflow,
       FinancialExecutionRejected.make({

@@ -9,30 +9,37 @@ if (!tag || !/^v(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/.test(tag)) {
 
 const runGit = async (...args: string[]) => {
   const result = spawnSync("git", args, { encoding: "utf8" })
+
   if (result.status !== 0) {
     throw new Error((result.stderr ?? "").trim() || `git ${args.join(" ")} failed`)
   }
+
   return result.stdout.trim()
 }
 
 const tagObjectType = await runGit("cat-file", "-t", `refs/tags/${tag}`)
+
 if (tagObjectType !== "tag") {
   throw new Error(`${tag} must be an annotated tag`)
 }
 
 const target = await runGit("rev-parse", "--verify", `${tag}^{}`)
+
 if ((await runGit("cat-file", "-t", target)) !== "commit") {
   throw new Error(`${tag} must target a commit`)
 }
 
 const expectedTarget = process.env["RELEASE_EXPECTED_TARGET"]
+
 if (expectedTarget && target !== expectedTarget) {
   throw new Error(`${tag} targets ${target}, expected ${expectedTarget}`)
 }
 
 const releaseBaseRef = process.env["RELEASE_BASE_REF"]
+
 if (releaseBaseRef !== undefined) {
   const base = await runGit("rev-parse", "--verify", releaseBaseRef)
+
   if ((await runGit("merge-base", base, target)) !== target) {
     throw new Error(`${tag} target ${target} is not contained in ${releaseBaseRef}`)
   }
@@ -40,6 +47,7 @@ if (releaseBaseRef !== undefined) {
 
 const releaseNotes = `.github/release-notes/${tag}.md`
 const notesRef = process.env["RELEASE_NOTES_REF"]
+
 const notes =
   notesRef === undefined
     ? await readFile(releaseNotes, "utf8")
@@ -48,6 +56,7 @@ const notes =
 if (!notes.trim()) {
   throw new Error(`${releaseNotes} must not be empty`)
 }
+
 if (!notes.includes(`# RITSEI ${tag}`)) {
   throw new Error(`${releaseNotes} must identify ${tag}`)
 }

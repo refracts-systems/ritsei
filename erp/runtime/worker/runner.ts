@@ -20,6 +20,7 @@ export const FinancialWorkerInput = Schema.Struct({
   tenantId: Uuid,
   workerId: NonEmptyString,
 })
+
 export type FinancialWorkerInput = Schema.Schema.Type<typeof FinancialWorkerInput>
 
 export const FinancialWorkerRun = Schema.Struct({
@@ -27,6 +28,7 @@ export const FinancialWorkerRun = Schema.Struct({
   jobId: Schema.NullOr(Uuid),
   operationId: Schema.NullOr(NonEmptyString),
 })
+
 export type FinancialWorkerRun = Schema.Schema.Type<typeof FinancialWorkerRun>
 
 export const WorkerFailpointName = Schema.Literals([
@@ -35,6 +37,7 @@ export const WorkerFailpointName = Schema.Literals([
   "before_job_completion",
   "before_job_failure",
 ])
+
 export type WorkerFailpointName = Schema.Schema.Type<typeof WorkerFailpointName>
 
 export class WorkerInjectedFailure extends Schema.TaggedError<WorkerInjectedFailure>()(
@@ -45,10 +48,13 @@ export class WorkerInjectedFailure extends Schema.TaggedError<WorkerInjectedFail
 export interface WorkerFailpointService {
   readonly hit: (point: WorkerFailpointName) => Effect.Effect<void, WorkerInjectedFailure>
 }
+
 export const WorkerFailpointService =
   Context.Service<WorkerFailpointService>("RITSEI/WorkerFailpoint")
+
 export const makeWorkerFailpointLayer = (points: Iterable<WorkerFailpointName>) => {
   const remaining = new Set(points)
+
   return Layer.succeed(WorkerFailpointService, {
     hit: (point: WorkerFailpointName) =>
       remaining.delete(point) ? Effect.fail(new WorkerInjectedFailure({ point })) : Effect.void,
@@ -89,13 +95,16 @@ export const runFinancialOperationOnce = (
     const process = yield* ProcessService
     const accounting = yield* FinancialOperationService
     const failpointOption = yield* Effect.serviceOption(WorkerFailpointService)
+
     const hit = (point: WorkerFailpointName) =>
       Option.isSome(failpointOption) ? failpointOption.value.hit(point) : Effect.void
+
     let job = yield* process.claimJob({
       tenantId: decoded.tenantId,
       workerId: decoded.workerId,
       jobType: ProcessFinancialJobTypes.submit,
     })
+
     if (job === null) {
       job = yield* process.claimJob({
         tenantId: decoded.tenantId,
@@ -103,21 +112,25 @@ export const runFinancialOperationOnce = (
         jobType: ProcessFinancialJobTypes.reconcile,
       })
     }
+
     if (job === null) return { status: "idle", jobId: null, operationId: null } as const
     const leaseToken = yield* leaseTokenOf(job)
     yield* hit("after_lease_before_accounting")
 
     const payload = yield* Schema.decodeUnknownEffect(FinancialOperationJobPayload)(job.payload)
+
     const operation =
       job.jobType === ProcessFinancialJobTypes.reconcile
         ? accounting.reconcileFinancialOperation(payload)
         : accounting.submitFinancialOperation(payload)
+
     const fencedOperation = operation.pipe(
       Effect.provideService(FencingContextService, {
         scope: job.fenceScope,
         generation: job.leaseGeneration,
       }),
     )
+
     const heartbeat = Effect.forever(
       Effect.sleep("1 minute").pipe(
         Effect.andThen(
@@ -132,11 +145,13 @@ export const runFinancialOperationOnce = (
         Effect.asVoid,
       ),
     )
+
     const result = yield* Effect.raceAllFirst([Effect.result(fencedOperation), heartbeat])
 
     if (Result.isSuccess(result)) {
       const value = result.success
       yield* hit("after_accounting_before_job_completion")
+
       if (value.status === "unknown" && job.jobType === ProcessFinancialJobTypes.reconcile) {
         yield* hit("before_job_failure")
         yield* process.failJob({
@@ -148,12 +163,14 @@ export const runFinancialOperationOnce = (
           error: "financial_operation_unknown",
           retryAt: value.scheduledAt,
         })
+
         return {
           status: "retrying" as const,
           jobId: job.jobId,
           operationId: value.operationId,
         }
       }
+
       if (
         value.status === "reconciled" ||
         value.status === "rejected" ||
@@ -168,12 +185,14 @@ export const runFinancialOperationOnce = (
           leaseToken,
           leaseGeneration: job.leaseGeneration,
         })
+
         return {
           status: value.status === "unknown" ? ("retrying" as const) : ("completed" as const),
           jobId: job.jobId,
           operationId: value.operationId,
         }
       }
+
       yield* hit("before_job_failure")
       yield* process.failJob({
         tenantId: decoded.tenantId,
@@ -184,6 +203,7 @@ export const runFinancialOperationOnce = (
         error: `financial_operation_${value.status}`,
         retryAt: value.scheduledAt,
       })
+
       return {
         status: "retrying" as const,
         jobId: job.jobId,
@@ -203,6 +223,7 @@ export const runFinancialOperationOnce = (
       error: `financial_operation_${error._tag}`,
       retryAt: permanent ? null : retryAfter(5_000),
     })
+
     return {
       status: permanent ? ("failed" as const) : ("retrying" as const),
       jobId: job.jobId,

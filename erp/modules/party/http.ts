@@ -220,17 +220,21 @@ export const PartyHttpErrors = apiErrorMapping({
   PartyRepresentationUserAccountNotFound: "not_found",
   PartyRoleAlreadyAssigned: "conflict",
 })
+
 const coreApiEffect = PartyHttpErrors.apiEffect
 
 export const PartyHttpHandlers = HttpApiBuilder.group(PartyHttpApi, "Parties", (handlers) =>
   Effect.gen(function* () {
     const party = yield* PartyService
     const contacts = yield* PartyContactService
+
     const partyScope = (headers: { "x-tenant-id": string }, params: { id: string }) =>
       Effect.gen(function* () {
         const principal = yield* CurrentPrincipal
+
         return { principal, tenantId: headers["x-tenant-id"], partyId: params.id }
       })
+
     return handlers
       .handle(
         "getContactBook",
@@ -242,6 +246,7 @@ export const PartyHttpHandlers = HttpApiBuilder.group(PartyHttpApi, "Parties", (
         "addAddress",
         Effect.fn("Http.Parties.addAddress")(function* ({ headers, params, payload }) {
           const scope = yield* partyScope(headers, params)
+
           return yield* coreApiEffect(contacts.addAddress({ ...scope, ...payload }))
         }),
       )
@@ -249,6 +254,7 @@ export const PartyHttpHandlers = HttpApiBuilder.group(PartyHttpApi, "Parties", (
         "addContact",
         Effect.fn("Http.Parties.addContact")(function* ({ headers, params, payload }) {
           const scope = yield* partyScope(headers, params)
+
           return yield* coreApiEffect(contacts.addContact({ ...scope, ...payload }))
         }),
       )
@@ -256,6 +262,7 @@ export const PartyHttpHandlers = HttpApiBuilder.group(PartyHttpApi, "Parties", (
         "addBankAccount",
         Effect.fn("Http.Parties.addBankAccount")(function* ({ headers, params, payload }) {
           const scope = yield* partyScope(headers, params)
+
           return yield* coreApiEffect(contacts.addBankAccount({ ...scope, ...payload }))
         }),
       )
@@ -263,6 +270,7 @@ export const PartyHttpHandlers = HttpApiBuilder.group(PartyHttpApi, "Parties", (
         "list",
         Effect.fn("Http.Parties.list")(function* ({ headers, query }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             party.list({
               principal,
@@ -276,6 +284,7 @@ export const PartyHttpHandlers = HttpApiBuilder.group(PartyHttpApi, "Parties", (
         "get",
         Effect.fn("Http.Parties.get")(function* ({ headers, params }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             party.getDetail({
               principal,
@@ -289,6 +298,7 @@ export const PartyHttpHandlers = HttpApiBuilder.group(PartyHttpApi, "Parties", (
         "create",
         Effect.fn("Http.Parties.create")(function* ({ headers, payload }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             party.create({ principal, tenantId: headers["x-tenant-id"], ...payload }),
           )
@@ -298,6 +308,7 @@ export const PartyHttpHandlers = HttpApiBuilder.group(PartyHttpApi, "Parties", (
         "createLegalEntity",
         Effect.fn("Http.Parties.createLegalEntity")(function* ({ headers, params }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             party.createLegalEntity({
               principal,
@@ -311,6 +322,7 @@ export const PartyHttpHandlers = HttpApiBuilder.group(PartyHttpApi, "Parties", (
         "createBranch",
         Effect.fn("Http.Parties.createBranch")(function* ({ headers, params, payload }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             party.createBranch({
               principal,
@@ -325,6 +337,7 @@ export const PartyHttpHandlers = HttpApiBuilder.group(PartyHttpApi, "Parties", (
         "assignRole",
         Effect.fn("Http.Parties.assignRole")(function* ({ headers, params, payload }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             party.assignRole({
               principal,
@@ -339,6 +352,7 @@ export const PartyHttpHandlers = HttpApiBuilder.group(PartyHttpApi, "Parties", (
         "attachIdentifier",
         Effect.fn("Http.Parties.attachIdentifier")(function* ({ headers, params, payload }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             party.attachIdentifier({
               principal,
@@ -353,6 +367,7 @@ export const PartyHttpHandlers = HttpApiBuilder.group(PartyHttpApi, "Parties", (
         "createRelationship",
         Effect.fn("Http.Parties.createRelationship")(function* ({ headers, params, payload }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             party.createRelationship({
               principal,
@@ -367,6 +382,7 @@ export const PartyHttpHandlers = HttpApiBuilder.group(PartyHttpApi, "Parties", (
         "createRepresentation",
         Effect.fn("Http.Parties.createRepresentation")(function* ({ headers, params, payload }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             party.createPartyRepresentation({
               principal,
@@ -381,6 +397,7 @@ export const PartyHttpHandlers = HttpApiBuilder.group(PartyHttpApi, "Parties", (
         "setRepresentationActive",
         Effect.fn("Http.Parties.setRepresentationActive")(function* ({ headers, params, payload }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             party.setPartyRepresentationActive({
               principal,
@@ -395,6 +412,7 @@ export const PartyHttpHandlers = HttpApiBuilder.group(PartyHttpApi, "Parties", (
         "findRelatedPartyPaths",
         Effect.fn("Http.Parties.findRelatedPartyPaths")(function* ({ headers, params, query }) {
           const principal = yield* CurrentPrincipal
+
           return yield* coreApiEffect(
             party.findRelatedPartyPaths({
               principal,

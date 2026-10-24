@@ -103,6 +103,7 @@ it.effect("validates external schemas at the contract boundary", () =>
         detail: "",
       }),
     )
+
     assert.strictEqual(invalid._tag, "SchemaError")
   }),
 )

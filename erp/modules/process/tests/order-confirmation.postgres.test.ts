@@ -53,8 +53,10 @@ import type {
 import { postgresCode, postgresConstraint } from "../../../../tests/support/postgres-error.ts"
 
 const databaseUrl = process.env["DATABASE_URL"]
+
 const postgresFailure = <A>(effect: () => Promise<A>) =>
   Effect.tryPromise({ try: effect, catch: (cause) => cause }).pipe(Effect.flip)
+
 const principal = { userAccountId: "order-confirmation", sessionId: "session" }
 
 const capabilities = [
@@ -92,13 +94,16 @@ it.effect.skipIf(databaseUrl === undefined)(
     withTemporaryDatabase(databaseUrl!, (client) =>
       Effect.gen(function* () {
         yield* runMigrations(client)
+
         const [tenant] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
           `,
         )
+
         const aggregateId = uuidv7()
+
         const nonRunningWorkflow = yield* postgresFailure(
           () =>
             client`
@@ -110,6 +115,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                ${aggregateId}, 'succeeded', '{}'::jsonb, '{}'::jsonb, now())
           `,
         )
+
         const nonPendingJob = yield* postgresFailure(
           () =>
             client`
@@ -133,6 +139,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                ${aggregateId}, 'running', '{}'::jsonb)
           `,
         )
+
         const emptyWorkflowIdempotency = yield* postgresFailure(
           () =>
             client`
@@ -143,6 +150,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                '{}'::jsonb)
           `,
         )
+
         const unknownJobType = yield* postgresFailure(
           () =>
             client`
@@ -153,6 +161,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                'invalid-job-type')
           `,
         )
+
         const emptyJobIdempotency = yield* postgresFailure(
           () =>
             client`
@@ -163,6 +172,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                'correlation')
           `,
         )
+
         const emptyJobCorrelation = yield* postgresFailure(
           () =>
             client`
@@ -173,6 +183,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                'empty-job-correlation', '{}'::jsonb, '   ')
           `,
         )
+
         const invalidJobLease = yield* postgresFailure(
           () =>
             client`
@@ -183,6 +194,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                'pending', now(), '{}'::jsonb, 'correlation')
           `,
         )
+
         const invalidJobCompletion = yield* postgresFailure(
           () =>
             client`
@@ -193,6 +205,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                'pending', now(), '{}'::jsonb, 'correlation')
           `,
         )
+
         const runningRecovery = yield* postgresFailure(
           () =>
             client`
@@ -204,6 +217,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                ${aggregateId}, 'running', '{}'::jsonb, 'unexpected')
           `,
         )
+
         const succeededRecovery = yield* postgresFailure(
           () =>
             client`
@@ -215,6 +229,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                ${aggregateId}, 'succeeded', '{}'::jsonb, '{}'::jsonb, 'unexpected', now())
           `,
         )
+
         const completedRecovery = yield* postgresFailure(
           () =>
             client`
@@ -260,6 +275,7 @@ it.effect.skipIf(databaseUrl === undefined)(
         assert.strictEqual(postgresConstraint(invalidJobCompletion), "process_jobs_state_check")
         assert.strictEqual(postgresCode(runningRecovery), "23514")
         assert.strictEqual(postgresConstraint(runningRecovery), "workflow_runs_state_check")
+
         for (const failure of [succeededRecovery, completedRecovery]) {
           assert.strictEqual(postgresCode(failure), "23514")
           assert.strictEqual(postgresConstraint(failure), "workflow_runs_state_transition_check")
@@ -274,13 +290,16 @@ it.effect.skipIf(databaseUrl === undefined)(
     withTemporaryDatabase(databaseUrl!, (client) =>
       Effect.gen(function* () {
         yield* runMigrations(client)
+
         const [tenant] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
           `,
         )
+
         const aggregateId = uuidv7()
+
         const [workflow] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -292,6 +311,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             returning id
           `,
         )
+
         yield* Effect.promise(
           () =>
             client`
@@ -300,6 +320,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             where id = ${workflow!.id}
           `,
         )
+
         const workflowTerminalFailure = yield* postgresFailure(
           () =>
             client`
@@ -308,6 +329,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             where id = ${workflow!.id}
           `,
         )
+
         assert.strictEqual(postgresCode(workflowTerminalFailure), "23514")
         assert.strictEqual(
           postgresConstraint(workflowTerminalFailure),
@@ -325,6 +347,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             returning id
           `,
         )
+
         const leaseToken = uuidv7()
         yield* Effect.promise(
           () =>
@@ -344,12 +367,14 @@ it.effect.skipIf(databaseUrl === undefined)(
             where id = ${job!.id}
           `,
         )
+
         const invalidJobTransition = yield* postgresFailure(
           () =>
             client`
             update process.jobs set status = 'completed' where id = ${job!.id}
           `,
         )
+
         assert.strictEqual(postgresCode(invalidJobTransition), "23514")
         assert.strictEqual(
           postgresConstraint(invalidJobTransition),
@@ -373,6 +398,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             where id = ${job!.id}
           `,
         )
+
         const jobTerminalFailure = yield* postgresFailure(
           () =>
             client`
@@ -381,6 +407,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             where id = ${job!.id}
           `,
         )
+
         assert.strictEqual(postgresCode(jobTerminalFailure), "23514")
         assert.strictEqual(
           postgresConstraint(jobTerminalFailure),
@@ -397,12 +424,14 @@ it.effect.skipIf(databaseUrl === undefined)(
       Effect.gen(function* () {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
+
         const [tenant] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
           `,
         )
+
         const authorizationLayer = makeAuthorizationTestLayer(
           capabilities.map((capability) => ({
             userAccountId: principal.userAccountId,
@@ -413,22 +442,28 @@ it.effect.skipIf(databaseUrl === undefined)(
 
         yield* Effect.gen(function* () {
           const authorization = yield* AuthorizationService
+
           const requirements = Layer.merge(
             Layer.succeed(Database, database),
             Layer.succeed(AuthorizationService, authorization),
           )
+
           const party = yield* Effect.provide(makePartyService, requirements)
+
           const messaging = yield* makeMessagingService.pipe(
             Effect.provideService(Database, database),
           )
+
           const sales = yield* Effect.provide(
             makeSalesService,
             Layer.merge(requirements, Layer.succeed(MessagingService, messaging)),
           )
+
           const inventory = yield* Effect.provide(
             makeInventoryService,
             Layer.merge(requirements, Layer.succeed(MessagingService, messaging)),
           )
+
           const accounting = yield* Effect.provide(
             makeAccountingService,
             Layer.mergeAll(
@@ -437,6 +472,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               Layer.succeed(SalesService, sales),
             ),
           )
+
           const process = yield* Effect.provide(
             makeProcessService,
             Layer.mergeAll(
@@ -455,29 +491,34 @@ it.effect.skipIf(databaseUrl === undefined)(
             kind: "organization",
             name: "Order Confirmation Organization",
           })
+
           const legalEntity = yield* party.createLegalEntity({
             principal,
             tenantId: tenant!.id,
             organizationId: organization.id,
           })
+
           const warehouse = yield* inventory.createWarehouse({
             principal,
             tenantId: tenant!.id,
             legalEntityId: legalEntity.id,
             name: "Main Warehouse",
           })
+
           const widget = yield* inventory.createItem({
             principal,
             tenantId: tenant!.id,
             sku: "ORDER-WIDGET",
             name: "Order Widget",
           })
+
           const cable = yield* inventory.createItem({
             principal,
             tenantId: tenant!.id,
             sku: "ORDER-CABLE",
             name: "Order Cable",
           })
+
           yield* Effect.forEach([widget, cable], (item) =>
             inventory.receiveStock({
               principal,
@@ -487,6 +528,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               quantity: "10",
             }),
           )
+
           const receivable = yield* accounting.createAccount({
             principal,
             tenantId: tenant!.id,
@@ -494,6 +536,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             name: "Accounts Receivable",
             type: "asset",
           })
+
           const revenue = yield* accounting.createAccount({
             principal,
             tenantId: tenant!.id,
@@ -501,6 +544,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             name: "Revenue",
             type: "revenue",
           })
+
           yield* accounting.configureLegalEntity({
             principal,
             tenantId: tenant!.id,
@@ -524,12 +568,14 @@ it.effect.skipIf(databaseUrl === undefined)(
             startsOn: "1900-01-01",
             endsOn: "2099-12-31",
           })
+
           const customer = yield* sales.createCustomer({
             principal,
             tenantId: tenant!.id,
             name: "Order Customer",
             email: "order-confirmation@example.test",
           })
+
           const order = yield* sales.createOrder({
             principal,
             tenantId: tenant!.id,
@@ -539,6 +585,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               { itemId: cable.id, quantity: "1", unitPrice: "25.00" },
             ],
           })
+
           const input = {
             principal,
             tenantId: tenant!.id,
@@ -562,6 +609,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             userAccountId: principal.userAccountId,
             tenantId: tenant!.id,
           })
+
           const [storedWorkflow] = yield* Effect.promise(
             () =>
               client<WorkflowRunRow[]>`
@@ -574,6 +622,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               where id = ${result.workflowRunId}
             `,
           )
+
           const decodedWorkflow = yield* Schema.decodeUnknownEffect(WorkflowRun)(storedWorkflow)
           assert.strictEqual(decodedWorkflow.id, result.workflowRunId)
           assert.strictEqual(decodedWorkflow.workflowType, ProcessWorkflowTypes.confirmation)
@@ -607,6 +656,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           assert.strictEqual(counts.workflow_runs, "1")
           assert.strictEqual(counts.events, "3")
           assert.strictEqual(counts.jobs, "1")
+
           const [event] = yield* Effect.promise(
             () =>
               client<
@@ -623,9 +673,11 @@ it.effect.skipIf(databaseUrl === undefined)(
               where id = ${result.eventId}
             `,
           )
+
           const eventPayload = yield* Schema.decodeUnknownEffect(
             OrderConfirmationCompletedEventPayload,
           )(event?.payload)
+
           const [storedEvent] = yield* Effect.promise(
             () =>
               client<OutboxEventRow[]>`
@@ -641,6 +693,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               where id = ${result.eventId}
             `,
           )
+
           const decodedEvent = yield* Schema.decodeUnknownEffect(EventEnvelope)(storedEvent)
           assert.strictEqual(decodedEvent.eventType, ProcessOrderConfirmationCompletedEvent.id)
           assert.strictEqual(
@@ -693,6 +746,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             ]).size,
             4,
           )
+
           const [job] = yield* Effect.promise(
             () =>
               client<
@@ -714,7 +768,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               where id = ${result.jobId}
             `,
           )
+
           yield* Schema.decodeUnknownEffect(ProcessPostCommitJobPayload)(job?.payload)
+
           const [storedJob] = yield* Effect.promise(
             () =>
               client<ProcessJobRow[]>`
@@ -728,6 +784,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               where id = ${result.jobId}
             `,
           )
+
           const decodedJob = yield* Schema.decodeUnknownEffect(ProcessJob)(storedJob)
           assert.deepStrictEqual(
             {
@@ -780,6 +837,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               order by item_id
             `,
           )
+
           assert.deepStrictEqual(
             balances,
             [
@@ -832,10 +890,12 @@ it.effect.skipIf(databaseUrl === undefined)(
               where id = ${result.eventId}
             `,
           )
+
           const mismatchedConfirmationJobPayload = {
             ...job!.payload,
             commandId: "mismatched-job-command",
           }
+
           yield* Effect.promise(
             () =>
               client`
@@ -853,12 +913,14 @@ it.effect.skipIf(databaseUrl === undefined)(
               where id = ${result.jobId}
             `,
           )
+
           const mismatchedConfirmationEventPayload = {
             workflowRunId: result.workflowRunId,
             orderId: input.orderId,
             reservationIds: result.reservations.map(({ id }) => id),
             journalId: uuidv7(),
           }
+
           yield* Effect.promise(
             () =>
               client`
@@ -878,12 +940,14 @@ it.effect.skipIf(databaseUrl === undefined)(
             `,
           )
           assert.instanceOf(yield* Effect.flip(process.confirmOrder(input)), WorkflowResultCorrupt)
+
           const inactiveReservationResult = {
             ...result,
             reservations: result.reservations.map((reservation, index) =>
               index === 0 ? { ...reservation, status: "fulfilled" as const } : reservation,
             ),
           }
+
           yield* Effect.promise(
             () =>
               client`
@@ -893,6 +957,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             `,
           )
           assert.instanceOf(yield* Effect.flip(process.confirmOrder(input)), WorkflowResultCorrupt)
+
           const corruptJournalResult = {
             ...result,
             journal: {
@@ -901,6 +966,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               reversesEntryId: uuidv7(),
             },
           }
+
           yield* Effect.promise(
             () =>
               client`
@@ -910,10 +976,12 @@ it.effect.skipIf(databaseUrl === undefined)(
             `,
           )
           assert.instanceOf(yield* Effect.flip(process.confirmOrder(input)), WorkflowResultCorrupt)
+
           const cancelledOrderResult = {
             ...result,
             order: { ...result.order, status: "cancelled" as const },
           }
+
           yield* Effect.promise(
             () =>
               client`
@@ -923,12 +991,14 @@ it.effect.skipIf(databaseUrl === undefined)(
             `,
           )
           assert.instanceOf(yield* Effect.flip(process.confirmOrder(input)), WorkflowResultCorrupt)
+
           const duplicateReservationIdResult = {
             ...result,
             reservations: result.reservations.map((reservation, index) =>
               index === 1 ? { ...reservation, id: result.reservations[0]!.id } : reservation,
             ),
           }
+
           yield* Effect.promise(
             () =>
               client`
@@ -938,10 +1008,12 @@ it.effect.skipIf(databaseUrl === undefined)(
             `,
           )
           assert.instanceOf(yield* Effect.flip(process.confirmOrder(input)), WorkflowResultCorrupt)
+
           const missingConfirmationTimestampResult = {
             ...result,
             order: { ...result.order, confirmedAt: null },
           }
+
           yield* Effect.promise(
             () =>
               client`
@@ -951,6 +1023,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             `,
           )
           assert.instanceOf(yield* Effect.flip(process.confirmOrder(input)), WorkflowResultCorrupt)
+
           const mismatchedReservationIdempotencyResult = {
             ...result,
             reservations: result.reservations.map((reservation, index) =>
@@ -959,6 +1032,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                 : reservation,
             ),
           }
+
           yield* Effect.promise(
             () =>
               client`
@@ -968,6 +1042,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             `,
           )
           assert.instanceOf(yield* Effect.flip(process.confirmOrder(input)), WorkflowResultCorrupt)
+
           const mismatchedJournalLinesResult = {
             ...result,
             journal: {
@@ -977,6 +1052,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               ),
             },
           }
+
           yield* Effect.promise(
             () =>
               client`
@@ -986,6 +1062,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             `,
           )
           assert.instanceOf(yield* Effect.flip(process.confirmOrder(input)), WorkflowResultCorrupt)
+
           const mismatchedOrderLinePriceResult = {
             ...result,
             order: {
@@ -995,6 +1072,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               ),
             },
           }
+
           yield* Effect.promise(
             () =>
               client`
@@ -1004,6 +1082,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             `,
           )
           assert.instanceOf(yield* Effect.flip(process.confirmOrder(input)), WorkflowResultCorrupt)
+
           const invalidJournalLineResult = {
             ...result,
             journal: {
@@ -1014,6 +1093,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               ],
             },
           }
+
           yield* Effect.promise(
             () =>
               client`
@@ -1023,10 +1103,12 @@ it.effect.skipIf(databaseUrl === undefined)(
             `,
           )
           assert.instanceOf(yield* Effect.flip(process.confirmOrder(input)), WorkflowResultCorrupt)
+
           const detachedOrderResult = {
             ...result,
             order: { ...result.order, id: uuidv7() },
           }
+
           yield* Effect.promise(
             () =>
               client`
@@ -1090,12 +1172,14 @@ it.effect.skipIf(databaseUrl === undefined)(
       Effect.gen(function* () {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
+
         const [tenant] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
           `,
         )
+
         const authorizationLayer = makeAuthorizationTestLayer(
           capabilities.map((capability) => ({
             userAccountId: principal.userAccountId,
@@ -1106,22 +1190,28 @@ it.effect.skipIf(databaseUrl === undefined)(
 
         yield* Effect.gen(function* () {
           const authorization = yield* AuthorizationService
+
           const requirements = Layer.merge(
             Layer.succeed(Database, database),
             Layer.succeed(AuthorizationService, authorization),
           )
+
           const party = yield* Effect.provide(makePartyService, requirements)
+
           const messaging = yield* makeMessagingService.pipe(
             Effect.provideService(Database, database),
           )
+
           const sales = yield* Effect.provide(
             makeSalesService,
             Layer.merge(requirements, Layer.succeed(MessagingService, messaging)),
           )
+
           const inventory = yield* Effect.provide(
             makeInventoryService,
             Layer.merge(requirements, Layer.succeed(MessagingService, messaging)),
           )
+
           const accounting = yield* Effect.provide(
             makeAccountingService,
             Layer.mergeAll(
@@ -1130,6 +1220,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               Layer.succeed(SalesService, sales),
             ),
           )
+
           const process = yield* Effect.provide(
             makeProcessService,
             Layer.mergeAll(
@@ -1141,29 +1232,34 @@ it.effect.skipIf(databaseUrl === undefined)(
               Layer.succeed(MessagingService, messaging),
             ),
           )
+
           const organization = yield* party.create({
             principal,
             tenantId: tenant!.id,
             kind: "organization",
             name: "Rollback Organization",
           })
+
           const legalEntity = yield* party.createLegalEntity({
             principal,
             tenantId: tenant!.id,
             organizationId: organization.id,
           })
+
           const warehouse = yield* inventory.createWarehouse({
             principal,
             tenantId: tenant!.id,
             legalEntityId: legalEntity.id,
             name: "Rollback Warehouse",
           })
+
           const item = yield* inventory.createItem({
             principal,
             tenantId: tenant!.id,
             sku: "ROLLBACK-WIDGET",
             name: "Rollback Widget",
           })
+
           yield* inventory.receiveStock({
             principal,
             tenantId: tenant!.id,
@@ -1171,18 +1267,21 @@ it.effect.skipIf(databaseUrl === undefined)(
             itemId: item.id,
             quantity: "1",
           })
+
           const customer = yield* sales.createCustomer({
             principal,
             tenantId: tenant!.id,
             name: "Rollback Customer",
             email: "rollback@example.test",
           })
+
           const order = yield* sales.createOrder({
             principal,
             tenantId: tenant!.id,
             customerId: customer.id,
             lines: [{ itemId: item.id, quantity: "2", unitPrice: "100.00" }],
           })
+
           const error = yield* Effect.flip(
             process.confirmOrder({
               principal,
@@ -1195,16 +1294,20 @@ it.effect.skipIf(databaseUrl === undefined)(
               idempotencyKey: "rollback-confirmation-1",
             }),
           )
+
           assert.strictEqual(error._tag, "StockUnavailable")
+
           const [storedOrder] = yield* Effect.promise(
             () =>
               client<{ status: string }[]>`
               select status from sales.orders where id = ${order.id}
             `,
           )
+
           assert.strictEqual(storedOrder?.status, "draft")
           const counts = (yield* Effect.promise(() => readCounts(client, tenant!.id)))[0]!
           assert.deepStrictEqual(counts, { workflow_runs: "0", events: "0", jobs: "0" })
+
           const legalEntityMismatch = yield* Effect.flip(
             process.confirmOrder({
               principal,
@@ -1217,13 +1320,16 @@ it.effect.skipIf(databaseUrl === undefined)(
               idempotencyKey: "legal-entity-mismatch-1",
             }),
           )
+
           assert.strictEqual(legalEntityMismatch._tag, "StockReservationLegalEntityMismatch")
+
           const [mismatchedOrder] = yield* Effect.promise(
             () =>
               client<{ status: string }[]>`
               select status from sales.orders where id = ${order.id}
             `,
           )
+
           assert.strictEqual(mismatchedOrder?.status, "draft")
           assert.deepStrictEqual((yield* Effect.promise(() => readCounts(client, tenant!.id)))[0], {
             workflow_runs: "0",
@@ -1242,12 +1348,14 @@ it.effect.skipIf(databaseUrl === undefined)(
       Effect.gen(function* () {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
+
         const [tenant] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
           `,
         )
+
         const authorizationLayer = makeAuthorizationTestLayer(
           capabilities.map((capability) => ({
             userAccountId: principal.userAccountId,
@@ -1258,22 +1366,28 @@ it.effect.skipIf(databaseUrl === undefined)(
 
         yield* Effect.gen(function* () {
           const authorization = yield* AuthorizationService
+
           const requirements = Layer.merge(
             Layer.succeed(Database, database),
             Layer.succeed(AuthorizationService, authorization),
           )
+
           const party = yield* Effect.provide(makePartyService, requirements)
+
           const messaging = yield* makeMessagingService.pipe(
             Effect.provideService(Database, database),
           )
+
           const sales = yield* Effect.provide(
             makeSalesService,
             Layer.merge(requirements, Layer.succeed(MessagingService, messaging)),
           )
+
           const inventory = yield* Effect.provide(
             makeInventoryService,
             Layer.merge(requirements, Layer.succeed(MessagingService, messaging)),
           )
+
           const accounting = yield* Effect.provide(
             makeAccountingService,
             Layer.mergeAll(
@@ -1282,6 +1396,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               Layer.succeed(SalesService, sales),
             ),
           )
+
           const process = yield* Effect.provide(
             makeProcessService,
             Layer.mergeAll(
@@ -1293,29 +1408,34 @@ it.effect.skipIf(databaseUrl === undefined)(
               Layer.succeed(MessagingService, messaging),
             ),
           )
+
           const organization = yield* party.create({
             principal,
             tenantId: tenant!.id,
             kind: "organization",
             name: "Concurrency Organization",
           })
+
           const legalEntity = yield* party.createLegalEntity({
             principal,
             tenantId: tenant!.id,
             organizationId: organization.id,
           })
+
           const warehouse = yield* inventory.createWarehouse({
             principal,
             tenantId: tenant!.id,
             legalEntityId: legalEntity.id,
             name: "Concurrency Warehouse",
           })
+
           const item = yield* inventory.createItem({
             principal,
             tenantId: tenant!.id,
             sku: "CONCURRENCY-WIDGET",
             name: "Concurrency Widget",
           })
+
           yield* inventory.receiveStock({
             principal,
             tenantId: tenant!.id,
@@ -1323,6 +1443,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             itemId: item.id,
             quantity: "5",
           })
+
           const receivable = yield* accounting.createAccount({
             principal,
             tenantId: tenant!.id,
@@ -1330,6 +1451,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             name: "Concurrency Receivable",
             type: "asset",
           })
+
           const revenue = yield* accounting.createAccount({
             principal,
             tenantId: tenant!.id,
@@ -1337,6 +1459,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             name: "Concurrency Revenue",
             type: "revenue",
           })
+
           yield* accounting.configureLegalEntity({
             principal,
             tenantId: tenant!.id,
@@ -1360,18 +1483,21 @@ it.effect.skipIf(databaseUrl === undefined)(
             startsOn: "1900-01-01",
             endsOn: "2099-12-31",
           })
+
           const customer = yield* sales.createCustomer({
             principal,
             tenantId: tenant!.id,
             name: "Concurrency Customer",
             email: "concurrency@example.test",
           })
+
           const order = yield* sales.createOrder({
             principal,
             tenantId: tenant!.id,
             customerId: customer.id,
             lines: [{ itemId: item.id, quantity: "1", unitPrice: "50.00" }],
           })
+
           const input = {
             principal,
             tenantId: tenant!.id,
@@ -1383,10 +1509,12 @@ it.effect.skipIf(databaseUrl === undefined)(
             causationId: null,
             idempotencyKey: "concurrent-confirmation-1",
           }
+
           const results = yield* Effect.all(
             [process.confirmOrder(input), process.confirmOrder(input)],
             { concurrency: "unbounded" },
           )
+
           assert.strictEqual(results[0].workflowRunId, results[1].workflowRunId)
 
           yield* Effect.promise(
@@ -1407,13 +1535,16 @@ it.effect.skipIf(databaseUrl === undefined)(
                  })}::jsonb)
             `,
           )
+
           const manual = yield* process.markManualRecovery({
             principal,
             tenantId: tenant!.id,
             idempotencyKey: "manual-confirmation-1",
             reason: "operator review required",
           })
+
           assert.strictEqual(manual.status, "manual_recovery")
+
           const recovery = yield* Effect.flip(
             process.recoverOrder({
               principal,
@@ -1427,6 +1558,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               idempotencyKey: "manual-confirmation-1",
             }),
           )
+
           assert.instanceOf(recovery, WorkflowManualRecoveryRequired)
         }).pipe(Effect.provide(authorizationLayer))
       }),

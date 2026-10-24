@@ -25,6 +25,7 @@ export const asPostgresClient = (client: Sql): PostgresClient => ({
           parameters?: readonly unknown[],
         ) => transaction.unsafe<Row[]>(query, parameters as never[] | undefined),
       }
+
       return callback(adapted)
     }) as Promise<A>,
 })
@@ -48,8 +49,10 @@ const makeVersionValidation = (
         const rows = await connection.unsafe<{ server_version_num: string }>(
           "show server_version_num",
         )
+
         const serverVersionNum = rows[0]?.server_version_num ?? "unknown"
         const version = Number.parseInt(serverVersionNum, 10)
+
         if (!Number.isInteger(version) || version < 190000) {
           throw new UnsupportedPostgresVersion({ serverVersionNum })
         }
@@ -84,6 +87,7 @@ export const makePostgresDatabase = (client: Sql): DatabaseService => {
         validate,
         Effect.gen(function* () {
           const transaction = yield* CurrentDatabaseTransaction
+
           return yield* Effect.tryPromise({
             try: () =>
               transaction === undefined
@@ -99,6 +103,7 @@ export const makePostgresDatabase = (client: Sql): DatabaseService => {
         validate,
         Effect.gen(function* () {
           const transaction = yield* CurrentDatabaseTransaction
+
           return yield* Effect.tryPromise({
             try: () =>
               transaction === undefined ? database.transaction(operation) : operation(transaction),
@@ -111,9 +116,11 @@ export const makePostgresDatabase = (client: Sql): DatabaseService => {
         validate,
         Effect.gen(function* () {
           const current = yield* CurrentDatabaseTransaction
+
           if (current !== undefined) return yield* operation
 
           const context = yield* Effect.context<R>()
+
           const outcome = yield* Effect.tryPromise({
             try: () =>
               database.transaction(async (transaction) => {
@@ -124,9 +131,11 @@ export const makePostgresDatabase = (client: Sql): DatabaseService => {
                     transaction,
                   ),
                 )
+
                 if (Result.isFailure(result)) {
                   throw new TransactionEffectFailure(result.failure)
                 }
+
                 return result.success
               }),
             catch: (cause) =>
@@ -140,6 +149,7 @@ export const makePostgresDatabase = (client: Sql): DatabaseService => {
           }).pipe(Effect.result)
 
           if (Result.isFailure(outcome)) return yield* Effect.fail(outcome.failure.error)
+
           return outcome.success
         }),
       ),

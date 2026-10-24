@@ -32,6 +32,7 @@ export const StockSource = Schema.Struct({ type: SourceType, id: Uuid })
 
 const uniqueItems = <T extends { readonly itemId: string }>(lines: ReadonlyArray<T>) =>
   new Set(lines.map((line) => line.itemId)).size === lines.length
+
 const DocumentLines = <S extends Schema.Top>(line: S) =>
   Schema.Array(line)
     .check(Schema.isMinLength(1))
@@ -106,12 +107,14 @@ export const ValuedStockLine = Schema.Struct({
   /** Signed value the movement added to or removed from stock. */
   value: Schema.String,
 })
+
 export const ValuedStockMovement = Schema.Struct({
   legalEntityId: Uuid,
   source: StockSource,
   lines: Schema.Array(ValuedStockLine),
   journalEntryId: Schema.NullOr(Uuid),
 })
+
 export type ValuedStockMovement = Schema.Schema.Type<typeof ValuedStockMovement>
 
 export const StockValuation = Schema.Struct({
@@ -121,9 +124,11 @@ export const StockValuation = Schema.Struct({
   ),
   totalValue: FinancialMajorAmount,
 })
+
 export type StockValuation = Schema.Schema.Type<typeof StockValuation>
 
 type CommonFailure = AuthorizationDenied | DatabaseFailure | Schema.SchemaError
+
 type MovementFailure =
   | InventoryReferenceNotFound
   | StockUnavailable

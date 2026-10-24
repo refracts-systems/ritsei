@@ -90,11 +90,13 @@ function CreateAccountDialog(props: { reload: () => Promise<void> }) {
   const [invalid, setInvalid] = createSignal(false)
   let formElement: HTMLFormElement | undefined
   let emailInput: HTMLInputElement | undefined
+
   const mutation = createAccountMutation(scope, () => {
     formElement?.reset()
     setInvalid(false)
     setOpen(false)
   })
+
   return (
     <Dialog
       open={open()}
@@ -112,11 +114,14 @@ function CreateAccountDialog(props: { reload: () => Promise<void> }) {
         onSubmit={(value) => {
           if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
           const email = value.email
+
           if (!Predicate.isString(email) || !/\S/.test(email)) {
             setInvalid(true)
             emailInput?.focus()
+
             return
           }
+
           setInvalid(false)
           mutation.mutate({ email })
         }}
@@ -180,6 +185,7 @@ function EmailEditor(props: {
   const mutation = createAccountEmailMutation(scope, props.saved)
   let emailInput: HTMLInputElement | undefined
   onSettled(() => emailInput?.focus())
+
   return (
     <section class={layout.documentSection} aria-labelledby="edit-heading">
       <Form
@@ -187,11 +193,14 @@ function EmailEditor(props: {
         onSubmit={(value) => {
           if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
           const email = value.email
+
           if (!Predicate.isString(email) || !/\S/.test(email)) {
             setInvalid(true)
             emailInput?.focus()
+
             return
           }
+
           setInvalid(false)
           mutation.mutate({ id: account.id, email })
         }}
@@ -271,10 +280,12 @@ function AccountDetail(props: { id: string }) {
   const [editing, setEditing] = createSignal(false)
   const [saved, setSaved] = createSignal(false)
   let editTrigger: HTMLButtonElement | undefined
+
   const closeEditor = () => {
     setEditing(false)
     queueMicrotask(() => editTrigger?.focus())
   }
+
   return (
     <section class={layout.stack} aria-label="User account">
       <a class={layout.quietLink} href="/user-accounts">
@@ -375,8 +386,10 @@ function AccountCollection() {
   const query = createAccountsQuery(scope)
   const [search, setSearch] = createSignal("")
   const [status, setStatus] = createSignal("all")
+
   const filtered = createMemo(() => {
     const term = search().trim().toLocaleLowerCase()
+
     return (query.data ?? []).filter(
       (account) =>
         (status() === "all" || account.status === status()) &&
@@ -384,6 +397,7 @@ function AccountCollection() {
           account.id.toLocaleLowerCase().includes(term)),
     )
   })
+
   return (
     <section class={layout.stack} aria-label="User accounts">
       <header class={layout.workspaceHeading}>

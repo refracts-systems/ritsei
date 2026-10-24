@@ -41,6 +41,7 @@ it.effect.skipIf(databaseUrl === undefined)(
         const fixture = yield* seedErpFixture(client)
         const { tenantId, legalEntityId } = fixture
         const database = Layer.succeed(Database, makePostgresDatabase(client))
+
         const grants = grantsFor(principal.userAccountId, tenantId, [
           AccountingCapabilities.accountCreate,
           AccountingCapabilities.accountRead,
@@ -51,6 +52,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           AccountingCapabilities.journalPost,
           AccountingCapabilities.ledgerRead,
         ])
+
         const ledgerLayer = (granted: typeof grants | []) =>
           GeneralLedgerLive.pipe(
             Layer.provide(
@@ -85,7 +87,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               parentAccountId: byCode.get("2000")!.id,
             }),
           )
+
           assert.instanceOf(mismatchedParent, InvalidParentAccount)
+
           const child = yield* ledger.createAccount({
             principal,
             tenantId,
@@ -94,6 +98,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             type: "asset",
             parentAccountId: byCode.get("1000")!.id,
           })
+
           assert.strictEqual(child.parentAccountId, byCode.get("1000")!.id)
 
           const invoice = {
@@ -108,6 +113,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               { role: "output_tax", debit: "0", credit: "11.00" },
             ] as const,
           }
+
           const posted = yield* ledger.postDocumentEntry(invoice)
           assert.strictEqual(posted.number, "JE/2026/00001")
           assert.deepStrictEqual(
@@ -117,6 +123,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           const retried = yield* ledger.postDocumentEntry(invoice)
           assert.strictEqual(retried.id, posted.id)
           assert.strictEqual(retried.number, posted.number)
+
           const conflicting = yield* Effect.flip(
             ledger.postDocumentEntry({
               ...invoice,
@@ -126,6 +133,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               ],
             }),
           )
+
           assert.instanceOf(conflicting, JournalIdempotencyConflict)
 
           const unbalanced = yield* Effect.flip(
@@ -139,7 +147,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               ],
             }),
           )
+
           assert.instanceOf(unbalanced, UnbalancedJournal)
+
           const twoSided = yield* Effect.flip(
             ledger.postManualEntry({
               ...scope,
@@ -151,7 +161,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               ],
             }),
           )
+
           assert.instanceOf(twoSided, InvalidJournalLine)
+
           const closedDate = yield* Effect.flip(
             ledger.postManualEntry({
               ...scope,
@@ -163,6 +175,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               ],
             }),
           )
+
           assert.instanceOf(closedDate, AccountingPeriodNotOpen)
 
           const capital = yield* ledger.postManualEntry({
@@ -174,17 +187,20 @@ it.effect.skipIf(databaseUrl === undefined)(
               { accountId: byCode.get("3100")!.id, debit: "0", credit: "1000.00" },
             ],
           })
+
           assert.strictEqual(capital.number, "JE/2026/00002")
 
           const otherEntity = yield* Effect.promise(() =>
             seedLegalEntity(client, tenantId, "Second Company"),
           )
+
           yield* Effect.promise(
             () => client`
               insert into accounting.accounting_periods (tenant_id, legal_entity_id, starts_on, ends_on)
               values (${tenantId}, ${otherEntity.legalEntityId}, '2026-01-01', '2026-12-31')
             `,
           )
+
           const missingRule = yield* Effect.flip(
             ledger.postDocumentEntry({
               ...invoice,
@@ -192,11 +208,13 @@ it.effect.skipIf(databaseUrl === undefined)(
               reference: "other/1",
             }),
           )
+
           assert.instanceOf(missingRule, PostingRuleNotFound)
 
           const trialBalance = yield* ledger.trialBalance({ ...scope, to: "2026-12-31" })
           assert.strictEqual(trialBalance.totalDebit, "1111.00")
           assert.strictEqual(trialBalance.totalCredit, "1111.00")
+
           const [raw] = yield* Effect.promise(
             () => client<{ debit: string; credit: string }[]>`
               select sum(l.debit)::text as debit, sum(l.credit)::text as credit
@@ -206,6 +224,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                 and e.status in ('posted', 'reversed')
             `,
           )
+
           assert.strictEqual(trialBalance.totalDebit, raw!.debit)
           assert.strictEqual(trialBalance.totalCredit, raw!.credit)
           assert.deepStrictEqual(
@@ -225,6 +244,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             from: "2026-10-02",
             to: "2026-12-31",
           })
+
           assert.strictEqual(cashLedger.openingBalance, "1000.00")
           assert.deepStrictEqual(cashLedger.lines, [])
           assert.strictEqual(cashLedger.closingBalance, "1000.00")
@@ -234,6 +254,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             role: "receivable",
             asOf: "2026-12-31",
           })
+
           assert.strictEqual(receivable.balance, "111.00")
         }).pipe(Effect.provide(ledgerLayer(grants)))
 
@@ -245,9 +266,11 @@ it.effect.skipIf(databaseUrl === undefined)(
               insert into accounting.journal_entries (tenant_id, reference)
               values (${tenantId}, 'raw/unbalanced') returning id
             `
+
               const [account] = await sql<{ id: string }[]>`
               select id from accounting.accounts where tenant_id = ${tenantId} limit 1
             `
+
               await sql`
               insert into accounting.journal_lines (tenant_id, entry_id, account_id, debit, credit)
               values (${tenantId}, ${entry!.id}, ${account!.id}, 5, 0),
@@ -260,6 +283,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             }),
           catch: (cause) => cause,
         }).pipe(Effect.flip)
+
         assert.include(
           String(postgresConstraint(unbalancedInsert)),
           "journal_entries_balanced_check",
@@ -267,10 +291,12 @@ it.effect.skipIf(databaseUrl === undefined)(
 
         const denied = yield* Effect.gen(function* () {
           const ledger = yield* GeneralLedgerService
+
           return yield* Effect.flip(
             ledger.trialBalance({ principal, tenantId, legalEntityId, to: "2026-12-31" }),
           )
         }).pipe(Effect.provide(ledgerLayer([])))
+
         assert.instanceOf(denied, AuthorizationDenied)
       }),
     ),

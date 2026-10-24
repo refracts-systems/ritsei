@@ -53,8 +53,10 @@ import {
 type Principal = Schema.Schema.Type<typeof PrincipalSchema>
 
 const minor = (value: string) => requireExactMajorToMinor(value, 2)
+
 const signedMinor = (value: string) =>
   value.startsWith("-") ? -minor(value.slice(1)) : minor(value)
+
 const major = (value: bigint) => formatSignedMinor(value, 2)
 const normalize = (value: string) => major(minor(value))
 
@@ -64,6 +66,7 @@ const rules = {
 } as const
 
 type BucketName = "current" | "days1To30" | "days31To60" | "days61To90" | "over90" | "unapplied"
+
 type Buckets = Record<BucketName, bigint>
 
 const emptyBuckets = (): Buckets => ({
@@ -78,8 +81,11 @@ const emptyBuckets = (): Buckets => ({
 /** The aging bucket for a number of days past due. */
 const bucketFor = (overdue: number): BucketName => {
   if (overdue <= 0) return "current"
+
   if (overdue <= 30) return "days1To30"
+
   if (overdue <= 60) return "days31To60"
+
   return overdue <= 90 ? "days61To90" : "over90"
 }
 
@@ -95,9 +101,11 @@ const formatBuckets = (values: Buckets) => ({
 
 const sumBuckets = (rows: Iterable<Buckets>) => {
   const totals = emptyBuckets()
+
   for (const values of rows) {
     for (const key of typedKeys(totals)) totals[key] += values[key]
   }
+
   return totals
 }
 
@@ -121,8 +129,11 @@ export const makeSettlementService = Effect.gen(function* () {
           .select()
           .from(payments)
           .where(and(eq(payments.tenantId, tenantId), eq(payments.id, paymentId)))
+
         const header = (await (lock ? query.for("update") : query))[0]
+
         if (header === undefined) return undefined
+
         const allocations = await tx
           .select({ invoiceId: paymentAllocations.invoiceId, amount: paymentAllocations.amount })
           .from(paymentAllocations)
@@ -133,11 +144,14 @@ export const makeSettlementService = Effect.gen(function* () {
             ),
           )
           .orderBy(asc(paymentAllocations.invoiceId))
+
         return { header, allocations }
       }, "settlement.payment.load")
+
       if (loaded === undefined)
         return yield* Effect.fail(new PaymentNotFound({ tenantId, paymentId }))
       const { header, allocations } = loaded
+
       return {
         id: header.id,
         tenantId: header.tenantId,
@@ -175,7 +189,9 @@ export const makeSettlementService = Effect.gen(function* () {
           }),
         )
       }
+
       const requested = allocations.reduce((sum, allocation) => sum + minor(allocation.amount), 0n)
+
       if (requested > minor(payment.unallocatedAmount)) {
         return yield* Effect.fail(
           new AllocationExceedsPayment({
@@ -186,12 +202,14 @@ export const makeSettlementService = Effect.gen(function* () {
           }),
         )
       }
+
       for (const allocation of allocations) {
         const document = yield* billing.getDocument({
           principal,
           tenantId: payment.tenantId,
           invoiceId: allocation.invoiceId,
         })
+
         if (
           document.kind !== rules[payment.direction].kind ||
           document.partyId !== payment.partyId ||
@@ -205,6 +223,7 @@ export const makeSettlementService = Effect.gen(function* () {
             }),
           )
         }
+
         yield* billing.applySettlement({
           principal,
           tenantId: payment.tenantId,
@@ -214,6 +233,7 @@ export const makeSettlementService = Effect.gen(function* () {
           settledOn: allocatedOn,
         })
       }
+
       const unallocatedAmount = major(minor(payment.unallocatedAmount) - requested)
       yield* database.transaction(async (tx) => {
         if (allocations.length === 0) return
@@ -231,6 +251,7 @@ export const makeSettlementService = Effect.gen(function* () {
           .set({ unallocatedAmount })
           .where(and(eq(payments.tenantId, payment.tenantId), eq(payments.id, payment.id)))
       }, "settlement.payment.allocate")
+
       return yield* loadPayment(payment.tenantId, payment.id)
     })
 
@@ -245,10 +266,13 @@ export const makeSettlementService = Effect.gen(function* () {
             Effect.map((payment): Payment | undefined => payment),
             Effect.catchTag("PaymentNotFound", () => Effect.succeed(undefined)),
           )
+
           if (recorded !== undefined) return recorded
         }
+
         const paymentId = input.paymentId ?? uuidv7()
         const rule = rules[direction]
+
         const allocated = yield* numbering
           .allocate({
             tenantId: input.tenantId,
@@ -259,11 +283,14 @@ export const makeSettlementService = Effect.gen(function* () {
             prefix: rule.prefix,
           })
           .pipe(Effect.catchTag("SchemaError", (error) => Effect.die(error)))
+
         const cash =
           input.cashAccountId === undefined
             ? { role: "cash" as const }
             : { accountId: input.cashAccountId }
+
         const counter = { role: rule.side } as const
+
         const journal = yield* ledger.postDocumentEntry({
           principal: input.principal,
           tenantId: input.tenantId,
@@ -283,6 +310,7 @@ export const makeSettlementService = Effect.gen(function* () {
                   { ...cash, debit: "0", credit: input.amount },
                 ],
         })
+
         yield* database.query(
           (db) =>
             db.insert(payments).values({
@@ -301,6 +329,7 @@ export const makeSettlementService = Effect.gen(function* () {
           "settlement.payment.insert",
         )
         const payment = yield* loadPayment(input.tenantId, paymentId, true)
+
         return yield* allocate(input.principal, payment, input.allocations, input.paymentDate)
       }),
       `settlement.payment_${direction}.atomic`,
@@ -313,6 +342,7 @@ export const makeSettlementService = Effect.gen(function* () {
       ReceivePaymentInput,
       SettlementCapabilities.paymentReceive,
     )(input)
+
     return yield* record("incoming", decoded)
   })
 
@@ -320,6 +350,7 @@ export const makeSettlementService = Effect.gen(function* () {
     input: Schema.Codec.Encoded<typeof MakePaymentInput>,
   ) {
     const decoded = yield* authorized(MakePaymentInput, SettlementCapabilities.paymentMake)(input)
+
     return yield* record("outgoing", decoded)
   })
 
@@ -334,9 +365,11 @@ export const makeSettlementService = Effect.gen(function* () {
         ? SettlementCapabilities.paymentReceive
         : SettlementCapabilities.paymentMake,
     )
+
     return yield* database.withTransaction(
       Effect.gen(function* () {
         const locked = yield* loadPayment(decoded.tenantId, decoded.paymentId, true)
+
         return yield* allocate(decoded.principal, locked, decoded.allocations, decoded.allocatedOn)
       }),
       "settlement.payment.allocate.atomic",
@@ -350,7 +383,9 @@ export const makeSettlementService = Effect.gen(function* () {
       CreatePaymentTermInput,
       SettlementCapabilities.paymentTermConfigure,
     )(input)
+
     const code = decoded.code.toUpperCase()
+
     const rows = yield* database
       .query(
         (db) =>
@@ -378,6 +413,7 @@ export const makeSettlementService = Effect.gen(function* () {
             : error,
         ),
       )
+
     return rows[0]!
   })
 
@@ -388,6 +424,7 @@ export const makeSettlementService = Effect.gen(function* () {
       AssignPartyTermInput,
       SettlementCapabilities.paymentTermConfigure,
     )(input)
+
     yield* database
       .query(
         (db) =>
@@ -434,6 +471,7 @@ export const makeSettlementService = Effect.gen(function* () {
         and ${paymentAllocations.paymentId} = ${payments.id}
         and ${paymentAllocations.allocatedOn} <= ${asOf}
     ), 0)`
+
     return database.query(
       (db) =>
         db
@@ -485,15 +523,20 @@ export const makeSettlementService = Effect.gen(function* () {
   ) {
     const decoded = yield* authorized(AgingInput, SettlementCapabilities.reportRead)(input)
     const items = yield* billing.listOpenItems(decoded)
+
     const netDays = yield* netDaysFor(decoded.tenantId, decoded.side, [
       ...new Set(items.map((item) => item.partyId)),
     ])
+
     const rows = new Map<string, Buckets>()
+
     const row = (partyId: string) => {
       const values = rows.get(partyId) ?? emptyBuckets()
       rows.set(partyId, values)
+
       return values
     }
+
     for (const item of items) {
       const amount = signedMinor(item.openAmount)
       // Credit notes are unapplied credit; documents age from their due date.
@@ -501,7 +544,9 @@ export const makeSettlementService = Effect.gen(function* () {
       const bucket = amount < 0n ? "unapplied" : bucketFor(daysBetween(due, decoded.asOf))
       row(item.partyId)[bucket] += amount
     }
+
     const direction = decoded.side === "receivable" ? "incoming" : "outgoing"
+
     for (const payment of yield* unallocatedPayments(
       decoded.tenantId,
       decoded.legalEntityId,
@@ -510,6 +555,7 @@ export const makeSettlementService = Effect.gen(function* () {
     )) {
       row(payment.partyId).unapplied -= minor(payment.unallocated)
     }
+
     return {
       legalEntityId: decoded.legalEntityId,
       side: decoded.side,
@@ -525,6 +571,7 @@ export const makeSettlementService = Effect.gen(function* () {
     input: Schema.Codec.Encoded<typeof StatementInput>,
   ) {
     const decoded = yield* authorized(StatementInput, SettlementCapabilities.reportRead)(input)
+
     const documents = yield* billing.listDocuments({
       principal: decoded.principal,
       tenantId: decoded.tenantId,
@@ -533,6 +580,7 @@ export const makeSettlementService = Effect.gen(function* () {
       side: "receivable",
       to: decoded.to,
     })
+
     const received = yield* database.query(
       (db) =>
         db
@@ -554,6 +602,7 @@ export const makeSettlementService = Effect.gen(function* () {
           ),
       "settlement.statement.payments",
     )
+
     const entries = [
       ...documents.map((document) => ({
         date: document.invoiceDate,
@@ -575,18 +624,23 @@ export const makeSettlementService = Effect.gen(function* () {
       (left, right) =>
         left.date.localeCompare(right.date) || left.number.localeCompare(right.number),
     )
+
     const opening = entries
       .filter((entry) => entry.date < decoded.from)
       .reduce((sum, entry) => sum + entry.amount, 0n)
+
     let balance = opening
+
     const period = entries
       .values()
       .filter((entry) => entry.date >= decoded.from)
       .map((entry) => {
         balance += entry.amount
+
         return { ...entry, amount: major(entry.amount), balance: major(balance) }
       })
       .toArray()
+
     return {
       legalEntityId: decoded.legalEntityId,
       partyId: decoded.partyId,

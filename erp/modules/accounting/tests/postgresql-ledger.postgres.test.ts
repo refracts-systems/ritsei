@@ -26,12 +26,14 @@ it.effect.skipIf(databaseUrl === undefined)(
       Effect.gen(function* () {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
+
         const [tenant] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
           insert into auth.tenants (slug) values (${`pg-ledger-${uuidv7()}`}) returning id
         `,
         )
+
         const [party] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -39,6 +41,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           values (${tenant!.id}, 'organization', 'PostgreSQL Ledger Test') returning id
         `,
         )
+
         const [legalEntity] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -46,6 +49,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           values (${tenant!.id}, ${party!.id}) returning id
         `,
         )
+
         const [period] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -55,6 +59,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           returning id
         `,
         )
+
         const [cash] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -62,6 +67,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           values (${tenant!.id}, '1000', 'Cash', 'asset') returning id
         `,
         )
+
         const [revenue] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -69,6 +75,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           values (${tenant!.id}, '4000', 'Revenue', 'revenue') returning id
         `,
         )
+
         const [journal] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -76,6 +83,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           values (${tenant!.id}, 'PG-LEDGER-1', 'draft', null) returning id
         `,
         )
+
         yield* Effect.promise(
           () =>
             client`
@@ -87,6 +95,7 @@ it.effect.skipIf(databaseUrl === undefined)(
         `,
         )
         const operationId = `pg-operation-${uuidv7()}`
+
         const [operation] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -101,6 +110,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           ) returning id
         `,
         )
+
         yield* Effect.promise(
           () =>
             client`
@@ -115,6 +125,7 @@ it.effect.skipIf(databaseUrl === undefined)(
         const ledger = yield* makePostgresqlFinancialLedger.pipe(
           Effect.provideService(Database, database),
         )
+
         const input = {
           tenantId: tenant!.id,
           legalEntityId: legalEntity!.id,
@@ -144,6 +155,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           },
           catch: (cause) => cause,
         }).pipe(Effect.flip)
+
         assert.ok(u128ConstraintFailure)
 
         assert.strictEqual(
@@ -165,6 +177,7 @@ it.effect.skipIf(databaseUrl === undefined)(
 
         const first = yield* ledger.postJournal(input)
         assert.strictEqual(first._tag, "accepted")
+
         if (!FinancialExecutionOutcome.guards.accepted(first)) return
         assert.strictEqual(first.transferCount, 1)
         assert.deepStrictEqual(first.transferIds, [
@@ -220,12 +233,14 @@ it.effect.skipIf(databaseUrl === undefined)(
           where tenant_id = ${tenant!.id} and id = ${operation!.id}
         `,
         )
+
         assert.deepStrictEqual(storedOperation, {
           status: "accepted",
           engine: "postgresql",
           observed_engine: "postgresql",
           attempts: 1,
         })
+
         const [storedJournal] = yield* Effect.promise(
           () =>
             client<{ status: string }[]>`
@@ -234,6 +249,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           }
         `,
         )
+
         assert.deepStrictEqual(storedJournal, { status: "posted" })
       }),
     ),

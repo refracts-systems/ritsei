@@ -16,27 +16,32 @@ import { tenants } from "./auth.ts"
 import { createdAt, updatedAt, uuidv7 } from "./common.ts"
 
 export const integrationSchema = pgSchema("integration")
+
 export const externalReliabilityKind = integrationSchema.enum("external_reliability_kind", [
   "action",
   "event",
 ])
+
 export const externalProviderStatus = integrationSchema.enum("external_provider_status", [
   "pending",
   "accepted",
   "rejected",
   "unknown",
 ])
+
 export const externalDeliveryState = integrationSchema.enum("external_delivery_state", [
   "accepted",
   "retry",
   "dead_letter",
 ])
+
 export const externalConnectorStatus = integrationSchema.enum("external_connector_status", [
   "draft",
   "reviewed",
   "active",
   "retired",
 ])
+
 export const externalGovernanceAction = integrationSchema.enum("external_governance_action", [
   "registered",
   "reviewed",

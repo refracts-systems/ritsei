@@ -37,8 +37,10 @@ export type ExternalConnectorStore = {
 export const makeMemoryExternalConnectorStore = (): ExternalConnectorStore => {
   const invocations = new Map<string, ExternalInvocationReceipt>()
   const events = new Map<string, ExternalEventReceipt>()
+
   const invocationKey = (tenantId: string, idempotencyKey: string) =>
     `${tenantId}:${idempotencyKey}`
+
   const eventKey = (tenantId: string, source: string, providerEventId: string) =>
     `${tenantId}:${source}:${providerEventId}`
 
@@ -47,12 +49,14 @@ export const makeMemoryExternalConnectorStore = (): ExternalConnectorStore => {
       Effect.succeed(invocations.get(invocationKey(tenantId, idempotencyKey))),
     putInvocation: (receipt) => {
       invocations.set(invocationKey(receipt.tenantId, receipt.idempotencyKey), receipt)
+
       return Effect.succeed(undefined)
     },
     getEvent: (tenantId, source, providerEventId) =>
       Effect.succeed(events.get(eventKey(tenantId, source, providerEventId))),
     putEvent: (receipt) => {
       events.set(eventKey(receipt.tenantId, receipt.source, receipt.providerEventId), receipt)
+
       return Effect.succeed(undefined)
     },
   }

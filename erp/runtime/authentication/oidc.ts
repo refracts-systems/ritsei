@@ -15,9 +15,11 @@ import {
 import type { OidcAuthenticationConfiguration, RitseiRuntimeConfiguration } from "../config.ts"
 
 type JsonObject = Schema.JsonObject
+
 type Jwk = JsonObject & { readonly kid?: string; readonly kty?: string; readonly alg?: string }
 
 class InvalidTokenFormat extends Error {}
+
 class ProviderUnavailable extends Error {}
 
 const isObject = (value: unknown): value is JsonObject =>
@@ -25,22 +27,29 @@ const isObject = (value: unknown): value is JsonObject =>
 
 const decodeBase64Url = (value: string): Uint8Array<ArrayBuffer> => {
   if (!/^[A-Za-z0-9_-]+$/.test(value)) throw new InvalidTokenFormat()
+
   const padded =
     value.replaceAll("-", "+").replaceAll("_", "/") + "=".repeat((4 - (value.length % 4)) % 4)
+
   const decoded = atob(padded)
+
   return Uint8Array.from(decoded, (character) => character.charCodeAt(0))
 }
 
 const decodeJsonPart = (value: string): JsonObject => {
   const parsed: unknown = JSON.parse(new TextDecoder().decode(decodeBase64Url(value)))
+
   if (!isObject(parsed)) throw new InvalidTokenFormat()
+
   return parsed
 }
 
 const readTextJson = async (response: Response): Promise<Schema.Json> => {
   if (!response.ok) throw new ProviderUnavailable()
   const text = await response.text()
+
   if (text.length > 1_048_576) throw new ProviderUnavailable()
+
   try {
     return Schema.decodeUnknownSync(Schema.Json)(JSON.parse(text))
   } catch {
@@ -63,6 +72,7 @@ export const makeOidcIdentityProvider = (
 
   const loadKeys = async (force = false): Promise<readonly Jwk[]> => {
     if (!force && cachedKeys !== undefined && cachedUntil > Date.now()) return cachedKeys
+
     const response = await fetch(configuration.jwksUri, {
       headers: { Accept: "application/json" },
       credentials: "omit",
@@ -71,13 +81,17 @@ export const makeOidcIdentityProvider = (
     }).catch(() => {
       throw new ProviderUnavailable()
     })
+
     const document = await readTextJson(response)
+
     if (!isObject(document) || !Array.isArray(document.keys)) throw new ProviderUnavailable()
     // SAFETY: Jwk only adds optional members to a JSON object; each is compared before use.
     const keys = document.keys.filter(isObject) as readonly Jwk[]
+
     if (keys.length === 0) throw new ProviderUnavailable()
     cachedKeys = keys
     cachedUntil = Date.now() + 300_000
+
     return keys
   }
 
@@ -85,12 +99,16 @@ export const makeOidcIdentityProvider = (
     if (assertion.length > 16_384) throw new InvalidTokenFormat()
     const parts = assertion.split(".")
     const [encodedHeader, encodedPayload, encodedSignature, ...rest] = parts
+
     if (!encodedHeader || !encodedPayload || !encodedSignature || rest.length > 0) {
       throw new InvalidTokenFormat()
     }
+
     const header = decodeJsonPart(encodedHeader)
     const payload = decodeJsonPart(encodedPayload)
+
     if (header.alg !== "RS256" || !Predicate.isString(header.kid)) throw new InvalidTokenFormat()
+
     if (
       payload.iss !== configuration.issuerUrl ||
       !Predicate.isString(payload.sub) ||
@@ -105,6 +123,7 @@ export const makeOidcIdentityProvider = (
       throw new InvalidTokenFormat()
     const now = Math.floor(Date.now() / 1_000)
     const nbf = payload.nbf
+
     if (
       payload.exp <= now ||
       payload.exp <= payload.iat ||
@@ -112,20 +131,25 @@ export const makeOidcIdentityProvider = (
     ) {
       throw new InvalidTokenFormat()
     }
+
     if (payload.iat > now + 60) throw new InvalidTokenFormat()
 
     let keys = await loadKeys()
     let jwk = keys.find((key) => key.kid === header.kid && key.kty === "RSA")
+
     if (jwk === undefined) {
       keys = await loadKeys(true)
       jwk = keys.find((key) => key.kid === header.kid && key.kty === "RSA")
     }
+
     if (jwk === undefined) throw new ProviderUnavailable()
+
     const key = await crypto.subtle
       .importKey("jwk", jwk, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["verify"])
       .catch(() => {
         throw new ProviderUnavailable()
       })
+
     const valid = await crypto.subtle
       .verify(
         { name: "RSASSA-PKCS1-v1_5" },
@@ -134,7 +158,9 @@ export const makeOidcIdentityProvider = (
         new TextEncoder().encode(`${encodedHeader}.${encodedPayload}`),
       )
       .catch(() => false)
+
     if (!valid) throw new InvalidTokenFormat()
+
     return {
       issuer: payload.iss,
       subject: payload.sub,
@@ -162,6 +188,7 @@ export const makeOidcIdentityProvider = (
 
 export const identityProviderLayer = (configuration: RitseiRuntimeConfiguration) => {
   const authentication = configuration.authentication
+
   return authentication?.profile === "oidc"
     ? Layer.succeed(IdentityProvider, makeOidcIdentityProvider(authentication))
     : Layer.empty

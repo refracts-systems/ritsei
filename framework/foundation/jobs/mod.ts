@@ -6,6 +6,7 @@ import { DatabaseFailure } from "../database/mod.ts"
 
 const NonEmptyString = Schema.String.check(Schema.isPattern(/\S/))
 const Uuid = Schema.String.check(Schema.isUUID())
+
 const PostgresInt = Schema.Int.check(
   Schema.isBetween({ minimum: -2_147_483_648, maximum: 2_147_483_647 }),
 )
@@ -34,6 +35,7 @@ export const DurableJob = Schema.Struct({
 })
 
 export type DurableJobInput = Schema.Schema.Type<typeof DurableJobInput>
+
 export type DurableJob = Schema.Schema.Type<typeof DurableJob>
 
 export interface DurableJobEnqueuer {

@@ -58,10 +58,12 @@ export const serviceLayers = (
   replicaClient?: Sql,
 ) => {
   const DatabaseLive = PostgresDatabaseLive(client)
+
   const readYourWrites =
     configuration.postgresReadYourWrites !== undefined && replicaClient !== undefined
       ? PostgresReadYourWritesLive(client, replicaClient, configuration.postgresReadYourWrites)
       : Layer.empty
+
   const PlatformCore = Layer.merge(DatabaseLive, readYourWrites)
   const PlatformLive = Layer.mergeAll(PlatformCore, WebCryptoLive)
   const financialLedger = financialLedgerLayer(DatabaseLive)
@@ -120,6 +122,7 @@ export const serviceLayers = (
           financialObservation,
           financialSigner,
         )
+
   const AccountingLive = AccountingServiceLayer.pipe(Layer.provide(AccountingRequirements))
 
   const NumberingServiceLive = NumberingLive.pipe(

@@ -25,11 +25,13 @@ import {
 
 const principal = { userAccountId: "product-user", sessionId: "product-session" }
 const tenantId = "018f2000-0000-7000-8000-0000000000aa"
+
 const grants = Object.values(ProductCapabilities).map((capability) => ({
   userAccountId: principal.userAccountId,
   tenantId,
   capability,
 }))
+
 const granted = makeProductTestLayer().pipe(Layer.provide(makeAuthorizationTestLayer(grants)))
 const ungranted = makeProductTestLayer().pipe(Layer.provide(makeAuthorizationTestLayer([])))
 
@@ -45,6 +47,7 @@ describe("product module", () => {
   it.effect("creates and lists tenant products with unique codes", () =>
     Effect.gen(function* () {
       const service = yield* ProductService
+
       const created = yield* service.createProduct({
         principal,
         tenantId,
@@ -52,6 +55,7 @@ describe("product module", () => {
         name: "First",
         type: "stockable",
       })
+
       assert.strictEqual(created.code, "SKU-1")
       assert.strictEqual(created.unitOfMeasure, "EA")
       assert.deepStrictEqual(yield* service.listProducts({ principal, tenantId }), [created])
@@ -63,6 +67,7 @@ describe("product module", () => {
         yield* service.listProducts({ principal, tenantId, type: "service" }),
         [],
       )
+
       const duplicate = yield* Effect.flip(
         service.createProduct({
           principal,
@@ -72,6 +77,7 @@ describe("product module", () => {
           type: "stockable",
         }),
       )
+
       assert.instanceOf(duplicate, ProductAlreadyExists)
     }).pipe(Effect.provide(granted)),
   )
@@ -91,18 +97,24 @@ it.layer(TestHttpServices)("product HTTP endpoint", (it) => {
       const bearer = Layer.succeed(BearerAuth, {
         bearer: (effect) => Effect.provideService(effect, CurrentPrincipal, principal),
       })
+
       const bearerClient = HttpApiMiddleware.layerClient(BearerAuth, ({ request, next }) =>
         next(HttpClientRequest.bearerToken(request, "product-token")),
       )
+
       const handlers = ProductHttpHandlers.pipe(Layer.provide(bearer), Layer.provide(granted))
+
       const client = yield* HttpApiTest.groups(moduleApi(ProductHttpGroup), ["Product"]).pipe(
         Effect.provide(Layer.mergeAll(handlers, bearerClient, bearer)),
       )
+
       const headers = { "x-tenant-id": tenantId }
+
       const created = yield* client.Product.createProduct({
         headers,
         payload: { code: "SVC-1", name: "Via HTTP", type: "service" },
       })
+
       assert.strictEqual(created.name, "Via HTTP")
       assert.deepStrictEqual(yield* client.Product.listProducts({ headers, query: {} }), [created])
     }),

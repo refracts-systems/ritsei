@@ -42,9 +42,11 @@ export const listCustomers = Effect.fn("Frontend.Sales.listCustomers")(function*
   const body = yield* requestJson(`${salesRoutes.listCustomers}${querySuffix(decoded)}`)
   const customers = yield* decodeResponse(CustomerList, body, "invalid-response")
   const connection = yield* BrowserConnection
+
   if (!responseListMatches(customers, { tenantId: connection.tenantId })) {
     return yield* Effect.fail(new RequestFailure({ kind: "invalid-response" }))
   }
+
   return customers
 })
 
@@ -53,6 +55,7 @@ export const getCustomer = Effect.fn("Frontend.Sales.getCustomer")(function* (id
   const body = yield* requestJson(routeWithId(salesRoutes.getCustomer, decoded.customerId))
   const customer = yield* decodeResponse(Customer, body, "invalid-response")
   const connection = yield* BrowserConnection
+
   if (
     !responseMatches(customer, {
       id: decoded.customerId,
@@ -61,6 +64,7 @@ export const getCustomer = Effect.fn("Frontend.Sales.getCustomer")(function* (id
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "invalid-response" }))
   }
+
   return customer
 })
 
@@ -71,6 +75,7 @@ export const createCustomer = Effect.fn("Frontend.Sales.createCustomer")(functio
   const connection = yield* BrowserConnection
   const body = yield* mutationRequest(salesRoutes.createCustomer, decoded)
   const customer = yield* decodeResponse(Customer, body, "unknown-outcome")
+
   if (
     !responseMatches(customer, {
       tenantId: connection.tenantId,
@@ -80,6 +85,7 @@ export const createCustomer = Effect.fn("Frontend.Sales.createCustomer")(functio
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
   }
+
   return customer
 })
 
@@ -90,6 +96,7 @@ export const listQuotations = Effect.fn("Frontend.Sales.listQuotations")(functio
   const body = yield* requestJson(`${salesRoutes.listQuotations}${querySuffix(decoded)}`)
   const quotations = yield* decodeResponse(QuotationList, body, "invalid-response")
   const connection = yield* BrowserConnection
+
   if (
     !responseListMatches(quotations, {
       tenantId: connection.tenantId,
@@ -98,6 +105,7 @@ export const listQuotations = Effect.fn("Frontend.Sales.listQuotations")(functio
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "invalid-response" }))
   }
+
   return quotations
 })
 
@@ -106,6 +114,7 @@ export const getQuotation = Effect.fn("Frontend.Sales.getQuotation")(function* (
   const body = yield* requestJson(routeWithId(salesRoutes.getQuotation, decoded.quotationId))
   const quotation = yield* decodeResponse(Quotation, body, "invalid-response")
   const connection = yield* BrowserConnection
+
   if (
     !responseMatches(quotation, {
       id: decoded.quotationId,
@@ -114,6 +123,7 @@ export const getQuotation = Effect.fn("Frontend.Sales.getQuotation")(function* (
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "invalid-response" }))
   }
+
   return quotation
 })
 
@@ -124,6 +134,7 @@ export const createQuotation = Effect.fn("Frontend.Sales.createQuotation")(funct
   const connection = yield* BrowserConnection
   const body = yield* mutationRequest(salesRoutes.createQuotation, decoded)
   const quotation = yield* decodeResponse(Quotation, body, "unknown-outcome")
+
   if (
     !responseMatches(quotation, {
       tenantId: connection.tenantId,
@@ -134,6 +145,7 @@ export const createQuotation = Effect.fn("Frontend.Sales.createQuotation")(funct
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
   }
+
   return quotation
 })
 
@@ -144,6 +156,7 @@ export const listOrders = Effect.fn("Frontend.Sales.listOrders")(function* (
   const body = yield* requestJson(`${salesRoutes.listOrders}${querySuffix(decoded)}`)
   const orders = yield* decodeResponse(SalesOrderList, body, "invalid-response")
   const connection = yield* BrowserConnection
+
   if (
     !responseListMatches(orders, {
       tenantId: connection.tenantId,
@@ -152,6 +165,7 @@ export const listOrders = Effect.fn("Frontend.Sales.listOrders")(function* (
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "invalid-response" }))
   }
+
   return orders
 })
 
@@ -160,6 +174,7 @@ export const getOrder = Effect.fn("Frontend.Sales.getOrder")(function* (id: stri
   const body = yield* requestJson(routeWithId(salesRoutes.getOrder, decoded.orderId))
   const order = yield* decodeResponse(SalesOrder, body, "invalid-response")
   const connection = yield* BrowserConnection
+
   if (
     !responseMatches(order, {
       id: decoded.orderId,
@@ -168,6 +183,7 @@ export const getOrder = Effect.fn("Frontend.Sales.getOrder")(function* (id: stri
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "invalid-response" }))
   }
+
   return order
 })
 
@@ -178,6 +194,7 @@ export const createOrder = Effect.fn("Frontend.Sales.createOrder")(function* (
   const connection = yield* BrowserConnection
   const body = yield* mutationRequest(salesRoutes.createOrder, decoded)
   const order = yield* decodeResponse(SalesOrder, body, "unknown-outcome")
+
   if (
     !responseMatches(order, {
       tenantId: connection.tenantId,
@@ -188,6 +205,7 @@ export const createOrder = Effect.fn("Frontend.Sales.createOrder")(function* (
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
   }
+
   return order
 })
 
@@ -202,6 +220,7 @@ export const confirmOrder = Effect.fn("Frontend.Sales.confirmOrder")(function* (
   const connection = yield* BrowserConnection
   const body = yield* mutationRequest(routeWithId(salesRoutes.confirmOrder, decodedId), decoded)
   const order = yield* decodeResponse(SalesOrder, body, "unknown-outcome")
+
   if (
     !responseMatches(order, {
       id: decodedId,
@@ -211,6 +230,7 @@ export const confirmOrder = Effect.fn("Frontend.Sales.confirmOrder")(function* (
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
   }
+
   return order
 })
 
@@ -223,6 +243,7 @@ export const cancelOrder = Effect.fn("Frontend.Sales.cancelOrder")(function* (
   const connection = yield* BrowserConnection
   const body = yield* mutationRequest(routeWithId(salesRoutes.cancelOrder, decodedId))
   const order = yield* decodeResponse(SalesOrder, body, "unknown-outcome")
+
   if (
     !responseMatches(order, {
       id: decodedId,
@@ -232,5 +253,6 @@ export const cancelOrder = Effect.fn("Frontend.Sales.cancelOrder")(function* (
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
   }
+
   return order
 })

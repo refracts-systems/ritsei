@@ -26,10 +26,13 @@ const ApiErrorWire = Schema.Union([
 /** Wire body of a canonical HTTP API failure, encoded by the backend schema itself. */
 export const unauthorizedBody = () =>
   Schema.encodeSync(ApiErrorWire)(new ApiUnauthorized({ code: "unauthorized" }))
+
 export const forbiddenBody = () =>
   Schema.encodeSync(ApiErrorWire)(new ApiForbidden({ code: "forbidden" }))
+
 export const notFoundBody = (code = "not_found") =>
   Schema.encodeSync(ApiErrorWire)(new ApiNotFound({ code }))
+
 export const conflictBody = (code = "conflict") =>
   Schema.encodeSync(ApiErrorWire)(new ApiConflict({ code }))
 
@@ -66,10 +69,12 @@ export const mockLocalAuth = async (
   )
   await page.route("**/api/auth/session", (route) => {
     const requestedTenantId = route.request().headers()["x-tenant-id"]
+
     const activeTenant =
       requestedTenantId === undefined
         ? memberships[0]
         : memberships.find((candidate) => candidate.tenantId === requestedTenantId)
+
     if (requestedTenantId !== undefined && activeTenant === undefined) {
       return route.fulfill({
         status: 403,
@@ -77,6 +82,7 @@ export const mockLocalAuth = async (
         body: JSON.stringify(forbiddenBody()),
       })
     }
+
     return route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -100,18 +106,22 @@ export const connectToTenant = async (
   await mockLocalAuth(page, token, tenantId)
   await page.goto(url)
   await page.getByRole("button", { name: "Sign in locally", exact: true }).click()
+
   if (heading === "User accounts") {
     await page.getByRole("link", { name: "User accounts", exact: true }).click()
   }
+
   await page.getByRole("heading", { name: heading, exact: true }).waitFor()
 }
 
 export const builtApp = Effect.gen(function* () {
   // Built once per run by tests/frontend/global-setup.ts.
   const outDir = inject("webOutDir")
+
   if (outDir === undefined) {
     return yield* Effect.die("No shared web build; add this test to the frontend Vitest project")
   }
+
   const server = yield* Effect.acquireRelease(
     Effect.promise(() =>
       preview({
@@ -129,23 +139,29 @@ export const builtApp = Effect.gen(function* () {
           }),
       ),
   )
+
   const address = server.httpServer.address()
   assert.isNotNull(address)
   assert.isNotString(address)
+
   if (!address || Predicate.isString(address)) {
     return yield* Effect.die("No preview TCP address")
   }
+
   const browser = yield* Effect.acquireRelease(
     Effect.promise(() => chromium.launch({ headless: true })),
     (browser) => Effect.promise(() => browser.close()),
   )
+
   const context = yield* Effect.acquireRelease(
     Effect.promise(() => browser.newContext({ viewport: { width: 1280, height: 900 } })),
     (context) => Effect.promise(() => context.close()),
   )
+
   const page = yield* Effect.promise(() => context.newPage())
   const errors: string[] = []
   page.on("pageerror", (error) => errors.push(error.message))
+
   return {
     page,
     context,

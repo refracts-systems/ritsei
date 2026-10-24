@@ -62,12 +62,15 @@ export const makeFinancialVerificationKeyring = (
   verifiers: readonly FinancialVerificationVerifierService[],
 ) => {
   const byKeyId = new Map(verifiers.map((verifier) => [verifier.keyId, verifier]))
+
   return Layer.succeed(FinancialVerificationKeyring, {
     verify: (keyId, payload, signature) => {
       const verifier = byKeyId.get(keyId)
+
       if (verifier === undefined) {
         return Effect.fail(new FinancialVerificationKeyNotFound({ keyId }))
       }
+
       return verifier.verify(payload, signature)
     },
   } satisfies FinancialVerificationKeyringService)
@@ -98,11 +101,13 @@ export const generateEd25519FinancialVerificationSigner = (keyId: string) =>
   Effect.tryPromise({
     try: async () => {
       const pair = await globalThis.crypto.subtle.generateKey(ed25519, false, ["sign", "verify"])
+
       const signer = makeEd25519FinancialVerificationSignerService(
         keyId,
         pair.privateKey,
         pair.publicKey,
       )
+
       return {
         pair,
         signer,

@@ -14,6 +14,7 @@ const probeSolidPackage = async (entry: string) => {
         lib: { entry, formats: ["es"] },
       },
     })
+
     return { build: "passed" as const, behavior: "unreviewed" as const }
   } catch (cause) {
     return { build: "blocked" as const, diagnostic: String(cause) }
@@ -45,6 +46,7 @@ export const probeBoneyardCoreCompatibility = async () => {
         },
       },
     })
+
     const code = extractBundleCode(result)
     const forbidden = code.match(/\b(?:react|react-dom|playwright)\b/i)
 
@@ -68,6 +70,7 @@ export const probeBoneyardCoreCompatibility = async () => {
 if (isMain(import.meta.url)) {
   const result = await probeKobalteCompatibility()
   console.log(JSON.stringify(result, null, 2))
+
   // A successful bundle still needs the dialog's browser/accessibility evidence.
   if (result.build === "blocked") process.exit(1)
 }

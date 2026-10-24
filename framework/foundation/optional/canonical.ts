@@ -9,7 +9,9 @@ export const canonicalize = <A>(value: A): A => {
     // SAFETY: mapping every element keeps an array of the same element type.
     return value.map(canonicalize) as A
   }
+
   if (!Predicate.isObjectOrArray(value)) return value
+
   // SAFETY: the entries keep their keys and values and only change order.
   return Object.fromEntries(
     Object.entries(value)

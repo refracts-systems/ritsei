@@ -21,8 +21,11 @@ type SalesDetail = "customer" | "quotation" | "order"
 
 function detailKind(pathname: string): SalesDetail | undefined {
   if (pathname.startsWith("/sales/customers/")) return "customer"
+
   if (pathname.startsWith("/sales/quotations/")) return "quotation"
+
   if (pathname.startsWith("/sales/orders/")) return "order"
+
   return undefined
 }
 
@@ -31,6 +34,7 @@ export default function SalesRoute() {
   const params = useParams<{ id?: string }>()
   const route = createMemo(() => decodeRouteInput(RouteInput, location.search, params.id))
   const detail = createMemo(() => detailKind(location.pathname))
+
   return (
     <Show
       when={route()}

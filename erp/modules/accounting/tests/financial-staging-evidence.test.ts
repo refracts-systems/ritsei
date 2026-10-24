@@ -54,6 +54,7 @@ const append = (
 ) =>
   Effect.gen(function* () {
     const evidenceHash = yield* hashFinancialStagingEvidence(evidence)
+
     return yield* store.append({
       tenantId,
       evidence,
@@ -67,6 +68,7 @@ describe("financial staging evidence store", () => {
     Effect.gen(function* () {
       const store = makeMemoryFinancialStagingEvidenceStore()
       const first = yield* append(store, makeEvidence("00000000-0000-7000-8000-000000000003"))
+
       const second = yield* append(
         store,
         makeEvidence("00000000-0000-7000-8000-000000000004", "global_reconciliation"),
@@ -98,6 +100,7 @@ describe("financial staging evidence store", () => {
       const conflict = yield* Effect.flip(
         append(store, { ...evidence, gateId: "global_reconciliation" }),
       )
+
       assert.instanceOf(conflict, FinancialStagingEvidenceConflict)
       assert.strictEqual(conflict.reason, "different_content")
 
@@ -109,6 +112,7 @@ describe("financial staging evidence store", () => {
           evidenceHash: "0".repeat(64),
         }),
       )
+
       assert.instanceOf(invalidHash, FinancialStagingEvidenceInvalid)
       assert.strictEqual(invalidHash.reason, "hash_mismatch")
 
@@ -118,6 +122,7 @@ describe("financial staging evidence store", () => {
           evidenceHash: "0".repeat(64),
         }),
       )
+
       assert.instanceOf(tampered, FinancialStagingEvidenceInvalid)
       assert.strictEqual(tampered.reason, "hash_mismatch")
     }),

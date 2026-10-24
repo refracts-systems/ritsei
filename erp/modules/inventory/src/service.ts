@@ -8,6 +8,7 @@ export const makeInventoryServiceFromStore = <R>(
 ): Effect.Effect<InventoryService, never, R> =>
   Effect.gen(function* () {
     const implementation = yield* store
+
     return {
       listWarehouses: Effect.fn("InventoryService.listWarehouses")(
         (input: Parameters<typeof implementation.listWarehouses>[0]) =>

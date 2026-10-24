@@ -20,6 +20,7 @@ import { partial } from "../../../../tests/support/partial.ts"
 const principal = { userAccountId: "staging-operator", sessionId: "staging-session" }
 const tenantId = "00000000-0000-4000-8000-000000000001"
 const legalEntityId = "00000000-0000-4000-8000-000000000002"
+
 const evidence = {
   recordId: "00000000-0000-7000-8000-000000000003",
   schemaVersion: 1,
@@ -95,6 +96,7 @@ const deniedLayer = makeAccountingTestLayer().pipe(
 it.effect("denies staging evidence lookup without its read capability", () =>
   Effect.gen(function* () {
     const accounting = yield* AccountingService
+
     const denied = yield* Effect.flip(
       accounting.listFinancialStagingEvidence({
         principal,
@@ -103,6 +105,7 @@ it.effect("denies staging evidence lookup without its read capability", () =>
         limit: 10,
       }),
     )
+
     assert.instanceOf(denied, AuthorizationDenied)
   }).pipe(Effect.provide(deniedLayer)),
 )
@@ -120,6 +123,7 @@ it.effect("records staging evidence through the authorized Accounting contract",
       postingEnabled: true,
     })
     const evidenceHash = yield* hashFinancialStagingEvidence(evidence)
+
     const input = {
       principal,
       tenantId,
@@ -127,6 +131,7 @@ it.effect("records staging evidence through the authorized Accounting contract",
       canonicalizationVersion: 1 as const,
       evidenceHash,
     }
+
     const first = yield* accounting.recordFinancialStagingEvidence(input)
     const replay = yield* accounting.recordFinancialStagingEvidence(input)
     assert.strictEqual(first.recordId, evidence.recordId)
@@ -144,10 +149,12 @@ it.effect("records staging evidence through the authorized Accounting contract",
     const invalid = yield* Effect.flip(
       accounting.recordFinancialStagingEvidence({ ...input, evidenceHash: "0".repeat(64) }),
     )
+
     assert.instanceOf(invalid, FinancialStagingEvidenceInvalid)
 
     const mismatchedEvidence = { ...evidence, operatorPrincipalId: "different-operator" }
     const mismatchedHash = yield* hashFinancialStagingEvidence(mismatchedEvidence)
+
     const operatorFailure = yield* Effect.flip(
       accounting.recordFinancialStagingEvidence({
         ...input,
@@ -155,6 +162,7 @@ it.effect("records staging evidence through the authorized Accounting contract",
         evidenceHash: mismatchedHash,
       }),
     )
+
     assert.instanceOf(operatorFailure, FinancialStagingEvidenceInvalid)
     assert.strictEqual(
       // SAFETY: the test passes values of this type.

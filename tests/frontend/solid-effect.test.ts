@@ -15,6 +15,7 @@ const builtSolidEffect = Effect.gen(function* () {
       shell: process.platform === "win32",
     }),
   )
+
   assert.isTrue(output.status === 0, output.stdout + output.stderr)
 
   const server = yield* Effect.acquireRelease(
@@ -34,9 +35,11 @@ const builtSolidEffect = Effect.gen(function* () {
           }),
       ),
   )
+
   const address = server.httpServer.address()
   assert.isNotNull(address)
   assert.isNotString(address)
+
   if (!address || Predicate.isString(address)) {
     return yield* Effect.die("No preview TCP address")
   }
@@ -45,10 +48,12 @@ const builtSolidEffect = Effect.gen(function* () {
     Effect.promise(() => chromium.launch({ headless: true })),
     (browser) => Effect.promise(() => browser.close()),
   )
+
   const context = yield* Effect.acquireRelease(
     Effect.promise(() => browser.newContext({ viewport: { width: 1280, height: 900 } })),
     (context) => Effect.promise(() => context.close()),
   )
+
   const page = yield* Effect.promise(() => context.newPage())
   const errors: string[] = []
   page.on("pageerror", (error) => errors.push(error.message))

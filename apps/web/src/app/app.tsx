@@ -43,6 +43,7 @@ const workspaceDirectory: readonly Readonly<{
 
 function HomeRoute() {
   const session = useContext(SessionContext)
+
   return (
     <Show when={session.current()} fallback={<Connection />}>
       <OperationalWorkspace
@@ -93,9 +94,12 @@ function SessionRecovery() {
       session.replace(null)
       navigate("/login", { replace: true })
     }
+
     globalThis.addEventListener("ritsei:unauthorized", recover)
+
     return () => globalThis.removeEventListener("ritsei:unauthorized", recover)
   })
+
   return null
 }
 
@@ -119,8 +123,10 @@ export function App() {
   const [user, setUser] = createSignal<AuthenticatedUser | null>(null)
   const [tenants, setTenants] = createSignal<readonly TenantOption[]>([])
   const [capabilities, setCapabilities] = createSignal<readonly Capability[]>([])
+
   const replace = (next: Session | null, details?: AuthSession) => {
     setSession(next)
+
     if (next === null || details === undefined) {
       setUser(null)
       setTenants([])
@@ -131,12 +137,16 @@ export function App() {
       setCapabilities(details.capabilities)
     }
   }
+
   const selectTenant = async (tenantId: string) => {
     if (!tenants().some((tenant) => tenant.tenantId === tenantId)) return
     const current = session()
+
     if (current === null || current.tenantId === tenantId) return
+
     try {
       const details = await getAuthSession(current.token, tenantId)
+
       if (details.activeTenant?.tenantId !== tenantId) return
       setUser(details.user)
       setTenants(details.memberships)
@@ -148,6 +158,7 @@ export function App() {
       }
     }
   }
+
   return (
     <SessionContext
       value={{ current: session, user, tenants, capabilities, replace, selectTenant }}

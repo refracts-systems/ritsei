@@ -3,6 +3,7 @@ import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 
 export { ExternalIdentity, IdentityProvider } from "./provider.ts"
+
 export type {
   ExternalIdentity as ExternalIdentityType,
   IdentityProvider as IdentityProviderContract,
@@ -16,20 +17,24 @@ export const CreateTenantInput = Schema.Struct({
   slug: Schema.String,
   timezone: Schema.optionalKey(NonBlankString),
 })
+
 export const IssueSessionInput = Schema.Struct({
   userAccountId: Schema.String,
   ttlSeconds: PositiveSeconds,
 })
+
 export const Tenant = Schema.Struct({
   id: Uuid,
   slug: Schema.String,
   timezone: Schema.String,
 })
+
 export const Session = Schema.Struct({
   id: Schema.String,
   userAccountId: Schema.String,
   expiresAt: Schema.String,
 })
+
 export const Principal = Schema.Struct({
   userAccountId: Schema.String,
   sessionId: Schema.String,
@@ -39,7 +44,9 @@ export const Principal = Schema.Struct({
 })
 
 export type Tenant = Schema.Schema.Type<typeof Tenant>
+
 export type Session = Schema.Schema.Type<typeof Session>
+
 export type Principal = Schema.Schema.Type<typeof Principal>
 
 export interface IssuedSession {

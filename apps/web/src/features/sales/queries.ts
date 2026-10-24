@@ -101,10 +101,12 @@ export function createCustomerMutation(
   afterSuccess?: (customer: Customer) => void,
 ) {
   const client = useQueryClient()
+
   return useMutation<Customer, RequestFailure, CreateCustomerInput>(() => ({
     mutationFn: (input) => runRequest(scope, createCustomer(input)),
     onSuccess: (customer) => {
       afterSuccess?.(customer)
+
       return invalidate(client, scope.tenantId, customersKey)
     },
   }))
@@ -115,10 +117,12 @@ export function createQuotationMutation(
   afterSuccess?: (quotation: Quotation) => void,
 ) {
   const client = useQueryClient()
+
   return useMutation<Quotation, RequestFailure, CreateQuotationInput>(() => ({
     mutationFn: (input) => runRequest(scope, createQuotation(input)),
     onSuccess: (quotation) => {
       afterSuccess?.(quotation)
+
       return Promise.all([
         invalidate(client, scope.tenantId, quotationsKey),
         invalidate(client, scope.tenantId, customersKey),
@@ -129,10 +133,12 @@ export function createQuotationMutation(
 
 export function createOrderMutation(scope: ApiScope, afterSuccess?: (order: SalesOrder) => void) {
   const client = useQueryClient()
+
   return useMutation<SalesOrder, RequestFailure, CreateOrderInput>(() => ({
     mutationFn: (input) => runRequest(scope, createOrder(input)),
     onSuccess: (order) => {
       afterSuccess?.(order)
+
       return Promise.all([
         invalidate(client, scope.tenantId, ordersKey),
         invalidate(client, scope.tenantId, quotationsKey),
@@ -146,6 +152,7 @@ export function createConfirmOrderMutation(
   afterSuccess?: (order: SalesOrder) => void,
 ) {
   const client = useQueryClient()
+
   return useMutation<
     SalesOrder,
     RequestFailure,
@@ -156,6 +163,7 @@ export function createConfirmOrderMutation(
     mutationFn: ({ id, input }) => runRequest(scope, confirmOrder(id, input)),
     onSuccess: (order) => {
       afterSuccess?.(order)
+
       return Promise.all([
         invalidate(client, scope.tenantId, ordersKey),
         invalidate(client, scope.tenantId, orderDetailKey(order.id)),
@@ -169,12 +177,14 @@ export function createCancelOrderMutation(
   afterSuccess?: (order: SalesOrder) => void,
 ) {
   const client = useQueryClient()
+
   return useMutation<SalesOrder, RequestFailure, { readonly id: string }>(() => ({
     // Fallow: confirm and cancel mutations intentionally share tenant-scoped invalidation behavior.
     // fallow-ignore-next-line code-duplication
     mutationFn: ({ id }) => runRequest(scope, cancelOrder(id)),
     onSuccess: (order) => {
       afterSuccess?.(order)
+
       return Promise.all([
         invalidate(client, scope.tenantId, ordersKey),
         invalidate(client, scope.tenantId, orderDetailKey(order.id)),

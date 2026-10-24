@@ -9,6 +9,7 @@ import { decodeExternalSchema } from "./schema.ts"
 
 const Uuid = Schema.String.check(Schema.isUUID())
 const MaxFieldLength = 256
+
 const BoundedNonEmptyString = Schema.String.check(
   Schema.isPattern(/\S/),
   Schema.isMaxLength(MaxFieldLength),
@@ -55,6 +56,7 @@ export const normalizeCloudEvent = (
       Predicate.isString(input.expectedType) && input.expectedType.trim() !== ""
         ? input.expectedType.slice(0, MaxFieldLength)
         : "external-event"
+
     if (
       !Schema.is(Uuid)(input.tenantId) ||
       !Schema.is(BoundedNonEmptyString)(input.connectorId) ||
@@ -67,6 +69,7 @@ export const normalizeCloudEvent = (
         }),
       )
     }
+
     const envelope = yield* Schema.decodeUnknownEffect(CloudEventsEnvelope)(input.envelope).pipe(
       Effect.mapError(
         () =>
@@ -76,6 +79,7 @@ export const normalizeCloudEvent = (
           }),
       ),
     )
+
     if (envelope.type !== input.expectedType) {
       return yield* Effect.fail(
         new ExternalPayloadInvalid({
@@ -84,6 +88,7 @@ export const normalizeCloudEvent = (
         }),
       )
     }
+
     const payload = yield* decodeExternalSchema(input.payloadSchema, envelope.data).pipe(
       Effect.mapError(
         () =>
@@ -93,6 +98,7 @@ export const normalizeCloudEvent = (
           }),
       ),
     )
+
     return {
       kind: "ExternalEvent" as const,
       envelope: "CloudEvents 1.0.x" as const,

@@ -12,6 +12,7 @@ if (base === undefined || head === undefined || args.length !== 2) {
 
 const zeroSha = /^0+$/u
 const range = zeroSha.test(base) ? head : `${base}..${head}`
+
 const result = spawnSync(
   "git",
   ["log", "--no-merges", "--format=%H%x00%s", "--no-decorate", range],
@@ -27,11 +28,13 @@ if (result.status !== 0) {
 }
 
 const commits = result.stdout.trimEnd().split(/\r?\n/u).filter(Boolean)
+
 const failures = commits.flatMap((commit) => {
   const separator = commit.indexOf("\0")
   const sha = separator === -1 ? commit : commit.slice(0, separator)
   const subject = separator === -1 ? "" : commit.slice(separator + 1)
   const error = commitSubjectError(subject)
+
   return error === undefined ? [] : [`${sha}: ${error}`]
 })
 

@@ -17,6 +17,7 @@ export default function PartiesRoute() {
   const location = useLocation()
   const params = useParams<{ id?: string }>()
   const route = createMemo(() => decodeRouteInput(RouteInput, location.search, params.id))
+
   return (
     <DecodedConnectedSessionRoute
       route={route}

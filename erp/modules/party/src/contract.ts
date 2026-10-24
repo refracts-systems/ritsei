@@ -23,15 +23,18 @@ import type {
 
 const NonBlankString = Schema.String.check(Schema.isPattern(/\S/))
 const TrimmedNonBlankString = Schema.String.check(Schema.isPattern(/\S/), Schema.isTrimmed())
+
 const UpperTrimmedNonBlankString = Schema.String.check(
   Schema.isPattern(/\S/),
   Schema.isTrimmed(),
   Schema.isUppercased(),
 )
+
 const Uuid = Schema.String.check(Schema.isUUID())
 
 export const PartyKind = Schema.Literals(["person", "organization"])
 export const PartyRole = Schema.Literals(["customer", "supplier", "employee", "partner"])
+
 export const PartyRelationshipKind = Schema.Literals([
   "customer",
   "supplier",
@@ -104,15 +107,25 @@ export const RelatedPartyPath = Schema.Struct({
 })
 
 export type Party = Schema.Schema.Type<typeof Party>
+
 export type ExternalIdentifier = Schema.Schema.Type<typeof ExternalIdentifier>
+
 export type LegalEntity = Schema.Schema.Type<typeof LegalEntity>
+
 export type Branch = Schema.Schema.Type<typeof Branch>
+
 export type PartyRepresentation = Schema.Schema.Type<typeof PartyRepresentation>
+
 export type PartyRelationship = Schema.Schema.Type<typeof PartyRelationship>
+
 export type RelatedPartyPath = Schema.Schema.Type<typeof RelatedPartyPath>
+
 export type PartyRepresentationKind = Schema.Schema.Type<typeof PartyRepresentationKind>
+
 export type PartyRole = Schema.Schema.Type<typeof PartyRole>
+
 export type PartyKind = Schema.Schema.Type<typeof PartyKind>
+
 export type PartyRelationshipKind = Schema.Schema.Type<typeof PartyRelationshipKind>
 
 export const PartyDirectoryEntry = Schema.Struct({
@@ -131,6 +144,7 @@ export const PartyDetail = Schema.Struct({
 })
 
 export type PartyDirectoryEntry = Schema.Schema.Type<typeof PartyDirectoryEntry>
+
 export type PartyDetail = Schema.Schema.Type<typeof PartyDetail>
 
 export const ListPartiesInput = Schema.Struct({

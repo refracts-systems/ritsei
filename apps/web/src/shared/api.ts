@@ -7,6 +7,7 @@ import type { Session } from "./session.ts"
 export class BrowserConnection extends Context.Service<BrowserConnection, Session>()(
   "RITSEI/BrowserConnection",
 ) {}
+
 export class RequestFailure extends Schema.TaggedError<RequestFailure>()("FrontendRequestFailure", {
   kind: Schema.Literals([
     "validation",
@@ -48,20 +49,26 @@ export const failureMessage = <Failure>(error: Failure): string =>
 // The existing list endpoint has no pagination. Refuse oversized payloads instead of silently
 // truncating or pretending a client-side rendering window bounds the backend query.
 const maxResponseBytes = 131_072
+
 const readBounded = async (response: Response): Promise<string> => {
   const reader = response.body?.getReader()
+
   if (!reader) return ""
   const decoder = new TextDecoder()
   let bytes = 0
   let text = ""
+
   try {
     for (;;) {
       const next = await reader.read()
+
       if (next.done) return text + decoder.decode()
       bytes += next.value.byteLength
+
       if (bytes > maxResponseBytes) {
         throw new RequestFailure({ kind: "invalid-response" })
       }
+
       text += decoder.decode(next.value, { stream: true })
     }
   } finally {
@@ -110,6 +117,7 @@ export function mutationRequest<Payload>(
 ) {
   const method = isMutationMethod(methodOrPayload) ? methodOrPayload : "POST"
   const requestPayload = isMutationMethod(methodOrPayload) ? payload : methodOrPayload
+
   return requestJson(path, method, requestPayload).pipe(
     Effect.mapError((error) =>
       error.kind === "invalid-response" || error.kind === "network"
@@ -121,9 +129,11 @@ export function mutationRequest<Payload>(
 
 export const querySuffix = (values: Readonly<Record<string, string | number | undefined>>) => {
   const query = new URLSearchParams()
+
   for (const [key, value] of Object.entries(values)) {
     if (value !== undefined) query.set(key, String(value))
   }
+
   return query.size === 0 ? "" : `?${query}`
 }
 
@@ -157,6 +167,7 @@ export const requestJson = Effect.fn("Frontend.requestJson")(function* <Payload>
 ) {
   const connection = yield* BrowserConnection
   const mutatesState = method !== "GET"
+
   const response = yield* Effect.tryPromise({
     try: async (signal) => {
       const response = await fetch(`/api${path}`, {
@@ -172,6 +183,7 @@ export const requestJson = Effect.fn("Frontend.requestJson")(function* <Payload>
         redirect: "error",
         signal: AbortSignal.any([signal, AbortSignal.timeout(10_000)]),
       })
+
       return { status: response.status, body: await readBounded(response) }
     },
     catch: (cause) =>
@@ -181,8 +193,11 @@ export const requestJson = Effect.fn("Frontend.requestJson")(function* <Payload>
             kind: mutatesState ? "unknown-outcome" : "network",
           }),
   })
+
   if (response.status >= 200 && response.status < 300) return response.body
+
   if (response.status === 401) globalThis.dispatchEvent(new Event("ritsei:unauthorized"))
+
   const error = yield* Schema.decodeUnknownEffect(Schema.fromJsonString(ApiError))(
     response.body,
   ).pipe(
@@ -193,6 +208,7 @@ export const requestJson = Effect.fn("Frontend.requestJson")(function* <Payload>
         }),
     ),
   )
+
   const kinds = {
     ApiUnauthorized: [401, "unauthorized"],
     ApiForbidden: [403, "forbidden"],
@@ -200,7 +216,9 @@ export const requestJson = Effect.fn("Frontend.requestJson")(function* <Payload>
     ApiConflict: [409, "conflict"],
     ApiServiceUnavailable: [503, "unavailable"],
   } as const
+
   const [status, kind] = kinds[error._tag]
+
   return yield* Effect.fail(
     new RequestFailure({
       kind: status === response.status ? kind : "invalid-response",

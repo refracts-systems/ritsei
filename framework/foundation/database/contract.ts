@@ -17,6 +17,7 @@ export interface PostgresClient {
 }
 
 export type DrizzleDatabase = PostgresJsDatabase<EmptyRelations>
+
 export type DrizzleTransaction = PostgresJsTransaction<AnyRelations>
 
 export const CurrentDatabaseTransaction = Context.Reference<DrizzleTransaction | undefined>(
@@ -32,9 +33,11 @@ export class DatabaseFailure extends Schema.TaggedError<DatabaseFailure>()("Data
 export const isDatabaseConstraint = <E>(error: E, constraint: string, code = "23505") => {
   if (!(error instanceof DatabaseFailure)) return false
   let cause: unknown = error.cause
+
   while (Predicate.isObjectOrArray(cause) && "cause" in cause && cause.cause !== undefined) {
     cause = cause.cause
   }
+
   return (
     Predicate.isObjectOrArray(cause) &&
     "code" in cause &&

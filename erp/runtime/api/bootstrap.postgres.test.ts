@@ -40,13 +40,16 @@ it.effect.skipIf(databaseUrl === undefined)(
         const database = makePostgresDatabase(client)
         const databaseLayer = Layer.succeed(Database, database)
         const userAccountService = yield* Effect.provide(makeUserAccountService, databaseLayer)
+
         const userAccountRecord = yield* userAccountService.create({
           email: `bootstrap-${uuidv7()}@example.test`,
         })
+
         const principal = { userAccountId: userAccountRecord.id, sessionId: "bootstrap-session" }
         const authorization = yield* Effect.provide(makeAuthorizationService, databaseLayer)
         const authorizationLayer = Layer.succeed(AuthorizationService, authorization)
         const businessRequirements = Layer.merge(databaseLayer, authorizationLayer)
+
         const auth = yield* Effect.provide(
           makeAuthService,
           Layer.mergeAll(
@@ -55,18 +58,24 @@ it.effect.skipIf(databaseUrl === undefined)(
             Layer.succeed(UserAccountService, userAccountService),
           ),
         )
+
         const party = yield* Effect.provide(makePartyService, businessRequirements)
         const messaging = yield* Effect.provide(makeMessagingService, databaseLayer)
+
         const messagingRequirements = Layer.merge(
           businessRequirements,
           Layer.succeed(MessagingService, messaging),
         )
+
         const sales = yield* Effect.provide(makeSalesService, messagingRequirements)
+
         const accounting = yield* Effect.provide(
           makeAccountingService,
           Layer.merge(messagingRequirements, Layer.succeed(SalesService, sales)),
         )
+
         const inventory = yield* Effect.provide(makeInventoryService, messagingRequirements)
+
         const services = Layer.mergeAll(
           Layer.succeed(AuthService, auth),
           authorizationLayer,
@@ -74,6 +83,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           Layer.succeed(AccountingService, accounting),
           Layer.succeed(InventoryService, inventory),
         )
+
         const input = {
           principal,
           slug: `bootstrap-${uuidv7()}`,

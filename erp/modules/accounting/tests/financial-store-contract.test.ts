@@ -31,6 +31,7 @@ describe("financial readiness contracts", () => {
     Effect.gen(function* () {
       const source = watermark("postgresql", "source")
       const target = watermark("tigerbeetle", "target")
+
       const registry = financialStoreObservationRegistry([
         {
           authority: "postgresql",
@@ -70,6 +71,7 @@ describe("financial readiness contracts", () => {
         yield* registry.collect("tigerbeetle", { scope: target.scope, maxRecords: 1 }),
         target,
       )
+
       const missingRegistry = financialStoreObservationRegistry([
         {
           authority: "postgresql",
@@ -86,9 +88,11 @@ describe("financial readiness contracts", () => {
           },
         },
       ])
+
       const missing = yield* Effect.flip(
         missingRegistry.collect("tigerbeetle", { scope: "missing", maxRecords: 1 }),
       )
+
       assert.instanceOf(missing, FinancialStoreObservationFailure)
       assert.strictEqual(missing.reason, "unsupported")
 
@@ -115,6 +119,7 @@ describe("financial readiness contracts", () => {
           },
         ],
       }
+
       const inventoryMismatch = compareFinancialStoreInventories(inventory, {
         ...inventory,
         transfers: [
@@ -125,6 +130,7 @@ describe("financial readiness contracts", () => {
           },
         ],
       })
+
       assert.isFalse(inventoryMismatch.ok)
       assert.strictEqual(inventoryMismatch.mismatches[0]!.kind, "unexpected_transfer")
 
@@ -163,6 +169,7 @@ describe("financial readiness contracts", () => {
         mismatchCount: 0,
         orphanCount: 0,
       }
+
       assert.deepStrictEqual(
         yield* Schema.decodeUnknownEffect(FinancialStagingEvidence)(evidence),
         evidence,
@@ -196,6 +203,7 @@ describe("financial readiness contracts", () => {
           },
         }),
       )
+
       const backup = {
         authority: "postgresql" as const,
         backupId: "backup-1",
@@ -208,10 +216,12 @@ describe("financial readiness contracts", () => {
         startedAt: "2026-08-30T00:00:00.000Z",
         completedAt: "2026-08-30T00:01:00.000Z",
       }
+
       assert.deepStrictEqual(
         yield* Schema.decodeUnknownEffect(FinancialBackupRestoreEvidence)(backup),
         backup,
       )
+
       const telemetryInput = {
         tenantId: evidence.tenantId,
         legalEntityId: evidence.legalEntityId,
@@ -219,6 +229,7 @@ describe("financial readiness contracts", () => {
         gateId: evidence.gateId,
         deploymentRevision: evidence.deploymentRevision,
       }
+
       assert.deepStrictEqual(
         yield* Schema.decodeUnknownEffect(FinancialStagingTelemetryInput)(telemetryInput),
         telemetryInput,
@@ -230,12 +241,14 @@ describe("financial readiness contracts", () => {
         }),
         { metrics: [], alerts: [] },
       )
+
       const invalidEvidence = yield* Effect.flip(
         Schema.decodeUnknownEffect(FinancialStagingEvidence)({
           ...evidence,
           mismatchCount: 1,
         }),
       )
+
       assert.strictEqual(invalidEvidence._tag, "SchemaError")
     }),
   )

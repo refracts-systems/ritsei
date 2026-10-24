@@ -16,17 +16,20 @@ import { createdAt, id, money, updatedAt } from "./common.ts"
 import { branches, legalEntities } from "./party.ts"
 
 export const inventorySchema = pgSchema("inventory")
+
 export const reservationStatus = inventorySchema.enum("reservation_status", [
   "active",
   "released",
   "fulfilled",
 ])
+
 export const movementKind = inventorySchema.enum("movement_kind", [
   "receipt",
   "issue",
   "reservation",
   "release",
 ])
+
 export const transferStatus = inventorySchema.enum("transfer_status", [
   "draft",
   "confirmed",

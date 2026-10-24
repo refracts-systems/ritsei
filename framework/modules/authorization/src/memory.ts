@@ -36,6 +36,7 @@ export const makeMemoryAuthorizationService = (
 
   const member = (input: Schema.Schema.Type<typeof TenantMembershipInput>) => {
     const found = membershipsStore.get(membershipKey(input.userAccountId, input.tenantId))
+
     return found === undefined
       ? Effect.fail(new TenantMembershipNotFound(input))
       : Effect.succeed(found)
@@ -46,13 +47,16 @@ export const makeMemoryAuthorizationService = (
       (input: Schema.Codec.Encoded<typeof AuthorizationInput>) =>
         Effect.gen(function* () {
           const decoded = yield* Schema.decodeUnknownEffect(AuthorizationInput)(input)
+
           const current = membershipsStore.get(
             membershipKey(decoded.principal.userAccountId, decoded.tenantId),
           )
+
           const key = `${membershipKey(
             decoded.principal.userAccountId,
             decoded.tenantId,
           )}:${decoded.capability}`
+
           if (current?.status !== "active" || !grants.has(key)) {
             return yield* Effect.fail(
               new AuthorizationDenied({
@@ -61,6 +65,7 @@ export const makeMemoryAuthorizationService = (
               }),
             )
           }
+
           return {
             allowed: true as const,
             tenantId: decoded.tenantId,
@@ -74,11 +79,14 @@ export const makeMemoryAuthorizationService = (
         Effect.gen(function* () {
           const decoded = yield* Schema.decodeUnknownEffect(AddTenantMembershipInput)(input)
           const key = membershipKey(decoded.userAccountId, decoded.tenantId)
+
           if (membershipsStore.has(key)) {
             return yield* Effect.fail(new TenantMembershipAlreadyExists(decoded))
           }
+
           const created = { ...decoded, status: "active" as const }
           membershipsStore.set(key, created)
+
           return created
         }),
     ),
@@ -90,6 +98,7 @@ export const makeMemoryAuthorizationService = (
       (input: Schema.Codec.Encoded<typeof ListTenantMembershipsInput>) =>
         Effect.gen(function* () {
           const decoded = yield* Schema.decodeUnknownEffect(ListTenantMembershipsInput)(input)
+
           return [...membershipsStore.values()]
             .filter(
               (member) =>
@@ -108,6 +117,7 @@ export const makeMemoryAuthorizationService = (
       (input: Schema.Codec.Encoded<typeof ListAccessibleTenantsInput>) =>
         Effect.gen(function* () {
           const decoded = yield* Schema.decodeUnknownEffect(ListAccessibleTenantsInput)(input)
+
           return [...membershipsStore.values()]
             .filter(
               (member) =>
@@ -122,6 +132,7 @@ export const makeMemoryAuthorizationService = (
           const decoded = yield* Schema.decodeUnknownEffect(TenantMembershipInput)(input)
           yield* member(decoded)
           const prefix = `${membershipKey(decoded.userAccountId, decoded.tenantId)}:`
+
           return grants
             .values()
             .filter((grant) => grant.startsWith(prefix))
@@ -147,9 +158,11 @@ export const makeMemoryAuthorizationService = (
         Effect.gen(function* () {
           const decoded = yield* Schema.decodeUnknownEffect(TenantMembershipInput)(input)
           const key = membershipKey(decoded.userAccountId, decoded.tenantId)
+
           if (!membershipsStore.delete(key)) {
             return yield* Effect.fail(new TenantMembershipNotFound(decoded))
           }
+
           for (const grant of grants) if (grant.startsWith(`${key}:`)) grants.delete(grant)
         }),
     ),
@@ -158,6 +171,7 @@ export const makeMemoryAuthorizationService = (
         Effect.gen(function* () {
           const decoded = yield* Schema.decodeUnknownEffect(GrantCapabilityInput)(input)
           const current = yield* member(decoded)
+
           if (current.status !== "active") {
             return yield* Effect.fail(
               new TenantMembershipNotActive({
@@ -166,10 +180,12 @@ export const makeMemoryAuthorizationService = (
               }),
             )
           }
+
           const key = `${membershipKey(
             decoded.userAccountId,
             decoded.tenantId,
           )}:${decoded.capability}`
+
           if (grants.has(key)) return yield* Effect.fail(new CapabilityAlreadyGranted(decoded))
           grants.add(key)
         }),
@@ -185,6 +201,7 @@ export const makeMemoryAuthorizationService = (
       const current = yield* member(decoded)
       const updated = { ...current, status }
       membershipsStore.set(membershipKey(decoded.userAccountId, decoded.tenantId), updated)
+
       return updated
     })
   }

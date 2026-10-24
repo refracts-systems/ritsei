@@ -8,6 +8,7 @@ const Uuid = Schema.String.check(Schema.isUUID())
 const NonEmptyString = Schema.String.check(Schema.isPattern(/\S/))
 
 export const ProcessOperatorAction = Schema.Literals(["retry", "compensate", "manual_recovery"])
+
 export const ProcessCompensationStatus = Schema.Literals([
   "not_started",
   "in_progress",
@@ -86,7 +87,9 @@ const replaceLastStep = (
   status: ProcessStepExecution["status"],
 ): ProcessCheckpoint => {
   const current = lastStep(checkpoint)
+
   if (current === undefined) return checkpoint
+
   return {
     ...checkpoint,
     revision: checkpoint.revision + 1,
@@ -99,6 +102,7 @@ export const makeProcessOperatorService = (): ProcessOperatorService => ({
     const step = lastStep(checkpoint)
     const retryable = step?.status === "retry_scheduled"
     const compensation = compensationStatus(step)
+
     return {
       instanceId: checkpoint.instanceId,
       status: checkpoint.status,
@@ -120,6 +124,7 @@ export const makeProcessOperatorService = (): ProcessOperatorService => ({
 
   retry: (checkpoint) => {
     const step = lastStep(checkpoint)
+
     return step?.status === "retry_scheduled"
       ? Effect.succeed({ ...replaceLastStep(checkpoint, "command_requested"), status: "running" })
       : Effect.fail(
@@ -132,6 +137,7 @@ export const makeProcessOperatorService = (): ProcessOperatorService => ({
 
   startCompensation: (checkpoint) => {
     const step = lastStep(checkpoint)
+
     return step?.status === "command_succeeded"
       ? Effect.succeed({
           ...replaceLastStep(checkpoint, "compensation_started"),
@@ -147,6 +153,7 @@ export const makeProcessOperatorService = (): ProcessOperatorService => ({
 
   requireManualRecovery: (checkpoint) => {
     const step = lastStep(checkpoint)
+
     return step === undefined
       ? Effect.fail(
           new ProcessOperatorActionUnavailable({

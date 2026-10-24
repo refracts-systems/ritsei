@@ -10,6 +10,7 @@ const migrationsDirectory = "db/migrations"
 const migrationNamePattern = /^\d{14}_[a-z0-9]+(?:_[a-z0-9]+)*$/
 const checksumPattern = /^[a-f0-9]{64}$/
 const rootSnapshotId = "00000000-0000-0000-0000-000000000000"
+
 const retireProcessEventOutboxMigration =
   "db/migrations/20260812175716_retire_process_event_outbox/migration.sql"
 
@@ -20,9 +21,11 @@ type SnapshotMetadata = {
 
 const migrationDirectories = async () => {
   const directories: string[] = []
+
   for (const entry of await readdir(migrationsDirectory, { withFileTypes: true })) {
     if (entry.isDirectory()) directories.push(entry.name)
   }
+
   return directories.sort()
 }
 
@@ -48,6 +51,7 @@ describe("migration discovery", () => {
         migrations.map((migration) => migration.name),
         migrations.map((migration) => migration.name).toSorted(),
       )
+
       for (const migration of migrations) {
         assert.match(migration.name, migrationNamePattern)
       }
@@ -75,9 +79,11 @@ describe("migration discovery", () => {
         const migration = yield* Effect.promise(() =>
           stat(`${migrationsDirectory}/${directory}/migration.sql`),
         )
+
         const snapshot = yield* Effect.promise(() =>
           stat(`${migrationsDirectory}/${directory}/snapshot.json`),
         )
+
         const metadata = yield* Effect.promise(() => readSnapshot(directory))
 
         assert.isTrue(migration.isFile())
@@ -112,6 +118,7 @@ describe("migration integrity", () => {
         const sql = yield* Effect.promise(() =>
           readFile(`${migrationsDirectory}/${migration.name}/migration.sql`, "utf8"),
         )
+
         const expected = createHash("sha256").update(sql).digest("hex")
 
         assert.match(migration.hash, checksumPattern)
@@ -139,6 +146,7 @@ describe("migration integrity", () => {
   it.effect("rejects changed, missing, duplicated, or reordered applied migrations", () =>
     Effect.sync(() => {
       const migrations = readMigrationFiles({ migrationsFolder: migrationsDirectory })
+
       const applied = migrations.map((migration) => ({
         hash: migration.hash,
         created_at: String(migration.folderMillis),
@@ -162,6 +170,7 @@ describe("migration integrity", () => {
         () => validateMigrationCatalog(migrations, [applied[0]!, applied[0]!]),
         /duplicate applied migration/,
       )
+
       if (applied.length > 1) {
         assert.throws(
           () => validateMigrationCatalog(migrations, [applied[1]!, applied[0]!]),

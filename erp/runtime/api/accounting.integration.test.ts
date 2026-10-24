@@ -36,6 +36,7 @@ const configuration = {
   postingEnabled: true,
   financialEngine: "postgresql" as const,
 }
+
 const account = {
   id: accountId,
   tenantId,
@@ -43,6 +44,7 @@ const account = {
   name: "Cash",
   type: "asset" as const,
 }
+
 const period = {
   id: "01920000-0000-7000-8000-000000000005",
   tenantId,
@@ -51,13 +53,16 @@ const period = {
   endsOn: "2026-12-31",
   status: "open" as const,
 }
+
 const profile = {
   tenantId,
   legalEntityId,
   receivableAccountId: accountId,
   revenueAccountId: "01920000-0000-7000-8000-000000000006",
 }
+
 const closedPeriod = { ...period, status: "closed" as const }
+
 const journal = {
   id: journalId,
   tenantId,
@@ -71,12 +76,14 @@ const journal = {
 }
 
 const observedInputs: unknown[] = []
+
 const accountingService = partial<AccountingServiceContract>()({
   listAccountingConfigurations: (
     input: Parameters<AccountingServiceContract["listAccountingConfigurations"]>[0],
   ) =>
     Effect.sync(() => {
       observedInputs.push(input)
+
       return [configuration]
     }),
   listAccounts: () => Effect.succeed([account]),
@@ -92,8 +99,10 @@ const accountingService = partial<AccountingServiceContract>()({
 })
 
 const financialOperations = partial<FinancialOperationServiceContract>()({})
+
 // The ledger endpoints are covered by the general-ledger tests; these contracts never reach them.
 const ledger = unusedService<GeneralLedgerServiceContract>("ledger")
+
 const TestHttpServices = Layer.mergeAll(Path.layer, Etag.layerWeak, HttpPlatform.layer).pipe(
   Layer.provideMerge(FileSystem.layerNoop({})),
 )
@@ -104,18 +113,22 @@ it.layer(TestHttpServices)("Accounting API contracts", (it) => {
       const bearer = Layer.succeed(BearerAuth, {
         bearer: (effect) => Effect.provideService(effect, CurrentPrincipal, principal),
       })
+
       const bearerClient = HttpApiMiddleware.layerClient(BearerAuth, ({ request, next }) =>
         next(HttpClientRequest.bearerToken(request, "accounting-token")),
       )
+
       const handlers = AccountingHandlers.pipe(
         Layer.provide(bearer),
         Layer.provide(Layer.succeed(AccountingService, accountingService)),
         Layer.provide(Layer.succeed(FinancialOperationService, financialOperations)),
         Layer.provide(Layer.succeed(GeneralLedgerService, ledger)),
       )
+
       const client = yield* HttpApiTest.groups(RitseiApi, ["Accounting"]).pipe(
         Effect.provide(Layer.mergeAll(handlers, bearerClient, bearer)),
       )
+
       const headers = { "x-tenant-id": tenantId }
 
       assert.deepStrictEqual(

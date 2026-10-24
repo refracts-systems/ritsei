@@ -110,6 +110,7 @@ it.effect(
       let runtime = makeRuntime()
       let inboxRuntime: ProcessRuntimeInstance[] = [runtime]
       let controls: ProcessOperatorControl[] = []
+
       const requests: Array<{
         path: string
         method: string
@@ -129,21 +130,27 @@ it.effect(
           requests.push({ path, method, headers: request.headers(), body })
 
           if (path === "/user-accounts" && method === "GET") return fulfillJson(route, 200, [])
+
           if (path === "/process/catalog" && method === "GET") {
             return fulfillJson(route, 200, [catalog])
           }
+
           if (path === "/process/runtime" && method === "GET") {
             return fulfillJson(route, 200, [runtime])
           }
+
           if (path === "/process/workflow-runs" && method === "GET") {
             return fulfillJson(route, 200, [workflow])
           }
+
           if (path === "/process/inbox" && method === "GET") {
             return fulfillJson(route, 200, { runtimeInstances: inboxRuntime, jobs: [job] })
           }
+
           if (path === "/process/operator-controls" && method === "GET") {
             return fulfillJson(route, 200, controls)
           }
+
           if (path === "/process/definitions/validate" && method === "POST") {
             return fulfillJson(route, 200, {
               status: "VALIDATED",
@@ -153,6 +160,7 @@ it.effect(
               references: body.references,
             })
           }
+
           if (path === `/process/runtime/${instanceId}/operator-controls` && method === "POST") {
             runtime = makeRuntime({
               status: "running",
@@ -175,8 +183,10 @@ it.effect(
                 createdAt: "2026-09-13T12:03:00.000Z",
               },
             ]
+
             return fulfillJson(route, 200, runtime)
           }
+
           return fulfillJson(route, 404, notFoundBody())
         })
 

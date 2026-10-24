@@ -14,6 +14,7 @@ const baselinePath = "tests/frontend/visual-contract.baseline.json"
 const tenantId = "01900000-0000-7000-8000-000000000010"
 const customerId = "01900000-0000-7000-8000-000000000101"
 const customer = { id: customerId, tenantId, name: "Northwind Customer", email: "n@example.test" }
+
 const quotation = {
   id: "01900000-0000-7000-8000-000000000201",
   tenantId,
@@ -21,6 +22,7 @@ const quotation = {
   status: "accepted",
   total: "24750.00",
 }
+
 const order = {
   id: "01900000-0000-7000-8000-000000000301",
   tenantId,
@@ -52,6 +54,7 @@ const styleOf = (locator: Locator) =>
   locator.first().evaluate(
     (element, names) => {
       const style = getComputedStyle(element)
+
       return Object.fromEntries(names.map((name) => [name, style.getPropertyValue(name)]))
     },
     [...properties],
@@ -77,7 +80,9 @@ const capture = async (page: Page) => {
     badgeNeutral: page.getByText("draft", { exact: true }),
     input: page.getByRole("textbox").first(),
   } satisfies Record<string, Locator>
+
   const result: Record<string, Record<string, string>> = {}
+
   for (const [name, locator] of Object.entries(targets)) result[name] = await styleOf(locator)
 
   await page.getByRole("button", { name: "Create customer", exact: true }).click()
@@ -86,6 +91,7 @@ const capture = async (page: Page) => {
   result["dialog"] = await styleOf(dialog)
   await dialog.getByRole("button", { name: "Close", exact: true }).click()
   await dialog.waitFor({ state: "hidden" })
+
   return result
 }
 
@@ -94,13 +100,18 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const { page, url, errors } = yield* builtApp
+
       const observed = yield* Effect.promise(async () => {
         await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" })
         await page.route("**/api/sales/**", (route) => {
           const path = new URL(route.request().url()).pathname.replace(/^\/api/, "")
+
           if (path === "/sales/customers") return fulfillJson(route, [customer])
+
           if (path === "/sales/quotations") return fulfillJson(route, [quotation])
+
           if (path === "/sales/orders") return fulfillJson(route, [order])
+
           return route.fallback()
         })
         await connectToTenant(page, url, "visual-session", tenantId, "My work")
@@ -109,8 +120,10 @@ it.effect(
         const light = await capture(page)
         await page.getByRole("button", { name: "Dark theme", exact: true }).click()
         const dark = await capture(page)
+
         return { light, dark }
       })
+
       assert.deepEqual(errors, [])
 
       if (process.env["RITSEI_UPDATE_VISUAL_CONTRACT"] === "1") {
@@ -118,6 +131,7 @@ it.effect(
           writeFile(baselinePath, `${JSON.stringify(observed, null, 2)}\n`),
         )
       }
+
       const baseline = JSON.parse(yield* Effect.promise(() => readFile(baselinePath, "utf8")))
       assert.deepEqual(observed, baseline)
     }),

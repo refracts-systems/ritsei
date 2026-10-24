@@ -44,6 +44,7 @@ it.effect(
       let periods: AccountingPeriod[] = []
       let profiles: RevenuePostingProfile[] = []
       let journals: JournalEntry[] = []
+
       const requests: Array<{
         path: string
         method: string
@@ -63,21 +64,27 @@ it.effect(
           requests.push({ path, method, headers: request.headers(), body })
 
           if (path === "/user-accounts" && method === "GET") return fulfillJson(route, 200, [])
+
           if (path === "/accounting/configurations" && method === "GET") {
             return fulfillJson(route, 200, configurations)
           }
+
           if (path === "/accounting/accounts" && method === "GET") {
             return fulfillJson(route, 200, accounts)
           }
+
           if (path === "/accounting/periods" && method === "GET") {
             return fulfillJson(route, 200, periods)
           }
+
           if (path === "/accounting/revenue-posting-profiles" && method === "GET") {
             return fulfillJson(route, 200, profiles)
           }
+
           if (path === "/accounting/journals" && method === "GET") {
             return fulfillJson(route, 200, journals)
           }
+
           if (
             path === `/accounting/legal-entities/${legalEntityId}/configuration` &&
             method === "POST"
@@ -93,8 +100,10 @@ it.effect(
                 financialEngine: "postgresql",
               },
             ]
+
             return fulfillJson(route, 201, configurations[0])
           }
+
           if (path === "/accounting/accounts" && method === "POST") {
             const account: Account = {
               id: body.code === "1000" ? cashId : revenueId,
@@ -103,9 +112,12 @@ it.effect(
               name: body.name.trim(),
               type: body.type,
             }
+
             accounts = [...accounts, account]
+
             return fulfillJson(route, 201, account)
           }
+
           if (path === "/accounting/revenue-posting-profiles" && method === "POST") {
             const profile: RevenuePostingProfile = {
               tenantId,
@@ -113,9 +125,12 @@ it.effect(
               receivableAccountId: body.receivableAccountId,
               revenueAccountId: body.revenueAccountId,
             }
+
             profiles = [profile]
+
             return fulfillJson(route, 201, profile)
           }
+
           if (path === "/accounting/periods" && method === "POST") {
             const period: AccountingPeriod = {
               id: periodId,
@@ -125,18 +140,25 @@ it.effect(
               endsOn: body.endsOn,
               status: "open",
             }
+
             periods = [period, ...periods]
+
             return fulfillJson(route, 201, period)
           }
+
           if (path === `/accounting/periods/${periodId}/close` && method === "POST") {
             const period = periods.find((candidate) => candidate.id === periodId)
+
             if (period === undefined) {
               return fulfillJson(route, 404, notFoundBody())
             }
+
             const closed: AccountingPeriod = { ...period, status: "closed" }
             periods = periods.map((candidate) => (candidate.id === periodId ? closed : candidate))
+
             return fulfillJson(route, 200, closed)
           }
+
           if (path === "/accounting/journals" && method === "POST") {
             const journal: JournalEntry = {
               id: journalId,
@@ -146,9 +168,12 @@ it.effect(
               postedAt: "2026-09-13T12:00:00.000Z",
               lines: body.lines,
             }
+
             journals = [journal, ...journals]
+
             return fulfillJson(route, 201, journal)
           }
+
           return fulfillJson(route, 404, notFoundBody())
         })
 
@@ -199,9 +224,11 @@ it.effect(
         await page.getByText("Revenue", { exact: true }).first().waitFor()
 
         await chooseMoreAction(page, "Configure revenue profile")
+
         const profileDialog = page.getByRole("dialog", {
           name: "Configure revenue posting profile",
         })
+
         await profileDialog
           .getByRole("textbox", { name: "Legal entity ID", exact: true })
           .fill(legalEntityId)
@@ -350,6 +377,7 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const { page, url, errors } = yield* builtApp
+
       const accounts: Account[] = [
         {
           id: cashId,
@@ -366,6 +394,7 @@ it.effect(
           type: "revenue",
         },
       ]
+
       let mode:
         | "forbidden-list"
         | "malformed-list"
@@ -382,21 +411,27 @@ it.effect(
           const requestUrl = new URL(request.url())
           const path = requestUrl.pathname.replace(/^\/api/, "")
           const method = request.method()
+
           if (path === "/user-accounts" && method === "GET") return fulfillJson(route, 200, [])
+
           if (path === "/accounting/accounts" && method === "GET") {
             if (mode === "forbidden-list") {
               return fulfillJson(route, 403, forbiddenBody())
             }
+
             if (mode === "malformed-list") {
               return fulfillJson(route, 200, { accounts: "not-an-array" })
             }
+
             return fulfillJson(route, 200, accounts)
           }
+
           if (path.startsWith("/accounting/")) {
             if (path === "/accounting/revenue-posting-profiles" && method === "POST") {
               if (mode === "profile-conflict") {
                 return fulfillJson(route, 409, conflictBody())
               }
+
               return fulfillJson(route, 201, {
                 tenantId,
                 legalEntityId,
@@ -404,8 +439,10 @@ it.effect(
                 revenueAccountId: revenueId,
               })
             }
+
             if (path === "/accounting/periods" && method === "POST") {
               if (mode === "period-unknown") return route.abort("connectionreset")
+
               return fulfillJson(route, 201, {
                 id: periodId,
                 tenantId,
@@ -415,12 +452,16 @@ it.effect(
                 status: "open",
               })
             }
+
             if (method === "GET") {
               if (path === "/accounting/configurations") return fulfillJson(route, 200, [])
+
               if (path === "/accounting/periods") return fulfillJson(route, 200, [])
+
               if (path === "/accounting/revenue-posting-profiles") {
                 return fulfillJson(route, 200, [])
               }
+
               if (path === "/accounting/journals") {
                 if (mode === "malformed-journal") {
                   return fulfillJson(route, 200, [
@@ -437,10 +478,12 @@ it.effect(
                     },
                   ])
                 }
+
                 return fulfillJson(route, 200, [])
               }
             }
           }
+
           return fulfillJson(route, 404, notFoundBody())
         })
 
@@ -473,9 +516,11 @@ it.effect(
 
         mode = "profile-conflict"
         await chooseMoreAction(page, "Configure revenue profile")
+
         const profileDialog = page.getByRole("dialog", {
           name: "Configure revenue posting profile",
         })
+
         await profileDialog
           .getByRole("textbox", { name: "Legal entity ID", exact: true })
           .fill(legalEntityId)
@@ -509,10 +554,12 @@ it.effect(
         assert.isFalse(
           await periodDialog.getByRole("button", { name: "Open period", exact: true }).isEnabled(),
         )
+
         const reloadBeforeRetry = periodDialog.getByRole("button", {
           name: "Reload Finance before retrying",
           exact: true,
         })
+
         await reloadBeforeRetry.click()
         await reloadBeforeRetry.waitFor({ state: "hidden" })
         assert.isTrue(

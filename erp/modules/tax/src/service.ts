@@ -35,6 +35,7 @@ export const makeTaxServiceFromStore = <R>(storeEffect: Effect.Effect<TaxStore, 
       input: Schema.Codec.Encoded<typeof ListTaxCodesInput>,
     ) {
       const decoded = yield* authorized(ListTaxCodesInput, TaxCapabilities.taxCodeRead)(input)
+
       return yield* store.listTaxCodes(decoded.tenantId, decoded.direction, decoded.limit ?? 200)
     })
 
@@ -43,6 +44,7 @@ export const makeTaxServiceFromStore = <R>(storeEffect: Effect.Effect<TaxStore, 
     ) {
       const decoded = yield* authorized(CreateTaxCodeInput, TaxCapabilities.taxCodeCreate)(input)
       const { principal: _principal, ...command } = decoded
+
       return yield* store.createTaxCode({ ...command, code: command.code.toUpperCase() })
     })
 
@@ -53,7 +55,9 @@ export const makeTaxServiceFromStore = <R>(storeEffect: Effect.Effect<TaxStore, 
         SetProductTaxDefaultInput,
         TaxCapabilities.productTaxConfigure,
       )(input)
+
       const { principal: _principal, ...value } = decoded
+
       return yield* store.setProductTaxDefault(value)
     })
 
@@ -61,12 +65,15 @@ export const makeTaxServiceFromStore = <R>(storeEffect: Effect.Effect<TaxStore, 
       input: Schema.Codec.Encoded<typeof DetermineTaxCodesInput>,
     ) {
       const decoded = yield* authorized(DetermineTaxCodesInput, TaxCapabilities.taxCodeRead)(input)
+
       const defaults = yield* store.productTaxDefaults(
         decoded.tenantId,
         decoded.direction,
         decoded.productIds,
       )
+
       const byProduct = new Map(defaults.map((value) => [value.productId, value.taxCodeId]))
+
       return new Map(
         decoded.productIds.map(
           (productId) => [productId, byProduct.get(productId) ?? null] as const,
@@ -78,28 +85,35 @@ export const makeTaxServiceFromStore = <R>(storeEffect: Effect.Effect<TaxStore, 
       input: Schema.Codec.Encoded<typeof ComputeTaxInput>,
     ) {
       const decoded = yield* authorized(ComputeTaxInput, TaxCapabilities.taxCodeRead)(input)
+
       const ids = [
         ...new Set(
           decoded.lines.flatMap((line) => (line.taxCodeId === null ? [] : [line.taxCodeId])),
         ),
       ]
+
       const codes = new Map(
         (yield* store.getTaxCodes(decoded.tenantId, ids)).map((code) => [code.id, code]),
       )
+
       for (const id of ids) {
         const code = codes.get(id)
+
         if (code === undefined || !code.active || code.direction !== decoded.direction) {
           return yield* Effect.fail(
             new TaxCodeNotFound({ tenantId: decoded.tenantId, taxCodeId: id }),
           )
         }
       }
+
       const summary = new Map<string, { base: bigint; tax: bigint }>()
       let totalTax = 0n
+
       const lines = decoded.lines.map((line) => {
         if (line.taxCodeId === null) {
           return { key: line.key, taxCodeId: null, rate: "0.0000", base: line.base, tax: "0.00" }
         }
+
         const code = codes.get(line.taxCodeId)!
         // Tax is computed per line and rounded half up, so document totals equal line sums.
         const tax = taxOn(line.base, code.rate)
@@ -109,8 +123,10 @@ export const makeTaxServiceFromStore = <R>(storeEffect: Effect.Effect<TaxStore, 
           tax: current.tax + minor(tax),
         })
         totalTax += minor(tax)
+
         return { key: line.key, taxCodeId: code.id, rate: code.rate, base: line.base, tax }
       })
+
       return {
         lines,
         summary: [...summary].map(([taxCodeId, amounts]) => ({

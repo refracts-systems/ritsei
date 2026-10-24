@@ -38,6 +38,7 @@ const readMember = (
 ) =>
   Effect.gen(function* () {
     const decoded = yield* Schema.decodeUnknownEffect(TenantMembershipInput)(input)
+
     const rows = yield* database.query(
       (db) =>
         db
@@ -55,8 +56,11 @@ const readMember = (
           ),
       "authorization.member.get",
     )
+
     const member = rows[0]
+
     if (member === undefined) return yield* Effect.fail(new TenantMembershipNotFound(decoded))
+
     return toTenantMembership(member)
   })
 
@@ -67,6 +71,7 @@ export const makePostgresAuthorizationService = (
     (input: Schema.Codec.Encoded<typeof AuthorizationInput>) =>
       Effect.gen(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(AuthorizationInput)(input)
+
         const rows = yield* database.query(
           (db) =>
             db
@@ -89,11 +94,13 @@ export const makePostgresAuthorizationService = (
               ),
           "authorization.check",
         )
+
         if (rows[0] === undefined) {
           return yield* Effect.fail(
             new AuthorizationDenied({ tenantId: decoded.tenantId, capability: decoded.capability }),
           )
         }
+
         return {
           allowed: true as const,
           tenantId: decoded.tenantId,
@@ -106,6 +113,7 @@ export const makePostgresAuthorizationService = (
     (input: Schema.Codec.Encoded<typeof AddTenantMembershipInput>) =>
       Effect.gen(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(AddTenantMembershipInput)(input)
+
         const rows = yield* database
           .query(
             (db) =>
@@ -123,12 +131,15 @@ export const makePostgresAuthorizationService = (
                   userAccountId: decoded.userAccountId,
                 })
               }
+
               if (isDatabaseConstraint(error, "tenant_memberships_pkey")) {
                 return new TenantMembershipAlreadyExists(decoded)
               }
+
               return error
             }),
           )
+
         return toTenantMembership(rows[0]!)
       }),
   ),
@@ -139,6 +150,7 @@ export const makePostgresAuthorizationService = (
     (input: Schema.Codec.Encoded<typeof ListTenantMembershipsInput>) =>
       Effect.gen(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(ListTenantMembershipsInput)(input)
+
         const rows = yield* database.query(
           (db) =>
             db
@@ -166,6 +178,7 @@ export const makePostgresAuthorizationService = (
               .limit(decoded.limit ?? 200),
           "authorization.member.list",
         )
+
         return rows.map(toTenantMembership)
       }),
   ),
@@ -173,6 +186,7 @@ export const makePostgresAuthorizationService = (
     (input: Schema.Codec.Encoded<typeof ListAccessibleTenantsInput>) =>
       Effect.gen(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(ListAccessibleTenantsInput)(input)
+
         const rows = yield* database.query(
           (db) =>
             db
@@ -191,6 +205,7 @@ export const makePostgresAuthorizationService = (
               .orderBy(asc(tenantMemberships.tenantId)),
           "authorization.member.listAccessibleTenants",
         )
+
         return rows.map(toTenantMembership)
       }),
   ),
@@ -199,6 +214,7 @@ export const makePostgresAuthorizationService = (
       Effect.gen(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(TenantMembershipInput)(input)
         yield* readMember(database, decoded)
+
         const rows = yield* database.query(
           (db) =>
             db
@@ -213,6 +229,7 @@ export const makePostgresAuthorizationService = (
               .orderBy(asc(memberships.capability)),
           "authorization.grant.list",
         )
+
         return rows.map(({ capability }): DirectCapabilityGrant => ({
           ...decoded,
           // SAFETY: grants are written only from a decoded DirectCapabilityGrant capability.
@@ -233,6 +250,7 @@ export const makePostgresAuthorizationService = (
     (input: Schema.Codec.Encoded<typeof TenantMembershipInput>) =>
       Effect.gen(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(TenantMembershipInput)(input)
+
         const rows = yield* database.query(
           (db) =>
             db
@@ -246,6 +264,7 @@ export const makePostgresAuthorizationService = (
               .returning({ userAccountId: tenantMemberships.userAccountId }),
           "authorization.member.remove",
         )
+
         if (rows[0] === undefined) return yield* Effect.fail(new TenantMembershipNotFound(decoded))
       }),
   ),
@@ -254,6 +273,7 @@ export const makePostgresAuthorizationService = (
       Effect.gen(function* () {
         const decoded = yield* Schema.decodeUnknownEffect(GrantCapabilityInput)(input)
         const member = yield* readMember(database, decoded)
+
         if (member.status !== "active") {
           return yield* Effect.fail(
             new TenantMembershipNotActive({
@@ -262,6 +282,7 @@ export const makePostgresAuthorizationService = (
             }),
           )
         }
+
         yield* database
           .query((db) => db.insert(memberships).values(decoded), "authorization.grant")
           .pipe(
@@ -288,6 +309,7 @@ const updateStatus = (
 ) =>
   Effect.gen(function* () {
     const decoded = yield* Schema.decodeUnknownEffect(TenantMembershipInput)(input)
+
     const rows = yield* database.query(
       (db) =>
         db
@@ -306,12 +328,16 @@ const updateStatus = (
           }),
       operation,
     )
+
     const member = rows[0]
+
     if (member === undefined) return yield* Effect.fail(new TenantMembershipNotFound(decoded))
+
     return toTenantMembership(member)
   })
 
 export type PostgresAuthorizationService = ReturnType<typeof makePostgresAuthorizationService>
+
 export type PostgresAuthorizationFailure =
   | AuthorizationDenied
   | CapabilityAlreadyGranted
@@ -321,4 +347,5 @@ export type PostgresAuthorizationFailure =
   | TenantMembershipUserAccountNotFound
   | DatabaseFailure
   | Schema.SchemaError
+
 export type { TenantMembership }

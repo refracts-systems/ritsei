@@ -21,11 +21,13 @@ export const createDialogOpenChange =
   // fallow-ignore-next-line complexity
   (next: boolean) => {
     if (mutation.isPending) return
+
     if (next) {
       mutation.reset()
       resetField?.(false)
       afterReset?.()
     }
+
     setOpen(next)
   }
 
@@ -99,6 +101,7 @@ export function useDialogInitialFocus(dialog: DialogContextValue) {
 function DialogBody(props: DialogProps & { menu: ActionMenuRegistry | null }) {
   const dialog = useDialogContext()
   useDialogInitialFocus(dialog)
+
   return (
     <KobalteDialog.Content
       class={styles.content}
@@ -144,6 +147,7 @@ function DialogBody(props: DialogProps & { menu: ActionMenuRegistry | null }) {
 // Uncontrolled dialogs inside an ActionMenu still need state the menu item can open.
 const createDialogState = (props: DialogProps) => {
   const [localOpen, setLocalOpen] = createSignal(false)
+
   return {
     open: () => props.open ?? localOpen(),
     setOpen: (next: boolean) =>
@@ -159,6 +163,7 @@ const registerMenuTrigger = (
 ) => {
   if (menu === null) return undefined
   const label = trigger()
+
   return label === undefined ? undefined : menu.register({ label, select: open })
 }
 
@@ -173,6 +178,7 @@ export function Dialog(props: DialogProps) {
       () => state.setOpen(true),
     ),
   )
+
   return (
     <KobalteDialog
       modal

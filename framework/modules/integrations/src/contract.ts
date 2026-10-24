@@ -25,6 +25,7 @@ export const ExternalIntegrationProfile = {
 } as const
 
 export type ExternalActionIdempotency = ActionIdempotency
+
 export type ExternalSchema = CatalogSchema
 
 export const ExternalCatalogLimits = {
@@ -42,10 +43,12 @@ const Identifier = Schema.String.check(
   Schema.isPattern(/\S/),
   Schema.isMaxLength(ExternalCatalogLimits.maxIdentifierLength),
 )
+
 const Scope = Schema.String.check(
   Schema.isPattern(/\S/),
   Schema.isMaxLength(ExternalCatalogLimits.maxScopeLength),
 )
+
 const PositiveInteger = Schema.Int.check(Schema.isGreaterThan(0))
 const ProblemText = Schema.String.check(Schema.isPattern(/\S/), Schema.isMaxLength(4_096))
 
@@ -96,22 +99,28 @@ export const ExternalProblemDetails = Schema.Struct({
 const ExternalSchemaValue = Schema.Unknown.pipe(
   Schema.refine((value): value is ExternalSchema => Schema.isSchema(value)),
 )
+
 const ExternalErrorSchemas = Schema.Array(ExternalSchemaValue).check(
   Schema.isMaxLength(ExternalCatalogLimits.maxErrorSchemas),
 )
+
 const ScopeList = Schema.Array(Scope).check(
   Schema.isMinLength(1),
   Schema.isMaxLength(ExternalCatalogLimits.maxCorrelationFields),
 )
+
 const CorrelationFields = Schema.Array(Identifier).check(
   Schema.isMaxLength(ExternalCatalogLimits.maxCorrelationFields),
 )
+
 const FilterableFields = Schema.Array(Identifier).check(
   Schema.isMaxLength(ExternalCatalogLimits.maxFilterableFields),
 )
+
 const TimeoutPolicySchema = Schema.Struct({
   timeoutMs: PositiveInteger.check(Schema.isLessThanOrEqualTo(ExternalCatalogLimits.maxTimeoutMs)),
 })
+
 const RetryPolicySchema = Schema.Struct({
   maxAttempts: PositiveInteger.check(Schema.isLessThanOrEqualTo(ExternalCatalogLimits.maxAttempts)),
 })
@@ -176,6 +185,7 @@ export const ExternalEventDefinitionSchema = Schema.Struct({
 export const decodeExternalActionDefinition = Schema.decodeUnknownResult(
   ExternalActionDefinitionSchema,
 )
+
 export const decodeExternalEventDefinition = Schema.decodeUnknownResult(
   ExternalEventDefinitionSchema,
 )

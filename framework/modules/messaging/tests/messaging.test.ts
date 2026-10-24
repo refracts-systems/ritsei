@@ -42,12 +42,16 @@ it.effect("bounds public JSON payload resources", () =>
     const oversizedString = yield* Effect.flip(
       Schema.decodeUnknownEffect(EventEnvelope)({ ...event(), payload: "x".repeat(64 * 1024 + 1) }),
     )
+
     const oversizedArray = yield* Effect.flip(
       Schema.decodeUnknownEffect(EventEnvelope)({ ...event(), payload: Array(1_001).fill(null) }),
     )
+
     const nest = (depth: number): readonly unknown[] | null =>
       depth === 0 ? null : [nest(depth - 1)]
+
     const deeplyNested = nest(17)
+
     const oversizedDepth = yield* Effect.flip(
       Schema.decodeUnknownEffect(EventEnvelope)({ ...event(), payload: deeplyNested }),
     )
@@ -68,6 +72,7 @@ it.effect("rejects malformed envelope and receipt timestamps", () =>
         attempts: 0,
       }),
     )
+
     const overflowingVersion = yield* Effect.flip(
       Schema.decodeUnknownEffect(EventEnvelope)({
         ...event(),
@@ -76,6 +81,7 @@ it.effect("rejects malformed envelope and receipt timestamps", () =>
         attempts: 0,
       }),
     )
+
     const invalidAttempts = yield* Effect.flip(
       Schema.decodeUnknownEffect(EventEnvelope)({
         ...event(),
@@ -83,6 +89,7 @@ it.effect("rejects malformed envelope and receipt timestamps", () =>
         attempts: -1,
       }),
     )
+
     const overflowingAttempts = yield* Effect.flip(
       Schema.decodeUnknownEffect(EventEnvelope)({
         ...event(),
@@ -90,6 +97,7 @@ it.effect("rejects malformed envelope and receipt timestamps", () =>
         attempts: 2_147_483_648,
       }),
     )
+
     const invalidReceipt = yield* Effect.flip(
       Schema.decodeUnknownEffect(ConsumerReceipt)({
         tenantId: event().tenantId,
@@ -127,6 +135,7 @@ it.effect("rejects malformed idempotency-conflict identities", () =>
         eventVersion: 0,
       }),
     )
+
     assert.strictEqual(invalid._tag, "SchemaError")
   }),
 )
@@ -164,9 +173,11 @@ it.effect("loads events through a tenant-scoped public query", () =>
         eventId: "018f3f77-0c5a-7cc0-8b62-6a163d214126",
       }),
     )
+
     const invalidGetEvent = yield* Effect.flip(
       messaging.getEvent({ tenantId: "not-a-uuid", eventId: source.eventId }),
     )
+
     assert.strictEqual(invalidGetEvent._tag, "SchemaError")
   }).pipe(Effect.provide(makeMessagingTestLayer())),
 )
@@ -175,16 +186,20 @@ it.effect("suppresses a duplicate event consumer effect with one consumer receip
   Effect.gen(function* () {
     const messaging = yield* MessagingService
     yield* messaging.append(event())
+
     const input = {
       tenantId: event().tenantId,
       consumerId: "accounting.project-order",
       eventId: event().eventId,
     }
+
     let executions = 0
+
     const first = yield* messaging.consumeOnce(
       input,
       Effect.sync(() => ++executions),
     )
+
     const duplicate = yield* messaging.consumeOnce(
       input,
       Effect.sync(() => ++executions),
@@ -203,12 +218,15 @@ it.effect("suppresses concurrent duplicate consumer effects in the test layer", 
   Effect.gen(function* () {
     const messaging = yield* MessagingService
     yield* messaging.append(event())
+
     const input = {
       tenantId: event().tenantId,
       consumerId: "accounting.concurrent-project-order",
       eventId: event().eventId,
     }
+
     let executions = 0
+
     const results = yield* Effect.all(
       [
         messaging.consumeOnce(
@@ -239,18 +257,22 @@ it.effect("rolls back the consumer receipt when the consumer effect fails", () =
   Effect.gen(function* () {
     const messaging = yield* MessagingService
     yield* messaging.append(event())
+
     const input = {
       tenantId: event().tenantId,
       consumerId: "inventory.project-order",
       eventId: event().eventId,
     }
+
     const failed = yield* Effect.result(
       messaging.consumeOnce(input, Effect.fail("projection failed")),
     )
+
     assert.isTrue(Result.isFailure(failed))
 
     const retried = yield* messaging.consumeOnce(input, Effect.succeed("completed"))
     assert.strictEqual(retried.duplicate, false)
+
     if (!retried.duplicate) assert.strictEqual(retried.value, "completed")
   }).pipe(Effect.provide(makeMessagingTestLayer())),
 )
@@ -268,11 +290,14 @@ it.effect("requires a tenant-matching source event and rolls back the consumer e
       consumerId: "accounting.project-order",
       eventId: source.eventId,
     }
+
     let executions = 0
+
     const consume = messaging.consumeOnce(
       input,
       Effect.gen(function* () {
         executions++
+
         return yield* messaging.append(
           event({
             eventId: derivedEventId,

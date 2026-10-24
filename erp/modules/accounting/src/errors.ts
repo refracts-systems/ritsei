@@ -1,11 +1,13 @@
 import * as Schema from "effect/Schema"
 
 const Uuid = Schema.String.check(Schema.isUUID())
+
 const TrimmedNonEmptyString = Schema.String.check(
   Schema.makeFilter((value) => /\S/.test(value) && value === value.trim(), {
     expected: "a trimmed nonblank string",
   }),
 )
+
 const UpperTrimmedNonEmptyString = Schema.String.check(
   Schema.makeFilter(
     (value) => /\S/.test(value) && value === value.trim() && value === value.toUpperCase(),
@@ -20,6 +22,7 @@ export class AccountingConfigurationAlreadyExists extends Schema.TaggedError<Acc
     legalEntityId: Uuid,
   },
 ) {}
+
 export class FinancialEngineActivated extends Schema.TaggedError<FinancialEngineActivated>()(
   "FinancialEngineActivated",
   {
@@ -27,6 +30,7 @@ export class FinancialEngineActivated extends Schema.TaggedError<FinancialEngine
     legalEntityId: Uuid,
   },
 ) {}
+
 export class FinancialEngineCutoverBlocked extends Schema.TaggedError<FinancialEngineCutoverBlocked>()(
   "FinancialEngineCutoverBlocked",
   {
@@ -47,6 +51,7 @@ export class FinancialVerificationArtifactNotFound extends Schema.TaggedError<Fi
   "FinancialVerificationArtifactNotFound",
   { tenantId: Uuid, artifactId: Uuid },
 ) {}
+
 export class FinancialVerificationArtifactInvalid extends Schema.TaggedError<FinancialVerificationArtifactInvalid>()(
   "FinancialVerificationArtifactInvalid",
   {
@@ -64,6 +69,7 @@ export class FinancialStagingEvidenceConflict extends Schema.TaggedError<Financi
     reason: Schema.Literal("different_content"),
   },
 ) {}
+
 export class FinancialStagingEvidenceInvalid extends Schema.TaggedError<FinancialStagingEvidenceInvalid>()(
   "FinancialStagingEvidenceInvalid",
   {
@@ -86,6 +92,7 @@ export class AccountingLegalEntityNotFound extends Schema.TaggedError<Accounting
     legalEntityId: Uuid,
   },
 ) {}
+
 export class AccountAlreadyExists extends Schema.TaggedError<AccountAlreadyExists>()(
   "AccountAlreadyExists",
   {
@@ -93,9 +100,11 @@ export class AccountAlreadyExists extends Schema.TaggedError<AccountAlreadyExist
     code: UpperTrimmedNonEmptyString,
   },
 ) {}
+
 export class AccountNotFound extends Schema.TaggedError<AccountNotFound>()("AccountNotFound", {
   tenantId: Uuid,
 }) {}
+
 export class JournalReferenceAlreadyExists extends Schema.TaggedError<JournalReferenceAlreadyExists>()(
   "JournalReferenceAlreadyExists",
   {
@@ -103,6 +112,7 @@ export class JournalReferenceAlreadyExists extends Schema.TaggedError<JournalRef
     reference: TrimmedNonEmptyString,
   },
 ) {}
+
 export class JournalIdempotencyConflict extends Schema.TaggedError<JournalIdempotencyConflict>()(
   "JournalIdempotencyConflict",
   {
@@ -110,12 +120,14 @@ export class JournalIdempotencyConflict extends Schema.TaggedError<JournalIdempo
     reference: TrimmedNonEmptyString,
   },
 ) {}
+
 export class InvalidJournalLine extends Schema.TaggedError<InvalidJournalLine>()(
   "InvalidJournalLine",
   {
     index: Schema.Int,
   },
 ) {}
+
 export class UnbalancedJournal extends Schema.TaggedError<UnbalancedJournal>()(
   "UnbalancedJournal",
   {
@@ -123,10 +135,12 @@ export class UnbalancedJournal extends Schema.TaggedError<UnbalancedJournal>()(
     credit: Schema.String,
   },
 ) {}
+
 export class RevenuePostingProfileAlreadyExists extends Schema.TaggedError<RevenuePostingProfileAlreadyExists>()(
   "RevenuePostingProfileAlreadyExists",
   { tenantId: Uuid, legalEntityId: Uuid },
 ) {}
+
 export class InvalidRevenuePostingProfile extends Schema.TaggedError<InvalidRevenuePostingProfile>()(
   "InvalidRevenuePostingProfile",
   {
@@ -134,6 +148,7 @@ export class InvalidRevenuePostingProfile extends Schema.TaggedError<InvalidReve
     legalEntityId: Uuid,
   },
 ) {}
+
 export class AccountingPeriodOverlap extends Schema.TaggedError<AccountingPeriodOverlap>()(
   "AccountingPeriodOverlap",
   {
@@ -141,6 +156,7 @@ export class AccountingPeriodOverlap extends Schema.TaggedError<AccountingPeriod
     legalEntityId: Uuid,
   },
 ) {}
+
 export class AccountingPeriodNotFound extends Schema.TaggedError<AccountingPeriodNotFound>()(
   "AccountingPeriodNotFound",
   {
@@ -149,6 +165,7 @@ export class AccountingPeriodNotFound extends Schema.TaggedError<AccountingPerio
     periodId: Uuid,
   },
 ) {}
+
 export class AccountingPeriodNotOpen extends Schema.TaggedError<AccountingPeriodNotOpen>()(
   "AccountingPeriodNotOpen",
   {
@@ -156,6 +173,7 @@ export class AccountingPeriodNotOpen extends Schema.TaggedError<AccountingPeriod
     legalEntityId: Uuid,
   },
 ) {}
+
 export class FinancialOperationsPending extends Schema.TaggedError<FinancialOperationsPending>()(
   "FinancialOperationsPending",
   {
@@ -164,6 +182,7 @@ export class FinancialOperationsPending extends Schema.TaggedError<FinancialOper
     periodId: Uuid,
   },
 ) {}
+
 export class RevenuePostingProfileNotFound extends Schema.TaggedError<RevenuePostingProfileNotFound>()(
   "RevenuePostingProfileNotFound",
   {
@@ -171,6 +190,7 @@ export class RevenuePostingProfileNotFound extends Schema.TaggedError<RevenuePos
     legalEntityId: Uuid,
   },
 ) {}
+
 export class RevenueJournalNotFound extends Schema.TaggedError<RevenueJournalNotFound>()(
   "RevenueJournalNotFound",
   {
@@ -179,6 +199,7 @@ export class RevenueJournalNotFound extends Schema.TaggedError<RevenueJournalNot
     orderId: Uuid,
   },
 ) {}
+
 export class PostingRuleNotFound extends Schema.TaggedError<PostingRuleNotFound>()(
   "PostingRuleNotFound",
   {
@@ -187,6 +208,7 @@ export class PostingRuleNotFound extends Schema.TaggedError<PostingRuleNotFound>
     role: Schema.String,
   },
 ) {}
+
 export class InvalidParentAccount extends Schema.TaggedError<InvalidParentAccount>()(
   "InvalidParentAccount",
   {

@@ -33,15 +33,18 @@ import {
 
 const principal = { userAccountId: "tax-user", sessionId: "tax-session" }
 const tenantId = "018f2000-0000-7000-8000-0000000000aa"
+
 const grantsFor = (tenant: string) =>
   Object.values(TaxCapabilities).map((capability) => ({
     userAccountId: principal.userAccountId,
     tenantId: tenant,
     capability,
   }))
+
 const granted = makeTaxTestLayer().pipe(
   Layer.provide(makeAuthorizationTestLayer(grantsFor(tenantId))),
 )
+
 const ungranted = makeTaxTestLayer().pipe(Layer.provide(makeAuthorizationTestLayer([])))
 
 const TestHttpServices = Layer.mergeAll(Path.layer, Etag.layerWeak, HttpPlatform.layer).pipe(
@@ -63,6 +66,7 @@ describe("tax module", () => {
   it.effect("computes tax per line and per code, and rejects codes of the other direction", () =>
     Effect.gen(function* () {
       const tax = yield* TaxService
+
       const vat = yield* tax.createTaxCode({
         principal,
         tenantId,
@@ -71,8 +75,10 @@ describe("tax module", () => {
         rate: "11",
         direction: "sales",
       })
+
       assert.strictEqual(vat.code, "VAT11")
       assert.strictEqual(vat.rate, "11.0000")
+
       const inputVat = yield* tax.createTaxCode({
         principal,
         tenantId,
@@ -81,6 +87,7 @@ describe("tax module", () => {
         rate: "11",
         direction: "purchase",
       })
+
       const duplicate = yield* Effect.flip(
         tax.createTaxCode({
           principal,
@@ -91,6 +98,7 @@ describe("tax module", () => {
           direction: "sales",
         }),
       )
+
       assert.instanceOf(duplicate, TaxCodeAlreadyExists)
 
       const computed = yield* tax.computeTax({
@@ -103,6 +111,7 @@ describe("tax module", () => {
           { key: "c", base: "10.00", taxCodeId: null },
         ],
       })
+
       assert.deepStrictEqual(
         computed.lines.map((line) => line.tax),
         ["11.00", "5.01", "0.00"],
@@ -120,6 +129,7 @@ describe("tax module", () => {
           lines: [{ key: "a", base: "1.00", taxCodeId: inputVat.id }],
         }),
       )
+
       assert.instanceOf(wrongDirection, TaxCodeNotFound)
 
       const productId = uuidv7()
@@ -130,6 +140,7 @@ describe("tax module", () => {
         direction: "sales",
         taxCodeId: vat.id,
       })
+
       const mismatched = yield* Effect.flip(
         tax.setProductTaxDefault({
           principal,
@@ -139,13 +150,16 @@ describe("tax module", () => {
           taxCodeId: inputVat.id,
         }),
       )
+
       assert.instanceOf(mismatched, TaxCodeNotFound)
+
       const determined = yield* tax.determineTaxCodes({
         principal,
         tenantId,
         direction: "sales",
         productIds: [productId, uuidv7()],
       })
+
       assert.deepStrictEqual([...determined.values()], [vat.id, null])
     }).pipe(Effect.provide(granted)),
   )
@@ -165,18 +179,24 @@ it.layer(TestHttpServices)("tax HTTP endpoint", (it) => {
       const bearer = Layer.succeed(BearerAuth, {
         bearer: (effect) => Effect.provideService(effect, CurrentPrincipal, principal),
       })
+
       const bearerClient = HttpApiMiddleware.layerClient(BearerAuth, ({ request, next }) =>
         next(HttpClientRequest.bearerToken(request, "tax-token")),
       )
+
       const handlers = TaxHttpHandlers.pipe(Layer.provide(bearer), Layer.provide(granted))
+
       const client = yield* HttpApiTest.groups(moduleApi(TaxHttpGroup), ["Tax"]).pipe(
         Effect.provide(Layer.mergeAll(handlers, bearerClient, bearer)),
       )
+
       const headers = { "x-tenant-id": tenantId }
+
       const created = yield* client.Tax.createTaxCode({
         headers,
         payload: { code: "ZERO", name: "Zero rated", rate: "0", direction: "sales" },
       })
+
       assert.strictEqual(created.rate, "0.0000")
       assert.deepStrictEqual(yield* client.Tax.listTaxCodes({ headers, query: {} }), [created])
     }),
@@ -192,15 +212,18 @@ it.effect.skipIf(databaseUrl === undefined)(
       Effect.gen(function* () {
         yield* runMigrations(client)
         const fixture = yield* seedErpFixture(client)
+
         const [product] = yield* Effect.promise(
           () => client<{ id: string }[]>`
             insert into product.products (tenant_id, code, name, type, unit_of_measure)
             values (${fixture.tenantId}, 'WIDGET', 'Widget', 'stockable', 'EA') returning id
           `,
         )
+
         yield* Effect.gen(function* () {
           const tax = yield* TaxService
           const scope = { principal, tenantId: fixture.tenantId }
+
           const vat = yield* tax.createTaxCode({
             ...scope,
             code: "VAT11",
@@ -208,6 +231,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             rate: "11",
             direction: "sales",
           })
+
           const purchase = yield* tax.createTaxCode({
             ...scope,
             code: "IN11",
@@ -215,12 +239,14 @@ it.effect.skipIf(databaseUrl === undefined)(
             rate: "11",
             direction: "purchase",
           })
+
           yield* tax.setProductTaxDefault({
             ...scope,
             productId: product!.id,
             direction: "sales",
             taxCodeId: vat.id,
           })
+
           const missingProduct = yield* Effect.flip(
             tax.setProductTaxDefault({
               ...scope,
@@ -229,7 +255,9 @@ it.effect.skipIf(databaseUrl === undefined)(
               taxCodeId: vat.id,
             }),
           )
+
           assert.instanceOf(missingProduct, TaxProductNotFound)
+
           const wrongDirection = yield* Effect.flip(
             tax.setProductTaxDefault({
               ...scope,
@@ -238,12 +266,15 @@ it.effect.skipIf(databaseUrl === undefined)(
               taxCodeId: purchase.id,
             }),
           )
+
           assert.instanceOf(wrongDirection, TaxCodeNotFound)
+
           const determined = yield* tax.determineTaxCodes({
             ...scope,
             direction: "sales",
             productIds: [product!.id],
           })
+
           assert.strictEqual(determined.get(product!.id), vat.id)
         }).pipe(
           Effect.provide(

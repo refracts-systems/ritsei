@@ -33,14 +33,18 @@ export function Connection() {
   const connect = async () => {
     setPending(true)
     setMessage("")
+
     try {
       const login = await devLogin()
       const authenticated = await getAuthSession(login.token)
       const tenant = authenticated.activeTenant ?? authenticated.memberships[0]
+
       if (tenant === undefined) {
         setMessage("Your account has no active tenant membership.")
+
         return
       }
+
       session.replace({ token: login.token, tenantId: tenant.tenantId }, authenticated)
       navigate("/")
     } catch (error) {
@@ -57,8 +61,10 @@ export function Connection() {
   const oidc = async () => {
     setPending(true)
     setMessage("")
+
     try {
       const current = configuration()
+
       if (current === null) throw new AuthClientFailure("invalid-response")
       await beginOidcLogin(current)
     } catch {

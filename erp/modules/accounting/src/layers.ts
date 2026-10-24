@@ -31,10 +31,12 @@ export const makeFinancialOperationsTestLive = () =>
   Layer.effect(FinancialOperationService, makeFinancialOperationService)
 
 export { makeAccountingService, makeAccountingTestLayer }
+
 export { FinancialOperationServiceLive }
 
 /** The general ledger over PostgreSQL; requires Database, Authorization, and Numbering. */
 export const makeGeneralLedgerService = makeGeneralLedgerServiceFromStore(
   makeGeneralLedgerPostgresStore(),
 )
+
 export const GeneralLedgerLive = Layer.effect(GeneralLedgerService, makeGeneralLedgerService)

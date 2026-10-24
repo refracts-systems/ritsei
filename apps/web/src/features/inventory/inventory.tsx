@@ -63,13 +63,16 @@ const requiredText = (value: FormDataEntryValue | null | undefined): string | nu
 // fallow-ignore-next-line code-duplication
 const statusTone = (status: StockReservation["status"] | StockTransfer["status"] | string) => {
   if (["completed", "fulfilled", "active"].includes(status)) return "success" as const
+
   if (["released", "confirmed"].includes(status)) return "warning" as const
+
   return "neutral" as const
 }
 
 const commandKey = (prefix: string) => `${prefix}:${Date.now()}`
 
 type LookupOption = { readonly value: string; readonly label: string }
+
 type InventoryLookupOptions = {
   readonly warehouses: readonly LookupOption[]
   readonly items: readonly LookupOption[]
@@ -171,10 +174,12 @@ function CreateWarehouseDialog(props: { reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
+
   const mutation = createWarehouseMutation(scope, () => {
     setOpen(false)
     void props.reload()
   })
+
   return (
     <Dialog
       open={open()}
@@ -193,21 +198,27 @@ function CreateWarehouseDialog(props: { reload: () => Promise<void> }) {
             const legalEntityId = requiredText(value.legalEntityId)
             const primaryBranchId = requiredText(value.primaryBranchId)
             const name = requiredText(value.name)
+
             const valid =
               legalEntityId !== null &&
               uuidPattern.test(legalEntityId) &&
               (primaryBranchId === null || uuidPattern.test(primaryBranchId)) &&
               name !== null
+
             if (!valid) {
               setInvalid(true)
+
               return
             }
+
             setInvalid(false)
+
             const input: CreateWarehouseInput = {
               legalEntityId,
               ...presentFields({ primaryBranchId }),
               name,
             }
+
             mutation.mutate(input)
           }
         }
@@ -255,10 +266,12 @@ function CreateItemDialog(props: { reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
+
   const mutation = createItemMutation(scope, () => {
     setOpen(false)
     void props.reload()
   })
+
   return (
     <Dialog
       open={open()}
@@ -277,10 +290,13 @@ function CreateItemDialog(props: { reload: () => Promise<void> }) {
             const sku = requiredText(value.sku)
             const name = requiredText(value.name)
             const unitOfMeasure = requiredText(value.unitOfMeasure) ?? "EA"
+
             if (sku === null || name === null || !unitPattern.test(unitOfMeasure.toUpperCase())) {
               setInvalid(true)
+
               return
             }
+
             setInvalid(false)
             const input: CreateItemInput = { sku, name, unitOfMeasure }
             mutation.mutate(input)
@@ -342,6 +358,7 @@ function ReceiveStockDialog(props: {
   reload: () => Promise<void>
 }) {
   const scope = useContext(ApiRuntime)
+
   const options = {
     get warehouses() {
       return LookupOptions(props).warehouses
@@ -350,12 +367,15 @@ function ReceiveStockDialog(props: {
       return LookupOptions(props).items
     },
   }
+
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
+
   const mutation = createReceiveStockMutation(scope, () => {
     setOpen(false)
     void props.reload()
   })
+
   return (
     // Fallow: receipt, adjustment, and reservation commands intentionally share one accessible dialog shell.
     // fallow-ignore-next-line code-duplication
@@ -377,6 +397,7 @@ function ReceiveStockDialog(props: {
             const warehouseId = requiredText(value.warehouseId)
             const itemId = requiredText(value.itemId)
             const quantity = requiredText(value.quantity)
+
             const valid =
               warehouseId !== null &&
               uuidPattern.test(warehouseId) &&
@@ -384,10 +405,13 @@ function ReceiveStockDialog(props: {
               uuidPattern.test(itemId) &&
               quantity !== null &&
               quantityPattern.test(quantity)
+
             if (!valid) {
               setInvalid(true)
+
               return
             }
+
             setInvalid(false)
             const input: ReceiveStockInput = { warehouseId, itemId, quantity }
             mutation.mutate(input)
@@ -429,6 +453,7 @@ function AdjustStockDialog(props: {
   reload: () => Promise<void>
 }) {
   const scope = useContext(ApiRuntime)
+
   const options = {
     get warehouses() {
       return LookupOptions(props).warehouses
@@ -437,13 +462,16 @@ function AdjustStockDialog(props: {
       return LookupOptions(props).items
     },
   }
+
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
   const [key, setKey] = createSignal(commandKey("adjust"))
+
   const mutation = createAdjustStockMutation(scope, () => {
     setOpen(false)
     void props.reload()
   })
+
   return (
     // Fallow: receipt, adjustment, and reservation commands intentionally share one accessible dialog shell.
     // fallow-ignore-next-line code-duplication
@@ -472,6 +500,7 @@ function AdjustStockDialog(props: {
             const idempotencyKey = requiredText(value.idempotencyKey)
             const commandId = requiredText(value.commandId)
             const correlationId = requiredText(value.correlationId)
+
             const valid =
               warehouseId !== null &&
               uuidPattern.test(warehouseId) &&
@@ -485,11 +514,15 @@ function AdjustStockDialog(props: {
               idempotencyKey !== null &&
               commandId !== null &&
               correlationId !== null
+
             if (!valid) {
               setInvalid(true)
+
               return
             }
+
             setInvalid(false)
+
             const input: AdjustStockInput = {
               warehouseId,
               itemId,
@@ -500,6 +533,7 @@ function AdjustStockDialog(props: {
               correlationId,
               idempotencyKey,
             }
+
             mutation.mutate(input)
           }
         }
@@ -629,6 +663,7 @@ function ReserveStockDialog(props: {
   reload: () => Promise<void>
 }) {
   const scope = useContext(ApiRuntime)
+
   const options = {
     get warehouses() {
       return LookupOptions(props).warehouses
@@ -637,13 +672,16 @@ function ReserveStockDialog(props: {
       return LookupOptions(props).items
     },
   }
+
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
   const [key, setKey] = createSignal(commandKey("reserve"))
+
   const mutation = createReserveStockMutation(scope, () => {
     setOpen(false)
     void props.reload()
   })
+
   return (
     // Fallow: receipt, adjustment, and reservation commands intentionally share one accessible dialog shell.
     // fallow-ignore-next-line code-duplication
@@ -668,6 +706,7 @@ function ReserveStockDialog(props: {
             const itemId = requiredText(value.itemId)
             const quantity = requiredText(value.quantity)
             const idempotencyKey = requiredText(value.idempotencyKey)
+
             const valid =
               warehouseId !== null &&
               uuidPattern.test(warehouseId) &&
@@ -676,10 +715,13 @@ function ReserveStockDialog(props: {
               quantity !== null &&
               quantityPattern.test(quantity) &&
               idempotencyKey !== null
+
             if (!valid) {
               setInvalid(true)
+
               return
             }
+
             setInvalid(false)
             const input: ReserveStockInput = { warehouseId, itemId, quantity, idempotencyKey }
             mutation.mutate(input)
@@ -732,6 +774,7 @@ function CreateTransferDialog(props: {
   reload: () => Promise<void>
 }) {
   const scope = useContext(ApiRuntime)
+
   const options = {
     get warehouses() {
       return LookupOptions(props).warehouses
@@ -740,12 +783,15 @@ function CreateTransferDialog(props: {
       return LookupOptions(props).items
     },
   }
+
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
+
   const mutation = createTransferMutation(scope, () => {
     setOpen(false)
     void props.reload()
   })
+
   return (
     <Dialog
       open={open()}
@@ -766,6 +812,7 @@ function CreateTransferDialog(props: {
             const destinationWarehouseId = requiredText(value.destinationWarehouseId)
             const itemId = requiredText(value.itemId)
             const quantity = requiredText(value.quantity)
+
             const valid =
               sourceWarehouseId !== null &&
               uuidPattern.test(sourceWarehouseId) &&
@@ -776,16 +823,21 @@ function CreateTransferDialog(props: {
               uuidPattern.test(itemId) &&
               quantity !== null &&
               quantityPattern.test(quantity)
+
             if (!valid) {
               setInvalid(true)
+
               return
             }
+
             setInvalid(false)
+
             const input: CreateStockTransferInput = {
               sourceWarehouseId,
               destinationWarehouseId,
               lines: [{ itemId, quantity }],
             }
+
             mutation.mutate(input)
           }
         }
@@ -848,11 +900,14 @@ function ReservationCommand(props: {
 }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
+
   const mutation =
     props.kind === "release"
       ? createReleaseReservationMutation(scope, () => setOpen(false))
       : createFulfillReservationMutation(scope, () => setOpen(false))
+
   const label = props.kind === "release" ? "Release reservation" : "Fulfill reservation"
+
   return (
     <Dialog
       open={open()}
@@ -893,11 +948,14 @@ function TransferCommand(props: {
 }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
+
   const mutation =
     props.kind === "confirm"
       ? createConfirmTransferMutation(scope, () => setOpen(false))
       : createCompleteTransferMutation(scope, () => setOpen(false))
+
   const label = props.kind === "confirm" ? "Confirm transfer" : "Complete transfer"
+
   return (
     <Dialog
       open={open()}
@@ -1233,6 +1291,7 @@ function InventoryFilters(props: {
   movementKind?: StockMovement["kind"]
 }) {
   const navigate = useNavigate()
+
   return (
     <Form
       class={layout.row}
@@ -1248,21 +1307,27 @@ function InventoryFilters(props: {
           const reservationStatus = value.reservationStatus
           const transferStatus = value.transferStatus
           const movementKind = value.movementKind
+
           if (warehouseId !== null) query.set("warehouseId", warehouseId)
+
           if (itemId !== null) query.set("itemId", itemId)
+
           if (search !== null) query.set("search", search)
+
           if (
             reservationStatus === "active" ||
             reservationStatus === "released" ||
             reservationStatus === "fulfilled"
           )
             query.set("reservationStatus", reservationStatus)
+
           if (
             transferStatus === "draft" ||
             transferStatus === "confirmed" ||
             transferStatus === "completed"
           )
             query.set("transferStatus", transferStatus)
+
           if (
             movementKind === "receipt" ||
             movementKind === "issue" ||
@@ -1465,32 +1530,38 @@ export function Inventory(props: {
 }) {
   const scope = useContext(ApiRuntime)
   const warehouses = createWarehousesQuery(scope, { limit: 200 })
+
   const items = createItemsQuery(scope, {
     ...definedFields({ search: props.search }),
     limit: 200,
   })
+
   const balances = createStockBalancesQuery(scope, {
     ...definedFields({ warehouseId: props.warehouseId }),
     ...definedFields({ itemId: props.itemId }),
     limit: 200,
   })
+
   const reservations = createStockReservationsQuery(scope, {
     ...definedFields({ warehouseId: props.warehouseId }),
     ...definedFields({ itemId: props.itemId }),
     ...definedFields({ status: props.reservationStatus }),
     limit: 200,
   })
+
   const transfers = createStockTransfersQuery(scope, {
     ...definedFields({ warehouseId: props.warehouseId }),
     ...definedFields({ status: props.transferStatus }),
     limit: 200,
   })
+
   const movements = createStockMovementsQuery(scope, {
     ...definedFields({ warehouseId: props.warehouseId }),
     ...definedFields({ itemId: props.itemId }),
     ...definedFields({ kind: props.movementKind }),
     limit: 200,
   })
+
   const reload = () =>
     reloaded(
       Promise.all([
@@ -1502,22 +1573,28 @@ export function Inventory(props: {
         movements.refetch(),
       ]),
     )
+
   const warehouseData = createMemo(() => warehouses.data ?? [])
   const itemData = createMemo(() => items.data ?? [])
+
   const names: InventoryNames = {
     warehouse: (id) => warehouseData().find((warehouse) => warehouse.id === id)?.name,
     item: (id) => {
       const item = itemData().find((candidate) => candidate.id === id)
+
       return item === undefined ? undefined : `${item.sku} · ${item.name}`
     },
   }
+
   const balanceData = createMemo(() => balances.data ?? [])
   const reservationData = createMemo(() => reservations.data ?? [])
   const transferData = createMemo(() => transfers.data ?? [])
   const movementData = createMemo(() => movements.data ?? [])
+
   const selectedTransfer = createMemo(() =>
     transferData().find((transfer) => transfer.id === props.selectedTransferId),
   )
+
   return (
     <QueryBoundary label="Inventory" retry={reload}>
       <EntityWorkspace

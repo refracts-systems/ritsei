@@ -18,6 +18,7 @@ export const ProcessNodeKind = Schema.Literals([
 ])
 
 export const ProcessEnvironment = Schema.Literals(["DEV", "TEST", "PROD"])
+
 export const ProcessRuntimeStatus = Schema.Literals([
   "running",
   "waiting",
@@ -25,6 +26,7 @@ export const ProcessRuntimeStatus = Schema.Literals([
   "failed",
   "manual_recovery",
 ])
+
 export const ProcessFailureKind = Schema.Literals([
   "business_failure",
   "technical_retry",
@@ -47,10 +49,12 @@ export const ProcessDefinitionNode = Schema.Struct({
   id: NonEmptyString,
   kind: ProcessNodeKind,
 })
+
 export const ProcessDefinitionEdge = Schema.Struct({
   from: NonEmptyString,
   to: NonEmptyString,
 })
+
 export const ProcessDefinition = Schema.Struct({
   id: Uuid,
   version: PositiveInt,
@@ -91,8 +95,11 @@ export const ProcessCheckpoint = Schema.Struct({
 })
 
 export type ProcessDefinition = Schema.Schema.Type<typeof ProcessDefinition>
+
 export type ProcessCheckpoint = Schema.Schema.Type<typeof ProcessCheckpoint>
+
 export type ProcessStepExecution = Schema.Schema.Type<typeof ProcessStepExecution>
+
 export type ProcessFailureKind = Schema.Schema.Type<typeof ProcessFailureKind>
 
 export class ProcessCheckpointInvalid extends Schema.TaggedError<ProcessCheckpointInvalid>()(
@@ -173,15 +180,18 @@ export const makeProcessRuntime = (): ProcessRuntime => ({
     const existingByStep = checkpoint.stepExecutions.find(
       (current) => current.stepId === execution.stepId,
     )
+
     const existingByKey = checkpoint.stepExecutions.find(
       (current) => current.idempotencyKey === execution.idempotencyKey,
     )
+
     if (
       existingByStep !== undefined &&
       existingByStep.idempotencyKey === execution.idempotencyKey
     ) {
       return Effect.succeed(checkpoint)
     }
+
     if (existingByStep !== undefined || existingByKey !== undefined) {
       return Effect.fail(
         new ProcessStepConflict({
@@ -190,6 +200,7 @@ export const makeProcessRuntime = (): ProcessRuntime => ({
         }),
       )
     }
+
     return Effect.succeed({
       ...checkpoint,
       revision: nextRevision(checkpoint),
@@ -205,6 +216,7 @@ export const makeProcessRuntime = (): ProcessRuntime => ({
     if (!Schema.is(Uuid)(eventId)) {
       return Effect.fail(new ProcessCheckpointInvalid({ reason: "event ID is not a UUID" }))
     }
+
     return Effect.succeed(
       has(checkpoint.consumedEventIds, eventId)
         ? checkpoint
@@ -220,6 +232,7 @@ export const makeProcessRuntime = (): ProcessRuntime => ({
     if (!/\S/.test(timerId)) {
       return Effect.fail(new ProcessCheckpointInvalid({ reason: "timer ID is blank" }))
     }
+
     return Effect.succeed(
       has(checkpoint.scheduledTimerIds, timerId)
         ? checkpoint

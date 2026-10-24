@@ -42,6 +42,7 @@ const fromBase64Url = (value: string) => {
     .replaceAll("-", "+")
     .replaceAll("_", "/")
     .padEnd(Math.ceil(value.length / 4) * 4, "=")
+
   return Uint8Array.from(atob(base64), (character) => character.charCodeAt(0))
 }
 
@@ -80,8 +81,11 @@ const databaseIdentity = (client: Sql, operation: "capture" | "wait") =>
         "select (pg_control_system()).system_identifier::text as system_identifier, " +
           "(pg_control_checkpoint()).timeline_id as timeline_id",
       )
+
       const identity = rows[0]
+
       if (identity === undefined) throw new Error("PostgreSQL identity is unavailable")
+
       return identity
     },
     catch: () =>
@@ -98,10 +102,13 @@ const capturePosition = (client: Sql) =>
       const rows = await client.unsafe<Array<{ readonly lsn: string }>>(
         "select pg_current_wal_insert_lsn()::text as lsn",
       )
+
       const lsn = rows[0]?.lsn
+
       if (lsn === undefined || !isConsistencyLsn(lsn)) {
         throw new Error("PostgreSQL LSN is unavailable")
       }
+
       return lsn
     },
     catch: () => new ReplicaConsistencyFailure({ reason: "capture_failed" }),
@@ -111,9 +118,11 @@ const signPayload = (key: CryptoKey, payload: TokenPayload) =>
   Effect.tryPromise({
     try: async () => {
       const encodedPayload = toBase64Url(encoder.encode(JSON.stringify(payload)))
+
       const signature = new Uint8Array(
         await crypto.subtle.sign("HMAC", key, encoder.encode(encodedPayload)),
       )
+
       // SAFETY: ConsistencyToken brands the token this module signs and encodes itself.
       return `${encodedPayload}.${toBase64Url(signature)}` as ConsistencyToken
     },
@@ -123,9 +132,11 @@ const signPayload = (key: CryptoKey, payload: TokenPayload) =>
 const decodePayload = (key: CryptoKey, token: string) =>
   Effect.gen(function* () {
     const [encodedPayload, encodedSignature, extra] = token.split(".")
+
     if (encodedPayload === undefined || encodedSignature === undefined || extra !== undefined) {
       return yield* Effect.fail(new ReplicaConsistencyFailure({ reason: "invalid_token" }))
     }
+
     const valid = yield* Effect.tryPromise({
       try: () =>
         crypto.subtle.verify(
@@ -136,13 +147,16 @@ const decodePayload = (key: CryptoKey, token: string) =>
         ),
       catch: () => new ReplicaConsistencyFailure({ reason: "invalid_token" }),
     })
+
     if (!valid) {
       return yield* Effect.fail(new ReplicaConsistencyFailure({ reason: "invalid_token" }))
     }
+
     const unknownPayload = yield* Effect.try({
       try: () => JSON.parse(decoder.decode(fromBase64Url(encodedPayload))),
       catch: () => new ReplicaConsistencyFailure({ reason: "invalid_token" }),
     })
+
     return yield* Schema.decodeUnknownEffect(TokenPayload)(unknownPayload).pipe(
       Effect.mapError(() => new ReplicaConsistencyFailure({ reason: "invalid_token" })),
     )
@@ -152,10 +166,12 @@ const waitForReplay = (client: Sql, lsn: string, maxWaitMs: number) =>
   Effect.tryPromise({
     try: async () => {
       if (!isConsistencyLsn(lsn)) throw new Error("Invalid LSN")
+
       const rows = await client.unsafe<Array<{ readonly status: string }>>(
         `WAIT FOR LSN '${lsn.toUpperCase()}' WITH (` +
           `MODE 'standby_replay', TIMEOUT '${maxWaitMs}ms', NO_THROW)`,
       )
+
       return rows[0]?.status
     },
     catch: () => new ReplicaConsistencyFailure({ reason: "wait_failed" }),
@@ -178,6 +194,7 @@ export const makePostgresReadYourWrites = (
           const identity = yield* databaseIdentity(primaryClient, "capture")
           const lsn = yield* capturePosition(primaryClient)
           const issuedAt = now()
+
           return yield* signPayload(key, {
             version: 1,
             tenantId,
@@ -192,36 +209,47 @@ export const makePostgresReadYourWrites = (
       wait: (tenantId, token) =>
         Effect.gen(function* () {
           const payload = yield* decodePayload(key, token)
+
           if (payload.expiresAt <= now()) {
             return yield* Effect.fail(new ReplicaConsistencyFailure({ reason: "expired_token" }))
           }
+
           if (payload.tenantId !== tenantId) {
             return yield* Effect.fail(new ReplicaConsistencyFailure({ reason: "tenant_mismatch" }))
           }
+
           if (payload.placementId !== config.placementId) {
             return yield* Effect.fail(
               new ReplicaConsistencyFailure({ reason: "placement_mismatch" }),
             )
           }
+
           const identity = yield* databaseIdentity(replicaClient, "wait")
+
           if (payload.systemIdentifier !== identity.system_identifier) {
             return yield* Effect.fail(
               new ReplicaConsistencyFailure({ reason: "placement_mismatch" }),
             )
           }
+
           if (payload.timelineId !== identity.timeline_id) {
             return yield* Effect.fail(
               new ReplicaConsistencyFailure({ reason: "timeline_mismatch" }),
             )
           }
+
           const status = yield* waitForReplay(replicaClient, payload.lsn, config.maxWaitMs)
+
           if (status === "success") return replicaDatabase
+
           if (status === "timeout") {
             return yield* Effect.fail(new ReplicaConsistencyFailure({ reason: "timeout" }))
           }
+
           if (status === "not in recovery") {
             return yield* Effect.fail(new ReplicaConsistencyFailure({ reason: "not_in_recovery" }))
           }
+
           return yield* Effect.fail(new ReplicaConsistencyFailure({ reason: "wait_failed" }))
         }),
     } satisfies PostgresReadYourWritesService

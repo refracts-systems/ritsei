@@ -32,6 +32,7 @@ render(() => <KobalteDialogProbe />, document.getElementById("root")!)
       root,
       build: { outDir, emptyOutDir: true },
     })
+
     return { root, outDir }
   }),
   ({ root, outDir }) =>
@@ -46,6 +47,7 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const { root, outDir } = yield* fixture
+
       const server = yield* Effect.acquireRelease(
         Effect.promise(() =>
           preview({
@@ -63,18 +65,23 @@ it.effect(
               }),
           ),
       )
+
       const address = server.httpServer.address()
       assert.isNotNull(address)
       assert.isNotString(address)
+
       if (!address || Predicate.isString(address)) return yield* Effect.die("No preview address")
+
       const browser = yield* Effect.acquireRelease(
         Effect.promise(() => chromium.launch({ headless: true })),
         (browser) => Effect.promise(() => browser.close()),
       )
+
       const context = yield* Effect.acquireRelease(
         Effect.promise(() => browser.newContext({ viewport: { width: 800, height: 600 } })),
         (context) => Effect.promise(() => context.close()),
       )
+
       const page = yield* Effect.promise(() => context.newPage())
       yield* Effect.promise(async () => {
         await page.goto(`http://127.0.0.1:${address.port}`)

@@ -26,6 +26,7 @@ export const ProcessReleaseValidation = Schema.Struct({
 })
 
 export type ProcessReleaseRequest = Schema.Schema.Type<typeof ProcessReleaseRequest>
+
 export type ProcessReleaseValidation = Schema.Schema.Type<typeof ProcessReleaseValidation>
 
 export class ProcessReleaseValidationFailed extends Schema.TaggedError<ProcessReleaseValidationFailed>()(
@@ -44,9 +45,11 @@ export const validateProcessRelease = (
 ): Effect.Effect<ProcessReleaseValidation, ProcessReleaseValidationFailed | Schema.SchemaError> =>
   Effect.gen(function* () {
     const decoded = yield* Schema.decodeUnknownEffect(ProcessReleaseRequest)(input)
+
     // An unregistered capability can never enter a released process.
     for (const reference of decoded.references) {
       const resolved = registry.resolveReleasedCapability(reference)
+
       if (resolved === undefined) {
         return yield* Effect.fail(
           new ProcessReleaseValidationFailed({
@@ -58,6 +61,7 @@ export const validateProcessRelease = (
         )
       }
     }
+
     return {
       status: "VALIDATED" as const,
       definitionId: decoded.definitionId,

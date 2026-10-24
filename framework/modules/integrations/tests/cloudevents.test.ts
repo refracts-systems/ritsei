@@ -5,6 +5,7 @@ import * as Schema from "effect/Schema"
 import { ExternalPayloadInvalid, normalizeCloudEvent } from "../mod.ts"
 
 const PaymentPayload = Schema.Struct({ paymentId: Schema.String, amount: Schema.Number })
+
 const envelope = {
   specversion: "1.0" as const,
   type: "payments.settled",
@@ -25,6 +26,7 @@ it.effect("validates a separate envelope and normalized ExternalEvent payload", 
       envelope,
       payloadSchema: PaymentPayload,
     })
+
     assert.strictEqual(event.kind, "ExternalEvent")
     assert.strictEqual(event.envelope, "CloudEvents 1.0.x")
     assert.deepStrictEqual(event.payload, { paymentId: "pay-1", amount: 12.5 })
@@ -42,6 +44,7 @@ it.effect("rejects malformed or oversized CloudEvents fields", () =>
         payloadSchema: PaymentPayload,
       }),
     )
+
     const oversizedId = yield* Effect.flip(
       normalizeCloudEvent({
         tenantId: "018f3f77-0c5a-7cc0-8b62-6a163d214123",
@@ -68,6 +71,7 @@ it.effect("rejects a mismatched event type or payload", () =>
         payloadSchema: PaymentPayload,
       }),
     )
+
     const payloadFailure = yield* Effect.flip(
       normalizeCloudEvent({
         tenantId: "018f3f77-0c5a-7cc0-8b62-6a163d214123",
@@ -77,6 +81,7 @@ it.effect("rejects a mismatched event type or payload", () =>
         payloadSchema: PaymentPayload,
       }),
     )
+
     assert.instanceOf(typeFailure, ExternalPayloadInvalid)
     assert.instanceOf(payloadFailure, ExternalPayloadInvalid)
   }),

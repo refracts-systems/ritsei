@@ -48,8 +48,10 @@ const toAuthenticationState = (row: {
 
 const isDuplicateEmail = (error: DatabaseFailure) =>
   isDatabaseConstraint(error, "user_accounts_email_key")
+
 const isDuplicateExternalSubject = (error: DatabaseFailure) =>
   isDatabaseConstraint(error, "external_subject_mappings_issuer_subject_key")
+
 const isMissingExternalSubjectUser = (error: DatabaseFailure) =>
   isDatabaseConstraint(error, "external_subject_mappings_user_account_id_fkey", "23503")
 
@@ -69,6 +71,7 @@ export const makeUserAccountPostgresStore = Effect.gen(function* () {
           isDuplicateEmail(error) ? new UserAccountAlreadyExists({ email }) : error,
         ),
       )
+
     return toUserAccount(rows[0]!)
   })
 
@@ -77,7 +80,9 @@ export const makeUserAccountPostgresStore = Effect.gen(function* () {
       (db) => db.select(selectUserAccount).from(userAccounts).where(eq(userAccounts.id, id)),
       "user-account.get",
     )
+
     const row = rows[0]
+
     return row === undefined
       ? yield* Effect.fail(new UserAccountNotFound({ id }))
       : toUserAccount(row)
@@ -101,7 +106,9 @@ export const makeUserAccountPostgresStore = Effect.gen(function* () {
           ),
       "user-account.external-subject.resolve",
     )
+
     const row = rows[0]
+
     return row === undefined
       ? yield* Effect.fail(new ExternalSubjectNotFound({ issuer, subject }))
       : toUserAccount(row)
@@ -113,6 +120,7 @@ export const makeUserAccountPostgresStore = Effect.gen(function* () {
     userAccountId: string,
   ) {
     const account = yield* getById(userAccountId)
+
     const existing = yield* database.query(
       (db) =>
         db
@@ -126,10 +134,13 @@ export const makeUserAccountPostgresStore = Effect.gen(function* () {
           ),
       "user-account.external-subject.lookup",
     )
+
     const existingMapping = existing[0]
+
     if (existingMapping !== undefined && existingMapping.userAccountId !== userAccountId) {
       return yield* Effect.fail(new ExternalSubjectAlreadyBound({ issuer, subject, userAccountId }))
     }
+
     if (existingMapping !== undefined) return account
     yield* database
       .query(
@@ -151,6 +162,7 @@ export const makeUserAccountPostgresStore = Effect.gen(function* () {
                   : error,
               )
             }
+
             return database
               .query(
                 (db) =>
@@ -177,11 +189,13 @@ export const makeUserAccountPostgresStore = Effect.gen(function* () {
           },
         ),
       )
+
     return account
   })
 
   const getByIds = Effect.fn("UserAccountStore.getByIds")(function* (ids: readonly string[]) {
     if (ids.length === 0) return []
+
     const rows = yield* database.query(
       (db) =>
         db
@@ -191,6 +205,7 @@ export const makeUserAccountPostgresStore = Effect.gen(function* () {
           .orderBy(userAccounts.createdAt, userAccounts.id),
       "user-account.get-many",
     )
+
     return rows.map(toUserAccount)
   })
 
@@ -202,7 +217,9 @@ export const makeUserAccountPostgresStore = Effect.gen(function* () {
         db.select(selectAuthenticationState).from(userAccounts).where(eq(userAccounts.id, id)),
       "user-account.authentication-state",
     )
+
     const row = rows[0]
+
     return row === undefined
       ? yield* Effect.fail(new UserAccountNotFound({ id }))
       : toAuthenticationState(row)
@@ -217,6 +234,7 @@ export const makeUserAccountPostgresStore = Effect.gen(function* () {
           .orderBy(userAccounts.createdAt, userAccounts.id),
       "user-account.list",
     )
+
     return rows.map(toUserAccount)
   })
 
@@ -236,7 +254,9 @@ export const makeUserAccountPostgresStore = Effect.gen(function* () {
           isDuplicateEmail(error) ? new UserAccountAlreadyExists({ email }) : error,
         ),
       )
+
     const row = rows[0]
+
     return row === undefined
       ? yield* Effect.fail(new UserAccountNotFound({ id }))
       : toUserAccount(row)
@@ -244,6 +264,7 @@ export const makeUserAccountPostgresStore = Effect.gen(function* () {
 
   const disable = Effect.fn("UserAccountStore.disable")(function* (id: string) {
     const timestamp = now()
+
     const rows = yield* database.query(
       (db) =>
         db
@@ -258,7 +279,9 @@ export const makeUserAccountPostgresStore = Effect.gen(function* () {
           .returning(selectUserAccount),
       "user-account.disable",
     )
+
     const row = rows[0]
+
     return row === undefined
       ? yield* Effect.fail(new UserAccountNotFound({ id }))
       : toUserAccount(row)
@@ -274,7 +297,9 @@ export const makeUserAccountPostgresStore = Effect.gen(function* () {
           .returning(selectUserAccount),
       "user-account.enable",
     )
+
     const row = rows[0]
+
     return row === undefined
       ? yield* Effect.fail(new UserAccountNotFound({ id }))
       : toUserAccount(row)
@@ -286,6 +311,7 @@ export const makeUserAccountPostgresStore = Effect.gen(function* () {
         db.delete(userAccounts).where(eq(userAccounts.id, id)).returning({ id: userAccounts.id }),
       "user-account.remove",
     )
+
     if (rows[0] === undefined) return yield* Effect.fail(new UserAccountNotFound({ id }))
   })
 

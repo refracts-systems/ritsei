@@ -17,6 +17,7 @@ const withPreviousMigrations = <A, E, R>(use: (directory: string) => Effect.Effe
   Effect.acquireUseRelease(
     Effect.promise(async () => {
       const directory = await mkdtemp(join(tmpdir(), "ritsei-migrations-"))
+
       for (const entry of await readdir("db/migrations", { withFileTypes: true })) {
         if (!entry.isDirectory() || entry.name >= latestMigration) continue
         const source = `db/migrations/${entry.name}`
@@ -25,6 +26,7 @@ const withPreviousMigrations = <A, E, R>(use: (directory: string) => Effect.Effe
         await copyFile(`${source}/migration.sql`, `${target}/migration.sql`)
         await copyFile(`${source}/snapshot.json`, `${target}/snapshot.json`)
       }
+
       return directory
     }),
     use,
@@ -39,16 +41,21 @@ it.effect.skipIf(databaseUrl === undefined)(
         yield* withPreviousMigrations((directory) => runMigrations(client, directory))
 
         const database = makePostgresDatabase(client)
+
         const userAccounts = yield* makeUserAccountService.pipe(
           Effect.provideService(Database, database),
         )
+
         const user = yield* userAccounts.create({ email: "capability-migration@example.test" })
+
         const auth = yield* makeAuthService.pipe(
           Effect.provideService(Database, database),
           Effect.provide(WebCryptoLive),
           Effect.provideService(UserAccountService, userAccounts),
         )
+
         const tenant = yield* auth.createTenant({ slug: `capability-${uuidv7()}` })
+
         const legacyCapabilities = [
           "auth.capability.grant",
           "user_account.write",
@@ -85,6 +92,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           order by capability
         `,
         )
+
         assert.deepStrictEqual(
           rows.map(({ capability }) => capability),
           [

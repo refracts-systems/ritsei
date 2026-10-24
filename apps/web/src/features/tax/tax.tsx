@@ -35,6 +35,7 @@ const taxCodePayload = (value: FormValue) => {
     rate: text(value.rate),
     direction: directionOf(value.direction),
   }
+
   return isComplete(payload) ? payload : undefined
 }
 
@@ -69,10 +70,12 @@ function CreateTaxCodeDialog(props: { reload: () => Promise<void> }) {
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
   let formElement: HTMLFormElement | undefined
+
   const mutation = createTaxCodeMutation(scope, () => {
     formElement?.reset()
     setOpen(false)
   })
+
   return (
     <Dialog
       open={open()}
@@ -90,6 +93,7 @@ function CreateTaxCodeDialog(props: { reload: () => Promise<void> }) {
         onSubmit={(value) => {
           const payload = taxCodePayload(value)
           setInvalid(payload === undefined)
+
           if (payload !== undefined && !mutation.isPending) mutation.mutate(payload)
         }}
       >
@@ -162,6 +166,7 @@ function CreateTaxCodeDialog(props: { reload: () => Promise<void> }) {
 export function Tax() {
   const scope = useContext(ApiRuntime)
   const query = createTaxCodesQuery(scope)
+
   return (
     <section class={layout.stack} aria-label="Tax">
       <header class={layout.workspaceHeading}>

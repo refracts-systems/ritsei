@@ -41,6 +41,7 @@ export const listParties = Effect.fn("Frontend.Party.listParties")(function* (
 ) {
   const decoded = yield* decodeInput(ListPartiesInput, input)
   const body = yield* requestJson(`${partyRoutes.list}${querySuffix(decoded)}`)
+
   return yield* decodeResponse(PartyDirectory, body, "invalid-response")
 })
 
@@ -50,9 +51,11 @@ export const getPartyDetail = Effect.fn("Frontend.Party.getPartyDetail")(functio
   const decodedId = yield* decodeInput(PartyId, id)
   const body = yield* requestJson(routeWithId(partyRoutes.get, decodedId))
   const detail = yield* decodeResponse(PartyDetail, body, "invalid-response")
+
   if (detail.party.id !== decodedId) {
     return yield* Effect.fail(new RequestFailure({ kind: "invalid-response" }))
   }
+
   return detail
 })
 
@@ -62,17 +65,21 @@ export const findRelatedPartyPaths = Effect.fn("Frontend.Party.findRelatedPartyP
 ) {
   const decodedId = yield* decodeInput(PartyId, partyId)
   const decoded = yield* decodeInput(ListRelatedPartyPathsInput, input)
+
   const body = yield* requestJson(
     `${routeWithId(partyRoutes.findRelatedPartyPaths, decodedId)}${querySuffix(decoded)}`,
   )
+
   const paths = yield* decodeResponse(
     Schema.Array(RelatedPartyPath).check(Schema.isMaxLength(100)),
     body,
     "invalid-response",
   )
+
   if (!responseListMatches(paths, { sourcePartyId: decodedId })) {
     return yield* Effect.fail(new RequestFailure({ kind: "invalid-response" }))
   }
+
   return paths
 })
 
@@ -81,6 +88,7 @@ export const createParty = Effect.fn("Frontend.Party.createParty")(function* (
 ) {
   const decoded = yield* decodeInput(CreatePartyInput, input)
   const body = yield* mutationRequest(partyRoutes.create, "POST", decoded)
+
   return yield* decodeResponse(Party, body, "unknown-outcome")
 })
 
@@ -88,14 +96,18 @@ export const createLegalEntity = Effect.fn("Frontend.Party.createLegalEntity")(f
   partyId: Schema.Codec.Encoded<typeof PartyId>,
 ) {
   const decodedPartyId = yield* decodeInput(PartyId, partyId)
+
   const body = yield* mutationRequest(
     routeWithId(partyRoutes.createLegalEntity, decodedPartyId),
     "POST",
   )
+
   const legalEntity = yield* decodeResponse(LegalEntity, body, "unknown-outcome")
+
   if (!responseMatches(legalEntity, { organizationId: decodedPartyId })) {
     return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
   }
+
   return legalEntity
 })
 
@@ -105,15 +117,19 @@ export const createBranch = Effect.fn("Frontend.Party.createBranch")(function* (
 ) {
   const decodedId = yield* decodeInput(PartyId, legalEntityId)
   const decoded = yield* decodeInput(CreateBranchInput, input)
+
   const body = yield* mutationRequest(
     routeWithId(partyRoutes.createBranch, decodedId),
     "POST",
     decoded,
   )
+
   const branch = yield* decodeResponse(Branch, body, "unknown-outcome")
+
   if (!responseMatches(branch, { legalEntityId: decodedId })) {
     return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
   }
+
   return branch
 })
 
@@ -132,12 +148,15 @@ export const attachPartyIdentifier = Effect.fn("Frontend.Party.attachPartyIdenti
 ) {
   const decodedId = yield* decodeInput(PartyId, partyId)
   const decoded = yield* decodeInput(AttachPartyIdentifierInput, input)
+
   const body = yield* mutationRequest(
     routeWithId(partyRoutes.attachIdentifier, decodedId),
     "POST",
     decoded,
   )
+
   const identifier = yield* decodeResponse(ExternalIdentifier, body, "unknown-outcome")
+
   if (
     !responseMatches(identifier, {
       partyId: decodedId,
@@ -146,6 +165,7 @@ export const attachPartyIdentifier = Effect.fn("Frontend.Party.attachPartyIdenti
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
   }
+
   return identifier
 })
 
@@ -156,12 +176,15 @@ export const createPartyRelationship = Effect.fn("Frontend.Party.createPartyRela
   ) {
     const decodedId = yield* decodeInput(PartyId, partyId)
     const decoded = yield* decodeInput(CreatePartyRelationshipInput, input)
+
     const body = yield* mutationRequest(
       routeWithId(partyRoutes.createRelationship, decodedId),
       "POST",
       decoded,
     )
+
     const relationship = yield* decodeResponse(PartyRelationship, body, "unknown-outcome")
+
     if (
       !responseMatches(relationship, {
         partyId: decodedId,
@@ -171,6 +194,7 @@ export const createPartyRelationship = Effect.fn("Frontend.Party.createPartyRela
     ) {
       return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
     }
+
     return relationship
   },
 )
@@ -182,12 +206,15 @@ export const createPartyRepresentation = Effect.fn("Frontend.Party.createPartyRe
   ) {
     const decodedId = yield* decodeInput(PartyId, partyId)
     const decoded = yield* decodeInput(CreatePartyRepresentationInput, input)
+
     const body = yield* mutationRequest(
       routeWithId(partyRoutes.createRepresentation, decodedId),
       "POST",
       decoded,
     )
+
     const representation = yield* decodeResponse(PartyRepresentation, body, "unknown-outcome")
+
     if (
       !responseMatches(representation, {
         partyId: decodedId,
@@ -197,6 +224,7 @@ export const createPartyRepresentation = Effect.fn("Frontend.Party.createPartyRe
     ) {
       return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
     }
+
     return representation
   },
 )
@@ -209,12 +237,15 @@ export const setPartyRepresentationActive = Effect.fn(
 ) {
   const decodedId = yield* decodeInput(PartyId, representationId)
   const decoded = yield* decodeInput(SetPartyRepresentationActiveInput, input)
+
   const body = yield* mutationRequest(
     routeWithId(partyRoutes.setRepresentationActive, decodedId),
     "PATCH",
     decoded,
   )
+
   const representation = yield* decodeResponse(PartyRepresentation, body, "unknown-outcome")
+
   if (
     !responseMatches(representation, {
       id: decodedId,
@@ -223,5 +254,6 @@ export const setPartyRepresentationActive = Effect.fn(
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
   }
+
   return representation
 })

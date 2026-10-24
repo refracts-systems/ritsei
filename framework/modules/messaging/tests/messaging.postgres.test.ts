@@ -12,6 +12,7 @@ import type { Overrides } from "../../../../tests/support/overrides.ts"
 import { postgresCode, postgresConstraint } from "../../../../tests/support/postgres-error.ts"
 
 const databaseUrl = process.env["DATABASE_URL"]
+
 const postgresFailure = <A>(effect: () => Promise<A>) =>
   Effect.tryPromise({ try: effect, catch: (cause) => cause }).pipe(Effect.flip)
 
@@ -43,12 +44,14 @@ it.effect.skipIf(databaseUrl === undefined)("rejects blank persisted messaging i
   withTemporaryDatabase(databaseUrl!, (client) =>
     Effect.gen(function* () {
       yield* runMigrations(client)
+
       const [tenant] = yield* Effect.promise(
         () =>
           client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
           `,
       )
+
       const eventId = uuidv7()
       yield* Effect.promise(
         () =>
@@ -198,16 +201,20 @@ it.effect.skipIf(databaseUrl === undefined)(
     withTemporaryDatabase(databaseUrl!, (client) =>
       Effect.gen(function* () {
         yield* runMigrations(client)
+
         const [tenant] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
           `,
         )
+
         const database = makePostgresDatabase(client)
+
         const messaging = yield* makeMessagingService.pipe(
           Effect.provideService(Database, database),
         )
+
         const input = event(tenant!.id)
         const appended = yield* messaging.append(input)
         assert.strictEqual(appended.eventId, input.eventId)
@@ -220,6 +227,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             where tenant_id = ${tenant!.id} and id = ${input.eventId}
           `,
         )
+
         assert.strictEqual(postgresCode(occurredAtFailure), "23514")
         assert.strictEqual(
           postgresConstraint(occurredAtFailure),
@@ -228,6 +236,7 @@ it.effect.skipIf(databaseUrl === undefined)(
 
         const changedId = uuidv7()
         const changedKey = uuidv7()
+
         const failure = yield* postgresFailure(
           () =>
             client`
@@ -236,6 +245,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             where tenant_id = ${tenant!.id} and id = ${input.eventId}
           `,
         )
+
         assert.strictEqual(postgresCode(failure), "23514")
         assert.strictEqual(postgresConstraint(failure), "event_outbox_immutable_identity_check")
 
@@ -247,6 +257,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             where tenant_id = ${tenant!.id}
           `,
         )
+
         assert.strictEqual(rows.length, 1)
         assert.strictEqual(rows[0]!.id, input.eventId)
         assert.strictEqual(rows[0]!.idempotency_key, input.idempotencyKey)
@@ -262,23 +273,30 @@ it.effect.skipIf(databaseUrl === undefined)(
     withTemporaryDatabase(databaseUrl!, (client) =>
       Effect.gen(function* () {
         yield* runMigrations(client)
+
         const [tenant] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
           `,
         )
+
         const database = makePostgresDatabase(client)
+
         const messaging = yield* makeMessagingService.pipe(
           Effect.provideService(Database, database),
         )
+
         const source = yield* messaging.append(event(tenant!.id))
+
         const input = {
           tenantId: tenant!.id,
           consumerId: "accounting.receipt-identity",
           eventId: source.eventId,
         }
+
         yield* messaging.consumeOnce(input, Effect.succeed("completed"))
+
         const completedAtFailure = yield* postgresFailure(
           () =>
             client`
@@ -289,11 +307,13 @@ it.effect.skipIf(databaseUrl === undefined)(
               and event_id = ${input.eventId}
           `,
         )
+
         assert.strictEqual(postgresCode(completedAtFailure), "23514")
         assert.strictEqual(
           postgresConstraint(completedAtFailure),
           "consumer_receipts_immutable_identity_check",
         )
+
         const failure = yield* postgresFailure(
           () =>
             client`
@@ -304,16 +324,19 @@ it.effect.skipIf(databaseUrl === undefined)(
               and event_id = ${input.eventId}
           `,
         )
+
         assert.strictEqual(postgresCode(failure), "23514")
         assert.strictEqual(
           postgresConstraint(failure),
           "consumer_receipts_immutable_identity_check",
         )
         let executions = 0
+
         const replay = yield* messaging.consumeOnce(
           input,
           Effect.sync(() => ++executions),
         )
+
         assert.isTrue(replay.duplicate)
         assert.strictEqual(executions, 0)
       }),
@@ -326,16 +349,20 @@ it.effect.skipIf(databaseUrl === undefined)(
     withTemporaryDatabase(databaseUrl!, (client) =>
       Effect.gen(function* () {
         yield* runMigrations(client)
+
         const [tenant] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
           `,
         )
+
         const database = makePostgresDatabase(client)
+
         const messaging = yield* makeMessagingService.pipe(
           Effect.provideService(Database, database),
         )
+
         const input = event(tenant!.id)
 
         const failure = yield* Effect.flip(
@@ -344,6 +371,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             "messaging.test.outer-transaction",
           ),
         )
+
         assert.strictEqual(failure, "outer transaction failed")
 
         const rows = yield* Effect.promise(
@@ -354,6 +382,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             where tenant_id = ${tenant!.id} and id = ${input.eventId}
           `,
         )
+
         assert.deepStrictEqual(rows, [{ count: 0 }])
       }),
     ),
@@ -365,15 +394,18 @@ it.effect.skipIf(databaseUrl === undefined)(
     withTemporaryDatabase(databaseUrl!, (client) =>
       Effect.gen(function* () {
         yield* runMigrations(client)
+
         const [tenant] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
           `,
         )
+
         const messaging = yield* makeMessagingService.pipe(
           Effect.provideService(Database, makePostgresDatabase(client)),
         )
+
         const source = yield* messaging.append(event(tenant!.id))
         yield* Effect.promise(
           () =>
@@ -392,6 +424,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             eventId: source.eventId,
           }),
         )
+
         assert.instanceOf(failure, DatabaseFailure)
         assert.strictEqual(failure.operation, "messaging.event.get.decode")
       }),
@@ -404,12 +437,14 @@ it.effect.skipIf(databaseUrl === undefined)(
     withTemporaryDatabase(databaseUrl!, (client) =>
       Effect.gen(function* () {
         yield* runMigrations(client)
+
         const [tenant] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
           `,
         )
+
         const messaging = yield* makeMessagingService.pipe(
           Effect.provideService(Database, makePostgresDatabase(client)),
         )
@@ -421,6 +456,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             }),
           ),
         )
+
         assert.strictEqual(failure._tag, "SchemaError")
 
         const rows = yield* Effect.promise(
@@ -429,6 +465,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             select count(*)::integer as count from messaging.event_outbox
           `,
         )
+
         assert.deepStrictEqual(rows, [{ count: 0 }])
       }),
     ),
@@ -440,32 +477,40 @@ it.effect.skipIf(databaseUrl === undefined)(
     withTemporaryDatabase(databaseUrl!, (client) =>
       Effect.gen(function* () {
         yield* runMigrations(client)
+
         const [tenant] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
           `,
         )
+
         const messaging = yield* makeMessagingService.pipe(
           Effect.provideService(Database, makePostgresDatabase(client)),
         )
+
         const input = event(tenant!.id)
+
         const [first, duplicate] = yield* Effect.all(
           [messaging.append(input), messaging.append(input)],
           { concurrency: "unbounded" },
         )
 
         assert.deepStrictEqual(duplicate, first)
+
         const conflict = yield* Effect.flip(
           messaging.append({ ...input, payload: { state: "different" } }),
         )
+
         assert.instanceOf(conflict, EventIdempotencyConflict)
+
         const rows = yield* Effect.promise(
           () =>
             client<{ count: number }[]>`
             select count(*)::integer as count from messaging.event_outbox
           `,
         )
+
         assert.strictEqual(rows[0]!.count, 1)
       }),
     ),
@@ -477,16 +522,20 @@ it.effect.skipIf(databaseUrl === undefined)(
     withTemporaryDatabase(databaseUrl!, (client) =>
       Effect.gen(function* () {
         yield* runMigrations(client)
+
         const [tenant] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
           `,
         )
+
         const messaging = yield* makeMessagingService.pipe(
           Effect.provideService(Database, makePostgresDatabase(client)),
         )
+
         const idempotencyKey = uuidv7()
+
         const envelopes = yield* Effect.all(
           [
             messaging.append(event(tenant!.id, { eventVersion: 1, idempotencyKey })),
@@ -494,6 +543,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           ],
           { concurrency: "unbounded" },
         )
+
         assert.deepStrictEqual(envelopes.map((envelope) => envelope.eventVersion).sort(), [1, 2])
 
         const rows = yield* Effect.promise(
@@ -507,6 +557,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             order by event_version
           `,
         )
+
         assert.deepStrictEqual([...rows], [{ event_version: 1 }, { event_version: 2 }])
       }),
     ),
@@ -516,16 +567,20 @@ it.effect.skipIf(databaseUrl === undefined)("scopes event idempotency by event t
   withTemporaryDatabase(databaseUrl!, (client) =>
     Effect.gen(function* () {
       yield* runMigrations(client)
+
       const [tenant] = yield* Effect.promise(
         () =>
           client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
           `,
       )
+
       const messaging = yield* makeMessagingService.pipe(
         Effect.provideService(Database, makePostgresDatabase(client)),
       )
+
       const idempotencyKey = uuidv7()
+
       const envelopes = yield* Effect.all(
         [
           messaging.append(event(tenant!.id, { idempotencyKey })),
@@ -538,6 +593,7 @@ it.effect.skipIf(databaseUrl === undefined)("scopes event idempotency by event t
         ],
         { concurrency: "unbounded" },
       )
+
       assert.deepStrictEqual(envelopes.map((envelope) => envelope.eventType).sort(), [
         "inventory.stock.corrected",
         "sales.order.confirmed",
@@ -554,6 +610,7 @@ it.effect.skipIf(databaseUrl === undefined)("scopes event idempotency by event t
             order by event_type
           `,
       )
+
       assert.deepStrictEqual(
         [...rows],
         [{ event_type: "inventory.stock.corrected" }, { event_type: "sales.order.confirmed" }],
@@ -568,6 +625,7 @@ it.effect.skipIf(databaseUrl === undefined)(
     withTemporaryDatabase(databaseUrl!, (client) =>
       Effect.gen(function* () {
         yield* runMigrations(client)
+
         const tenants = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -576,9 +634,11 @@ it.effect.skipIf(databaseUrl === undefined)(
             returning id
           `,
         )
+
         const messaging = yield* makeMessagingService.pipe(
           Effect.provideService(Database, makePostgresDatabase(client)),
         )
+
         const eventId = uuidv7()
         const aggregateId = uuidv7()
         const idempotencyKey = uuidv7()
@@ -591,6 +651,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           ],
           { concurrency: "unbounded" },
         )
+
         assert.strictEqual(envelopes[0].eventId, envelopes[1].eventId)
         assert.notStrictEqual(envelopes[0].tenantId, envelopes[1].tenantId)
 
@@ -602,6 +663,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             where id = ${eventId} and idempotency_key = ${idempotencyKey}
           `,
         )
+
         assert.deepStrictEqual(rows, [{ count: 2 }])
       }),
     ),
@@ -611,6 +673,7 @@ it.effect.skipIf(databaseUrl === undefined)("scopes consumer receipts by tenant"
   withTemporaryDatabase(databaseUrl!, (client) =>
     Effect.gen(function* () {
       yield* runMigrations(client)
+
       const tenants = yield* Effect.promise(
         () =>
           client<{ id: string }[]>`
@@ -619,36 +682,45 @@ it.effect.skipIf(databaseUrl === undefined)("scopes consumer receipts by tenant"
             returning id
           `,
       )
+
       const database = makePostgresDatabase(client)
       const messaging = yield* makeMessagingService.pipe(Effect.provideService(Database, database))
       const eventId = uuidv7()
+
       const shared = event(tenants[0]!.id, {
         eventId,
         idempotencyKey: "shared-consumer-tenant-key",
       })
+
       yield* messaging.append(shared)
       yield* messaging.append({
         ...shared,
         tenantId: tenants[1]!.id,
         payload: { state: "other" },
       })
+
       const firstEvent = yield* messaging.getEvent({
         tenantId: tenants[0]!.id,
         eventId,
       })
+
       const otherEvent = yield* messaging.getEvent({
         tenantId: tenants[1]!.id,
         eventId,
       })
+
       assert.strictEqual(firstEvent?.tenantId, tenants[0]!.id)
       assert.strictEqual(otherEvent?.tenantId, tenants[1]!.id)
       assert.deepStrictEqual(otherEvent?.payload, { state: "other" })
+
       const missingEvent = yield* messaging.getEvent({
         tenantId: tenants[0]!.id,
         eventId: uuidv7(),
       })
+
       assert.isUndefined(missingEvent)
       const consumerId = "accounting.shared-tenant-consumer"
+
       const mutation = (tenantId: string) =>
         database.query(
           (db) =>
@@ -659,6 +731,7 @@ it.effect.skipIf(databaseUrl === undefined)("scopes consumer receipts by tenant"
               `),
           "messaging.test.tenant-receipt-mutation",
         )
+
       const first = yield* messaging.consumeOnce(
         {
           tenantId: tenants[0]!.id,
@@ -667,6 +740,7 @@ it.effect.skipIf(databaseUrl === undefined)("scopes consumer receipts by tenant"
         },
         mutation(tenants[0]!.id),
       )
+
       const other = yield* messaging.consumeOnce(
         {
           tenantId: tenants[1]!.id,
@@ -675,6 +749,7 @@ it.effect.skipIf(databaseUrl === undefined)("scopes consumer receipts by tenant"
         },
         mutation(tenants[1]!.id),
       )
+
       const firstDuplicate = yield* messaging.consumeOnce(
         {
           tenantId: tenants[0]!.id,
@@ -683,6 +758,7 @@ it.effect.skipIf(databaseUrl === undefined)("scopes consumer receipts by tenant"
         },
         mutation(tenants[0]!.id),
       )
+
       const otherDuplicate = yield* messaging.consumeOnce(
         {
           tenantId: tenants[1]!.id,
@@ -691,10 +767,12 @@ it.effect.skipIf(databaseUrl === undefined)("scopes consumer receipts by tenant"
         },
         mutation(tenants[1]!.id),
       )
+
       assert.isFalse(first.duplicate)
       assert.isFalse(other.duplicate)
       assert.isTrue(firstDuplicate.duplicate)
       assert.isTrue(otherDuplicate.duplicate)
+
       const rows = yield* Effect.promise(
         () =>
           client<{ tenant_id: string; attempts: number; receipts: number }[]>`
@@ -708,6 +786,7 @@ it.effect.skipIf(databaseUrl === undefined)("scopes consumer receipts by tenant"
             order by e.tenant_id
           `,
       )
+
       assert.deepStrictEqual(
         rows.map(({ attempts, receipts }) => ({ attempts, receipts })),
         [
@@ -725,6 +804,7 @@ it.effect.skipIf(databaseUrl === undefined)(
     withTemporaryDatabase(databaseUrl!, (client) =>
       Effect.gen(function* () {
         yield* runMigrations(client)
+
         const tenants = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
@@ -733,11 +813,15 @@ it.effect.skipIf(databaseUrl === undefined)(
             returning id
           `,
         )
+
         const database = makePostgresDatabase(client)
+
         const messaging = yield* makeMessagingService.pipe(
           Effect.provideService(Database, database),
         )
+
         const source = yield* messaging.append(event(tenants[0]!.id))
+
         const mutation = database.query(
           (db) =>
             db.execute(sql`
@@ -758,6 +842,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             mutation,
           ),
         )
+
         assert.instanceOf(failure, DatabaseFailure)
 
         const rows = yield* Effect.promise(
@@ -771,6 +856,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             where e.tenant_id = ${tenants[0]!.id} and e.id = ${source.eventId}
           `,
         )
+
         assert.deepStrictEqual(rows, [{ attempts: 0, receipts: 0 }])
       }),
     ),
@@ -782,15 +868,18 @@ it.effect.skipIf(databaseUrl === undefined)(
     withTemporaryDatabase(databaseUrl!, (client) =>
       Effect.gen(function* () {
         yield* runMigrations(client)
+
         const [tenant] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
           `,
         )
+
         const messaging = yield* makeMessagingService.pipe(
           Effect.provideService(Database, makePostgresDatabase(client)),
         )
+
         const idempotencyKey = uuidv7()
         const first = event(tenant!.id, { idempotencyKey, payload: { source: "first" } })
         const second = event(tenant!.id, { idempotencyKey, payload: { source: "second" } })
@@ -799,6 +888,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           [Effect.result(messaging.append(first)), Effect.result(messaging.append(second))],
           { concurrency: "unbounded" },
         )
+
         const successes = outcomes.filter(Result.isSuccess)
         const failures = outcomes.filter(Result.isFailure)
         assert.strictEqual(successes.length, 1)
@@ -813,6 +903,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             where tenant_id = ${tenant!.id} and idempotency_key = ${idempotencyKey}
           `,
         )
+
         assert.deepStrictEqual(rows, [{ count: 1 }])
       }),
     ),
@@ -824,17 +915,21 @@ it.effect.skipIf(databaseUrl === undefined)(
     withTemporaryDatabase(databaseUrl!, (client) =>
       Effect.gen(function* () {
         yield* runMigrations(client)
+
         const [tenant] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
           `,
         )
+
         const messaging = yield* makeMessagingService.pipe(
           Effect.provideService(Database, makePostgresDatabase(client)),
         )
+
         const eventId = uuidv7()
         const first = event(tenant!.id, { eventId })
+
         const second = event(tenant!.id, {
           eventId,
           eventType: "inventory.stock.corrected",
@@ -844,6 +939,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           [Effect.result(messaging.append(first)), Effect.result(messaging.append(second))],
           { concurrency: "unbounded" },
         )
+
         const successes = outcomes.filter(Result.isSuccess)
         const failures = outcomes.filter(Result.isFailure)
         assert.strictEqual(successes.length, 1)
@@ -858,6 +954,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             where tenant_id = ${tenant!.id} and id = ${eventId}
           `,
         )
+
         assert.deepStrictEqual(rows, [{ count: 1 }])
       }),
     ),
@@ -869,45 +966,56 @@ it.effect.skipIf(databaseUrl === undefined)(
     withTemporaryDatabase(databaseUrl!, (client) =>
       Effect.gen(function* () {
         yield* runMigrations(client)
+
         const [tenant] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
           `,
         )
+
         const messaging = yield* makeMessagingService.pipe(
           Effect.provideService(Database, makePostgresDatabase(client)),
         )
+
         const source = yield* messaging.append(event(tenant!.id))
+
         const input = {
           tenantId: tenant!.id,
           consumerId: "accounting.project-order",
           eventId: source.eventId,
         }
+
         let executions = 0
+
         const first = yield* messaging.consumeOnce(
           input,
           Effect.sync(() => ++executions),
         )
+
         const duplicate = yield* messaging.consumeOnce(
           input,
           Effect.sync(() => ++executions),
         )
+
         assert.strictEqual(first.duplicate, false)
         assert.strictEqual(duplicate.duplicate, true)
         assert.strictEqual(executions, 1)
 
         const failedInput = { ...input, consumerId: "inventory.project-order" }
+
         const rolledBackEvent = event(tenant!.id, {
           eventType: "inventory.order.projected",
           idempotencyKey: "failed-derived-event",
         })
+
         yield* Effect.flip(
           messaging.consumeOnce(
             failedInput,
             Effect.andThen(messaging.append(rolledBackEvent), Effect.fail("projection failed")),
           ),
         )
+
         const rolledBack = yield* Effect.promise(
           () =>
             client<{ events: number; receipts: number }[]>`
@@ -920,10 +1028,12 @@ it.effect.skipIf(databaseUrl === undefined)(
                   and event_id = ${source.eventId}) as receipts
           `,
         )
+
         assert.deepStrictEqual(rolledBack, [{ events: 0, receipts: 0 }])
 
         const retried = yield* messaging.consumeOnce(failedInput, messaging.append(rolledBackEvent))
         assert.strictEqual(retried.duplicate, false)
+
         const recovered = yield* Effect.promise(
           () =>
             client<{ events: number; receipts: number }[]>`
@@ -936,6 +1046,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                   and event_id = ${source.eventId}) as receipts
           `,
         )
+
         assert.deepStrictEqual(recovered, [{ events: 1, receipts: 1 }])
       }),
     ),
@@ -947,22 +1058,28 @@ it.effect.skipIf(databaseUrl === undefined)(
     withTemporaryDatabase(databaseUrl!, (client) =>
       Effect.gen(function* () {
         yield* runMigrations(client)
+
         const [tenant] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
           `,
         )
+
         const messaging = yield* makeMessagingService.pipe(
           Effect.provideService(Database, makePostgresDatabase(client)),
         )
+
         const source = yield* messaging.append(event(tenant!.id))
+
         const input = {
           tenantId: tenant!.id,
           consumerId: "accounting.project-order",
           eventId: source.eventId,
         }
+
         yield* messaging.consumeOnce(input, Effect.succeed("completed"))
+
         const sourceMutation = yield* postgresFailure(
           () =>
             client`
@@ -973,16 +1090,19 @@ it.effect.skipIf(databaseUrl === undefined)(
             where tenant_id = ${tenant!.id} and id = ${source.eventId}
           `,
         )
+
         assert.strictEqual(postgresCode(sourceMutation), "23514")
         assert.strictEqual(
           postgresConstraint(sourceMutation),
           "event_outbox_immutable_identity_check",
         )
         let executions = 0
+
         const replay = yield* messaging.consumeOnce(
           input,
           Effect.sync(() => ++executions),
         )
+
         assert.isTrue(replay.duplicate)
         assert.strictEqual(executions, 0)
       }),
@@ -995,29 +1115,36 @@ it.effect.skipIf(databaseUrl === undefined)(
     withTemporaryDatabase(databaseUrl!, (client) =>
       Effect.gen(function* () {
         yield* runMigrations(client)
+
         const [tenant] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
           `,
         )
+
         const messaging = yield* makeMessagingService.pipe(
           Effect.provideService(Database, makePostgresDatabase(client)),
         )
+
         const input = {
           tenantId: tenant!.id,
           consumerId: "accounting.missing-source",
           eventId: uuidv7(),
         }
+
         let executions = 0
+
         const failure = yield* Effect.flip(
           messaging.consumeOnce(
             input,
             Effect.sync(() => ++executions),
           ),
         )
+
         assert.instanceOf(failure, DatabaseFailure)
         assert.strictEqual(executions, 0)
+
         const rows = yield* Effect.promise(
           () =>
             client<{ receipts: number }[]>`
@@ -1028,6 +1155,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               and event_id = ${input.eventId}
           `,
         )
+
         assert.deepStrictEqual(rows, [{ receipts: 0 }])
       }),
     ),
@@ -1039,17 +1167,22 @@ it.effect.skipIf(databaseUrl === undefined)(
     withTemporaryDatabase(databaseUrl!, (client) =>
       Effect.gen(function* () {
         yield* runMigrations(client)
+
         const [tenant] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
           `,
         )
+
         const database = makePostgresDatabase(client)
+
         const messaging = yield* makeMessagingService.pipe(
           Effect.provideService(Database, database),
         )
+
         const source = yield* messaging.append(event(tenant!.id))
+
         const mutation = database.query(
           (db) =>
             db.execute(sql`
@@ -1081,6 +1214,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           ],
           { concurrency: "unbounded" },
         )
+
         assert.isFalse(results[0].duplicate)
         assert.isFalse(results[1].duplicate)
 
@@ -1094,6 +1228,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             where e.tenant_id = ${tenant!.id} and e.id = ${source.eventId}
           `,
         )
+
         assert.deepStrictEqual(rows, [{ attempts: 2, receipts: 2 }])
       }),
     ),
@@ -1105,22 +1240,28 @@ it.effect.skipIf(databaseUrl === undefined)(
     withTemporaryDatabase(databaseUrl!, (client) =>
       Effect.gen(function* () {
         yield* runMigrations(client)
+
         const [tenant] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
           `,
         )
+
         const database = makePostgresDatabase(client)
+
         const messaging = yield* makeMessagingService.pipe(
           Effect.provideService(Database, database),
         )
+
         const source = yield* messaging.append(event(tenant!.id))
+
         const input = {
           tenantId: tenant!.id,
           consumerId: "accounting.increment-attempts",
           eventId: source.eventId,
         }
+
         const mutation = database.query(
           (db) =>
             db.execute(sql`
@@ -1135,6 +1276,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           [messaging.consumeOnce(input, mutation), messaging.consumeOnce(input, mutation)],
           { concurrency: "unbounded" },
         )
+
         assert.strictEqual(results.filter((result) => !result.duplicate).length, 1)
         assert.strictEqual(results.filter((result) => result.duplicate).length, 1)
         const duplicate = results.find((result) => result.duplicate)
@@ -1155,6 +1297,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             where e.tenant_id = ${tenant!.id} and e.id = ${source.eventId}
           `,
         )
+
         assert.deepStrictEqual(rows, [{ attempts: 1, receipts: 1 }])
       }),
     ),
@@ -1166,21 +1309,26 @@ it.effect.skipIf(databaseUrl === undefined)(
     withTemporaryDatabase(databaseUrl!, (client) =>
       Effect.gen(function* () {
         yield* runMigrations(client)
+
         const [tenant] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
           `,
         )
+
         const messaging = yield* makeMessagingService.pipe(
           Effect.provideService(Database, makePostgresDatabase(client)),
         )
+
         const source = yield* messaging.append(event(tenant!.id))
+
         const derived = event(tenant!.id, {
           eventType: "accounting.order.projected",
           causationId: source.eventId,
           idempotencyKey: "derived-event",
         })
+
         const input = {
           tenantId: tenant!.id,
           consumerId: "accounting.project-order",
@@ -1194,10 +1342,12 @@ it.effect.skipIf(databaseUrl === undefined)(
           ],
           { concurrency: "unbounded" },
         )
+
         assert.strictEqual(results.filter((result) => !result.duplicate).length, 1)
         assert.strictEqual(results.filter((result) => result.duplicate).length, 1)
         const first = results.find((result) => !result.duplicate)!
         const duplicate = results.find((result) => result.duplicate)!
+
         const [storedReceipt] = yield* Effect.promise(
           () =>
             client<{ completed_at: string }[]>`
@@ -1208,6 +1358,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               and event_id = ${source.eventId}
           `,
         )
+
         assert.isDefined(storedReceipt)
         assert.strictEqual(
           new Date(String(storedReceipt!.completed_at)).toISOString(),
@@ -1227,6 +1378,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                   and event_id = ${source.eventId}) as receipts
           `,
         )
+
         assert.deepStrictEqual(rows, [{ events: 1, receipts: 1 }])
       }),
     ),

@@ -57,9 +57,11 @@ const generateMigration = async (n: EntityNames) => {
     },
   )
   const created = (await readdir(migrations)).filter((entry) => !before.has(entry))
+
   if (created.length !== 1) throw new Error(`expected one new migration, found ${created.length}`)
   const path = `${migrations}/${created[0]}/migration.sql`
   const today = new Date().toISOString().slice(0, 10)
+
   const header = [
     `-- owner: ${n.module}`,
     `-- reviewed: ${today}`,
@@ -67,26 +69,33 @@ const generateMigration = async (n: EntityNames) => {
     `-- rationale: create the ${n.module} module's ${n.table} table (ritsei new module --entity)`,
     "",
   ].join("\n")
+
   await writeFile(path, `${header}${await readFile(path, "utf8")}`)
+
   return path
 }
 
 export const newEntityModule = async (module: string, entity: string) => {
   const n = entityNames(module, entity)
   const files = renderEntityModule(n)
+
   for (const { path } of files) {
     if (await exists(path)) throw new Error(`${path} already exists`)
   }
+
   for (const file of files) {
     await mkdir(file.path.slice(0, file.path.lastIndexOf("/")), { recursive: true })
     await writeFile(file.path, format(file.path, file.content))
   }
+
   for (const { path, apply } of edits(n)) {
     const edited = apply(await readFile(path, "utf8"))
     await writeFile(path, path.endsWith(".ts") ? format(path, edited) : edited)
   }
+
   const generated = await generate({ check: false })
   const migration = await generateMigration(n)
+
   return [
     ...files.map(({ path }) => path),
     ...edits(n).map(({ path }) => path),

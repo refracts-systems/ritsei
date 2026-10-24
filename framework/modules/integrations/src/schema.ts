@@ -17,6 +17,7 @@ export const decodeExternalSchema = (
 ) =>
   Effect.suspend(() => {
     if (!Schema.isSchema(schema)) return Effect.fail(new InvalidExternalSchema())
+
     try {
       return Schema.decodeUnknownEffect(schema)(input)
     } catch {

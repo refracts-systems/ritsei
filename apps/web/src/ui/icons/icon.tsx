@@ -87,6 +87,7 @@ export function Icon(props: IconProps) {
   const variant = () => props.variant ?? defaultIconVariant(props.name)
   const size = () => props.size ?? "md"
   const tone = () => props.tone ?? "default"
+
   const className = () =>
     [sizeStyles[size()], toneStyles[tone()], props.class].filter(Boolean).join(" ")
 

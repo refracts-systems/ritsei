@@ -45,6 +45,7 @@ describe("catalog compatibility", () => {
         id: "inventory.stock.adjust",
         version: 1,
       })
+
       const event = registry.resolveReleasedCapability({
         kind: "DomainEvent",
         id: "process.order_confirmation.completed",
@@ -83,6 +84,7 @@ describe("catalog compatibility", () => {
           stability: "PRIVATE",
         },
       ])
+
       assert.isUndefined(
         privateRegistry.resolveReleasedCapability({
           kind: "DomainEvent",

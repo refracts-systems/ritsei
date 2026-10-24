@@ -19,10 +19,12 @@ import type * as AccountingErrors from "./errors.ts"
 
 const TrimmedNonEmptyString = TrimmedText(256)
 const AccountCode = UpperCode(64)
+
 /** Signed exact amount: positive is a debit balance, negative a credit balance. */
 const SourceType = DottedName
 
 export const AccountType = Schema.Literals(["asset", "liability", "equity", "revenue", "expense"])
+
 export type AccountType = Schema.Schema.Type<typeof AccountType>
 
 /** Roles a document owner posts to; posting rules resolve each to an account per legal entity. */
@@ -39,6 +41,7 @@ export const PostingRole = Schema.Literals([
   "inventory_adjustment",
   "cash",
 ])
+
 export type PostingRole = Schema.Schema.Type<typeof PostingRole>
 
 export const ChartTemplateId = Schema.Literal("neutral_trading")
@@ -51,6 +54,7 @@ export const LedgerAccount = Schema.Struct({
   type: AccountType,
   parentAccountId: Schema.NullOr(Uuid),
 })
+
 export type LedgerAccount = Schema.Schema.Type<typeof LedgerAccount>
 
 export const PostingRule = Schema.Struct({
@@ -59,6 +63,7 @@ export const PostingRule = Schema.Struct({
   role: PostingRole,
   accountId: Uuid,
 })
+
 export type PostingRule = Schema.Schema.Type<typeof PostingRule>
 
 const LineAmounts = { debit: FinancialMajorAmount, credit: FinancialMajorAmount }
@@ -68,9 +73,11 @@ export const LedgerLineInput = Schema.Union([
   Schema.Struct({ role: PostingRole, ...LineAmounts }),
   Schema.Struct({ accountId: Uuid, ...LineAmounts }),
 ])
+
 export type LedgerLineInput = Schema.Schema.Type<typeof LedgerLineInput>
 
 export const LedgerEntryLine = Schema.Struct({ accountId: Uuid, ...LineAmounts })
+
 export type LedgerEntryLine = Schema.Schema.Type<typeof LedgerEntryLine>
 
 export const LedgerEntry = Schema.Struct({
@@ -86,6 +93,7 @@ export const LedgerEntry = Schema.Struct({
   postedAt: InstantString,
   lines: Schema.Array(LedgerEntryLine),
 })
+
 export type LedgerEntry = Schema.Schema.Type<typeof LedgerEntry>
 
 export const TrialBalanceRow = Schema.Struct({
@@ -98,6 +106,7 @@ export const TrialBalanceRow = Schema.Struct({
   credit: FinancialMajorAmount,
   balance: SignedAmount,
 })
+
 export const TrialBalance = Schema.Struct({
   legalEntityId: Uuid,
   from: Schema.NullOr(CalendarDate),
@@ -106,6 +115,7 @@ export const TrialBalance = Schema.Struct({
   totalDebit: FinancialMajorAmount,
   totalCredit: FinancialMajorAmount,
 })
+
 export type TrialBalance = Schema.Schema.Type<typeof TrialBalance>
 
 export const GeneralLedgerLine = Schema.Struct({
@@ -118,6 +128,7 @@ export const GeneralLedgerLine = Schema.Struct({
   credit: FinancialMajorAmount,
   balance: SignedAmount,
 })
+
 export const GeneralLedger = Schema.Struct({
   legalEntityId: Uuid,
   account: LedgerAccount,
@@ -127,6 +138,7 @@ export const GeneralLedger = Schema.Struct({
   lines: Schema.Array(GeneralLedgerLine),
   closingBalance: SignedAmount,
 })
+
 export type GeneralLedger = Schema.Schema.Type<typeof GeneralLedger>
 
 export const RoleBalance = Schema.Struct({
@@ -136,6 +148,7 @@ export const RoleBalance = Schema.Struct({
   asOf: CalendarDate,
   balance: SignedAmount,
 })
+
 export type RoleBalance = Schema.Schema.Type<typeof RoleBalance>
 
 const ScopedInput = { principal: Principal, tenantId: Uuid }
@@ -147,19 +160,23 @@ export const CreateLedgerAccountInput = Schema.Struct({
   type: AccountType,
   parentAccountId: Schema.optionalKey(Uuid),
 })
+
 export const ListChartInput = Schema.Struct({ ...ScopedInput })
+
 export const ApplyChartTemplateInput = Schema.Struct({
   ...ScopedInput,
   template: ChartTemplateId,
   /** When given, also configures the template's posting rules for this legal entity. */
   legalEntityId: Schema.optionalKey(Uuid),
 })
+
 export const ConfigurePostingRuleInput = Schema.Struct({
   ...ScopedInput,
   legalEntityId: Uuid,
   role: PostingRole,
   accountId: Uuid,
 })
+
 export const ListPostingRulesInput = Schema.Struct({ ...ScopedInput, legalEntityId: Uuid })
 
 const EntryFields = {
@@ -171,11 +188,14 @@ const EntryFields = {
   description: Schema.optionalKey(Schema.String.check(Schema.isMaxLength(500))),
   lines: Schema.Array(LedgerLineInput).check(Schema.isMinLength(2)),
 }
+
 export const PostManualEntryInput = Schema.Struct(EntryFields)
+
 export const PostDocumentEntryInput = Schema.Struct({
   ...EntryFields,
   source: Schema.Struct({ type: SourceType, id: Uuid }),
 })
+
 export type PostDocumentEntryCommand = Schema.Schema.Type<typeof PostDocumentEntryInput>
 
 export const TrialBalanceInput = Schema.Struct({
@@ -184,6 +204,7 @@ export const TrialBalanceInput = Schema.Struct({
   from: Schema.optionalKey(CalendarDate),
   to: CalendarDate,
 })
+
 export const GeneralLedgerInput = Schema.Struct({
   ...ScopedInput,
   legalEntityId: Uuid,
@@ -191,6 +212,7 @@ export const GeneralLedgerInput = Schema.Struct({
   from: CalendarDate,
   to: CalendarDate,
 })
+
 export const RoleBalanceInput = Schema.Struct({
   ...ScopedInput,
   legalEntityId: Uuid,

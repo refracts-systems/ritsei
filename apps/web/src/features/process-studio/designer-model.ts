@@ -12,7 +12,9 @@ export type ProcessNodeKind =
   | "Timer"
   | "ParallelBranch"
   | "End"
+
 export type ProcessEnvironment = "DEV" | "TEST" | "PROD"
+
 export type MappingType = "string" | "number" | "boolean" | "uuid"
 
 export type CatalogReference = {
@@ -58,6 +60,7 @@ export type DesignerAction = Data.TaggedEnum<{
   SetCapability: { readonly nodeId: string; readonly capability?: CatalogReference }
   AddMapping: { readonly nodeId: string; readonly mapping: TypedMapping }
 }>
+
 export const DesignerAction = Data.taggedEnum<DesignerAction>()
 
 export type DesignerValidationIssue = {
@@ -114,6 +117,7 @@ const nextId = (model: DesignerModel): string => {
     .map((node) => /^node-(\d+)$/.exec(node.id)?.[1])
     .filter(Boolean)
     .map(Number)
+
   return `node-${Math.max(0, ...numbers) + 1}`
 }
 
@@ -123,8 +127,10 @@ const middle = (nodes: readonly DesignerNode[]): DesignerNode[] =>
 const linear = (model: DesignerModel, nodes: readonly DesignerNode[]): DesignerModel => {
   const start = model.nodes.find((node) => node.kind === "Start")
   const end = model.nodes.find((node) => node.kind === "End")
+
   if (start === undefined || end === undefined) return model
   const ordered = [start, ...nodes, end]
+
   return {
     ...model,
     nodes: ordered,
@@ -156,9 +162,11 @@ export const reorderNode = (
   const nodes = middle(model.nodes)
   const index = nodes.findIndex((node) => node.id === nodeId)
   const target = direction === "up" ? index - 1 : index + 1
+
   if (index < 0 || target < 0 || target >= nodes.length) return model
   const [node] = nodes.splice(index, 1)
   nodes.splice(target, 0, node!)
+
   return linear(model, nodes)
 }
 
@@ -166,10 +174,12 @@ const moveNodeTo = (model: DesignerModel, sourceId: string, targetId: string): D
   const nodes = middle(model.nodes)
   const sourceIndex = nodes.findIndex((node) => node.id === sourceId)
   const targetIndex = nodes.findIndex((node) => node.id === targetId)
+
   if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return model
   const [source] = nodes.splice(sourceIndex, 1)
   const destination = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex
   nodes.splice(destination, 0, source!)
+
   return linear(model, nodes)
 }
 
@@ -213,6 +223,7 @@ export const applyDesignerAction = (model: DesignerModel, action: DesignerAction
   })
 
 const compare = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0)
+
 const canonical = (model: DesignerModel) => ({
   formatVersion: 1 as const,
   definitionId: model.definitionId,
@@ -225,14 +236,17 @@ const canonical = (model: DesignerModel) => ({
 
 const checksum = (value: string): string => {
   let hash = 2166136261
+
   for (let index = 0; index < value.length; index += 1) {
     hash = Math.imul(hash ^ value.charCodeAt(index), 16777619)
   }
+
   return (hash >>> 0).toString(16).padStart(8, "0")
 }
 
 export const toProcessIr = (model: DesignerModel): ProcessDesignIr => {
   const payload = canonical(model)
+
   return { ...model, formatVersion: 1, checksum: checksum(JSON.stringify(payload)) }
 }
 
@@ -245,6 +259,7 @@ const capabilityIssue = (node: DesignerNode): DesignerValidationIssue | undefine
     Match.when("WaitForEvent", () => "DomainEvent" as const),
     Match.orElse(() => undefined),
   )
+
   if (expectedKind === undefined) {
     return node.capability === undefined
       ? undefined
@@ -254,6 +269,7 @@ const capabilityIssue = (node: DesignerNode): DesignerValidationIssue | undefine
           message: `${node.kind} nodes cannot reference a catalog capability.`,
         }
   }
+
   if (
     node.capability === undefined ||
     !/\S/.test(node.capability.id) ||
@@ -266,6 +282,7 @@ const capabilityIssue = (node: DesignerNode): DesignerValidationIssue | undefine
       message: `${node.kind} nodes must reference an exact ${expectedKind} catalog capability.`,
     }
   }
+
   return node.capability.kind === expectedKind
     ? undefined
     : {
@@ -292,6 +309,7 @@ const mappingIssue = (
 const nodeValidation = (nodes: readonly DesignerNode[]) => {
   const ids = new Set<string>()
   const issues: DesignerValidationIssue[] = []
+
   for (const node of nodes) {
     if (ids.has(node.id)) {
       issues.push({
@@ -300,14 +318,19 @@ const nodeValidation = (nodes: readonly DesignerNode[]) => {
         message: `Node ID ${node.id} is duplicated.`,
       })
     }
+
     ids.add(node.id)
     const capabilityProblem = capabilityIssue(node)
+
     if (capabilityProblem !== undefined) issues.push(capabilityProblem)
+
     for (const mapping of node.mappings) {
       const issue = mappingIssue(node, mapping)
+
       if (issue !== undefined) issues.push(issue)
     }
   }
+
   return { ids, issues }
 }
 
@@ -315,6 +338,7 @@ const edgeValidation = (model: DesignerModel, ids: ReadonlySet<string>) => {
   const incoming = new Map<string, number>()
   const outgoing = new Map<string, number>()
   const issues: DesignerValidationIssue[] = []
+
   for (const edge of model.edges) {
     if (!ids.has(edge.from) || !ids.has(edge.to)) {
       issues.push({
@@ -326,6 +350,7 @@ const edgeValidation = (model: DesignerModel, ids: ReadonlySet<string>) => {
       outgoing.set(edge.from, (outgoing.get(edge.from) ?? 0) + 1)
     }
   }
+
   return { incoming, outgoing, issues }
 }
 
@@ -336,8 +361,10 @@ const reachabilityValidation = (
   if (start === undefined) return []
   const reachable = new Set([start.id])
   const pending = [start.id]
+
   while (pending.length > 0) {
     const current = pending.shift()!
+
     for (const edge of model.edges) {
       if (edge.from === current && !reachable.has(edge.to)) {
         reachable.add(edge.to)
@@ -345,6 +372,7 @@ const reachabilityValidation = (
       }
     }
   }
+
   return model.nodes.flatMap((node) =>
     reachable.has(node.id)
       ? []
@@ -362,23 +390,28 @@ export const validateDesignerModel = (model: DesignerModel): readonly DesignerVa
   if (model.nodes.length === 0) {
     return [{ code: "empty_graph", message: "Add a start and end node before validating." }]
   }
+
   const { ids, issues } = nodeValidation(model.nodes)
   const edges = edgeValidation(model, ids)
   issues.push(...edges.issues)
   const start = model.nodes.filter((node) => node.kind === "Start")
   const end = model.nodes.filter((node) => node.kind === "End")
+
   if (start.length !== 1 || edges.outgoing.get(start[0]?.id ?? "") !== 1) {
     issues.push({
       code: "invalid_start",
       message: "The graph needs one start node with one outgoing edge.",
     })
   }
+
   if (end.length !== 1 || edges.incoming.get(end[0]?.id ?? "") !== 1) {
     issues.push({
       code: "invalid_end",
       message: "The graph needs one end node with one incoming edge.",
     })
   }
+
   issues.push(...reachabilityValidation(model, start[0]))
+
   return issues
 }

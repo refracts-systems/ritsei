@@ -11,17 +11,22 @@ export const id = () =>
   uuidv7("id")
     .default(sql`uuidv7()`)
     .primaryKey()
+
 export const createdAt = () =>
   timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
+
 export const updatedAt = () =>
   timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
+
 // NUMERIC(24, 2) leaves four integer-digit positions above the 18-digit
 // public amount boundary while preserving exact decimal storage.
 export const money = (name: string) => numeric(name, { precision: 24, scale: 2 }).notNull()
 
 /** A JSON value, as a `jsonb` column stores it. */
 export type JsonValue = null | number | boolean | string | JsonArray | JsonObject
+
 export interface JsonArray extends ReadonlyArray<JsonValue> {}
+
 export interface JsonObject {
   readonly [key: string]: JsonValue
 }

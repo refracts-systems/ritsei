@@ -24,7 +24,9 @@ export const TaxRate = Schema.String.check(
     { expected: "a percent between 0 and 100 with at most four decimals" },
   ),
 )
+
 export const TaxDirection = Schema.Literals(["sales", "purchase"])
+
 export type TaxDirection = Schema.Schema.Type<typeof TaxDirection>
 
 export const TaxCode = Schema.Struct({
@@ -37,6 +39,7 @@ export const TaxCode = Schema.Struct({
   direction: TaxDirection,
   active: Schema.Boolean,
 })
+
 export type TaxCode = Schema.Schema.Type<typeof TaxCode>
 
 export const ProductTaxDefault = Schema.Struct({
@@ -45,6 +48,7 @@ export const ProductTaxDefault = Schema.Struct({
   direction: TaxDirection,
   taxCodeId: Uuid,
 })
+
 export type ProductTaxDefault = Schema.Schema.Type<typeof ProductTaxDefault>
 
 export const ComputedTaxLine = Schema.Struct({
@@ -54,6 +58,7 @@ export const ComputedTaxLine = Schema.Struct({
   base: FinancialMajorAmount,
   tax: FinancialMajorAmount,
 })
+
 export const TaxComputation = Schema.Struct({
   lines: Schema.Array(ComputedTaxLine),
   /** Tax per code, for the tax summary of a document. */
@@ -62,6 +67,7 @@ export const TaxComputation = Schema.Struct({
   ),
   totalTax: FinancialMajorAmount,
 })
+
 export type TaxComputation = Schema.Schema.Type<typeof TaxComputation>
 
 export const ListTaxCodesInput = Schema.Struct({
@@ -69,6 +75,7 @@ export const ListTaxCodesInput = Schema.Struct({
   direction: Schema.optionalKey(TaxDirection),
   limit: Schema.optionalKey(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 200 }))),
 })
+
 export const CreateTaxCodeInput = Schema.Struct({
   ...ScopedInput,
   code: Text,
@@ -76,17 +83,20 @@ export const CreateTaxCodeInput = Schema.Struct({
   rate: TaxRate,
   direction: TaxDirection,
 })
+
 export const SetProductTaxDefaultInput = Schema.Struct({
   ...ScopedInput,
   productId: Uuid,
   direction: TaxDirection,
   taxCodeId: Uuid,
 })
+
 export const DetermineTaxCodesInput = Schema.Struct({
   ...ScopedInput,
   direction: TaxDirection,
   productIds: Schema.Array(Uuid).check(Schema.isMaxLength(500)),
 })
+
 /** Tax-exclusive amounts; a line without a tax code is untaxed. */
 export const ComputeTaxInput = Schema.Struct({
   ...ScopedInput,
@@ -128,11 +138,13 @@ export const TaxService = Context.Service<TaxService>("RITSEI/TaxService")
 /** `11.5` → 115000 ten-thousandths of a percent. */
 export const rateToTenThousandths = (rate: string): bigint => {
   const [whole = "0", fraction = ""] = rate.split(".")
+
   return BigInt(whole) * 10_000n + BigInt(fraction.padEnd(4, "0").slice(0, 4))
 }
 
 export const normalizeRate = (rate: string): string => {
   const scaled = rateToTenThousandths(rate)
+
   return `${scaled / 10_000n}.${(scaled % 10_000n).toString().padStart(4, "0")}`
 }
 
@@ -140,5 +152,6 @@ export const normalizeRate = (rate: string): string => {
 export const taxOn = (base: string, rate: string): string => {
   const numerator = requireExactMajorToMinor(base, 2) * rateToTenThousandths(rate)
   const denominator = 1_000_000n
+
   return formatSignedMinor((numerator * 2n + denominator) / (denominator * 2n), 2)
 }

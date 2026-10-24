@@ -8,6 +8,7 @@ type MoneyFieldProps = Omit<JSX.InputHTMLAttributes<HTMLInputElement>, "class" |
 
 export function MoneyField(props: MoneyFieldProps) {
   const inputProps = omit(props, "class", "label", "error")
+
   return (
     <FieldShell label={props.label} error={props.error} id={props.id} class={props.class}>
       {(fieldProps) => (

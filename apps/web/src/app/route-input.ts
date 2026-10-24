@@ -14,5 +14,6 @@ export function decodeRouteInput<S extends Schema.ConstraintDecoder<unknown, nev
     },
     { onExcessProperty: "error" },
   )
+
   return Result.isSuccess(decoded) ? decoded.success : null
 }

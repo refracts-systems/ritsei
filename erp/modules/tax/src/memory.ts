@@ -9,8 +9,10 @@ import type { TaxStore } from "./store.ts"
 export const makeTaxMemoryStore = (): TaxStore => {
   const codes: TaxCode[] = []
   const defaults = new Map<string, ProductTaxDefault>()
+
   const defaultKey = (tenantId: string, productId: string, direction: string) =>
     `${tenantId}:${productId}:${direction}`
+
   return {
     listTaxCodes: (tenantId, direction, limit) =>
       Effect.sync(() =>
@@ -36,6 +38,7 @@ export const makeTaxMemoryStore = (): TaxStore => {
             new TaxCodeAlreadyExists({ tenantId: command.tenantId, code: command.code }),
           )
         }
+
         const code: TaxCode = {
           id: uuidv7(),
           tenantId: command.tenantId,
@@ -45,7 +48,9 @@ export const makeTaxMemoryStore = (): TaxStore => {
           direction: command.direction,
           active: true,
         }
+
         codes.push(code)
+
         return Effect.succeed(code)
       }),
     setProductTaxDefault: (value) =>
@@ -56,18 +61,22 @@ export const makeTaxMemoryStore = (): TaxStore => {
             candidate.id === value.taxCodeId &&
             candidate.direction === value.direction,
         )
+
         if (code === undefined) {
           return Effect.fail(
             new TaxCodeNotFound({ tenantId: value.tenantId, taxCodeId: value.taxCodeId }),
           )
         }
+
         defaults.set(defaultKey(value.tenantId, value.productId, value.direction), value)
+
         return Effect.succeed(value)
       }),
     productTaxDefaults: (tenantId, direction, productIds) =>
       Effect.sync(() =>
         productIds.flatMap((productId) => {
           const value = defaults.get(defaultKey(tenantId, productId, direction))
+
           return value === undefined ? [] : [value]
         }),
       ),

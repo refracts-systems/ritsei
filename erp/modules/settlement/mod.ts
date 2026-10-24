@@ -1,4 +1,5 @@
 export { SettlementCapabilities } from "./src/capabilities.ts"
+
 export {
   AgingInput,
   AgingReport,
@@ -17,6 +18,7 @@ export {
   StatementEntry,
   StatementInput,
 } from "./src/contract.ts"
+
 export type {
   AgingReport as AgingReportType,
   CustomerStatement as CustomerStatementType,
@@ -24,6 +26,7 @@ export type {
   PaymentFailure,
   SettlementService as SettlementServiceContract,
 } from "./src/contract.ts"
+
 export {
   AllocationBeforePayment,
   AllocationExceedsPayment,
@@ -32,5 +35,7 @@ export {
   PaymentTermAlreadyExists,
   PaymentTermNotFound,
 } from "./src/errors.ts"
+
 export { SettlementLive } from "./src/service.ts"
+
 export { SettlementModule } from "./manifest.ts"

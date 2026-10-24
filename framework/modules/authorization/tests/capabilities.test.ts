@@ -23,6 +23,7 @@ describe("capability naming contract", () => {
       CapabilityDefinitions.map((definition) => definition.id),
       Array.from(CapabilityIds),
     )
+
     for (const definition of CapabilityDefinitions) {
       const segments = definition.id.split(".")
       assert.strictEqual(definition.owner, segments[0])
@@ -45,6 +46,7 @@ describe("capability naming contract", () => {
       "process.runtime.compensate",
       "process.runtime.manual_recovery",
     ] as const
+
     for (const capability of processCapabilities) {
       assert.isTrue(CapabilityIds.includes(capability))
       assert.isDefined(CapabilityDefinitions.find((definition) => definition.id === capability))
@@ -67,6 +69,7 @@ describe("capability naming contract", () => {
           "SchemaError",
         )
       }
+
       assert.strictEqual(
         yield* Schema.decodeUnknownEffect(Capability)("identity.user_account.read"),
         "identity.user_account.read",
@@ -85,6 +88,7 @@ describe("capability naming contract", () => {
           ._tag,
         "SchemaError",
       )
+
       const definition = yield* Schema.decodeUnknownEffect(CapabilityDefinition)({
         id: "plugin_customer.submit",
         owner: "plugin_customer",
@@ -94,6 +98,7 @@ describe("capability naming contract", () => {
         stability: "EXPERIMENTAL",
         scope: ["tenant"],
       })
+
       assert.strictEqual(definition.owner, "plugin_customer")
       assert.strictEqual(definition.stability, "EXPERIMENTAL")
     }),

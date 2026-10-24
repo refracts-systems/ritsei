@@ -40,6 +40,7 @@ describe("purchase order document pilot", () => {
         snapshotId,
         capturedAt: confirmedAt,
       })
+
       yield* Schema.decodeUnknownEffect(DocumentSnapshot)(snapshot)
       const context = yield* makePurchaseOrderDocumentContext(snapshot)
       yield* Schema.decodeUnknownEffect(DocumentContext)(context)
@@ -63,10 +64,12 @@ describe("purchase order document pilot", () => {
         snapshotId,
         capturedAt: confirmedAt,
       })
+
       const second = yield* makePurchaseOrderDocumentSnapshot(confirmedOrder, {
         snapshotId,
         capturedAt: "2026-09-06T01:00:00.000Z",
       })
+
       assert.strictEqual(first.checksum, second.checksum)
     }),
   )
@@ -79,6 +82,7 @@ describe("purchase order document pilot", () => {
           { snapshotId, capturedAt: confirmedAt },
         ),
       )
+
       assert.instanceOf(error, PurchaseOrderInvalidState)
       assert.strictEqual(error.status, "draft")
     }),

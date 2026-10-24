@@ -23,6 +23,7 @@ describe("architecture boundaries", () => {
     ]) {
       assert.isNotEmpty(frontend(`import { value } from "${specifier}"`), specifier)
     }
+
     assert.deepStrictEqual(
       frontend(
         'import { Dialog } from "@kobalte/core/dialog"; import { css } from "./generated/css"',
@@ -37,6 +38,7 @@ describe("architecture boundaries", () => {
     for (const specifier of ["../../ui/index.ts", "../../ui/recipes/index.ts"]) {
       assert.isNotEmpty(frontend(`import { value } from "${specifier}"`), specifier)
     }
+
     assert.deepStrictEqual(frontend('import { layout } from "../../ui/foundations/layout.ts"'), [])
   })
 
@@ -56,6 +58,7 @@ describe("architecture boundaries", () => {
         specifier,
       )
     }
+
     assert.deepStrictEqual(
       frontend(
         'import type { Money } from "../shared/values/money.ts"',

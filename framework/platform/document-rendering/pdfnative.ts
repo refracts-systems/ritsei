@@ -39,9 +39,11 @@ const fontLoader =
   async () => {
     const module = await load()
     const font = Predicate.isObjectOrArray(module) && "default" in module ? module.default : module
+
     if (!Predicate.isObjectKeyword(font) || !("fontName" in font) || !("ttfBase64" in font)) {
       throw new TypeError("pdfnative font module did not expose FontData")
     }
+
     // SAFETY: pdfnative's generated font declarations describe module fields loosely; the runtime object is
     // the FontData shape documented by its FontLoader contract.
     return font as FontData
@@ -88,8 +90,11 @@ const rendererFailure = (operation: string, reason: string, cause: unknown) =>
 const textValues = (nodes: ReadonlyArray<DocumentNode>) =>
   nodes.flatMap((node) => {
     if ("value" in node) return [node.value]
+
     if ("headers" in node) return [...node.headers, ...node.rows.flat()]
+
     if ("label" in node) return [node.label]
+
     return []
   })
 
@@ -97,12 +102,15 @@ const loadFontEntries = (texts: ReadonlyArray<string>) =>
   Effect.tryPromise({
     try: async () => {
       const languages = new Set(["latin", ...detectFallbackLangs([...texts], "latin")])
+
       const loaded = await Promise.all(
         [...languages].map(async (language) => {
           const fontData = await loadFontData(language)
+
           return fontData === null ? undefined : { fontData, lang: language }
         }),
       )
+
       return loaded
         .filter((entry): entry is { fontData: FontData; lang: string } => entry !== undefined)
         .map(({ fontData, lang }, index) => ({
@@ -117,6 +125,7 @@ const loadFontEntries = (texts: ReadonlyArray<string>) =>
 const loadAsset = (assetId: string, resolveAsset: PdfNativeAssetResolver | undefined) =>
   Effect.gen(function* () {
     const bytes = resolveAsset === undefined ? undefined : yield* resolveAsset(assetId)
+
     if (bytes === undefined) {
       return yield* Effect.fail(
         new DocumentAssetUnavailable({
@@ -125,11 +134,13 @@ const loadAsset = (assetId: string, resolveAsset: PdfNativeAssetResolver | undef
         }),
       )
     }
+
     if (detectImageFormat(bytes) === null) {
       return yield* Effect.fail(
         rendererFailure("asset-loading", "asset is not a supported PNG or JPEG image", { assetId }),
       )
     }
+
     return bytes
   })
 
@@ -177,6 +188,7 @@ const toImageBlocks = (
 ) =>
   Effect.gen(function* () {
     const bytes = yield* loadAsset(node.assetId, resolveAsset)
+
     const blocks: PdfDocumentBlock[] = [
       {
         type: "image",
@@ -185,6 +197,7 @@ const toImageBlocks = (
         align: "center",
       },
     ]
+
     return { blocks, assetBytes: bytes.byteLength }
   })
 
@@ -194,10 +207,12 @@ const toSignatureBlocks = (
 ) =>
   Effect.gen(function* () {
     const bytes = yield* loadAsset(node.assetId, resolveAsset)
+
     const blocks: PdfDocumentBlock[] = [
       { type: "paragraph", text: node.label },
       { type: "image", data: bytes, alt: node.label, align: "center" },
     ]
+
     return { blocks, assetBytes: bytes.byteLength }
   })
 
@@ -217,11 +232,14 @@ const toPdfBlocks = (
         ),
       ),
     )
+
     const result = { blocks: new Array<PdfDocumentBlock>(), assetBytes: 0 }
+
     for (const blockResult of blockResults) {
       result.blocks.push(...blockResult.blocks)
       result.assetBytes += blockResult.assetBytes
     }
+
     return result
   })
 
@@ -230,6 +248,7 @@ const decodeInput = (input: DocumentRenderInput) =>
     const context = yield* Schema.decodeUnknownEffect(DocumentContext)(input.context)
     const ast = yield* Schema.decodeUnknownEffect(DocumentAst)(input.ast)
     const request = yield* Schema.decodeUnknownEffect(DocumentRenderRequest)(input.request)
+
     return { context, ast, request }
   })
 
@@ -251,6 +270,7 @@ const validateInputReferences = (
       ),
     )
   }
+
   if (ast.snapshotId !== request.snapshotId || ast.checksum !== request.astChecksum) {
     return Effect.fail(
       rendererFailure(
@@ -260,6 +280,7 @@ const validateInputReferences = (
       ),
     )
   }
+
   return Effect.succeed(undefined)
 }
 
@@ -293,6 +314,7 @@ const makePdfLayout = (
   policy: DocumentRenderPolicy,
 ): Partial<PdfLayoutOptions> => {
   const provided = options.layout ?? {}
+
   return {
     ...provided,
     // PDF metadata must not introduce wall-clock or snapshot-capture variance into artifact bytes.
@@ -325,6 +347,7 @@ const makeDocumentArtifact = (
 ) =>
   Effect.gen(function* () {
     const contentHash = yield* sha256Hex(bytes)
+
     const metadata = yield* Schema.decodeUnknownEffect(DocumentArtifact)({
       artifactId: uuidv7(),
       tenantId: request.tenantId,
@@ -344,6 +367,7 @@ const makeDocumentArtifact = (
       status: "ready" satisfies DocumentArtifactStatus,
       createdAt: new Date().toISOString(),
     })
+
     return { metadata, bytes }
   })
 
@@ -360,16 +384,19 @@ const renderPdfNativeDocument = (
     const { blocks, assetBytes } = yield* toPdfBlocks(ast.nodes, options.resolveAsset)
     yield* validateAssetBytes(assetBytes, policy)
     const fontEntries = yield* loadFontEntries(textValues(ast.nodes))
+
     const params: PdfDocumentParams = {
       title: `${context.source.type} ${context.source.id}`,
       blocks,
       fontEntries,
       metadata: { author: "RITSEI" },
     }
+
     const layout = makePdfLayout(options, policy)
     const inspection = yield* inspectPdfLayout(params, layout)
     yield* validatePageCount(inspection.totalPages, policy)
     const bytes = yield* generatePdfBytes(params, layout)
+
     return yield* makeDocumentArtifact(request, bytes, inspection.totalPages)
   })
 
@@ -377,6 +404,7 @@ export const makePdfNativeDocumentRenderer = (
   options: PdfNativeRendererOptions = {},
 ): DocumentRenderer => {
   const policy = options.policy ?? defaultPolicy
+
   const render = Effect.fn("DocumentRenderer.pdfnative.render")((input: DocumentRenderInput) =>
     renderPdfNativeDocument(input, options, policy),
   )

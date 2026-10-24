@@ -17,6 +17,7 @@ export const AccountingFiscalCalendarLive = Layer.effect(
   FiscalCalendar,
   Effect.gen(function* () {
     const database = yield* Database
+
     return {
       fiscalYearStartMonth: (tenantId, scopeId) =>
         database

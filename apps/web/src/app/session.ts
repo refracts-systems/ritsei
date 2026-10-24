@@ -3,7 +3,9 @@ import type { AuthSession } from "../shared/contracts/generated/auth.ts"
 import type { Session } from "../shared/session.ts"
 
 export type TenantOption = AuthSession["memberships"][number]
+
 export type AuthenticatedUser = AuthSession["user"]
+
 export type Capability = AuthSession["capabilities"][number]
 
 type SessionContextValue = {

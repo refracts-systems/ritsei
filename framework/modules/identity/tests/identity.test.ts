@@ -43,6 +43,7 @@ describe("user account contract", () => {
   it.effect("authorizes tenant account creation and publishes its owner event", () =>
     Effect.gen(function* () {
       const published: EventEnvelopeContract[] = []
+
       const service = yield* Effect.provide(
         makeUserAccountServiceFromStore(Effect.succeed(makeUserAccountMemoryStore())),
         Layer.mergeAll(
@@ -61,13 +62,16 @@ describe("user account contract", () => {
             append: (input) => {
               // SAFETY: the published event is an envelope, as the publisher contract requires.
               published.push(input as EventEnvelopeContract)
+
               // SAFETY: the published event is an envelope, as the publisher contract requires.
               return Effect.succeed(input as EventEnvelopeContract)
             },
           }),
         ),
       )
+
       const principal = { userAccountId: "actor", sessionId: "session" }
+
       const invalidTenant = yield* Effect.flip(
         Schema.decodeUnknownEffect(CreateUserAccountForTenantInput)({
           principal,
@@ -75,7 +79,9 @@ describe("user account contract", () => {
           email: "invalid@example.com",
         }),
       )
+
       assert.strictEqual(invalidTenant._tag, "SchemaError")
+
       const created = yield* service.createForTenant({
         principal,
         tenantId: identityTenantId,
@@ -100,6 +106,7 @@ describe("user account contract", () => {
           email: "denied@example.com",
         }),
       )
+
       assert.instanceOf(denied, IdentityAuthorizationDenied)
       assert.strictEqual((yield* service.list()).length, 1)
     }),
@@ -165,6 +172,7 @@ describe("user account contract", () => {
         const create = UserAccountService.use((service) =>
           service.create({ email: "duplicate@example.com" }),
         )
+
         yield* create
         const error = yield* Effect.flip(create)
 
@@ -195,12 +203,14 @@ describe("user account contract", () => {
     withUserAccount(
       Effect.gen(function* () {
         const service = yield* UserAccountService
+
         const invalidId = yield* Effect.flip(
           Schema.decodeUnknownEffect(UpdateUserAccountInput)({
             id: "not-a-uuid",
             email: "invalid@example.com",
           }),
         )
+
         assert.strictEqual(invalidId._tag, "SchemaError")
         const first = yield* service.create({ email: "first@example.com" })
         const second = yield* service.create({ email: "second@example.com" })
@@ -233,6 +243,7 @@ describe("user account contract", () => {
       operation: "user-account.test",
       cause: new Error("database unavailable"),
     })
+
     const database: DatabaseService = {
       query: <A>(_operation: (database: DrizzleDatabase) => Promise<A>) =>
         Effect.fail(databaseFailure),

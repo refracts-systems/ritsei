@@ -12,6 +12,7 @@ export class OrderConfirmationNotFound extends Schema.TaggedError<OrderConfirmat
     orderId: Uuid,
   },
 ) {}
+
 export class OrderConfirmationCorrupt extends Schema.TaggedError<OrderConfirmationCorrupt>()(
   "OrderConfirmationCorrupt",
   {
@@ -19,6 +20,7 @@ export class OrderConfirmationCorrupt extends Schema.TaggedError<OrderConfirmati
     orderId: Uuid,
   },
 ) {}
+
 export class WorkflowRunNotFound extends Schema.TaggedError<WorkflowRunNotFound>()(
   "WorkflowRunNotFound",
   {
@@ -26,6 +28,7 @@ export class WorkflowRunNotFound extends Schema.TaggedError<WorkflowRunNotFound>
     idempotencyKey: NonEmptyString,
   },
 ) {}
+
 export class WorkflowIdempotencyConflict extends Schema.TaggedError<WorkflowIdempotencyConflict>()(
   "WorkflowIdempotencyConflict",
   {
@@ -33,6 +36,7 @@ export class WorkflowIdempotencyConflict extends Schema.TaggedError<WorkflowIdem
     idempotencyKey: NonEmptyString,
   },
 ) {}
+
 export class WorkflowAlreadyInProgress extends Schema.TaggedError<WorkflowAlreadyInProgress>()(
   "WorkflowAlreadyInProgress",
   {
@@ -40,6 +44,7 @@ export class WorkflowAlreadyInProgress extends Schema.TaggedError<WorkflowAlread
     idempotencyKey: NonEmptyString,
   },
 ) {}
+
 export class WorkflowManualRecoveryRequired extends Schema.TaggedError<WorkflowManualRecoveryRequired>()(
   "WorkflowManualRecoveryRequired",
   {
@@ -48,6 +53,7 @@ export class WorkflowManualRecoveryRequired extends Schema.TaggedError<WorkflowM
     reason: NonEmptyString,
   },
 ) {}
+
 export class WorkflowResultCorrupt extends Schema.TaggedError<WorkflowResultCorrupt>()(
   "WorkflowResultCorrupt",
   {
@@ -55,6 +61,7 @@ export class WorkflowResultCorrupt extends Schema.TaggedError<WorkflowResultCorr
     idempotencyKey: NonEmptyString,
   },
 ) {}
+
 export class WorkflowOutcomeUnknown extends Schema.TaggedError<WorkflowOutcomeUnknown>()(
   "WorkflowOutcomeUnknown",
   {
@@ -62,6 +69,7 @@ export class WorkflowOutcomeUnknown extends Schema.TaggedError<WorkflowOutcomeUn
     idempotencyKey: NonEmptyString,
   },
 ) {}
+
 export class WorkflowAlreadyCompleted extends Schema.TaggedError<WorkflowAlreadyCompleted>()(
   "WorkflowAlreadyCompleted",
   {
@@ -69,6 +77,7 @@ export class WorkflowAlreadyCompleted extends Schema.TaggedError<WorkflowAlready
     idempotencyKey: NonEmptyString,
   },
 ) {}
+
 export class ProcessJobLeaseLost extends Schema.TaggedError<ProcessJobLeaseLost>()(
   "ProcessJobLeaseLost",
   {
@@ -76,6 +85,7 @@ export class ProcessJobLeaseLost extends Schema.TaggedError<ProcessJobLeaseLost>
     jobId: Uuid,
   },
 ) {}
+
 export class ProcessJobNotFound extends Schema.TaggedError<ProcessJobNotFound>()(
   "ProcessJobNotFound",
   {
@@ -83,6 +93,7 @@ export class ProcessJobNotFound extends Schema.TaggedError<ProcessJobNotFound>()
     jobId: Uuid,
   },
 ) {}
+
 export class ProcessJobCorrupt extends Schema.TaggedError<ProcessJobCorrupt>()(
   "ProcessJobCorrupt",
   {

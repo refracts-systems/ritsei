@@ -23,7 +23,9 @@ it.effect.skipIf(databaseUrl === undefined)(
             order by id
           `,
         )
+
         const local = readMigrationFiles({ migrationsFolder: "db/migrations" })
+
         const partyTable = yield* Effect.promise(
           () =>
             client<{ table_name: string }[]>`

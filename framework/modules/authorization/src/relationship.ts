@@ -14,6 +14,7 @@ export const RelationshipInput = Schema.Struct({
   resourceId: Schema.String,
   relationship: Schema.String,
 })
+
 export type RelationshipInput = Schema.Schema.Type<typeof RelationshipInput>
 
 export const RelationshipResult = Schema.Literals([
@@ -23,6 +24,7 @@ export const RelationshipResult = Schema.Literals([
   "stale",
   "unavailable",
 ])
+
 export type RelationshipResult = Schema.Schema.Type<typeof RelationshipResult>
 
 export const RelationshipDecision = Schema.Struct({
@@ -35,6 +37,7 @@ export const RelationshipDecision = Schema.Struct({
   reason: Schema.String,
   consistency: Schema.Literals(["current", "stale", "unknown", "unavailable"]),
 })
+
 export type RelationshipDecision = Schema.Schema.Type<typeof RelationshipDecision>
 
 export interface RelationshipEngine {
@@ -80,17 +83,21 @@ export const makeMemoryRelationshipEngine = (
   defaultResult: RelationshipResult = "denied",
 ): RelationshipEngine => {
   const allowed = new Set(allowedRelationships.map((input) => relationshipKey(input)))
+
   return {
     evaluate: Effect.fn("RelationshipEngine.evaluate")(function* (
       input: Schema.Codec.Encoded<typeof RelationshipInput>,
     ) {
       const decoded = yield* Schema.decodeUnknownEffect(RelationshipInput)(input)
+
       if (defaultResult === "stale" || defaultResult === "unavailable") {
         return unavailable(decoded, defaultResult)
       }
+
       if (decoded.resourceType !== "tenant" || decoded.relationship !== "member") {
         return unknown(decoded)
       }
+
       return allowed.has(relationshipKey(decoded))
         ? {
             allowed: true,
@@ -109,10 +116,13 @@ export const makePostgresRelationshipEngine = (database: DatabaseService): Relat
     input: Schema.Codec.Encoded<typeof RelationshipInput>,
   ) {
     const decoded = yield* Schema.decodeUnknownEffect(RelationshipInput)(input)
+
     if (decoded.resourceType !== "tenant" || decoded.relationship !== "member") {
       return unknown(decoded)
     }
+
     if (decoded.resourceId !== decoded.tenantId) return denied(decoded, "RELATIONSHIP_DENIED")
+
     const member = yield* database
       .query(
         (db) =>
@@ -132,6 +142,7 @@ export const makePostgresRelationshipEngine = (database: DatabaseService): Relat
         Effect.map((rows) => rows[0]),
         Effect.catchTag("DatabaseFailure", () => Effect.succeed(undefined)),
       )
+
     return member === undefined
       ? denied(decoded, "RELATIONSHIP_DENIED")
       : {

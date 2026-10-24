@@ -17,6 +17,7 @@ const customer = {
   name: "Northwind Customer",
   email: "northwind@example.test",
 }
+
 const quotation = {
   id: quotationId,
   tenantId,
@@ -24,6 +25,7 @@ const quotation = {
   status: "draft" as const,
   total: "25.00",
 }
+
 const draftOrder: SalesOrder = {
   id: orderId,
   tenantId,
@@ -52,6 +54,7 @@ it.effect(
       let customers = new Array<typeof customer>()
       let quotations = new Array<typeof quotation>()
       let currentOrder: SalesOrder | undefined
+
       const requests: Array<{
         path: string
         method: string
@@ -71,8 +74,10 @@ it.effect(
           requests.push({ path, method, headers: request.headers(), body })
 
           if (path === "/user-accounts" && method === "GET") return fulfillJson(route, 200, [])
+
           if (path === "/sales/customers" && method === "GET") {
             const search = requestUrl.searchParams.get("search")?.toLowerCase()
+
             return fulfillJson(
               route,
               200,
@@ -84,6 +89,7 @@ it.effect(
               ),
             )
           }
+
           if (path === "/sales/customers" && method === "POST") {
             customers = [
               {
@@ -92,24 +98,32 @@ it.effect(
                 email: body.email.trim().toLowerCase(),
               },
             ]
+
             return fulfillJson(route, 201, customers[0])
           }
+
           if (path === `/sales/customers/${customerId}` && method === "GET") {
             return fulfillJson(route, 200, customer)
           }
+
           if (path === "/sales/quotations" && method === "GET") {
             return fulfillJson(route, 200, quotations)
           }
+
           if (path === "/sales/quotations" && method === "POST") {
             quotations = [{ ...quotation, customerId: body.customerId, total: body.total }]
+
             return fulfillJson(route, 201, quotations[0])
           }
+
           if (path === `/sales/quotations/${quotationId}` && method === "GET") {
             return fulfillJson(route, 200, quotation)
           }
+
           if (path === "/sales/orders" && method === "GET") {
             return fulfillJson(route, 200, currentOrder === undefined ? [] : [currentOrder])
           }
+
           if (path === "/sales/orders" && method === "POST") {
             currentOrder = {
               ...draftOrder,
@@ -118,23 +132,30 @@ it.effect(
               lines: body.lines,
               total: "25.00",
             }
+
             return fulfillJson(route, 201, currentOrder)
           }
+
           if (path === `/sales/orders/${orderId}` && method === "GET") {
             return fulfillJson(route, 200, currentOrder ?? draftOrder)
           }
+
           if (path === `/sales/orders/${orderId}/confirm` && method === "POST") {
             currentOrder = {
               ...(currentOrder ?? draftOrder),
               status: "confirmed",
               confirmedAt: "2026-09-13T12:00:00.000Z",
             }
+
             return fulfillJson(route, 200, currentOrder)
           }
+
           if (path === `/sales/orders/${orderId}/cancel` && method === "POST") {
             currentOrder = { ...(currentOrder ?? draftOrder), status: "cancelled" }
+
             return fulfillJson(route, 200, currentOrder)
           }
+
           return fulfillJson(route, 404, notFoundBody())
         })
 

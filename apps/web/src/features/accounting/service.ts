@@ -40,6 +40,7 @@ const JournalEntryList = Schema.Array(JournalEntry).check(Schema.isMaxLength(200
 
 const exactMinor = (value: string): bigint => {
   const [whole, fraction = ""] = value.split(".")
+
   return BigInt(whole!) * 100n + BigInt(fraction.padEnd(2, "0"))
 }
 
@@ -47,8 +48,10 @@ const validJournal = (journal: JournalEntry): boolean => {
   const linesAreValid = journal.lines.every((line) => {
     const debit = exactMinor(line.debit)
     const credit = exactMinor(line.credit)
+
     return debit > 0n !== credit > 0n
   })
+
   const totals = journal.lines.reduce(
     (sum, line) => ({
       debit: sum.debit + exactMinor(line.debit),
@@ -56,6 +59,7 @@ const validJournal = (journal: JournalEntry): boolean => {
     }),
     { debit: 0n, credit: 0n },
   )
+
   return (
     linesAreValid &&
     totals.debit === totals.credit &&
@@ -72,6 +76,7 @@ export const listConfigurations = Effect.fn("Frontend.Accounting.listConfigurati
   const body = yield* requestJson(`${accountingRoutes.listConfigurations}${querySuffix(decoded)}`)
   const configurations = yield* decodeResponse(ConfigurationList, body)
   const connection = yield* BrowserConnection
+
   if (
     !responseListMatches(configurations, {
       tenantId: connection.tenantId,
@@ -80,6 +85,7 @@ export const listConfigurations = Effect.fn("Frontend.Accounting.listConfigurati
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "invalid-response" }))
   }
+
   return configurations
 })
 
@@ -90,6 +96,7 @@ export const listAccounts = Effect.fn("Frontend.Accounting.listAccounts")(functi
   const body = yield* requestJson(`${accountingRoutes.listAccounts}${querySuffix(decoded)}`)
   const accounts = yield* decodeResponse(AccountList, body)
   const connection = yield* BrowserConnection
+
   if (
     !responseListMatches(accounts, {
       tenantId: connection.tenantId,
@@ -98,6 +105,7 @@ export const listAccounts = Effect.fn("Frontend.Accounting.listAccounts")(functi
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "invalid-response" }))
   }
+
   return accounts
 })
 
@@ -108,6 +116,7 @@ export const listPeriods = Effect.fn("Frontend.Accounting.listPeriods")(function
   const body = yield* requestJson(`${accountingRoutes.listPeriods}${querySuffix(decoded)}`)
   const periods = yield* decodeResponse(PeriodList, body)
   const connection = yield* BrowserConnection
+
   if (
     !responseListMatches(periods, {
       tenantId: connection.tenantId,
@@ -116,6 +125,7 @@ export const listPeriods = Effect.fn("Frontend.Accounting.listPeriods")(function
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "invalid-response" }))
   }
+
   return periods
 })
 
@@ -123,11 +133,14 @@ export const listRevenuePostingProfiles = Effect.fn(
   "Frontend.Accounting.listRevenuePostingProfiles",
 )(function* (input: Schema.Codec.Encoded<typeof ListRevenuePostingProfilesInput> = {}) {
   const decoded = yield* decodeInput(ListRevenuePostingProfilesInput, input)
+
   const body = yield* requestJson(
     `${accountingRoutes.listRevenuePostingProfiles}${querySuffix(decoded)}`,
   )
+
   const profiles = yield* decodeResponse(RevenuePostingProfileList, body)
   const connection = yield* BrowserConnection
+
   if (
     !responseListMatches(profiles, {
       tenantId: connection.tenantId,
@@ -136,6 +149,7 @@ export const listRevenuePostingProfiles = Effect.fn(
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "invalid-response" }))
   }
+
   return profiles
 })
 
@@ -143,12 +157,15 @@ export const configureLegalEntity = Effect.fn("Frontend.Accounting.configureLega
   function* (legalEntityId: string, input: Schema.Codec.Encoded<typeof ConfigureLegalEntityInput>) {
     const decodedId = yield* decodeInput(Schema.String.check(Schema.isUUID()), legalEntityId)
     const decoded = yield* decodeInput(ConfigureLegalEntityInput, input)
+
     const body = yield* mutationRequest(
       accountingRoutes.configureLegalEntity.replace(":id", encodeURIComponent(decodedId)),
       decoded,
     )
+
     const configuration = yield* decodeResponse(AccountingConfiguration, body, "unknown-outcome")
     const connection = yield* BrowserConnection
+
     if (
       !responseMatches(configuration, {
         tenantId: connection.tenantId,
@@ -162,6 +179,7 @@ export const configureLegalEntity = Effect.fn("Frontend.Accounting.configureLega
     ) {
       return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
     }
+
     return configuration
   },
 )
@@ -172,6 +190,7 @@ export const configureRevenuePosting = Effect.fn("Frontend.Accounting.configureR
     const body = yield* mutationRequest(accountingRoutes.configureRevenuePosting, decoded)
     const profile = yield* decodeResponse(RevenuePostingProfile, body, "unknown-outcome")
     const connection = yield* BrowserConnection
+
     if (
       !responseMatches(profile, {
         tenantId: connection.tenantId,
@@ -182,6 +201,7 @@ export const configureRevenuePosting = Effect.fn("Frontend.Accounting.configureR
     ) {
       return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
     }
+
     return profile
   },
 )
@@ -193,6 +213,7 @@ export const openPeriod = Effect.fn("Frontend.Accounting.openPeriod")(function* 
   const body = yield* mutationRequest(accountingRoutes.openPeriod, decoded)
   const period = yield* decodeResponse(AccountingPeriod, body, "unknown-outcome")
   const connection = yield* BrowserConnection
+
   if (
     !responseMatches(period, {
       tenantId: connection.tenantId,
@@ -204,6 +225,7 @@ export const openPeriod = Effect.fn("Frontend.Accounting.openPeriod")(function* 
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
   }
+
   return period
 })
 
@@ -213,12 +235,15 @@ export const closePeriod = Effect.fn("Frontend.Accounting.closePeriod")(function
 ) {
   const decodedId = yield* decodeInput(Schema.String.check(Schema.isUUID()), periodId)
   const decoded = yield* decodeInput(ClosePeriodInput, input)
+
   const body = yield* mutationRequest(
     accountingRoutes.closePeriod.replace(":id", encodeURIComponent(decodedId)),
     decoded,
   )
+
   const period = yield* decodeResponse(AccountingPeriod, body, "unknown-outcome")
   const connection = yield* BrowserConnection
+
   if (
     !responseMatches(period, {
       tenantId: connection.tenantId,
@@ -229,6 +254,7 @@ export const closePeriod = Effect.fn("Frontend.Accounting.closePeriod")(function
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
   }
+
   return period
 })
 
@@ -239,6 +265,7 @@ export const createAccount = Effect.fn("Frontend.Accounting.createAccount")(func
   const body = yield* mutationRequest(accountingRoutes.createAccount, decoded)
   const account = yield* decodeResponse(Account, body, "unknown-outcome")
   const connection = yield* BrowserConnection
+
   if (
     !responseMatches(account, {
       tenantId: connection.tenantId,
@@ -249,6 +276,7 @@ export const createAccount = Effect.fn("Frontend.Accounting.createAccount")(func
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
   }
+
   return account
 })
 
@@ -259,6 +287,7 @@ export const postJournal = Effect.fn("Frontend.Accounting.postJournal")(function
   const body = yield* mutationRequest(accountingRoutes.postJournal, decoded)
   const journal = yield* decodeResponse(JournalEntry, body, "unknown-outcome")
   const connection = yield* BrowserConnection
+
   if (
     !responseMatches(journal, {
       tenantId: connection.tenantId,
@@ -269,6 +298,7 @@ export const postJournal = Effect.fn("Frontend.Accounting.postJournal")(function
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
   }
+
   return journal
 })
 
@@ -279,6 +309,7 @@ export const listJournals = Effect.fn("Frontend.Accounting.listJournals")(functi
   const body = yield* requestJson(`${accountingRoutes.listJournals}${querySuffix(decoded)}`)
   const journals = yield* decodeResponse(JournalEntryList, body)
   const connection = yield* BrowserConnection
+
   if (
     !responseListMatches(journals, {
       tenantId: connection.tenantId,
@@ -288,5 +319,6 @@ export const listJournals = Effect.fn("Frontend.Accounting.listJournals")(functi
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "invalid-response" }))
   }
+
   return journals
 })

@@ -27,20 +27,25 @@ export const makeProductServiceFromStore = <R>(
       input: Schema.Codec.Encoded<typeof ListProductsInput>,
     ) {
       const decoded = yield* authorized(ListProductsInput, ProductCapabilities.productRead)(input)
+
       return yield* store.listProducts(decoded)
     })
+
     const getProduct = Effect.fn("ProductService.getProduct")(function* (
       input: Schema.Codec.Encoded<typeof GetProductInput>,
     ) {
       const decoded = yield* authorized(GetProductInput, ProductCapabilities.productRead)(input)
       const product = yield* store.getProduct(decoded.tenantId, decoded.productId)
+
       if (product === undefined) {
         return yield* Effect.fail(
           new ProductNotFound({ tenantId: decoded.tenantId, productId: decoded.productId }),
         )
       }
+
       return product
     })
+
     const createProduct = Effect.fn("ProductService.createProduct")(function* (
       input: Schema.Codec.Encoded<typeof CreateProductInput>,
     ) {
@@ -48,7 +53,9 @@ export const makeProductServiceFromStore = <R>(
         CreateProductInput,
         ProductCapabilities.productCreate,
       )(input)
+
       const { principal: _principal, ...command } = decoded
+
       return yield* store.createProduct({ ...command, code: command.code.toUpperCase() })
     })
 

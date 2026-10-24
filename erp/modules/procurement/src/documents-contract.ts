@@ -27,8 +27,10 @@ import type * as ProcurementErrors from "./errors.ts"
 
 const Quantity = PositiveQuantity
 const ScopedInput = { principal: Principal, tenantId: Uuid }
+
 const uniqueLines = <T extends { readonly purchaseOrderLineId: string }>(lines: ReadonlyArray<T>) =>
   new Set(lines.map((line) => line.purchaseOrderLineId)).size === lines.length
+
 const DocumentLines = Schema.Array(Schema.Struct({ purchaseOrderLineId: Uuid, quantity: Quantity }))
   .check(Schema.isMinLength(1))
   .check(Schema.makeFilter(uniqueLines, { expected: "each order line appears once" }))
@@ -47,6 +49,7 @@ export const PricedPurchaseOrder = Schema.Struct({
   /** The approval request when the total exceeds the purchase order approval threshold. */
   approval: Schema.NullOr(Schema.Unknown),
 })
+
 export type PricedPurchaseOrder = {
   readonly purchaseOrderId: string
   readonly total: string
@@ -62,6 +65,7 @@ export const MatchingLine = Schema.Struct({
   unitPrice: FinancialMajorAmount,
   taxCodeId: Schema.NullOr(Uuid),
 })
+
 export const PurchaseMatching = Schema.Struct({
   purchaseOrderId: Uuid,
   supplierAccountId: Uuid,
@@ -70,6 +74,7 @@ export const PurchaseMatching = Schema.Struct({
   status: Schema.Literals(["draft", "confirmed", "cancelled"]),
   lines: Schema.Array(MatchingLine),
 })
+
 export type PurchaseMatching = Schema.Schema.Type<typeof PurchaseMatching>
 
 export const PurchaseStockDocument = Schema.Struct({
@@ -78,6 +83,7 @@ export const PurchaseStockDocument = Schema.Struct({
   number: Schema.String,
   stock: Schema.Unknown,
 })
+
 export type PurchaseStockDocument = {
   readonly id: string
   readonly purchaseOrderId: string
@@ -91,6 +97,7 @@ export const SetSupplierPriceInput = Schema.Struct({
   productId: Uuid,
   unitPrice: FinancialMajorAmount,
 })
+
 export const DraftPurchaseOrderInput = Schema.Struct({
   ...ScopedInput,
   supplierAccountId: Uuid,
@@ -107,12 +114,15 @@ export const DraftPurchaseOrderInput = Schema.Struct({
     .check(Schema.isMinLength(1))
     .check(Schema.isMaxLength(200)),
 })
+
 export const ReleasePurchaseOrderInput = Schema.Struct({
   ...ScopedInput,
   purchaseOrderId: Uuid,
   idempotencyKey: Schema.String.check(Schema.isPattern(/\S/)),
 })
+
 export const PurchaseOrderQueryInput = Schema.Struct({ ...ScopedInput, purchaseOrderId: Uuid })
+
 export const ReceiveValuedInput = Schema.Struct({
   ...ScopedInput,
   /** Client-chosen id that makes a retried receipt return the recorded one. */
@@ -122,6 +132,7 @@ export const ReceiveValuedInput = Schema.Struct({
   receiptDate: CalendarDate,
   lines: DocumentLines,
 })
+
 export const ReturnToSupplierInput = Schema.Struct({
   ...ScopedInput,
   returnId: Schema.optionalKey(Uuid),
@@ -132,6 +143,7 @@ export const ReturnToSupplierInput = Schema.Struct({
 })
 
 type CommonFailure = AuthorizationDenied | DatabaseFailure | Schema.SchemaError
+
 type StockFailure =
   | InventoryReferenceNotFound
   | StockUnavailable

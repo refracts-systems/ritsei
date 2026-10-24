@@ -49,6 +49,7 @@ const sensitiveField = (key: string): boolean =>
 // redaction removes credentials before a delivery record is exposed or retained.
 export const redactExternalPayload = (value: Schema.Json): Schema.Json => {
   if (Array.isArray(value)) return value.map(redactExternalPayload)
+
   if (
     value === null ||
     Predicate.isString(value) ||
@@ -57,6 +58,7 @@ export const redactExternalPayload = (value: Schema.Json): Schema.Json => {
   ) {
     return value
   }
+
   return Object.fromEntries(
     Object.entries(value).map(([key, child]) => [
       key,
@@ -86,8 +88,10 @@ export const assessExternalDelivery = (
   }
 
   const encoded = JSON.stringify(input.payload)
+
   const actualPayloadBytes =
     encoded === undefined ? Number.POSITIVE_INFINITY : new TextEncoder().encode(encoded).byteLength
+
   if (actualPayloadBytes > input.maxPayloadBytes) {
     return Effect.fail(
       new ExternalPayloadLimitExceeded({
@@ -106,6 +110,7 @@ export const assessExternalDelivery = (
       : input.attempts >= input.maxAttempts
         ? "dead_letter"
         : "retry"
+
   return Effect.succeed({
     state,
     connectorId: input.connectorId,

@@ -42,34 +42,43 @@ it.effect.skipIf(databaseUrl === undefined)(
     withTemporaryDatabase(databaseUrl!, (client: Sql) =>
       Effect.gen(function* () {
         yield* runMigrations(client)
+
         const [tenant] = yield* Effect.promise(
           () =>
             client<{ id: string }[]>`
             insert into auth.tenants (slug) values (${uuidv7()}) returning id
           `,
         )
+
         const database = makePostgresDatabase(client)
+
         const store = yield* makePostgresProcessCheckpointStore.pipe(
           Effect.provideService(Database, database),
         )
+
         const checkpoint = yield* Schema.decodeUnknownEffect(ProcessCheckpoint)(
           makeCheckpoint(tenant!.id),
         )
+
         const runtime = makeProcessRuntime()
         yield* store.save(checkpoint)
+
         const withEvent = yield* runtime.recordEvent(
           checkpoint,
           "018f3f77-0c5a-7cc0-8b62-6a163d214123",
         )
+
         const duplicateEvent = yield* runtime.recordEvent(
           withEvent,
           "018f3f77-0c5a-7cc0-8b62-6a163d214123",
         )
+
         const saved = yield* store.save(duplicateEvent)
 
         const restartedStore = yield* makePostgresProcessCheckpointStore.pipe(
           Effect.provideService(Database, database),
         )
+
         const recovered = yield* restartedStore.load(tenant!.id, checkpoint.instanceId)
         assert.deepStrictEqual(recovered, saved)
         assert.deepStrictEqual(recovered?.consumedEventIds, [

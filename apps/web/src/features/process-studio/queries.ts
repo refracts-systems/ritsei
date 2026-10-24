@@ -106,6 +106,7 @@ export function createProcessOperatorMutation(
   afterSuccess?: (instance: ProcessRuntimeInstance) => void,
 ) {
   const client = useQueryClient()
+
   return useMutation<
     ProcessRuntimeInstance,
     RequestFailure,
@@ -114,6 +115,7 @@ export function createProcessOperatorMutation(
     mutationFn: ({ instanceId, input }) => runRequest(scope, operateRuntime(instanceId, input)),
     onSuccess: (instance) => {
       afterSuccess?.(instance)
+
       return invalidate(client, scope.tenantId)
     },
   }))

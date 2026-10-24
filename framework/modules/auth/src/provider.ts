@@ -10,6 +10,7 @@ export const ExternalIdentity = Schema.Struct({
   subject: NonBlankString,
   issuedAt: Schema.Int.check(Schema.isGreaterThan(0)),
 })
+
 export type ExternalIdentity = Schema.Schema.Type<typeof ExternalIdentity>
 
 export interface IdentityProvider {

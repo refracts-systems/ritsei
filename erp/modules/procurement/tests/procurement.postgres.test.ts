@@ -46,8 +46,10 @@ import { postgresCode, postgresConstraint } from "../../../../tests/support/post
 
 const databaseUrl = process.env["DATABASE_URL"]
 const principal = { userAccountId: "procurement-postgres", sessionId: "session" }
+
 const postgresFailure = <A>(effect: () => Promise<A>) =>
   Effect.tryPromise({ try: effect, catch: (cause) => cause }).pipe(Effect.flip)
+
 const capabilities = [
   PartyCapabilities.partyCreate,
   PartyCapabilities.legalEntityCreate,
@@ -72,18 +74,23 @@ it.effect.skipIf(databaseUrl === undefined)(
       Effect.gen(function* () {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
+
         const userAccountService = yield* makeUserAccountService.pipe(
           Effect.provideService(Database, database),
         )
+
         const auth = yield* makeAuthService.pipe(
           Effect.provideService(Database, database),
           Effect.provide(WebCryptoLive),
           Effect.provideService(UserAccountService, userAccountService),
         )
+
         const tenant = yield* auth.createTenant({ slug: `procurement-${uuidv7()}` })
+
         const otherTenant = yield* auth.createTenant({
           slug: `procurement-other-${uuidv7()}`,
         })
+
         const authorizationLayer = makeAuthorizationTestLayer(
           [tenant.id, otherTenant.id].flatMap((tenantId) =>
             capabilities.map((capability) => ({
@@ -96,13 +103,16 @@ it.effect.skipIf(databaseUrl === undefined)(
 
         yield* Effect.gen(function* () {
           const authorization = yield* AuthorizationService
+
           const party = yield* makePartyService.pipe(
             Effect.provideService(Database, database),
             Effect.provideService(AuthorizationService, authorization),
           )
+
           const messaging = yield* makeMessagingService.pipe(
             Effect.provideService(Database, database),
           )
+
           const procurement = yield* Effect.provide(
             makeProcurementService,
             Layer.mergeAll(
@@ -121,23 +131,27 @@ it.effect.skipIf(databaseUrl === undefined)(
                 kind: "organization",
                 name: "Buying Legal Entity",
               })
+
               const legalEntity = yield* party.createLegalEntity({
                 principal,
                 tenantId: scopeTenantId,
                 organizationId: owner.id,
               })
+
               const supplier = yield* party.create({
                 principal,
                 tenantId: scopeTenantId,
                 kind: "organization",
                 name: "Supplier",
               })
+
               yield* party.assignRole({
                 principal,
                 tenantId: scopeTenantId,
                 partyId: supplier.id,
                 role: "supplier",
               })
+
               return yield* party.createRelationship({
                 principal,
                 tenantId: scopeTenantId,
@@ -149,11 +163,13 @@ it.effect.skipIf(databaseUrl === undefined)(
 
           const relationship = yield* createSupplierRelationship(tenant.id)
           const otherRelationship = yield* createSupplierRelationship(otherTenant.id)
+
           const input = {
             principal,
             tenantId: tenant.id,
             supplierRelationshipId: relationship.id,
           }
+
           const account = yield* procurement.createSupplierAccount(input)
           assert.strictEqual(account.partyId, relationship.partyId)
           assert.strictEqual(account.legalEntityId, relationship.legalEntityId)
@@ -179,6 +195,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               values (${tenant.id}, ${otherRelationship.id})
             `,
           )
+
           assert.strictEqual(postgresCode(invalidScope), "23503")
           assert.strictEqual(
             postgresConstraint(invalidScope),
@@ -190,16 +207,19 @@ it.effect.skipIf(databaseUrl === undefined)(
             tenantId: otherTenant.id,
             supplierRelationshipId: otherRelationship.id,
           })
+
           const lines = [
             { itemId: uuidv7(), quantity: "3", unitPrice: "12.34" },
             { itemId: uuidv7(), quantity: "2", unitPrice: "0.01" },
           ]
+
           const order = yield* procurement.createPurchaseOrder({
             principal,
             tenantId: tenant.id,
             supplierAccountId: account.id,
             lines,
           })
+
           assert.strictEqual(order.total, "37.04")
           assert.deepStrictEqual(
             (yield* procurement.listSupplierAccounts({
@@ -223,6 +243,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             }),
             [],
           )
+
           const persisted = yield* Effect.promise(
             () =>
               client<
@@ -245,6 +266,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               order by pol.item_id
             `,
           )
+
           assert.strictEqual(persisted.length, 2)
           assert.isTrue(persisted.every((row) => row.status === "draft" && row.total === "37.04"))
           assert.deepStrictEqual(
@@ -302,11 +324,13 @@ it.effect.skipIf(databaseUrl === undefined)(
             purchaseOrderId: order.id,
             idempotencyKey: "purchase-order-confirmation",
           }
+
           const confirmed = yield* procurement.confirmPurchaseOrder(confirmationInput)
           const replayed = yield* procurement.confirmPurchaseOrder(confirmationInput)
           assert.strictEqual(confirmed.status, "confirmed")
           assert.isNotNull(confirmed.confirmedAt)
           assert.deepStrictEqual(replayed, confirmed)
+
           const [confirmationEvent] = yield* Effect.promise(
             () =>
               client<
@@ -330,6 +354,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                 and aggregate_id = ${confirmed.id}
             `,
           )
+
           assert.deepStrictEqual(confirmationEvent, {
             event_type: ProcurementPurchaseOrderConfirmedEvent.id,
             event_version: ProcurementPurchaseOrderConfirmedEvent.version,
@@ -366,6 +391,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             }),
             confirmed,
           )
+
           const confirmationRows = yield* Effect.promise(
             () =>
               client<
@@ -380,6 +406,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant.id} and id = ${order.id}
             `,
           )
+
           assert.strictEqual(confirmationRows[0]?.status, "confirmed")
           assert.strictEqual(
             confirmationRows[0]?.confirmation_idempotency_key,
@@ -393,6 +420,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             supplierAccountId: account.id,
             lines: [{ itemId: uuidv7(), quantity: "1", unitPrice: "2.00" }],
           })
+
           assert.instanceOf(
             yield* Effect.flip(
               procurement.confirmPurchaseOrder({
@@ -409,12 +437,14 @@ it.effect.skipIf(databaseUrl === undefined)(
             supplierAccountId: account.id,
             lines: [{ itemId: uuidv7(), quantity: "1", unitPrice: "3.00" }],
           })
+
           const concurrentInput = {
             principal,
             tenantId: tenant.id,
             purchaseOrderId: concurrentOrder.id,
             idempotencyKey: "concurrent-purchase-order-confirmation",
           }
+
           const concurrentResults = yield* Effect.all(
             [
               procurement.confirmPurchaseOrder(concurrentInput),
@@ -422,8 +452,10 @@ it.effect.skipIf(databaseUrl === undefined)(
             ],
             { concurrency: "unbounded" },
           )
+
           assert.strictEqual(concurrentResults[0].id, concurrentResults[1].id)
           assert.strictEqual(concurrentResults[0].confirmedAt, concurrentResults[1].confirmedAt)
+
           const concurrentCancellations = yield* Effect.all(
             [
               procurement.cancelPurchaseOrder({
@@ -439,6 +471,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             ],
             { concurrency: "unbounded" },
           )
+
           assert.strictEqual(concurrentCancellations[0].status, "cancelled")
           assert.deepStrictEqual(concurrentCancellations[0], concurrentCancellations[1])
           assert.instanceOf(
@@ -464,6 +497,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             supplierAccountId: account.id,
             lines: [{ itemId: uuidv7(), quantity: "1", unitPrice: "4.00" }],
           })
+
           for (const mutation of [
             () =>
               client`
@@ -496,6 +530,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant.id} and id = ${metadataOrder.id}
             `,
           )
+
           assert.strictEqual(postgresCode(invalidDraftCancellation), "23514")
           assert.strictEqual(
             postgresConstraint(invalidDraftCancellation),
@@ -507,6 +542,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             purchaseOrderId: metadataOrder.id,
             idempotencyKey: "metadata-order-confirmation",
           })
+
           const tamperedCancellation = yield* postgresFailure(
             () =>
               client`
@@ -515,6 +551,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant.id} and id = ${metadataOrder.id}
             `,
           )
+
           assert.strictEqual(postgresCode(tamperedCancellation), "23514")
           assert.strictEqual(
             postgresConstraint(tamperedCancellation),
@@ -533,6 +570,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                 )
               `,
             )
+
             assert.strictEqual(postgresCode(nonDraftInsert), "23514")
             assert.strictEqual(
               postgresConstraint(nonDraftInsert),
@@ -548,6 +586,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant.id} and id = ${order.id}
             `,
           )
+
           assert.strictEqual(postgresCode(invalidTransition), "23514")
           assert.strictEqual(
             postgresConstraint(invalidTransition),
@@ -561,6 +600,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant.id} and id = ${order.id}
             `,
           )
+
           assert.strictEqual(postgresCode(immutableHeader), "23514")
           assert.strictEqual(
             postgresConstraint(immutableHeader),
@@ -598,11 +638,13 @@ it.effect.skipIf(databaseUrl === undefined)(
             tenantId: tenant.id,
             purchaseOrderId: order.id,
           })
+
           const replayedCancellation = yield* procurement.cancelPurchaseOrder({
             principal,
             tenantId: tenant.id,
             purchaseOrderId: order.id,
           })
+
           assert.strictEqual(cancelled.status, "cancelled")
           assert.strictEqual(cancelled.confirmedAt, confirmed.confirmedAt)
           assert.deepStrictEqual(replayedCancellation, cancelled)
@@ -618,6 +660,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             yield* Effect.flip(procurement.confirmPurchaseOrder(confirmationInput)),
             PurchaseOrderInvalidState,
           )
+
           const cancellationRows = yield* Effect.promise(
             () =>
               client<
@@ -632,6 +675,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant.id} and id = ${order.id}
             `,
           )
+
           assert.strictEqual(cancellationRows[0]?.status, "cancelled")
           assert.strictEqual(
             cancellationRows[0]?.confirmation_idempotency_key,
@@ -647,6 +691,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                 where tenant_id = ${tenant.id} and id = ${order.id}
               `,
             )
+
             assert.strictEqual(postgresCode(invalidCancelledTransition), "23514")
             assert.strictEqual(
               postgresConstraint(invalidCancelledTransition),
@@ -703,6 +748,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             supplierAccountId: account.id,
             lines: [{ itemId: uuidv7(), quantity: "1", unitPrice: "5.00" }],
           })
+
           for (const [quantity, unitPrice, constraint] of [
             ["0", "1.00", "purchase_order_lines_quantity_check"],
             ["1", "-1.00", "purchase_order_lines_unit_price_check"],
@@ -715,6 +761,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                 values (${tenant.id}, ${constraintOrder.id}, ${uuidv7()}, ${quantity}, ${unitPrice})
               `,
             )
+
             assert.strictEqual(postgresCode(failure), "23514")
             assert.strictEqual(postgresConstraint(failure), constraint)
           }
@@ -728,6 +775,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               `
             }),
           )
+
           assert.strictEqual(postgresCode(invalidDraftTotal), "23514")
           assert.strictEqual(
             postgresConstraint(invalidDraftTotal),
@@ -741,6 +789,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                 values (${tenant.id}, ${account.id}, 11.00)
                 returning id
               `
+
               await transaction`
                 insert into procurement.purchase_order_lines
                   (tenant_id, purchase_order_id, item_id, quantity, unit_price)
@@ -756,6 +805,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               await transaction`set constraints all immediate`
             }),
           )
+
           assert.strictEqual(postgresCode(inconsistentTotal), "23514")
           assert.strictEqual(
             postgresConstraint(inconsistentTotal),
@@ -770,6 +820,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant.id} and supplier_account_id = ${account.id}
             `,
           )
+
           yield* Effect.promise(
             () =>
               client`
@@ -806,6 +857,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             ),
             DatabaseFailure,
           )
+
           const afterRollback = yield* Effect.promise(
             () =>
               client<{ count: number }[]>`
@@ -814,6 +866,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant.id} and supplier_account_id = ${account.id}
             `,
           )
+
           assert.strictEqual(afterRollback[0]?.count, beforeRollback[0]?.count)
         }).pipe(Effect.provide(authorizationLayer))
       }),
@@ -827,15 +880,19 @@ it.effect.skipIf(databaseUrl === undefined)(
       Effect.gen(function* () {
         yield* runMigrations(client)
         const database = makePostgresDatabase(client)
+
         const userAccountService = yield* makeUserAccountService.pipe(
           Effect.provideService(Database, database),
         )
+
         const auth = yield* makeAuthService.pipe(
           Effect.provideService(Database, database),
           Effect.provide(WebCryptoLive),
           Effect.provideService(UserAccountService, userAccountService),
         )
+
         const tenant = yield* auth.createTenant({ slug: `receipt-${uuidv7()}` })
+
         const authorizationLayer = makeAuthorizationTestLayer(
           [
             PartyCapabilities.partyCreate,
@@ -861,18 +918,23 @@ it.effect.skipIf(databaseUrl === undefined)(
 
         yield* Effect.gen(function* () {
           const authorization = yield* AuthorizationService
+
           const requirements = Layer.merge(
             Layer.succeed(Database, database),
             Layer.succeed(AuthorizationService, authorization),
           )
+
           const party = yield* Effect.provide(makePartyService, requirements)
+
           const messaging = yield* makeMessagingService.pipe(
             Effect.provideService(Database, database),
           )
+
           const inventory = yield* Effect.provide(
             makeInventoryService,
             Layer.merge(requirements, Layer.succeed(MessagingService, messaging)),
           )
+
           const procurement = yield* Effect.provide(
             makeProcurementService,
             Layer.mergeAll(
@@ -888,23 +950,27 @@ it.effect.skipIf(databaseUrl === undefined)(
             kind: "organization",
             name: "Buying Legal Entity",
           })
+
           const legalEntity = yield* party.createLegalEntity({
             principal,
             tenantId: tenant.id,
             organizationId: owner.id,
           })
+
           const supplier = yield* party.create({
             principal,
             tenantId: tenant.id,
             kind: "organization",
             name: "Supplier",
           })
+
           yield* party.assignRole({
             principal,
             tenantId: tenant.id,
             partyId: supplier.id,
             role: "supplier",
           })
+
           const relationship = yield* party.createRelationship({
             principal,
             tenantId: tenant.id,
@@ -912,29 +978,34 @@ it.effect.skipIf(databaseUrl === undefined)(
             legalEntityId: legalEntity.id,
             kind: "supplier",
           })
+
           const supplierAccount = yield* procurement.createSupplierAccount({
             principal,
             tenantId: tenant.id,
             supplierRelationshipId: relationship.id,
           })
+
           const warehouse = yield* inventory.createWarehouse({
             principal,
             tenantId: tenant.id,
             legalEntityId: legalEntity.id,
             name: "Receipt Warehouse",
           })
+
           const item = yield* inventory.createItem({
             principal,
             tenantId: tenant.id,
             sku: "receipt-item",
             name: "Receipt Item",
           })
+
           const order = yield* procurement.createPurchaseOrder({
             principal,
             tenantId: tenant.id,
             supplierAccountId: supplierAccount.id,
             lines: [{ itemId: item.id, quantity: "3", unitPrice: "1.00" }],
           })
+
           const draftOrderReceipt = yield* postgresFailure(
             () =>
               client`
@@ -944,18 +1015,22 @@ it.effect.skipIf(databaseUrl === undefined)(
                 (${tenant.id}, ${order.id}, ${warehouse.id}, 'draft-order-receipt')
             `,
           )
+
           assert.strictEqual(postgresCode(draftOrderReceipt), "23514")
           assert.strictEqual(
             postgresConstraint(draftOrderReceipt),
             "purchase_receipt_order_state_check",
           )
+
           const confirmed = yield* procurement.confirmPurchaseOrder({
             principal,
             tenantId: tenant.id,
             purchaseOrderId: order.id,
             idempotencyKey: "receipt-confirmation",
           })
+
           const lineId = confirmed.lines[0]!.id
+
           const receiptInput = {
             principal,
             tenantId: tenant.id,
@@ -964,11 +1039,13 @@ it.effect.skipIf(databaseUrl === undefined)(
             idempotencyKey: "receipt-1",
             lines: [{ purchaseOrderLineId: lineId, quantity: "1" }],
           }
+
           const first = yield* Effect.provideService(
             procurement.receivePurchaseOrder(receiptInput),
             InventoryService,
             inventory,
           )
+
           assert.deepStrictEqual(
             yield* procurement.listPurchaseReceipts({
               principal,
@@ -977,6 +1054,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             }),
             [first],
           )
+
           const cancelledOrderWithReceipt = yield* postgresFailure(
             () =>
               client`
@@ -985,11 +1063,13 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant.id} and id = ${confirmed.id}
             `,
           )
+
           assert.strictEqual(postgresCode(cancelledOrderWithReceipt), "23514")
           assert.strictEqual(
             postgresConstraint(cancelledOrderWithReceipt),
             "purchase_order_receipt_state_check",
           )
+
           const changedReceipt = yield* postgresFailure(
             () =>
               client`
@@ -998,8 +1078,10 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant.id} and id = ${first.id}
             `,
           )
+
           assert.strictEqual(postgresCode(changedReceipt), "23514")
           assert.strictEqual(postgresConstraint(changedReceipt), "purchase_receipt_facts_immutable")
+
           const changedReceiptLine = yield* postgresFailure(
             () =>
               client`
@@ -1009,11 +1091,13 @@ it.effect.skipIf(databaseUrl === undefined)(
                 and purchase_order_line_id = ${lineId}
             `,
           )
+
           assert.strictEqual(postgresCode(changedReceiptLine), "23514")
           assert.strictEqual(
             postgresConstraint(changedReceiptLine),
             "purchase_receipt_facts_immutable",
           )
+
           const deletedReceiptLine = yield* postgresFailure(
             () =>
               client`
@@ -1022,11 +1106,13 @@ it.effect.skipIf(databaseUrl === undefined)(
                 and purchase_order_line_id = ${lineId}
             `,
           )
+
           assert.strictEqual(postgresCode(deletedReceiptLine), "23514")
           assert.strictEqual(
             postgresConstraint(deletedReceiptLine),
             "purchase_receipt_facts_immutable",
           )
+
           const deletedReceipt = yield* postgresFailure(
             () =>
               client`
@@ -1034,8 +1120,10 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant.id} and id = ${first.id}
             `,
           )
+
           assert.strictEqual(postgresCode(deletedReceipt), "23514")
           assert.strictEqual(postgresConstraint(deletedReceipt), "purchase_receipt_facts_immutable")
+
           const invalidWarehouseReceipt = yield* postgresFailure(
             () =>
               client`
@@ -1045,30 +1133,36 @@ it.effect.skipIf(databaseUrl === undefined)(
                 (${tenant.id}, ${confirmed.id}, ${uuidv7()}, 'invalid-warehouse')
             `,
           )
+
           assert.strictEqual(postgresCode(invalidWarehouseReceipt), "23503")
           assert.strictEqual(
             postgresConstraint(invalidWarehouseReceipt),
             "purchase_receipts_tenant_warehouse_fkey",
           )
+
           const otherItem = yield* inventory.createItem({
             principal,
             tenantId: tenant.id,
             sku: "receipt-other-item",
             name: "Receipt Other Item",
           })
+
           const otherOrder = yield* procurement.createPurchaseOrder({
             principal,
             tenantId: tenant.id,
             supplierAccountId: supplierAccount.id,
             lines: [{ itemId: otherItem.id, quantity: "1", unitPrice: "1.00" }],
           })
+
           const otherConfirmed = yield* procurement.confirmPurchaseOrder({
             principal,
             tenantId: tenant.id,
             purchaseOrderId: otherOrder.id,
             idempotencyKey: "other-receipt-confirmation",
           })
+
           const otherLineId = otherConfirmed.lines[0]!.id
+
           const mismatchedReceiptOrder = yield* postgresFailure(() =>
             client.begin(async (transaction) => {
               const [receipt] = await transaction<{ id: string }[]>`
@@ -1078,6 +1172,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                   (${tenant.id}, ${confirmed.id}, ${warehouse.id}, 'direct-mismatched-receipt')
                 returning id
               `
+
               await transaction`
                 insert into procurement.purchase_receipt_lines
                   (tenant_id, receipt_id, purchase_order_id, purchase_order_line_id,
@@ -1088,11 +1183,13 @@ it.effect.skipIf(databaseUrl === undefined)(
               `
             }),
           )
+
           assert.strictEqual(postgresCode(mismatchedReceiptOrder), "23503")
           assert.strictEqual(
             postgresConstraint(mismatchedReceiptOrder),
             "purchase_receipt_lines_tenant_receipt_order_fkey",
           )
+
           const mismatchedReceiptItem = yield* postgresFailure(() =>
             client.begin(async (transaction) => {
               const [receipt] = await transaction<{ id: string }[]>`
@@ -1102,6 +1199,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                   (${tenant.id}, ${confirmed.id}, ${warehouse.id}, 'direct-mismatched-item')
                 returning id
               `
+
               await transaction`
                 insert into procurement.purchase_receipt_lines
                   (tenant_id, receipt_id, purchase_order_id, purchase_order_line_id,
@@ -1112,10 +1210,12 @@ it.effect.skipIf(databaseUrl === undefined)(
               `
             }),
           )
+
           assert.strictEqual(
             postgresConstraint(mismatchedReceiptItem),
             "purchase_receipt_lines_tenant_order_line_item_fkey",
           )
+
           const invalidReceiptUnit = yield* postgresFailure(() =>
             client.begin(async (transaction) => {
               const [receipt] = await transaction<{ id: string }[]>`
@@ -1125,6 +1225,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                   (${tenant.id}, ${confirmed.id}, ${warehouse.id}, 'direct-invalid-unit')
                 returning id
               `
+
               await transaction`
                 insert into procurement.purchase_receipt_lines
                   (tenant_id, receipt_id, purchase_order_id, purchase_order_line_id,
@@ -1135,16 +1236,19 @@ it.effect.skipIf(databaseUrl === undefined)(
               `
             }),
           )
+
           assert.strictEqual(postgresCode(invalidReceiptUnit), "23514")
           assert.strictEqual(
             postgresConstraint(invalidReceiptUnit),
             "purchase_receipt_lines_unit_of_measure_check",
           )
+
           const replay = yield* Effect.provideService(
             procurement.receivePurchaseOrder(receiptInput),
             InventoryService,
             inventory,
           )
+
           assert.deepStrictEqual(replay, first)
 
           const second = yield* Effect.provideService(
@@ -1156,7 +1260,9 @@ it.effect.skipIf(databaseUrl === undefined)(
             InventoryService,
             inventory,
           )
+
           assert.strictEqual(second.lines[0]?.quantity, "2")
+
           const overReceipt = yield* postgresFailure(() =>
             client.begin(async (transaction) => {
               const [receipt] = await transaction<{ id: string }[]>`
@@ -1166,6 +1272,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                   (${tenant.id}, ${confirmed.id}, ${warehouse.id}, 'direct-over-receipt')
                 returning id
               `
+
               await transaction`
                 insert into procurement.purchase_receipt_lines
                   (tenant_id, receipt_id, purchase_order_id, purchase_order_line_id,
@@ -1176,6 +1283,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               `
             }),
           )
+
           assert.strictEqual(postgresCode(overReceipt), "23514")
           assert.strictEqual(
             postgresConstraint(overReceipt),
@@ -1217,11 +1325,13 @@ it.effect.skipIf(databaseUrl === undefined)(
               order by pr.id
             `,
           )
+
           assert.strictEqual(persistedReceipts.length, 2)
           assert.deepStrictEqual(
             persistedReceipts.map((row) => row.count),
             ["1", "1"],
           )
+
           const movements = yield* Effect.promise(
             () =>
               client<{ reference_id: string | null; quantity: string }[]>`
@@ -1232,11 +1342,13 @@ it.effect.skipIf(databaseUrl === undefined)(
               order by created_at
             `,
           )
+
           assert.deepStrictEqual(movements.map((row) => row.quantity).toSorted(), ["1", "2"])
           assert.deepStrictEqual(
             movements.map((row) => row.reference_id).sort(),
             persistedReceipts.map((row) => row.id).sort(),
           )
+
           const balance = yield* Effect.promise(
             () =>
               client<{ on_hand: string }[]>`
@@ -1246,6 +1358,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                 and item_id = ${item.id}
             `,
           )
+
           assert.strictEqual(balance[0]?.on_hand, "3")
 
           const missingItemOrder = yield* procurement.createPurchaseOrder({
@@ -1254,12 +1367,14 @@ it.effect.skipIf(databaseUrl === undefined)(
             supplierAccountId: supplierAccount.id,
             lines: [{ itemId: uuidv7(), quantity: "1", unitPrice: "1.00" }],
           })
+
           const missingItemConfirmed = yield* procurement.confirmPurchaseOrder({
             principal,
             tenantId: tenant.id,
             purchaseOrderId: missingItemOrder.id,
             idempotencyKey: "missing-item-confirmation",
           })
+
           assert.instanceOf(
             yield* Effect.flip(
               Effect.provideService(
@@ -1282,6 +1397,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             ),
             PurchaseReceiptInventoryReferenceNotFound,
           )
+
           const missingItemReceipts = yield* Effect.promise(
             () =>
               client<{ count: string }[]>`
@@ -1290,6 +1406,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               where tenant_id = ${tenant.id} and purchase_order_id = ${missingItemConfirmed.id}
             `,
           )
+
           assert.strictEqual(missingItemReceipts[0]?.count, "0")
         }).pipe(Effect.provide(authorizationLayer))
       }),

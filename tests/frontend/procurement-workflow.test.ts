@@ -69,41 +69,55 @@ it.effect(
           requests.push({ path, method, headers: request.headers() })
 
           if (path === "/user-accounts") return fulfillJson(route, 200, [])
+
           if (path === "/procurement/supplier-accounts" && method === "GET") {
             return fulfillJson(route, 200, accounts)
           }
+
           if (path === "/procurement/supplier-accounts" && method === "POST") {
             supplierAccountBody = request.postDataJSON()
+
             return fulfillJson(route, 201, supplierAccount)
           }
+
           if (path === "/procurement/purchase-orders" && method === "GET") {
             const status = requestUrl.searchParams.get("status")
             const supplier = requestUrl.searchParams.get("supplierAccountId")
+
             const matches = [order].filter(
               (candidate) =>
                 (status === null || candidate.status === status) &&
                 (supplier === null || candidate.supplierAccountId === supplier),
             )
+
             return fulfillJson(route, 200, matches)
           }
+
           if (path === "/procurement/purchase-orders" && method === "POST") {
             purchaseOrderBody = request.postDataJSON()
             order = draftOrder
+
             return fulfillJson(route, 201, order)
           }
+
           if (path === `/procurement/purchase-orders/${orderId}` && method === "GET") {
             return fulfillJson(route, 200, order)
           }
+
           if (path === `/procurement/purchase-orders/${orderId}/confirm` && method === "POST") {
             confirmBody = request.postDataJSON()
             order = { ...order, status: "confirmed", confirmedAt: "2026-09-13T12:00:00.000Z" }
+
             return fulfillJson(route, 200, order)
           }
+
           if (path === `/procurement/purchase-orders/${orderId}/receipts` && method === "GET") {
             return fulfillJson(route, 200, receipts)
           }
+
           if (path === `/procurement/purchase-orders/${orderId}/receipts` && method === "POST") {
             receiveBody = request.postDataJSON()
+
             const receipt = {
               id: receiptId,
               tenantId,
@@ -121,9 +135,12 @@ it.effect(
                 },
               ],
             }
+
             receipts = [receipt]
+
             return fulfillJson(route, 201, receipt)
           }
+
           return fulfillJson(route, 404, notFoundBody())
         })
 
@@ -137,9 +154,11 @@ it.effect(
               request.path === "/procurement/purchase-orders" && request.method === "GET",
           ),
         )
+
         const procurementRequest = requests.find((request) =>
           request.path.startsWith("/procurement"),
         )
+
         assert.equal(procurementRequest?.headers.authorization, "Bearer procurement-session")
         assert.equal(procurementRequest?.headers["x-tenant-id"], tenantId)
 
@@ -147,6 +166,7 @@ it.effect(
           name: "Create supplier account",
           exact: true,
         })
+
         await createAccount.click()
         const accountDialog = page.getByRole("dialog", { name: "Create supplier account" })
         await accountDialog.waitFor()

@@ -37,6 +37,7 @@ export const simulateWithoutSideEffect = (
       Predicate.isString(input.action?.id) && input.action.id.trim() !== ""
         ? input.action.id.slice(0, 256)
         : "external-action"
+
     if (!Schema.is(Uuid)(input.tenantId)) {
       return yield* Effect.fail(
         new ExternalPayloadInvalid({
@@ -45,6 +46,7 @@ export const simulateWithoutSideEffect = (
         }),
       )
     }
+
     if (!validateExternalActionDefinition(input.action)) {
       return yield* Effect.fail(
         new ExternalPayloadInvalid({
@@ -53,6 +55,7 @@ export const simulateWithoutSideEffect = (
         }),
       )
     }
+
     if (!input.action.allowlisted || input.action.stability !== "PUBLIC") {
       return yield* Effect.fail(
         new ExternalActionNotAllowlisted({
@@ -61,6 +64,7 @@ export const simulateWithoutSideEffect = (
         }),
       )
     }
+
     const validatedInput = yield* decodeExternalSchema(input.action.inputSchema, input.input).pipe(
       Effect.mapError(
         () =>
@@ -70,6 +74,7 @@ export const simulateWithoutSideEffect = (
           }),
       ),
     )
+
     return {
       simulated: true,
       actionId: input.action.id,

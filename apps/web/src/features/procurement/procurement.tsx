@@ -40,6 +40,7 @@ const statusOptions = [
   { value: "confirmed", label: "Confirmed" },
   { value: "cancelled", label: "Cancelled" },
 ] as const
+
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const quantityPattern = /^[1-9]\d*$/
 const moneyPattern = /^\d+\.\d{2}$/
@@ -63,11 +64,14 @@ function CreateSupplierAccountDialog(props: { reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
+
   const mutation = createSupplierAccountMutation(scope, () => {
     setOpen(false)
     void props.reload()
   })
+
   let relationshipInput: HTMLInputElement | undefined
+
   return (
     <Dialog
       open={open()}
@@ -84,11 +88,14 @@ function CreateSupplierAccountDialog(props: { reload: () => Promise<void> }) {
           (value) => {
             if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
             const supplierRelationshipId = requiredText(value.supplierRelationshipId)
+
             if (supplierRelationshipId === null || !uuidPattern.test(supplierRelationshipId)) {
               setInvalid(true)
               relationshipInput?.focus()
+
               return
             }
+
             setInvalid(false)
             mutation.mutate({ supplierRelationshipId })
           }
@@ -150,10 +157,12 @@ function CreatePurchaseOrderDialog(props: {
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
   const [lineIndexes, setLineIndexes] = createSignal([0])
+
   const mutation = createPurchaseOrderMutation(scope, (order) => {
     setOpen(false)
     navigate(`/procurement/${encodeURIComponent(order.id)}`)
   })
+
   return (
     <Dialog
       open={open()}
@@ -182,13 +191,17 @@ function CreatePurchaseOrderDialog(props: {
             (value, _event, form) => {
               if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
               const supplierAccountId = requiredText(value.supplierAccountId)
+
               const lines = lineIndexes().flatMap((index) => {
                 const itemId = requiredText(form.get(`itemId-${index}`))
                 const quantity = requiredText(form.get(`quantity-${index}`))
                 const unitPrice = requiredText(form.get(`unitPrice-${index}`))
+
                 if (itemId === null && quantity === null && unitPrice === null) return []
+
                 return [{ itemId, quantity, unitPrice }]
               })
+
               // Fallow: purchase-order line validation intentionally remains adjacent to submission.
               const validLines = lines.every(
                 // fallow-ignore-next-line complexity
@@ -200,6 +213,7 @@ function CreatePurchaseOrderDialog(props: {
                   line.unitPrice !== null &&
                   moneyPattern.test(line.unitPrice),
               )
+
               if (
                 supplierAccountId === null ||
                 !uuidPattern.test(supplierAccountId) ||
@@ -207,8 +221,10 @@ function CreatePurchaseOrderDialog(props: {
                 !validLines
               ) {
                 setInvalid(true)
+
                 return
               }
+
               setInvalid(false)
               mutation.mutate({
                 supplierAccountId,
@@ -344,6 +360,7 @@ function ConfirmPurchaseOrderDialog(props: { order: PurchaseOrder; reload: () =>
   const [open, setOpen] = createSignal(false)
   const mutation = createConfirmPurchaseOrderMutation(scope, () => setOpen(false))
   const [invalid, setInvalid] = createSignal(false)
+
   return (
     <Dialog
       open={open()}
@@ -361,10 +378,13 @@ function ConfirmPurchaseOrderDialog(props: { order: PurchaseOrder; reload: () =>
           (value) => {
             if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
             const idempotencyKey = requiredText(value.idempotencyKey)
+
             if (idempotencyKey === null) {
               setInvalid(true)
+
               return
             }
+
             setInvalid(false)
             mutation.mutate({ id: props.order.id, idempotencyKey })
           }
@@ -412,6 +432,7 @@ function CancelPurchaseOrderDialog(props: { order: PurchaseOrder; reload: () => 
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
   const mutation = createCancelPurchaseOrderMutation(scope, () => setOpen(false))
+
   return (
     <Dialog
       open={open()}
@@ -450,6 +471,7 @@ function ReceivePurchaseOrderDialog(props: { order: PurchaseOrder; reload: () =>
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
   const mutation = createReceivePurchaseOrderMutation(scope, () => setOpen(false))
+
   return (
     <Dialog
       open={open()}
@@ -468,20 +490,26 @@ function ReceivePurchaseOrderDialog(props: { order: PurchaseOrder; reload: () =>
             if (mutation.isPending || mutation.error?.kind === "unknown-outcome") return
             const warehouseId = requiredText(value.warehouseId)
             const idempotencyKey = requiredText(value.idempotencyKey)
+
             const lines = props.order.lines.flatMap((line) => {
               const quantity = requiredText(form.get(`receipt-quantity-${line.id}`))
+
               return quantity === null ? [] : [{ purchaseOrderLineId: line.id, quantity }]
             })
+
             const valid =
               warehouseId !== null &&
               uuidPattern.test(warehouseId) &&
               idempotencyKey !== null &&
               lines.length > 0 &&
               lines.every((line) => quantityPattern.test(line.quantity))
+
             if (!valid) {
               setInvalid(true)
+
               return
             }
+
             setInvalid(false)
             mutation.mutate({
               id: props.order.id,
@@ -663,6 +691,7 @@ function ProcurementFilters(props: {
   status?: PurchaseOrderStatus
 }) {
   const navigate = useNavigate()
+
   return (
     <Form
       class={layout.row}
@@ -674,10 +703,13 @@ function ProcurementFilters(props: {
           const query = new URLSearchParams()
           const supplierAccountId = requiredText(value.supplierAccountId)
           const status = value.status
+
           if (supplierAccountId !== null) query.set("supplierAccountId", supplierAccountId)
+
           if (status === "draft" || status === "confirmed" || status === "cancelled") {
             query.set("status", status)
           }
+
           navigate(query.size === 0 ? "/procurement" : `/procurement?${query}`)
         }
       }
@@ -814,6 +846,7 @@ function PurchaseOrderDetail(props: { id: string }) {
   const query = createPurchaseOrderQuery(scope, id)
   const receipts = createPurchaseReceiptsQuery(scope, id, { limit: 200 })
   const reload = () => reloaded(Promise.all([query.refetch(), receipts.refetch()]))
+
   return (
     <section class={layout.stack} aria-labelledby="purchase-order-detail-heading">
       <div class={layout.row}>
@@ -889,11 +922,13 @@ export function Procurement(props: {
 }) {
   const scope = useContext(ApiRuntime)
   const supplierAccounts = createSupplierAccountsQuery(scope, { limit: 200 })
+
   const orders = createPurchaseOrdersQuery(scope, {
     ...definedFields({ supplierAccountId: props.supplierAccountId }),
     ...definedFields({ status: props.status }),
     limit: 200,
   })
+
   return (
     <EntityWorkspace
       title="Procurement"

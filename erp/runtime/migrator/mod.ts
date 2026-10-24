@@ -8,6 +8,7 @@ import { isMain } from "../../../tooling/entrypoint.ts"
 
 export const migrate = (url: string) => {
   const client = postgres(url)
+
   return Effect.acquireUseRelease(
     Effect.succeed(client),
     (connection) => runMigrations(connection),
@@ -17,12 +18,14 @@ export const migrate = (url: string) => {
 
 if (isMain(import.meta.url)) {
   const url = process.env["DATABASE_URL"]
+
   if (url === undefined || url.trim() === "") {
     console.error("DATABASE_URL is required")
     process.exit(1)
   }
 
   const result = await Effect.runPromiseExit(migrate(url))
+
   if (Exit.isFailure(result)) {
     console.error(result.cause)
     process.exit(1)

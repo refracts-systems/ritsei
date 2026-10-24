@@ -21,6 +21,7 @@ const AccountId = Schema.String.check(Schema.isUUID())
 
 export const listAccounts = Effect.fn("Frontend.Identity.listAccounts")(function* () {
   const body = yield* requestJson(userAccountRoutes.list)
+
   return yield* decodeResponse(AccountList, body)
 })
 
@@ -30,9 +31,11 @@ export const getAccount = Effect.fn("Frontend.Identity.getAccount")(function* (
   const decodedId = yield* decodeInput(AccountId, id)
   const body = yield* requestJson(routeWithId(userAccountRoutes.get, decodedId))
   const account = yield* decodeResponse(UserAccount, body)
+
   if (!responseMatches(account, { id: decodedId })) {
     return yield* Effect.fail(new RequestFailure({ kind: "invalid-response" }))
   }
+
   return account
 })
 
@@ -41,6 +44,7 @@ export const createAccount = Effect.fn("Frontend.Identity.createAccount")(functi
 ) {
   const decoded = yield* decodeInput(CreateUserAccountInput, input)
   const body = yield* mutationRequest(userAccountRoutes.create, "POST", decoded)
+
   return yield* decodeResponse(UserAccount, body, "unknown-outcome")
 })
 
@@ -48,12 +52,16 @@ export const updateAccount = Effect.fn("Frontend.Identity.updateAccount")(functi
   input: Schema.Codec.Encoded<typeof UpdateUserAccountInput>,
 ) {
   const decoded = yield* decodeInput(UpdateUserAccountInput, input)
+
   const body = yield* requestJson(routeWithId(userAccountRoutes.update, decoded.id), "PATCH", {
     email: decoded.email,
   })
+
   const account = yield* decodeResponse(UserAccount, body, "unknown-outcome")
+
   if (!responseMatches(account, { id: decoded.id })) {
     return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
   }
+
   return account
 })

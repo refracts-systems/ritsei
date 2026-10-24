@@ -39,10 +39,12 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
   const identifiers = new Map<string, ExternalIdentifier>()
   const representations = new Map<string, PartyRepresentation>()
   const id = uuidv7
+
   const list = Effect.fn("PartyStore.memory.list")(
     (tenantId: string, search: string | null, kind: Party["kind"] | null, limit: number) =>
       Effect.sync(() => {
         const normalizedSearch = search?.toLocaleLowerCase()
+
         return [...stored.values()]
           .filter(
             (party) =>
@@ -64,19 +66,24 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
           }))
       }),
   )
+
   const getDetail = Effect.fn("PartyStore.memory.getDetail")(function* (
     tenantId: string,
     partyId: string,
   ) {
     const party = stored.get(partyId)
+
     if (party === undefined || party.tenantId !== tenantId) {
       return yield* Effect.fail(new PartyNotFound({ tenantId, partyId }))
     }
+
     const legalEntity =
       [...legalEntities.values()].find(
         (entity) => entity.tenantId === tenantId && entity.organizationId === partyId,
       ) ?? null
+
     const rolePrefix = `${tenantId}:${partyId}:`
+
     return {
       party,
       // SAFETY: role keys are written only as the prefix followed by a PartyRole.
@@ -131,25 +138,31 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
         ),
     } satisfies PartyDetail
   })
+
   const create = Effect.fn("PartyStore.memory.create")(
     (tenantId: string, kind: Party["kind"], name: string) =>
       Effect.sync(() => {
         const party = { id: id(), tenantId, kind, name }
         stored.set(party.id, party)
+
         return party
       }),
   )
+
   const createLegalEntity = Effect.fn("PartyStore.memory.createLegalEntity")(function* (
     tenantId: string,
     organizationId: string,
   ) {
     const party = stored.get(organizationId)
+
     if (party === undefined || party.tenantId !== tenantId) {
       return yield* Effect.fail(new PartyNotFound({ tenantId, partyId: organizationId }))
     }
+
     if (party.kind !== "organization") {
       return yield* Effect.fail(new OrganizationRequired({ tenantId, partyId: organizationId }))
     }
+
     if (
       [...legalEntities.values()].some(
         (x) => x.tenantId === tenantId && x.organizationId === organizationId,
@@ -158,8 +171,10 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
       return yield* Effect.fail(new LegalEntityAlreadyExists({ tenantId, organizationId }))
     const result = { id: id(), tenantId, organizationId }
     legalEntities.set(result.id, result)
+
     return result
   })
+
   const createBranch = Effect.fn("PartyStore.memory.createBranch")(function* (
     tenantId: string,
     legalEntityId: string,
@@ -169,15 +184,18 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
     dedicatedJournalCode: string | null,
   ) {
     const entity = legalEntities.get(legalEntityId)
+
     if (entity === undefined || entity.tenantId !== tenantId) {
       return yield* Effect.fail(new LegalEntityNotFound({ tenantId, legalEntityId }))
     }
+
     if (
       [...branches.values()].some(
         (x) => x.tenantId === tenantId && x.legalEntityId === legalEntityId && x.name === name,
       )
     )
       return yield* Effect.fail(new BranchAlreadyExists({ tenantId, legalEntityId, name }))
+
     const result = {
       id: id(),
       tenantId,
@@ -187,9 +205,12 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
       localTaxRegistration,
       dedicatedJournalCode,
     }
+
     branches.set(result.id, result)
+
     return result
   })
+
   const createPartyRepresentation = Effect.fn("PartyStore.memory.createPartyRepresentation")(
     function* (
       tenantId: string,
@@ -202,9 +223,11 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
           new PartyRepresentationUserAccountNotFound({ tenantId, userAccountId }),
         )
       }
+
       if (stored.get(partyId)?.tenantId !== tenantId) {
         return yield* Effect.fail(new PartyNotFound({ tenantId, partyId }))
       }
+
       if (
         [...representations.values()].some(
           (x) =>
@@ -218,22 +241,29 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
           new PartyRepresentationAlreadyExists({ tenantId, userAccountId, partyId, kind }),
         )
       }
+
       const result = { id: id(), tenantId, userAccountId, partyId, kind, active: true }
       representations.set(result.id, result)
+
       return result
     },
   )
+
   const setPartyRepresentationActive = Effect.fn("PartyStore.memory.setPartyRepresentationActive")(
     function* (tenantId: string, representationId: string, active: boolean) {
       const current = representations.get(representationId)
+
       if (current === undefined || current.tenantId !== tenantId) {
         return yield* Effect.fail(new PartyRepresentationNotFound({ tenantId, representationId }))
       }
+
       const result = { ...current, active }
       representations.set(result.id, result)
+
       return result
     },
   )
+
   const assignRole = Effect.fn("PartyStore.memory.assignRole")(function* (
     tenantId: string,
     partyId: string,
@@ -242,12 +272,16 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
     if (stored.get(partyId)?.tenantId !== tenantId) {
       return yield* Effect.fail(new PartyNotFound({ tenantId, partyId }))
     }
+
     const key = `${tenantId}:${partyId}:${role}`
+
     if (roles.has(key)) {
       return yield* Effect.fail(new PartyRoleAlreadyAssigned({ tenantId, partyId, role }))
     }
+
     roles.add(key)
   })
+
   const createRelationship = Effect.fn("PartyStore.memory.createRelationship")(function* (
     tenantId: string,
     partyId: string,
@@ -257,22 +291,29 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
     if (stored.get(partyId)?.tenantId !== tenantId) {
       return yield* Effect.fail(new PartyNotFound({ tenantId, partyId }))
     }
+
     if (legalEntities.get(legalEntityId)?.tenantId !== tenantId) {
       return yield* Effect.fail(new LegalEntityNotFound({ tenantId, legalEntityId }))
     }
+
     if (!roles.has(`${tenantId}:${partyId}:${kind}`)) {
       return yield* Effect.fail(new PartyRelationshipRoleNotAssigned({ tenantId, partyId, kind }))
     }
+
     const key = `${tenantId}:${partyId}:${legalEntityId}:${kind}`
+
     if (relationships.has(key)) {
       return yield* Effect.fail(
         new PartyRelationshipAlreadyExists({ tenantId, partyId, legalEntityId, kind }),
       )
     }
+
     const result = { id: id(), tenantId, partyId, legalEntityId, kind, active: true }
     relationships.set(key, result)
+
     return result
   })
+
   const getRelationship = Effect.fn("PartyStore.memory.getRelationship")(function* (
     tenantId: string,
     relationshipId: string,
@@ -280,11 +321,14 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
     const result = [...relationships.values()].find(
       (x) => x.tenantId === tenantId && x.id === relationshipId,
     )
+
     if (result === undefined) {
       return yield* Effect.fail(new PartyRelationshipNotFound({ tenantId, relationshipId }))
     }
+
     return result
   })
+
   const findRelatedPartyPaths = Effect.fn("PartyStore.memory.findRelatedPartyPaths")(
     (tenantId: string, sourcePartyId: string, limit: number) =>
       Effect.sync(() =>
@@ -315,6 +359,7 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
           .slice(0, limit),
       ),
   )
+
   const attachIdentifier = Effect.fn("PartyStore.memory.attachIdentifier")(function* (
     tenantId: string,
     partyId: string,
@@ -327,10 +372,13 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
     if (stored.get(partyId)?.tenantId !== tenantId) {
       return yield* Effect.fail(new PartyNotFound({ tenantId, partyId }))
     }
+
     if (legalEntityId !== null && legalEntities.get(legalEntityId)?.tenantId !== tenantId) {
       return yield* Effect.fail(new LegalEntityNotFound({ tenantId, legalEntityId }))
     }
+
     const key = `${tenantId}:${provider}:${scheme}:${scope}:${legalEntityId ?? "tenant"}:${value}`
+
     if (identifiers.has(key)) {
       return yield* Effect.fail(
         new ExternalIdentifierAlreadyAssigned({
@@ -343,6 +391,7 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
         }),
       )
     }
+
     const result: ExternalIdentifier = {
       id: id(),
       tenantId,
@@ -353,9 +402,12 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
       legalEntityId,
       value,
     }
+
     identifiers.set(key, result)
+
     return result
   })
+
   return {
     list,
     getDetail,

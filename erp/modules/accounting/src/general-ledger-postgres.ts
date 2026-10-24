@@ -43,6 +43,7 @@ const accountSelection = {
 const normalize = (value: string) => {
   const negative = value.startsWith("-")
   const [whole = "0", fraction = ""] = (negative ? value.slice(1) : value).split(".")
+
   return `${negative ? "-" : ""}${whole}.${fraction.padEnd(2, "0").slice(0, 2)}`
 }
 
@@ -70,6 +71,7 @@ const NO_SOURCE = { type: null, id: null } as const
 
 const commandPosting = (command: PostEntryCommand): Posting => {
   const source = command.source ?? NO_SOURCE
+
   return {
     legalEntityId: command.legalEntityId,
     postingDate: command.postingDate,
@@ -109,6 +111,7 @@ export const makeGeneralLedgerPostgresStore = Effect.fn("GeneralLedger.makePostg
             if (isDatabaseConstraint(error, "accounts_tenant_code_key")) {
               return new AccountAlreadyExists({ tenantId: command.tenantId, code: command.code })
             }
+
             if (
               command.parentAccountId !== null &&
               isDatabaseConstraint(error, "accounts_parent_same_type_fkey", "23503")
@@ -118,6 +121,7 @@ export const makeGeneralLedgerPostgresStore = Effect.fn("GeneralLedger.makePostg
                 parentAccountId: command.parentAccountId,
               })
             }
+
             return error
           }),
         )
@@ -139,6 +143,7 @@ export const makeGeneralLedgerPostgresStore = Effect.fn("GeneralLedger.makePostg
     ) =>
       database.transaction(async (tx) => {
         const byCode = new Map<string, LedgerAccount>()
+
         const existing = await tx
           .select(accountSelection)
           .from(accounts)
@@ -151,12 +156,16 @@ export const makeGeneralLedgerPostgresStore = Effect.fn("GeneralLedger.makePostg
               ),
             ),
           )
+
         for (const account of existing) byCode.set(account.code, account)
+
         // Template order lists parents before children.
         for (const account of template) {
           if (byCode.has(account.code)) continue
+
           const parent =
             account.parentCode === undefined ? undefined : byCode.get(account.parentCode)
+
           const created = (
             await tx
               .insert(accounts)
@@ -169,8 +178,10 @@ export const makeGeneralLedgerPostgresStore = Effect.fn("GeneralLedger.makePostg
               })
               .returning(accountSelection)
           )[0]!
+
           byCode.set(created.code, created)
         }
+
         return template.map((account) => byCode.get(account.code)!)
       }, "accounting.ledger.chart.template")
 
@@ -178,6 +189,7 @@ export const makeGeneralLedgerPostgresStore = Effect.fn("GeneralLedger.makePostg
       database
         .query((db) => {
           const insert = db.insert(postingRules).values(rule)
+
           return (
             options.replace
               ? insert.onConflictDoUpdate({
@@ -198,12 +210,14 @@ export const makeGeneralLedgerPostgresStore = Effect.fn("GeneralLedger.makePostg
             if (isDatabaseConstraint(error, "posting_rules_account_fkey", "23503")) {
               return new AccountNotFound({ tenantId: rule.tenantId })
             }
+
             if (isDatabaseConstraint(error, "posting_rules_legal_entity_fkey", "23503")) {
               return new AccountingLegalEntityNotFound({
                 tenantId: rule.tenantId,
                 legalEntityId: rule.legalEntityId,
               })
             }
+
             return error
           }),
         )
@@ -240,7 +254,9 @@ export const makeGeneralLedgerPostgresStore = Effect.fn("GeneralLedger.makePostg
             )
             .for("update")
         )[0]
+
         if (entry === undefined) return undefined
+
         const lines = await tx
           .select({
             accountId: journalLines.accountId,
@@ -250,6 +266,7 @@ export const makeGeneralLedgerPostgresStore = Effect.fn("GeneralLedger.makePostg
           .from(journalLines)
           .where(and(eq(journalLines.tenantId, tenantId), eq(journalLines.entryId, entry.id)))
           .orderBy(asc(journalLines.id))
+
         return {
           entry,
           lines: lines.map((line) => ({
@@ -307,10 +324,13 @@ export const makeGeneralLedgerPostgresStore = Effect.fn("GeneralLedger.makePostg
               )
               .for("share")
           )[0]
+
           if (configuration === undefined) return Result.fail(PostEntryOutcome.NotConfigured())
+
           if (configuration.financialEngine !== "postgresql") {
             return Result.fail(PostEntryOutcome.EngineActivated())
           }
+
           // A shared lock on the open period makes a concurrent close wait for this posting.
           const period = (
             await tx
@@ -327,9 +347,11 @@ export const makeGeneralLedgerPostgresStore = Effect.fn("GeneralLedger.makePostg
               )
               .for("share")
           )[0]
+
           if (period === undefined || !configuration.postingEnabled) {
             return Result.fail(PostEntryOutcome.PeriodNotOpen())
           }
+
           const rules = await tx
             .select({ role: postingRules.role, accountId: postingRules.accountId })
             .from(postingRules)
@@ -339,6 +361,7 @@ export const makeGeneralLedgerPostgresStore = Effect.fn("GeneralLedger.makePostg
                 eq(postingRules.legalEntityId, command.legalEntityId),
               ),
             )
+
           return Result.succeed({
             fiscalYearStartMonth: configuration.fiscalYearStartMonth,
             rules: new Map<PostingRole, string>(rules.map((rule) => [rule.role, rule.accountId])),
@@ -353,15 +376,19 @@ export const makeGeneralLedgerPostgresStore = Effect.fn("GeneralLedger.makePostg
       rules: ReadonlyMap<PostingRole, string>,
     ): { readonly lines: AccountLine[] } | { readonly missing: PostingRole } => {
       const resolved: AccountLine[] = []
+
       for (const line of lines) {
         if ("accountId" in line) {
           resolved.push({ accountId: line.accountId, debit: line.debit, credit: line.credit })
           continue
         }
+
         const accountId = rules.get(line.role)
+
         if (accountId === undefined) return { missing: line.role }
         resolved.push({ accountId, debit: line.debit, credit: line.credit })
       }
+
       return { lines: resolved }
     }
 
@@ -372,6 +399,7 @@ export const makeGeneralLedgerPostgresStore = Effect.fn("GeneralLedger.makePostg
       lines: ReadonlyArray<AccountLine>,
     ): PostEntryOutcome => {
       const entry = toEntry(existing)
+
       return entry !== undefined &&
         postingKey(entry, entry.lines) === postingKey(commandPosting(command), lines)
         ? PostEntryOutcome.Posted({ entry })
@@ -412,6 +440,7 @@ export const makeGeneralLedgerPostgresStore = Effect.fn("GeneralLedger.makePostg
             .update(journalEntries)
             .set({ status: "posted", postedAt, updatedAt: postedAt })
             .where(eq(journalEntries.id, entryId))
+
           return PostEntryOutcome.Posted({
             entry: {
               id: entryId,
@@ -443,12 +472,16 @@ export const makeGeneralLedgerPostgresStore = Effect.fn("GeneralLedger.makePostg
       database.withTransaction(
         Effect.gen(function* () {
           const context = yield* preparePosting(command)
+
           if (Result.isFailure(context)) return context.failure
           const resolved = resolveLines(command.lines, context.success.rules)
+
           if ("missing" in resolved) return PostEntryOutcome.RuleMissing({ role: resolved.missing })
           const existing = yield* loadEntry(command.tenantId, command.reference)
+
           if (existing !== undefined) return replay(existing, command, resolved.lines)
           const entryId = uuidv7()
+
           const allocated = yield* numbering
             .allocate({
               tenantId: command.tenantId,
@@ -460,6 +493,7 @@ export const makeGeneralLedgerPostgresStore = Effect.fn("GeneralLedger.makePostg
               prefix: "JE/",
             })
             .pipe(Effect.catchTag("SchemaError", (error) => Effect.die(error)))
+
           return yield* insertEntry(command, entryId, allocated.number, resolved.lines)
         }),
         "accounting.ledger.entry.atomic",

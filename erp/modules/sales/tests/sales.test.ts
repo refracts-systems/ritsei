@@ -33,11 +33,13 @@ import {
 
 const principal = { userAccountId: "seller", sessionId: "session" }
 const tenantId = "00000000-0000-4000-8000-000000000001"
+
 const confirmationMetadata = {
   commandId: "sales-confirm-command",
   correlationId: "sales-confirm-correlation",
   causationId: null,
 } as const
+
 const capabilities = [
   "sales.customer.create",
   "sales.customer.read",
@@ -67,7 +69,9 @@ const withSales = <A, E>(
     MessagingService,
     Effect.gen(function* () {
       const base = yield* MessagingService
+
       if (onPublished === undefined) return base
+
       return {
         ...base,
         append: (input: Parameters<typeof base.append>[0]) =>
@@ -75,6 +79,7 @@ const withSales = <A, E>(
       }
     }),
   ).pipe(Layer.provide(makeMessagingTestLayer()))
+
   return Effect.provide(
     program,
     makeSalesTestLayer().pipe(Layer.provide(Layer.merge(authorizationLayer, messaging))),
@@ -95,6 +100,7 @@ describe("sales contract", () => {
           idempotencyKey: "confirmation-1",
         }),
       )
+
       assert.strictEqual(error._tag, "SchemaError")
 
       const invalidTenant = yield* Effect.flip(
@@ -108,6 +114,7 @@ describe("sales contract", () => {
           idempotencyKey: "confirmation-1",
         }),
       )
+
       assert.strictEqual(invalidTenant._tag, "SchemaError")
 
       const emptyLines = yield* Effect.flip(Schema.decodeUnknownEffect(SalesOrder.fields.lines)([]))
@@ -131,6 +138,7 @@ describe("sales contract", () => {
           ],
         }),
       )
+
       assert.strictEqual(invalidConfirmationMetadata._tag, "SchemaError")
       assert.strictEqual(
         (yield* Effect.flip(
@@ -177,6 +185,7 @@ describe("sales contract", () => {
           total: "10.00",
         }),
       )
+
       assert.strictEqual(invalidQuotationCustomer._tag, "SchemaError")
 
       const invalidOrderQuotation = yield* Effect.flip(
@@ -194,6 +203,7 @@ describe("sales contract", () => {
           ],
         }),
       )
+
       assert.strictEqual(invalidOrderQuotation._tag, "SchemaError")
     }),
   )
@@ -207,22 +217,27 @@ describe("sales contract", () => {
           unitPrice: "10.00",
         }),
       )
+
       assert.strictEqual(error._tag, "SchemaError")
     }),
   )
 
   it.effect("publishes one confirmation event across idempotent replay", () => {
     const published: EventEnvelopeContract[] = []
+
     return withSales(
       Effect.gen(function* () {
         const sales = yield* SalesService
+
         const customer = yield* sales.createCustomer({
           principal,
           tenantId,
           name: "ACME",
           email: "event@acme.test",
         })
+
         yield* Schema.decodeUnknownEffect(Customer)(customer)
+
         const order = yield* sales.createOrder({
           principal,
           tenantId,
@@ -235,6 +250,7 @@ describe("sales contract", () => {
             },
           ],
         })
+
         const input = {
           principal,
           tenantId,
@@ -245,6 +261,7 @@ describe("sales contract", () => {
           causationId: " sales-causation ",
           idempotencyKey: " confirm-event ",
         }
+
         const confirmed = yield* sales.confirmOrder(input)
         yield* Schema.decodeUnknownEffect(SalesOrder)(confirmed)
         assert.strictEqual(published.length, 1)
@@ -283,24 +300,28 @@ describe("sales contract", () => {
     withSales(
       Effect.gen(function* () {
         const sales = yield* SalesService
+
         const quotedCustomer = yield* sales.createCustomer({
           principal,
           tenantId,
           name: "Quoted Customer",
           email: "quoted@example.test",
         })
+
         const orderingCustomer = yield* sales.createCustomer({
           principal,
           tenantId,
           name: "Ordering Customer",
           email: "ordering@example.test",
         })
+
         const quotation = yield* sales.createQuotation({
           principal,
           tenantId,
           customerId: quotedCustomer.id,
           total: "10.00",
         })
+
         const error = yield* Effect.flip(
           sales.createOrder({
             principal,
@@ -316,6 +337,7 @@ describe("sales contract", () => {
             ],
           }),
         )
+
         assert.instanceOf(error, QuotationCustomerMismatch)
         assert.strictEqual(error.quotationId, quotation.id)
         assert.strictEqual(error.customerId, orderingCustomer.id)
@@ -327,24 +349,28 @@ describe("sales contract", () => {
     withSales(
       Effect.gen(function* () {
         const sales = yield* SalesService
+
         const customer = yield* sales.createCustomer({
           principal,
           tenantId,
           name: "Read Customer",
           email: "read@example.test",
         })
+
         const otherCustomer = yield* sales.createCustomer({
           principal,
           tenantId: "00000000-0000-4000-8000-000000000002",
           name: "Other Tenant Customer",
           email: "other-read@example.test",
         })
+
         const quotation = yield* sales.createQuotation({
           principal,
           tenantId,
           customerId: customer.id,
           total: "10.00",
         })
+
         const order = yield* sales.createOrder({
           principal,
           tenantId,
@@ -358,6 +384,7 @@ describe("sales contract", () => {
             },
           ],
         })
+
         assert.deepStrictEqual(
           yield* sales.listCustomers({ principal, tenantId, search: "READ", limit: 10 }),
           [customer],
@@ -408,12 +435,14 @@ describe("sales contract", () => {
     withSales(
       Effect.gen(function* () {
         const sales = yield* SalesService
+
         const customer = yield* sales.createCustomer({
           principal,
           tenantId,
           name: "ACME",
           email: " SALES@ACME.TEST ",
         })
+
         assert.strictEqual(
           (yield* Effect.flip(
             Schema.decodeUnknownEffect(Customer)({ ...customer, name: " ACME " }),
@@ -426,12 +455,14 @@ describe("sales contract", () => {
           ))._tag,
           "SchemaError",
         )
+
         const quotation = yield* sales.createQuotation({
           principal,
           tenantId,
           customerId: customer.id,
           total: "1250.00",
         })
+
         const order = yield* sales.createOrder({
           principal,
           tenantId,
@@ -464,6 +495,7 @@ describe("sales contract", () => {
           ...confirmationMetadata,
           idempotencyKey: "confirm-1",
         })
+
         const repeated = yield* sales.confirmOrder({
           principal,
           tenantId,
@@ -471,6 +503,7 @@ describe("sales contract", () => {
           ...confirmationMetadata,
           idempotencyKey: "confirm-1",
         })
+
         assert.strictEqual(confirmed.status, "confirmed")
         assert.strictEqual(confirmed.id, repeated.id)
         assert.isNotNull(confirmed.confirmedAt)
@@ -496,12 +529,14 @@ describe("sales contract", () => {
     withSales(
       Effect.gen(function* () {
         const sales = yield* SalesService
+
         const customer = yield* sales.createCustomer({
           principal,
           tenantId,
           name: "ACME",
           email: "confirm-key@acme.test",
         })
+
         const order = yield* sales.createOrder({
           principal,
           tenantId,
@@ -514,6 +549,7 @@ describe("sales contract", () => {
             },
           ],
         })
+
         yield* sales.confirmOrder({
           principal,
           tenantId,
@@ -521,6 +557,7 @@ describe("sales contract", () => {
           ...confirmationMetadata,
           idempotencyKey: "confirm-a",
         })
+
         const conflict = yield* Effect.flip(
           sales.confirmOrder({
             principal,
@@ -530,6 +567,7 @@ describe("sales contract", () => {
             idempotencyKey: " confirm-b ",
           }),
         )
+
         assert.instanceOf(conflict, SalesOrderConfirmationIdempotencyConflict)
         assert.strictEqual(conflict.idempotencyKey, "confirm-b")
       }),
@@ -618,10 +656,12 @@ describe("sales contract", () => {
         const command = { principal, tenantId, name: "ACME", email: "same@acme.test" }
         const customer = yield* sales.createCustomer(command)
         assert.instanceOf(yield* Effect.flip(sales.createCustomer(command)), CustomerAlreadyExists)
+
         const otherCustomer = yield* sales.createCustomer({
           ...command,
           tenantId: "00000000-0000-4000-8000-000000000002",
         })
+
         assert.notStrictEqual(otherCustomer.id, customer.id)
         assert.strictEqual(otherCustomer.email, customer.email)
       }),

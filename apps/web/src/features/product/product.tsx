@@ -19,6 +19,7 @@ const typeLabels = {
   consumable: "Consumable",
   service: "Service",
 } as const
+
 const typeOptions = Object.entries(typeLabels).map(([value, label]) => ({ value, label }))
 
 const text = (value: FormValue[string] | undefined) =>
@@ -39,6 +40,7 @@ const productPayload = (value: FormValue) => {
     name: text(value.name),
     type: productTypeOf(text(value.type)),
   }
+
   return payload.code !== "" && payload.name !== "" ? payload : undefined
 }
 
@@ -69,10 +71,12 @@ function CreateProductDialog(props: { reload: () => Promise<void> }) {
   const [open, setOpen] = createSignal(false)
   const [invalid, setInvalid] = createSignal(false)
   let formElement: HTMLFormElement | undefined
+
   const mutation = createProductMutation(scope, () => {
     formElement?.reset()
     setOpen(false)
   })
+
   return (
     <Dialog
       open={open()}
@@ -90,6 +94,7 @@ function CreateProductDialog(props: { reload: () => Promise<void> }) {
         onSubmit={(value) => {
           const payload = productPayload(value)
           setInvalid(payload === undefined)
+
           if (payload !== undefined && !mutation.isPending) mutation.mutate(payload)
         }}
       >
@@ -147,6 +152,7 @@ function CreateProductDialog(props: { reload: () => Promise<void> }) {
 export function Products() {
   const scope = useContext(ApiRuntime)
   const query = createProductsQuery(scope)
+
   return (
     <section class={layout.stack} aria-label="Products">
       <header class={layout.workspaceHeading}>

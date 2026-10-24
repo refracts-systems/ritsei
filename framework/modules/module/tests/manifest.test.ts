@@ -32,12 +32,14 @@ describe("module registry", () => {
       http: ["Orders"],
       pages: ["/orders"],
     })
+
     const mail = defineModule({
       ...empty,
       name: "mail",
       dependsOn: ["orders"],
       consumes: ["orders.order.confirmed"],
     })
+
     assert.deepStrictEqual(failuresOf([orders, mail]), [])
   })
 
@@ -46,6 +48,7 @@ describe("module registry", () => {
       { ...empty, name: "a", dependsOn: ["b"] },
       { ...empty, name: "b", dependsOn: ["a", "missing"] },
     ])
+
     assert.isTrue(failures.some((failure) => failure.includes("unknown module missing")))
     assert.isTrue(failures.some((failure) => failure.startsWith("module dependency cycle")))
     assert.isTrue(
@@ -65,6 +68,7 @@ describe("module registry", () => {
         events: [releasedEvent("sales", "sales.order.confirmed")],
       },
     ])
+
     assert.isTrue(failures.some((failure) => failure.includes("must start with orders.")))
     assert.isTrue(failures.some((failure) => failure.includes("releases sales.order.confirmed")))
   })
@@ -74,6 +78,7 @@ describe("module registry", () => {
       { ...empty, name: "a", schemas: ["shared"], http: ["Same"] },
       { ...empty, name: "b", schemas: ["shared"], http: ["Same"], consumes: ["a.thing.done"] },
     ])
+
     assert.isTrue(failures.some((failure) => failure.includes("schema shared is declared")))
     assert.isTrue(failures.some((failure) => failure.includes("http Same is declared")))
     assert.isTrue(failures.some((failure) => failure.includes("no declared dependency releases")))

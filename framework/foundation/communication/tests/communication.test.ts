@@ -99,6 +99,7 @@ it.effect("rejects unsafe email links and malformed table rows", () =>
         attachments: [],
       }),
     )
+
     const malformedTable = yield* Effect.flip(
       Schema.decodeUnknownEffect(EmailMessage)({
         subject: "Purchase order",
@@ -132,6 +133,7 @@ it.effect("keeps unknown provider outcomes on attempts while communication recon
       artifactId: null,
       createdAt: timestamp,
     })
+
     const attempt = yield* Schema.decodeUnknownEffect(DeliveryAttempt)({
       attemptId,
       communicationId,
@@ -163,6 +165,7 @@ it.effect("binds an email artifact to an existing document artifact reference", 
       timezone: "Asia/Jakarta",
       data: { purchaseOrder: { number: "PO-2026-0001" } },
     })
+
     const artifact = yield* Schema.decodeUnknownEffect(CommunicationArtifact)({
       artifactId,
       communicationId,

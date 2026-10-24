@@ -27,12 +27,14 @@ it.effect.skipIf(databaseUrl === undefined)(
         yield* runMigrations(client)
         const fixture = yield* seedErpFixture(client)
         const { tenantId, legalEntityId } = fixture
+
         const [warehouse] = yield* Effect.promise(
           () => client<{ id: string }[]>`
             insert into inventory.warehouses (tenant_id, legal_entity_id, name)
             values (${tenantId}, ${legalEntityId}, 'Main') returning id
           `,
         )
+
         const grants = [
           ...Object.values(InventoryCapabilities),
           ...Object.values(ProductCapabilities),
@@ -55,20 +57,24 @@ it.effect.skipIf(databaseUrl === undefined)(
             name: "Widget",
             type: "stockable",
           })
+
           const service = yield* products.createProduct({
             ...scope,
             code: "SETUP",
             name: "Setup service",
             type: "service",
           })
+
           const item = yield* stock.registerProductItem({ ...scope, productId: widget.id })
           assert.strictEqual(item.id, widget.id)
           assert.strictEqual(item.sku, "WIDGET")
           const again = yield* stock.registerProductItem({ ...scope, productId: widget.id })
           assert.deepStrictEqual(again, item)
+
           const notStockable = yield* Effect.flip(
             stock.registerProductItem({ ...scope, productId: service.id }),
           )
+
           assert.instanceOf(notStockable, StockNotStockable)
 
           const movement = {
@@ -76,12 +82,14 @@ it.effect.skipIf(databaseUrl === undefined)(
             warehouseId: warehouse!.id,
             postingDate: "2026-10-20",
           }
+
           const opening = {
             ...movement,
             source: { type: "inventory.opening_stock", id: uuidv7() },
             counterRole: "inventory_adjustment",
             lines: [{ itemId: widget.id, quantity: "10", unitCost: "10.00" }],
           } as const
+
           const received = yield* stock.receiveValued(opening)
           assert.strictEqual(received.lines[0]!.value, "100.00")
           const replayed = yield* stock.receiveValued(opening)
@@ -100,10 +108,12 @@ it.effect.skipIf(databaseUrl === undefined)(
             counterRole: "cost_of_goods_sold",
             lines: [{ itemId: widget.id, quantity: "3" }],
           })
+
           assert.deepStrictEqual(
             issued.lines.map((line) => [line.quantity, line.value]),
             [["-3", "-33.00"]],
           )
+
           const tooMany = yield* Effect.flip(
             stock.issueValued({
               ...movement,
@@ -112,6 +122,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               lines: [{ itemId: widget.id, quantity: "13" }],
             }),
           )
+
           assert.instanceOf(tooMany, StockUnavailable)
 
           // Counting 11 against 12 on hand loses one unit at the average cost of 11.00.
@@ -120,6 +131,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             countId: uuidv7(),
             lines: [{ itemId: widget.id, countedQuantity: "11" }],
           })
+
           assert.deepStrictEqual(
             counted.lines.map((line) => [line.quantity, line.value]),
             [["-1", "-11.00"]],
@@ -129,19 +141,23 @@ it.effect.skipIf(databaseUrl === undefined)(
           assert.deepStrictEqual(valuation.rows, [
             { itemId: widget.id, quantity: "11", value: "121.00" },
           ])
+
           const inventoryAccount = yield* ledger.roleBalance({
             ...scope,
             legalEntityId,
             role: "inventory",
             asOf: "2026-12-31",
           })
+
           assert.strictEqual(inventoryAccount.balance, valuation.totalValue)
+
           const cogs = yield* ledger.roleBalance({
             ...scope,
             legalEntityId,
             role: "cost_of_goods_sold",
             asOf: "2026-12-31",
           })
+
           assert.strictEqual(cogs.balance, "33.00")
 
           // Stock received without a value (the legacy receive path) cannot be issued at cost.
@@ -151,6 +167,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             name: "Legacy item",
             type: "stockable",
           })
+
           yield* stock.registerProductItem({ ...scope, productId: legacy.id })
           yield* Effect.promise(() =>
             client.begin(async (sql) => {
@@ -164,6 +181,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               `
             }),
           )
+
           const unvalued = yield* Effect.flip(
             stock.issueValued({
               ...movement,
@@ -172,6 +190,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               lines: [{ itemId: legacy.id, quantity: "1" }],
             }),
           )
+
           assert.instanceOf(unvalued, StockValuationUnavailable)
         }).pipe(Effect.provide(erpChainLayers(client, grants)))
 
@@ -187,6 +206,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           // SAFETY: driver errors carry the violated constraint name.
           catch: (cause) => cause as { constraint_name?: string },
         }).pipe(Effect.flip)
+
         assert.strictEqual(tampered.constraint_name, "inventory_valuation_entry_consistency_check")
       }),
     ),

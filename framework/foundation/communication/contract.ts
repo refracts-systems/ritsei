@@ -7,26 +7,33 @@ import { InstantString } from "../time/mod.ts"
 
 const Uuid = Schema.String.check(Schema.isUUID())
 const NonEmptyString = Schema.String.check(Schema.isPattern(/\S/))
+
 const Slug = Schema.String.check(
   Schema.makeFilter((value) => /^[a-z][a-z0-9._-]*$/.test(value), {
     expected: "a lowercase communication slug",
   }),
 )
+
 const PositiveInteger = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 2_147_483_647 }))
+
 const NonNegativeInteger = Schema.Int.check(
   Schema.isBetween({ minimum: 0, maximum: 2_147_483_647 }),
 )
+
 const Sha256 = Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/))
+
 const EmailAddress = Schema.String.check(
   Schema.makeFilter((value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value), {
     expected: "an email address",
   }),
 )
+
 const SafeEmailLink = Schema.String.check(
   Schema.makeFilter((value) => /^(?:https:\/\/|app:\/\/|\/)/i.test(value), {
     expected: "an https, app, or relative email link",
   }),
 )
+
 const Locale = Schema.String.check(
   Schema.makeFilter((value) => /^[a-z]{2,3}(?:-[A-Z][a-z]{2})?(?:-[A-Z]{2})?$/.test(value), {
     expected: "a BCP-47 locale",
@@ -34,9 +41,11 @@ const Locale = Schema.String.check(
 )
 
 export const CommunicationChannel = Schema.Literals(["email", "in_app", "sms", "push", "whatsapp"])
+
 export type CommunicationChannel = Schema.Schema.Type<typeof CommunicationChannel>
 
 export const CommunicationPriority = Schema.Literals(["critical", "high", "normal", "low"])
+
 export type CommunicationPriority = Schema.Schema.Type<typeof CommunicationPriority>
 
 export const CommunicationStatus = Schema.Literals([
@@ -50,6 +59,7 @@ export const CommunicationStatus = Schema.Literals([
   "cancelled",
   "failed",
 ])
+
 export type CommunicationStatus = Schema.Schema.Type<typeof CommunicationStatus>
 
 export const DeliveryAttemptStatus = Schema.Literals([
@@ -63,6 +73,7 @@ export const DeliveryAttemptStatus = Schema.Literals([
   "failed",
   "unknown",
 ])
+
 export type DeliveryAttemptStatus = Schema.Schema.Type<typeof DeliveryAttemptStatus>
 
 export const CommunicationSubject = Schema.Struct({
@@ -70,12 +81,14 @@ export const CommunicationSubject = Schema.Struct({
   type: Slug,
   id: Uuid,
 })
+
 export type CommunicationSubject = Schema.Schema.Type<typeof CommunicationSubject>
 
 export const CommunicationAudience = Schema.Struct({
   type: Slug,
   subject: CommunicationSubject,
 })
+
 export type CommunicationAudience = Schema.Schema.Type<typeof CommunicationAudience>
 
 export const CommunicationSourceEvent = Schema.Struct({
@@ -86,6 +99,7 @@ export const CommunicationSourceEvent = Schema.Struct({
   correlationId: NonEmptyString,
   causationId: Schema.NullOr(NonEmptyString),
 })
+
 export type CommunicationSourceEvent = Schema.Schema.Type<typeof CommunicationSourceEvent>
 
 export const CommunicationIntentInput = Schema.Struct({
@@ -102,6 +116,7 @@ export const CommunicationIntentInput = Schema.Struct({
   idempotencyKey: NonEmptyString,
   correlationId: NonEmptyString,
 })
+
 export type CommunicationIntentInput = Schema.Schema.Type<typeof CommunicationIntentInput>
 
 export const CommunicationIntent = Schema.Struct({
@@ -110,12 +125,14 @@ export const CommunicationIntent = Schema.Struct({
   requestedAt: InstantString,
   status: Schema.Literal("requested"),
 })
+
 export type CommunicationIntent = Schema.Schema.Type<typeof CommunicationIntent>
 
 export const RecipientMailbox = Schema.Struct({
   address: EmailAddress,
   displayName: Schema.optionalKey(NonEmptyString),
 })
+
 export type RecipientMailbox = Schema.Schema.Type<typeof RecipientMailbox>
 
 export const RecipientSnapshot = Schema.Struct({
@@ -127,6 +144,7 @@ export const RecipientSnapshot = Schema.Struct({
   resolverVersion: PositiveInteger,
   resolvedAt: InstantString,
 })
+
 export type RecipientSnapshot = Schema.Schema.Type<typeof RecipientSnapshot>
 
 export const SenderIdentity = Schema.Struct({
@@ -135,6 +153,7 @@ export const SenderIdentity = Schema.Struct({
   displayName: Schema.optionalKey(NonEmptyString),
   replyTo: Schema.optionalKey(EmailAddress),
 })
+
 export type SenderIdentity = Schema.Schema.Type<typeof SenderIdentity>
 
 export const CommunicationTemplateRef = Schema.Struct({
@@ -144,6 +163,7 @@ export const CommunicationTemplateRef = Schema.Struct({
   contextVersion: PositiveInteger,
   locale: Locale,
 })
+
 export type CommunicationTemplateRef = Schema.Schema.Type<typeof CommunicationTemplateRef>
 
 export const CommunicationContext = Schema.Struct({
@@ -155,6 +175,7 @@ export const CommunicationContext = Schema.Struct({
   timezone: NonEmptyString,
   data: Schema.Json,
 })
+
 export type CommunicationContext = Schema.Schema.Type<typeof CommunicationContext>
 
 export const CommunicationAttachmentRef = Schema.Struct({
@@ -164,27 +185,34 @@ export const CommunicationAttachmentRef = Schema.Struct({
   disposition: Schema.Literals(["attachment", "inline"]),
   contentId: Schema.optionalKey(NonEmptyString),
 })
+
 export type CommunicationAttachmentRef = Schema.Schema.Type<typeof CommunicationAttachmentRef>
 
 export const EmailHeadingNode = Schema.TaggedStruct("heading", {
   level: Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 6 })),
   text: NonEmptyString,
 })
+
 export const EmailTextNode = Schema.TaggedStruct("text", {
   text: NonEmptyString,
 })
+
 export const EmailImageNode = Schema.TaggedStruct("image", {
   assetId: NonEmptyString,
   alt: NonEmptyString,
 })
+
 export const EmailButtonNode = Schema.TaggedStruct("button", {
   label: NonEmptyString,
   href: SafeEmailLink,
 })
+
 export const EmailDividerNode = Schema.TaggedStruct("divider", {})
+
 export const EmailSpacerNode = Schema.TaggedStruct("spacer", {
   heightPx: NonNegativeInteger,
 })
+
 export const EmailKeyValueNode = Schema.TaggedStruct("key_value", {
   entries: Schema.Array(
     Schema.Struct({
@@ -193,6 +221,7 @@ export const EmailKeyValueNode = Schema.TaggedStruct("key_value", {
     }),
   ).check(Schema.isMinLength(1)),
 })
+
 export const EmailTableNode = Schema.TaggedStruct("table", {
   headers: Schema.Array(NonEmptyString).check(Schema.isMinLength(1)),
   rows: Schema.Array(Schema.Array(NonEmptyString)),
@@ -212,6 +241,7 @@ export const EmailMessageNode = Schema.Union([
   EmailKeyValueNode,
   EmailTableNode,
 ]).pipe(Schema.toTaggedUnion("_tag"))
+
 export type EmailMessageNode = Schema.Schema.Type<typeof EmailMessageNode>
 
 export const EmailMessage = Schema.Struct({
@@ -220,6 +250,7 @@ export const EmailMessage = Schema.Struct({
   nodes: Schema.Array(EmailMessageNode).check(Schema.isMinLength(1)),
   attachments: Schema.Array(CommunicationAttachmentRef),
 })
+
 export type EmailMessage = Schema.Schema.Type<typeof EmailMessage>
 
 export const EmailRenderInput = Schema.Struct({
@@ -228,6 +259,7 @@ export const EmailRenderInput = Schema.Struct({
   template: CommunicationTemplateRef,
   message: EmailMessage,
 })
+
 export type EmailRenderInput = Schema.Schema.Type<typeof EmailRenderInput>
 
 export const CommunicationArtifact = Schema.Struct({
@@ -245,12 +277,14 @@ export const CommunicationArtifact = Schema.Struct({
   rendererVersion: NonEmptyString,
   createdAt: InstantString,
 })
+
 export type CommunicationArtifact = Schema.Schema.Type<typeof CommunicationArtifact>
 
 export const EmailHeader = Schema.Struct({
   name: NonEmptyString,
   value: NonEmptyString,
 })
+
 export type EmailHeader = Schema.Schema.Type<typeof EmailHeader>
 
 export const PreparedEmail = Schema.Struct({
@@ -266,6 +300,7 @@ export const PreparedEmail = Schema.Struct({
   attachments: Schema.Array(CommunicationAttachmentRef),
   headers: Schema.Array(EmailHeader),
 })
+
 export type PreparedEmail = Schema.Schema.Type<typeof PreparedEmail>
 
 export const DeliveryReceipt = Schema.Struct({
@@ -276,6 +311,7 @@ export const DeliveryReceipt = Schema.Struct({
   providerMessageId: Schema.NullOr(NonEmptyString),
   observedAt: InstantString,
 })
+
 export type DeliveryReceipt = Schema.Schema.Type<typeof DeliveryReceipt>
 
 export const DeliveryAttempt = Schema.Struct({
@@ -291,6 +327,7 @@ export const DeliveryAttempt = Schema.Struct({
   startedAt: InstantString,
   completedAt: Schema.NullOr(InstantString),
 })
+
 export type DeliveryAttempt = Schema.Schema.Type<typeof DeliveryAttempt>
 
 export const Communication = Schema.Struct({
@@ -306,6 +343,7 @@ export const Communication = Schema.Struct({
   artifactId: Schema.NullOr(Uuid),
   createdAt: InstantString,
 })
+
 export type Communication = Schema.Schema.Type<typeof Communication>
 
 export class CommunicationRecipientResolutionFailure extends Schema.TaggedError<CommunicationRecipientResolutionFailure>()(
@@ -383,6 +421,7 @@ export const createCommunicationIntent = (
 ) =>
   Effect.gen(function* () {
     const decoded = yield* Schema.decodeUnknownEffect(CommunicationIntentInput)(input)
+
     return {
       ...decoded,
       communicationId: decoded.communicationId ?? uuidv7(),

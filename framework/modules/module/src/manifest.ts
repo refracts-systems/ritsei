@@ -31,22 +31,31 @@ const modulePrefix = (name: string) => `${name}.`
 
 const findCycle = (modules: ReadonlyMap<string, ModuleManifest>): readonly string[] | undefined => {
   const state = new Map<string, "visiting" | "done">()
+
   const visit = (name: string, path: readonly string[]): readonly string[] | undefined => {
     if (state.get(name) === "done") return undefined
+
     if (state.get(name) === "visiting") return [...path.slice(path.indexOf(name)), name]
     state.set(name, "visiting")
+
     for (const dependency of modules.get(name)?.dependsOn ?? []) {
       if (!modules.has(dependency)) continue
       const cycle = visit(dependency, [...path, name])
+
       if (cycle !== undefined) return cycle
     }
+
     state.set(name, "done")
+
     return undefined
   }
+
   for (const name of modules.keys()) {
     const cycle = visit(name, [])
+
     if (cycle !== undefined) return cycle
   }
+
   return undefined
 }
 
@@ -54,12 +63,15 @@ type Modules = ReadonlyMap<string, ModuleManifest>
 
 const nameFailures = (manifests: ReadonlyArray<ModuleManifest>) => {
   const seen = new Set<string>()
+
   return manifests.flatMap(({ name }) => {
     const failures = /^[a-z][a-z0-9_]*$/.test(name)
       ? []
       : [`module name ${JSON.stringify(name)} must match [a-z][a-z0-9_]*`]
+
     if (seen.has(name)) failures.push(`module ${name} is registered twice`)
     seen.add(name)
+
     return failures
   })
 }
@@ -76,6 +88,7 @@ const dependencyFailures = ({ name, dependsOn }: ModuleManifest, modules: Module
 const namespaceFailures = ({ name, capabilities, actions, events }: ModuleManifest) => {
   const prefix = modulePrefix(name)
   const declared = new Set(Object.values(capabilities))
+
   return [
     ...declared
       .values()
@@ -115,10 +128,12 @@ const claimKinds = {
 const ownershipFailures = (manifests: ReadonlyArray<ModuleManifest>) =>
   Object.entries(claimKinds).flatMap(([kind, values]) => {
     const owners = new Map<string, string>()
+
     return manifests.flatMap((manifest) =>
       values(manifest).flatMap((value) => {
         const existing = owners.get(value)
         owners.set(value, manifest.name)
+
         return existing !== undefined && existing !== manifest.name
           ? [`${kind} ${value} is declared by both ${existing} and ${manifest.name}`]
           : []
@@ -132,6 +147,7 @@ export const validateModuleRegistry = (
 ): readonly string[] => {
   const modules: Modules = new Map(manifests.map((manifest) => [manifest.name, manifest]))
   const cycle = findCycle(modules)
+
   return [
     ...nameFailures(manifests),
     ...manifests.flatMap((manifest) => [

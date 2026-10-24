@@ -76,14 +76,17 @@ export const makeInventoryMemoryLayer = () =>
       const correctionsByIdempotencyKey = new Map<string, StockCorrection>()
       const storedMovements: StockMovement[] = []
       const nextId = uuidv7
+
       const recordMovement = (movement: Omit<StockMovement, "id"> & { id?: string }) => {
         storedMovements.push({ id: movement.id ?? nextId(), ...movement })
       }
+
       const authorize = (
         principal: Schema.Codec.Encoded<typeof Principal>,
         tenantId: string,
         capability: CapabilityType,
       ) => authorization.authorize({ principal, tenantId, capability })
+
       const service: InventoryService = {
         listWarehouses: (input) =>
           Effect.gen(function* () {
@@ -93,6 +96,7 @@ export const makeInventoryMemoryLayer = () =>
               decoded.tenantId,
               InventoryCapabilities.warehouseRead,
             )
+
             return [...storedWarehouses.values()]
               .filter(
                 (warehouse) =>
@@ -108,6 +112,7 @@ export const makeInventoryMemoryLayer = () =>
             const decoded = yield* Schema.decodeUnknownEffect(ListItemsInput)(input)
             yield* authorize(decoded.principal, decoded.tenantId, InventoryCapabilities.itemRead)
             const search = decoded.search?.toLocaleLowerCase()
+
             return [...storedItems.values()]
               .filter(
                 (item) =>
@@ -123,10 +128,12 @@ export const makeInventoryMemoryLayer = () =>
           Effect.gen(function* () {
             const decoded = yield* Schema.decodeUnknownEffect(ListStockBalancesInput)(input)
             yield* authorize(decoded.principal, decoded.tenantId, InventoryCapabilities.stockRead)
+
             return [...balances.entries()]
               .flatMap(([key, balance]) => {
                 const [tenantId, warehouseId, itemId] = key.split(":")
                 const item = storedItems.get(itemId ?? "")
+
                 if (
                   tenantId !== decoded.tenantId ||
                   item === undefined ||
@@ -134,6 +141,7 @@ export const makeInventoryMemoryLayer = () =>
                   (decoded.itemId !== undefined && itemId !== decoded.itemId)
                 )
                   return []
+
                 return [
                   {
                     tenantId,
@@ -156,6 +164,7 @@ export const makeInventoryMemoryLayer = () =>
           Effect.gen(function* () {
             const decoded = yield* Schema.decodeUnknownEffect(ListStockReservationsInput)(input)
             yield* authorize(decoded.principal, decoded.tenantId, InventoryCapabilities.stockRead)
+
             return [...storedReservations.values()]
               .filter(
                 (reservation) =>
@@ -172,6 +181,7 @@ export const makeInventoryMemoryLayer = () =>
           Effect.gen(function* () {
             const decoded = yield* Schema.decodeUnknownEffect(ListStockTransfersInput)(input)
             yield* authorize(decoded.principal, decoded.tenantId, InventoryCapabilities.stockRead)
+
             return [...storedTransfers.values()]
               .filter(
                 (transfer) =>
@@ -188,6 +198,7 @@ export const makeInventoryMemoryLayer = () =>
           Effect.gen(function* () {
             const decoded = yield* Schema.decodeUnknownEffect(ListStockMovementsInput)(input)
             yield* authorize(decoded.principal, decoded.tenantId, InventoryCapabilities.stockRead)
+
             return storedMovements
               .filter(
                 (movement) =>
@@ -208,6 +219,7 @@ export const makeInventoryMemoryLayer = () =>
               InventoryCapabilities.warehouseCreate,
             )
             const name = decoded.name.trim()
+
             if (
               [...storedWarehouses.values()].some(
                 (value) => value.tenantId === decoded.tenantId && value.name === name,
@@ -217,6 +229,7 @@ export const makeInventoryMemoryLayer = () =>
                 new WarehouseAlreadyExists({ tenantId: decoded.tenantId, name }),
               )
             }
+
             const value = {
               id: nextId(),
               tenantId: decoded.tenantId,
@@ -224,7 +237,9 @@ export const makeInventoryMemoryLayer = () =>
               primaryBranchId: decoded.primaryBranchId ?? null,
               name,
             }
+
             storedWarehouses.set(value.id, value)
+
             return value
           }),
         createItem: (input) =>
@@ -233,6 +248,7 @@ export const makeInventoryMemoryLayer = () =>
             yield* authorize(decoded.principal, decoded.tenantId, InventoryCapabilities.itemCreate)
             const sku = decoded.sku.trim().toUpperCase()
             const unitOfMeasure = decoded.unitOfMeasure.trim().toUpperCase()
+
             if (
               [...storedItems.values()].some(
                 (value) => value.tenantId === decoded.tenantId && value.sku === sku,
@@ -240,6 +256,7 @@ export const makeInventoryMemoryLayer = () =>
             ) {
               return yield* Effect.fail(new ItemAlreadyExists({ tenantId: decoded.tenantId, sku }))
             }
+
             const value = {
               id: nextId(),
               tenantId: decoded.tenantId,
@@ -247,7 +264,9 @@ export const makeInventoryMemoryLayer = () =>
               name: decoded.name.trim(),
               unitOfMeasure,
             }
+
             storedItems.set(value.id, value)
+
             return value
           }),
         receiveStock: (input) =>
@@ -259,6 +278,7 @@ export const makeInventoryMemoryLayer = () =>
               InventoryCapabilities.stockReceive,
             )
             const warehouse = storedWarehouses.get(decoded.warehouseId)
+
             if (
               warehouse?.tenantId !== decoded.tenantId ||
               storedItems.get(decoded.itemId)?.tenantId !== decoded.tenantId
@@ -267,6 +287,7 @@ export const makeInventoryMemoryLayer = () =>
                 referenceFailure(decoded.tenantId, decoded.warehouseId, decoded.itemId),
               )
             }
+
             if (
               decoded.legalEntityId !== undefined &&
               warehouse.legalEntityId !== decoded.legalEntityId
@@ -279,6 +300,7 @@ export const makeInventoryMemoryLayer = () =>
                 }),
               )
             }
+
             const key = `${decoded.tenantId}:${decoded.warehouseId}:${decoded.itemId}`
             const balance = balances.get(key) ?? { onHand: 0n, reserved: 0n }
             balance.onHand += BigInt(decoded.quantity)
@@ -294,6 +316,7 @@ export const makeInventoryMemoryLayer = () =>
               reason: null,
               idempotencyKey: null,
             })
+
             return {
               tenantId: decoded.tenantId,
               warehouseId: decoded.warehouseId,
@@ -315,6 +338,7 @@ export const makeInventoryMemoryLayer = () =>
             const idempotencyKey = decoded.idempotencyKey.trim()
             const key = `${decoded.tenantId}:${idempotencyKey}`
             const existing = correctionsByIdempotencyKey.get(key)
+
             if (existing !== undefined) {
               if (
                 existing.warehouseId !== decoded.warehouseId ||
@@ -330,9 +354,12 @@ export const makeInventoryMemoryLayer = () =>
                   }),
                 )
               }
+
               return existing
             }
+
             const item = storedItems.get(decoded.itemId)
+
             if (
               storedWarehouses.get(decoded.warehouseId)?.tenantId !== decoded.tenantId ||
               item?.tenantId !== decoded.tenantId
@@ -341,6 +368,7 @@ export const makeInventoryMemoryLayer = () =>
                 referenceFailure(decoded.tenantId, decoded.warehouseId, decoded.itemId),
               )
             }
+
             if (item.unitOfMeasure !== unitOfMeasure) {
               return yield* Effect.fail(
                 new InventoryUnitOfMeasureMismatch({
@@ -351,9 +379,11 @@ export const makeInventoryMemoryLayer = () =>
                 }),
               )
             }
+
             const balanceKey = `${decoded.tenantId}:${decoded.warehouseId}:${decoded.itemId}`
             const balance = balances.get(balanceKey) ?? { onHand: 0n, reserved: 0n }
             const adjustment = BigInt(decoded.adjustment)
+
             if (balance.onHand + adjustment < balance.reserved) {
               return yield* Effect.fail(
                 new StockUnavailable({
@@ -364,6 +394,7 @@ export const makeInventoryMemoryLayer = () =>
                 }),
               )
             }
+
             const correction: StockCorrection = {
               id: uuidv7(),
               tenantId: decoded.tenantId,
@@ -374,6 +405,7 @@ export const makeInventoryMemoryLayer = () =>
               reason,
               idempotencyKey,
             }
+
             yield* messaging.append({
               eventId: uuidv7(),
               eventType: InventoryStockCorrectedEvent.id,
@@ -408,6 +440,7 @@ export const makeInventoryMemoryLayer = () =>
               idempotencyKey: correction.idempotencyKey,
             })
             correctionsByIdempotencyKey.set(key, correction)
+
             return correction
           }),
         reserveStock: (input) =>
@@ -418,8 +451,10 @@ export const makeInventoryMemoryLayer = () =>
               decoded.tenantId,
               InventoryCapabilities.stockReserve,
             )
+
             if (decoded.legalEntityId !== undefined) {
               const warehouse = storedWarehouses.get(decoded.warehouseId)
+
               if (
                 warehouse?.tenantId !== decoded.tenantId ||
                 warehouse?.legalEntityId !== decoded.legalEntityId
@@ -433,15 +468,19 @@ export const makeInventoryMemoryLayer = () =>
                 )
               }
             }
+
             const normalizedIdempotencyKey = decoded.idempotencyKey?.trim()
+
             const idempotencyKey =
               normalizedIdempotencyKey === undefined
                 ? undefined
                 : `${decoded.tenantId}:${normalizedIdempotencyKey}`
+
             const existing =
               idempotencyKey === undefined
                 ? undefined
                 : storedReservations.get(reservationIdsByIdempotencyKey.get(idempotencyKey) ?? "")
+
             if (existing !== undefined) {
               if (
                 existing.warehouseId !== decoded.warehouseId ||
@@ -455,11 +494,14 @@ export const makeInventoryMemoryLayer = () =>
                   }),
                 )
               }
+
               return existing
             }
+
             const key = `${decoded.tenantId}:${decoded.warehouseId}:${decoded.itemId}`
             const balance = balances.get(key)
             const quantity = BigInt(decoded.quantity)
+
             if (balance === undefined || balance.onHand - balance.reserved < quantity) {
               return yield* Effect.fail(
                 new StockUnavailable({
@@ -470,7 +512,9 @@ export const makeInventoryMemoryLayer = () =>
                 }),
               )
             }
+
             balance.reserved += quantity
+
             const reservation: StockReservation = {
               id: nextId(),
               tenantId: decoded.tenantId,
@@ -480,10 +524,13 @@ export const makeInventoryMemoryLayer = () =>
               idempotencyKey: normalizedIdempotencyKey ?? null,
               status: "active",
             }
+
             storedReservations.set(reservation.id, reservation)
+
             if (idempotencyKey !== undefined) {
               reservationIdsByIdempotencyKey.set(idempotencyKey, reservation.id)
             }
+
             recordMovement({
               tenantId: reservation.tenantId,
               warehouseId: reservation.warehouseId,
@@ -495,6 +542,7 @@ export const makeInventoryMemoryLayer = () =>
               reason: null,
               idempotencyKey: null,
             })
+
             return reservation
           }),
         releaseReservation: (input) =>
@@ -506,6 +554,7 @@ export const makeInventoryMemoryLayer = () =>
               InventoryCapabilities.stockRelease,
             )
             const reservation = storedReservations.get(decoded.reservationId)
+
             if (reservation === undefined || reservation.tenantId !== decoded.tenantId) {
               return yield* Effect.fail(
                 new StockReservationNotFound({
@@ -514,7 +563,9 @@ export const makeInventoryMemoryLayer = () =>
                 }),
               )
             }
+
             if (reservation.status === "released") return reservation
+
             if (reservation.status !== "active") {
               return yield* Effect.fail(
                 new StockReservationInvalidState({
@@ -525,9 +576,11 @@ export const makeInventoryMemoryLayer = () =>
                 }),
               )
             }
+
             const balance = balances.get(
               `${decoded.tenantId}:${reservation.warehouseId}:${reservation.itemId}`,
             )!
+
             balance.reserved -= BigInt(reservation.quantity)
             const released = { ...reservation, status: "released" as const }
             storedReservations.set(released.id, released)
@@ -542,6 +595,7 @@ export const makeInventoryMemoryLayer = () =>
               reason: null,
               idempotencyKey: null,
             })
+
             return released
           }),
         fulfillReservation: (input) =>
@@ -553,6 +607,7 @@ export const makeInventoryMemoryLayer = () =>
               InventoryCapabilities.stockFulfill,
             )
             const reservation = storedReservations.get(decoded.reservationId)
+
             if (reservation === undefined || reservation.tenantId !== decoded.tenantId) {
               return yield* Effect.fail(
                 new StockReservationNotFound({
@@ -561,7 +616,9 @@ export const makeInventoryMemoryLayer = () =>
                 }),
               )
             }
+
             if (reservation.status === "fulfilled") return reservation
+
             if (reservation.status !== "active") {
               return yield* Effect.fail(
                 new StockReservationInvalidState({
@@ -572,9 +629,11 @@ export const makeInventoryMemoryLayer = () =>
                 }),
               )
             }
+
             const balance = balances.get(
               `${decoded.tenantId}:${reservation.warehouseId}:${reservation.itemId}`,
             )!
+
             const quantity = BigInt(reservation.quantity)
             balance.onHand -= quantity
             balance.reserved -= quantity
@@ -591,6 +650,7 @@ export const makeInventoryMemoryLayer = () =>
               reason: null,
               idempotencyKey: null,
             })
+
             return fulfilled
           }),
         createTransfer: (input) =>
@@ -601,6 +661,7 @@ export const makeInventoryMemoryLayer = () =>
               decoded.tenantId,
               InventoryCapabilities.stockTransferCreate,
             )
+
             if (decoded.sourceWarehouseId === decoded.destinationWarehouseId) {
               return yield* Effect.fail(
                 new StockTransferSameWarehouse({
@@ -609,7 +670,9 @@ export const makeInventoryMemoryLayer = () =>
                 }),
               )
             }
+
             const itemIds = new Set<string>()
+
             for (const line of decoded.lines) {
               if (itemIds.has(line.itemId)) {
                 return yield* Effect.fail(
@@ -619,8 +682,10 @@ export const makeInventoryMemoryLayer = () =>
                   }),
                 )
               }
+
               itemIds.add(line.itemId)
             }
+
             if (storedWarehouses.get(decoded.sourceWarehouseId)?.tenantId !== decoded.tenantId) {
               return yield* Effect.fail(
                 new StockTransferWarehouseNotFound({
@@ -629,6 +694,7 @@ export const makeInventoryMemoryLayer = () =>
                 }),
               )
             }
+
             if (
               storedWarehouses.get(decoded.destinationWarehouseId)?.tenantId !== decoded.tenantId
             ) {
@@ -639,8 +705,10 @@ export const makeInventoryMemoryLayer = () =>
                 }),
               )
             }
+
             const sourceWarehouse = storedWarehouses.get(decoded.sourceWarehouseId)!
             const destinationWarehouse = storedWarehouses.get(decoded.destinationWarehouseId)!
+
             if (destinationWarehouse.legalEntityId !== sourceWarehouse.legalEntityId) {
               return yield* Effect.fail(
                 new StockTransferDifferentLegalEntity({
@@ -650,9 +718,11 @@ export const makeInventoryMemoryLayer = () =>
                 }),
               )
             }
+
             const missingItem = decoded.lines.find(
               (line) => storedItems.get(line.itemId)?.tenantId !== decoded.tenantId,
             )
+
             if (missingItem !== undefined) {
               return yield* Effect.fail(
                 new StockTransferItemNotFound({
@@ -661,6 +731,7 @@ export const makeInventoryMemoryLayer = () =>
                 }),
               )
             }
+
             const transfer: StockTransfer = {
               id: nextId(),
               tenantId: decoded.tenantId,
@@ -672,7 +743,9 @@ export const makeInventoryMemoryLayer = () =>
               completedAt: null,
               lines: decoded.lines,
             }
+
             storedTransfers.set(transfer.id, transfer)
+
             return transfer
           }),
         confirmTransfer: (input) =>
@@ -684,6 +757,7 @@ export const makeInventoryMemoryLayer = () =>
               InventoryCapabilities.stockTransferConfirm,
             )
             const transfer = storedTransfers.get(decoded.transferId)
+
             if (transfer === undefined || transfer.tenantId !== decoded.tenantId) {
               return yield* Effect.fail(
                 new StockTransferNotFound({
@@ -692,11 +766,14 @@ export const makeInventoryMemoryLayer = () =>
                 }),
               )
             }
+
             if (transfer.status !== "draft") return transfer
+
             for (const line of transfer.lines) {
               const balance = balances.get(
                 `${decoded.tenantId}:${transfer.sourceWarehouseId}:${line.itemId}`,
               )
+
               if (
                 balance === undefined ||
                 balance.onHand - balance.reserved < BigInt(line.quantity)
@@ -711,10 +788,12 @@ export const makeInventoryMemoryLayer = () =>
                 )
               }
             }
+
             for (const line of transfer.lines) {
               const balance = balances.get(
                 `${decoded.tenantId}:${transfer.sourceWarehouseId}:${line.itemId}`,
               )!
+
               balance.onHand -= BigInt(line.quantity)
               recordMovement({
                 tenantId: decoded.tenantId,
@@ -728,12 +807,15 @@ export const makeInventoryMemoryLayer = () =>
                 idempotencyKey: null,
               })
             }
+
             const confirmed: StockTransfer = {
               ...transfer,
               status: "confirmed",
               confirmedAt: now().toISOString(),
             }
+
             storedTransfers.set(confirmed.id, confirmed)
+
             return confirmed
           }),
         completeTransfer: (input) =>
@@ -745,6 +827,7 @@ export const makeInventoryMemoryLayer = () =>
               InventoryCapabilities.stockTransferComplete,
             )
             const transfer = storedTransfers.get(decoded.transferId)
+
             if (transfer === undefined || transfer.tenantId !== decoded.tenantId) {
               return yield* Effect.fail(
                 new StockTransferNotFound({
@@ -753,7 +836,9 @@ export const makeInventoryMemoryLayer = () =>
                 }),
               )
             }
+
             if (transfer.status === "completed") return transfer
+
             if (transfer.status !== "confirmed") {
               return yield* Effect.fail(
                 new StockTransferInvalidState({
@@ -764,6 +849,7 @@ export const makeInventoryMemoryLayer = () =>
                 }),
               )
             }
+
             for (const line of transfer.lines) {
               const key = `${decoded.tenantId}:${transfer.destinationWarehouseId}:${line.itemId}`
               const balance = balances.get(key) ?? { onHand: 0n, reserved: 0n }
@@ -781,15 +867,19 @@ export const makeInventoryMemoryLayer = () =>
                 idempotencyKey: null,
               })
             }
+
             const completed: StockTransfer = {
               ...transfer,
               status: "completed",
               completedAt: now().toISOString(),
             }
+
             storedTransfers.set(completed.id, completed)
+
             return completed
           }),
       }
+
       return {
         listWarehouses: Effect.fn("InventoryStore.memory.listWarehouses")(
           (input: Parameters<typeof service.listWarehouses>[0]) => service.listWarehouses(input),

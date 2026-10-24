@@ -61,6 +61,7 @@ export const makeAuthService = Effect.gen(function* () {
 
   const findTenantBySlug = Effect.fn("auth.findTenantBySlug")(function* (slug: string) {
     const normalized = slug.trim().toLowerCase()
+
     return yield* store
       .findTenantBySlug(normalized)
       .pipe(
@@ -75,6 +76,7 @@ export const makeAuthService = Effect.gen(function* () {
   ) {
     const decoded = yield* Schema.decodeUnknownEffect(CreateTenantInput)(input)
     const { slug, timezone } = normalizeTenant(decoded)
+
     return yield* store
       .createTenant(slug, timezone)
       .pipe(Effect.map((tenant) => ({ ...tenant }) satisfies Tenant))
@@ -84,6 +86,7 @@ export const makeAuthService = Effect.gen(function* () {
     input: Schema.Codec.Encoded<typeof IssueSessionInput>,
   ) {
     const decoded = yield* Schema.decodeUnknownEffect(IssueSessionInput)(input)
+
     const account = yield* userAccounts
       .getAuthenticationState(decoded.userAccountId)
       .pipe(
@@ -93,18 +96,22 @@ export const makeAuthService = Effect.gen(function* () {
             : error,
         ),
       )
+
     if (account.status === "disabled") {
       return yield* Effect.fail(
         new SessionUserAccountDisabled({ userAccountId: decoded.userAccountId }),
       )
     }
+
     const token = yield* makeToken(crypto)
     const tokenHash = yield* hashToken(crypto, token)
+
     const row = yield* store.createSession(
       decoded.userAccountId,
       tokenHash,
       new Date(clock.currentTimeMillisUnsafe() + decoded.ttlSeconds * 1000),
     )
+
     return {
       token,
       session: {
@@ -119,7 +126,9 @@ export const makeAuthService = Effect.gen(function* () {
     if (Option.isNone(identityProvider)) {
       const tokenHash = yield* hashToken(crypto, token)
       const row = yield* store.findActiveSession(tokenHash, now())
+
       if (row === undefined) return yield* Effect.fail(new InvalidSessionToken({}))
+
       const account = yield* userAccounts
         .getAuthenticationState(row.userAccountId)
         .pipe(
@@ -129,12 +138,14 @@ export const makeAuthService = Effect.gen(function* () {
               : error,
           ),
         )
+
       if (
         account.status === "disabled" ||
         (account.sessionInvalidatedAt !== null &&
           row.createdAt.getTime() <= Date.parse(account.sessionInvalidatedAt))
       )
         return yield* Effect.fail(new InvalidSessionToken({}))
+
       return {
         userAccountId: row.userAccountId,
         sessionId: row.id,
@@ -143,6 +154,7 @@ export const makeAuthService = Effect.gen(function* () {
     }
 
     const external = yield* identityProvider.value.authenticate(token)
+
     const account = yield* userAccounts
       .resolveExternalSubject({
         issuer: external.issuer,
@@ -155,6 +167,7 @@ export const makeAuthService = Effect.gen(function* () {
             : error,
         ),
       )
+
     const state = yield* userAccounts
       .getAuthenticationState(account.id)
       .pipe(
@@ -164,15 +177,18 @@ export const makeAuthService = Effect.gen(function* () {
             : error,
         ),
       )
+
     if (
       state.status === "disabled" ||
       (state.sessionInvalidatedAt !== null &&
         external.issuedAt * 1_000 <= Date.parse(state.sessionInvalidatedAt))
     )
       return yield* Effect.fail(new InvalidSessionToken({}))
+
     const sessionId = yield* hashToken(crypto, `${external.issuer}\u0000${external.subject}`).pipe(
       Effect.map((hash) => `external:${hash}`),
     )
+
     return {
       userAccountId: account.id,
       sessionId,
@@ -184,6 +200,7 @@ export const makeAuthService = Effect.gen(function* () {
 
   const revoke = Effect.fn("auth.revoke")(function* (sessionId: string) {
     if (sessionId.startsWith("external:")) return
+
     if (!(yield* store.revokeSession(sessionId, now()))) {
       return yield* Effect.fail(new InvalidSessionToken({}))
     }

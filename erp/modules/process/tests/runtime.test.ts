@@ -46,6 +46,7 @@ it.effect("suppresses a duplicate event and duplicate command", () =>
   Effect.gen(function* () {
     const checkpoint = yield* Schema.decodeUnknownEffect(ProcessCheckpoint)(checkpointInput)
     const runtime = makeProcessRuntime()
+
     const execution = {
       stepId: "step-1",
       nodeId: "confirm",
@@ -54,12 +55,15 @@ it.effect("suppresses a duplicate event and duplicate command", () =>
       commandId: "command-1",
       eventId: null,
     }
+
     const firstCommand = yield* runtime.recordCommand(checkpoint, execution)
     const replayedCommand = yield* runtime.recordCommand(firstCommand, execution)
+
     const firstEvent = yield* runtime.recordEvent(
       replayedCommand,
       "018f3f77-0c5a-7cc0-8b62-6a163d214125",
     )
+
     const replayedEvent = yield* runtime.recordEvent(
       firstEvent,
       "018f3f77-0c5a-7cc0-8b62-6a163d214125",
@@ -76,6 +80,7 @@ it.effect("suppresses a duplicate event and duplicate command", () =>
         idempotencyKey: "different-key",
       }),
     )
+
     assert.instanceOf(conflict, ProcessStepConflict)
   }),
 )

@@ -61,6 +61,7 @@ describe("document rendering contracts", () => {
         schemaVersion: 1,
         payload: { total: "12.50", lines: [{ quantity: "1" }] },
       })
+
       const second = yield* createDocumentSnapshot({
         snapshotId,
         tenantId,
@@ -69,6 +70,7 @@ describe("document rendering contracts", () => {
         schemaVersion: 1,
         payload: { lines: [{ quantity: "1" }], total: "12.50" },
       })
+
       assert.strictEqual(first.checksum, second.checksum)
 
       const request = yield* createDocumentRenderRequest(requestInput())
@@ -92,6 +94,7 @@ describe("document rendering contracts", () => {
         ...requestInput(),
         capabilities: ["css", "javascript"] as const,
       }
+
       const policy = {
         rendererFamily: "static-html" as const,
         capabilities: ["css", "javascript"] as const,
@@ -101,6 +104,7 @@ describe("document rendering contracts", () => {
         maxPages: 2,
         maxAssetBytes: 1_024,
       }
+
       const error = yield* Effect.flip(validateDocumentRenderPolicy(requirements, policy))
       assert.instanceOf(error, DocumentRenderPolicyViolation)
       assert.strictEqual(error.reason, "javascript_disabled")
@@ -120,6 +124,7 @@ describe("document rendering contracts", () => {
           maxAssetBytes: 0,
         }),
       )
+
       assert.instanceOf(error, DocumentRenderLimitExceeded)
       assert.strictEqual(error.limit, "ast_nodes")
       assert.strictEqual(error.actual, 6)
@@ -131,6 +136,7 @@ describe("document rendering contracts", () => {
       const store = makeMemoryDocumentArtifactStore()
       const bytes = new Uint8Array([1, 2, 3])
       const contentHash = yield* sha256Hex(bytes)
+
       const metadata = {
         artifactId,
         tenantId,
@@ -150,16 +156,19 @@ describe("document rendering contracts", () => {
         status: "ready" as const,
         createdAt: timestamp,
       }
+
       const first = yield* store.put({
         metadata,
         bytes,
         fencing: { scope: "document-render:scope", generation: "1" },
       })
+
       const replay = yield* store.put({
         metadata: { ...metadata, artifactId: "018f0000-0000-7000-8000-000000000006" },
         bytes,
         fencing: { scope: "document-render:scope", generation: "1" },
       })
+
       assert.strictEqual(replay.artifactId, first.artifactId)
 
       const stale = yield* Effect.flip(
@@ -169,9 +178,11 @@ describe("document rendering contracts", () => {
           fencing: { scope: "document-render:scope", generation: "0" },
         }),
       )
+
       assert.instanceOf(stale, DocumentArtifactStaleWriter)
 
       const conflictBytes = new Uint8Array([1, 2, 3, 4])
+
       const conflict = yield* Effect.flip(
         store.put({
           metadata: {
@@ -183,6 +194,7 @@ describe("document rendering contracts", () => {
           fencing: { scope: "document-render:scope", generation: "2" },
         }),
       )
+
       assert.instanceOf(conflict, DocumentArtifactConflict)
 
       const stored = yield* store.get({ tenantId, renderFingerprint: hashA })

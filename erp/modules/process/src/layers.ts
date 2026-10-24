@@ -25,26 +25,32 @@ export const ProcessJobEnqueuerLive = Layer.effect(DurableJobEnqueuer, makeProce
 export const ProcessPostgresLive = ProcessLive
 export const ProcessStudioLive = Layer.effect(ProcessStudioService, makeProcessStudioService)
 export const ProcessStudioPostgresLive = ProcessStudioLive
+
 export const ProcessRuntimeMemoryLive = Layer.succeed(
   ProcessCheckpointStore,
   makeMemoryProcessCheckpointStore(),
 )
+
 export const ProcessRuntimePostgresLive = Layer.effect(
   ProcessCheckpointStore,
   makePostgresProcessCheckpointStore,
 )
+
 export const ProcessOperatorMemoryLive = Layer.succeed(
   ProcessOperatorStore,
   makeMemoryProcessOperatorStore(),
 )
+
 export const ProcessOperatorPostgresLive = Layer.effect(
   ProcessOperatorStore,
   makePostgresProcessOperatorStore,
 )
+
 export const ProcessReleaseMemoryLive = Layer.succeed(
   ProcessReleaseStore,
   makeMemoryProcessReleaseStore(),
 )
+
 export const ProcessReleasePostgresLive = Layer.effect(
   ProcessReleaseStore,
   makePostgresProcessReleaseStore,

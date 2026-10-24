@@ -35,14 +35,18 @@ const GoodsReceiptList = Schema.Array(GoodsReceipt).check(Schema.isMaxLength(200
 export const listSupplierAccounts = Effect.fn("Frontend.Procurement.listSupplierAccounts")(
   function* (input: Schema.Codec.Encoded<typeof ListSupplierAccountsInput> = {}) {
     const decoded = yield* decodeInput(ListSupplierAccountsInput, input)
+
     const body = yield* requestJson(
       `${procurementRoutes.listSupplierAccounts}${querySuffix(decoded)}`,
     )
+
     const accounts = yield* decodeResponse(SupplierAccountList, body, "invalid-response")
     const connection = yield* BrowserConnection
+
     if (!responseListMatches(accounts, { tenantId: connection.tenantId })) {
       return yield* Effect.fail(new RequestFailure({ kind: "invalid-response" }))
     }
+
     return accounts
   },
 )
@@ -53,6 +57,7 @@ export const createSupplierAccount = Effect.fn("Frontend.Procurement.createSuppl
     const connection = yield* BrowserConnection
     const body = yield* mutationRequest(procurementRoutes.createSupplierAccount, "POST", decoded)
     const account = yield* decodeResponse(SupplierAccount, body, "unknown-outcome")
+
     if (
       !responseMatches(account, {
         tenantId: connection.tenantId,
@@ -61,6 +66,7 @@ export const createSupplierAccount = Effect.fn("Frontend.Procurement.createSuppl
     ) {
       return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
     }
+
     return account
   },
 )
@@ -72,6 +78,7 @@ export const listPurchaseOrders = Effect.fn("Frontend.Procurement.listPurchaseOr
   const body = yield* requestJson(`${procurementRoutes.listPurchaseOrders}${querySuffix(decoded)}`)
   const orders = yield* decodeResponse(PurchaseOrderList, body, "invalid-response")
   const connection = yield* BrowserConnection
+
   if (
     !responseListMatches(orders, {
       tenantId: connection.tenantId,
@@ -83,6 +90,7 @@ export const listPurchaseOrders = Effect.fn("Frontend.Procurement.listPurchaseOr
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "invalid-response" }))
   }
+
   return orders
 })
 
@@ -93,6 +101,7 @@ export const createPurchaseOrder = Effect.fn("Frontend.Procurement.createPurchas
   const connection = yield* BrowserConnection
   const body = yield* mutationRequest(procurementRoutes.createPurchaseOrder, "POST", decoded)
   const order = yield* decodeResponse(PurchaseOrder, body, "unknown-outcome")
+
   if (
     !responseMatches(order, {
       tenantId: connection.tenantId,
@@ -102,6 +111,7 @@ export const createPurchaseOrder = Effect.fn("Frontend.Procurement.createPurchas
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
   }
+
   return order
 })
 
@@ -112,6 +122,7 @@ export const getPurchaseOrder = Effect.fn("Frontend.Procurement.getPurchaseOrder
   const connection = yield* BrowserConnection
   const body = yield* requestJson(routeWithId(procurementRoutes.getPurchaseOrder, decodedId))
   const order = yield* decodeResponse(PurchaseOrder, body, "invalid-response")
+
   if (
     !responseMatches(order, {
       id: decodedId,
@@ -120,6 +131,7 @@ export const getPurchaseOrder = Effect.fn("Frontend.Procurement.getPurchaseOrder
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "invalid-response" }))
   }
+
   return order
 })
 
@@ -133,12 +145,15 @@ export const confirmPurchaseOrder = Effect.fn("Frontend.Procurement.confirmPurch
     const decodedId = yield* decodeInput(Uuid, id)
     const decoded = yield* decodeInput(ConfirmPurchaseOrderInput, input)
     const connection = yield* BrowserConnection
+
     const body = yield* mutationRequest(
       routeWithId(procurementRoutes.confirmPurchaseOrder, decodedId),
       "POST",
       decoded,
     )
+
     const order = yield* decodeResponse(PurchaseOrder, body, "unknown-outcome")
+
     if (
       !responseMatches(order, {
         id: decodedId,
@@ -148,6 +163,7 @@ export const confirmPurchaseOrder = Effect.fn("Frontend.Procurement.confirmPurch
     ) {
       return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
     }
+
     return order
   },
 )
@@ -159,11 +175,14 @@ export const cancelPurchaseOrder = Effect.fn("Frontend.Procurement.cancelPurchas
 ) {
   const decodedId = yield* decodeInput(Uuid, id)
   const connection = yield* BrowserConnection
+
   const body = yield* mutationRequest(
     routeWithId(procurementRoutes.cancelPurchaseOrder, decodedId),
     "POST",
   )
+
   const order = yield* decodeResponse(PurchaseOrder, body, "unknown-outcome")
+
   if (
     !responseMatches(order, {
       id: decodedId,
@@ -173,6 +192,7 @@ export const cancelPurchaseOrder = Effect.fn("Frontend.Procurement.cancelPurchas
   ) {
     return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
   }
+
   return order
 })
 
@@ -183,11 +203,14 @@ export const listPurchaseReceipts = Effect.fn("Frontend.Procurement.listPurchase
   ) {
     const decodedId = yield* decodeInput(Uuid, id)
     const decoded = yield* decodeInput(ListPurchaseReceiptsInput, input)
+
     const body = yield* requestJson(
       `${routeWithId(procurementRoutes.listPurchaseReceipts, decodedId)}${querySuffix(decoded)}`,
     )
+
     const receipts = yield* decodeResponse(GoodsReceiptList, body, "invalid-response")
     const connection = yield* BrowserConnection
+
     if (
       !responseListMatches(receipts, {
         tenantId: connection.tenantId,
@@ -196,6 +219,7 @@ export const listPurchaseReceipts = Effect.fn("Frontend.Procurement.listPurchase
     ) {
       return yield* Effect.fail(new RequestFailure({ kind: "invalid-response" }))
     }
+
     return receipts
   },
 )
@@ -208,12 +232,15 @@ export const receivePurchaseOrder = Effect.fn("Frontend.Procurement.receivePurch
     const decodedId = yield* decodeInput(Uuid, id)
     const decoded = yield* decodeInput(ReceivePurchaseOrderInput, input)
     const connection = yield* BrowserConnection
+
     const body = yield* mutationRequest(
       routeWithId(procurementRoutes.receivePurchaseOrder, decodedId),
       "POST",
       decoded,
     )
+
     const receipt = yield* decodeResponse(GoodsReceipt, body, "unknown-outcome")
+
     if (
       !responseMatches(receipt, {
         tenantId: connection.tenantId,
@@ -223,6 +250,7 @@ export const receivePurchaseOrder = Effect.fn("Frontend.Procurement.receivePurch
     ) {
       return yield* Effect.fail(new RequestFailure({ kind: "unknown-outcome" }))
     }
+
     return receipt
   },
 )
