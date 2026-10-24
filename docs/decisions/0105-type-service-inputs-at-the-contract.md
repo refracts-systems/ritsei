@@ -1,6 +1,6 @@
 # ADR-0105: Type Service Inputs at the Contract
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-21
 - Amends: None
 - Compatible with: ADR-0024, ADR-0048, ADR-0094
