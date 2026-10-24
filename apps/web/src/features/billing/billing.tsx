@@ -1,6 +1,7 @@
 import { useNavigate } from "@solidjs/router"
-import * as Predicate from "effect/Predicate"
 import { createMemo, For, Show, useContext } from "solid-js"
+import { formText as text } from "../../shared/form-values.ts"
+import { type Names, namesFrom } from "../../shared/party-names.ts"
 import { QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
 import { ApiRuntime } from "../../shared/runtime.ts"
 import { formatDecimal } from "../../ui/foundations/format.ts"
@@ -14,7 +15,6 @@ import { Form, type FormValue } from "../../ui/primitives/form.tsx"
 import { Reference } from "../../ui/primitives/reference.tsx"
 import { Select } from "../../ui/primitives/select.tsx"
 import { surface } from "../../ui/recipes/surface.ts"
-import type { PartyDirectoryEntry } from "../../shared/contracts/generated/party.ts"
 import {
   createBillingDocumentQuery,
   createBillingDocumentsQuery,
@@ -52,24 +52,6 @@ function DocumentStatus(props: { document: BillingDocument }) {
     </Show>
   )
 }
-
-/** Names resolved from the party directory; an unresolved id falls back to the identifier. */
-interface Names {
-  readonly parties: ReadonlyMap<string, string>
-  readonly legalEntities: ReadonlyMap<string, string>
-}
-
-const namesFrom = (entries: readonly PartyDirectoryEntry[]): Names => ({
-  parties: new Map(entries.map((entry) => [entry.party.id, entry.party.name])),
-  legalEntities: new Map(
-    entries.flatMap((entry) =>
-      entry.legalEntityId === null ? [] : [[entry.legalEntityId, entry.party.name] as const],
-    ),
-  ),
-})
-
-const text = (value: FormValue[string] | undefined) =>
-  Predicate.isString(value) ? value.trim() : ""
 
 const sideOf = (value: FormValue[string] | undefined): BillingSide =>
   value === "payable" ? "payable" : "receivable"

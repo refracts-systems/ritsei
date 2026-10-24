@@ -1,6 +1,6 @@
 import { useNavigate } from "@solidjs/router"
-import * as Predicate from "effect/Predicate"
 import { createSignal, Show, useContext } from "solid-js"
+import { today } from "../../shared/form-values.ts"
 import { CommandFeedback, reloaded } from "../../shared/request-feedback.tsx"
 import { ApiRuntime } from "../../shared/runtime.ts"
 import { formatDecimal } from "../../ui/foundations/format.ts"
@@ -8,7 +8,7 @@ import { layout } from "../../ui/foundations/layout.ts"
 import { Button } from "../../ui/primitives/button.tsx"
 import { Dialog } from "../../ui/primitives/dialog.tsx"
 import { FormField } from "../../ui/primitives/form-field.tsx"
-import { Form, type FormValue } from "../../ui/primitives/form.tsx"
+import { Form } from "../../ui/primitives/form.tsx"
 import { Input } from "../../ui/primitives/input.tsx"
 import { Select } from "../../ui/primitives/select.tsx"
 import {
@@ -16,14 +16,8 @@ import {
   createCustomersQuery,
   createInvoiceMutation,
 } from "./queries.ts"
+import { invoicePayload } from "./payloads.ts"
 import { invoiceFailureMessages } from "./service.ts"
-
-const text = (value: FormValue[string] | undefined) =>
-  Predicate.isString(value) ? value.trim() : ""
-
-const today = () => new Date().toISOString().slice(0, 10)
-
-const isDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value)
 
 function InvoiceOrderForm(props: { onCreated: (id: string) => void; close: () => void }) {
   const scope = useContext(ApiRuntime)
@@ -43,13 +37,10 @@ function InvoiceOrderForm(props: { onCreated: (id: string) => void; close: () =>
     <Form
       class={layout.stack}
       onSubmit={(value) => {
-        const orderId = text(value.orderId)
-        const invoiceDate = text(value.invoiceDate)
-        setInvalid(orderId === "" || !isDate(invoiceDate))
+        const payload = invoicePayload(value)
+        setInvalid(payload === undefined)
 
-        if (orderId !== "" && isDate(invoiceDate) && !mutation.isPending) {
-          mutation.mutate({ orderId, invoiceDate })
-        }
+        if (payload !== undefined && !mutation.isPending) mutation.mutate(payload)
       }}
     >
       <Show

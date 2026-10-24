@@ -1,5 +1,5 @@
-import * as Predicate from "effect/Predicate"
 import { createSignal, useContext } from "solid-js"
+import { today } from "../../shared/form-values.ts"
 import { CommandFeedback } from "../../shared/request-feedback.tsx"
 import { ApiRuntime } from "../../shared/runtime.ts"
 import { formatDecimal } from "../../ui/foundations/format.ts"
@@ -7,18 +7,12 @@ import { layout } from "../../ui/foundations/layout.ts"
 import { Button } from "../../ui/primitives/button.tsx"
 import { Dialog } from "../../ui/primitives/dialog.tsx"
 import { FormField } from "../../ui/primitives/form-field.tsx"
-import { Form, type FormValue } from "../../ui/primitives/form.tsx"
+import { Form } from "../../ui/primitives/form.tsx"
 import { Input } from "../../ui/primitives/input.tsx"
 import { MoneyField } from "../../ui/primitives/money-field.tsx"
+import { paymentPayload } from "./payloads.ts"
 import { createPaymentMutation } from "./queries.ts"
 import { type BillingDocument, paymentFailureMessages } from "./service.ts"
-
-const text = (value: FormValue[string] | undefined) =>
-  Predicate.isString(value) ? value.trim() : ""
-
-const today = () => new Date().toISOString().slice(0, 10)
-const isDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value)
-const isPositiveAmount = (value: string) => /^\d+(\.\d{1,2})?$/.test(value) && /[1-9]/.test(value)
 
 /** Whether a payment can still settle the document: credit notes and settled documents cannot. */
 export const canRecordPayment = (document: BillingDocument) =>
@@ -39,21 +33,10 @@ function RecordPaymentForm(props: {
     <Form
       class={layout.stack}
       onSubmit={(value) => {
-        const paymentDate = text(value.paymentDate)
-        const amount = text(value.amount)
-        const complete = isDate(paymentDate) && isPositiveAmount(amount)
-        setInvalid(!complete)
+        const payload = paymentPayload(value, props.document)
+        setInvalid(payload === undefined)
 
-        if (complete && !mutation.isPending) {
-          mutation.mutate({
-            side: receivable() ? "receivable" : "payable",
-            legalEntityId: props.document.legalEntityId,
-            partyId: props.document.partyId,
-            invoiceId: props.document.id,
-            paymentDate,
-            amount,
-          })
-        }
+        if (payload !== undefined && !mutation.isPending) mutation.mutate(payload)
       }}
     >
       <p>

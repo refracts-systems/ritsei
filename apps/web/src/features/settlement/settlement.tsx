@@ -1,6 +1,7 @@
 import { useNavigate } from "@solidjs/router"
-import * as Predicate from "effect/Predicate"
 import { createMemo, For, Show, useContext } from "solid-js"
+import { formText as text, isDate, today } from "../../shared/form-values.ts"
+import { type Names, namesFrom } from "../../shared/party-names.ts"
 import { QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
 import { ApiRuntime } from "../../shared/runtime.ts"
 import { formatDecimal } from "../../ui/foundations/format.ts"
@@ -10,7 +11,7 @@ import { EntityWorkspace } from "../../ui/patterns/entity-workspace.tsx"
 import { Badge } from "../../ui/primitives/badge.tsx"
 import { Button } from "../../ui/primitives/button.tsx"
 import { FormField } from "../../ui/primitives/form-field.tsx"
-import { Form, type FormValue } from "../../ui/primitives/form.tsx"
+import { Form } from "../../ui/primitives/form.tsx"
 import { Input } from "../../ui/primitives/input.tsx"
 import { Reference } from "../../ui/primitives/reference.tsx"
 import { Select } from "../../ui/primitives/select.tsx"
@@ -31,31 +32,10 @@ const directionOptions = [
   { value: "outgoing", label: "Paid to suppliers" },
 ]
 
-const today = () => new Date().toISOString().slice(0, 10)
 const monthStart = () => `${today().slice(0, 8)}01`
 
 const sideOf = (direction: PaymentDirection): SettlementSide =>
   direction === "incoming" ? "receivable" : "payable"
-
-/** Names resolved from the party directory; an unresolved id falls back to the identifier. */
-interface Names {
-  readonly parties: ReadonlyMap<string, string>
-  readonly legalEntities: ReadonlyMap<string, string>
-}
-
-const namesFrom = (entries: readonly PartyDirectoryEntry[]): Names => ({
-  parties: new Map(entries.map((entry) => [entry.party.id, entry.party.name])),
-  legalEntities: new Map(
-    entries.flatMap((entry) =>
-      entry.legalEntityId === null ? [] : [[entry.legalEntityId, entry.party.name] as const],
-    ),
-  ),
-})
-
-const text = (value: FormValue[string] | undefined) =>
-  Predicate.isString(value) ? value.trim() : ""
-
-const isDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value)
 
 export interface SettlementRoute {
   readonly selectedPaymentId?: string | undefined

@@ -1,5 +1,6 @@
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import { Amount, CalendarDate, Uuid } from "../../shared/schemas.ts"
 import {
   decodeInput,
   decodeResponse,
@@ -14,10 +15,6 @@ import {
 } from "../../shared/contracts/generated/accounting.ts"
 import { PartyDirectoryEntry, partyRoutes } from "../../shared/contracts/generated/party.ts"
 import { Customer, SalesOrder, salesRoutes } from "../../shared/contracts/generated/sales.ts"
-
-const Uuid = Schema.String.check(Schema.isUUID())
-const CalendarDate = Schema.String.check(Schema.isPattern(/^\d{4}-\d{2}-\d{2}$/))
-const Amount = Schema.String.check(Schema.isPattern(/^-?\d+(\.\d+)?$/))
 
 /** Browser view of the Billing transport contract served by the billing module. */
 export const BillingSide = Schema.Literals(["receivable", "payable"])

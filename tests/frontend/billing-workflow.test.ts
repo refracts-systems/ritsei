@@ -70,6 +70,20 @@ const directory = [
 const fulfillJson = <Body>(route: Route, status: number, body: Body) =>
   route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) })
 
+type Handler = (route: Route) => Promise<void>
+
+/** Answers each API path from a table; any path outside the table fails the test run. */
+const mockRoutes = (page: Page, table: Readonly<Record<string, Handler>>) =>
+  page.route("**/api/**", (route) => {
+    const path = new URL(route.request().url()).pathname.replace(/^\/api/, "")
+    const key = `${route.request().method()} ${path}`
+    const handler = table[key]
+
+    return handler === undefined
+      ? fulfillJson(route, 404, { code: "unexpected_test_request" })
+      : handler(route)
+  })
+
 const openBilling = async (page: Page, url: string) => {
   await connectToTenant(page, url, "billing-session", tenantId, "User accounts")
   await page.getByRole("link", { name: "Billing", exact: true }).click()
@@ -231,32 +245,19 @@ it.effect(
       let invoiceBody: unknown
 
       yield* Effect.promise(async () => {
-        await page.route("**/api/**", (route) => {
-          const requestUrl = new URL(route.request().url())
-          const path = requestUrl.pathname.replace(/^\/api/, "")
-
-          if (path === "/user-accounts") return fulfillJson(route, 200, [])
-
-          if (path === "/parties") return fulfillJson(route, 200, directory)
-
-          if (path === "/accounting/configurations") {
-            return fulfillJson(route, 200, [configuration])
-          }
-
-          if (path === "/billing/documents") {
-            return fulfillJson(route, 200, attempts < 2 ? [] : [invoice])
-          }
-
-          if (path === `/billing/documents/${invoiceId}`) return fulfillJson(route, 200, invoice)
-
-          if (path === "/sales/customers") {
-            return fulfillJson(route, 200, [
+        await mockRoutes(page, {
+          "GET /user-accounts": (route) => fulfillJson(route, 200, []),
+          "GET /parties": (route) => fulfillJson(route, 200, directory),
+          "GET /accounting/configurations": (route) => fulfillJson(route, 200, [configuration]),
+          "GET /billing/documents": (route) =>
+            fulfillJson(route, 200, attempts < 2 ? [] : [invoice]),
+          [`GET /billing/documents/${invoiceId}`]: (route) => fulfillJson(route, 200, invoice),
+          "GET /sales/customers": (route) =>
+            fulfillJson(route, 200, [
               { id: customerId, tenantId, name: "PT Pembeli", email: "finance@pembeli.test" },
-            ])
-          }
-
-          if (path === "/sales/orders") {
-            return fulfillJson(route, 200, [
+            ]),
+          "GET /sales/orders": (route) =>
+            fulfillJson(route, 200, [
               {
                 id: orderId,
                 tenantId,
@@ -267,21 +268,16 @@ it.effect(
                 total: "140.00",
                 lines: [{ itemId: customerId, quantity: "1", unitPrice: "140.00" }],
               },
-            ])
-          }
-
-          if (path === "/billing/invoices" && route.request().method() === "POST") {
+            ]),
+          "POST /billing/invoices": (route) => {
             attempts += 1
             invoiceBody = route.request().postDataJSON()
 
             return attempts === 1
               ? fulfillJson(route, 409, conflictBody("NothingToInvoice"))
               : fulfillJson(route, 201, invoice)
-          }
-
-          return fulfillJson(route, 404, { code: "unexpected_test_request" })
+          },
         })
-
         await openBilling(page, url)
         await page.getByText("No invoices or credit notes in this legal entity yet.").waitFor()
 

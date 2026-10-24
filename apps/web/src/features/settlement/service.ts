@@ -1,15 +1,12 @@
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import { Amount, CalendarDate, Uuid } from "../../shared/schemas.ts"
 import { decodeInput, decodeResponse, querySuffix, requestJson } from "../../shared/api.ts"
 import {
   AccountingConfiguration,
   accountingRoutes,
 } from "../../shared/contracts/generated/accounting.ts"
 import { PartyDirectoryEntry, partyRoutes } from "../../shared/contracts/generated/party.ts"
-
-const Uuid = Schema.String.check(Schema.isUUID())
-const CalendarDate = Schema.String.check(Schema.isPattern(/^\d{4}-\d{2}-\d{2}$/))
-const Amount = Schema.String.check(Schema.isPattern(/^-?\d+(\.\d+)?$/))
 
 /** Browser view of the Settlement transport contract served by the settlement module. */
 export const PaymentDirection = Schema.Literals(["incoming", "outgoing"])
