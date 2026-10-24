@@ -10,6 +10,6 @@ export const BillingModule = defineModule({
   actions: [],
   events: [],
   consumes: [],
-  http: [],
+  http: ["Billing"],
   pages: [],
 })
