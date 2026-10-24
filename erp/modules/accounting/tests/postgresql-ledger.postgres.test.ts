@@ -9,7 +9,13 @@ import {
   LARGE_FINANCIAL_MINOR,
 } from "../../../../tests/support/financial-ledger-conformance.ts"
 import { withTemporaryDatabase } from "../../../../tests/support/postgres-database.ts"
-import { makePostgresqlFinancialLedger } from "../mod.ts"
+import {
+  makePostgresqlFinancialLedger,
+  FinancialExecutionManualRecovery,
+  FinancialBalanceAvailable,
+  FinancialBalanceNotFound,
+  FinancialExecutionOutcome,
+} from "../mod.ts"
 
 const databaseUrl = process.env["DATABASE_URL"]
 
@@ -159,7 +165,7 @@ it.effect.skipIf(databaseUrl === undefined)(
 
         const first = yield* ledger.postJournal(input)
         assert.strictEqual(first._tag, "accepted")
-        if (first._tag !== "accepted") return
+        if (!FinancialExecutionOutcome.guards.accepted(first)) return
         assert.strictEqual(first.transferCount, 1)
         assert.deepStrictEqual(first.transferIds, [
           `postgresql:v1:${tenant!.id}:${legalEntity!.id}:${operationId}:0`,
@@ -173,11 +179,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               { accountId: revenue!.id, debitMinor: "0", creditMinor: "49999999999999999" },
             ],
           }),
-          {
-            _tag: "manual_recovery",
-            operationId,
-            reason: "conflicting_replay",
-          },
+          FinancialExecutionManualRecovery.make({ operationId, reason: "conflicting_replay" }),
         )
         assert.strictEqual((yield* ledger.reconcileJournal(input))._tag, "accepted")
         assert.deepStrictEqual(
@@ -188,15 +190,14 @@ it.effect.skipIf(databaseUrl === undefined)(
             currency: "USD",
             mappingVersion: 1,
           }),
-          {
-            _tag: "available",
+          FinancialBalanceAvailable.make({
             accountId: cash!.id,
             mappingVersion: 1,
             debitsPendingMinor: "0",
             debitsPostedMinor: LARGE_FINANCIAL_MINOR,
             creditsPendingMinor: "0",
             creditsPostedMinor: "0",
-          },
+          }),
         )
         assert.deepStrictEqual(
           yield* ledger.getBalance({
@@ -206,7 +207,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             currency: "USD",
             mappingVersion: 1,
           }),
-          { _tag: "not_found", accountId: cash!.id },
+          FinancialBalanceNotFound.make({ accountId: cash!.id }),
         )
 
         const [storedOperation] = yield* Effect.promise(

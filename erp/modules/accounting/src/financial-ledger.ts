@@ -65,81 +65,84 @@ export const FinancialManualRecoveryReason = Schema.Literals([
   "engine_routing_changed",
 ])
 
+export const ExecutionAccountAccepted = Schema.TaggedStruct("accepted", {
+  accountId: NonEmptyString,
+  mappingVersion: PositiveInteger,
+  acceptedAt: NonEmptyString,
+})
+export const ExecutionAccountRejected = Schema.TaggedStruct("rejected", {
+  accountId: NonEmptyString,
+  reason: FinancialRejectionReason,
+})
+export const ExecutionAccountUnknown = Schema.TaggedStruct("unknown", {
+  accountId: NonEmptyString,
+  reason: Schema.Literals(["unavailable", "response_lost"]),
+})
+export const ExecutionAccountManualRecovery = Schema.TaggedStruct("manual_recovery", {
+  accountId: NonEmptyString,
+  reason: FinancialManualRecoveryReason,
+})
+
 export const ExecutionAccountOutcome = Schema.Union([
-  Schema.Struct({
-    _tag: Schema.Literal("accepted"),
-    accountId: NonEmptyString,
-    mappingVersion: PositiveInteger,
-    acceptedAt: NonEmptyString,
-  }),
-  Schema.Struct({
-    _tag: Schema.Literal("rejected"),
-    accountId: NonEmptyString,
-    reason: FinancialRejectionReason,
-  }),
-  Schema.Struct({
-    _tag: Schema.Literal("unknown"),
-    accountId: NonEmptyString,
-    reason: Schema.Literals(["unavailable", "response_lost"]),
-  }),
-  Schema.Struct({
-    _tag: Schema.Literal("manual_recovery"),
-    accountId: NonEmptyString,
-    reason: FinancialManualRecoveryReason,
-  }),
-])
+  ExecutionAccountAccepted,
+  ExecutionAccountRejected,
+  ExecutionAccountUnknown,
+  ExecutionAccountManualRecovery,
+]).pipe(Schema.toTaggedUnion("_tag"))
+
+export const FinancialExecutionAccepted = Schema.TaggedStruct("accepted", {
+  operationId: NonEmptyString,
+  mappingVersion: PositiveInteger,
+  acceptedAt: NonEmptyString,
+  transferCount: PositiveInteger,
+  transferIds: Schema.Array(NonEmptyString).check(Schema.isMinLength(1)),
+})
+export const FinancialExecutionRejected = Schema.TaggedStruct("rejected", {
+  operationId: NonEmptyString,
+  reason: FinancialRejectionReason,
+})
+export const FinancialExecutionUnknown = Schema.TaggedStruct("unknown", {
+  operationId: NonEmptyString,
+  reason: Schema.Literals(["unavailable", "response_lost", "not_found"]),
+})
+export const FinancialExecutionManualRecovery = Schema.TaggedStruct("manual_recovery", {
+  operationId: NonEmptyString,
+  reason: FinancialManualRecoveryReason,
+})
 
 export const FinancialExecutionOutcome = Schema.Union([
-  Schema.Struct({
-    _tag: Schema.Literal("accepted"),
-    operationId: NonEmptyString,
-    mappingVersion: PositiveInteger,
-    acceptedAt: NonEmptyString,
-    transferCount: PositiveInteger,
-    transferIds: Schema.Array(NonEmptyString).check(Schema.isMinLength(1)),
-  }),
-  Schema.Struct({
-    _tag: Schema.Literal("rejected"),
-    operationId: NonEmptyString,
-    reason: FinancialRejectionReason,
-  }),
-  Schema.Struct({
-    _tag: Schema.Literal("unknown"),
-    operationId: NonEmptyString,
-    reason: Schema.Literals(["unavailable", "response_lost", "not_found"]),
-  }),
-  Schema.Struct({
-    _tag: Schema.Literal("manual_recovery"),
-    operationId: NonEmptyString,
-    reason: FinancialManualRecoveryReason,
-  }),
-])
+  FinancialExecutionAccepted,
+  FinancialExecutionRejected,
+  FinancialExecutionUnknown,
+  FinancialExecutionManualRecovery,
+]).pipe(Schema.toTaggedUnion("_tag"))
+
+export const FinancialBalanceAvailable = Schema.TaggedStruct("available", {
+  accountId: NonEmptyString,
+  mappingVersion: PositiveInteger,
+  debitsPendingMinor: MinorAmount,
+  debitsPostedMinor: MinorAmount,
+  creditsPendingMinor: MinorAmount,
+  creditsPostedMinor: MinorAmount,
+})
+export const FinancialBalanceNotFound = Schema.TaggedStruct("not_found", {
+  accountId: NonEmptyString,
+})
+export const FinancialBalanceUnknown = Schema.TaggedStruct("unknown", {
+  accountId: NonEmptyString,
+  reason: Schema.Literals(["unavailable", "response_lost"]),
+})
+export const FinancialBalanceManualRecovery = Schema.TaggedStruct("manual_recovery", {
+  accountId: NonEmptyString,
+  reason: FinancialManualRecoveryReason,
+})
 
 export const FinancialBalanceOutcome = Schema.Union([
-  Schema.Struct({
-    _tag: Schema.Literal("available"),
-    accountId: NonEmptyString,
-    mappingVersion: PositiveInteger,
-    debitsPendingMinor: MinorAmount,
-    debitsPostedMinor: MinorAmount,
-    creditsPendingMinor: MinorAmount,
-    creditsPostedMinor: MinorAmount,
-  }),
-  Schema.Struct({
-    _tag: Schema.Literal("not_found"),
-    accountId: NonEmptyString,
-  }),
-  Schema.Struct({
-    _tag: Schema.Literal("unknown"),
-    accountId: NonEmptyString,
-    reason: Schema.Literals(["unavailable", "response_lost"]),
-  }),
-  Schema.Struct({
-    _tag: Schema.Literal("manual_recovery"),
-    accountId: NonEmptyString,
-    reason: FinancialManualRecoveryReason,
-  }),
-])
+  FinancialBalanceAvailable,
+  FinancialBalanceNotFound,
+  FinancialBalanceUnknown,
+  FinancialBalanceManualRecovery,
+]).pipe(Schema.toTaggedUnion("_tag"))
 
 export type FinancialAccountConstraint = Schema.Schema.Type<typeof FinancialAccountConstraint>
 export type CreateExecutionAccountInput = Schema.Schema.Type<typeof CreateExecutionAccountInput>
@@ -245,7 +248,7 @@ const validateJournal = (
   input: PostFinancialJournalInput,
 ): FinancialExecutionOutcome | undefined => {
   if (input.lines.length < 2) {
-    return { _tag: "rejected", operationId: input.operationId, reason: "unbalanced" }
+    return FinancialExecutionRejected.make({ operationId: input.operationId, reason: "unbalanced" })
   }
 
   let debit = 0n
@@ -254,17 +257,23 @@ const validateJournal = (
     const lineDebit = parseMinor(line.debitMinor)
     const lineCredit = parseMinor(line.creditMinor)
     if (lineDebit > U128_MAX || lineCredit > U128_MAX || lineDebit > 0n === lineCredit > 0n) {
-      return { _tag: "rejected", operationId: input.operationId, reason: "invalid_amount" }
+      return FinancialExecutionRejected.make({
+        operationId: input.operationId,
+        reason: "invalid_amount",
+      })
     }
     debit += lineDebit
     credit += lineCredit
     if (debit > U128_MAX || credit > U128_MAX) {
-      return { _tag: "rejected", operationId: input.operationId, reason: "invalid_amount" }
+      return FinancialExecutionRejected.make({
+        operationId: input.operationId,
+        reason: "invalid_amount",
+      })
     }
   }
   return debit === credit
     ? undefined
-    : { _tag: "rejected", operationId: input.operationId, reason: "unbalanced" }
+    : FinancialExecutionRejected.make({ operationId: input.operationId, reason: "unbalanced" })
 }
 
 export const makeFinancialLedgerTestLayer = (options: TestAdapterOptions = {}) =>
@@ -295,26 +304,23 @@ export const makeFinancialLedgerTestLayer = (options: TestAdapterOptions = {}) =
             const existing = accounts.get(key)
             if (existing !== undefined) {
               return sameAccountInput(existing, decoded)
-                ? {
-                    _tag: "accepted" as const,
+                ? ExecutionAccountAccepted.make({
                     accountId: decoded.accountId,
                     mappingVersion: decoded.mappingVersion,
                     acceptedAt: "0",
-                  }
-                : {
-                    _tag: "manual_recovery" as const,
+                  })
+                : ExecutionAccountManualRecovery.make({
                     accountId: decoded.accountId,
                     reason: "mapping_mismatch" as const,
-                  }
+                  })
             }
             accounts.set(key, decoded)
             balances.set(key, { debitsPostedMinor: 0n, creditsPostedMinor: 0n })
-            return {
-              _tag: "accepted" as const,
+            return ExecutionAccountAccepted.make({
               accountId: decoded.accountId,
               mappingVersion: decoded.mappingVersion,
               acceptedAt: "0",
-            }
+            })
           }),
         expectedTransferIds: (input) =>
           Effect.gen(function* () {
@@ -331,22 +337,20 @@ export const makeFinancialLedgerTestLayer = (options: TestAdapterOptions = {}) =
                 !unavailableOnce.has(failureKey))
             ) {
               unavailableOnce.add(failureKey)
-              return {
-                _tag: "unknown" as const,
+              return FinancialExecutionUnknown.make({
                 operationId: decoded.operationId,
                 reason: "unavailable" as const,
-              }
+              })
             }
             if (
               options.failBeforeSubmissionFor === decoded.operationId &&
               !failedBefore.has(failureKey)
             ) {
               failedBefore.add(failureKey)
-              return {
-                _tag: "unknown" as const,
+              return FinancialExecutionUnknown.make({
                 operationId: decoded.operationId,
                 reason: "response_lost" as const,
-              }
+              })
             }
             const validation = validateJournal(decoded)
             if (validation !== undefined) return validation
@@ -370,11 +374,10 @@ export const makeFinancialLedgerTestLayer = (options: TestAdapterOptions = {}) =
                 .map((account) => account.accountId),
             )
             if (decoded.lines.some((line) => !accountIds.has(line.accountId))) {
-              return {
-                _tag: "rejected" as const,
+              return FinancialExecutionRejected.make({
                 operationId: decoded.operationId,
                 reason: "invalid_account" as const,
-              }
+              })
             }
             const key = operationKey(decoded)
             const fingerprint = JSON.stringify({
@@ -387,11 +390,10 @@ export const makeFinancialLedgerTestLayer = (options: TestAdapterOptions = {}) =
             const existing = operations.get(key)
             if (existing !== undefined) {
               if (existing.fingerprint !== fingerprint) {
-                return {
-                  _tag: "manual_recovery" as const,
+                return FinancialExecutionManualRecovery.make({
                   operationId: decoded.operationId,
                   reason: "conflicting_replay" as const,
-                }
+                })
               }
               return existing.outcome
             }
@@ -425,11 +427,10 @@ export const makeFinancialLedgerTestLayer = (options: TestAdapterOptions = {}) =
                 next.creditsPostedMinor > U128_MAX ||
                 violatesConstraint(account, next)
               ) {
-                return {
-                  _tag: "rejected" as const,
+                return FinancialExecutionRejected.make({
                   operationId: decoded.operationId,
                   reason: "constraint_violation" as const,
-                }
+                })
               }
               lineBalances.set(balanceKey, next)
             }
@@ -446,11 +447,10 @@ export const makeFinancialLedgerTestLayer = (options: TestAdapterOptions = {}) =
                 )
               })
             ) {
-              return {
-                _tag: "rejected" as const,
+              return FinancialExecutionRejected.make({
                 operationId: decoded.operationId,
                 reason: "constraint_violation" as const,
-              }
+              })
             }
             for (const [balanceKey, next] of lineBalances) balances.set(balanceKey, next)
             const transferIds = pairs
@@ -458,22 +458,20 @@ export const makeFinancialLedgerTestLayer = (options: TestAdapterOptions = {}) =
               options.corruptTransferIdsFor === decoded.operationId
                 ? transferIds.map((id, index) => (index === 0 ? `${id}:corrupt` : id))
                 : transferIds
-            const outcome: FinancialExecutionOutcome = {
-              _tag: "accepted",
+            const outcome: FinancialExecutionOutcome = FinancialExecutionAccepted.make({
               operationId: decoded.operationId,
               mappingVersion: decoded.mappingVersion,
               acceptedAt: "0",
               transferCount: returnedTransferIds.length,
               transferIds: returnedTransferIds,
-            }
+            })
             operations.set(key, { fingerprint, outcome })
             if (options.loseResponseFor === decoded.operationId && !lost.has(key)) {
               lost.add(key)
-              return {
-                _tag: "unknown" as const,
+              return FinancialExecutionUnknown.make({
                 operationId: decoded.operationId,
                 reason: "response_lost" as const,
-              }
+              })
             }
             return outcome
           }),
@@ -481,19 +479,17 @@ export const makeFinancialLedgerTestLayer = (options: TestAdapterOptions = {}) =
           Effect.gen(function* () {
             const decoded = yield* Schema.decodeUnknownEffect(PostFinancialJournalInput)(input)
             if (options.unavailableFor === decoded.operationId) {
-              return {
-                _tag: "unknown" as const,
+              return FinancialExecutionUnknown.make({
                 operationId: decoded.operationId,
                 reason: "unavailable" as const,
-              }
+              })
             }
             const existing = operations.get(operationKey(decoded))
             if (existing === undefined) {
-              return {
-                _tag: "unknown" as const,
+              return FinancialExecutionUnknown.make({
                 operationId: decoded.operationId,
                 reason: "not_found" as const,
-              }
+              })
             }
             const fingerprint = JSON.stringify({
               journalId: decoded.journalId,
@@ -504,11 +500,10 @@ export const makeFinancialLedgerTestLayer = (options: TestAdapterOptions = {}) =
             })
             return existing.fingerprint === fingerprint
               ? existing.outcome
-              : {
-                  _tag: "manual_recovery" as const,
+              : FinancialExecutionManualRecovery.make({
                   operationId: decoded.operationId,
                   reason: "conflicting_replay" as const,
-                }
+                })
           }),
         getBalance: (input) =>
           Effect.gen(function* () {
@@ -518,16 +513,15 @@ export const makeFinancialLedgerTestLayer = (options: TestAdapterOptions = {}) =
             )
             const balance = balances.get(accountKey(decoded))
             return exists && balance !== undefined
-              ? {
-                  _tag: "available" as const,
+              ? FinancialBalanceAvailable.make({
                   accountId: decoded.accountId,
                   mappingVersion: decoded.mappingVersion,
                   debitsPendingMinor: "0",
                   debitsPostedMinor: balance.debitsPostedMinor.toString(),
                   creditsPendingMinor: "0",
                   creditsPostedMinor: balance.creditsPostedMinor.toString(),
-                }
-              : { _tag: "not_found" as const, accountId: decoded.accountId }
+                })
+              : FinancialBalanceNotFound.make({ accountId: decoded.accountId })
           }),
       } satisfies FinancialLedgerPort
     }),

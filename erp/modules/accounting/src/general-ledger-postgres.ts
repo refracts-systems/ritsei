@@ -1,5 +1,6 @@
 import { and, asc, eq, gte, inArray, lte, sum } from "drizzle-orm"
 import * as Effect from "effect/Effect"
+import * as Result from "effect/Result"
 
 import {
   accountingPeriods,
@@ -17,9 +18,9 @@ import {
 } from "../../../../framework/foundation/mod.ts"
 import { NumberingService } from "../../../../framework/modules/numbering/mod.ts"
 import type { LedgerAccount, LedgerEntry, PostingRole } from "./general-ledger-contract.ts"
-import type {
-  GeneralLedgerStore,
-  PostEntryCommand,
+import {
+  type GeneralLedgerStore,
+  type PostEntryCommand,
   PostEntryOutcome,
 } from "./general-ledger-store.ts"
 import {
@@ -281,63 +282,70 @@ export const makeGeneralLedgerPostgresStore = Effect.fn("GeneralLedger.makePostg
             lines: row.lines,
           }
 
+    type PreparedPosting = {
+      readonly fiscalYearStartMonth: number
+      readonly rules: ReadonlyMap<PostingRole, string>
+    }
+
     /** Locks the configuration and open period, and loads posting rules. */
     const preparePosting = (command: PostEntryCommand) =>
-      database.transaction(async (tx) => {
-        const configuration = (
-          await tx
-            .select({
-              postingEnabled: legalEntityAccountingConfigurations.postingEnabled,
-              financialEngine: legalEntityAccountingConfigurations.financialEngine,
-              fiscalYearStartMonth: legalEntityAccountingConfigurations.fiscalYearStartMonth,
-            })
-            .from(legalEntityAccountingConfigurations)
+      database.transaction(
+        async (tx): Promise<Result.Result<PreparedPosting, PostEntryOutcome>> => {
+          const configuration = (
+            await tx
+              .select({
+                postingEnabled: legalEntityAccountingConfigurations.postingEnabled,
+                financialEngine: legalEntityAccountingConfigurations.financialEngine,
+                fiscalYearStartMonth: legalEntityAccountingConfigurations.fiscalYearStartMonth,
+              })
+              .from(legalEntityAccountingConfigurations)
+              .where(
+                and(
+                  eq(legalEntityAccountingConfigurations.tenantId, command.tenantId),
+                  eq(legalEntityAccountingConfigurations.legalEntityId, command.legalEntityId),
+                ),
+              )
+              .for("share")
+          )[0]
+          if (configuration === undefined) return Result.fail(PostEntryOutcome.NotConfigured())
+          if (configuration.financialEngine !== "postgresql") {
+            return Result.fail(PostEntryOutcome.EngineActivated())
+          }
+          // A shared lock on the open period makes a concurrent close wait for this posting.
+          const period = (
+            await tx
+              .select({ id: accountingPeriods.id })
+              .from(accountingPeriods)
+              .where(
+                and(
+                  eq(accountingPeriods.tenantId, command.tenantId),
+                  eq(accountingPeriods.legalEntityId, command.legalEntityId),
+                  eq(accountingPeriods.status, "open"),
+                  lte(accountingPeriods.startsOn, command.postingDate),
+                  gte(accountingPeriods.endsOn, command.postingDate),
+                ),
+              )
+              .for("share")
+          )[0]
+          if (period === undefined || !configuration.postingEnabled) {
+            return Result.fail(PostEntryOutcome.PeriodNotOpen())
+          }
+          const rules = await tx
+            .select({ role: postingRules.role, accountId: postingRules.accountId })
+            .from(postingRules)
             .where(
               and(
-                eq(legalEntityAccountingConfigurations.tenantId, command.tenantId),
-                eq(legalEntityAccountingConfigurations.legalEntityId, command.legalEntityId),
+                eq(postingRules.tenantId, command.tenantId),
+                eq(postingRules.legalEntityId, command.legalEntityId),
               ),
             )
-            .for("share")
-        )[0]
-        if (configuration === undefined) return { _tag: "not-configured" as const }
-        if (configuration.financialEngine !== "postgresql") {
-          return { _tag: "engine-activated" as const }
-        }
-        // A shared lock on the open period makes a concurrent close wait for this posting.
-        const period = (
-          await tx
-            .select({ id: accountingPeriods.id })
-            .from(accountingPeriods)
-            .where(
-              and(
-                eq(accountingPeriods.tenantId, command.tenantId),
-                eq(accountingPeriods.legalEntityId, command.legalEntityId),
-                eq(accountingPeriods.status, "open"),
-                lte(accountingPeriods.startsOn, command.postingDate),
-                gte(accountingPeriods.endsOn, command.postingDate),
-              ),
-            )
-            .for("share")
-        )[0]
-        if (period === undefined || !configuration.postingEnabled) {
-          return { _tag: "period-not-open" as const }
-        }
-        const rules = await tx
-          .select({ role: postingRules.role, accountId: postingRules.accountId })
-          .from(postingRules)
-          .where(
-            and(
-              eq(postingRules.tenantId, command.tenantId),
-              eq(postingRules.legalEntityId, command.legalEntityId),
-            ),
-          )
-        return {
-          _tag: "ready" as const,
-          fiscalYearStartMonth: configuration.fiscalYearStartMonth,
-          rules: new Map<PostingRole, string>(rules.map((rule) => [rule.role, rule.accountId])),
-        }
-      }, "accounting.ledger.entry.prepare")
+          return Result.succeed({
+            fiscalYearStartMonth: configuration.fiscalYearStartMonth,
+            rules: new Map<PostingRole, string>(rules.map((rule) => [rule.role, rule.accountId])),
+          })
+        },
+        "accounting.ledger.entry.prepare",
+      )
 
     /** Resolves role lines to accounts, or names the first role without a posting rule. */
     const resolveLines = (
@@ -366,8 +374,8 @@ export const makeGeneralLedgerPostgresStore = Effect.fn("GeneralLedger.makePostg
       const entry = toEntry(existing)
       return entry !== undefined &&
         postingKey(entry, entry.lines) === postingKey(commandPosting(command), lines)
-        ? { _tag: "posted", entry }
-        : { _tag: "idempotency-conflict" }
+        ? PostEntryOutcome.Posted({ entry })
+        : PostEntryOutcome.IdempotencyConflict()
     }
 
     /** Inserts the draft entry and its lines, then posts it, which runs the balance check. */
@@ -404,8 +412,7 @@ export const makeGeneralLedgerPostgresStore = Effect.fn("GeneralLedger.makePostg
             .update(journalEntries)
             .set({ status: "posted", postedAt, updatedAt: postedAt })
             .where(eq(journalEntries.id, entryId))
-          return {
-            _tag: "posted",
+          return PostEntryOutcome.Posted({
             entry: {
               id: entryId,
               tenantId: command.tenantId,
@@ -423,12 +430,12 @@ export const makeGeneralLedgerPostgresStore = Effect.fn("GeneralLedger.makePostg
                 credit: normalize(line.credit),
               })),
             },
-          } satisfies PostEntryOutcome
+          })
         }, "accounting.ledger.entry.post")
         .pipe(
           Effect.catchIf(
             (error) => isDatabaseConstraint(error, "journal_lines_account_fkey", "23503"),
-            () => Effect.succeed<PostEntryOutcome>({ _tag: "account-missing" }),
+            () => Effect.succeed<PostEntryOutcome>(PostEntryOutcome.AccountMissing()),
           ),
         )
 
@@ -436,9 +443,9 @@ export const makeGeneralLedgerPostgresStore = Effect.fn("GeneralLedger.makePostg
       database.withTransaction(
         Effect.gen(function* () {
           const context = yield* preparePosting(command)
-          if (context._tag !== "ready") return context satisfies PostEntryOutcome
-          const resolved = resolveLines(command.lines, context.rules)
-          if ("missing" in resolved) return { _tag: "rule-missing", role: resolved.missing }
+          if (Result.isFailure(context)) return context.failure
+          const resolved = resolveLines(command.lines, context.success.rules)
+          if ("missing" in resolved) return PostEntryOutcome.RuleMissing({ role: resolved.missing })
           const existing = yield* loadEntry(command.tenantId, command.reference)
           if (existing !== undefined) return replay(existing, command, resolved.lines)
           const entryId = uuidv7()
@@ -449,7 +456,7 @@ export const makeGeneralLedgerPostgresStore = Effect.fn("GeneralLedger.makePostg
               documentType: "accounting.journal",
               documentId: entryId,
               documentDate: command.postingDate,
-              fiscalYearStartMonth: context.fiscalYearStartMonth,
+              fiscalYearStartMonth: context.success.fiscalYearStartMonth,
               prefix: "JE/",
             })
             .pipe(Effect.catchTag("SchemaError", (error) => Effect.die(error)))

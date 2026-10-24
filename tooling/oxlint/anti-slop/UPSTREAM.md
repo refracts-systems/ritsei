@@ -21,7 +21,7 @@ formatting, and Fallow because it keeps upstream's tab-indented style.
 `anti-slop/no-widen-then-assert`, `anti-slop-effect/no-manual-effect-error-tag`,
 `anti-slop-effect/prefer-effect-match`, `anti-slop/no-chained-type-assertions`,
 `anti-slop/no-unsafe-dictionary-type`, `anti-slop/no-runtime-typeof`, `anti-slop/no-unknown-returns`, and
-`anti-slop/require-safety-comment-for-type-assertion` (everywhere, tests included), `anti-slop-effect/no-service-constructor-imports`, `anti-slop/no-shape-in-symbol-names`, `anti-slop/no-conditional-empty-object-spread`, `anti-slop/no-unknown-parameters`.
+`anti-slop/require-safety-comment-for-type-assertion` (everywhere, tests included), `anti-slop-effect/no-service-constructor-imports`, `anti-slop/no-shape-in-symbol-names`, `anti-slop/no-conditional-empty-object-spread`, `anti-slop/no-unknown-parameters`, `anti-slop-effect/no-manual-tag-comparison`, `anti-slop-effect/no-manual-tagged-construction`.
 
 `pnpm run lint` passes with this set. Fixes made when enabling it:
 
@@ -88,6 +88,16 @@ formatting, and Fallow because it keeps upstream's tab-indented style.
   capability parameters use the catalog `Capability` union. Tests that send invalid input build it
   with `partial<T>()(value)`. The migration ran module by module behind a shrinking `overrides`
   block, now removed.
+- `no-manual-tag-comparison` and `no-manual-tagged-construction` (about 330 sites): outcomes that stay in
+  memory are `Data.taggedEnum` types with PascalCase tags, built with their variant constructors and
+  consumed with `$match`/`$is`. Outcomes defined by a Schema (email and document nodes, the financial
+  ledger port outcomes) are `Schema.TaggedStruct` members joined with `Schema.toTaggedUnion`, built with
+  `.make` and consumed with `.match` or `.guards`; their tag values did not change. Effect built-ins use
+  `Option.isSome`, `Result.isSuccess` and `Exit.isFailure`, failure unions use `Match.valueTags` or
+  `Effect.catchTag`. Tests build error and wire fixtures from the real classes; an invalid wire body is a
+  valid instance with one field overridden. One exception: `PlatformError.systemError` takes an option
+  named `_tag` (`crypto/adapter.ts`), which carries an inline disable with the reason. The earlier note
+  that hand-matched outcome unions were a repo convention was wrong: no ADR required them.
 - `no-reflect-get` (1 site): the `Proxy` default branch in `request-limits.ts` reads the wrapped
   request directly, with a `SAFETY:` comment.
 
@@ -99,5 +109,3 @@ cleanup it needs.
 | Rule | Findings | Reason |
 | --- | --- | --- |
 | `require-readable-spacing` | 8468 | Formatting belongs to oxfmt; the autofix would rewrite most files and fight the formatter. |
-| `anti-slop-effect/no-manual-tag-comparison` | 146 | Outcome unions (`{ _tag: "posted" }`) are matched by hand throughout. |
-| `anti-slop-effect/no-manual-tagged-construction` | 182 | The same outcome unions are built as literals. |

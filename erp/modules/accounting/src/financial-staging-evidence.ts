@@ -3,6 +3,7 @@ import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
+import * as Data from "effect/Data"
 
 import { financialStagingEvidence } from "../../../../db/schema/accounting.ts"
 import { Database, DatabaseFailure } from "../../../../framework/foundation/mod.ts"
@@ -308,6 +309,55 @@ export const makeMemoryFinancialStagingEvidenceStore = (): FinancialStagingEvide
   }
 }
 
+export type AppendOutcome = Data.TaggedEnum<{
+  Inserted: {
+    readonly row: {
+      tenantId: string
+      recordId: string
+      legalEntityId: string
+      gateId: string
+      cohortId: string
+      deploymentRevision: string
+      schemaVersion: number
+      canonicalizationVersion: number
+      evidenceHash: string
+      evidence: unknown
+      operatorPrincipalId: string
+      providerIdentityRef: string
+      result: string
+      mismatchCount: number
+      orphanCount: number
+      startedAt: Date
+      completedAt: Date
+      createdAt: Date
+    }
+  }
+  Missing: {}
+  Existing: {
+    readonly row: {
+      recordId: string
+      tenantId: string
+      legalEntityId: string
+      gateId: string
+      cohortId: string
+      deploymentRevision: string
+      schemaVersion: number
+      canonicalizationVersion: number
+      evidenceHash: string
+      evidence: unknown
+      operatorPrincipalId: string
+      providerIdentityRef: string
+      result: string
+      mismatchCount: number
+      orphanCount: number
+      startedAt: Date
+      completedAt: Date
+      createdAt: Date
+    }
+  }
+}>
+export const AppendOutcome = Data.taggedEnum<AppendOutcome>()
+
 export const makePostgresFinancialStagingEvidenceStore = Effect.gen(function* () {
   const database = yield* Database
   return {
@@ -320,7 +370,7 @@ export const makePostgresFinancialStagingEvidenceStore = Effect.gen(function* ()
             .values(dbValues(candidate))
             .onConflictDoNothing()
             .returning()
-          if (inserted !== undefined) return { _tag: "inserted" as const, row: inserted }
+          if (inserted !== undefined) return AppendOutcome.Inserted({ row: inserted })
           const [existing] = await transaction
             .select()
             .from(financialStagingEvidence)
@@ -332,10 +382,10 @@ export const makePostgresFinancialStagingEvidenceStore = Effect.gen(function* ()
             )
             .for("update")
           return existing === undefined
-            ? { _tag: "missing" as const }
-            : { _tag: "existing" as const, row: existing }
+            ? AppendOutcome.Missing()
+            : AppendOutcome.Existing({ row: existing })
         }, "accounting.financial_staging_evidence.append")
-        if (result._tag === "missing") {
+        if (AppendOutcome.$is("Missing")(result)) {
           return yield* Effect.fail(
             new DatabaseFailure({
               operation: "accounting.financial_staging_evidence.append",
@@ -344,7 +394,7 @@ export const makePostgresFinancialStagingEvidenceStore = Effect.gen(function* ()
           )
         }
         const record = yield* validateStoredRow(result.row)
-        if (result._tag === "inserted") return { record, duplicate: false }
+        if (AppendOutcome.$is("Inserted")(result)) return { record, duplicate: false }
         if (!sameEvidence(record, candidate)) {
           return yield* Effect.fail(
             new FinancialStagingEvidenceConflict({

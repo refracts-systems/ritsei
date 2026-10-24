@@ -1,5 +1,6 @@
 import { and, eq, gte, inArray, lte } from "drizzle-orm"
 import * as Context from "effect/Context"
+import * as Data from "effect/Data"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Match from "effect/Match"
@@ -47,8 +48,14 @@ import { SalesOrderInvalidState, SalesOrderNotFound, SalesService } from "../../
 import { AccountingCapabilities } from "./capabilities.ts"
 import { AccountingFinancialOperationReconciledEvent } from "./events.ts"
 import {
+  ExecutionAccountOutcome,
   type FinancialAccountConstraint,
-  type FinancialExecutionOutcome,
+  FinancialBalanceOutcome,
+  FinancialExecutionAccepted,
+  FinancialExecutionManualRecovery,
+  FinancialExecutionOutcome,
+  FinancialExecutionRejected,
+  FinancialExecutionUnknown,
   FinancialLedgerAuthority,
   FinancialLedgerPort,
 } from "./financial-ledger.ts"
@@ -1058,12 +1065,12 @@ type FinancialProjectionTransferRow = Readonly<{
   readonly amountMinor: unknown
   readonly engineTransferId: string | null
 }>
-type FinancialProjectionTransferAssessment =
-  | Readonly<{
-      readonly _tag: "ready"
-      readonly missingTransfers: FinancialProjectionTransferPair[]
-    }>
-  | Readonly<{ readonly _tag: "mismatch" }>
+type FinancialProjectionTransferAssessment = Data.TaggedEnum<{
+  Ready: { readonly missingTransfers: FinancialProjectionTransferPair[] }
+  Mismatch: {}
+}>
+const FinancialProjectionTransferAssessment =
+  Data.taggedEnum<FinancialProjectionTransferAssessment>()
 
 const projectedFinancialTransferMatches = (
   existing: FinancialProjectionTransferRow,
@@ -1100,8 +1107,8 @@ const classifyProjectedTransferRows = ({
     (transfer) => !expectedPositions.has(transfer.position),
   )
   return projected.length > expectedPairs.length || hasUnexpectedPosition || projectionMismatch
-    ? { _tag: "mismatch" }
-    : { _tag: "ready", missingTransfers }
+    ? FinancialProjectionTransferAssessment.Mismatch()
+    : FinancialProjectionTransferAssessment.Ready({ missingTransfers })
 }
 
 const submitJobType = "accounting.financial_operation.submit"
@@ -1502,11 +1509,14 @@ export const makeFinancialOperationService = Effect.gen(function* () {
             return updated!
           }
           if (current.status === "reconciled") return current
-          if (current.status === "accepted" && outcome._tag !== "accepted") {
+          if (
+            current.status === "accepted" &&
+            !FinancialExecutionOutcome.guards.accepted(outcome)
+          ) {
             return yield* Effect.fail(new FinancialOperationReconciliationConflict({ operationId }))
           }
 
-          if (outcome._tag === "accepted") {
+          if (FinancialExecutionOutcome.guards.accepted(outcome)) {
             const expectedTransfers = yield* database.query(
               (db) =>
                 db
@@ -1636,11 +1646,19 @@ export const makeFinancialOperationService = Effect.gen(function* () {
                 .set({
                   status,
                   engineAcceptedAt: null,
-                  rejectionReason: outcome._tag === "rejected" ? outcome.reason : null,
-                  recoveryReason: outcome._tag === "manual_recovery" ? outcome.reason : null,
+                  rejectionReason: FinancialExecutionOutcome.guards.rejected(outcome)
+                    ? outcome.reason
+                    : null,
+                  recoveryReason: FinancialExecutionOutcome.guards.manual_recovery(outcome)
+                    ? outcome.reason
+                    : null,
                   observedEngine,
-                  lastError: outcome._tag === "unknown" ? outcome.reason : null,
-                  scheduledAt: outcome._tag === "unknown" ? new Date(now.getTime() + 5_000) : now,
+                  lastError: FinancialExecutionOutcome.guards.unknown(outcome)
+                    ? outcome.reason
+                    : null,
+                  scheduledAt: FinancialExecutionOutcome.guards.unknown(outcome)
+                    ? new Date(now.getTime() + 5_000)
+                    : now,
                   updatedAt: now,
                 })
                 .where(
@@ -1684,7 +1702,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
         "accounting.financial_operation.receipt",
       )
       yield* hit("after_receipt_commit")
-      if (outcome._tag === "accepted" && receipt.status === "accepted") {
+      if (FinancialExecutionOutcome.guards.accepted(outcome) && receipt.status === "accepted") {
         return yield* finalizeAccepted(operationId, tenantId, executionFence)
       }
       return receipt
@@ -2296,7 +2314,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
               `missing:${transfer.position}`,
           ),
         })
-        if (outcome._tag === "accepted") {
+        if (FinancialExecutionOutcome.guards.accepted(outcome)) {
           targetOperations.push({
             operationId: outcome.operationId,
             status: operation.status === "accepted" ? "accepted" : "reconciled",
@@ -2365,7 +2383,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
           currency: balance.currency,
           mappingVersion: balance.mappingVersion,
         })
-        if (outcome._tag === "available") {
+        if (FinancialBalanceOutcome.guards.available(outcome)) {
           targetBalances.push({
             accountId: outcome.accountId,
             currency: balance.currency,
@@ -2434,16 +2452,19 @@ export const makeFinancialOperationService = Effect.gen(function* () {
     readonly currency: string
     readonly mappingVersion: number
   }>
-  type FinancialProjectionRebuildOutcome = Readonly<{
-    readonly _tag: "rebuilt" | "quarantined"
+  type FinancialProjectionRebuildOutcome = Data.TaggedEnum<{
+    Rebuilt: {}
+    Quarantined: {}
   }>
-  type FinancialProjectionRebuildPlan =
-    | Readonly<{ readonly _tag: "quarantine" }>
-    | Readonly<{
-        readonly _tag: "repair"
-        readonly outcome: Extract<FinancialExecutionOutcome, { readonly _tag: "accepted" }>
-        readonly missingTransfers: readonly FinancialProjectionTransferPair[]
-      }>
+  const FinancialProjectionRebuildOutcome = Data.taggedEnum<FinancialProjectionRebuildOutcome>()
+  type FinancialProjectionRebuildPlan = Data.TaggedEnum<{
+    Quarantine: {}
+    Repair: {
+      readonly outcome: typeof FinancialExecutionAccepted.Type
+      readonly missingTransfers: readonly FinancialProjectionTransferPair[]
+    }
+  }>
+  const FinancialProjectionRebuildPlan = Data.taggedEnum<FinancialProjectionRebuildPlan>()
 
   const inspectFinancialProjection = (
     tenantId: string,
@@ -2483,9 +2504,12 @@ export const makeFinancialOperationService = Effect.gen(function* () {
         })),
       }
       const outcome = yield* ledger.reconcileJournal(journalInput)
-      if (outcome._tag !== "accepted") {
-        if (outcome._tag === "manual_recovery" || outcome._tag === "rejected") {
-          return { _tag: "quarantine" as const }
+      if (!FinancialExecutionOutcome.guards.accepted(outcome)) {
+        if (
+          FinancialExecutionOutcome.guards.manual_recovery(outcome) ||
+          FinancialExecutionOutcome.guards.rejected(outcome)
+        ) {
+          return FinancialProjectionRebuildPlan.Quarantine()
         }
         return yield* Effect.fail(
           new FinancialProjectionRebuildBlocked({
@@ -2505,7 +2529,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
         outcome.transferIds.length === expected.length &&
         outcome.transferIds.every((id, index) => id === expected[index]) &&
         expectedPairs.length === expected.length
-      if (!identitiesMatch) return { _tag: "quarantine" as const }
+      if (!identitiesMatch) return FinancialProjectionRebuildPlan.Quarantine()
       const projected = yield* database.query(
         (db) =>
           db
@@ -2530,9 +2554,11 @@ export const makeFinancialOperationService = Effect.gen(function* () {
         expectedPairs,
         transferIds: outcome.transferIds,
       })
-      return projection._tag === "mismatch"
-        ? { _tag: "quarantine" as const }
-        : { _tag: "repair" as const, outcome, missingTransfers: projection.missingTransfers }
+      return FinancialProjectionTransferAssessment.$match(projection, {
+        Mismatch: () => FinancialProjectionRebuildPlan.Quarantine(),
+        Ready: ({ missingTransfers }) =>
+          FinancialProjectionRebuildPlan.Repair({ outcome, missingTransfers }),
+      })
     })
 
   const applyFinancialProjectionRepair = (
@@ -2541,9 +2567,9 @@ export const makeFinancialOperationService = Effect.gen(function* () {
     plan: FinancialProjectionRebuildPlan,
   ) =>
     Effect.gen(function* () {
-      if (plan._tag === "quarantine") {
+      if (FinancialProjectionRebuildPlan.$is("Quarantine")(plan)) {
         yield* quarantineProjection(tenantId, operation.operationId)
-        return { _tag: "quarantined" as const }
+        return FinancialProjectionRebuildOutcome.Quarantined()
       }
       const rebuilt = yield* database
         .withTransaction(
@@ -2572,11 +2598,11 @@ export const makeFinancialOperationService = Effect.gen(function* () {
       if (Result.isFailure(rebuilt)) {
         if (rebuilt.failure instanceof EventIdempotencyConflict) {
           yield* quarantineProjection(tenantId, operation.operationId)
-          return { _tag: "quarantined" as const }
+          return FinancialProjectionRebuildOutcome.Quarantined()
         }
         return yield* Effect.fail(rebuilt.failure)
       }
-      return { _tag: "rebuilt" as const }
+      return FinancialProjectionRebuildOutcome.Rebuilt()
     })
 
   const rebuildOneFinancialProjection = (
@@ -2768,7 +2794,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
           currency: target.currency,
           mappingVersion: target.mappingVersion,
         })
-        if (outcome._tag !== "available") {
+        if (!FinancialBalanceOutcome.guards.available(outcome)) {
           return yield* Effect.fail(
             new FinancialProjectionRebuildBlocked({
               tenantId,
@@ -2951,7 +2977,7 @@ export const makeFinancialOperationService = Effect.gen(function* () {
           operation,
           ledgerOption.value,
         )
-        if (outcome._tag === "rebuilt") {
+        if (FinancialProjectionRebuildOutcome.$is("Rebuilt")(outcome)) {
           rebuiltOperations += 1
         } else {
           quarantinedOperations += 1
@@ -3026,11 +3052,10 @@ export const makeFinancialOperationService = Effect.gen(function* () {
             yield* writeReceipt(
               decoded.operationId,
               decoded.tenantId,
-              {
-                _tag: "manual_recovery",
+              FinancialExecutionManualRecovery.make({
                 operationId: decoded.operationId,
                 reason: "reconciliation_required",
-              },
+              }),
               null,
               executionFence,
             ),
@@ -3217,11 +3242,10 @@ export const makeFinancialOperationService = Effect.gen(function* () {
           yield* writeReceipt(
             decoded.operationId,
             decoded.tenantId,
-            {
-              _tag: "manual_recovery",
+            FinancialExecutionManualRecovery.make({
               operationId: decoded.operationId,
               reason: "engine_routing_changed",
-            },
+            }),
             "observedEngine" in state ? state.observedEngine : null,
             executionFence,
           ),
@@ -3280,11 +3304,10 @@ export const makeFinancialOperationService = Effect.gen(function* () {
             yield* writeReceipt(
               decoded.operationId,
               decoded.tenantId,
-              {
-                _tag: "manual_recovery",
+              FinancialExecutionManualRecovery.make({
                 operationId: decoded.operationId,
                 reason: "mapping_mismatch",
-              },
+              }),
               ledger.authority,
               executionFence,
             ),
@@ -3298,24 +3321,18 @@ export const makeFinancialOperationService = Effect.gen(function* () {
           mappingVersion: state.operation.mappingVersion,
           balanceConstraint: balanceConstraintForAccountType(accountType),
         })
-        if (accountOutcome._tag !== "accepted") {
+        if (!ExecutionAccountOutcome.guards.accepted(accountOutcome)) {
           const operationId = state.operation.operationId
           const operationOutcome: FinancialExecutionOutcome = Match.value(accountOutcome).pipe(
-            Match.tag("rejected", ({ reason }) => ({
-              _tag: "rejected" as const,
-              operationId,
-              reason,
-            })),
-            Match.tag("unknown", ({ reason }) => ({
-              _tag: "unknown" as const,
-              operationId,
-              reason,
-            })),
-            Match.tag("manual_recovery", ({ reason }) => ({
-              _tag: "manual_recovery" as const,
-              operationId,
-              reason,
-            })),
+            Match.tag("rejected", ({ reason }) =>
+              FinancialExecutionRejected.make({ operationId, reason }),
+            ),
+            Match.tag("unknown", ({ reason }) =>
+              FinancialExecutionUnknown.make({ operationId, reason }),
+            ),
+            Match.tag("manual_recovery", ({ reason }) =>
+              FinancialExecutionManualRecovery.make({ operationId, reason }),
+            ),
             Match.exhaustive,
           )
           return toOperation(
@@ -3410,11 +3427,10 @@ export const makeFinancialOperationService = Effect.gen(function* () {
           yield* writeReceipt(
             decoded.operationId,
             decoded.tenantId,
-            {
-              _tag: "manual_recovery",
+            FinancialExecutionManualRecovery.make({
               operationId: decoded.operationId,
               reason: "mapping_mismatch",
-            },
+            }),
             ledger.authority,
             executionFence,
           ),
@@ -3450,21 +3466,25 @@ export const makeFinancialOperationService = Effect.gen(function* () {
       let outcome = yield* state.reconcile
         ? ledger.reconcileJournal(journalInput)
         : ledger.postJournal(journalInput)
-      if (outcome._tag === "accepted") yield* hit("after_provider_acceptance")
-      if (state.reconcile && outcome._tag === "unknown" && outcome.reason === "not_found") {
+      if (FinancialExecutionOutcome.guards.accepted(outcome))
+        yield* hit("after_provider_acceptance")
+      if (
+        state.reconcile &&
+        FinancialExecutionOutcome.guards.unknown(outcome) &&
+        outcome.reason === "not_found"
+      ) {
         outcome = yield* ledger.postJournal(journalInput)
       }
-      if (outcome._tag === "accepted") {
+      if (FinancialExecutionOutcome.guards.accepted(outcome)) {
         if (
           outcome.transferCount !== expectedTransferIds.length ||
           outcome.transferIds.length !== expectedTransferIds.length ||
           outcome.transferIds.some((id, index) => id !== expectedTransferIds[index])
         ) {
-          outcome = {
-            _tag: "manual_recovery",
+          outcome = FinancialExecutionManualRecovery.make({
             operationId: outcome.operationId,
             reason: "mapping_mismatch",
-          }
+          })
         }
       }
       return toOperation(

@@ -5,6 +5,7 @@ import * as Base64Url from "effect/encoding/Base64Url"
 import * as Option from "effect/Option"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
+import * as Data from "effect/Data"
 
 import {
   accountingPeriods,
@@ -86,7 +87,7 @@ import {
 } from "./errors.ts"
 import { AccountingRevenuePostedEvent, RevenuePostedEventPayload } from "./events.ts"
 import {
-  type ExecutionAccountOutcome,
+  ExecutionAccountOutcome,
   type FinancialAccountConstraint,
   FinancialLedgerPort,
 } from "./financial-ledger.ts"
@@ -171,6 +172,97 @@ const revenuePostingProfileSelection = {
   receivableAccountId: revenuePostingProfiles.receivableAccountId,
   revenueAccountId: revenuePostingProfiles.revenueAccountId,
 }
+
+export type PostJournalOutcome = Data.TaggedEnum<{
+  IdempotencyConflict: {}
+  Existing: {
+    readonly journal: {
+      id: string
+      tenantId: string
+      reference: string
+      status: "posted"
+      postedAt: string
+      lines: readonly {
+        readonly accountId: string
+        readonly debit: string
+        readonly credit: string
+      }[]
+    }
+  }
+  Created: {
+    readonly journal: {
+      id: string
+      tenantId: string
+      reference: string
+      status: "posted"
+      postedAt: string
+      lines: readonly {
+        readonly accountId: string
+        readonly debit: string
+        readonly credit: string
+      }[]
+    }
+  }
+}>
+export const PostJournalOutcome = Data.taggedEnum<PostJournalOutcome>()
+
+export type ReverseRevenueForOrderOutcome = Data.TaggedEnum<{
+  Existing: {
+    readonly entry: {
+      id: string
+      tenantId: string
+      reference: string
+      status: "posted" | "draft" | "reversed"
+      reversesEntryId: string | null
+      postedAt: Date | null
+    }
+  }
+  IdempotencyConflict: {}
+  ProfileMissing: {}
+  PeriodClosed: {}
+  SourceMissing: {}
+  Reversed: {
+    readonly journal: {
+      id: string
+      tenantId: string
+      reference: string
+      status: "reversed"
+      postedAt: string
+      reversesEntryId: string
+      lines: { accountId: string; debit: string; credit: string }[]
+    }
+  }
+}>
+export const ReverseRevenueForOrderOutcome = Data.taggedEnum<ReverseRevenueForOrderOutcome>()
+
+export type PostRevenueForOrderOutcome = Data.TaggedEnum<{
+  ProfileMissing: {}
+  PeriodClosed: {}
+  Posted: {
+    readonly journal:
+      | {
+          id: string
+          tenantId: string
+          reference: string
+          status: "posted"
+          postedAt: string
+          lines: readonly {
+            readonly accountId: string
+            readonly debit: string
+            readonly credit: string
+          }[]
+        }
+      | {
+          id: string
+          tenantId: string
+          reference: string
+          status: "posted"
+          postedAt: string
+          lines: { accountId: string; debit: string; credit: string }[]
+        }
+  }
+}>
+export const PostRevenueForOrderOutcome = Data.taggedEnum<PostRevenueForOrderOutcome>()
 
 export const makeAccountingService = Effect.gen(function* () {
   const database = yield* Database
@@ -1209,7 +1301,7 @@ export const makeAccountingService = Effect.gen(function* () {
             mappingVersion: 1,
             balanceConstraint: balanceConstraintForAccountType(account.type),
           })
-          if (result._tag !== "accepted") {
+          if (!ExecutionAccountOutcome.guards.accepted(result)) {
             yield* database.query(
               (db) =>
                 db
@@ -1731,7 +1823,7 @@ export const makeAccountingService = Effect.gen(function* () {
                     )
                     .for("update")
                 )[0]
-                if (profile === undefined) return { _tag: "profile-missing" as const }
+                if (profile === undefined) return PostRevenueForOrderOutcome.ProfileMissing()
                 const configuration = (
                   await tx
                     .select({
@@ -1750,7 +1842,7 @@ export const makeAccountingService = Effect.gen(function* () {
                     .for("update")
                 )[0]
                 if (configuration?.postingEnabled !== true) {
-                  return { _tag: "period-closed" as const }
+                  return PostRevenueForOrderOutcome.PeriodClosed()
                 }
                 const currentPeriod = (
                   await tx
@@ -1767,7 +1859,7 @@ export const makeAccountingService = Effect.gen(function* () {
                     )
                     .for("update")
                 )[0]
-                if (currentPeriod === undefined) return { _tag: "period-closed" as const }
+                if (currentPeriod === undefined) return PostRevenueForOrderOutcome.PeriodClosed()
                 const entry = (
                   await tx
                     .insert(journalEntries)
@@ -1800,8 +1892,7 @@ export const makeAccountingService = Effect.gen(function* () {
                     .where(eq(journalEntries.id, entry.id))
                     .returning(journalEntrySelection)
                 )[0]!
-                return {
-                  _tag: "posted" as const,
+                return PostRevenueForOrderOutcome.Posted({
                   journal: {
                     id: posted.id,
                     tenantId: posted.tenantId,
@@ -1810,9 +1901,9 @@ export const makeAccountingService = Effect.gen(function* () {
                     postedAt: posted.postedAt!.toISOString(),
                     lines,
                   },
-                }
+                })
               }, "accounting.revenue.post")
-              if (mutation._tag === "posted") {
+              if (PostRevenueForOrderOutcome.$is("Posted")(mutation)) {
                 const payload = yield* Schema.decodeUnknownEffect(RevenuePostedEventPayload)({
                   journalId: mutation.journal.id,
                   legalEntityId: decoded.legalEntityId,
@@ -1850,11 +1941,11 @@ export const makeAccountingService = Effect.gen(function* () {
                       new JournalIdempotencyConflict({ tenantId: decoded.tenantId, reference }),
                     )
                   }
-                  return { _tag: "posted" as const, journal: existing }
+                  return PostRevenueForOrderOutcome.Posted({ journal: existing })
                 }),
             ),
           )
-        if (journal._tag === "profile-missing") {
+        if (PostRevenueForOrderOutcome.$is("ProfileMissing")(journal)) {
           return yield* Effect.fail(
             new RevenuePostingProfileNotFound({
               tenantId: decoded.tenantId,
@@ -1862,7 +1953,7 @@ export const makeAccountingService = Effect.gen(function* () {
             }),
           )
         }
-        if (journal._tag === "period-closed") {
+        if (PostRevenueForOrderOutcome.$is("PeriodClosed")(journal)) {
           return yield* Effect.fail(
             new AccountingPeriodNotOpen({
               tenantId: decoded.tenantId,
@@ -1960,8 +2051,8 @@ export const makeAccountingService = Effect.gen(function* () {
           }
           if (existing !== undefined) {
             return (await matchesSourceLines(existing, sourceForExisting))
-              ? { _tag: "existing" as const, entry: existing }
-              : { _tag: "idempotency-conflict" as const }
+              ? ReverseRevenueForOrderOutcome.Existing({ entry: existing })
+              : ReverseRevenueForOrderOutcome.IdempotencyConflict()
           }
           const profile = (
             await tx
@@ -1975,7 +2066,7 @@ export const makeAccountingService = Effect.gen(function* () {
               )
               .for("update")
           )[0]
-          if (profile === undefined) return { _tag: "profile-missing" as const }
+          if (profile === undefined) return ReverseRevenueForOrderOutcome.ProfileMissing()
           const concurrentExisting = (
             await tx
               .select(journalEntrySelection)
@@ -2005,8 +2096,8 @@ export const makeAccountingService = Effect.gen(function* () {
                 )[0]
           if (concurrentExisting !== undefined) {
             return (await matchesSourceLines(concurrentExisting, sourceForConcurrentExisting))
-              ? { _tag: "existing" as const, entry: concurrentExisting }
-              : { _tag: "idempotency-conflict" as const }
+              ? ReverseRevenueForOrderOutcome.Existing({ entry: concurrentExisting })
+              : ReverseRevenueForOrderOutcome.IdempotencyConflict()
           }
           const configuration = (
             await tx
@@ -2038,7 +2129,7 @@ export const makeAccountingService = Effect.gen(function* () {
               .for("update")
           )[0]
           if (configuration?.postingEnabled !== true || currentPeriod === undefined) {
-            return { _tag: "period-closed" as const }
+            return ReverseRevenueForOrderOutcome.PeriodClosed()
           }
           const source = (
             await tx
@@ -2053,7 +2144,7 @@ export const makeAccountingService = Effect.gen(function* () {
               .for("update")
           )[0]
           if (source === undefined || source.status !== "posted") {
-            return { _tag: "source-missing" as const }
+            return ReverseRevenueForOrderOutcome.SourceMissing()
           }
           const sourceLines = await tx
             .select(journalLineSelection)
@@ -2095,8 +2186,7 @@ export const makeAccountingService = Effect.gen(function* () {
               .where(eq(journalEntries.id, entry.id))
               .returning(journalEntrySelection)
           )[0]!
-          return {
-            _tag: "reversed" as const,
+          return ReverseRevenueForOrderOutcome.Reversed({
             journal: {
               id: posted.id,
               tenantId: posted.tenantId,
@@ -2106,9 +2196,9 @@ export const makeAccountingService = Effect.gen(function* () {
               reversesEntryId: source.id,
               lines,
             },
-          }
+          })
         }, "accounting.revenue.reverse")
-        if (journal._tag === "profile-missing") {
+        if (ReverseRevenueForOrderOutcome.$is("ProfileMissing")(journal)) {
           return yield* Effect.fail(
             new RevenuePostingProfileNotFound({
               tenantId: decoded.tenantId,
@@ -2116,7 +2206,7 @@ export const makeAccountingService = Effect.gen(function* () {
             }),
           )
         }
-        if (journal._tag === "period-closed") {
+        if (ReverseRevenueForOrderOutcome.$is("PeriodClosed")(journal)) {
           return yield* Effect.fail(
             new AccountingPeriodNotOpen({
               tenantId: decoded.tenantId,
@@ -2124,12 +2214,12 @@ export const makeAccountingService = Effect.gen(function* () {
             }),
           )
         }
-        if (journal._tag === "idempotency-conflict") {
+        if (ReverseRevenueForOrderOutcome.$is("IdempotencyConflict")(journal)) {
           return yield* Effect.fail(
             new JournalIdempotencyConflict({ tenantId: decoded.tenantId, reference }),
           )
         }
-        if (journal._tag === "source-missing") {
+        if (ReverseRevenueForOrderOutcome.$is("SourceMissing")(journal)) {
           return yield* Effect.fail(
             new RevenueJournalNotFound({
               tenantId: decoded.tenantId,
@@ -2138,7 +2228,7 @@ export const makeAccountingService = Effect.gen(function* () {
             }),
           )
         }
-        if (journal._tag === "existing") {
+        if (ReverseRevenueForOrderOutcome.$is("Existing")(journal)) {
           const lines = yield* database.query(
             (db) =>
               db
@@ -2258,7 +2348,7 @@ export const makeAccountingService = Effect.gen(function* () {
             const existing = existingEntries[0]
             if (existing !== undefined) {
               if (existing.status !== "posted" || existing.postedAt === null) {
-                return { _tag: "idempotency-conflict" as const }
+                return PostJournalOutcome.IdempotencyConflict()
               }
               const lines = await tx
                 .select(journalLineSelection)
@@ -2278,10 +2368,9 @@ export const makeAccountingService = Effect.gen(function* () {
                 JSON.stringify(normalizeLines(storedLines)) !==
                 JSON.stringify(normalizeLines(decoded.lines))
               ) {
-                return { _tag: "idempotency-conflict" as const }
+                return PostJournalOutcome.IdempotencyConflict()
               }
-              return {
-                _tag: "existing" as const,
+              return PostJournalOutcome.Existing({
                 journal: {
                   id: existing.id,
                   tenantId: existing.tenantId,
@@ -2290,7 +2379,7 @@ export const makeAccountingService = Effect.gen(function* () {
                   postedAt: existing.postedAt.toISOString(),
                   lines: decoded.lines,
                 },
-              }
+              })
             }
 
             const entry = (
@@ -2321,8 +2410,7 @@ export const makeAccountingService = Effect.gen(function* () {
                 .where(eq(journalEntries.id, entry.id))
                 .returning(journalEntrySelection)
             )[0]!
-            return {
-              _tag: "created" as const,
+            return PostJournalOutcome.Created({
               journal: {
                 id: posted.id,
                 tenantId: posted.tenantId,
@@ -2331,7 +2419,7 @@ export const makeAccountingService = Effect.gen(function* () {
                 postedAt: posted.postedAt!.toISOString(),
                 lines: decoded.lines,
               },
-            }
+            })
           }, "accounting.journal.post")
           .pipe(
             Effect.mapError((error) => {
@@ -2352,7 +2440,7 @@ export const makeAccountingService = Effect.gen(function* () {
           if (result.failure instanceof JournalReferenceAlreadyExists) return yield* loadExisting()
           return yield* Effect.fail(result.failure)
         }
-        if (result.success._tag === "idempotency-conflict") {
+        if (PostJournalOutcome.$is("IdempotencyConflict")(result.success)) {
           return yield* Effect.fail(
             new JournalIdempotencyConflict({
               tenantId: decoded.tenantId,

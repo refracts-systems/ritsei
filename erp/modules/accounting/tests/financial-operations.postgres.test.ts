@@ -40,6 +40,7 @@ import {
   makeFinancialLedgerTestLayer,
   makeFinancialOperationFailpointLayer,
   makeFinancialOperationService,
+  FinancialExecutionOutcome,
 } from "../mod.ts"
 import {
   type FinancialStoreInventoryType,
@@ -692,7 +693,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               .postJournal(input)
               .pipe(
                 Effect.map((outcome) =>
-                  outcome._tag === "accepted" &&
+                  FinancialExecutionOutcome.guards.accepted(outcome) &&
                   outcome.operationId === submissionIdentityOperationId
                     ? { ...outcome, operationId: `foreign-${uuidv7()}` }
                     : outcome,
@@ -781,7 +782,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           reconcileJournal: (input: Parameters<typeof ledger.reconcileJournal>[0]) =>
             ledger.reconcileJournal(input).pipe(
               Effect.map((outcome) => {
-                if (outcome._tag !== "accepted") return outcome
+                if (!FinancialExecutionOutcome.guards.accepted(outcome)) return outcome
                 if (outcome.operationId === corruptMappingVersionOperationId) {
                   return { ...outcome, mappingVersion: outcome.mappingVersion + 1 }
                 }
@@ -1454,7 +1455,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           reconcileJournal: (journalInput: Parameters<typeof ledger.reconcileJournal>[0]) =>
             ledger.reconcileJournal(journalInput).pipe(
               Effect.map((outcome) => {
-                if (outcome._tag !== "accepted") return outcome
+                if (!FinancialExecutionOutcome.guards.accepted(outcome)) return outcome
                 // SAFETY: the test calls this double only with inputs of the shape it reads.
                 const operationId = (journalInput as { readonly operationId?: string }).operationId
                 return operationId === input.operationId

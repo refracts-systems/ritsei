@@ -18,7 +18,18 @@ import {
 } from "../../../../framework/foundation/mod.ts"
 import {
   CreateExecutionAccountInput,
+  ExecutionAccountAccepted,
+  ExecutionAccountManualRecovery,
+  ExecutionAccountRejected,
+  ExecutionAccountUnknown,
+  FinancialBalanceAvailable,
+  FinancialBalanceNotFound,
+  FinancialBalanceUnknown,
+  FinancialExecutionAccepted,
+  FinancialExecutionManualRecovery,
   FinancialExecutionOutcome,
+  FinancialExecutionRejected,
+  FinancialExecutionUnknown,
   FinancialJournalLine,
   FinancialLedgerPort,
   GetFinancialBalanceInput,
@@ -116,7 +127,7 @@ const validateJournal = (
   input: PostFinancialJournalInput,
 ): FinancialExecutionOutcome | undefined => {
   if (input.lines.length < 2) {
-    return { _tag: "rejected", operationId: input.operationId, reason: "unbalanced" }
+    return FinancialExecutionRejected.make({ operationId: input.operationId, reason: "unbalanced" })
   }
   let debit = 0n
   let credit = 0n
@@ -128,17 +139,23 @@ const validateJournal = (
       lineCredit > FINANCIAL_LEDGER_MAX_MINOR ||
       lineDebit > 0n === lineCredit > 0n
     ) {
-      return { _tag: "rejected", operationId: input.operationId, reason: "invalid_amount" }
+      return FinancialExecutionRejected.make({
+        operationId: input.operationId,
+        reason: "invalid_amount",
+      })
     }
     debit += lineDebit
     credit += lineCredit
     if (debit > FINANCIAL_LEDGER_MAX_MINOR || credit > FINANCIAL_LEDGER_MAX_MINOR) {
-      return { _tag: "rejected", operationId: input.operationId, reason: "invalid_amount" }
+      return FinancialExecutionRejected.make({
+        operationId: input.operationId,
+        reason: "invalid_amount",
+      })
     }
   }
   return debit === credit
     ? undefined
-    : { _tag: "rejected", operationId: input.operationId, reason: "unbalanced" }
+    : FinancialExecutionRejected.make({ operationId: input.operationId, reason: "unbalanced" })
 }
 
 const toMinor = (value: string | null) => requireExactMajorToMinor(String(value ?? "0"), 2)
@@ -152,19 +169,19 @@ const acceptedOutcome = (
   input: PostFinancialJournalInput,
   operation: OperationRow,
   ids = pairLines(input.lines).map((_, index) => transferId(input, index)),
-): FinancialExecutionOutcome => ({
-  _tag: "accepted",
-  operationId: input.operationId,
-  mappingVersion: input.mappingVersion,
-  acceptedAt: operation.engineAcceptedAt ?? operation.submittedAt?.toISOString() ?? "postgresql",
-  transferCount: ids.length,
-  transferIds: ids,
-})
+): FinancialExecutionOutcome =>
+  FinancialExecutionAccepted.make({
+    operationId: input.operationId,
+    mappingVersion: input.mappingVersion,
+    acceptedAt: operation.engineAcceptedAt ?? operation.submittedAt?.toISOString() ?? "postgresql",
+    transferCount: ids.length,
+    transferIds: ids,
+  })
 
 const unknownOutcome = (
   operationId: string,
   reason: "unavailable" | "response_lost" | "not_found" = "unavailable",
-) => ({ _tag: "unknown" as const, operationId, reason })
+) => FinancialExecutionUnknown.make({ operationId, reason })
 
 const operationMatches = (operation: OperationRow, input: PostFinancialJournalInput) =>
   operation.tenantId === input.tenantId &&
@@ -359,17 +376,17 @@ const balancesFrom = (
   return balances
 }
 
-const toRejected = (reason: string | null): FinancialExecutionOutcome => ({
-  _tag: "rejected",
-  operationId: "unknown",
-  reason:
-    reason === "invalid_account" ||
-    reason === "invalid_amount" ||
-    reason === "unbalanced" ||
-    reason === "constraint_violation"
-      ? reason
-      : "constraint_violation",
-})
+const toRejected = (reason: string | null): FinancialExecutionOutcome =>
+  FinancialExecutionRejected.make({
+    operationId: "unknown",
+    reason:
+      reason === "invalid_account" ||
+      reason === "invalid_amount" ||
+      reason === "unbalanced" ||
+      reason === "constraint_violation"
+        ? reason
+        : "constraint_violation",
+  })
 
 export const makePostgresqlFinancialLedger = Effect.gen(function* () {
   const database = yield* Database
@@ -390,11 +407,10 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
         "accounting.postgresql_ledger.account",
       )
       if (account === undefined) {
-        return {
-          _tag: "rejected" as const,
+        return ExecutionAccountRejected.make({
           accountId: decoded.accountId,
           reason: "invalid_account" as const,
-        }
+        })
       }
       const expectedConstraint = constraintFor(account.type)
       if (
@@ -402,27 +418,23 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
         decoded.balanceConstraint !== "none" &&
         decoded.balanceConstraint !== expectedConstraint
       ) {
-        return {
-          _tag: "manual_recovery" as const,
+        return ExecutionAccountManualRecovery.make({
           accountId: decoded.accountId,
           reason: "mapping_mismatch" as const,
-        }
+        })
       }
-      return {
-        _tag: "accepted" as const,
+      return ExecutionAccountAccepted.make({
         accountId: decoded.accountId,
         mappingVersion: decoded.mappingVersion,
         acceptedAt: "postgresql",
-      }
+      })
     }).pipe(
       Effect.catchIf(
         (error) => error instanceof DatabaseFailure,
         () =>
-          Effect.succeed({
-            _tag: "unknown" as const,
-            accountId: "unknown",
-            reason: "unavailable" as const,
-          }),
+          Effect.succeed(
+            ExecutionAccountUnknown.make({ accountId: "unknown", reason: "unavailable" as const }),
+          ),
       ),
     )
 
@@ -442,21 +454,19 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
         pairs.length === 0 ||
         pairs.some((pair) => pair.debitAccountId === pair.creditAccountId)
       ) {
-        return {
-          _tag: "rejected" as const,
+        return FinancialExecutionRejected.make({
           operationId: decoded.operationId,
           reason: "constraint_violation" as const,
-        }
+        })
       }
       return yield* database.withTransaction(
         Effect.gen(function* () {
           const [operation] = yield* readOperation(database, decoded, true)
           if (operation === undefined || !operationMatches(operation, decoded)) {
-            return {
-              _tag: "manual_recovery" as const,
+            return FinancialExecutionManualRecovery.make({
               operationId: decoded.operationId,
               reason: "mapping_mismatch" as const,
-            }
+            })
           }
           const persistedLines = yield* readJournalLines(
             database,
@@ -464,19 +474,17 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
             operation.journalId,
           )
           if (!journalLinesMatch(persistedLines, decoded)) {
-            return {
-              _tag: "manual_recovery" as const,
+            return FinancialExecutionManualRecovery.make({
               operationId: decoded.operationId,
               reason: "conflicting_replay" as const,
-            }
+            })
           }
           const transfers = yield* readTransfers(database, decoded.tenantId, operation.id)
           if (!transferRowsMatch(transfers, decoded)) {
-            return {
-              _tag: "manual_recovery" as const,
+            return FinancialExecutionManualRecovery.make({
               operationId: decoded.operationId,
               reason: "mapping_mismatch" as const,
-            }
+            })
           }
           if (operation.status === "accepted" || operation.status === "reconciled") {
             return acceptedOutcome(decoded, operation)
@@ -488,14 +496,13 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
           ) {
             return operation.status === "rejected"
               ? { ...toRejected(operation.rejectionReason), operationId: decoded.operationId }
-              : {
-                  _tag: "manual_recovery" as const,
+              : FinancialExecutionManualRecovery.make({
                   operationId: decoded.operationId,
                   reason:
                     operation.recoveryReason === "conflicting_replay"
                       ? ("conflicting_replay" as const)
                       : ("reconciliation_required" as const),
-                }
+                })
           }
 
           const accountIds = [...new Set(decoded.lines.map((line) => line.accountId))].sort()
@@ -511,11 +518,10 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
             "accounting.postgresql_ledger.accounts",
           )
           if (accountRows.length !== accountIds.length) {
-            return {
-              _tag: "rejected" as const,
+            return FinancialExecutionRejected.make({
               operationId: decoded.operationId,
               reason: "invalid_account" as const,
-            }
+            })
           }
           const balanceInput = {
             tenantId: decoded.tenantId,
@@ -546,11 +552,10 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
                 ? next.creditsMinor > next.debitsMinor
                 : next.debitsMinor > next.creditsMinor
             if (violates) {
-              return {
-                _tag: "rejected" as const,
+              return FinancialExecutionRejected.make({
                 operationId: decoded.operationId,
                 reason: "constraint_violation" as const,
-              }
+              })
             }
           }
 
@@ -668,20 +673,18 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
         pairs.length === 0 ||
         pairs.some((pair) => pair.debitAccountId === pair.creditAccountId)
       ) {
-        return {
-          _tag: "rejected" as const,
+        return FinancialExecutionRejected.make({
           operationId: decoded.operationId,
           reason: "constraint_violation" as const,
-        }
+        })
       }
       const [operation] = yield* readOperation(database, decoded, false)
       if (operation === undefined) return unknownOutcome(decoded.operationId, "not_found")
       if (!operationMatches(operation, decoded)) {
-        return {
-          _tag: "manual_recovery" as const,
+        return FinancialExecutionManualRecovery.make({
           operationId: decoded.operationId,
           reason: "mapping_mismatch" as const,
-        }
+        })
       }
       if (operation.status === "rejected") {
         return {
@@ -690,14 +693,13 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
         }
       }
       if (operation.status === "manual_recovery") {
-        return {
-          _tag: "manual_recovery" as const,
+        return FinancialExecutionManualRecovery.make({
           operationId: decoded.operationId,
           reason:
             operation.recoveryReason === "conflicting_replay"
               ? ("conflicting_replay" as const)
               : ("reconciliation_required" as const),
-        }
+        })
       }
       if (operation.status !== "accepted" && operation.status !== "reconciled") {
         return unknownOutcome(decoded.operationId, "not_found")
@@ -708,22 +710,20 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
         operation.journalId,
       )
       if (!journalLinesMatch(persistedLines, decoded)) {
-        return {
-          _tag: "manual_recovery" as const,
+        return FinancialExecutionManualRecovery.make({
           operationId: decoded.operationId,
           reason: "conflicting_replay" as const,
-        }
+        })
       }
       const transfers = yield* readTransfers(database, decoded.tenantId, operation.id)
       if (
         !transferRowsMatch(transfers, decoded) ||
         transfers.some((row) => row.status !== "accepted")
       ) {
-        return {
-          _tag: "manual_recovery" as const,
+        return FinancialExecutionManualRecovery.make({
           operationId: decoded.operationId,
           reason: "mapping_mismatch" as const,
-        }
+        })
       }
       const [journal] = yield* database.query(
         (db) =>
@@ -740,11 +740,10 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
       )
       const expectedStatus = operation.operationType === "journal_reverse" ? "reversed" : "posted"
       if (journal?.status !== expectedStatus) {
-        return {
-          _tag: "manual_recovery" as const,
+        return FinancialExecutionManualRecovery.make({
           operationId: decoded.operationId,
           reason: "mapping_mismatch" as const,
-        }
+        })
       }
       return acceptedOutcome(decoded, operation)
     }).pipe(
@@ -767,30 +766,28 @@ export const makePostgresqlFinancialLedger = Effect.gen(function* () {
             ),
         "accounting.postgresql_ledger.balance.account",
       )
-      if (account === undefined) return { _tag: "not_found" as const, accountId: decoded.accountId }
+      if (account === undefined)
+        return FinancialBalanceNotFound.make({ accountId: decoded.accountId })
       const rows = yield* readPostedLines(database, decoded, [decoded.accountId])
       const balance = balancesFrom(rows).get(decoded.accountId) ?? {
         debitsMinor: 0n,
         creditsMinor: 0n,
       }
-      return {
-        _tag: "available" as const,
+      return FinancialBalanceAvailable.make({
         accountId: decoded.accountId,
         mappingVersion: decoded.mappingVersion,
         debitsPendingMinor: "0",
         debitsPostedMinor: balance.debitsMinor.toString(),
         creditsPendingMinor: "0",
         creditsPostedMinor: balance.creditsMinor.toString(),
-      }
+      })
     }).pipe(
       Effect.catchIf(
         (error) => error instanceof DatabaseFailure,
         () =>
-          Effect.succeed({
-            _tag: "unknown" as const,
-            accountId: "unknown",
-            reason: "unavailable" as const,
-          }),
+          Effect.succeed(
+            FinancialBalanceUnknown.make({ accountId: "unknown", reason: "unavailable" as const }),
+          ),
       ),
     )
 

@@ -29,7 +29,11 @@ import {
   RoleBalanceInput,
   TrialBalanceInput,
 } from "./general-ledger-contract.ts"
-import type { GeneralLedgerStore, PostEntryCommand } from "./general-ledger-store.ts"
+import {
+  type GeneralLedgerStore,
+  type PostEntryCommand,
+  PostEntryOutcome,
+} from "./general-ledger-store.ts"
 import {
   AccountingLegalEntityNotFound,
   AccountingPeriodNotOpen,
@@ -78,27 +82,21 @@ export const makeGeneralLedgerServiceFromStore = <R>(
       if (invalid !== undefined) return yield* Effect.fail(invalid)
       const outcome = yield* store.postEntry(command)
       const scope = { tenantId: command.tenantId, legalEntityId: command.legalEntityId }
-      switch (outcome._tag) {
-        case "posted":
-          return outcome.entry
-        case "not-configured":
-          return yield* Effect.fail(new AccountingLegalEntityNotFound(scope))
-        case "engine-activated":
-          return yield* Effect.fail(new FinancialEngineActivated(scope))
-        case "period-not-open":
-          return yield* Effect.fail(new AccountingPeriodNotOpen(scope))
-        case "rule-missing":
-          return yield* Effect.fail(new PostingRuleNotFound({ ...scope, role: outcome.role }))
-        case "account-missing":
-          return yield* Effect.fail(new AccountNotFound({ tenantId: command.tenantId }))
-        case "idempotency-conflict":
-          return yield* Effect.fail(
+      return yield* PostEntryOutcome.$match(outcome, {
+        Posted: ({ entry }) => Effect.succeed(entry),
+        NotConfigured: () => Effect.fail(new AccountingLegalEntityNotFound(scope)),
+        EngineActivated: () => Effect.fail(new FinancialEngineActivated(scope)),
+        PeriodNotOpen: () => Effect.fail(new AccountingPeriodNotOpen(scope)),
+        RuleMissing: ({ role }) => Effect.fail(new PostingRuleNotFound({ ...scope, role })),
+        AccountMissing: () => Effect.fail(new AccountNotFound({ tenantId: command.tenantId })),
+        IdempotencyConflict: () =>
+          Effect.fail(
             new JournalIdempotencyConflict({
               tenantId: command.tenantId,
               reference: command.reference,
             }),
-          )
-      }
+          ),
+      })
     })
 
     const createAccount = Effect.fn("GeneralLedgerService.createAccount")(function* (

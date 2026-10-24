@@ -30,6 +30,7 @@ import {
   makeFinancialLedgerTestLayer,
   makeFinancialOperationService,
   type ReconcileFinancialCheckpointInputType,
+  FinancialBalanceOutcome,
 } from "../mod.ts"
 import {
   type FinancialStoreInventoryType,
@@ -697,7 +698,7 @@ it.effect.skipIf(databaseUrl === undefined)("enforces the controlled cutover sta
         getBalance: (input: Parameters<typeof operationLedgerService.getBalance>[0]) =>
           operationLedgerService.getBalance(input).pipe(
             Effect.map((outcome) =>
-              outcome._tag === "available"
+              FinancialBalanceOutcome.guards.available(outcome)
                 ? {
                     ...outcome,
                     debitsPostedMinor: (BigInt(outcome.debitsPostedMinor) + 1n).toString(),

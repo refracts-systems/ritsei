@@ -1,7 +1,12 @@
 import { assert } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 
-import type { FinancialLedgerPort } from "../../erp/modules/accounting/mod.ts"
+import {
+  type FinancialLedgerPort,
+  FinancialBalanceAvailable,
+  FinancialExecutionRejected,
+  FinancialExecutionOutcome,
+} from "../../erp/modules/accounting/mod.ts"
 
 export const LARGE_FINANCIAL_MAJOR = "500000000000000.00"
 export const LARGE_FINANCIAL_MINOR = "50000000000000000"
@@ -68,7 +73,7 @@ export const assertFinancialLedgerConformance = (
     // SAFETY: the test calls this double only with inputs of the shape it reads.
     assert.strictEqual((first as { readonly _tag?: string })._tag, "accepted")
     // SAFETY: the test calls this double only with inputs of the shape it reads.
-    if ((first as { readonly _tag?: string })._tag !== "accepted") return
+    if (!FinancialExecutionOutcome.guards.accepted(first)) return
     // SAFETY: the test calls this double only with inputs of the shape it reads.
     const accepted = first as {
       readonly _tag: "accepted"
@@ -88,15 +93,14 @@ export const assertFinancialLedgerConformance = (
         currency: input.currency,
         mappingVersion: input.mappingVersion,
       }),
-      {
-        _tag: "available",
+      FinancialBalanceAvailable.make({
         accountId: debitLine.accountId,
         mappingVersion: input.mappingVersion,
         debitsPendingMinor: "0",
         debitsPostedMinor: debitLine.debitMinor,
         creditsPendingMinor: "0",
         creditsPostedMinor: "0",
-      },
+      }),
     )
     assert.deepStrictEqual(
       yield* ledger.getBalance({
@@ -106,15 +110,14 @@ export const assertFinancialLedgerConformance = (
         currency: input.currency,
         mappingVersion: input.mappingVersion,
       }),
-      {
-        _tag: "available",
+      FinancialBalanceAvailable.make({
         accountId: creditLine.accountId,
         mappingVersion: input.mappingVersion,
         debitsPendingMinor: "0",
         debitsPostedMinor: "0",
         creditsPendingMinor: "0",
         creditsPostedMinor: creditLine.creditMinor,
-      },
+      }),
     )
 
     const overflow = yield* ledger.postJournal({
@@ -126,11 +129,13 @@ export const assertFinancialLedgerConformance = (
         { accountId: creditLine.accountId, debitMinor: "0", creditMinor: (1n << 128n).toString() },
       ],
     })
-    assert.deepStrictEqual(overflow, {
-      _tag: "rejected",
-      operationId: `${input.operationId}:overflow`,
-      reason: "invalid_amount",
-    })
+    assert.deepStrictEqual(
+      overflow,
+      FinancialExecutionRejected.make({
+        operationId: `${input.operationId}:overflow`,
+        reason: "invalid_amount",
+      }),
+    )
 
     const u128Max = ((1n << 128n) - 1n).toString()
     const aggregateOverflow = yield* ledger.postJournal({
@@ -144,9 +149,11 @@ export const assertFinancialLedgerConformance = (
         { accountId: `${creditLine.accountId}:2`, debitMinor: "0", creditMinor: u128Max },
       ],
     })
-    assert.deepStrictEqual(aggregateOverflow, {
-      _tag: "rejected",
-      operationId: `${input.operationId}:aggregate-overflow`,
-      reason: "invalid_amount",
-    })
+    assert.deepStrictEqual(
+      aggregateOverflow,
+      FinancialExecutionRejected.make({
+        operationId: `${input.operationId}:aggregate-overflow`,
+        reason: "invalid_amount",
+      }),
+    )
   })
