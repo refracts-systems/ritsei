@@ -5,6 +5,7 @@ import {
   createSignal,
   Errored,
   For,
+  lazy,
   Loading,
   onSettled,
   Show,
@@ -13,12 +14,16 @@ import {
 } from "solid-js"
 import { layout } from "../ui/foundations/layout.ts"
 import { Icon, type IconName } from "../ui/icons/index.ts"
-import { ConfirmDialog } from "../ui/patterns/confirm-dialog.tsx"
 import { Button } from "../ui/primitives/button.tsx"
 import { logout as logoutSession } from "./auth-client.ts"
 import { moduleWorkspaces } from "./routes.gen.ts"
 import { SessionContext } from "./session.ts"
 import { type NavigationGroup, navigationGroups } from "./workspace.ts"
+
+// Dialog code loads after the first paint so it stays out of the entry chunk.
+const ConfirmDialog = lazy(() => import("../ui/patterns/confirm-dialog.tsx"), {
+  export: "ConfirmDialog",
+})
 
 type NavigationItem = Readonly<{
   label: string
@@ -421,20 +426,22 @@ export function ApplicationShell(props: { children: JSX.Element }) {
                 <span class="sr-only">Dark theme</span>
               </Button>
               <Show when={session.current()}>
-                <ConfirmDialog
-                  triggerLabel="Sign out"
-                  triggerVariant="ghost"
-                  title="Sign out of RITSEI?"
-                  description="Your in-memory session credentials will be cleared."
-                  confirmLabel="Sign out"
-                  onConfirm={() => {
-                    const current = session.current()
+                <Loading>
+                  <ConfirmDialog
+                    triggerLabel="Sign out"
+                    triggerVariant="ghost"
+                    title="Sign out of RITSEI?"
+                    description="Your in-memory session credentials will be cleared."
+                    confirmLabel="Sign out"
+                    onConfirm={() => {
+                      const current = session.current()
 
-                    if (current !== null) void logoutSession(current.token).catch(() => undefined)
-                    session.replace(null)
-                    navigate("/", { replace: true })
-                  }}
-                />
+                      if (current !== null) void logoutSession(current.token).catch(() => undefined)
+                      session.replace(null)
+                      navigate("/", { replace: true })
+                    }}
+                  />
+                </Loading>
               </Show>
             </div>
           </header>
