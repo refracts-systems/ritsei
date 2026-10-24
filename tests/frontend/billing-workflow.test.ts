@@ -370,3 +370,119 @@ it.effect(
     }),
   { timeout: 120_000 },
 )
+
+it.effect(
+  "creates a supplier bill from a released order and explains why it cannot",
+  () =>
+    Effect.gen(function* () {
+      const { page, url, errors } = yield* builtApp
+      const orderId = "01900000-0000-7000-8000-000000000070"
+      const orderLineId = "01900000-0000-7000-8000-000000000071"
+      const productId = "01900000-0000-7000-8000-000000000072"
+      const billId = "01900000-0000-7000-8000-000000000073"
+      let attempts = 0
+      let billBody: unknown
+
+      const bill = {
+        ...invoice,
+        id: billId,
+        kind: "supplier_bill",
+        number: "BILL/2026/00001",
+        sourceType: "procurement.purchase_order",
+        sourceId: orderId,
+        supplierReference: "SUP-77",
+      }
+
+      yield* Effect.promise(async () => {
+        await mockRoutes(page, {
+          "GET /user-accounts": (route) => fulfillJson(route, 200, []),
+          "GET /parties": (route) => fulfillJson(route, 200, directory),
+          "GET /accounting/configurations": (route) => fulfillJson(route, 200, [configuration]),
+          "GET /billing/documents": (route) => fulfillJson(route, 200, attempts < 2 ? [] : [bill]),
+          [`GET /billing/documents/${billId}`]: (route) => fulfillJson(route, 200, bill),
+          "GET /product/products": (route) =>
+            fulfillJson(route, 200, [
+              { id: productId, tenantId, code: "WIDGET", name: "Widget", type: "stockable" },
+            ]),
+          "GET /procurement/purchase-orders": (route) =>
+            fulfillJson(route, 200, [
+              {
+                id: orderId,
+                tenantId,
+                supplierAccountId: partyId,
+                status: "confirmed",
+                confirmedAt: "2026-10-20T00:00:00.000Z",
+                total: "25.00",
+                lines: [{ id: orderLineId, itemId: productId, quantity: "2", unitPrice: "12.50" }],
+              },
+            ]),
+          [`GET /procurement/purchase-orders/${orderId}/matching`]: (route) =>
+            fulfillJson(route, 200, {
+              purchaseOrderId: orderId,
+              supplierAccountId: partyId,
+              partyId,
+              legalEntityId,
+              status: "confirmed",
+              lines: [
+                {
+                  purchaseOrderLineId: orderLineId,
+                  productId,
+                  ordered: "2",
+                  received: "2",
+                  returned: "0",
+                  unitPrice: "12.50",
+                  taxCodeId: null,
+                },
+              ],
+            }),
+          "POST /billing/supplier-bills": (route) => {
+            attempts += 1
+            billBody = route.request().postDataJSON()
+
+            return attempts === 1
+              ? fulfillJson(route, 409, conflictBody("BillExceedsReceipt"))
+              : fulfillJson(route, 201, bill)
+          },
+        })
+
+        await openBilling(page, url)
+        await page
+          .getByRole("combobox", { name: "Documents for", exact: true })
+          .selectOption("payable")
+        await page.getByRole("button", { name: "Apply filters", exact: true }).click()
+        await page.getByText("No supplier bills in this legal entity yet.").waitFor()
+
+        await page.getByRole("button", { name: "Create supplier bill", exact: true }).click()
+        const dialog = page.getByRole("dialog", { name: "Create supplier bill" })
+        await dialog.waitFor()
+        await dialog
+          .getByRole("combobox", { name: "Purchase order", exact: true })
+          .selectOption(orderId)
+        await dialog.getByRole("textbox", { name: "Supplier reference" }).fill("SUP-77")
+        assert.equal(
+          await dialog.getByRole("textbox", { name: /Widget.*2 received/ }).inputValue(),
+          "2",
+        )
+        assert.deepEqual(
+          (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()).violations,
+          [],
+        )
+        await dialog.getByRole("button", { name: "Create supplier bill", exact: true }).click()
+        await dialog.getByRole("alert").waitFor()
+        assert.include(await dialog.getByRole("alert").innerText(), "bills more than was received")
+
+        await dialog.getByRole("button", { name: "Create supplier bill", exact: true }).click()
+        await page.getByRole("heading", { name: "Supplier bill BILL/2026/00001" }).waitFor()
+        assert.deepEqual(billBody, {
+          purchaseOrderId: orderId,
+          billDate: new Date().toISOString().slice(0, 10),
+          supplierReference: "SUP-77",
+          lines: [{ purchaseOrderLineId: orderLineId, quantity: "2", unitPrice: "12.50" }],
+        })
+        await page.getByRole("button", { name: "Make payment", exact: true }).waitFor()
+      })
+
+      assert.deepEqual(errors, [])
+    }),
+  { timeout: 120_000 },
+)

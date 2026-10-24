@@ -13,6 +13,7 @@ import {
   AccountingConfiguration,
   accountingRoutes,
 } from "../../shared/contracts/generated/accounting.ts"
+import { PurchaseOrder, procurementRoutes } from "../../shared/contracts/generated/procurement.ts"
 import { Customer, SalesOrder, salesRoutes } from "../../shared/contracts/generated/sales.ts"
 
 /** Browser view of the Billing transport contract served by the billing module. */
@@ -187,4 +188,79 @@ export const paymentFailureMessages = {
   PostingRuleNotFound:
     "A posting rule (cash or receivables) is missing. Apply a chart template in Finance first.",
   AccountingLegalEntityNotFound: "This legal entity is not configured for accounting.",
+} as const
+
+const PurchaseOrderList = Schema.Array(PurchaseOrder).check(Schema.isMaxLength(200))
+
+const OrderMatching = Schema.Struct({
+  purchaseOrderId: Uuid,
+  partyId: Uuid,
+  legalEntityId: Uuid,
+  lines: Schema.Array(
+    Schema.Struct({
+      purchaseOrderLineId: Uuid,
+      productId: Uuid,
+      ordered: Schema.String,
+      received: Schema.String,
+      returned: Schema.String,
+      unitPrice: Amount,
+    }),
+  ).check(Schema.isMaxLength(200)),
+})
+
+export type OrderMatching = Schema.Schema.Type<typeof OrderMatching>
+
+const BillOrderInput = Schema.Struct({
+  purchaseOrderId: Uuid,
+  billDate: CalendarDate,
+  supplierReference: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(128)),
+  lines: Schema.Array(
+    Schema.Struct({
+      purchaseOrderLineId: Uuid,
+      quantity: Schema.String.check(Schema.isPattern(/^[1-9]\d*$/)),
+      unitPrice: Schema.String.check(Schema.isPattern(/^\d+(\.\d{1,2})?$/)),
+    }),
+  ).check(Schema.isMinLength(1)),
+})
+
+/** Released orders are the ones with goods that can have been received and billed. */
+export const listReleasedOrders = Effect.fn("Frontend.Billing.listReleasedOrders")(function* () {
+  const body = yield* requestJson(
+    `${procurementRoutes.listPurchaseOrders}${querySuffix({ status: "confirmed", limit: 200 })}`,
+  )
+
+  return yield* decodeResponse(PurchaseOrderList, body)
+})
+
+export const getOrderMatching = Effect.fn("Frontend.Billing.getOrderMatching")(function* (
+  id: string,
+) {
+  const decoded = yield* decodeInput(Uuid, id)
+  const body = yield* requestJson(routeWithId("/procurement/purchase-orders/:id/matching", decoded))
+
+  return yield* decodeResponse(OrderMatching, body)
+})
+
+export const billPurchaseOrder = Effect.fn("Frontend.Billing.billPurchaseOrder")(function* (
+  input: Schema.Codec.Encoded<typeof BillOrderInput>,
+) {
+  const decoded = yield* decodeInput(BillOrderInput, input)
+  const body = yield* mutationRequest("/billing/supplier-bills", decoded)
+
+  return yield* decodeResponse(BillingDocument, body, "unknown-outcome")
+})
+
+/** What the user is told for the business failures billing a purchase order can return. */
+export const billFailureMessages = {
+  BillExceedsReceipt:
+    "This bills more than was received and not yet billed. Receive the goods first, or lower the quantity.",
+  NothingToInvoice: "Nothing is left to bill on this order.",
+  PurchaseOrderInvalidState: "Only released orders can be billed.",
+  PurchaseOrderNotFound: "This purchase order is no longer available. Reload and choose another.",
+  PartyRelationshipNotFound: "This supplier is no longer an active supplier relationship.",
+  AccountingPeriodNotOpen: "The accounting period for that bill date is not open.",
+  PostingRuleNotFound:
+    "A posting rule is missing for this legal entity. Apply a chart template in Finance first.",
+  TaxCodeNotFound: "A tax code used by this order no longer exists.",
+  ProductNotFound: "A product on this order no longer exists.",
 } as const

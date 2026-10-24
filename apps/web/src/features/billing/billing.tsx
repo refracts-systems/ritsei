@@ -22,6 +22,7 @@ import {
   createLegalEntitiesQuery,
 } from "./queries.ts"
 import { InvoiceOrderDialog } from "./invoice-order-dialog.tsx"
+import { SupplierBillDialog } from "./supplier-bill-dialog.tsx"
 import { canRecordPayment, RecordPaymentDialog } from "./record-payment-dialog.tsx"
 import type { BillingDocument, BillingSide } from "./service.ts"
 
@@ -391,7 +392,9 @@ export function Billing(props: {
                   Posted invoices, credit notes, and supplier bills with what is still open on each.
                 </p>
               }
-              headerActions={<InvoiceOrderDialog />}
+              headerActions={
+                side() === "receivable" ? <InvoiceOrderDialog /> : <SupplierBillDialog />
+              }
               toolbar={
                 <BillingFilters
                   names={names()}
