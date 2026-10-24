@@ -188,6 +188,7 @@ export const ProcessHttpErrors = apiErrorMapping({
   RevenueJournalNotFound: "not_found",
   RevenuePostingProfileNotFound: "not_found",
   SalesOrderConfirmationIdempotencyConflict: "conflict",
+  CreditLimitExceeded: "conflict",
   SalesOrderInvalidState: "conflict",
   SalesOrderNotFound: "not_found",
   StockReservationIdempotencyConflict: "conflict",

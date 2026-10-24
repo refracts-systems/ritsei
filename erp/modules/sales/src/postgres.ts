@@ -132,6 +132,34 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
     return rows[0]
   })
 
+  const getCreditContext = Effect.fn("SalesStore.getCreditContext")(function* (decoded: {
+    tenantId: string
+    orderId: string
+  }) {
+    const rows = yield* database.query(
+      (db) =>
+        db
+          .select({
+            status: orders.status,
+            total: orders.total,
+            customerId: orders.customerId,
+            creditLimit: customers.creditLimit,
+            partyId: customers.partyId,
+            legalEntityId: customers.legalEntityId,
+          })
+          .from(orders)
+          .innerJoin(
+            customers,
+            and(eq(customers.tenantId, orders.tenantId), eq(customers.id, orders.customerId)),
+          )
+          .where(and(eq(orders.tenantId, decoded.tenantId), eq(orders.id, decoded.orderId)))
+          .limit(1),
+      "sales.order.credit_context",
+    )
+
+    return rows[0]
+  })
+
   const listQuotations = Effect.fn("SalesStore.listQuotations")(function* (
     decoded: ListQuotationsCommand,
   ) {
@@ -552,6 +580,7 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
   return {
     listCustomers,
     getCustomer,
+    getCreditContext,
     listQuotations,
     getQuotation,
     listOrders,

@@ -68,3 +68,17 @@ export const deliveryPayload = (value: FormValue, fulfillment: OrderFulfillment)
     ? undefined
     : { orderId: fulfillment.orderId, warehouseId, deliveryDate, lines }
 }
+
+const amount = /^\d+(\.\d{1,2})?$/
+
+/**
+ * The credit limit command from the `creditLimit` field: a non-negative amount with at most two
+ * decimals, or null when the field is empty, which removes the limit. Undefined when malformed.
+ */
+export const creditLimitPayload = (value: FormValue) => {
+  const limit = formText(value.creditLimit)
+
+  if (limit === "") return { creditLimit: null }
+
+  return amount.test(limit) ? { creditLimit: limit } : undefined
+}

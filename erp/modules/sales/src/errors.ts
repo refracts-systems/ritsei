@@ -114,3 +114,16 @@ export class DeliveryExceedsOrder extends Schema.TaggedError<DeliveryExceedsOrde
   "DeliveryExceedsOrder",
   { tenantId: Uuid, orderLineId: Uuid, ordered: Schema.String, requested: Schema.String },
 ) {}
+
+/** Confirming the order would take the customer past their credit limit (ADR-0108). */
+export class CreditLimitExceeded extends Schema.TaggedError<CreditLimitExceeded>()(
+  "CreditLimitExceeded",
+  {
+    tenantId: Uuid,
+    orderId: Uuid,
+    customerId: Uuid,
+    creditLimit: Schema.String,
+    receivableBalance: Schema.String,
+    orderTotal: Schema.String,
+  },
+) {}

@@ -14,6 +14,7 @@ import {
 import { Principal } from "../../../../framework/modules/auth/mod.ts"
 import type { AuthorizationDenied } from "../../../../framework/modules/authorization/mod.ts"
 import type { PartyNotFound, PartyRelationshipNotFound } from "../../party/mod.ts"
+import type { CreditStanding } from "./credit.ts"
 import type {
   CustomerAlreadyExists,
   CustomerLegalEntityRequired,
@@ -182,6 +183,15 @@ export const DraftQuotationInput = Schema.Struct({
     .check(Schema.isMaxLength(200)),
 })
 
+export const CreditStandingInput = Schema.Struct({ ...ScopedInput, customerId: Uuid })
+
+export const SetCreditLimitInput = Schema.Struct({
+  ...ScopedInput,
+  customerId: Uuid,
+  /** Null removes the limit. */
+  creditLimit: Schema.NullOr(FinancialMajorAmount),
+})
+
 export const QuotationCommandInput = Schema.Struct({ ...ScopedInput, quotationId: Uuid })
 export const ExpireQuotationsInput = Schema.Struct({ ...ScopedInput, asOf: CalendarDate })
 export const OrderQueryInput = Schema.Struct({ ...ScopedInput, orderId: Uuid })
@@ -220,6 +230,14 @@ export interface SalesDocumentService {
     | PartyRelationshipNotFound
     | CommonFailure
   >
+  /** What the customer may owe, what they owe now, and what is left. */
+  readonly getCreditStanding: (
+    input: Schema.Codec.Encoded<typeof CreditStandingInput>,
+  ) => Effect.Effect<CreditStanding, CustomerNotFound | CommonFailure>
+  /** Sets or removes the limit that gates confirming the customer's orders (ADR-0108). */
+  readonly setCreditLimit: (
+    input: Schema.Codec.Encoded<typeof SetCreditLimitInput>,
+  ) => Effect.Effect<CreditStanding, CustomerNotFound | CommonFailure>
   readonly createPriceList: (
     input: Schema.Codec.Encoded<typeof CreatePriceListInput>,
   ) => Effect.Effect<PriceList, PriceListAlreadyExists | CommonFailure>

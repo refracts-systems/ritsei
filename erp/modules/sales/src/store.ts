@@ -101,7 +101,21 @@ export const toSalesOrder = (
   lines: lines.map(({ itemId, quantity, unitPrice }) => ({ itemId, quantity, unitPrice })),
 })
 
+/** What confirming an order needs to know about its customer's credit. */
+export interface CreditContext {
+  readonly status: SalesOrderStatus
+  readonly total: string
+  readonly customerId: string
+  readonly creditLimit: string | null
+  readonly partyId: string | null
+  readonly legalEntityId: string | null
+}
+
 export interface SalesStore {
+  readonly getCreditContext: (input: {
+    readonly tenantId: string
+    readonly orderId: string
+  }) => Effect.Effect<CreditContext | undefined, DatabaseFailure>
   readonly listCustomers: (
     input: ListCustomersCommand,
   ) => Effect.Effect<ReadonlyArray<Customer>, DatabaseFailure>
