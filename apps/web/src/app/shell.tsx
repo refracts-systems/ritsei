@@ -34,7 +34,7 @@ type NavigationSection = Readonly<{
 // Framework pages; ERP module entries come from the generated module workspaces.
 const frameworkNavigation: Readonly<Record<NavigationGroup, readonly NavigationItem[]>> = {
   Operations: [],
-  Processes: [],
+  Processes: [{ label: "Approvals", icon: "status.success", href: "/approvals" }],
   Administration: [
     { label: "User accounts", icon: "navigation.user-accounts", href: "/user-accounts" },
     { label: "Access", icon: "navigation.access", href: "/access" },
@@ -65,6 +65,7 @@ type LocalNavigation = Readonly<{
 
 // The local-navigation route table: framework pages, then one entry per module workspace.
 const localNavigationTable: readonly (LocalNavigation & { href: string })[] = [
+  { href: "/approvals", area: "Approvals", items: [{ label: "Requests", href: "/approvals" }] },
   {
     href: "/user-accounts",
     area: "Identity",

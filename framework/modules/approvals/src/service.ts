@@ -248,6 +248,7 @@ export const makeApprovalService = Effect.gen(function* () {
       tenantId: decoded.tenantId,
       capability: ApprovalCapabilities.requestRead,
     })
+
     const rows = yield* database.query(
       (db) =>
         db
