@@ -68,7 +68,7 @@ The rules are owned elsewhere; this list says which ones shape the plan and wher
 | Process engine deferred until O2C and P2P run end to end                                                                          | ADR-0091 §6, [`process-studio.md`](../architecture/process-studio.md)                                                                                                                                                | Until then, composite flows are coded coordinators under the Composite Process Contract in the [architecture specification](../architecture/architecture-spec-v4.md#composite-process-contract) |
 | Operational domains only by evidence                                                                                              | [`../roadmap/domain-maturity.md`](../roadmap/domain-maturity.md) (D3)                                                                                                                                                | Manufacturing, quality, assets, maintenance, projects, HR stay out until a requested capability needs an owner                                                                                  |
 
-## 3. Current state (master `2858f33`)
+## 3. Current state (`main` at `2858f33`)
 
 ### 3.1 ERP modules
 
@@ -360,7 +360,7 @@ are proposed post-pilot waves; their order is a default that pilot evidence may 
 | 7. Developer preview            | `localization-id` skeleton built as an outside developer would build it (Indonesian COA template, NPWP/NIK schemes) using only public APIs                                                                                                                                                                                        | 6          | Generator, released extension points                                                | The localization module installs, extends Product and Billing only through released extension points, and passes its contract tests                                                                      |
 | 8. Pilots                       | `localization-id`: PPN, PPh withholding, Coretax e-Faktur export; bank statement import and manual reconciliation; profit and loss and balance sheet; spreadsheet import of masters and opening balances                                                                                                                          | 7          | Integration adapters, import                                                        | 2–3 companies close one real month: invoices, tax output, payments, stock, and statements reconcile without off-system spreadsheets                                                                      |
 
-#### Implementation status (merged to `master` in #17, 2026-10-20)
+#### Implementation status (merged to `main` in #17, 2026-10-20)
 
 Phases 4–6 are implemented, with every decision recorded as an Accepted ADR:
 
