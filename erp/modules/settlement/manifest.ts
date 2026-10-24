@@ -11,5 +11,5 @@ export const SettlementModule = defineModule({
   events: [],
   consumes: [],
   http: ["Settlement"],
-  pages: [],
+  pages: ["/settlement", "/settlement/:id"],
 })

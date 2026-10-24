@@ -280,7 +280,7 @@ function DocumentDetail(props: {
           when={props.document.lines.length > 0}
           fallback={<p role="status">This document has no lines.</p>}
         >
-          <div class={layout.scroll}>
+          <div class={layout.scroll} tabindex="0" role="region" aria-label="Document lines">
             <table>
               <thead>
                 <tr>
