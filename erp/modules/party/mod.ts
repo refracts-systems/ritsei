@@ -42,6 +42,7 @@ export type { PartyService as PartyServiceContract } from "./src/contract.ts"
 export {
   BranchAlreadyExists,
   ExternalIdentifierAlreadyAssigned,
+  ExternalIdentifierInvalid,
   LegalEntityAlreadyExists,
   LegalEntityNotFound,
   OrganizationRequired,
@@ -87,3 +88,5 @@ export type {
 export { PartyBankAccountAlreadyExists } from "./src/errors.ts"
 
 export { PartyModule } from "./manifest.ts"
+
+export { IdentifierSchemes } from "./src/identifier-schemes.ts"

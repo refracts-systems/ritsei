@@ -1,3 +1,5 @@
+import * as Context from "effect/Context"
+
 import type { AccountType, PostingRole } from "./general-ledger-contract.ts"
 
 export type TemplateAccount = {
@@ -53,3 +55,24 @@ const neutralTrading: ChartTemplate = {
 }
 
 export const chartTemplates = { neutral_trading: neutralTrading } as const
+
+/**
+ * Charts contributed by localization modules, by template id. The runtime provides it from the
+ * installed localizations (ADR-0111); without it only the built-in neutral chart exists.
+ */
+export interface ChartTemplateRegistry {
+  readonly templates: Readonly<Record<string, ChartTemplate>>
+}
+
+export const ChartTemplateRegistry = Context.Service<ChartTemplateRegistry>(
+  "RITSEI/ChartTemplateRegistry",
+)
+
+const builtIn = new Map<string, ChartTemplate>(Object.entries(chartTemplates))
+
+/** The built-in templates and any a localization contributed; a contribution never replaces one. */
+export const templateById = (
+  contributed: Readonly<Record<string, ChartTemplate>>,
+  id: string,
+): ChartTemplate | undefined =>
+  builtIn.get(id) ?? Object.entries(contributed).find(([key]) => key === id)?.[1]

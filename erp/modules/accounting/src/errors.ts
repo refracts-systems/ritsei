@@ -101,6 +101,12 @@ export class AccountAlreadyExists extends Schema.TaggedError<AccountAlreadyExist
   },
 ) {}
 
+/** No built-in or installed localization chart has this id. */
+export class ChartTemplateNotFound extends Schema.TaggedError<ChartTemplateNotFound>()(
+  "ChartTemplateNotFound",
+  { tenantId: Uuid, template: Schema.String },
+) {}
+
 export class AccountNotFound extends Schema.TaggedError<AccountNotFound>()("AccountNotFound", {
   tenantId: Uuid,
 }) {}

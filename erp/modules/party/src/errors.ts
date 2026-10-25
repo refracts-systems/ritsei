@@ -55,6 +55,12 @@ export class ExternalIdentifierAlreadyAssigned extends Schema.TaggedError<Extern
   },
 ) {}
 
+/** An installed localization rejected the identifier's value for its scheme (ADR-0111). */
+export class ExternalIdentifierInvalid extends Schema.TaggedError<ExternalIdentifierInvalid>()(
+  "ExternalIdentifierInvalid",
+  { tenantId: Uuid, provider: Schema.String, scheme: Schema.String, reason: Schema.String },
+) {}
+
 export class OrganizationRequired extends Schema.TaggedError<OrganizationRequired>()(
   "OrganizationRequired",
   { tenantId: Uuid, partyId: Uuid },
@@ -105,6 +111,7 @@ export type PartyFailure =
   | PartyRelationshipRoleNotAssigned
   | PartyRelationshipNotFound
   | ExternalIdentifierAlreadyAssigned
+  | ExternalIdentifierInvalid
   | OrganizationRequired
   | LegalEntityAlreadyExists
   | LegalEntityNotFound

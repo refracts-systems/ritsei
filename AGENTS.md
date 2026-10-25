@@ -181,7 +181,7 @@ extensions/    (later) modules from other developers and customers
   `framework/foundation/`, `framework/platform/`, and `framework/modules/` (auth, identity,
   authorization, messaging, integrations, module, http, numbering, approvals). ERP:
   `erp/modules/` (party, product, tax, sales, procurement, inventory, accounting, billing,
-  settlement, documents, process, communication) and `erp/runtime/` (server, worker, and composition). `db/`, `apps/web/`, `tests/`, and `tooling/` stay at the root.
+  settlement, documents, localization_id, process, communication) and `erp/runtime/` (server, worker, and composition). `db/`, `apps/web/`, `tests/`, and `tooling/` stay at the root.
 - Modules extend each other only through public contracts, events, and released extension points,
   never by patching another module's models, tables, or views.
 - Extract, don't speculate: add a framework capability only together with an ERP module that uses

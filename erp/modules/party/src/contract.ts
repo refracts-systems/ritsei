@@ -8,6 +8,7 @@ import type { EventIdempotencyConflict } from "../../../../framework/modules/mes
 import type {
   BranchAlreadyExists,
   ExternalIdentifierAlreadyAssigned,
+  ExternalIdentifierInvalid,
   LegalEntityAlreadyExists,
   LegalEntityNotFound,
   OrganizationRequired,
@@ -336,6 +337,7 @@ export interface PartyService {
     | LegalEntityNotFound
     | PartyNotFound
     | ExternalIdentifierAlreadyAssigned
+    | ExternalIdentifierInvalid
     | AuthorizationDenied
     | DatabaseFailure
     | Schema.SchemaError
