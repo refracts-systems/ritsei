@@ -5,6 +5,7 @@ import { Database } from "../../framework/foundation/mod.ts"
 import { makeAuthorizationTestLayer } from "../../framework/modules/authorization/mod.ts"
 import { NumberingLive } from "../../framework/modules/numbering/mod.ts"
 import { ApprovalsLive } from "../../framework/modules/approvals/mod.ts"
+import { CustomFieldsLive, customFieldPointsOf } from "../../framework/modules/custom-fields/mod.ts"
 import { makePostgresDatabase } from "../../framework/platform/mod.ts"
 import {
   AccountingFiscalCalendarLive,
@@ -16,10 +17,14 @@ import { DocumentsLive } from "../../erp/modules/documents/mod.ts"
 import { PartyLive } from "../../erp/modules/party/mod.ts"
 import { OrderToCashLive } from "../../erp/modules/process/mod.ts"
 import { SettlementLive } from "../../erp/modules/settlement/mod.ts"
-import { ProductLive } from "../../erp/modules/product/mod.ts"
+import { ProductFieldsLive, ProductLive } from "../../erp/modules/product/mod.ts"
 import { ProcurementLive, PurchaseDocumentsLive } from "../../erp/modules/procurement/mod.ts"
 import { InventoryLive } from "../../erp/modules/inventory/mod.ts"
-import { SalesDocumentsLive, SalesLive } from "../../erp/modules/sales/mod.ts"
+import {
+  SalesCustomerFieldsLive,
+  SalesDocumentsLive,
+  SalesLive,
+} from "../../erp/modules/sales/mod.ts"
 import { TaxLive } from "../../erp/modules/tax/mod.ts"
 import { makeMessagingService, MessagingService } from "../../framework/modules/messaging/mod.ts"
 
@@ -51,6 +56,18 @@ export const erpChainLayers = (client: Sql, grants: ReadonlyArray<Grant>) => {
 
   const ledger = GeneralLedgerLive.pipe(Layer.provide(Layer.merge(platform, numbering)))
   const product = ProductLive.pipe(Layer.provide(platform))
+
+  const customFields = CustomFieldsLive.pipe(
+    Layer.provide(
+      Layer.merge(platform, customFieldPointsOf(["sales.customer", "product.product"])),
+    ),
+  )
+
+  const salesCustomerFields = SalesCustomerFieldsLive.pipe(
+    Layer.provide(Layer.merge(platform, customFields)),
+  )
+
+  const productFields = ProductFieldsLive.pipe(Layer.provide(Layer.merge(platform, customFields)))
   const stock = StockKeepingLive.pipe(Layer.provide(Layer.mergeAll(platform, ledger, product)))
 
   const messaging = Layer.effect(MessagingService, makeMessagingService).pipe(
@@ -120,5 +137,8 @@ export const erpChainLayers = (client: Sql, grants: ReadonlyArray<Grant>) => {
     purchasing,
     documents,
     orderToCash,
+    customFields,
+    salesCustomerFields,
+    productFields,
   )
 }

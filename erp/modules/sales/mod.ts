@@ -53,6 +53,8 @@ export {
 
 export { makeSalesService, makeSalesTestLayer, SalesLive } from "./src/layers.ts"
 
+export { SalesCustomerFields, SalesCustomerFieldsLive } from "./src/custom-fields.ts"
+
 export { CreditExposure, CreditStanding, NoCreditExposureLive } from "./src/credit.ts"
 
 export type { CreditStanding as CreditStandingType } from "./src/credit.ts"

@@ -73,6 +73,27 @@ describe("module registry", () => {
     assert.isTrue(failures.some((failure) => failure.includes("releases sales.order.confirmed")))
   })
 
+  it("accepts an extension point on the module's own document and rejects another's", () => {
+    const sales = defineModule({
+      ...empty,
+      name: "sales",
+      extensionPoints: [{ kind: "custom-fields", documentType: "sales.customer" }],
+    })
+
+    assert.deepStrictEqual(failuresOf([sales]), [])
+
+    assert.deepStrictEqual(
+      failuresOf([
+        {
+          ...empty,
+          name: "mail",
+          extensionPoints: [{ kind: "custom-fields", documentType: "sales.customer" }],
+        },
+      ]),
+      ["mail releases custom-fields for sales.customer, which it does not own"],
+    )
+  })
+
   it("rejects shared ownership and consumption without a dependency", () => {
     const failures = failuresOf([
       { ...empty, name: "a", schemas: ["shared"], http: ["Same"] },

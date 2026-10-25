@@ -22,6 +22,15 @@ export interface ModuleManifest {
   readonly http: ReadonlyArray<string>
   /** Web route paths that render this module's workspace. */
   readonly pages: ReadonlyArray<string>
+  /** Extension points this module releases on its own documents (ADR-0094, ADR-0109). */
+  readonly extensionPoints?: ReadonlyArray<ExtensionPoint>
+}
+
+/** A document type, owned by the module, that accepts tenant-defined custom fields. */
+export interface ExtensionPoint {
+  readonly kind: "custom-fields"
+  /** `<module>.<document>`, for example `sales.customer`. */
+  readonly documentType: string
 }
 
 export const defineModule = <const Manifest extends ModuleManifest>(manifest: Manifest): Manifest =>
@@ -107,6 +116,13 @@ const namespaceFailures = ({ name, capabilities, actions, events }: ModuleManife
   ]
 }
 
+const extensionPointFailures = ({ name, extensionPoints = [] }: ModuleManifest) =>
+  extensionPoints
+    .filter((point) => !point.documentType.startsWith(modulePrefix(name)))
+    .map(
+      (point) => `${name} releases ${point.kind} for ${point.documentType}, which it does not own`,
+    )
+
 const consumptionFailures = ({ name, dependsOn, consumes }: ModuleManifest, modules: Modules) =>
   consumes
     .filter(
@@ -153,6 +169,7 @@ export const validateModuleRegistry = (
     ...manifests.flatMap((manifest) => [
       ...dependencyFailures(manifest, modules),
       ...namespaceFailures(manifest),
+      ...extensionPointFailures(manifest),
       ...consumptionFailures(manifest, modules),
     ]),
     ...ownershipFailures(manifests),
