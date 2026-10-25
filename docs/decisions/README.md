@@ -132,8 +132,8 @@ current system; ADRs preserve decision history.
 | [`0106`](./0106-validate-service-inputs-once-with-schema-classes.md)                          | Validate service inputs once with Schema classes                                                 | Proposed   |
 | [`0107`](./0107-read-document-chains-through-a-documents-module.md)                          | Read document chains through a documents module                                                  | Proposed   |
 | [`0108`](./0108-gate-order-confirmation-on-customer-credit-limit.md)                          | Gate order confirmation on a customer credit limit                                               | Accepted   |
-| [`0109`](./0109-release-custom-fields-as-an-extension-point.md) | Release custom fields as an owner extension point | Proposed   |
-| [`0110`](./0110-issue-invoices-as-immutable-numbered-artifacts-and-send-by-communication.md) | Issue invoices as immutable numbered artifacts and send them through communication | Proposed   |
-| [`0111`](./0111-sequence-localization-id-on-public-contracts.md) | Build Indonesian localization on public contracts, in two stages | Proposed   |
+| [`0109`](./0109-release-custom-fields-as-an-extension-point.md) | Release custom fields as an owner extension point | Accepted   |
+| [`0110`](./0110-issue-invoices-as-immutable-numbered-artifacts-and-send-by-communication.md) | Issue invoices as immutable numbered artifacts and send them through communication | Accepted   |
+| [`0111`](./0111-sequence-localization-id-on-public-contracts.md) | Build Indonesian localization on public contracts, in two stages | Accepted   |
 
 Accepted ADRs must not be rewritten to alter history. Create a new ADR and use `Supersedes`.
