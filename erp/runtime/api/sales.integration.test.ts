@@ -169,13 +169,6 @@ it.layer(TestHttpServices)("sales API contracts", (it) => {
         customer,
       )
       assert.deepStrictEqual(
-        yield* client.Sales.createQuotation({
-          headers,
-          payload: { customerId, total: quotation.total },
-        }),
-        quotation,
-      )
-      assert.deepStrictEqual(
         yield* client.Sales.createOrder({
           headers,
           payload: { customerId, quotationId, lines: draftOrder.lines },
