@@ -1,6 +1,6 @@
 # ADR-0109: Release Custom Fields as an Owner Extension Point
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-25
 - Amends: None
 - Compatible with: ADR-0015, ADR-0091, ADR-0094

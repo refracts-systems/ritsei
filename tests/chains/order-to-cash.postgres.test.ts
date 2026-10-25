@@ -245,6 +245,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             customerId: customer.id,
             creditLimit: "100.00",
             receivableBalance: "0.00",
+            confirmedNotInvoiced: "0.00",
             available: "100.00",
           })
 
@@ -301,14 +302,15 @@ it.effect.skipIf(databaseUrl === undefined)(
 
           assert.strictEqual(firstInvoice.number, "INV/2026/00001")
 
-          // What the customer owes counts against the limit.
+          // What the customer owes, and the part of the order not yet invoiced, count against the limit.
           const standing = yield* salesDocuments.getCreditStanding({
             ...scope,
             customerId: customer.id,
           })
 
           assert.strictEqual(standing.receivableBalance, "115.44")
-          assert.strictEqual(standing.available, "884.56")
+          assert.strictEqual(standing.confirmedNotInvoiced, "36.00")
+          assert.strictEqual(standing.available, "848.56")
           assert.deepStrictEqual(
             [firstInvoice.subtotal, firstInvoice.taxTotal, firstInvoice.total],
             ["104.00", "11.44", "115.44"],

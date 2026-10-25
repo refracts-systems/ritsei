@@ -20,7 +20,8 @@ it.effect(
         customerId,
         creditLimit: limit,
         receivableBalance: "115.44",
-        available: limit === null ? null : (Number(limit) - 115.44).toFixed(2),
+        confirmedNotInvoiced: "36.00",
+        available: limit === null ? null : (Number(limit) - 115.44 - 36).toFixed(2),
       })
 
       yield* Effect.promise(async () => {
@@ -50,6 +51,8 @@ it.effect(
         const credit = page.getByRole("region", { name: "Credit" })
         await credit.getByText("No limit").waitFor()
         await credit.getByText("115.44").waitFor()
+        await credit.getByText("Confirmed, not yet invoiced").waitFor()
+        await credit.getByText("36.00").waitFor()
         assert.deepEqual(
           (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()).violations,
           [],
@@ -66,7 +69,7 @@ it.effect(
         await dialog.getByLabel("Credit limit").fill("500.00")
         await dialog.getByRole("button", { name: "Save limit", exact: true }).click()
         await dialog.waitFor({ state: "hidden" })
-        await credit.getByText("384.56").waitFor()
+        await credit.getByText("348.56").waitFor()
         assert.deepEqual(posted, [{ creditLimit: "500.00" }])
 
         // Emptying the field removes the limit.

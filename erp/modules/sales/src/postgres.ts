@@ -32,7 +32,7 @@ import {
   QuotationNotFound,
   SalesOrderConfirmationIdempotencyConflict,
 } from "./errors.ts"
-import type { SalesStore } from "./store.ts"
+import type { CreditCheck, CreditContext, SalesStore } from "./store.ts"
 import {
   CancellationMutation,
   ConfirmationMutation,
@@ -127,34 +127,6 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
           )
           .limit(1),
       "sales.customer.get",
-    )
-
-    return rows[0]
-  })
-
-  const getCreditContext = Effect.fn("SalesStore.getCreditContext")(function* (decoded: {
-    tenantId: string
-    orderId: string
-  }) {
-    const rows = yield* database.query(
-      (db) =>
-        db
-          .select({
-            status: orders.status,
-            total: orders.total,
-            customerId: orders.customerId,
-            creditLimit: customers.creditLimit,
-            partyId: customers.partyId,
-            legalEntityId: customers.legalEntityId,
-          })
-          .from(orders)
-          .innerJoin(
-            customers,
-            and(eq(customers.tenantId, orders.tenantId), eq(customers.id, orders.customerId)),
-          )
-          .where(and(eq(orders.tenantId, decoded.tenantId), eq(orders.id, decoded.orderId)))
-          .limit(1),
-      "sales.order.credit_context",
     )
 
     return rows[0]
@@ -438,10 +410,49 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
     append: (
       order: SalesOrder,
     ) => Effect.Effect<unknown, EventIdempotencyConflict | DatabaseFailure | Schema.SchemaError>,
+    checkCredit: CreditCheck,
   ) {
     return yield* database
       .withTransaction(
         Effect.gen(function* () {
+          // Locking the customer makes two confirmations for them run one after the other, so the
+          // second sees the first order as committed.
+          const credit = yield* database.transaction(async (tx) => {
+            const [row] = await tx
+              .select({
+                status: orders.status,
+                total: orders.total,
+                customerId: orders.customerId,
+                creditLimit: customers.creditLimit,
+                partyId: customers.partyId,
+                legalEntityId: customers.legalEntityId,
+              })
+              .from(orders)
+              .innerJoin(
+                customers,
+                and(eq(customers.tenantId, orders.tenantId), eq(customers.id, orders.customerId)),
+              )
+              .where(and(eq(orders.tenantId, decoded.tenantId), eq(orders.id, decoded.orderId)))
+              .for("update", { of: customers })
+
+            if (row === undefined) return undefined
+
+            const confirmedOrders = await tx
+              .select({ id: orders.id, total: orders.total })
+              .from(orders)
+              .where(
+                and(
+                  eq(orders.tenantId, decoded.tenantId),
+                  eq(orders.customerId, row.customerId),
+                  eq(orders.status, "confirmed"),
+                ),
+              )
+
+            return { ...row, confirmedOrders } satisfies CreditContext
+          }, "sales.order.credit_context")
+
+          if (credit !== undefined) yield* checkCredit(credit)
+
           const mutation = yield* database.transaction(async (tx) => {
             const [row] = await tx
               .select({
@@ -580,7 +591,6 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
   return {
     listCustomers,
     getCustomer,
-    getCreditContext,
     listQuotations,
     getQuotation,
     listOrders,

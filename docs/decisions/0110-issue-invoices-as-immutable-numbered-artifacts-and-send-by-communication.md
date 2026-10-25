@@ -1,6 +1,6 @@
 # ADR-0110: Issue Invoices as Immutable Numbered Artifacts and Send Them Through Communication
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-25
 - Amends: None
 - Compatible with: ADR-0082, ADR-0091, ADR-0102
@@ -32,25 +32,31 @@ to be the invoice on file, and an auditor expects the same bytes years later.
    a worker renders through `framework/foundation/document-rendering` with a native transactional
    renderer, so a slow render never holds the posting transaction. The artifact exists when the job
    completes; the document shows "preparing" until then.
-3. **The renderer dependency is chosen, measured, and added in its own change.** The architecture
-   gates renderer dependencies on a benchmark corpus; this ADR does not pick a library. Until then,
-   the browser print sheet stays.
+3. **The renderer is `pdfnative`, added in its own change after the activation gates pass.** The
+   owner accepted the native transactional profile the rendering architecture proposes as its
+   default. It stays an evaluation dependency until the eight gates in
+   [`document-rendering.md`](../architecture/document-rendering.md#12-activation-gates) pass
+   (contract, ownership, security, determinism, conformance, workload, operational, dependency).
+   Billing's ownership of invoices, which that document left open, is decided by ADR-0102. Until
+   activation, the browser print sheet stays.
 4. **Reading an artifact needs the document's read capability.** `GET` an artifact by document id
    returns the stored bytes with the checksum in a header; there is no regenerate-on-read.
 5. **Email goes through Communication.** Posting an invoice records an `invoice.issued` fact through
    the outbox. A communication policy turns it into a `CommunicationIntent` for the customer's
    billing contact, attaches the artifact, and sends through the transport port with the idempotency
    key `artifact id + recipient`. Delivery attempts, retries, and failures are recorded by the
-   Communication Platform; Billing never knows the provider. A tenant chooses automatic sending or
-   a manual "send" action.
-6. **The provider is an operator integration.** SMTP or a transactional email API is an adapter in
-   `framework/modules/integrations`, configured per deployment, with credentials outside the
-   repository.
+   Communication Platform; Billing never knows the provider.
+6. **Sending is manual first, automatic as a tenant setting.** The first release has a "Send"
+   action on an issued document. Automatic sending when a document is issued follows as a per-tenant
+   setting, off by default.
+7. **The transport is SMTP.** An SMTP adapter in `framework/modules/integrations` is configured per
+   deployment (host, port, credentials outside the repository), so any provider that speaks SMTP
+   works. A provider API adapter can be added later behind the same transport port.
 
 ## Consequences
 
 - Invoices need a worker and a stored-artifact table before this works end to end; nothing here is
-  active until the renderer and the provider are decided.
+  active until the activation gates pass and a deployment configures SMTP.
 - A tenant that edits its template changes future artifacts only; the version stored with each
   artifact says which template produced it.
 - Resending sends the stored artifact, not a new rendering.

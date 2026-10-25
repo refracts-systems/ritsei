@@ -24,6 +24,7 @@ import type {
 } from "./contract.ts"
 import type { SalesOrderStatus } from "./contract.ts"
 import {
+  CreditLimitExceeded,
   CustomerAlreadyExists,
   CustomerNotFound,
   QuotationCustomerMismatch,
@@ -101,7 +102,7 @@ export const toSalesOrder = (
   lines: lines.map(({ itemId, quantity, unitPrice }) => ({ itemId, quantity, unitPrice })),
 })
 
-/** What confirming an order needs to know about its customer's credit. */
+/** What confirming an order needs to know about its customer's credit, read under a lock. */
 export interface CreditContext {
   readonly status: SalesOrderStatus
   readonly total: string
@@ -109,13 +110,16 @@ export interface CreditContext {
   readonly creditLimit: string | null
   readonly partyId: string | null
   readonly legalEntityId: string | null
+  /** The customer's confirmed orders, which already commit part of the limit. */
+  readonly confirmedOrders: ReadonlyArray<{ readonly id: string; readonly total: string }>
 }
 
+/** Fails when confirming would pass the limit; runs while the customer is locked. */
+export type CreditCheck = (
+  context: CreditContext,
+) => Effect.Effect<void, CreditLimitExceeded | DatabaseFailure>
+
 export interface SalesStore {
-  readonly getCreditContext: (input: {
-    readonly tenantId: string
-    readonly orderId: string
-  }) => Effect.Effect<CreditContext | undefined, DatabaseFailure>
   readonly listCustomers: (
     input: ListCustomersCommand,
   ) => Effect.Effect<ReadonlyArray<Customer>, DatabaseFailure>
@@ -151,8 +155,10 @@ export interface SalesStore {
     append: (
       order: SalesOrder,
     ) => Effect.Effect<unknown, EventIdempotencyConflict | DatabaseFailure | Schema.SchemaError>,
+    checkCredit: CreditCheck,
   ) => Effect.Effect<
     ConfirmationMutation,
+    | CreditLimitExceeded
     | EventIdempotencyConflict
     | DatabaseFailure
     | Schema.SchemaError
