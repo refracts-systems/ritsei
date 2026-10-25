@@ -38,6 +38,28 @@ export const BillingCreditExposureLive = Layer.effect(
             "billing.credit_exposure",
           )
           .pipe(Effect.map((rows) => rows[0]?.balance ?? "0.00")),
+      invoicedNet: (input) =>
+        input.orderIds.length === 0
+          ? Effect.succeed("0.00")
+          : database
+              .query(
+                (db) =>
+                  db
+                    .select({
+                      net: sql<string>`coalesce(sum(${invoices.subtotal}), 0)::numeric(24,2)::text`,
+                    })
+                    .from(invoices)
+                    .where(
+                      and(
+                        eq(invoices.tenantId, input.tenantId),
+                        eq(invoices.kind, "customer_invoice"),
+                        eq(invoices.sourceType, "sales.order"),
+                        inArray(invoices.sourceId, [...input.orderIds]),
+                      ),
+                    ),
+                "billing.credit_exposure.invoiced",
+              )
+              .pipe(Effect.map((rows) => rows[0]?.net ?? "0.00")),
     }
   }),
 )

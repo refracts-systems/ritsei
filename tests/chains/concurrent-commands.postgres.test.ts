@@ -22,6 +22,7 @@ import { OrderToCashService } from "../../erp/modules/process/mod.ts"
 import { ProcurementCapabilities } from "../../erp/modules/procurement/mod.ts"
 import { ProductCapabilities, ProductService } from "../../erp/modules/product/mod.ts"
 import {
+  CreditLimitExceeded,
   DeliveryExceedsOrder,
   SalesCapabilities,
   SalesDocumentService,
@@ -234,6 +235,46 @@ it.effect.skipIf(databaseUrl === undefined)(
             (yield* settlement.listPayments({ ...scope, legalEntityId })).length,
             1,
           )
+
+          // Two orders that each fit the credit limit but not together: one is confirmed, the other
+          // is refused, because confirming locks the customer.
+          yield* salesDocuments.setCreditLimit({
+            ...scope,
+            customerId: customer.id,
+            creditLimit: "250.00",
+          })
+
+          const draftOrders = yield* Effect.forEach([1, 2], () =>
+            sales.createOrder({
+              ...scope,
+              customerId: customer.id,
+              lines: [{ itemId: widget.id, quantity: "15", unitPrice: "10.00" }],
+            }),
+          )
+
+          const confirm = (draft: (typeof draftOrders)[number]) =>
+            sales.confirmOrder({
+              ...scope,
+              orderId: draft.id,
+              commandId: uuidv7(),
+              correlationId: uuidv7(),
+              idempotencyKey: `confirm-${draft.id}`,
+            })
+
+          const confirmations = outcomes(
+            yield* race(confirm(draftOrders[0]!), confirm(draftOrders[1]!)),
+          )
+
+          assert.strictEqual(confirmations.succeeded.length, 1)
+          assert.instanceOf(confirmations.failed[0], CreditLimitExceeded)
+
+          const standing = yield* salesDocuments.getCreditStanding({
+            ...scope,
+            customerId: customer.id,
+          })
+
+          assert.strictEqual(standing.confirmedNotInvoiced, "150.00")
+          assert.strictEqual(standing.available, "100.00")
 
           // Two approvers deciding one request: the first decision stands.
           yield* approvals.configurePolicy({
