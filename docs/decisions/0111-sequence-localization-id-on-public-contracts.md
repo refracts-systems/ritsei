@@ -26,7 +26,9 @@ is required in the first pilot month.
 
 1. **`erp/modules/localization-id` is one module that imports only public entry points.** It owns no
    business document. It contributes data and rules to modules that release a point for them.
-2. **Stage A uses what is public or is small to release, and needs no custom fields:**
+2. **Stage A uses what is public or is small to release, and needs no custom fields** (built;
+   the module is `erp/modules/localization_id`, named with an underscore because module names
+   cannot contain a hyphen):
    - a chart-of-accounts template for Indonesian trading, through a template registry that
      Accounting releases (today the neutral template is built in);
    - PPN tax codes and the product tax defaults, created through the Tax module's public commands by a
@@ -47,7 +49,13 @@ is required in the first pilot month.
 
 ## Consequences
 
-- Stage A can start without any new extension point beyond Accounting's template registry.
+- Stage A needed two small extension points, both optional services that default to none: Accounting's
+  `ChartTemplateRegistry` (an unknown template id fails with `ChartTemplateNotFound`) and Party's
+  `IdentifierSchemes` (a rejected value fails with `ExternalIdentifierInvalid`; a scheme without a rule
+  is accepted as before). One setup command, `POST /localization-id/setup`, applies the chart with its
+  posting rules and creates the PPN tax codes, and is safe to repeat.
+- Stage A does not give tax codes validity periods: the tax module has none yet, so a rate change
+  today is a new code. Dated rates remain open for Stage B.
 - Tax statutory text and rate tables are not in this ADR; the module's own document owns them.
 - A second jurisdiction would be a second module with the same shape, which tests that the neutral
   modules stayed neutral.

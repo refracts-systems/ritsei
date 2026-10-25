@@ -57,6 +57,11 @@ import { TaxLive } from "../modules/tax/mod.ts"
 import { BillingCreditExposureLive, BillingLive } from "../modules/billing/mod.ts"
 import { SettlementLive } from "../modules/settlement/mod.ts"
 import { DocumentsLive } from "../modules/documents/mod.ts"
+import {
+  IndonesianChartTemplatesLive,
+  IndonesianIdentifierSchemesLive,
+  LocalizationIdLive,
+} from "../modules/localization_id/mod.ts"
 
 export const serviceLayers = (
   client: Sql,
@@ -98,7 +103,11 @@ export const serviceLayers = (
 
   const PartyLive = PartyServiceLayer.pipe(
     Layer.provide(
-      Layer.merge(BusinessRequirements, PartyEventPublisherLive.pipe(Layer.provide(MessagingLive))),
+      Layer.mergeAll(
+        BusinessRequirements,
+        PartyEventPublisherLive.pipe(Layer.provide(MessagingLive)),
+        IndonesianIdentifierSchemesLive,
+      ),
     ),
   )
 
@@ -141,7 +150,9 @@ export const serviceLayers = (
   )
 
   const LedgerLive = GeneralLedgerLive.pipe(
-    Layer.provide(Layer.merge(BusinessRequirements, NumberingServiceLive)),
+    Layer.provide(
+      Layer.mergeAll(BusinessRequirements, NumberingServiceLive, IndonesianChartTemplatesLive),
+    ),
   )
 
   const ProcessJobEnqueuerLive = ProcessJobEnqueuerServiceLayer.pipe(Layer.provide(DatabaseLive))
@@ -260,6 +271,10 @@ export const serviceLayers = (
     ),
   )
 
+  const LocalizationIdServiceLive = LocalizationIdLive.pipe(
+    Layer.provide(Layer.mergeAll(BusinessRequirements, LedgerLive, TaxServiceLive)),
+  )
+
   const DocumentsServiceLive = DocumentsLive.pipe(
     Layer.provide(
       Layer.mergeAll(
@@ -310,6 +325,7 @@ export const serviceLayers = (
     BillingServiceLive,
     SettlementServiceLive,
     DocumentsServiceLive,
+    LocalizationIdServiceLive,
     ApprovalServiceLive,
     PurchaseDocumentServiceLive,
     OrderToCashServiceLive,

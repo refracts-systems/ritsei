@@ -14,6 +14,11 @@ import {
 import { StockKeepingLive } from "../../erp/modules/inventory/mod.ts"
 import { BillingCreditExposureLive, BillingLive } from "../../erp/modules/billing/mod.ts"
 import { DocumentsLive } from "../../erp/modules/documents/mod.ts"
+import {
+  IndonesianChartTemplatesLive,
+  IndonesianIdentifierSchemesLive,
+  LocalizationIdLive,
+} from "../../erp/modules/localization_id/mod.ts"
 import { PartyLive } from "../../erp/modules/party/mod.ts"
 import { OrderToCashLive } from "../../erp/modules/process/mod.ts"
 import { SettlementLive } from "../../erp/modules/settlement/mod.ts"
@@ -54,7 +59,10 @@ export const erpChainLayers = (client: Sql, grants: ReadonlyArray<Grant>) => {
     ),
   )
 
-  const ledger = GeneralLedgerLive.pipe(Layer.provide(Layer.merge(platform, numbering)))
+  const ledger = GeneralLedgerLive.pipe(
+    Layer.provide(Layer.mergeAll(platform, numbering, IndonesianChartTemplatesLive)),
+  )
+
   const product = ProductLive.pipe(Layer.provide(platform))
 
   const customFields = CustomFieldsLive.pipe(
@@ -74,7 +82,10 @@ export const erpChainLayers = (client: Sql, grants: ReadonlyArray<Grant>) => {
     Layer.provide(database),
   )
 
-  const party = PartyLive.pipe(Layer.provide(Layer.mergeAll(platform, messaging)))
+  const party = PartyLive.pipe(
+    Layer.provide(Layer.mergeAll(platform, messaging, IndonesianIdentifierSchemesLive)),
+  )
+
   const tax = TaxLive.pipe(Layer.provide(platform))
 
   const creditExposure = BillingCreditExposureLive.pipe(Layer.provide(platform))
@@ -114,6 +125,8 @@ export const erpChainLayers = (client: Sql, grants: ReadonlyArray<Grant>) => {
     Layer.provide(Layer.mergeAll(legacySales, sales, procurement, purchasing, billing, settlement)),
   )
 
+  const localization = LocalizationIdLive.pipe(Layer.provide(Layer.mergeAll(platform, ledger, tax)))
+
   const orderToCash = OrderToCashLive.pipe(
     Layer.provide(Layer.mergeAll(platform, sales, stock, product)),
   )
@@ -136,6 +149,7 @@ export const erpChainLayers = (client: Sql, grants: ReadonlyArray<Grant>) => {
     procurement,
     purchasing,
     documents,
+    localization,
     orderToCash,
     customFields,
     salesCustomerFields,

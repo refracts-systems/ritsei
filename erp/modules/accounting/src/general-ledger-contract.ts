@@ -44,7 +44,8 @@ export const PostingRole = Schema.Literals([
 
 export type PostingRole = Schema.Schema.Type<typeof PostingRole>
 
-export const ChartTemplateId = Schema.Literal("neutral_trading")
+/** A chart template id such as `neutral_trading`; localizations add their own. */
+export const ChartTemplateId = Schema.String.check(Schema.isPattern(/^[a-z][a-z0-9_]{0,63}$/))
 
 export const LedgerAccount = Schema.Struct({
   id: Uuid,
@@ -252,7 +253,9 @@ export interface GeneralLedgerService {
     input: Schema.Codec.Encoded<typeof ApplyChartTemplateInput>,
   ) => Effect.Effect<
     ReadonlyArray<LedgerAccount>,
-    AccountingErrors.AccountingLegalEntityNotFound | CommonFailure
+    | AccountingErrors.AccountingLegalEntityNotFound
+    | AccountingErrors.ChartTemplateNotFound
+    | CommonFailure
   >
   readonly configurePostingRule: (
     input: Schema.Codec.Encoded<typeof ConfigurePostingRuleInput>,

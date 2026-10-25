@@ -111,6 +111,7 @@ export const CapabilityIds = [
   "settlement.report.read",
   "approvals.policy.configure",
   "approvals.request.read",
+  "localization_id.setup.apply",
   "procurement.supplier_price.configure",
   "procurement.supplier_price.read",
   "procurement.purchase_return.create",
@@ -167,6 +168,7 @@ export const CapabilityOwner = Schema.Literals([
   "billing",
   "settlement",
   "approvals",
+  "localization_id",
 ])
 
 export type CapabilityOwner = Schema.Schema.Type<typeof CapabilityOwner>
@@ -369,6 +371,7 @@ export const CapabilityDefinitions: ReadonlyArray<CapabilityDefinition> = [
   definition("settlement.report.read", "settlement", "report", "read"),
   definition("approvals.policy.configure", "approvals", "policy", "configure"),
   definition("approvals.request.read", "approvals", "request", "read"),
+  definition("localization_id.setup.apply", "localization_id", "setup", "apply"),
   definition("procurement.supplier_price.configure", "procurement", "supplier_price", "configure"),
   definition("procurement.supplier_price.read", "procurement", "supplier_price", "read"),
   definition("procurement.purchase_return.create", "procurement", "purchase_return", "create"),

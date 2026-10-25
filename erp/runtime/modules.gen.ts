@@ -9,6 +9,11 @@ import { DocumentsHttpGroup, DocumentsHttpHandlers } from "../modules/documents/
 import { DocumentsModule } from "../modules/documents/mod.ts"
 import { InventoryHttpGroup, InventoryHttpHandlers } from "../modules/inventory/http.ts"
 import { InventoryModule } from "../modules/inventory/mod.ts"
+import {
+  LocalizationIdHttpGroup,
+  LocalizationIdHttpHandlers,
+} from "../modules/localization_id/http.ts"
+import { LocalizationIdModule } from "../modules/localization_id/mod.ts"
 import { PartyHttpGroup, PartyHttpHandlers } from "../modules/party/http.ts"
 import { PartyModule } from "../modules/party/mod.ts"
 import { ProcessHttpGroup, ProcessHttpHandlers } from "../modules/process/http.ts"
@@ -31,6 +36,7 @@ export const ErpModules: ReadonlyArray<ModuleManifest> = [
   CommunicationModule,
   DocumentsModule,
   InventoryModule,
+  LocalizationIdModule,
   PartyModule,
   ProcessModule,
   ProcurementModule,
@@ -46,6 +52,7 @@ export const ErpHttpGroups = [
   BillingHttpGroup,
   DocumentsHttpGroup,
   InventoryHttpGroup,
+  LocalizationIdHttpGroup,
   PartyHttpGroup,
   ProcessHttpGroup,
   ProcurementHttpGroup,
@@ -61,6 +68,7 @@ export const ErpHttpHandlers = [
   BillingHttpHandlers,
   DocumentsHttpHandlers,
   InventoryHttpHandlers,
+  LocalizationIdHttpHandlers,
   PartyHttpHandlers,
   ProcessHttpHandlers,
   ProcurementHttpHandlers,

@@ -1,5 +1,6 @@
 import type { CapabilityType } from "../../../../framework/modules/authorization/mod.ts"
 import * as Effect from "effect/Effect"
+import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 
 import {
@@ -14,7 +15,7 @@ import {
   scopedCommand,
 } from "../../../../framework/modules/authorization/mod.ts"
 import { AccountingCapabilities } from "./capabilities.ts"
-import { chartTemplates } from "./chart-templates.ts"
+import { ChartTemplateRegistry, templateById } from "./chart-templates.ts"
 import {
   ApplyChartTemplateInput,
   ConfigurePostingRuleInput,
@@ -38,6 +39,7 @@ import {
   AccountingLegalEntityNotFound,
   AccountingPeriodNotOpen,
   AccountNotFound,
+  ChartTemplateNotFound,
   FinancialEngineActivated,
   InvalidJournalLine,
   JournalIdempotencyConflict,
@@ -73,6 +75,15 @@ export const makeGeneralLedgerServiceFromStore = <R>(
   Effect.gen(function* () {
     const store = yield* storeEffect
     const authorization = yield* AuthorizationService
+
+    // Localizations contribute charts through the registry; none are contributed by default.
+    const contributed = Option.getOrElse(
+      yield* Effect.serviceOption(ChartTemplateRegistry),
+      () => ({
+        templates: {},
+      }),
+    )
+
     const authorized = scopedCommand(authorization)
 
     const authorize = (
@@ -138,7 +149,14 @@ export const makeGeneralLedgerServiceFromStore = <R>(
         AccountingCapabilities.chartApply,
       )(input)
 
-      const template = chartTemplates[decoded.template]
+      const template = templateById(contributed.templates, decoded.template)
+
+      if (template === undefined) {
+        return yield* Effect.fail(
+          new ChartTemplateNotFound({ tenantId: decoded.tenantId, template: decoded.template }),
+        )
+      }
+
       const created = yield* store.ensureTemplateAccounts(decoded.tenantId, template.accounts)
 
       if (decoded.legalEntityId !== undefined) {

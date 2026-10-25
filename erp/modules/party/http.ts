@@ -208,6 +208,7 @@ export const PartyHttpErrors = apiErrorMapping({
   ...BaseApiErrorPolicy,
   BranchAlreadyExists: "conflict",
   ExternalIdentifierAlreadyAssigned: "conflict",
+  ExternalIdentifierInvalid: "conflict",
   LegalEntityAlreadyExists: "conflict",
   LegalEntityNotFound: "not_found",
   OrganizationRequired: "conflict",

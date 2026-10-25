@@ -177,6 +177,7 @@ export {
   AccountingPeriodOverlap,
   AccountingService,
   AccountNotFound,
+  ChartTemplateNotFound,
   ActivateTigerBeetleCutoverInput,
   ApproveTigerBeetleCutoverInput,
   ClosePeriodInput,
@@ -227,6 +228,10 @@ export type {
   JournalLine as JournalLineType,
   RevenuePostingProfile as RevenuePostingProfileType,
 } from "./src/service.ts"
+
+export type { ChartTemplate, TemplateAccount } from "./src/chart-templates.ts"
+
+export { ChartTemplateRegistry } from "./src/chart-templates.ts"
 
 export {
   ChartTemplateId,

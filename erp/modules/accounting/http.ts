@@ -394,6 +394,7 @@ export const AccountingHttpErrors = apiErrorMapping({
   SalesOrderNotFound: "not_found",
   AccountAlreadyExists: "conflict",
   AccountNotFound: "not_found",
+  ChartTemplateNotFound: "not_found",
   AccountingConfigurationAlreadyExists: "conflict",
   AccountingLegalEntityNotFound: "not_found",
   AccountingPeriodNotFound: "not_found",

@@ -197,6 +197,7 @@ it.effect("derives routing and OpenAPI from the Effect HttpApi contract", () =>
     assert.ok(specification.paths["/sales/customers/{id}"]?.get)
     assert.ok(specification.paths["/sales/quotations"]?.get)
     assert.ok(specification.paths["/sales/quotations/{id}"]?.get)
+    assert.ok(specification.paths["/localization-id/setup"]?.post)
     assert.ok(specification.paths["/sales/custom-fields"]?.get)
     assert.ok(specification.paths["/sales/custom-fields"]?.post)
     assert.ok(specification.paths["/sales/customers/{id}/custom-fields"]?.get)

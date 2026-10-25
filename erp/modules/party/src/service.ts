@@ -5,6 +5,8 @@ import * as Schema from "effect/Schema"
 import { Database, uuidv7 } from "../../../../framework/foundation/mod.ts"
 import { AuthorizationService } from "../../../../framework/modules/authorization/mod.ts"
 import { PartyCapabilities } from "./capabilities.ts"
+import { ExternalIdentifierInvalid } from "./errors.ts"
+import { IdentifierSchemes } from "./identifier-schemes.ts"
 import {
   AssignPartyRoleInput,
   AttachExternalIdentifierInput,
@@ -35,6 +37,7 @@ export const makePartyServiceFromStore = <R>(
     const authorization = yield* AuthorizationService
     const databaseOption = yield* Effect.serviceOption(Database)
     const publisherOption = yield* Effect.serviceOption(PartyEventPublisher)
+    const schemesOption = yield* Effect.serviceOption(IdentifierSchemes)
 
     const list = Effect.fn("PartyService.list")(function* (
       input: Schema.Codec.Encoded<typeof ListPartiesInput>,
@@ -252,14 +255,30 @@ export const makePartyServiceFromStore = <R>(
         capability: PartyCapabilities.partyIdentifierAttach,
       })
 
+      const provider = decoded.provider.trim().toUpperCase()
+      const scheme = decoded.scheme.trim().toUpperCase()
+      const value = decoded.value.trim()
+
+      const reason = Option.getOrUndefined(
+        Option.flatMap(schemesOption, (schemes) =>
+          Option.fromNullishOr(schemes.rejection({ provider, scheme, value })),
+        ),
+      )
+
+      if (reason !== undefined) {
+        return yield* Effect.fail(
+          new ExternalIdentifierInvalid({ tenantId: decoded.tenantId, provider, scheme, reason }),
+        )
+      }
+
       return yield* partyStore.attachIdentifier(
         decoded.tenantId,
         decoded.partyId,
-        decoded.provider.trim().toUpperCase(),
-        decoded.scheme.trim().toUpperCase(),
+        provider,
+        scheme,
         decoded.scope.trim(),
         decoded.legalEntityId ?? null,
-        decoded.value.trim(),
+        value,
       )
     })
 
