@@ -35,6 +35,7 @@ export default defineConfig({
     "settlement",
     "numbering",
     "approvals",
+    "custom_fields",
     "product",
     "tax",
   ],

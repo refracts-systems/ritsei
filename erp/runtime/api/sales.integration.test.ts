@@ -10,6 +10,7 @@ import * as Path from "effect/Path"
 
 import { partial } from "../../../tests/support/partial.ts"
 import {
+  SalesCustomerFields,
   SalesDocumentService,
   type SalesDocumentServiceContract,
   SalesService,
@@ -71,6 +72,8 @@ const documentQuotation: SalesQuotationType = {
   lines: [],
 }
 
+type SalesCustomerFieldsContract = typeof SalesCustomerFields.Service
+
 const salesDocuments = partial<SalesDocumentServiceContract>()({
   draftQuotation: () => Effect.succeed(documentQuotation),
   getQuotation: () => Effect.succeed(documentQuotation),
@@ -119,6 +122,9 @@ it.layer(TestHttpServices)("sales API contracts", (it) => {
         Layer.provide(bearer),
         Layer.provide(Layer.succeed(SalesService, salesService(observedInputs))),
         Layer.provide(Layer.succeed(SalesDocumentService, salesDocuments)),
+        Layer.provide(
+          Layer.succeed(SalesCustomerFields, partial<SalesCustomerFieldsContract>()({})),
+        ),
       )
 
       const client = yield* HttpApiTest.groups(RitseiApi, ["Sales"]).pipe(

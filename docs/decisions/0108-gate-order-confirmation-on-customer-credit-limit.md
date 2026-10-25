@@ -1,6 +1,6 @@
 # ADR-0108: Gate Order Confirmation on a Customer Credit Limit
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-24
 - Amends: None
 - Compatible with: ADR-0091, ADR-0099, ADR-0102
@@ -25,23 +25,32 @@ read from Billing. Billing depends on Sales, so Sales cannot import Billing.
    `sales.credit_limit.configure`; `getCreditStanding` returns the limit, what the customer owes,
    and what is left, behind the existing customer read capability.
 2. **Sales asks through a port, Billing answers.** Sales defines `CreditExposure` with one operation,
-   `receivableBalance(tenant, legal entity, party)`. Billing implements it by summing the open amount
-   of the party's invoices less the open amount of their credit notes in that legal entity, and the
-   runtime provides Billing's implementation to Sales. Neither module imports the other's internals.
-3. **Confirming a draft order is refused when the balance plus the order total exceeds the limit.**
+   `receivableBalance(tenant, legal entity, party)` and `invoicedNet(tenant, order ids)`. Billing
+   implements them: the first sums the open amount of the party's invoices less the open amount of
+   their credit notes in that legal entity, the second the net amount invoiced against the given sales
+   orders. The runtime provides Billing's implementation to Sales. Neither module imports the other's
+   internals.
+3. **Confirming a draft order is refused when what the customer carries plus the order total exceeds
+   the limit.** What the customer carries is their open receivables plus their confirmed orders less
+   what has been invoiced against those orders (`confirmedNotInvoiced`, never below zero).
    `SalesService.confirmOrder` fails with `CreditLimitExceeded` before the order changes. A retried
    confirmation of an order that is already confirmed is not checked again. The delivery and invoicing
    of confirmed orders is not gated.
-4. **Only customers with a party role and a legal entity have an exposure.** A customer created
+4. **The check runs while the customer is locked.** Confirmation locks the customer row inside its
+   transaction, then reads the customer's confirmed orders, asks the port, decides, and confirms.
+   Two confirmations for one customer therefore run one after the other, and the second sees the
+   first as confirmed.
+5. **Only customers with a party role and a legal entity have an exposure.** A customer created
    before party roles (ADR-0099) has no legal entity and is never gated.
 
 ## Consequences
 
-- The check reads the balance and then confirms; two orders confirmed at the same moment can both pass.
-  The limit is a control, not a hard ledger invariant. Closing the gap would need a lock on the
-  customer.
-- Confirmed but not yet invoiced orders do not count against the limit, only invoices do. Counting
-  them needs a read of Sales' own confirmed orders and is a later refinement.
+- Locking the customer serializes confirmations for that customer only; other customers are not
+  affected. The balance comes from Billing at the moment of the check, so an invoice posted a
+  moment later is not seen; it moves the amount from "confirmed, not yet invoiced" to "open", which
+  does not change the total carried.
+- The committed amount is clamped at zero, so an over-invoiced order never lowers what other orders
+  commit.
 - The exposure port does not check the caller's billing permissions: the policy applies to whoever
   confirms.
 

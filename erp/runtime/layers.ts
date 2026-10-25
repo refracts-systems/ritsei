@@ -21,6 +21,8 @@ import {
 import { MessagingLive as MessagingServiceLayer } from "../../framework/modules/messaging/mod.ts"
 import { NumberingLive } from "../../framework/modules/numbering/mod.ts"
 import { ApprovalsLive } from "../../framework/modules/approvals/mod.ts"
+import { CustomFieldsLive, customFieldPointsOf } from "../../framework/modules/custom-fields/mod.ts"
+import { ErpModules } from "./modules.gen.ts"
 import {
   PartyContactsLive,
   PartyEventPublisherLive,
@@ -33,7 +35,11 @@ import {
   ProcessStudioLive,
 } from "../modules/process/mod.ts"
 import { ProcurementLive, PurchaseDocumentsLive } from "../modules/procurement/mod.ts"
-import { SalesDocumentsLive, SalesLive as SalesServiceLayer } from "../modules/sales/mod.ts"
+import {
+  SalesCustomerFieldsLive,
+  SalesDocumentsLive,
+  SalesLive as SalesServiceLayer,
+} from "../modules/sales/mod.ts"
 import {
   PostgresDatabaseLive,
   PostgresReadYourWritesLive,
@@ -46,7 +52,7 @@ import {
 import { IdentityAccountAuthorizerLive } from "./adapters/identity-account-authorizer.ts"
 import { identityProviderLayer } from "./authentication/oidc.ts"
 import type { RitseiRuntimeConfiguration } from "./config.ts"
-import { ProductLive } from "../modules/product/mod.ts"
+import { ProductFieldsLive, ProductLive } from "../modules/product/mod.ts"
 import { TaxLive } from "../modules/tax/mod.ts"
 import { BillingCreditExposureLive, BillingLive } from "../modules/billing/mod.ts"
 import { SettlementLive } from "../modules/settlement/mod.ts"
@@ -190,6 +196,27 @@ export const serviceLayers = (
 
   const ProductServiceLive = ProductLive.pipe(Layer.provide(BusinessRequirements))
 
+  // The document types whose modules released custom fields in their manifests (ADR-0109).
+  const CustomFieldPointsLive = customFieldPointsOf(
+    ErpModules.flatMap((manifest) =>
+      (manifest.extensionPoints ?? []).flatMap((point) =>
+        point.kind === "custom-fields" ? [point.documentType] : [],
+      ),
+    ),
+  )
+
+  const CustomFieldServiceLive = CustomFieldsLive.pipe(
+    Layer.provide(Layer.merge(BusinessRequirements, CustomFieldPointsLive)),
+  )
+
+  const ProductFieldsServiceLive = ProductFieldsLive.pipe(
+    Layer.provide(Layer.merge(BusinessRequirements, CustomFieldServiceLive)),
+  )
+
+  const SalesCustomerFieldsServiceLive = SalesCustomerFieldsLive.pipe(
+    Layer.provide(Layer.merge(BusinessRequirements, CustomFieldServiceLive)),
+  )
+
   const StockKeepingServiceLive = StockKeepingLive.pipe(
     Layer.provide(Layer.mergeAll(BusinessRequirements, LedgerLive, ProductServiceLive)),
   )
@@ -293,6 +320,8 @@ export const serviceLayers = (
     StockKeepingServiceLive,
     TaxServiceLive,
     SalesDocumentServiceLive,
+    SalesCustomerFieldsServiceLive,
+    ProductFieldsServiceLive,
     BillingServiceLive,
     SettlementServiceLive,
     DocumentsServiceLive,

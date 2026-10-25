@@ -7,7 +7,7 @@ import { Principal } from "../../../../framework/modules/auth/mod.ts"
 import { AuthorizationService } from "../../../../framework/modules/authorization/mod.ts"
 import { MessagingService } from "../../../../framework/modules/messaging/mod.ts"
 import { SalesCapabilities } from "./capabilities.ts"
-import { CreditExposure, exceedsCreditLimit } from "./credit.ts"
+import { committedAmount, CreditExposure, exceedsCreditLimit } from "./credit.ts"
 import { CreditLimitExceeded } from "./errors.ts"
 import {
   CancelConfirmedOrderInput,
@@ -32,7 +32,7 @@ import {
   SalesOrderNotFound,
 } from "./errors.ts"
 import { SalesOrderConfirmedEvent, SalesOrderConfirmedEventPayload } from "./events.ts"
-import type { SalesStore } from "./store.ts"
+import type { CreditCheck, SalesStore } from "./store.ts"
 import { CancellationMutation, ConfirmationMutation, ConfirmedTotalLookup } from "./store.ts"
 
 export const makeSalesServiceFromStore = <R>(storeEffect: Effect.Effect<SalesStore, never, R>) =>
@@ -166,58 +166,81 @@ export const makeSalesServiceFromStore = <R>(storeEffect: Effect.Effect<SalesSto
         idempotencyKey: decoded.idempotencyKey.trim(),
       }
 
-      // A draft order is checked against the customer's credit limit; a retried confirmation is not.
-      const credit = yield* store.getCreditContext(decoded)
+      // A draft order is checked against the customer's credit limit while the customer is
+      // locked; a retried confirmation of a confirmed order is not.
+      const checkCredit: CreditCheck = (credit) =>
+        Effect.gen(function* () {
+          if (
+            credit.status !== "draft" ||
+            credit.creditLimit === null ||
+            credit.partyId === null ||
+            credit.legalEntityId === null
+          ) {
+            return
+          }
 
-      if (
-        credit?.status === "draft" &&
-        credit.creditLimit !== null &&
-        credit.partyId !== null &&
-        credit.legalEntityId !== null
-      ) {
-        const balance = yield* exposure.receivableBalance({
-          tenantId: decoded.tenantId,
-          legalEntityId: credit.legalEntityId,
-          partyId: credit.partyId,
+          const receivableBalance = yield* exposure.receivableBalance({
+            tenantId: decoded.tenantId,
+            legalEntityId: credit.legalEntityId,
+            partyId: credit.partyId,
+          })
+
+          const invoiced = yield* exposure.invoicedNet({
+            tenantId: decoded.tenantId,
+            orderIds: credit.confirmedOrders.map((order) => order.id),
+          })
+
+          const confirmedNotInvoiced = committedAmount(
+            credit.confirmedOrders.map((order) => order.total),
+            invoiced,
+          )
+
+          if (
+            exceedsCreditLimit(
+              credit.creditLimit,
+              { receivableBalance, confirmedNotInvoiced },
+              credit.total,
+            )
+          ) {
+            return yield* Effect.fail(
+              new CreditLimitExceeded({
+                tenantId: decoded.tenantId,
+                orderId: decoded.orderId,
+                customerId: credit.customerId,
+                creditLimit: credit.creditLimit,
+                receivableBalance,
+                orderTotal: credit.total,
+              }),
+            )
+          }
         })
 
-        if (exceedsCreditLimit(credit.creditLimit, balance, credit.total)) {
-          return yield* Effect.fail(
-            new CreditLimitExceeded({
-              tenantId: decoded.tenantId,
-              orderId: decoded.orderId,
-              customerId: credit.customerId,
-              creditLimit: credit.creditLimit,
-              receivableBalance: balance,
-              orderTotal: credit.total,
-            }),
-          )
-        }
-      }
-
-      const mutation = yield* store.confirmOrder(normalized, (order) =>
-        Schema.decodeUnknownEffect(SalesOrderConfirmedEventPayload)({
-          orderId: order.id,
-          total: order.total,
-        }).pipe(
-          Effect.flatMap((payload) =>
-            messaging.append({
-              eventId: uuidv7(),
-              eventType: SalesOrderConfirmedEvent.id,
-              eventVersion: SalesOrderConfirmedEvent.version,
-              tenantId: normalized.tenantId,
-              aggregateType: SalesOrderConfirmedEvent.aggregateType,
-              aggregateId: order.id,
-              commandId: normalized.commandId,
-              correlationId: normalized.correlationId,
-              causationId: normalized.causationId,
-              idempotencyKey: normalized.idempotencyKey,
-              actorPrincipalId: normalized.principal.userAccountId,
-              occurredAt: order.confirmedAt!,
-              payload,
-            }),
+      const mutation = yield* store.confirmOrder(
+        normalized,
+        (order) =>
+          Schema.decodeUnknownEffect(SalesOrderConfirmedEventPayload)({
+            orderId: order.id,
+            total: order.total,
+          }).pipe(
+            Effect.flatMap((payload) =>
+              messaging.append({
+                eventId: uuidv7(),
+                eventType: SalesOrderConfirmedEvent.id,
+                eventVersion: SalesOrderConfirmedEvent.version,
+                tenantId: normalized.tenantId,
+                aggregateType: SalesOrderConfirmedEvent.aggregateType,
+                aggregateId: order.id,
+                commandId: normalized.commandId,
+                correlationId: normalized.correlationId,
+                causationId: normalized.causationId,
+                idempotencyKey: normalized.idempotencyKey,
+                actorPrincipalId: normalized.principal.userAccountId,
+                occurredAt: order.confirmedAt!,
+                payload,
+              }),
+            ),
           ),
-        ),
+        checkCredit,
       )
 
       return yield* ConfirmationMutation.$match(mutation, {

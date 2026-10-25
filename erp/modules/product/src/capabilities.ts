@@ -2,4 +2,5 @@
 export const ProductCapabilities = {
   productRead: "product.product.read",
   productCreate: "product.product.create",
+  customFieldConfigure: "product.custom_field.configure",
 } as const

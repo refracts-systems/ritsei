@@ -36,6 +36,13 @@ export { authorizationSchema, memberships, tenantMemberships } from "./authoriza
 
 export { createdAt, id, money, updatedAt, uuidv7 } from "./common.ts"
 
+export {
+  customFieldDefinitions,
+  customFieldKind,
+  customFieldsSchema,
+  customFieldValues,
+} from "./custom-fields.ts"
+
 export { externalSubjectMappings, identitySchema, userAccounts } from "./identity.ts"
 
 export {

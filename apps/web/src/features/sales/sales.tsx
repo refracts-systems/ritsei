@@ -38,6 +38,7 @@ import {
 import { presentFields, definedFields } from "../../shared/api.ts"
 import { DraftQuotationDialog } from "./draft-quotation-dialog.tsx"
 import { CustomerCredit } from "./customer-credit.tsx"
+import { CustomerFields } from "./customer-fields.tsx"
 import { confirmFailureMessages } from "./documents.ts"
 import { OrderDelivery } from "./order-delivery.tsx"
 import { QuotationLifecycle } from "./quotation-lifecycle.tsx"
@@ -606,6 +607,7 @@ function CustomerDetail(props: { id: string }) {
         </Show>
       </QueryBoundary>
       <CustomerCredit customerId={id} />
+      <CustomerFields customerId={id} />
     </section>
   )
 }
