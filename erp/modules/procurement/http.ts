@@ -38,7 +38,6 @@ import {
   PurchaseOrder,
   PurchaseOrderLine,
   PurchaseOrderStatus,
-  PurchaseReceiptLineInput,
   SupplierAccount,
   SupplierPrice,
 } from "./mod.ts"
@@ -50,7 +49,6 @@ const CreatedPurchaseOrder = HttpApiSchema.WithHeaders(
   { "x-ritsei-consistency-token": Schema.optionalKey(ConsistencyToken) },
 )
 
-const CreatedGoodsReceipt = GoodsReceipt.pipe(HttpApiSchema.status(201))
 const CreatedPricedPurchaseOrder = PricedPurchaseOrder.pipe(HttpApiSchema.status(201))
 const CreatedPurchaseStockDocument = PurchaseStockDocument.pipe(HttpApiSchema.status(201))
 
@@ -133,17 +131,6 @@ export const ProcurementHttpGroup = HttpApiGroup.make("Procurement").add(
       ),
     },
     success: Schema.Array(GoodsReceipt),
-    error: errors,
-  }).middleware(BearerAuth),
-  HttpApiEndpoint.post("receivePurchaseOrder", "/procurement/purchase-orders/:id/receipts", {
-    params: { id: Uuid },
-    headers: tenantHeaders,
-    payload: Schema.Struct({
-      warehouseId: Uuid,
-      idempotencyKey: ShortString,
-      lines: BoundedArray(PurchaseReceiptLineInput).check(Schema.isMinLength(1)),
-    }),
-    success: CreatedGoodsReceipt,
     error: errors,
   }).middleware(BearerAuth),
   HttpApiEndpoint.get("listSupplierPrices", "/procurement/supplier-prices", {
@@ -394,25 +381,6 @@ export const ProcurementHttpHandlers = HttpApiBuilder.group(
                 tenantId: headers["x-tenant-id"],
                 purchaseOrderId: params.id,
                 ...query,
-              }),
-            )
-          }),
-        )
-        .handle(
-          "receivePurchaseOrder",
-          Effect.fn("Http.Procurement.receivePurchaseOrder")(function* ({
-            headers,
-            params,
-            payload,
-          }) {
-            const principal = yield* CurrentPrincipal
-
-            return yield* coreApiEffect(
-              procurement.receivePurchaseOrder({
-                principal,
-                tenantId: headers["x-tenant-id"],
-                purchaseOrderId: params.id,
-                ...payload,
               }),
             )
           }),

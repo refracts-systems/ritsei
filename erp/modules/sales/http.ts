@@ -40,7 +40,6 @@ import {
 } from "./mod.ts"
 
 const CreatedCustomer = Customer.pipe(HttpApiSchema.status(201))
-const CreatedQuotation = Quotation.pipe(HttpApiSchema.status(201))
 const CreatedOrder = SalesOrder.pipe(HttpApiSchema.status(201))
 const CreatedSalesQuotation = SalesQuotation.pipe(HttpApiSchema.status(201))
 
@@ -90,12 +89,6 @@ export const SalesHttpGroup = HttpApiGroup.make("Sales").add(
     params: { id: Uuid },
     headers: tenantHeaders,
     success: Quotation,
-    error: errors,
-  }).middleware(BearerAuth),
-  HttpApiEndpoint.post("createQuotation", "/sales/quotations", {
-    headers: tenantHeaders,
-    payload: Schema.Struct({ customerId: Uuid, total: FinancialMajorAmount }),
-    success: CreatedQuotation,
     error: errors,
   }).middleware(BearerAuth),
   HttpApiEndpoint.get("listOrders", "/sales/orders", {
@@ -298,16 +291,6 @@ export const SalesHttpHandlers = HttpApiBuilder.group(SalesHttpApi, "Sales", (ha
               tenantId: headers["x-tenant-id"],
               quotationId: params.id,
             }),
-          )
-        }),
-      )
-      .handle(
-        "createQuotation",
-        Effect.fn("Http.Sales.createQuotation")(function* ({ headers, payload }) {
-          const principal = yield* CurrentPrincipal
-
-          return yield* coreApiEffect(
-            sales.createQuotation({ principal, tenantId: headers["x-tenant-id"], ...payload }),
           )
         }),
       )

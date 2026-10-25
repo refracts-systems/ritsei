@@ -269,7 +269,6 @@ it("generates deterministic browser-only contracts and canonical endpoint paths"
     createCustomer: RitseiApi.groups.Sales.endpoints.createCustomer.path,
     listQuotations: RitseiApi.groups.Sales.endpoints.listQuotations.path,
     getQuotation: RitseiApi.groups.Sales.endpoints.getQuotation.path,
-    createQuotation: RitseiApi.groups.Sales.endpoints.createQuotation.path,
     listOrders: RitseiApi.groups.Sales.endpoints.listOrders.path,
     getOrder: RitseiApi.groups.Sales.endpoints.getOrder.path,
     createOrder: RitseiApi.groups.Sales.endpoints.createOrder.path,

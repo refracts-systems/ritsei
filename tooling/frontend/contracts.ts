@@ -269,11 +269,6 @@ export function procurementSource(): string {
         ),
       ),
     }),
-    ReceivePurchaseOrderInput: Schema.Struct({
-      warehouseId: Uuid,
-      idempotencyKey: ShortString,
-      lines: Schema.Array(PurchaseReceiptLineInput).check(Schema.isMinLength(1)),
-    }),
     ApiError,
   })
 
@@ -292,7 +287,6 @@ export function procurementSource(): string {
       confirmPurchaseOrder: endpoints.confirmPurchaseOrder.path,
       cancelPurchaseOrder: endpoints.cancelPurchaseOrder.path,
       listPurchaseReceipts: endpoints.listPurchaseReceipts.path,
-      receivePurchaseOrder: endpoints.receivePurchaseOrder.path,
     })} as const`,
     "",
   ].join("\n\n")
@@ -598,7 +592,6 @@ export function salesSource(): string {
       ),
     }),
     GetQuotationInput: Schema.Struct({ quotationId: Uuid }),
-    CreateQuotationInput: Schema.Struct({ customerId: Uuid, total: Money }),
     ListOrdersInput: Schema.Struct({
       customerId: Schema.optionalKey(Uuid),
       status: Schema.optionalKey(SalesOrderStatus),
@@ -636,7 +629,6 @@ export function salesSource(): string {
       createCustomer: endpoints.createCustomer.path,
       listQuotations: endpoints.listQuotations.path,
       getQuotation: endpoints.getQuotation.path,
-      createQuotation: endpoints.createQuotation.path,
       listOrders: endpoints.listOrders.path,
       getOrder: endpoints.getOrder.path,
       createOrder: endpoints.createOrder.path,
