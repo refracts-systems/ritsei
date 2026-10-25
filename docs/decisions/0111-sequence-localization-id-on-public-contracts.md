@@ -1,0 +1,57 @@
+# ADR-0111: Build Indonesian Localization on Public Contracts, in Two Stages
+
+- Status: Proposed
+- Date: 2026-10-25
+- Amends: None
+- Compatible with: ADR-0013, ADR-0016, ADR-0091, ADR-0109
+- Supersedes: None
+- Superseded by: None
+
+> **Related documents**
+>
+> - ADR index: [`./README.md`](./README.md)
+> - ERP parity plan, phases 7 and 8 and open question 1:
+>   [`../proposals/erp-module-parity-plan.md`](../proposals/erp-module-parity-plan.md)
+> - Follow-ups: [`../proposals/erp-chains-next-steps.md`](../proposals/erp-chains-next-steps.md) (F5)
+
+## Context
+
+The flagship segment is an Indonesian trading company, so PPN, withholding, taxpayer identifiers,
+and the Coretax e-Faktur export are needed. ADR-0016 keeps the neutral modules free of any
+jurisdiction, so all of it lives in a `localization-id` module built only on public contracts. Some of
+what it needs is public today and some is not, and the parity plan leaves open whether Coretax output
+is required in the first pilot month.
+
+## Decision
+
+1. **`erp/modules/localization-id` is one module that imports only public entry points.** It owns no
+   business document. It contributes data and rules to modules that release a point for them.
+2. **Stage A uses what is public or is small to release, and needs no custom fields:**
+   - a chart-of-accounts template for Indonesian trading, through a template registry that
+     Accounting releases (today the neutral template is built in);
+   - PPN tax codes and the product tax defaults, created through the Tax module's public commands by a
+     seed command, never hard-coded in Tax;
+   - NPWP and NIK identifier schemes with their validation, through Party's identifier scheme
+     contract.
+3. **Stage B waits for ADR-0109 and for the owner's answer on pilots:**
+   - PPh 23 and PPh 4(2) withholding on supplier bills, which needs a Billing extension point for
+     withheld amounts;
+   - the Coretax e-Faktur export, a versioned adapter in `framework/modules/integrations` that runs
+     as a job and records what was submitted (ADR-0013); its output format version is part of the
+     adapter's contract.
+4. **Rules carry their jurisdiction and effective dates.** PPN rates and DPP basis rules are
+   versioned data with a validity period, so a rate change is a new row, not a code change.
+5. **If the first pilot month needs Coretax output,** Stage B moves ahead of other Phase 8 work; that
+   is the owner's decision (open question 1) and does not change the shape above.
+
+## Consequences
+
+- Stage A can start without any new extension point beyond Accounting's template registry.
+- Tax statutory text and rate tables are not in this ADR; the module's own document owns them.
+- A second jurisdiction would be a second module with the same shape, which tests that the neutral
+  modules stayed neutral.
+
+## Alternatives Considered
+
+- **Put PPN codes in the neutral Tax module:** rejected by ADR-0016.
+- **Build withholding and Coretax first:** rejected; they need extension points that do not exist yet.
