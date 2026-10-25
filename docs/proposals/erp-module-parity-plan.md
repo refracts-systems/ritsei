@@ -492,8 +492,10 @@ the module's released contracts. Item 1 waits for the D1 ADR.
 
 ## 11. Open questions for the owner
 
-1. Is the PPN and Coretax output a hard requirement for the first pilot month? If so, part of
-   `localization-id` moves from Phase 8 into Phase 5.
+1. ~~Is the PPN and Coretax output a hard requirement for the first pilot month?~~ **Answered:**
+   Coretax output is not required in the first pilot month; PPN is calculated from tax codes.
+   `localization-id` stays in Phases 7 and 8 and is sequenced by
+   [ADR-0111](../decisions/0111-sequence-localization-id-on-public-contracts.md).
 2. Should supplier bills live in Billing (one obligation owner, as proposed in D2) or in
    Procurement (closer to Odoo's purchase-centric flow)?
 3. Do the target pilots need lots and expiry dates (pharma, food) in the first month? If so, part of

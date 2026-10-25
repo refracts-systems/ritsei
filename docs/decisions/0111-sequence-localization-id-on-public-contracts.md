@@ -1,6 +1,6 @@
 # ADR-0111: Build Indonesian Localization on Public Contracts, in Two Stages
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-25
 - Amends: None
 - Compatible with: ADR-0013, ADR-0016, ADR-0091, ADR-0109
@@ -33,7 +33,7 @@ is required in the first pilot month.
      seed command, never hard-coded in Tax;
    - NPWP and NIK identifier schemes with their validation, through Party's identifier scheme
      contract.
-3. **Stage B waits for ADR-0109 and for the owner's answer on pilots:**
+3. **Stage B waits for ADR-0109 (accepted) and for Stage A:**
    - PPh 23 and PPh 4(2) withholding on supplier bills, which needs a Billing extension point for
      withheld amounts;
    - the Coretax e-Faktur export, a versioned adapter in `framework/modules/integrations` that runs
@@ -41,8 +41,9 @@ is required in the first pilot month.
      adapter's contract.
 4. **Rules carry their jurisdiction and effective dates.** PPN rates and DPP basis rules are
    versioned data with a validity period, so a rate change is a new row, not a code change.
-5. **If the first pilot month needs Coretax output,** Stage B moves ahead of other Phase 8 work; that
-   is the owner's decision (open question 1) and does not change the shape above.
+5. **Coretax output is not required in the first pilot month** (the owner's answer to open question
+   1 of the parity plan). Stage B therefore stays after custom fields and after Stage A. PPN is
+   calculated from tax codes from the first month, which Stage A seeds.
 
 ## Consequences
 
