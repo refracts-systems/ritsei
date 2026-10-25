@@ -99,6 +99,12 @@ export function CustomerCredit(props: { customerId: string }) {
                     {formatDecimal(standing.receivableBalance)}
                   </dd>
                 </div>
+                <div class={layout.detailItem}>
+                  <dt class={layout.detailTerm}>Confirmed, not yet invoiced</dt>
+                  <dd class={[layout.detailValue, layout.numeric]}>
+                    {formatDecimal(standing.confirmedNotInvoiced)}
+                  </dd>
+                </div>
                 <Show when={standing.available}>
                   {(available) => (
                     <div class={layout.detailItem}>

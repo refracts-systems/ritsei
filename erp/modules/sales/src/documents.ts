@@ -30,7 +30,7 @@ import { NumberingService } from "../../../../framework/modules/numbering/mod.ts
 import { PartyService } from "../../party/mod.ts"
 import { TaxService } from "../../tax/mod.ts"
 import { SalesCapabilities } from "./capabilities.ts"
-import { CreditExposure, standingOf } from "./credit.ts"
+import { committedAmount, CreditExposure, standingOf } from "./credit.ts"
 import {
   AssignCustomerPriceListInput,
   CreatePartyCustomerInput,
@@ -286,7 +286,35 @@ export const makeSalesDocumentService = Effect.gen(function* () {
             partyId: customer.partyId,
           })
 
-    return standingOf(customerId, customer.creditLimit, balance)
+    const confirmed = yield* database.query(
+      (db) =>
+        db
+          .select({ id: orders.id, total: orders.total })
+          .from(orders)
+          .where(
+            and(
+              eq(orders.tenantId, tenantId),
+              eq(orders.customerId, customerId),
+              eq(orders.status, "confirmed"),
+            ),
+          ),
+      "sales.customer.credit.confirmed",
+    )
+
+    const invoiced = yield* exposure.invoicedNet({
+      tenantId,
+      orderIds: confirmed.map((order) => order.id),
+    })
+
+    return standingOf(
+      customerId,
+      customer.creditLimit,
+      balance,
+      committedAmount(
+        confirmed.map((order) => order.total),
+        invoiced,
+      ),
+    )
   })
 
   const getCreditStanding = Effect.fn("SalesDocumentService.getCreditStanding")(function* (

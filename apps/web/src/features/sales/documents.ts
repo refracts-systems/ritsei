@@ -177,6 +177,7 @@ const CreditStanding = Schema.Struct({
   customerId: Uuid,
   creditLimit: Schema.NullOr(Amount),
   receivableBalance: Amount,
+  confirmedNotInvoiced: Amount,
   available: Schema.NullOr(Amount),
 })
 
