@@ -13,4 +13,5 @@ export const SalesCapabilities = {
   quotationDecide: "sales.quotation.decide",
   deliveryRecord: "sales.delivery.record",
   creditLimitConfigure: "sales.credit_limit.configure",
+  customFieldConfigure: "sales.custom_field.configure",
 } as const

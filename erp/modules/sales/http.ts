@@ -25,6 +25,12 @@ import {
   moduleApi,
 } from "../../../framework/modules/http/mod.ts"
 import {
+  CustomFieldDefinition,
+  CustomFieldKey,
+  CustomFieldKind,
+  CustomFieldValues,
+} from "../../../framework/modules/custom-fields/mod.ts"
+import {
   CreditStanding,
   Customer,
   DiscountPercent,
@@ -36,12 +42,21 @@ import {
   SalesOrderLine,
   SalesOrderStatus,
   SalesQuotation,
+  SalesCustomerFields,
   SalesService,
 } from "./mod.ts"
 
 const CreatedCustomer = Customer.pipe(HttpApiSchema.status(201))
 const CreatedOrder = SalesOrder.pipe(HttpApiSchema.status(201))
 const CreatedSalesQuotation = SalesQuotation.pipe(HttpApiSchema.status(201))
+
+const CustomFieldPayload = Schema.Struct({
+  key: CustomFieldKey,
+  label: ShortString,
+  kind: CustomFieldKind,
+  required: Schema.optionalKey(Schema.Boolean),
+  choices: Schema.optionalKey(BoundedArray(ShortString).check(Schema.isMinLength(1))),
+})
 
 export const SalesHttpGroup = HttpApiGroup.make("Sales").add(
   HttpApiEndpoint.get("listCustomers", "/sales/customers", {
@@ -164,6 +179,30 @@ export const SalesHttpGroup = HttpApiGroup.make("Sales").add(
     success: SalesQuotation,
     error: errors,
   }).middleware(BearerAuth),
+  HttpApiEndpoint.get("listSalesCustomFields", "/sales/custom-fields", {
+    headers: tenantHeaders,
+    success: Schema.Array(CustomFieldDefinition),
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.post("defineSalesCustomField", "/sales/custom-fields", {
+    headers: tenantHeaders,
+    payload: CustomFieldPayload,
+    success: CustomFieldDefinition.pipe(HttpApiSchema.status(201)),
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.get("getCustomerCustomFields", "/sales/customers/:id/custom-fields", {
+    params: { id: Uuid },
+    headers: tenantHeaders,
+    success: CustomFieldValues,
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.post("setCustomerCustomFields", "/sales/customers/:id/custom-fields", {
+    params: { id: Uuid },
+    headers: tenantHeaders,
+    payload: Schema.Struct({ values: CustomFieldValues }),
+    success: CustomFieldValues,
+    error: errors,
+  }).middleware(BearerAuth),
   HttpApiEndpoint.get("getCreditStanding", "/sales/customers/:id/credit", {
     params: { id: Uuid },
     headers: tenantHeaders,
@@ -224,6 +263,11 @@ export const SalesHttpErrors = apiErrorMapping({
   QuotationNotFound: "not_found",
   SalesOrderConfirmationIdempotencyConflict: "conflict",
   CreditLimitExceeded: "conflict",
+  CustomFieldAlreadyDefined: "conflict",
+  CustomFieldDocumentTypeNotReleased: "conflict",
+  CustomFieldNotDefined: "conflict",
+  CustomFieldRequired: "conflict",
+  CustomFieldValueInvalid: "conflict",
   SalesOrderInvalidState: "conflict",
   SalesOrderNotFound: "not_found",
 })
@@ -234,6 +278,7 @@ export const SalesHttpHandlers = HttpApiBuilder.group(SalesHttpApi, "Sales", (ha
   Effect.gen(function* () {
     const sales = yield* SalesService
     const documents = yield* SalesDocumentService
+    const customerFields = yield* SalesCustomerFields
 
     return handlers
       .handle(
@@ -377,6 +422,55 @@ export const SalesHttpHandlers = HttpApiBuilder.group(SalesHttpApi, "Sales", (ha
               principal,
               tenantId: headers["x-tenant-id"],
               quotationId: params.id,
+            }),
+          )
+        }),
+      )
+      .handle(
+        "listSalesCustomFields",
+        Effect.fn("Http.Sales.listSalesCustomFields")(function* ({ headers }) {
+          const principal = yield* CurrentPrincipal
+
+          return yield* coreApiEffect(
+            customerFields.listFields({ principal, tenantId: headers["x-tenant-id"] }),
+          )
+        }),
+      )
+      .handle(
+        "defineSalesCustomField",
+        Effect.fn("Http.Sales.defineSalesCustomField")(function* ({ headers, payload }) {
+          const principal = yield* CurrentPrincipal
+
+          return yield* coreApiEffect(
+            customerFields.defineField({ principal, tenantId: headers["x-tenant-id"], ...payload }),
+          )
+        }),
+      )
+      .handle(
+        "getCustomerCustomFields",
+        Effect.fn("Http.Sales.getCustomerCustomFields")(function* ({ headers, params }) {
+          const principal = yield* CurrentPrincipal
+
+          return yield* coreApiEffect(
+            customerFields.getValues({
+              principal,
+              tenantId: headers["x-tenant-id"],
+              documentId: params.id,
+            }),
+          )
+        }),
+      )
+      .handle(
+        "setCustomerCustomFields",
+        Effect.fn("Http.Sales.setCustomerCustomFields")(function* ({ headers, params, payload }) {
+          const principal = yield* CurrentPrincipal
+
+          return yield* coreApiEffect(
+            customerFields.setValues({
+              principal,
+              tenantId: headers["x-tenant-id"],
+              documentId: params.id,
+              values: payload.values,
             }),
           )
         }),

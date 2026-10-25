@@ -21,3 +21,5 @@ export { ProductAlreadyExists, ProductNotFound } from "./src/errors.ts"
 export { makeProductService, makeProductTestLayer, ProductLive } from "./src/layers.ts"
 
 export { ProductModule } from "./manifest.ts"
+
+export { ProductFields, ProductFieldsLive } from "./src/custom-fields.ts"

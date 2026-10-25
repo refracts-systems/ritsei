@@ -12,5 +12,6 @@ export const SalesModule = defineModule({
   events: SalesTypedEventCatalog,
   consumes: [],
   http: ["Sales"],
+  extensionPoints: [{ kind: "custom-fields", documentType: "sales.customer" }],
   pages: ["/sales", "/sales/customers/:id", "/sales/quotations/:id", "/sales/orders/:id"],
 })

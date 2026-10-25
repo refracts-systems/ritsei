@@ -14,11 +14,13 @@ import {
 } from "../../../../framework/modules/authorization/mod.ts"
 import { BearerAuth, CurrentPrincipal, moduleApi } from "../../../../framework/modules/http/mod.ts"
 import { validateModuleRegistry } from "../../../../framework/modules/module/mod.ts"
+import { partial } from "../../../../tests/support/partial.ts"
 import { ProductHttpGroup, ProductHttpHandlers } from "../http.ts"
 import {
   ProductAlreadyExists,
   makeProductTestLayer,
   ProductCapabilities,
+  ProductFields,
   ProductModule,
   ProductService,
 } from "../mod.ts"
@@ -102,7 +104,11 @@ it.layer(TestHttpServices)("product HTTP endpoint", (it) => {
         next(HttpClientRequest.bearerToken(request, "product-token")),
       )
 
-      const handlers = ProductHttpHandlers.pipe(Layer.provide(bearer), Layer.provide(granted))
+      const handlers = ProductHttpHandlers.pipe(
+        Layer.provide(bearer),
+        Layer.provide(granted),
+        Layer.provide(Layer.succeed(ProductFields, partial<typeof ProductFields.Service>()({}))),
+      )
 
       const client = yield* HttpApiTest.groups(moduleApi(ProductHttpGroup), ["Product"]).pipe(
         Effect.provide(Layer.mergeAll(handlers, bearerClient, bearer)),

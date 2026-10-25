@@ -34,19 +34,23 @@ one is released. This is that first one.
 3. **Kinds are closed:** text, number, date, boolean, and a choice from a list. Each definition
    compiles to an Effect Schema that validates a value on write. There are no formulas, no scripts,
    and no cross-field logic (the Studio features rejected in the parity plan).
-4. **The owner decides where values appear.** The owner's service returns them under one `custom`
-   key of its DTO and accepts them on its write commands through the framework's validator; the
-   owner's authorization applies to both. A new capability per owner, for example
-   `product.custom_field.configure`, gates changing definitions; deny by default.
-5. **First consumers are Product and the Sales customer.** Documents with posting effects (invoices,
+4. **The owner decides where values appear.** The owner exposes them as a sub-resource of the
+   document (`GET` and `POST` `/sales/customers/:id/custom-fields`) and its definitions at
+   `/<module>/custom-fields`, through the framework's validator; the owner's authorization and its
+   own not-found error apply to both. The first release keeps values out of the document's base DTO,
+   so existing contracts do not change; embedding them under a `custom` key is a later, owner-chosen
+   step. A new capability per owner, for example `product.custom_field.configure`, gates changing
+   definitions; deny by default. Reading uses the owner's read capability and writing its existing
+   write capability.
+5. **First consumers are Product and the Sales customer** (the web app shows the customer's). Documents with posting effects (invoices,
    journals) get none: a posted document does not change.
 
 ## Consequences
 
 - Reading a document with custom fields costs one more query by document id; v1 does not index values
   for search or filter lists by them.
-- Removing a definition keeps the values until a tenant administrator purges them, so nothing is lost
-  by accident.
+- Definitions cannot be removed in the first release, so values are never orphaned; retiring a field
+  and purging its values is a later step.
 - Localization modules (ADR-0111) can add jurisdiction fields without touching shared tables.
 
 ## Alternatives Considered
