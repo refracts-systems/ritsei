@@ -60,7 +60,39 @@ registerFonts({
   zh: fontLoader(() => import("pdfnative/fonts/noto-sc-data.js")),
 })
 
-const deterministicCreationDate = new Date("2000-01-01T00:00:00.000Z")
+// pdfnative 1.7.0 formats its supplied Date with local-time getters. Keep its PDF and XMP
+// metadata in UTC without changing the process timezone shared by other requests.
+class UtcMetadataDate extends Date {
+  override getFullYear() {
+    return this.getUTCFullYear()
+  }
+
+  override getMonth() {
+    return this.getUTCMonth()
+  }
+
+  override getDate() {
+    return this.getUTCDate()
+  }
+
+  override getHours() {
+    return this.getUTCHours()
+  }
+
+  override getMinutes() {
+    return this.getUTCMinutes()
+  }
+
+  override getSeconds() {
+    return this.getUTCSeconds()
+  }
+
+  override getTimezoneOffset() {
+    return 0
+  }
+}
+
+const deterministicCreationDate = new UtcMetadataDate("2000-01-01T00:00:00.000Z")
 
 const defaultPolicy: DocumentRenderPolicy = {
   rendererFamily: "native-transactional",
