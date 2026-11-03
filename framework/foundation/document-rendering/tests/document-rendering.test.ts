@@ -4,12 +4,14 @@ import * as Effect from "effect/Effect"
 import {
   canonicalizeJson,
   DocumentArtifactConflict,
+  DocumentArtifactInvalidContent,
   DocumentArtifactStaleWriter,
   DocumentRenderLimitExceeded,
   DocumentRenderPolicyViolation,
   makeDocumentRenderJobPayload,
   createDocumentRenderRequest,
   createDocumentSnapshot,
+  documentRenderFenceScope,
   makeMemoryDocumentArtifactStore,
   sha256Hex,
   validateDocumentRenderPolicy,
@@ -147,7 +149,7 @@ describe("document rendering contracts", () => {
         documentSchemaVersion: 1,
         rendererFamily: "native-transactional" as const,
         rendererVersion: "contract-test",
-        assetVersions: [],
+        assetVersions: ["logo-v1"],
         renderFingerprint: hashA,
         contentHash,
         mediaType: "application/json",
@@ -157,16 +159,18 @@ describe("document rendering contracts", () => {
         createdAt: timestamp,
       }
 
+      const scope = documentRenderFenceScope(metadata)
+
       const first = yield* store.put({
         metadata,
         bytes,
-        fencing: { scope: "document-render:scope", generation: "1" },
+        fencing: { scope, generation: "1" },
       })
 
       const replay = yield* store.put({
         metadata: { ...metadata, artifactId: "018f0000-0000-7000-8000-000000000006" },
         bytes,
-        fencing: { scope: "document-render:scope", generation: "1" },
+        fencing: { scope, generation: "1" },
       })
 
       assert.strictEqual(replay.artifactId, first.artifactId)
@@ -175,11 +179,53 @@ describe("document rendering contracts", () => {
         store.put({
           metadata,
           bytes,
-          fencing: { scope: "document-render:scope", generation: "0" },
+          fencing: { scope, generation: "0" },
         }),
       )
 
       assert.instanceOf(stale, DocumentArtifactStaleWriter)
+
+      const wrongScope = yield* Effect.flip(
+        store.put({
+          metadata,
+          bytes,
+          fencing: { scope: "document-render:other-scope", generation: "0" },
+        }),
+      )
+
+      assert.instanceOf(wrongScope, DocumentArtifactInvalidContent)
+
+      const otherTenantId = "018f0000-0000-7000-8000-000000000007"
+      const otherTenantMetadata = { ...metadata, tenantId: otherTenantId }
+
+      const crossTenant = yield* Effect.flip(
+        store.put({
+          metadata: otherTenantMetadata,
+          bytes,
+          fencing: { scope: documentRenderFenceScope(otherTenantMetadata), generation: "1" },
+        }),
+      )
+
+      assert.instanceOf(crossTenant, DocumentArtifactConflict)
+      assert.isUndefined(yield* store.get({ tenantId: otherTenantId, renderFingerprint: hashA }))
+
+      const distinctArtifact = {
+        ...otherTenantMetadata,
+        artifactId: "018f0000-0000-7000-8000-000000000008",
+      }
+
+      yield* store.put({
+        metadata: distinctArtifact,
+        bytes,
+        fencing: { scope: documentRenderFenceScope(distinctArtifact), generation: "1" },
+      })
+
+      const otherTenantArtifact = yield* store.get({
+        tenantId: otherTenantId,
+        renderFingerprint: hashA,
+      })
+
+      assert.strictEqual(otherTenantArtifact!.metadata.artifactId, distinctArtifact.artifactId)
 
       const conflictBytes = new Uint8Array([1, 2, 3, 4])
 
@@ -191,7 +237,7 @@ describe("document rendering contracts", () => {
             byteLength: conflictBytes.byteLength,
           },
           bytes: conflictBytes,
-          fencing: { scope: "document-render:scope", generation: "2" },
+          fencing: { scope, generation: "2" },
         }),
       )
 
@@ -200,6 +246,18 @@ describe("document rendering contracts", () => {
       const stored = yield* store.get({ tenantId, renderFingerprint: hashA })
       assert.isDefined(stored)
       assert.deepStrictEqual([...stored!.bytes], [1, 2, 3])
+
+      Reflect.set(first, "pageCount", 9)
+      Reflect.set(first.assetVersions, 0, "changed")
+      Reflect.set(stored!.metadata, "pageCount", 10)
+      Reflect.set(stored!.metadata.assetVersions, 0, "changed-again")
+      stored!.bytes[0] = 9
+      bytes[1] = 9
+
+      const reread = yield* store.get({ tenantId, renderFingerprint: hashA })
+      assert.strictEqual(reread!.metadata.pageCount, 1)
+      assert.deepStrictEqual(reread!.metadata.assetVersions, ["logo-v1"])
+      assert.deepStrictEqual([...reread!.bytes], [1, 2, 3])
     }),
   )
 })

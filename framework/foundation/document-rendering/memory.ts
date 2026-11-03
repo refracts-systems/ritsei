@@ -13,11 +13,17 @@ import {
   DocumentArtifactStaleWriter,
   DocumentArtifactStore,
   type DocumentArtifactWrite,
+  documentRenderFenceScope,
   sha256Hex,
 } from "./contract.ts"
 
 const artifactKey = (tenantId: string, renderFingerprint: string) =>
   `${tenantId}:${renderFingerprint}`
+
+const copyArtifact = (metadata: DocumentArtifact): DocumentArtifact => ({
+  ...metadata,
+  assetVersions: [...metadata.assetVersions],
+})
 
 const artifactIdOf = (input: DocumentArtifactWrite["metadata"] | undefined) =>
   Predicate.isObjectOrArray(input) && "artifactId" in input && Predicate.isString(input.artifactId)
@@ -50,7 +56,7 @@ const decodeArtifactWrite = (input: DocumentArtifactWrite) =>
     const metadata = yield* Schema.decodeUnknownEffect(DocumentArtifact)(write.metadata)
     const fencing = yield* Schema.decodeUnknownEffect(FencingContext)(write.fencing)
 
-    return { metadata, bytes: write.bytes, fencing } satisfies DocumentArtifactWrite
+    return { metadata: copyArtifact(metadata), bytes: write.bytes.slice(), fencing }
   })
 
 const persistArtifact = (
@@ -62,17 +68,14 @@ const persistArtifact = (
   Effect.gen(function* () {
     const key = artifactKey(write.metadata.tenantId, write.metadata.renderFingerprint)
     const existing = artifacts.get(key)
-    const existingFingerprint = artifactIds.get(write.metadata.artifactId)
+    const existingKey = artifactIds.get(write.metadata.artifactId)
 
-    if (
-      existingFingerprint !== undefined &&
-      existingFingerprint !== write.metadata.renderFingerprint
-    ) {
+    if (existingKey !== undefined && existingKey !== key) {
       return yield* Effect.fail(
         new DocumentArtifactConflict({
           tenantId: write.metadata.tenantId,
           renderFingerprint: write.metadata.renderFingerprint,
-          reason: "artifact identity is already bound to another render fingerprint",
+          reason: "artifact identity is already bound to another tenant or render fingerprint",
         }),
       )
     }
@@ -93,19 +96,19 @@ const persistArtifact = (
 
       generations.set(write.fencing.scope, BigInt(write.fencing.generation))
 
-      return existing.metadata
+      return copyArtifact(existing.metadata)
     }
 
     const stored: DocumentArtifactRecord = {
-      metadata: write.metadata,
+      metadata: copyArtifact(write.metadata),
       bytes: write.bytes.slice(),
     }
 
     artifacts.set(key, stored)
-    artifactIds.set(write.metadata.artifactId, write.metadata.renderFingerprint)
+    artifactIds.set(write.metadata.artifactId, key)
     generations.set(write.fencing.scope, BigInt(write.fencing.generation))
 
-    return write.metadata
+    return copyArtifact(write.metadata)
   })
 
 export const makeMemoryDocumentArtifactStore = (): DocumentArtifactStore => {
@@ -117,6 +120,16 @@ export const makeMemoryDocumentArtifactStore = (): DocumentArtifactStore => {
     input: DocumentArtifactWrite,
   ) {
     const write = yield* decodeArtifactWrite(input)
+
+    if (write.fencing.scope !== documentRenderFenceScope(write.metadata)) {
+      return yield* Effect.fail(
+        new DocumentArtifactInvalidContent({
+          artifactId: write.metadata.artifactId,
+          reason: "fencing scope does not match the tenant and render fingerprint",
+        }),
+      )
+    }
+
     const contentHash = yield* sha256Hex(write.bytes)
 
     if (
@@ -155,7 +168,7 @@ export const makeMemoryDocumentArtifactStore = (): DocumentArtifactStore => {
 
     return found === undefined
       ? undefined
-      : { metadata: found.metadata, bytes: found.bytes.slice() }
+      : { metadata: copyArtifact(found.metadata), bytes: found.bytes.slice() }
   })
 
   return { put, get }
