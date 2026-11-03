@@ -13,6 +13,11 @@ import { BillingDocument, BillingDocumentLine } from "./contract.ts"
 
 const NonEmptyString = Schema.String.check(Schema.isPattern(/\S/))
 
+const UuidV7 = Schema.String.check(
+  Schema.isUUID(),
+  Schema.isPattern(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i),
+)
+
 export const CustomerInvoiceDocument = Schema.Struct({
   ...BillingDocument.fields,
   kind: Schema.Literal("customer_invoice"),
@@ -40,14 +45,19 @@ export const InvoiceDocumentPayload = Schema.Struct({
 })
 
 export const InvoiceDocumentSnapshotInput = Schema.Struct({
-  snapshotId: Schema.optionalKey(DocumentSnapshot.fields.snapshotId),
+  snapshotId: Schema.optionalKey(UuidV7),
   capturedAt: DocumentSnapshotInput.fields.capturedAt,
   issuerName: NonEmptyString,
   customerName: NonEmptyString,
 })
 
+export const InvoiceDocumentAstInput = Schema.Struct({
+  astId: UuidV7,
+})
+
 export const InvoiceDocumentSnapshot = Schema.Struct({
   ...DocumentSnapshot.fields,
+  snapshotId: UuidV7,
   source: Schema.Struct({
     owner: Schema.Literal("billing"),
     type: Schema.Literal("customer_invoice"),
@@ -97,11 +107,14 @@ export const makeInvoiceDocumentSnapshot = Effect.fn("Billing.makeInvoiceDocumen
 
 export const makeInvoiceDocumentAst = Effect.fn("Billing.makeInvoiceDocumentAst")(function* (
   snapshot: Schema.Codec.Encoded<typeof InvoiceDocumentSnapshot>,
+  input: Schema.Codec.Encoded<typeof InvoiceDocumentAstInput>,
 ) {
   const decoded = yield* Schema.decodeUnknownEffect(InvoiceDocumentSnapshot)(snapshot)
+  const decodedInput = yield* Schema.decodeUnknownEffect(InvoiceDocumentAstInput)(input)
   const payload = decoded.payload
 
   return yield* createDocumentAst({
+    astId: decodedInput.astId,
     snapshotId: decoded.snapshotId,
     documentType: "customer_invoice",
     astVersion: 1,
