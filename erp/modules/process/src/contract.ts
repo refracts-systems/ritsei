@@ -96,12 +96,17 @@ export const ProcessFinancialJobType = Schema.Literals([
   ProcessFinancialJobTypes.reconcile,
 ])
 
+export const ProcessDocumentJobTypes = {
+  invoiceRender: "billing.invoice.render",
+} as const
+
 export const ProcessJobType = Schema.Literals([
   ProcessPostCommitJobTypes.confirmation,
   ProcessPostCommitJobTypes.cancellation,
   ProcessPostCommitJobTypes.fulfillment,
   ProcessFinancialJobTypes.submit,
   ProcessFinancialJobTypes.reconcile,
+  ProcessDocumentJobTypes.invoiceRender,
 ])
 
 export const OrderConfirmationPayload = Schema.Struct({

@@ -325,7 +325,7 @@ export const processJobs = processSchema.table(
     }).onDelete("cascade"),
     check(
       "process_jobs_type_check",
-      sql`${table.jobType} in ('process.order_confirmation.post_commit', 'process.order_cancellation.post_commit', 'process.order_fulfillment.post_commit', 'accounting.financial_operation.submit', 'accounting.financial_operation.reconcile')`,
+      sql`${table.jobType} in ('process.order_confirmation.post_commit', 'process.order_cancellation.post_commit', 'process.order_fulfillment.post_commit', 'accounting.financial_operation.submit', 'accounting.financial_operation.reconcile', 'billing.invoice.render')`,
     ),
     check("process_jobs_idempotency_key_check", sql`${table.idempotencyKey} ~ '[^[:space:]]'`),
     check("process_jobs_correlation_id_check", sql`${table.correlationId} ~ '[^[:space:]]'`),

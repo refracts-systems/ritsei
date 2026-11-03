@@ -19,13 +19,88 @@ import {
 } from "../../../../framework/modules/messaging/mod.ts"
 import { makeSalesService, SalesService } from "../../sales/mod.ts"
 import {
+  makeProcessJobEnqueuer,
   makeProcessService,
+  ProcessDocumentJobTypes,
   ProcessJobLeaseLost,
   ProcessJobMaxAttempts,
   ProcessJobNotFound,
 } from "../mod.ts"
 
 const databaseUrl = process.env["DATABASE_URL"]
+
+it.effect.skipIf(databaseUrl === undefined)(
+  "enqueues and claims invoice render jobs transactionally",
+  () =>
+    withTemporaryDatabase(databaseUrl!, (client) =>
+      TestClock.withLive(
+        Effect.gen(function* () {
+          yield* runMigrations(client)
+
+          const [tenant] = yield* Effect.promise(
+            () =>
+              client<
+                { id: string }[]
+              >`insert into auth.tenants (slug) values (${uuidv7()}) returning id`,
+          )
+
+          const database = makePostgresDatabase(client)
+
+          const enqueuer = yield* makeProcessJobEnqueuer.pipe(
+            Effect.provideService(Database, database),
+          )
+
+          const process = yield* makeProcess(client).pipe(
+            Effect.provide(makeAuthorizationTestLayer([])),
+          )
+
+          const jobInput = {
+            tenantId: tenant!.id,
+            jobType: ProcessDocumentJobTypes.invoiceRender,
+            idempotencyKey: uuidv7(),
+            priority: 0,
+            payload: { probe: true },
+            correlationId: "invoice-render-evaluation",
+          }
+
+          const rolledBack = yield* Effect.flip(
+            database.withTransaction(
+              Effect.gen(function* () {
+                yield* enqueuer.enqueue(jobInput)
+
+                return yield* Effect.fail("rollback")
+              }),
+            ),
+          )
+
+          assert.strictEqual(rolledBack, "rollback")
+
+          const absent = yield* process.claimJob({
+            tenantId: tenant!.id,
+            workerId: "evaluation-worker",
+            jobType: ProcessDocumentJobTypes.invoiceRender,
+          })
+
+          assert.isNull(absent)
+
+          const queued = yield* enqueuer.enqueue(jobInput)
+          const replay = yield* enqueuer.enqueue(jobInput)
+
+          assert.strictEqual(replay.jobId, queued.jobId)
+
+          const claimed = yield* process.claimJob({
+            tenantId: tenant!.id,
+            workerId: "evaluation-worker",
+            jobType: ProcessDocumentJobTypes.invoiceRender,
+          })
+
+          assert.isNotNull(claimed)
+          assert.strictEqual(claimed!.jobId, queued.jobId)
+          assert.strictEqual(claimed!.leaseGeneration, "1")
+        }),
+      ),
+    ),
+)
 
 const makeProcess = (client: Sql) =>
   Effect.gen(function* () {

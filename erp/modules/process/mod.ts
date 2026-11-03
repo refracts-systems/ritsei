@@ -200,6 +200,7 @@ export {
   OrderConfirmationResult,
   OrderFulfillmentPayload,
   OrderFulfillmentResult,
+  ProcessDocumentJobTypes,
   ProcessFinancialJobType,
   ProcessFinancialJobTypes,
   ProcessJob,
