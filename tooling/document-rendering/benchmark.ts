@@ -4,7 +4,9 @@ import { isMain } from "../entrypoint.ts"
 
 import {
   documentContextFromSnapshot,
+  type DocumentContext,
   type DocumentRenderPolicy,
+  type DocumentSnapshot,
   createDocumentAst,
   createDocumentRenderRequest,
   createDocumentSnapshot,
@@ -48,6 +50,43 @@ const renderer = makePdfNativeDocumentRenderer({
 
 type BenchmarkFixture = (typeof documentBenchmarkCorpus)[number]
 
+const renderFixture = (
+  fixture: BenchmarkFixture,
+  snapshot: DocumentSnapshot,
+  context: DocumentContext,
+  index: number,
+) =>
+  Effect.gen(function* () {
+    const ast = yield* createDocumentAst({
+      astId,
+      snapshotId,
+      documentType: fixture.name,
+      astVersion: 1,
+      nodes: fixture.nodes,
+    })
+
+    const request = yield* createDocumentRenderRequest({
+      tenantId,
+      snapshotId,
+      snapshotChecksum: snapshot.checksum,
+      astId: ast.astId,
+      astChecksum: ast.checksum,
+      templateId: "benchmark-default",
+      templateVersion: 1,
+      documentSchemaVersion: 1,
+      rendererFamily: "native-transactional",
+      rendererVersion: "pdfnative@1.7.0",
+      assetVersions: fixture.assetBytes > 0 ? ["sample-assets@1"] : [],
+      capabilities: fixture.capabilities,
+      astNodeCount: ast.nodes.length,
+      pageCount: fixture.pageCount,
+      assetBytes: fixture.assetBytes,
+      correlationId: `document-benchmark:${fixture.name}:${index}`,
+    })
+
+    return yield* renderer.render({ context, ast, request })
+  })
+
 const benchmarkFixture = (fixture: BenchmarkFixture) =>
   fixture.capabilities.includes("paged-media")
     ? Effect.succeed({
@@ -76,34 +115,7 @@ const benchmarkFixture = (fixture: BenchmarkFixture) =>
         for (let index = 0; index < iterations; index += 1) {
           const iterationStartedAt = performance.now()
 
-          const ast = yield* createDocumentAst({
-            astId,
-            snapshotId,
-            documentType: fixture.name,
-            astVersion: 1,
-            nodes: fixture.nodes,
-          })
-
-          const request = yield* createDocumentRenderRequest({
-            tenantId,
-            snapshotId,
-            snapshotChecksum: snapshot.checksum,
-            astId: ast.astId,
-            astChecksum: ast.checksum,
-            templateId: "benchmark-default",
-            templateVersion: 1,
-            documentSchemaVersion: 1,
-            rendererFamily: "native-transactional",
-            rendererVersion: "pdfnative@1.7.0",
-            assetVersions: fixture.assetBytes > 0 ? ["sample-assets@1"] : [],
-            capabilities: fixture.capabilities,
-            astNodeCount: ast.nodes.length,
-            pageCount: fixture.pageCount,
-            assetBytes: fixture.assetBytes,
-            correlationId: `document-benchmark:${fixture.name}:${index}`,
-          })
-
-          const output = yield* renderer.render({ context, ast, request })
+          const output = yield* renderFixture(fixture, snapshot, context, index)
 
           if (index === 0) firstIterationMs = performance.now() - iterationStartedAt
 
