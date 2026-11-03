@@ -53,6 +53,13 @@ describe("document rendering contracts", () => {
     )
   })
 
+  it("orders object keys by UTF-16 code units independently of locale", () => {
+    assert.strictEqual(
+      canonicalizeJson({ é: 1, z: 2, a: 3, A: 4, "😀": 5, "\uE000": 6, _: 7 }),
+      '{"A":4,"_":7,"a":3,"z":2,"é":1,"😀":5,"\uE000":6}',
+    )
+  })
+
   it.effect("creates deterministic snapshots and render job identity", () =>
     Effect.gen(function* () {
       const first = yield* createDocumentSnapshot({

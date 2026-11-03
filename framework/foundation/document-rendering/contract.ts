@@ -391,7 +391,10 @@ export const canonicalizeJson = (value: Schema.Schema.Type<typeof Schema.Json>):
     return encoded === undefined ? "null" : encoded
   }
 
-  const entries = Object.entries(value).sort(([left], [right]) => left.localeCompare(right))
+  // JavaScript string comparisons use UTF-16 code units, independent of the host locale.
+  const entries = Object.entries(value).sort(([left], [right]) =>
+    left < right ? -1 : left > right ? 1 : 0,
+  )
 
   return `{${entries
     .map(([key, entry]) => `${JSON.stringify(key)}:${canonicalizeJson(entry)}`)
