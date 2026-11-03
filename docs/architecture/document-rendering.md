@@ -314,6 +314,13 @@ upload → validate → normalize → hash → store → render cache
 Logo, signature, icon, image, and font assets must be tenant-scoped, size-limited, versioned, and
 available without an uncontrolled remote fetch during rendering.
 
+The evaluation render contract binds each referenced image or signature asset to a unique asset ID,
+version, and SHA-256 content hash in its fingerprint. A resolver receives the tenant, asset ID,
+and version; the adapter checks the returned bytes against the manifest before rendering. The
+manifest must come from a trusted owner and the resolver must enforce tenant access: a matching
+hash alone does not establish authorization. The current evaluation fingerprint and job payload
+formats are version 2; version 1 evaluation inputs must be recreated.
+
 ## 7. Determinism and issued artifacts
 
 The target reproducibility equation is:
