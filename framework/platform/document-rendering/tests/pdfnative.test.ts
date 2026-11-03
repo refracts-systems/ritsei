@@ -105,7 +105,7 @@ const renderInput = () =>
 
 const renderer = makePdfNativeDocumentRenderer({
   policy,
-  resolveAsset: (assetId) =>
+  resolveAsset: ({ assetId }) =>
     Effect.succeed(assetId === "logo-v1" || assetId === "signature-v1" ? pngBytes : undefined),
 })
 
@@ -267,6 +267,90 @@ describe("pdfnative document renderer", () => {
       assert.instanceOf(failure, DocumentRenderLimitExceeded)
       assert.strictEqual(failure.limit, "ast_nodes")
       assert.strictEqual(failure.actual, policy.maxAstNodes + 1)
+    }),
+  )
+
+  it.effect("passes the verified tenant to the asset resolver", () =>
+    Effect.gen(function* () {
+      const input = yield* renderInput()
+      const resolvedTenants: string[] = []
+
+      const scopedRenderer = makePdfNativeDocumentRenderer({
+        policy,
+        resolveAsset: ({ tenantId: assetTenant }) => {
+          resolvedTenants.push(assetTenant)
+
+          return Effect.succeed(assetTenant === tenantId ? pngBytes : undefined)
+        },
+      })
+
+      yield* scopedRenderer.render(input)
+      assert.deepStrictEqual(resolvedTenants, [tenantId, tenantId])
+
+      const otherTenantId = "018f0000-0000-7000-8000-000000000099"
+
+      const otherSnapshot = yield* createDocumentSnapshot({
+        snapshotId,
+        tenantId: otherTenantId,
+        source: input.context.source,
+        capturedAt: input.context.capturedAt,
+        schemaVersion: input.context.schemaVersion,
+        payload: input.context.data,
+      })
+
+      const otherRequest = yield* createDocumentRenderRequest({
+        ...input.request,
+        tenantId: otherTenantId,
+        snapshotChecksum: otherSnapshot.checksum,
+      })
+
+      const missing = yield* Effect.flip(
+        scopedRenderer.render({
+          ...input,
+          context: documentContextFromSnapshot(otherSnapshot),
+          request: otherRequest,
+        }),
+      )
+
+      assert.instanceOf(missing, DocumentAssetUnavailable)
+      assert.strictEqual(resolvedTenants.at(-1), otherTenantId)
+    }),
+  )
+
+  it.effect("stops resolving assets once the total byte limit is exceeded", () =>
+    Effect.gen(function* () {
+      const input = yield* renderInput()
+      const resolvedIds: string[] = []
+
+      const limitedRenderer = makePdfNativeDocumentRenderer({
+        policy: { ...policy, maxAssetBytes: pngBytes.byteLength },
+        resolveAsset: ({ assetId }) => {
+          resolvedIds.push(assetId)
+
+          return Effect.succeed(pngBytes)
+        },
+      })
+
+      const ast = yield* createDocumentAst({
+        ...input.ast,
+        nodes: [
+          ...input.ast.nodes,
+          DocumentImageNode.make({ assetId: "extra-v1", alt: "Additional image" }),
+        ],
+      })
+
+      const request = yield* createDocumentRenderRequest({
+        ...input.request,
+        astChecksum: ast.checksum,
+        astNodeCount: ast.nodes.length,
+        assetBytes: 0,
+      })
+
+      const failure = yield* Effect.flip(limitedRenderer.render({ ...input, ast, request }))
+      assert.instanceOf(failure, DocumentRenderLimitExceeded)
+      assert.strictEqual(failure.limit, "asset_bytes")
+      assert.strictEqual(failure.actual, pngBytes.byteLength * 2)
+      assert.deepStrictEqual(resolvedIds, ["logo-v1", "signature-v1"])
     }),
   )
 

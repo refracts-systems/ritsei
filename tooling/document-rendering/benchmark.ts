@@ -42,7 +42,7 @@ const policy: DocumentRenderPolicy = {
 
 const renderer = makePdfNativeDocumentRenderer({
   policy,
-  resolveAsset: (assetId) =>
+  resolveAsset: ({ assetId }) =>
     Effect.succeed(assetId === "logo-v1" || assetId === "signature-v1" ? samplePng : undefined),
 })
 
