@@ -1,10 +1,12 @@
 import { sql } from "drizzle-orm"
 import {
   bigint,
+  bytea,
   check,
   date,
   foreignKey,
   index,
+  integer,
   pgSchema,
   primaryKey,
   text,
@@ -13,7 +15,7 @@ import {
 } from "drizzle-orm/pg-core"
 
 import { tenants } from "./auth.ts"
-import { createdAt, id, money } from "./common.ts"
+import { createdAt, id, json, money } from "./common.ts"
 import { legalEntities, parties } from "./party.ts"
 
 export const billingSchema = pgSchema("billing")
@@ -52,6 +54,12 @@ export const invoices = billingSchema.table(
   },
   (table) => [
     unique("invoices_tenant_id_id_key").on(table.tenantId, table.id),
+    unique("invoices_tenant_id_number_kind_key").on(
+      table.tenantId,
+      table.id,
+      table.number,
+      table.kind,
+    ),
     unique("invoices_legal_entity_kind_number_key").on(
       table.tenantId,
       table.legalEntityId,
@@ -89,6 +97,121 @@ export const invoices = billingSchema.table(
       "invoices_source_check",
       sql`(${table.sourceType} is null and ${table.sourceId} is null) or
       (${table.sourceType} ~ '^[a-z][a-z0-9_.]*$' and ${table.sourceId} is not null)`,
+    ),
+  ],
+)
+
+/** Evaluation-only immutable render inputs for an issued customer invoice (ADR-0112). */
+export const invoiceRenderInputs = billingSchema.table(
+  "invoice_render_inputs",
+  {
+    id: id(),
+    tenantId: uuid("tenant_id").notNull(),
+    invoiceId: uuid("invoice_id").notNull(),
+    invoiceNumber: text("invoice_number").notNull(),
+    invoiceKind: invoiceKind("invoice_kind").notNull().default("customer_invoice"),
+    snapshotChecksum: text("snapshot_checksum").notNull(),
+    snapshot: json("snapshot").notNull(),
+    astId: uuid("ast_id").notNull(),
+    astChecksum: text("ast_checksum").notNull(),
+    ast: json("ast").notNull(),
+    renderFingerprint: text("render_fingerprint").notNull(),
+    renderRequest: json("render_request").notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    unique("invoice_render_inputs_invoice_key").on(table.tenantId, table.invoiceId),
+    unique("invoice_render_inputs_artifact_fkey_key").on(
+      table.tenantId,
+      table.invoiceId,
+      table.id,
+      table.astId,
+      table.renderFingerprint,
+    ),
+    foreignKey({
+      columns: [table.tenantId, table.invoiceId, table.invoiceNumber, table.invoiceKind],
+      foreignColumns: [invoices.tenantId, invoices.id, invoices.number, invoices.kind],
+      name: "invoice_render_inputs_invoice_fkey",
+    }),
+    check("invoice_render_inputs_kind_check", sql`${table.invoiceKind} = 'customer_invoice'`),
+    check(
+      "invoice_render_inputs_hashes_check",
+      sql`${table.snapshotChecksum} ~ '^[0-9a-f]{64}$' and
+      ${table.astChecksum} ~ '^[0-9a-f]{64}$' and ${table.renderFingerprint} ~ '^[0-9a-f]{64}$'`,
+    ),
+    check(
+      "invoice_render_inputs_snapshot_check",
+      sql`(jsonb_typeof(${table.snapshot}) = 'object' and
+      ${table.snapshot}->>'snapshotId' = ${table.id}::text and
+      ${table.snapshot}->>'tenantId' = ${table.tenantId}::text and
+      ${table.snapshot}->>'checksum' = ${table.snapshotChecksum} and
+      ${table.snapshot}->'source'->>'owner' = 'billing' and
+      ${table.snapshot}->'source'->>'type' = 'customer_invoice' and
+      ${table.snapshot}->'source'->>'id' = ${table.invoiceId}::text and
+      ${table.snapshot}->'payload'->>'number' = ${table.invoiceNumber}) is true`,
+    ),
+    check(
+      "invoice_render_inputs_ast_check",
+      sql`(jsonb_typeof(${table.ast}) = 'object' and
+      ${table.ast}->>'astId' = ${table.astId}::text and
+      ${table.ast}->>'snapshotId' = ${table.id}::text and
+      ${table.ast}->>'checksum' = ${table.astChecksum} and
+      ${table.ast}->>'documentType' = 'customer_invoice') is true`,
+    ),
+    check(
+      "invoice_render_inputs_request_check",
+      sql`(jsonb_typeof(${table.renderRequest}) = 'object' and
+      ${table.renderRequest}->>'tenantId' = ${table.tenantId}::text and
+      ${table.renderRequest}->>'snapshotId' = ${table.id}::text and
+      ${table.renderRequest}->>'snapshotChecksum' = ${table.snapshotChecksum} and
+      ${table.renderRequest}->>'astId' = ${table.astId}::text and
+      ${table.renderRequest}->>'astChecksum' = ${table.astChecksum} and
+      ${table.renderRequest}->>'renderFingerprint' = ${table.renderFingerprint} and
+      ${table.renderRequest}->>'fingerprintVersion' = '2') is true`,
+    ),
+  ],
+)
+
+/** The single immutable PDF issued for an invoice; failures remain job state. */
+export const invoiceArtifacts = billingSchema.table(
+  "invoice_artifacts",
+  {
+    id: id(),
+    tenantId: uuid("tenant_id").notNull(),
+    invoiceId: uuid("invoice_id").notNull(),
+    snapshotId: uuid("snapshot_id").notNull(),
+    astId: uuid("ast_id").notNull(),
+    renderFingerprint: text("render_fingerprint").notNull(),
+    contentHash: text("content_hash").notNull(),
+    content: bytea("content").notNull(),
+    pageCount: integer("page_count").notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    unique("invoice_artifacts_invoice_key").on(table.tenantId, table.invoiceId),
+    foreignKey({
+      columns: [
+        table.tenantId,
+        table.invoiceId,
+        table.snapshotId,
+        table.astId,
+        table.renderFingerprint,
+      ],
+      foreignColumns: [
+        invoiceRenderInputs.tenantId,
+        invoiceRenderInputs.invoiceId,
+        invoiceRenderInputs.id,
+        invoiceRenderInputs.astId,
+        invoiceRenderInputs.renderFingerprint,
+      ],
+      name: "invoice_artifacts_render_input_fkey",
+    }),
+    check("invoice_artifacts_pages_check", sql`${table.pageCount} > 0`),
+    check(
+      "invoice_artifacts_content_check",
+      sql`octet_length(${table.content}) >= 5 and octet_length(${table.content}) <= 50000000 and
+      substring(${table.content} from 1 for 5) = decode('255044462d', 'hex') and
+      ${table.contentHash} = encode(sha256(${table.content}), 'hex')`,
     ),
   ],
 )
