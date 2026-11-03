@@ -104,6 +104,7 @@ const defaultPolicy: DocumentRenderPolicy = {
   allowJavaScript: false,
   allowNetwork: false,
   maxAstNodes: 100_000,
+  maxTableRows: 100_000,
   maxPages: 10_000,
   maxAssetBytes: 50_000_000,
   maxImagePixels: 20_000_000,
@@ -543,6 +544,21 @@ const renderPdfNativeDocument = (
           limit: "ast_nodes",
           actual: ast.nodes.length,
           maximum: policy.maxAstNodes,
+        }),
+      )
+    }
+
+    const tableRows = ast.nodes.reduce(
+      (total, node) => total + ("rows" in node ? node.rows.length : 0),
+      0,
+    )
+
+    if (tableRows > policy.maxTableRows) {
+      return yield* Effect.fail(
+        new DocumentRenderLimitExceeded({
+          limit: "table_rows",
+          actual: tableRows,
+          maximum: policy.maxTableRows,
         }),
       )
     }

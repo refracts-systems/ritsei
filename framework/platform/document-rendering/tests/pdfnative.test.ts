@@ -47,6 +47,7 @@ const policy: DocumentRenderPolicy = {
   allowJavaScript: false,
   allowNetwork: false,
   maxAstNodes: 100,
+  maxTableRows: 1_000,
   maxPages: 20,
   maxAssetBytes: 100_000,
   maxImagePixels: 1_000_000,
@@ -451,6 +452,36 @@ describe("pdfnative document renderer", () => {
       assert.strictEqual(failure.limit, "asset_bytes")
       assert.strictEqual(failure.actual, pngBytes.byteLength * 2)
       assert.deepStrictEqual(resolvedIds, ["logo-v1", "signature-v1"])
+    }),
+  )
+
+  it.effect("rejects tables exceeding the total row budget", () =>
+    Effect.gen(function* () {
+      const input = yield* renderInput()
+
+      const ast = yield* createDocumentAst({
+        ...input.ast,
+        nodes: [
+          DocumentTableNode.make({ headers: ["Item"], rows: [["First"]] }),
+          DocumentTableNode.make({ headers: ["Item"], rows: [["Second"]] }),
+        ],
+      })
+
+      const request = yield* createDocumentRenderRequest({
+        ...input.request,
+        astChecksum: ast.checksum,
+        astNodeCount: ast.nodes.length,
+      })
+
+      const limitedRenderer = makePdfNativeDocumentRenderer({
+        policy: { ...policy, maxTableRows: 1 },
+      })
+
+      const failure = yield* Effect.flip(limitedRenderer.render({ ...input, ast, request }))
+      assert.instanceOf(failure, DocumentRenderLimitExceeded)
+      assert.strictEqual(failure.limit, "table_rows")
+      assert.strictEqual(failure.actual, 2)
+      assert.strictEqual(failure.maximum, 1)
     }),
   )
 
