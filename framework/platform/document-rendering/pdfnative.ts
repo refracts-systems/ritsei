@@ -107,6 +107,7 @@ const defaultPolicy: DocumentRenderPolicy = {
   maxPages: 10_000,
   maxAssetBytes: 50_000_000,
   maxImagePixels: 20_000_000,
+  maxOutputBytes: 50_000_000,
 }
 
 /** Resolve only assets that the specified tenant is authorized to use. */
@@ -563,6 +564,16 @@ const renderPdfNativeDocument = (
     const inspection = yield* inspectPdfLayout(params, layout)
     yield* validatePageCount(inspection.totalPages, policy)
     const bytes = yield* generatePdfBytes(params, layout)
+
+    if (bytes.byteLength > policy.maxOutputBytes) {
+      return yield* Effect.fail(
+        new DocumentRenderLimitExceeded({
+          limit: "output_bytes",
+          actual: bytes.byteLength,
+          maximum: policy.maxOutputBytes,
+        }),
+      )
+    }
 
     return yield* makeDocumentArtifact(request, bytes, inspection.totalPages)
   })
