@@ -1,5 +1,6 @@
 import { assert, describe, it } from "@effect/vitest"
 import { execFileSync } from "node:child_process"
+import { createRequire } from "node:module"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import { extractText, validatePdfUA } from "pdfnative"
@@ -122,6 +123,14 @@ const renderer = makePdfNativeDocumentRenderer({
 })
 
 describe("pdfnative document renderer", () => {
+  it("identifies the installed pdfnative version", () => {
+    const metadata = Schema.decodeUnknownSync(Schema.Struct({ version: Schema.String }))(
+      createRequire(import.meta.url)("pdfnative/package.json"),
+    )
+
+    assert.isTrue(pdfNativeRendererVersion.endsWith(`+pdfnative@${metadata.version}`))
+  })
+
   it.effect("renders the benchmark corpus with identical bytes across process timezones", () =>
     Effect.gen(function* () {
       const benchmark = (timezone: string) =>
