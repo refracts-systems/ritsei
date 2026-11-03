@@ -1,5 +1,7 @@
 import { assert, describe, it } from "@effect/vitest"
+import { execFileSync } from "node:child_process"
 import * as Effect from "effect/Effect"
+import * as Schema from "effect/Schema"
 import { extractText, validatePdfUA } from "pdfnative"
 
 import {
@@ -117,6 +119,50 @@ const renderer = makePdfNativeDocumentRenderer({
 })
 
 describe("pdfnative document renderer", () => {
+  it.effect("renders the benchmark corpus with identical bytes across process timezones", () =>
+    Effect.gen(function* () {
+      const benchmark = (timezone: string) =>
+        Effect.sync(() =>
+          execFileSync(
+            process.execPath,
+            ["--import", "tsx", "tooling/document-rendering/benchmark.ts", "1"],
+            {
+              encoding: "utf8",
+              env: { ...process.env, TZ: timezone },
+              timeout: 25_000,
+            },
+          ),
+        )
+
+      const benchmarkResult = Schema.Struct({
+        fixtures: Schema.Array(
+          Schema.Struct({
+            name: Schema.String,
+            contentHash: Schema.optionalKey(Schema.String),
+            skipped: Schema.optionalKey(Schema.Boolean),
+          }),
+        ),
+      })
+
+      const utc = yield* Schema.decodeUnknownEffect(benchmarkResult)(
+        JSON.parse(yield* benchmark("UTC")),
+      )
+
+      const bangkok = yield* Schema.decodeUnknownEffect(benchmarkResult)(
+        JSON.parse(yield* benchmark("Asia/Bangkok")),
+      )
+
+      const evidence = (result: typeof utc) =>
+        result.fixtures
+          .filter((fixture) => fixture.skipped !== true)
+          .map(({ name, contentHash }) => ({ name, contentHash }))
+
+      assert.isAbove(evidence(utc).length, 1)
+      assert.isTrue(evidence(utc).every((fixture) => fixture.contentHash !== undefined))
+      assert.deepStrictEqual(evidence(utc), evidence(bangkok))
+    }),
+  )
+
   it.effect("renders the AST corpus with deterministic PDF bytes", () =>
     Effect.gen(function* () {
       const input = yield* renderInput()
