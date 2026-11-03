@@ -25,7 +25,7 @@ import {
   sha256Hex,
   UnsupportedDocumentCapability,
 } from "../../../foundation/mod.ts"
-import { makePdfNativeDocumentRenderer } from "../mod.ts"
+import { makePdfNativeDocumentRenderer, pdfNativeRendererVersion } from "../mod.ts"
 
 const tenantId = "018f0000-0000-7000-8000-000000000001"
 const snapshotId = "018f0000-0000-7000-8000-000000000002"
@@ -97,7 +97,7 @@ const renderInput = () =>
       templateVersion: 1,
       documentSchemaVersion: 1,
       rendererFamily: "native-transactional",
-      rendererVersion: "pdfnative@1.7.0",
+      rendererVersion: pdfNativeRendererVersion,
       assetVersions: [
         { assetId: "logo-v1", version: "1", contentHash: assetHash },
         { assetId: "signature-v1", version: "2", contentHash: assetHash },
@@ -258,6 +258,21 @@ describe("pdfnative document renderer", () => {
       assert.include(pages[0], "BEFORE BREAK")
       assert.notInclude(pages[0], "AFTER BREAK")
       assert.include(pages[1], "AFTER BREAK")
+    }),
+  )
+
+  it.effect("rejects a request for a different renderer version", () =>
+    Effect.gen(function* () {
+      const input = yield* renderInput()
+
+      const request = yield* createDocumentRenderRequest({
+        ...input.request,
+        rendererVersion: "pdfnative@0.0.0",
+      })
+
+      const failure = yield* Effect.flip(renderer.render({ ...input, request }))
+      assert.instanceOf(failure, DocumentRendererFailure)
+      assert.strictEqual(failure.operation, "input-validation")
     }),
   )
 

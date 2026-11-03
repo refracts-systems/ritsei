@@ -94,6 +94,9 @@ class UtcMetadataDate extends Date {
 
 const deterministicCreationDate = new UtcMetadataDate("2000-01-01T00:00:00.000Z")
 
+// Increment the adapter version when a change can affect the PDF bytes.
+export const pdfNativeRendererVersion = "ritsei-pdfnative@1+pdfnative@1.7.0"
+
 const defaultPolicy: DocumentRenderPolicy = {
   rendererFamily: "native-transactional",
   capabilities: ["svg"],
@@ -490,6 +493,17 @@ const renderPdfNativeDocument = (
     }
 
     const { context, ast, request } = yield* decodeInput(input)
+
+    if (request.rendererVersion !== pdfNativeRendererVersion) {
+      return yield* Effect.fail(
+        rendererFailure(
+          "input-validation",
+          "renderer version does not match the adapter",
+          undefined,
+        ),
+      )
+    }
+
     yield* validateDocumentRenderPolicy(request, policy)
 
     if (ast.nodes.length > policy.maxAstNodes) {

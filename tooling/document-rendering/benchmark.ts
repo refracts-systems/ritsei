@@ -12,7 +12,10 @@ import {
   createDocumentSnapshot,
   sha256Hex,
 } from "../../framework/foundation/mod.ts"
-import { makePdfNativeDocumentRenderer } from "../../framework/platform/mod.ts"
+import {
+  makePdfNativeDocumentRenderer,
+  pdfNativeRendererVersion,
+} from "../../framework/platform/mod.ts"
 import { documentBenchmarkCorpus } from "./corpus.ts"
 
 const tenantId = "018f0000-0000-7000-8000-000000000001"
@@ -82,7 +85,7 @@ const renderFixture = (
       templateVersion: 1,
       documentSchemaVersion: 1,
       rendererFamily: "native-transactional",
-      rendererVersion: "pdfnative@1.7.0",
+      rendererVersion: pdfNativeRendererVersion,
       assetVersions:
         fixture.assetBytes > 0
           ? ["logo-v1", "signature-v1"].map((assetId) => ({
@@ -170,7 +173,7 @@ if (isMain(import.meta.url)) {
   console.log(
     JSON.stringify({
       benchmark: "pdfnative-document-render",
-      renderer: "pdfnative@1.7.0",
+      renderer: pdfNativeRendererVersion,
       activation: "evaluation-only",
       fixtures: results,
       processPeakRssKiB: process.resourceUsage().maxRSS,

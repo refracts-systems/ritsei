@@ -321,7 +321,9 @@ manifest must come from a trusted owner and the resolver must enforce tenant acc
 hash alone does not establish authorization. The current evaluation fingerprint and job payload
 formats are version 2; version 1 evaluation inputs must be recreated.
 The evaluation adapter uses a fixed layout; renderer-specific options are rejected until their
-effects can be represented and versioned in the render input.
+effects can be represented and versioned in the render input. Its renderer version identifies both
+the adapter and the pinned backend, and the adapter rejects requests for another version. Changes
+that can affect PDF bytes require a new adapter version.
 
 ## 7. Determinism and issued artifacts
 
