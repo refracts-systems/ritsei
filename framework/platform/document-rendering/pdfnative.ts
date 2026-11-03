@@ -72,6 +72,7 @@ const defaultPolicy: DocumentRenderPolicy = {
   maxAssetBytes: 50_000_000,
 }
 
+/** Resolve only assets that the specified tenant is authorized to use. */
 export type PdfNativeAssetResolver = (input: {
   readonly tenantId: string
   readonly assetId: string
@@ -119,7 +120,7 @@ const loadFontEntries = (texts: ReadonlyArray<string>) =>
         .filter((entry): entry is { fontData: FontData; lang: string } => entry !== undefined)
         .map(({ fontData, lang }, index) => ({
           fontData,
-          fontRef: `/F${index + 1}`,
+          fontRef: `/RitseiFont${index + 1}`,
           lang,
         }))
     },

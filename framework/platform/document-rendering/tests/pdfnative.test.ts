@@ -143,6 +143,19 @@ describe("pdfnative document renderer", () => {
         `/ActualText <FEFF${actualText}>`,
       )
 
+      const pdf = new TextDecoder("latin1").decode(first.bytes)
+      const fontResources = [...pdf.matchAll(/\/Font <<\s*([^>]*)>>/g)]
+      assert.isAbove(fontResources.length, 0)
+
+      for (const [, resource] of fontResources) {
+        const fontNames = [...resource.matchAll(/\/(\S+)\s+\d+\s+\d+\s+R/g)].map(
+          (match) => match[1],
+        )
+
+        assert.isAbove(fontNames.length, 0)
+        assert.strictEqual(new Set(fontNames).size, fontNames.length)
+      }
+
       const tablePages = pages.filter((page) => /ITEM-\d+/.test(page))
       assert.isAbove(tablePages.length, 1)
 
