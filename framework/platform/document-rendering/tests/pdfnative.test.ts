@@ -50,6 +50,7 @@ const policy: DocumentRenderPolicy = {
   maxPages: 20,
   maxAssetBytes: 100_000,
   maxImagePixels: 1_000_000,
+  maxOutputBytes: 2_000_000,
 }
 
 const renderInput = () =>
@@ -450,6 +451,23 @@ describe("pdfnative document renderer", () => {
       assert.strictEqual(failure.limit, "asset_bytes")
       assert.strictEqual(failure.actual, pngBytes.byteLength * 2)
       assert.deepStrictEqual(resolvedIds, ["logo-v1", "signature-v1"])
+    }),
+  )
+
+  it.effect("rejects generated PDFs exceeding the output byte limit", () =>
+    Effect.gen(function* () {
+      const input = yield* renderInput()
+
+      const limitedRenderer = makePdfNativeDocumentRenderer({
+        policy: { ...policy, maxOutputBytes: 1 },
+        resolveAsset: () => Effect.succeed(pngBytes),
+      })
+
+      const failure = yield* Effect.flip(limitedRenderer.render(input))
+      assert.instanceOf(failure, DocumentRenderLimitExceeded)
+      assert.strictEqual(failure.limit, "output_bytes")
+      assert.isAbove(failure.actual, 1)
+      assert.strictEqual(failure.maximum, 1)
     }),
   )
 

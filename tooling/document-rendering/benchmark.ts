@@ -45,6 +45,7 @@ const policy: DocumentRenderPolicy = {
   maxPages: 100,
   maxAssetBytes: 50_000_000,
   maxImagePixels: 20_000_000,
+  maxOutputBytes: 50_000_000,
 }
 
 const renderer = makePdfNativeDocumentRenderer({

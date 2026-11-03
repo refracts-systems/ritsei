@@ -187,6 +187,7 @@ describe("document rendering contracts", () => {
         maxPages: 2,
         maxAssetBytes: 1_024,
         maxImagePixels: 1_000_000,
+        maxOutputBytes: 1_000_000,
       }
 
       const error = yield* Effect.flip(validateDocumentRenderPolicy(requirements, policy))
@@ -207,6 +208,7 @@ describe("document rendering contracts", () => {
           maxPages: 1,
           maxAssetBytes: 0,
           maxImagePixels: 1_000_000,
+          maxOutputBytes: 1_000_000,
         }),
       )
 
