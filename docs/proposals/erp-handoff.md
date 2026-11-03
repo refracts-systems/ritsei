@@ -111,7 +111,7 @@ Gate evidence reviewed on 2026-11-03:
 | Contract | Versioned rendering contracts and a Purchase Order snapshot exist. Billing's issued invoice snapshot and its binding to the artifact and invoice number remain to be implemented. |
 | Ownership | ADR-0102 and ADR-0110 assign invoices to Billing; the evaluation pilot is owned by Procurement. |
 | Security | Evaluation validates some references and limits and rejects unsupported capabilities. End-to-end tenant isolation, asset policy, sandboxing and the remaining resource limits still need evidence. |
-| Determinism | One fixture produces identical PDF bytes twice in one process. Reproducibility across the supported environment and versioned assets still needs evidence. |
+| Determinism | One fixture produces identical PDF bytes twice in one process. JSON key ordering now uses locale-independent UTF-16 code units; this can change evaluation snapshot checksums and fingerprints, so old evaluation inputs must be recreated. Reproducibility across the supported environment and versioned assets still needs evidence. |
 | Conformance | Tests cover repeated table headers, row identifiers and an explicit page break. Font, Unicode, asset and code fidelity and other pagination cases still need evidence. |
 | Workload | The evaluation contract has a job identity and fencing scope; the memory store tests deduplication and stale writers. Production queue, worker, timeout, retry and reserve behavior remain unmeasured. |
 | Operations | Only an in-memory evaluation artifact store is present. Durable storage, retention, cleanup, monitoring and recovery need an operational design and evidence. |
