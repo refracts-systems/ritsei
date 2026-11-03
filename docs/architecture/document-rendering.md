@@ -26,6 +26,8 @@
 >   [`../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md`](../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md)
 > - Framework and flagship ERP:
 >   [`../decisions/0091-adopt-framework-and-flagship-erp.md`](../decisions/0091-adopt-framework-and-flagship-erp.md)
+> - Staged invoice rendering:
+>   [`../decisions/0112-stage-invoice-rendering-before-activation.md`](../decisions/0112-stage-invoice-rendering-before-activation.md)
 > - State and consistency: [`./state-and-consistency.md`](./state-and-consistency.md)
 > - External integration surface: [`./integration-architecture.md`](./integration-architecture.md)
 > - Financial ledger: [`./financial-ledger.md`](./financial-ledger.md)
@@ -613,10 +615,13 @@ This architecture does not:
 ## 15. Current implementation boundary
 
 The current implementation slice is intentionally production-gated. It may add typed snapshot, AST,
-capability, fingerprint, job-payload, benchmark, conformance, and test-artifact contracts, plus one
-owner-local Purchase Order pilot and an evaluation-only adapter for the selected native candidate. It
-must not add a production PDF route, browser worker, template persistence model, production
-artifact-retention promise, or a new Process job type/migration.
+capability, fingerprint, job-payload, benchmark, conformance, and test-artifact contracts, plus the
+owner-local Purchase Order pilot and an evaluation-only adapter for the selected native candidate.
+ADR-0112 also permits a candidate invoice-render job, migration, Billing-owned artifact store and
+isolated worker for evaluation against disposable nonproduction databases. It does not authorize
+applying an evaluation migration to production, production invoice enqueueing or worker composition,
+a production PDF route, browser worker, template persistence model, or a production artifact-retention
+promise before the gates pass.
 
 `pdfnative` and its RITSEI adapter are evaluation dependencies only until the activation gates pass.
 The adapter is used for conformance and benchmark evidence; it does not activate a production

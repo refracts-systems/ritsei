@@ -135,5 +135,6 @@ current system; ADRs preserve decision history.
 | [`0109`](./0109-release-custom-fields-as-an-extension-point.md) | Release custom fields as an owner extension point | Accepted   |
 | [`0110`](./0110-issue-invoices-as-immutable-numbered-artifacts-and-send-by-communication.md) | Issue invoices as immutable numbered artifacts and send them through communication | Accepted   |
 | [`0111`](./0111-sequence-localization-id-on-public-contracts.md) | Build Indonesian localization on public contracts, in two stages | Accepted   |
+| [`0112`](./0112-stage-invoice-rendering-before-activation.md) | Stage invoice rendering before activation | Accepted   |
 
 Accepted ADRs must not be rewritten to alter history. Create a new ADR and use `Supersedes`.

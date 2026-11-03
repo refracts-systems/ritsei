@@ -137,14 +137,14 @@ The 2026-11-03 dependency inspection found the following, without approving prod
   Inspect renderer input handling, font and image processing, release provenance and supported
   deployment runtimes, then assign an upgrade and vulnerability-response owner before activation.
 
-1. Complete and review evidence for each of the eight gates in the rendering architecture. In
-   particular, verify pagination and font/asset fidelity, tenant isolation and resource limits,
-   deterministic output, workload behavior, artifact retention and recovery, and dependency
-   ownership. Record failures and unresolved evidence; do not infer a gate passes from one test or
-   benchmark.
-2. Only after the gates pass, activate the renderer in a separate change. Implement Billing's
-   immutable issued snapshot, render job and stored artifact under ADR-0110, including authorization,
-   idempotency, fencing and failure recovery. Downloads must return the stored artifact.
+1. Build and measure the staged job, Billing-owned artifact implementation and worker under
+   [ADR-0112](../decisions/0112-stage-invoice-rendering-before-activation.md), using disposable
+   nonproduction databases. Complete and review evidence for all eight rendering gates, including
+   pagination, fidelity, isolation, determinism, workload behavior, retention and recovery, and
+   dependency ownership. Do not infer a gate passes from one test or benchmark.
+2. Only after the gates pass, activate the renderer in a separate change and connect Billing's
+   immutable issued snapshot and render job to posting under ADR-0110. Preserve authorization,
+   idempotency, fencing and recovery; downloads must return the stored artifact.
 3. Add manual sending through Communication and the SMTP integration, including durable delivery
    attempts and retries. Automatic sending is a later tenant setting, off by default.
 
