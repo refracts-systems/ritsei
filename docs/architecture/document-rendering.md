@@ -496,6 +496,10 @@ max_output_size
 max_browser_memory
 ```
 
+The native evaluation adapter checks the total encoded asset bytes and each image's pixel count
+before rendering. These checks do not prove that image contents are safe or cap the renderer's
+memory use; trusted asset normalization and isolated resource limits remain required.
+
 The capability resolver must reject a template whose declared requirements exceed the selected
 renderer or tenant policy. A compatibility escape hatch must not become an authorization escape
 hatch.
