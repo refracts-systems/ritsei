@@ -6,13 +6,17 @@ import {
   DocumentAst,
   DocumentTableNode,
   DocumentTextNode,
+  createDocumentAst,
+  createDocumentRenderRequest,
 } from "../../../../framework/foundation/mod.ts"
 import {
   CustomerInvoiceDocument,
   InvoiceDocumentAstInput,
   InvoiceDocumentSnapshot,
+  InvoiceRenderInputInvalid,
   makeInvoiceDocumentAst,
   makeInvoiceDocumentSnapshot,
+  validateInvoiceRenderInput,
 } from "../mod.ts"
 
 const invoice: Schema.Codec.Encoded<typeof CustomerInvoiceDocument> = {
@@ -56,6 +60,34 @@ const snapshotInput = {
 }
 
 const astInput = { astId: "018f0000-0000-7000-8000-000000000009" }
+
+const renderInput = () =>
+  Effect.gen(function* () {
+    const snapshot = yield* makeInvoiceDocumentSnapshot(invoice, snapshotInput)
+    const ast = yield* makeInvoiceDocumentAst(snapshot, astInput)
+
+    const request = yield* createDocumentRenderRequest({
+      fingerprintVersion: 2,
+      tenantId: snapshot.tenantId,
+      snapshotId: snapshot.snapshotId,
+      snapshotChecksum: snapshot.checksum,
+      astId: ast.astId,
+      astChecksum: ast.checksum,
+      templateId: "invoice-default",
+      templateVersion: 1,
+      documentSchemaVersion: 1,
+      rendererFamily: "native-transactional",
+      rendererVersion: "evaluation@1",
+      assetVersions: [],
+      capabilities: [],
+      astNodeCount: ast.nodes.length,
+      pageCount: 1,
+      assetBytes: 0,
+      correlationId: "invoice-test",
+    })
+
+    return { snapshot, ast, request }
+  })
 
 describe("invoice document evaluation", () => {
   it.effect("captures immutable invoice facts and builds its AST", () =>
@@ -126,6 +158,53 @@ describe("invoice document evaluation", () => {
       )
 
       assert.instanceOf(failure, Schema.SchemaError)
+    }),
+  )
+
+  it.effect("rejects changed snapshot, AST, and render request contents", () =>
+    Effect.gen(function* () {
+      const input = yield* renderInput()
+      yield* validateInvoiceRenderInput(input)
+
+      const changedSnapshot = yield* Effect.flip(
+        validateInvoiceRenderInput({
+          ...input,
+          snapshot: {
+            ...input.snapshot,
+            payload: { ...input.snapshot.payload, customerName: "Other" },
+          },
+        }),
+      )
+
+      assert.instanceOf(changedSnapshot, InvoiceRenderInputInvalid)
+      assert.strictEqual(changedSnapshot.reason, "snapshot")
+
+      const changedAst = yield* createDocumentAst({
+        ...input.ast,
+        nodes: [DocumentTextNode.make({ value: "INVOICE OTHER" }), ...input.ast.nodes.slice(1)],
+      })
+
+      const matchingRequest = yield* createDocumentRenderRequest({
+        ...input.request,
+        astChecksum: changedAst.checksum,
+      })
+
+      const invalidAst = yield* Effect.flip(
+        validateInvoiceRenderInput({ ...input, ast: changedAst, request: matchingRequest }),
+      )
+
+      assert.instanceOf(invalidAst, InvoiceRenderInputInvalid)
+      assert.strictEqual(invalidAst.reason, "ast")
+
+      const invalidRequest = yield* Effect.flip(
+        validateInvoiceRenderInput({
+          ...input,
+          request: { ...input.request, renderFingerprint: "a".repeat(64) },
+        }),
+      )
+
+      assert.instanceOf(invalidRequest, InvoiceRenderInputInvalid)
+      assert.strictEqual(invalidRequest.reason, "request")
     }),
   )
 })
