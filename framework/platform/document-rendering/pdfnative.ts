@@ -72,9 +72,10 @@ const defaultPolicy: DocumentRenderPolicy = {
   maxAssetBytes: 50_000_000,
 }
 
-export type PdfNativeAssetResolver = (
-  assetId: string,
-) => Effect.Effect<Uint8Array | undefined, DocumentAssetUnavailable | DocumentRendererFailure>
+export type PdfNativeAssetResolver = (input: {
+  readonly tenantId: string
+  readonly assetId: string
+}) => Effect.Effect<Uint8Array | undefined, DocumentAssetUnavailable | DocumentRendererFailure>
 
 export type PdfNativeRendererOptions = {
   readonly policy?: DocumentRenderPolicy
@@ -125,9 +126,14 @@ const loadFontEntries = (texts: ReadonlyArray<string>) =>
     catch: (cause) => rendererFailure("font-loading", "unable to load registered fonts", cause),
   })
 
-const loadAsset = (assetId: string, resolveAsset: PdfNativeAssetResolver | undefined) =>
+const loadAsset = (
+  tenantId: string,
+  assetId: string,
+  resolveAsset: PdfNativeAssetResolver | undefined,
+) =>
   Effect.gen(function* () {
-    const bytes = resolveAsset === undefined ? undefined : yield* resolveAsset(assetId)
+    const bytes =
+      resolveAsset === undefined ? undefined : yield* resolveAsset({ tenantId, assetId })
 
     if (bytes === undefined) {
       return yield* Effect.fail(
@@ -187,10 +193,11 @@ const toStaticPdfBlock = (node: StaticDocumentNode): PdfDocumentBlock =>
 
 const toImageBlocks = (
   node: Extract<DocumentNode, { _tag: "image" }>,
+  tenantId: string,
   resolveAsset: PdfNativeAssetResolver | undefined,
 ) =>
   Effect.gen(function* () {
-    const bytes = yield* loadAsset(node.assetId, resolveAsset)
+    const bytes = yield* loadAsset(tenantId, node.assetId, resolveAsset)
 
     const blocks: PdfDocumentBlock[] = [
       {
@@ -206,10 +213,11 @@ const toImageBlocks = (
 
 const toSignatureBlocks = (
   node: Extract<DocumentNode, { _tag: "signature" }>,
+  tenantId: string,
   resolveAsset: PdfNativeAssetResolver | undefined,
 ) =>
   Effect.gen(function* () {
-    const bytes = yield* loadAsset(node.assetId, resolveAsset)
+    const bytes = yield* loadAsset(tenantId, node.assetId, resolveAsset)
 
     const blocks: PdfDocumentBlock[] = [
       { type: "paragraph", text: node.label },
@@ -221,26 +229,23 @@ const toSignatureBlocks = (
 
 const toPdfBlocks = (
   nodes: ReadonlyArray<DocumentNode>,
+  tenantId: string,
   resolveAsset: PdfNativeAssetResolver | undefined,
+  policy: DocumentRenderPolicy,
 ) =>
   Effect.gen(function* () {
-    const blockResults = yield* Effect.all(
-      nodes.map((node) =>
-        Match.value(node).pipe(
-          Match.tag("image", (image) => toImageBlocks(image, resolveAsset)),
-          Match.tag("signature", (signature) => toSignatureBlocks(signature, resolveAsset)),
-          Match.orElse((rest) =>
-            Effect.succeed({ blocks: [toStaticPdfBlock(rest)], assetBytes: 0 }),
-          ),
-        ),
-      ),
-    )
-
     const result = { blocks: new Array<PdfDocumentBlock>(), assetBytes: 0 }
 
-    for (const blockResult of blockResults) {
-      result.blocks.push(...blockResult.blocks)
+    for (const node of nodes) {
+      const blockResult = yield* Match.value(node).pipe(
+        Match.tag("image", (image) => toImageBlocks(image, tenantId, resolveAsset)),
+        Match.tag("signature", (signature) => toSignatureBlocks(signature, tenantId, resolveAsset)),
+        Match.orElse((rest) => Effect.succeed({ blocks: [toStaticPdfBlock(rest)], assetBytes: 0 })),
+      )
+
       result.assetBytes += blockResult.assetBytes
+      yield* validateAssetBytes(result.assetBytes, policy)
+      result.blocks.push(...blockResult.blocks)
     }
 
     return result
@@ -435,8 +440,7 @@ const renderPdfNativeDocument = (
     yield* validateInputReferences(context, ast, request)
     yield* validateInputIntegrity(context, ast, request)
 
-    const { blocks, assetBytes } = yield* toPdfBlocks(ast.nodes, options.resolveAsset)
-    yield* validateAssetBytes(assetBytes, policy)
+    const { blocks } = yield* toPdfBlocks(ast.nodes, context.tenantId, options.resolveAsset, policy)
     const fontEntries = yield* loadFontEntries(textValues(ast.nodes))
 
     const params: PdfDocumentParams = {
