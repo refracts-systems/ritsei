@@ -115,7 +115,27 @@ Gate evidence reviewed on 2026-11-03:
 | Conformance | Tests cover repeated table headers, row identifiers and an explicit page break. Font, Unicode, asset and code fidelity and other pagination cases still need evidence. |
 | Workload | The evaluation contract has a job identity and fencing scope; the memory store tests deduplication and stale writers. Production queue, worker, timeout, retry and reserve behavior remain unmeasured. |
 | Operations | Only an in-memory evaluation artifact store is present. Durable storage, retention, cleanup, monitoring and recovery need an operational design and evidence. |
-| Dependency | `pdfnative` is pinned at 1.7.0 for evaluation. License and font review, supported deployment compatibility, security review and upgrade ownership need evidence. |
+| Dependency | `pdfnative` is pinned at 1.7.0 for evaluation. Its package notices and Node engine were inspected; distribution, security review and upgrade ownership still need evidence. |
+
+The 2026-11-03 dependency inspection found the following, without approving production use:
+
+- `package.json` and `pnpm-lock.yaml` pin `pdfnative` 1.7.0; its package declares MIT, Node >=22
+  and no runtime dependencies. RITSEI requires Node >=24.22 and the local evaluation tests and
+  benchmark ran on Node 24.22. These are not deployment-wide compatibility evidence.
+- The installed package includes its MIT `LICENSE`, `fonts/LICENSE` (SIL Open Font License 1.1 for
+  the bundled Noto font data), and `THIRD-PARTY-NOTICES.md` (also identifying Unicode License v3
+  data). RITSEI itself is Apache-2.0. Inspect these files again for the exact pinned package and
+  any version change; do not infer license terms from the package name alone.
+- Before distributing an artifact that includes the renderer or its font data, review the included
+  notices and make the applicable license texts and copyright notices available with that
+  distribution. `tooling/production/artifacts.ts` currently bundles Node entry points and copies
+  migrations and the web build, but has no explicit third-party-notice copy step. Verify the actual
+  release artifact and embedding/subsetting treatment, rather than assuming the package's local
+  files are present in the distributed bundle.
+- `pnpm audit --prod --json` on that date reported no `pdfnative` advisory; it failed on existing
+  `seroval` advisories in the web dependency graph. An advisory scan is not a security review.
+  Inspect renderer input handling, font and image processing, release provenance and supported
+  deployment runtimes, then assign an upgrade and vulnerability-response owner before activation.
 
 1. Complete and review evidence for each of the eight gates in the rendering architecture. In
    particular, verify pagination and font/asset fidelity, tenant isolation and resource limits,
