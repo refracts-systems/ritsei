@@ -261,6 +261,18 @@ describe("pdfnative document renderer", () => {
     }),
   )
 
+  it.effect("rejects provider layout options that are not bound to the fingerprint", () =>
+    Effect.gen(function* () {
+      const input = yield* renderInput()
+      const options = { policy }
+      Reflect.set(options, "layout", { headerTemplate: "{date}" })
+
+      const failure = yield* Effect.flip(makePdfNativeDocumentRenderer(options).render(input))
+      assert.instanceOf(failure, DocumentRendererFailure)
+      assert.strictEqual(failure.operation, "input-validation")
+    }),
+  )
+
   it.effect("fails closed when the native policy does not support a capability", () =>
     Effect.gen(function* () {
       const input = yield* renderInput()

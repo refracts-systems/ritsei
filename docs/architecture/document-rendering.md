@@ -320,6 +320,8 @@ and version; the adapter checks the returned bytes against the manifest before r
 manifest must come from a trusted owner and the resolver must enforce tenant access: a matching
 hash alone does not establish authorization. The current evaluation fingerprint and job payload
 formats are version 2; version 1 evaluation inputs must be recreated.
+The evaluation adapter uses a fixed layout; renderer-specific options are rejected until their
+effects can be represented and versioned in the render input.
 
 ## 7. Determinism and issued artifacts
 

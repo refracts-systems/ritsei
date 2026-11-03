@@ -114,7 +114,6 @@ export type PdfNativeAssetResolver = (input: {
 export type PdfNativeRendererOptions = {
   readonly policy?: DocumentRenderPolicy
   readonly resolveAsset?: PdfNativeAssetResolver
-  readonly layout?: Partial<PdfLayoutOptions>
 }
 
 const rendererFailure = (operation: string, reason: string, cause: unknown) =>
@@ -424,26 +423,14 @@ const validatePageCount = (pageCount: number, policy: DocumentRenderPolicy) =>
       )
     : Effect.succeed(undefined)
 
-const valueOr = <T>(value: T | undefined, fallback: T): T =>
-  value === undefined ? fallback : value
-
-const makePdfLayout = (
-  options: PdfNativeRendererOptions,
-  policy: DocumentRenderPolicy,
-): Partial<PdfLayoutOptions> => {
-  const provided = options.layout ?? {}
-
-  return {
-    ...provided,
-    // PDF metadata must not introduce wall-clock or snapshot-capture variance into artifact bytes.
-    creationDate: deterministicCreationDate,
-    maxBlocks: Math.min(valueOr(provided.maxBlocks, policy.maxAstNodes), policy.maxAstNodes),
-    tagged: valueOr(provided.tagged, "pdfa2u"),
-    strict: valueOr(provided.strict, true),
-    compress: valueOr(provided.compress, false),
-    onDiagnostic: valueOr(provided.onDiagnostic, () => undefined),
-  }
-}
+const makePdfLayout = (policy: DocumentRenderPolicy): Partial<PdfLayoutOptions> => ({
+  creationDate: deterministicCreationDate,
+  maxBlocks: policy.maxAstNodes,
+  tagged: "pdfa2u",
+  strict: true,
+  compress: false,
+  onDiagnostic: () => undefined,
+})
 
 const inspectPdfLayout = (params: PdfDocumentParams, layout: Partial<PdfLayoutOptions>) =>
   Effect.tryPromise({
@@ -496,6 +483,12 @@ const renderPdfNativeDocument = (
   policy: DocumentRenderPolicy,
 ) =>
   Effect.gen(function* () {
+    if ("layout" in options) {
+      return yield* Effect.fail(
+        rendererFailure("input-validation", "renderer layout options are not supported", undefined),
+      )
+    }
+
     const { context, ast, request } = yield* decodeInput(input)
     yield* validateDocumentRenderPolicy(request, policy)
 
@@ -522,7 +515,7 @@ const renderPdfNativeDocument = (
       metadata: { author: "RITSEI" },
     }
 
-    const layout = makePdfLayout(options, policy)
+    const layout = makePdfLayout(policy)
     const inspection = yield* inspectPdfLayout(params, layout)
     yield* validatePageCount(inspection.totalPages, policy)
     const bytes = yield* generatePdfBytes(params, layout)
