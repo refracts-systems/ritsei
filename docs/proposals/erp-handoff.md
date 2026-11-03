@@ -104,16 +104,16 @@ tests and `pnpm run document:benchmark` provide partial evidence, not production
 benchmark measures a transactional table and explicit page break, but skips the separate
 `pagination-table` fixture because it requests the broader `paged-media` capability.
 
-Gate evidence reviewed on 2026-11-03:
+Gate evidence reviewed on 2026-11-04 on `codex/invoice-rendering-readiness` (not yet merged):
 
 | Gate | Evidence and remaining work |
 | --- | --- |
 | Contract | Versioned rendering contracts and a Purchase Order snapshot exist. Billing's issued invoice snapshot and its binding to the artifact and invoice number remain to be implemented. |
 | Ownership | ADR-0102 and ADR-0110 assign invoices to Billing; the evaluation pilot is owned by Procurement. |
-| Security | Evaluation validates some references and limits and rejects unsupported capabilities. End-to-end tenant isolation, asset policy, sandboxing and the remaining resource limits still need evidence. |
-| Determinism | One fixture produces identical PDF bytes twice in one process. JSON key ordering now uses locale-independent UTF-16 code units; this can change evaluation snapshot checksums and fingerprints, so old evaluation inputs must be recreated. Reproducibility across the supported environment and versioned assets still needs evidence. |
-| Conformance | Tests cover repeated table headers, row identifiers and an explicit page break. Font, Unicode, asset and code fidelity and other pagination cases still need evidence. |
-| Workload | The evaluation contract has a job identity and fencing scope; the memory store tests deduplication and stale writers. Production queue, worker, timeout, retry and reserve behavior remain unmeasured. |
+| Security | Evaluation checks input and asset integrity, rejects unversioned layout options, and limits rows, pixels, asset bytes and generated output. Tenant authorization, trusted asset normalization, sandboxing and execution-time memory limits still need evidence. |
+| Determinism | The evaluation corpus produces identical PDF hashes in separate UTC and Asia/Bangkok processes on the same local runtime. Fingerprints bind asset hashes and the adapter version; version 1 evaluation inputs must be recreated. Other platforms, dependency versions and runtime environments still need evidence. |
+| Conformance | Tests cover repeated table headers, row identifiers, an explicit page break, multilingual text and font resources. Independent local inspection confirmed multilingual rendering and one PNG fixture; barcode/QR scanning, other fonts and assets, and further pagination cases still need evidence. |
+| Workload | The evaluation contract has a job identity and fencing scope; the memory store tests deduplication and stale writers. The benchmark records sequential renderer timing, CPU and process peak RSS. Production queue, worker, timeout, retry and reserve behavior remain unmeasured. |
 | Operations | Only an in-memory evaluation artifact store is present. Durable storage, retention, cleanup, monitoring and recovery need an operational design and evidence. |
 | Dependency | `pdfnative` is pinned at 1.7.0 for evaluation. Its package notices and Node engine were inspected; distribution, security review and upgrade ownership still need evidence. |
 
