@@ -252,6 +252,7 @@ export type DocumentArtifactLookup = Schema.Schema.Type<typeof DocumentArtifactL
 export type DocumentArtifactWrite = {
   readonly metadata: DocumentArtifact
   readonly bytes: Uint8Array
+  /** The active lease generation and the render request's tenant-scoped fenceScope. */
   readonly fencing: Schema.Schema.Type<typeof FencingContext>
 }
 
@@ -463,6 +464,10 @@ export const createDocumentAst = (input: Schema.Codec.Encoded<typeof DocumentAst
     } satisfies DocumentAst
   })
 
+export const documentRenderFenceScope = (
+  request: Pick<DocumentRenderRequestInput, "tenantId"> & { readonly renderFingerprint: string },
+) => `document-render:${request.tenantId}:${request.renderFingerprint}`
+
 export const createDocumentRenderRequest = (
   input: Schema.Codec.Encoded<typeof DocumentRenderRequestInput>,
 ) =>
@@ -490,7 +495,7 @@ export const createDocumentRenderRequest = (
     return {
       ...decoded,
       renderFingerprint,
-      fenceScope: `document-render:${decoded.tenantId}:${renderFingerprint}`,
+      fenceScope: documentRenderFenceScope({ tenantId: decoded.tenantId, renderFingerprint }),
     } satisfies DocumentRenderRequest
   })
 
