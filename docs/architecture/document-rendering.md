@@ -628,7 +628,8 @@ it excludes the mutable open amount. The evaluation builder accepts names as inp
 issuance must resolve those names through the owning contracts in the posting transaction before
 persisting the snapshot; the evaluation builder alone is not authorization or evidence of origin.
 Its AST builder takes an explicit UUIDv7 identity so a retry can reuse the stored identity and
-produce the same render request.
+produce the same render request. Billing validates the snapshot checksum, reconstructs the AST
+from that snapshot, and verifies the request's identities and fingerprint before staged persistence.
 The staged Billing schema binds one immutable render input and one immutable PDF to each customer
 invoice, verifies the PDF checksum in PostgreSQL, and rejects update, delete, and truncate. These
 tables alone do not prove authorization, an active lease, or atomic job completion; the candidate

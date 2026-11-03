@@ -45,6 +45,12 @@ export {
 
 export { BillingCreditExposureLive } from "./src/credit-exposure.ts"
 
+export {
+  InvoiceRenderInput,
+  InvoiceRenderInputInvalid,
+  validateInvoiceRenderInput,
+} from "./src/render-input.ts"
+
 export { BillingLive } from "./src/service.ts"
 
 export { BillingModule } from "./manifest.ts"
