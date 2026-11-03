@@ -152,6 +152,49 @@ Until activation, the browser print sheet remains available. The permitted evalu
 the gate definitions belong to [`document-rendering.md`](../architecture/document-rendering.md),
 not this working note.
 
+### B2: candidate operational approach
+
+This is a proposal for reviewing gate evidence, not an implemented service, a production
+retention promise, or an exception to the rendering architecture's current implementation
+boundary. The governing rules remain in [`document-rendering.md`](../architecture/document-rendering.md),
+[`durable-execution.md`](../architecture/durable-execution.md), and
+[`state-and-consistency.md`](../architecture/state-and-consistency.md).
+
+- **Storage and commit:** The first candidate is bounded PDF bytes and metadata in PostgreSQL,
+  subject to measured size and capacity. Use the Billing-owned invoice identity and snapshot and
+  public job contract. Design the artifact write and job completion so a crash cannot publish two
+  artifacts or acknowledge work with no artifact; the accepting mutation must enforce the active
+  fence generation. If the worker loses the commit response, inspect the committed job and artifact
+  and compare the expected identity and hash before retrying. A conflict goes to manual recovery,
+  not an overwrite or a new rendering of an issued artifact.
+- **Alternative storage:** An external object store is not selected. Consider it only for a measured
+  need; a candidate must specify immutable object identity, digest verification, authorization,
+  staged uploads, unknown-outcome reconciliation and orphan cleanup without treating two writes as
+  one transaction. Recovery and retention must be proven before activation.
+- **Cleanup and retention:** Clean temporary render files and failed staging data with bounded,
+  observable cleanup after the associated work is resolved. Do not delete an issued artifact as
+  routine retry cleanup. Retention duration, backup and restore, legal holds, deletion authority,
+  and storage limits still need a deployment decision and recovery evidence.
+- **Worker capacity:** Evaluate a separate bounded render worker and database pool, with configured
+  CPU, memory, concurrency and timeout budgets. Measure normal commands while the render workload
+  saturates those budgets; process separation alone does not establish command reserve. A renderer
+  timeout also needs a way to stop or recycle the actual work, not merely abandon a waiting fiber.
+- **Operations:** Record bounded queue wait, duration, failure, retry, resource and artifact-size
+  measurements; keep document and tenant identities out of metric labels. Alert on sustained queue
+  delay, exhausted retries, failures and storage pressure using thresholds chosen from deployment
+  measurements. For manual recovery, an authorized operator inspects job status, lease generation,
+  artifact identity and hash, and the last failure; reconcile an unknown commit before retrying,
+  and escalate conflicts instead of deleting issued evidence. Correlation records should not expose
+  invoice content or credentials.
+
+The existing Process PostgreSQL job tests, financial worker tests and memory artifact-store tests
+passed together on 2026-11-03 (3 files, 13 tests). They cover generic lease fencing, concurrent
+claims, expired-lease recovery, retry/manual-recovery behavior and in-memory deduplication. They do
+not run a renderer job, prove atomic artifact storage, establish resource limits, or satisfy the
+workload or operational gate. The renderer benchmark similarly measures the evaluation adapter,
+not a protected production worker. The storage implementation, timeout/retry values, operational
+owners, alert thresholds and retention policy remain unselected.
+
 Open owner questions that still affect scope (parity plan section 11): whether supplier bills should
 live in Billing or Procurement (the code puts them in Billing, per D2); whether the first pilots need
 lots and expiry dates in month one; which operational module a pilot is most likely to ask for.
