@@ -100,8 +100,9 @@ section 9.2.
 
 The rendering foundation already has snapshot, AST, request, and artifact contracts, an in-memory
 artifact store, a Purchase Order pilot, and an evaluation-only `pdfnative` adapter. The existing
-tests and `pnpm run document:benchmark` provide partial evidence, not production activation: the
-benchmark currently skips its `pagination-table` fixture because it requests `paged-media`.
+tests and `pnpm run document:benchmark` provide partial evidence, not production activation. The
+benchmark measures a transactional table and explicit page break, but skips the separate
+`pagination-table` fixture because it requests the broader `paged-media` capability.
 
 Gate evidence reviewed on 2026-11-03:
 
