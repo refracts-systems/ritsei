@@ -30,6 +30,9 @@ import {
   DocumentRenderLimitExceeded,
   DocumentRenderPolicy,
   DocumentRenderRequest,
+  createDocumentAst,
+  createDocumentRenderRequest,
+  createDocumentSnapshot,
   sha256Hex,
   validateDocumentRenderPolicy,
 } from "../../foundation/mod.ts"
@@ -271,7 +274,11 @@ const validateInputReferences = (
     )
   }
 
-  if (ast.snapshotId !== request.snapshotId || ast.checksum !== request.astChecksum) {
+  if (
+    ast.astId !== request.astId ||
+    ast.snapshotId !== request.snapshotId ||
+    ast.checksum !== request.astChecksum
+  ) {
     return Effect.fail(
       rendererFailure(
         "input-validation",
@@ -283,6 +290,41 @@ const validateInputReferences = (
 
   return Effect.succeed(undefined)
 }
+
+const validateInputIntegrity = (
+  context: DocumentContext,
+  ast: DocumentAst,
+  request: DocumentRenderRequest,
+) =>
+  Effect.gen(function* () {
+    const snapshot = yield* createDocumentSnapshot({
+      snapshotId: context.snapshotId,
+      tenantId: context.tenantId,
+      source: context.source,
+      capturedAt: context.capturedAt,
+      schemaVersion: context.schemaVersion,
+      payload: context.data,
+    })
+
+    const verifiedAst = yield* createDocumentAst(ast)
+    const verifiedRequest = yield* createDocumentRenderRequest(request)
+
+    if (
+      snapshot.checksum !== context.snapshotChecksum ||
+      verifiedAst.checksum !== ast.checksum ||
+      verifiedRequest.renderFingerprint !== request.renderFingerprint ||
+      verifiedRequest.fenceScope !== request.fenceScope ||
+      ast.nodes.length !== request.astNodeCount
+    ) {
+      return yield* Effect.fail(
+        rendererFailure(
+          "input-validation",
+          "document render input failed integrity validation",
+          undefined,
+        ),
+      )
+    }
+  })
 
 const validateAssetBytes = (assetBytes: number, policy: DocumentRenderPolicy) =>
   assetBytes > policy.maxAssetBytes
@@ -378,8 +420,20 @@ const renderPdfNativeDocument = (
 ) =>
   Effect.gen(function* () {
     const { context, ast, request } = yield* decodeInput(input)
-    yield* validateInputReferences(context, ast, request)
     yield* validateDocumentRenderPolicy(request, policy)
+
+    if (ast.nodes.length > policy.maxAstNodes) {
+      return yield* Effect.fail(
+        new DocumentRenderLimitExceeded({
+          limit: "ast_nodes",
+          actual: ast.nodes.length,
+          maximum: policy.maxAstNodes,
+        }),
+      )
+    }
+
+    yield* validateInputReferences(context, ast, request)
+    yield* validateInputIntegrity(context, ast, request)
 
     const { blocks, assetBytes } = yield* toPdfBlocks(ast.nodes, options.resolveAsset)
     yield* validateAssetBytes(assetBytes, policy)

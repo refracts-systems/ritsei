@@ -8,8 +8,11 @@ import {
   documentContextFromSnapshot,
   DocumentDividerNode,
   DocumentImageNode,
+  DocumentPageBreakNode,
   DocumentQrCodeNode,
   DocumentRenderInput,
+  DocumentRendererFailure,
+  DocumentRenderLimitExceeded,
   type DocumentRenderPolicy,
   DocumentSignatureNode,
   DocumentTableNode,
@@ -121,12 +124,57 @@ describe("pdfnative document renderer", () => {
       assert.isAbove(first.metadata.pageCount, 1)
       assert.strictEqual(String.fromCharCode(...first.bytes.slice(0, 5)), "%PDF-")
 
-      const text = extractText(first.bytes)
-        .map((page) => page.text)
-        .join("\n")
+      const pages = extractText(first.bytes).map((page) => page.text)
+      const text = pages.join("\n")
 
       assert.include(text, "PURCHASE ORDER")
+      const tablePages = pages.filter((page) => /ITEM-\d+/.test(page))
+      assert.isAbove(tablePages.length, 1)
+
+      for (const page of tablePages) {
+        assert.include(page, "Item")
+        assert.include(page, "Quantity")
+        assert.include(page, "Unit Price")
+      }
+
+      const rows = text.match(/ITEM-\d+/g) ?? []
+      assert.deepStrictEqual(
+        rows,
+        Array.from({ length: 80 }, (_, index) => `ITEM-${index + 1}`),
+      )
       assert.isTrue(validatePdfUA(first.bytes).valid)
+    }),
+  )
+
+  it.effect("places content after an explicit page break on a new page", () =>
+    Effect.gen(function* () {
+      const input = yield* renderInput()
+
+      const ast = yield* createDocumentAst({
+        astId,
+        snapshotId,
+        documentType: "purchase_order",
+        astVersion: 1,
+        nodes: [
+          DocumentTextNode.make({ value: "BEFORE BREAK" }),
+          DocumentPageBreakNode.make({}),
+          DocumentTextNode.make({ value: "AFTER BREAK" }),
+        ],
+      })
+
+      const request = yield* createDocumentRenderRequest({
+        ...input.request,
+        astChecksum: ast.checksum,
+        astNodeCount: ast.nodes.length,
+      })
+
+      const result = yield* renderer.render({ ...input, ast, request })
+      const pages = extractText(result.bytes).map((page) => page.text)
+
+      assert.strictEqual(pages.length, 2)
+      assert.include(pages[0], "BEFORE BREAK")
+      assert.notInclude(pages[0], "AFTER BREAK")
+      assert.include(pages[1], "AFTER BREAK")
     }),
   )
 
@@ -142,6 +190,68 @@ describe("pdfnative document renderer", () => {
       )
 
       assert.instanceOf(unsupported, UnsupportedDocumentCapability)
+    }),
+  )
+
+  it.effect("rejects render input whose content or identity does not match its checksums", () =>
+    Effect.gen(function* () {
+      const input = yield* renderInput()
+      const changedId = "018f0000-0000-7000-8000-000000000099"
+
+      const understatedRequest = yield* createDocumentRenderRequest({
+        ...input.request,
+        astNodeCount: 1,
+      })
+
+      const tamperedInputs: ReadonlyArray<DocumentRenderInput> = [
+        { ...input, ast: { ...input.ast, astId: changedId } },
+        {
+          ...input,
+          ast: {
+            ...input.ast,
+            nodes: [DocumentTextNode.make({ value: "CHANGED" }), ...input.ast.nodes.slice(1)],
+          },
+        },
+        { ...input, context: { ...input.context, data: { total: "99.00" } } },
+        {
+          ...input,
+          context: { ...input.context, source: { ...input.context.source, id: changedId } },
+        },
+        { ...input, context: { ...input.context, schemaVersion: 2 } },
+        { ...input, request: { ...input.request, renderFingerprint: "a".repeat(64) } },
+        { ...input, request: { ...input.request, fenceScope: "changed-scope" } },
+        { ...input, request: understatedRequest },
+      ]
+
+      for (const tampered of tamperedInputs) {
+        const failure = yield* Effect.flip(renderer.render(tampered))
+        assert.instanceOf(failure, DocumentRendererFailure)
+        assert.strictEqual(failure.operation, "input-validation")
+      }
+    }),
+  )
+
+  it.effect("rejects an understated node count before rendering", () =>
+    Effect.gen(function* () {
+      const input = yield* renderInput()
+
+      const ast = yield* createDocumentAst({
+        ...input.ast,
+        nodes: Array.from({ length: policy.maxAstNodes + 1 }, () =>
+          DocumentTextNode.make({ value: "ROW" }),
+        ),
+      })
+
+      const request = yield* createDocumentRenderRequest({
+        ...input.request,
+        astChecksum: ast.checksum,
+        astNodeCount: 1,
+      })
+
+      const failure = yield* Effect.flip(renderer.render({ ...input, ast, request }))
+      assert.instanceOf(failure, DocumentRenderLimitExceeded)
+      assert.strictEqual(failure.limit, "ast_nodes")
+      assert.strictEqual(failure.actual, policy.maxAstNodes + 1)
     }),
   )
 

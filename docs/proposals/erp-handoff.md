@@ -83,7 +83,7 @@ Each item gets its own branch from `main`. Items marked **needs owner** wait for
 | # | Item | Why / scope | Start from |
 | --- | --- | --- | --- |
 | B1 | Accept or revise ADR-0107 (documents module) | Code exists, ADR is still Proposed | **needs owner** |
-| B2 | Invoice artifacts and email (F2) | Stored immutable PDF via `pdfnative`, then manual "Send" over SMTP; automatic send later as a per-tenant setting, off by default. Rendering stays a job. `pdfnative` is added in its own change only after the eight activation gates pass | ADR-0110, [`document-rendering.md`](../architecture/document-rendering.md) section 12 |
+| B2 | Invoice artifacts and email (F2) | Stored immutable PDF via `pdfnative`, then manual "Send" over SMTP; automatic send later as a per-tenant setting, off by default. Rendering stays a job. The existing `pdfnative` adapter is for evaluation only; production activation requires all eight gates | ADR-0110, [`document-rendering.md`](../architecture/document-rendering.md) section 12 |
 | B3 | `localization_id` Stage B | PPh 23 and PPh 4(2) withholding on supplier bills (needs a Billing extension point for withheld amounts); dated tax rates (Tax has no validity periods); Coretax e-Faktur export as a versioned adapter run by a job | ADR-0111 |
 | B4 | Custom fields leftovers | Retire a field and purge values; embed values in the base DTO under a `custom` key (owner's choice); a Product screen | ADR-0109 |
 | B5 | Pilot readiness | Spreadsheet import of masters and opening balances; bank statement import and manual reconciliation; profit and loss and balance sheet | Parity plan Phase 8 |
@@ -95,6 +95,41 @@ Each item gets its own branch from `main`. Items marked **needs owner** wait for
 Deliberately **not** planned: model inheritance and view patching, arbitrary fields on other modules'
 tables, SAP condition technique, payroll in the flagship, a BI platform. Reasons are in parity plan
 section 9.2.
+
+### B2: next execution steps
+
+The rendering foundation already has snapshot, AST, request, and artifact contracts, an in-memory
+artifact store, a Purchase Order pilot, and an evaluation-only `pdfnative` adapter. The existing
+tests and `pnpm run document:benchmark` provide partial evidence, not production activation: the
+benchmark currently skips its `pagination-table` fixture because it requests `paged-media`.
+
+Gate evidence reviewed on 2026-11-03:
+
+| Gate | Evidence and remaining work |
+| --- | --- |
+| Contract | Versioned rendering contracts and a Purchase Order snapshot exist. Billing's issued invoice snapshot and its binding to the artifact and invoice number remain to be implemented. |
+| Ownership | ADR-0102 and ADR-0110 assign invoices to Billing; the evaluation pilot is owned by Procurement. |
+| Security | Evaluation validates some references and limits and rejects unsupported capabilities. End-to-end tenant isolation, asset policy, sandboxing and the remaining resource limits still need evidence. |
+| Determinism | One fixture produces identical PDF bytes twice in one process. Reproducibility across the supported environment and versioned assets still needs evidence. |
+| Conformance | Tests cover repeated table headers, row identifiers and an explicit page break. Font, Unicode, asset and code fidelity and other pagination cases still need evidence. |
+| Workload | The evaluation contract has a job identity and fencing scope; the memory store tests deduplication and stale writers. Production queue, worker, timeout, retry and reserve behavior remain unmeasured. |
+| Operations | Only an in-memory evaluation artifact store is present. Durable storage, retention, cleanup, monitoring and recovery need an operational design and evidence. |
+| Dependency | `pdfnative` is pinned at 1.7.0 for evaluation. License and font review, supported deployment compatibility, security review and upgrade ownership need evidence. |
+
+1. Complete and review evidence for each of the eight gates in the rendering architecture. In
+   particular, verify pagination and font/asset fidelity, tenant isolation and resource limits,
+   deterministic output, workload behavior, artifact retention and recovery, and dependency
+   ownership. Record failures and unresolved evidence; do not infer a gate passes from one test or
+   benchmark.
+2. Only after the gates pass, activate the renderer in a separate change. Implement Billing's
+   immutable issued snapshot, render job and stored artifact under ADR-0110, including authorization,
+   idempotency, fencing and failure recovery. Downloads must return the stored artifact.
+3. Add manual sending through Communication and the SMTP integration, including durable delivery
+   attempts and retries. Automatic sending is a later tenant setting, off by default.
+
+Until activation, the browser print sheet remains available. The permitted evaluation scope and
+the gate definitions belong to [`document-rendering.md`](../architecture/document-rendering.md),
+not this working note.
 
 Open owner questions that still affect scope (parity plan section 11): whether supplier bills should
 live in Billing or Procurement (the code puts them in Billing, per D2); whether the first pilots need
