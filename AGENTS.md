@@ -13,6 +13,7 @@ subsystem rules live in the canonical architecture documents linked below.
 > - Documentation index and ownership: [`./docs/README.md`](./docs/README.md), [`./docs/documentation-boundaries.md`](./docs/documentation-boundaries.md)
 > - Architecture enforcement: [`./docs/architecture/architecture-enforcement.md`](./docs/architecture/architecture-enforcement.md)
 > - Testing strategy: [`./docs/development/testing.md`](./docs/development/testing.md)
+> - Continuing the ERP build-out (status, backlog, traps): [`./docs/proposals/erp-handoff.md`](./docs/proposals/erp-handoff.md)
 > - Commit messages: [`./docs/development/commit-message-guidelines.md`](./docs/development/commit-message-guidelines.md)
 
 ## Source-of-Truth Order
