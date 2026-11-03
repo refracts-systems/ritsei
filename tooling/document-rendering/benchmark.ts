@@ -67,11 +67,15 @@ const benchmarkFixture = (fixture: BenchmarkFixture) =>
 
         const context = documentContextFromSnapshot(snapshot)
         const startedAt = performance.now()
+        const startedCpu = process.cpuUsage()
+        let firstIterationMs = 0
         let lastBytes = 0
         let lastPages = 0
         let lastFingerprint = ""
 
         for (let index = 0; index < iterations; index += 1) {
+          const iterationStartedAt = performance.now()
+
           const ast = yield* createDocumentAst({
             astId,
             snapshotId,
@@ -100,18 +104,29 @@ const benchmarkFixture = (fixture: BenchmarkFixture) =>
           })
 
           const output = yield* renderer.render({ context, ast, request })
+
+          if (index === 0) firstIterationMs = performance.now() - iterationStartedAt
+
           lastBytes = output.bytes.byteLength
           lastPages = output.metadata.pageCount
           lastFingerprint = output.metadata.renderFingerprint
         }
 
         const elapsedMs = Number((performance.now() - startedAt).toFixed(3))
+        const cpu = process.cpuUsage(startedCpu)
 
         return {
           name: fixture.name,
           iterations,
           elapsedMs,
           averageMs: Number((elapsedMs / iterations).toFixed(3)),
+          firstIterationMs: Number(firstIterationMs.toFixed(3)),
+          warmAverageMs:
+            iterations > 1
+              ? Number(((elapsedMs - firstIterationMs) / (iterations - 1)).toFixed(3))
+              : null,
+          documentsPerSecond: Number(((iterations * 1_000) / elapsedMs).toFixed(3)),
+          cpuMs: Number(((cpu.user + cpu.system) / 1_000).toFixed(3)),
           outputBytes: lastBytes,
           pages: lastPages,
           renderFingerprint: lastFingerprint,
@@ -128,7 +143,8 @@ if (isMain(import.meta.url)) {
       renderer: "pdfnative@1.7.0",
       activation: "evaluation-only",
       fixtures: results,
-      note: "This measures the RITSEI native adapter; publishing and browser profiles remain separate.",
+      processPeakRssKiB: process.resourceUsage().maxRSS,
+      note: "Sequential in-process measurements include AST and request construction. The first iteration is not a cold-process measurement; peak RSS is for the entire process. Publishing and browser profiles remain separate.",
     }),
   )
 }
