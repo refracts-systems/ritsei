@@ -2,6 +2,7 @@ export { BillingCapabilities } from "./src/capabilities.ts"
 
 export {
   CustomerInvoiceDocument,
+  InvoiceDocumentAstInput,
   InvoiceDocumentPayload,
   InvoiceDocumentSnapshot,
   InvoiceDocumentSnapshotInput,

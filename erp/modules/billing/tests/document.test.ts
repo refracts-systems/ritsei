@@ -9,6 +9,7 @@ import {
 } from "../../../../framework/foundation/mod.ts"
 import {
   CustomerInvoiceDocument,
+  InvoiceDocumentAstInput,
   InvoiceDocumentSnapshot,
   makeInvoiceDocumentAst,
   makeInvoiceDocumentSnapshot,
@@ -54,14 +55,18 @@ const snapshotInput = {
   customerName: "Customer Ltd",
 }
 
+const astInput = { astId: "018f0000-0000-7000-8000-000000000009" }
+
 describe("invoice document evaluation", () => {
   it.effect("captures immutable invoice facts and builds its AST", () =>
     Effect.gen(function* () {
       const snapshot = yield* makeInvoiceDocumentSnapshot(invoice, snapshotInput)
       yield* Schema.decodeUnknownEffect(InvoiceDocumentSnapshot)(snapshot)
 
-      const ast = yield* makeInvoiceDocumentAst(snapshot)
+      const ast = yield* makeInvoiceDocumentAst(snapshot, astInput)
       yield* Schema.decodeUnknownEffect(DocumentAst)(ast)
+
+      const replay = yield* makeInvoiceDocumentAst(snapshot, astInput)
 
       assert.strictEqual(snapshot.source.owner, "billing")
       assert.strictEqual(snapshot.source.id, invoice.id)
@@ -69,6 +74,8 @@ describe("invoice document evaluation", () => {
       assert.strictEqual(snapshot.payload.customerName, snapshotInput.customerName)
       assert.notProperty(snapshot.payload, "openAmount")
       assert.strictEqual(ast.snapshotId, snapshot.snapshotId)
+      assert.strictEqual(ast.astId, astInput.astId)
+      assert.deepStrictEqual(replay, ast)
       assert.deepStrictEqual(ast.nodes[0], DocumentTextNode.make({ value: "INVOICE INV-001" }))
       assert.deepStrictEqual(
         ast.nodes[4],
@@ -104,6 +111,18 @@ describe("invoice document evaluation", () => {
     Effect.gen(function* () {
       const failure = yield* Effect.flip(
         Schema.decodeUnknownEffect(CustomerInvoiceDocument)({ ...invoice, kind: "supplier_bill" }),
+      )
+
+      assert.instanceOf(failure, Schema.SchemaError)
+    }),
+  )
+
+  it.effect("rejects a non-v7 AST identity", () =>
+    Effect.gen(function* () {
+      const failure = yield* Effect.flip(
+        Schema.decodeUnknownEffect(InvoiceDocumentAstInput)({
+          astId: "018f0000-0000-4000-8000-000000000009",
+        }),
       )
 
       assert.instanceOf(failure, Schema.SchemaError)
