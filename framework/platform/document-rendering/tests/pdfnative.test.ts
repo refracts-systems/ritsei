@@ -29,6 +29,7 @@ const snapshotId = "018f0000-0000-7000-8000-000000000002"
 const astId = "018f0000-0000-7000-8000-000000000003"
 const sourceId = "018f0000-0000-7000-8000-000000000004"
 const timestamp = "2026-09-06T00:00:00.000Z"
+const multilingualText = "فاتورة شراء / 仕入注文 / 구매 주문"
 
 const pngBytes = Uint8Array.from(
   atob(
@@ -67,7 +68,7 @@ const renderInput = () =>
       astVersion: 1,
       nodes: [
         DocumentTextNode.make({ value: "PURCHASE ORDER" }),
-        DocumentTextNode.make({ value: "فاتورة شراء / 仕入注文 / 구매 주문" }),
+        DocumentTextNode.make({ value: multilingualText }),
         DocumentTableNode.make({
           headers: ["Item", "Quantity", "Unit Price"],
           rows: Array.from({ length: 80 }, (_, index) => [`ITEM-${index + 1}`, "2", "12.50"]),
@@ -128,6 +129,20 @@ describe("pdfnative document renderer", () => {
       const text = pages.join("\n")
 
       assert.include(text, "PURCHASE ORDER")
+      assert.include(text.normalize("NFKC"), "仕入注文")
+      assert.include(text, "구매 주문")
+
+      // pdfnative's extractor reads ToUnicode in visual order, not tagged /ActualText.
+      const actualText = Buffer.from(multilingualText, "utf16le")
+        .swap16()
+        .toString("hex")
+        .toUpperCase()
+
+      assert.include(
+        new TextDecoder("latin1").decode(first.bytes),
+        `/ActualText <FEFF${actualText}>`,
+      )
+
       const tablePages = pages.filter((page) => /ITEM-\d+/.test(page))
       assert.isAbove(tablePages.length, 1)
 
