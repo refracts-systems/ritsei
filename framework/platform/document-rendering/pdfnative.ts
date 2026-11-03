@@ -76,6 +76,7 @@ const defaultPolicy: DocumentRenderPolicy = {
 export type PdfNativeAssetResolver = (input: {
   readonly tenantId: string
   readonly assetId: string
+  readonly version: string
 }) => Effect.Effect<Uint8Array | undefined, DocumentAssetUnavailable | DocumentRendererFailure>
 
 export type PdfNativeRendererOptions = {
@@ -127,20 +128,51 @@ const loadFontEntries = (texts: ReadonlyArray<string>) =>
     catch: (cause) => rendererFailure("font-loading", "unable to load registered fonts", cause),
   })
 
+type AssetBudget = { readonly usedBytes: number; readonly policy: DocumentRenderPolicy }
+
 const loadAsset = (
-  tenantId: string,
+  request: DocumentRenderRequest,
   assetId: string,
   resolveAsset: PdfNativeAssetResolver | undefined,
+  budget: AssetBudget,
 ) =>
   Effect.gen(function* () {
-    const bytes =
-      resolveAsset === undefined ? undefined : yield* resolveAsset({ tenantId, assetId })
+    const asset = request.assetVersions.find((entry) => entry.assetId === assetId)
 
-    if (bytes === undefined) {
+    if (asset === undefined) {
+      return yield* Effect.fail(
+        new DocumentAssetUnavailable({
+          assetId,
+          reason: "asset is absent from the render manifest",
+        }),
+      )
+    }
+
+    const resolved =
+      resolveAsset === undefined
+        ? undefined
+        : yield* resolveAsset({ tenantId: request.tenantId, assetId, version: asset.version })
+
+    if (resolved === undefined) {
       return yield* Effect.fail(
         new DocumentAssetUnavailable({
           assetId,
           reason: "the renderer has no asset bytes for this asset",
+        }),
+      )
+    }
+
+    yield* validateAssetBytes(budget.usedBytes + resolved.byteLength, budget.policy)
+
+    // Keep the verified image stable even if the resolver later mutates its buffer.
+    const bytes = Uint8Array.from(resolved)
+    const contentHash = yield* sha256Hex(bytes)
+
+    if (contentHash !== asset.contentHash) {
+      return yield* Effect.fail(
+        new DocumentAssetUnavailable({
+          assetId,
+          reason: "asset content does not match its version",
         }),
       )
     }
@@ -194,11 +226,12 @@ const toStaticPdfBlock = (node: StaticDocumentNode): PdfDocumentBlock =>
 
 const toImageBlocks = (
   node: Extract<DocumentNode, { _tag: "image" }>,
-  tenantId: string,
+  request: DocumentRenderRequest,
   resolveAsset: PdfNativeAssetResolver | undefined,
+  budget: AssetBudget,
 ) =>
   Effect.gen(function* () {
-    const bytes = yield* loadAsset(tenantId, node.assetId, resolveAsset)
+    const bytes = yield* loadAsset(request, node.assetId, resolveAsset, budget)
 
     const blocks: PdfDocumentBlock[] = [
       {
@@ -214,11 +247,12 @@ const toImageBlocks = (
 
 const toSignatureBlocks = (
   node: Extract<DocumentNode, { _tag: "signature" }>,
-  tenantId: string,
+  request: DocumentRenderRequest,
   resolveAsset: PdfNativeAssetResolver | undefined,
+  budget: AssetBudget,
 ) =>
   Effect.gen(function* () {
-    const bytes = yield* loadAsset(tenantId, node.assetId, resolveAsset)
+    const bytes = yield* loadAsset(request, node.assetId, resolveAsset, budget)
 
     const blocks: PdfDocumentBlock[] = [
       { type: "paragraph", text: node.label },
@@ -230,7 +264,7 @@ const toSignatureBlocks = (
 
 const toPdfBlocks = (
   nodes: ReadonlyArray<DocumentNode>,
-  tenantId: string,
+  request: DocumentRenderRequest,
   resolveAsset: PdfNativeAssetResolver | undefined,
   policy: DocumentRenderPolicy,
 ) =>
@@ -238,9 +272,13 @@ const toPdfBlocks = (
     const result = { blocks: new Array<PdfDocumentBlock>(), assetBytes: 0 }
 
     for (const node of nodes) {
+      const budget = { usedBytes: result.assetBytes, policy }
+
       const blockResult = yield* Match.value(node).pipe(
-        Match.tag("image", (image) => toImageBlocks(image, tenantId, resolveAsset)),
-        Match.tag("signature", (signature) => toSignatureBlocks(signature, tenantId, resolveAsset)),
+        Match.tag("image", (image) => toImageBlocks(image, request, resolveAsset, budget)),
+        Match.tag("signature", (signature) =>
+          toSignatureBlocks(signature, request, resolveAsset, budget),
+        ),
         Match.orElse((rest) => Effect.succeed({ blocks: [toStaticPdfBlock(rest)], assetBytes: 0 })),
       )
 
@@ -398,6 +436,7 @@ const makeDocumentArtifact = (
 
     const metadata = yield* Schema.decodeUnknownEffect(DocumentArtifact)({
       artifactId: uuidv7(),
+      fingerprintVersion: request.fingerprintVersion,
       tenantId: request.tenantId,
       snapshotId: request.snapshotId,
       astId: request.astId,
@@ -441,7 +480,7 @@ const renderPdfNativeDocument = (
     yield* validateInputReferences(context, ast, request)
     yield* validateInputIntegrity(context, ast, request)
 
-    const { blocks } = yield* toPdfBlocks(ast.nodes, context.tenantId, options.resolveAsset, policy)
+    const { blocks } = yield* toPdfBlocks(ast.nodes, request, options.resolveAsset, policy)
     const fontEntries = yield* loadFontEntries(textValues(ast.nodes))
 
     const params: PdfDocumentParams = {

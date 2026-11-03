@@ -162,7 +162,25 @@ export const DocumentAst = Schema.Struct({
 
 export type DocumentAst = Schema.Schema.Type<typeof DocumentAst>
 
+export const DocumentAssetVersion = Schema.Struct({
+  assetId: NonEmptyString,
+  version: NonEmptyString,
+  contentHash: Sha256,
+})
+
+export type DocumentAssetVersion = Schema.Schema.Type<typeof DocumentAssetVersion>
+
+export const DocumentAssetVersions = Schema.Array(DocumentAssetVersion).check(
+  Schema.makeFilter(
+    (assets) => new Set(assets.map((asset) => asset.assetId)).size === assets.length,
+    {
+      expected: "document asset IDs must be unique within a render",
+    },
+  ),
+)
+
 export const DocumentRenderRequestInput = Schema.Struct({
+  fingerprintVersion: Schema.Literal(2),
   tenantId: Uuid,
   snapshotId: Uuid,
   snapshotChecksum: Sha256,
@@ -173,7 +191,7 @@ export const DocumentRenderRequestInput = Schema.Struct({
   documentSchemaVersion: PositiveInteger,
   rendererFamily: DocumentRendererFamily,
   rendererVersion: NonEmptyString,
-  assetVersions: Schema.Array(NonEmptyString),
+  assetVersions: DocumentAssetVersions,
   capabilities: Schema.Array(DocumentCapability),
   astNodeCount: NonNegativeInteger,
   pageCount: NonNegativeInteger,
@@ -192,7 +210,8 @@ export const DocumentRenderRequest = Schema.Struct({
 export type DocumentRenderRequest = Schema.Schema.Type<typeof DocumentRenderRequest>
 
 export const DocumentRenderJobPayload = Schema.Struct({
-  jobVersion: PositiveInteger,
+  jobVersion: Schema.Literal(2),
+  fingerprintVersion: Schema.Literal(2),
   tenantId: Uuid,
   snapshotId: Uuid,
   astId: Uuid,
@@ -201,7 +220,7 @@ export const DocumentRenderJobPayload = Schema.Struct({
   documentSchemaVersion: PositiveInteger,
   rendererFamily: DocumentRendererFamily,
   rendererVersion: NonEmptyString,
-  assetVersions: Schema.Array(NonEmptyString),
+  assetVersions: DocumentAssetVersions,
   capabilities: Schema.Array(DocumentCapability),
   astNodeCount: NonNegativeInteger,
   pageCount: NonNegativeInteger,
@@ -222,6 +241,7 @@ export type DocumentArtifactStatus = Schema.Schema.Type<typeof DocumentArtifactS
 
 export const DocumentArtifact = Schema.Struct({
   artifactId: Uuid,
+  fingerprintVersion: Schema.Literal(2),
   tenantId: Uuid,
   snapshotId: Uuid,
   astId: Uuid,
@@ -230,7 +250,7 @@ export const DocumentArtifact = Schema.Struct({
   documentSchemaVersion: PositiveInteger,
   rendererFamily: DocumentRendererFamily,
   rendererVersion: NonEmptyString,
-  assetVersions: Schema.Array(NonEmptyString),
+  assetVersions: DocumentAssetVersions,
   renderFingerprint: Sha256,
   contentHash: Sha256,
   mediaType: NonEmptyString,
@@ -478,6 +498,7 @@ export const createDocumentRenderRequest = (
     const decoded = yield* Schema.decodeUnknownEffect(DocumentRenderRequestInput)(input)
 
     const renderFingerprint = yield* hashJson({
+      fingerprintVersion: decoded.fingerprintVersion,
       tenantId: decoded.tenantId,
       snapshotId: decoded.snapshotId,
       snapshotChecksum: decoded.snapshotChecksum,
@@ -513,7 +534,8 @@ export const makeDocumentRenderJobPayload = (
     const request = yield* Schema.decodeUnknownEffect(DocumentRenderRequest)(input)
 
     return {
-      jobVersion: 1,
+      jobVersion: 2,
+      fingerprintVersion: request.fingerprintVersion,
       tenantId: request.tenantId,
       snapshotId: request.snapshotId,
       astId: request.astId,

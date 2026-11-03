@@ -22,7 +22,7 @@ const artifactKey = (tenantId: string, renderFingerprint: string) =>
 
 const copyArtifact = (metadata: DocumentArtifact): DocumentArtifact => ({
   ...metadata,
-  assetVersions: [...metadata.assetVersions],
+  assetVersions: metadata.assetVersions.map((asset) => ({ ...asset })),
 })
 
 const artifactIdOf = (input: DocumentArtifactWrite["metadata"] | undefined) =>

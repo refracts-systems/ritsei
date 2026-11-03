@@ -20,6 +20,7 @@ import {
   createDocumentAst,
   createDocumentRenderRequest,
   createDocumentSnapshot,
+  sha256Hex,
   UnsupportedDocumentCapability,
 } from "../../../foundation/mod.ts"
 import { makePdfNativeDocumentRenderer } from "../mod.ts"
@@ -81,7 +82,10 @@ const renderInput = () =>
       ],
     })
 
+    const assetHash = yield* sha256Hex(pngBytes)
+
     const request = yield* createDocumentRenderRequest({
+      fingerprintVersion: 2,
       tenantId,
       snapshotId,
       snapshotChecksum: snapshot.checksum,
@@ -92,7 +96,10 @@ const renderInput = () =>
       documentSchemaVersion: 1,
       rendererFamily: "native-transactional",
       rendererVersion: "pdfnative@1.7.0",
-      assetVersions: ["logo-v1", "signature-v1"],
+      assetVersions: [
+        { assetId: "logo-v1", version: "1", contentHash: assetHash },
+        { assetId: "signature-v1", version: "2", contentHash: assetHash },
+      ],
       capabilities: ["svg"],
       astNodeCount: ast.nodes.length,
       pageCount: 20,
@@ -121,6 +128,8 @@ describe("pdfnative document renderer", () => {
       assert.deepStrictEqual([...first.bytes], [...second.bytes])
       assert.strictEqual(first.metadata.contentHash, second.metadata.contentHash)
       assert.strictEqual(first.metadata.renderFingerprint, second.metadata.renderFingerprint)
+      assert.strictEqual(first.metadata.fingerprintVersion, 2)
+      assert.deepStrictEqual(first.metadata.assetVersions, input.request.assetVersions)
       assert.strictEqual(first.metadata.mediaType, "application/pdf")
       assert.isAbove(first.metadata.pageCount, 1)
       assert.strictEqual(String.fromCharCode(...first.bytes.slice(0, 5)), "%PDF-")
@@ -283,22 +292,25 @@ describe("pdfnative document renderer", () => {
     }),
   )
 
-  it.effect("passes the verified tenant to the asset resolver", () =>
+  it.effect("passes the verified tenant and asset version to the resolver", () =>
     Effect.gen(function* () {
       const input = yield* renderInput()
-      const resolvedTenants: string[] = []
+      const resolvedAssets: { tenantId: string; assetId: string; version: string }[] = []
 
       const scopedRenderer = makePdfNativeDocumentRenderer({
         policy,
-        resolveAsset: ({ tenantId: assetTenant }) => {
-          resolvedTenants.push(assetTenant)
+        resolveAsset: (asset) => {
+          resolvedAssets.push(asset)
 
-          return Effect.succeed(assetTenant === tenantId ? pngBytes : undefined)
+          return Effect.succeed(asset.tenantId === tenantId ? pngBytes : undefined)
         },
       })
 
       yield* scopedRenderer.render(input)
-      assert.deepStrictEqual(resolvedTenants, [tenantId, tenantId])
+      assert.deepStrictEqual(resolvedAssets, [
+        { tenantId, assetId: "logo-v1", version: "1" },
+        { tenantId, assetId: "signature-v1", version: "2" },
+      ])
 
       const otherTenantId = "018f0000-0000-7000-8000-000000000099"
 
@@ -326,7 +338,7 @@ describe("pdfnative document renderer", () => {
       )
 
       assert.instanceOf(missing, DocumentAssetUnavailable)
-      assert.strictEqual(resolvedTenants.at(-1), otherTenantId)
+      assert.strictEqual(resolvedAssets.at(-1)?.tenantId, otherTenantId)
     }),
   )
 
@@ -364,6 +376,73 @@ describe("pdfnative document renderer", () => {
       assert.strictEqual(failure.limit, "asset_bytes")
       assert.strictEqual(failure.actual, pngBytes.byteLength * 2)
       assert.deepStrictEqual(resolvedIds, ["logo-v1", "signature-v1"])
+    }),
+  )
+
+  it.effect("rejects assets that are absent from the manifest before calling the resolver", () =>
+    Effect.gen(function* () {
+      const input = yield* renderInput()
+      let calls = 0
+
+      const unmanifestedRequest = yield* createDocumentRenderRequest({
+        ...input.request,
+        assetVersions: input.request.assetVersions.filter((asset) => asset.assetId !== "logo-v1"),
+      })
+
+      const scopedRenderer = makePdfNativeDocumentRenderer({
+        policy,
+        resolveAsset: () => {
+          calls += 1
+
+          return Effect.succeed(pngBytes)
+        },
+      })
+
+      const failure = yield* Effect.flip(
+        scopedRenderer.render({ ...input, request: unmanifestedRequest }),
+      )
+
+      assert.instanceOf(failure, DocumentAssetUnavailable)
+      assert.strictEqual(failure.assetId, "logo-v1")
+      assert.strictEqual(calls, 0)
+    }),
+  )
+
+  it.effect("rejects asset bytes that do not match the versioned content hash", () =>
+    Effect.gen(function* () {
+      const input = yield* renderInput()
+
+      const changedRenderer = makePdfNativeDocumentRenderer({
+        policy,
+        resolveAsset: () => Effect.succeed(Uint8Array.from([1, 2, 3])),
+      })
+
+      const failure = yield* Effect.flip(changedRenderer.render(input))
+      assert.instanceOf(failure, DocumentAssetUnavailable)
+      assert.strictEqual(failure.assetId, "logo-v1")
+      assert.strictEqual(failure.reason, "asset content does not match its version")
+    }),
+  )
+
+  it.effect("renders the verified copy if the resolver mutates its original bytes", () =>
+    Effect.gen(function* () {
+      const input = yield* renderInput()
+      const baseline = yield* renderer.render(input)
+      const mutableBytes = Uint8Array.from(pngBytes)
+
+      const mutableRenderer = makePdfNativeDocumentRenderer({
+        policy,
+        resolveAsset: ({ assetId }) => {
+          if (assetId === "logo-v1") return Effect.succeed(mutableBytes)
+
+          mutableBytes.fill(0)
+
+          return Effect.succeed(pngBytes)
+        },
+      })
+
+      const result = yield* mutableRenderer.render(input)
+      assert.deepStrictEqual([...result.bytes], [...baseline.bytes])
     }),
   )
 

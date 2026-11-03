@@ -10,6 +10,7 @@ import {
   createDocumentAst,
   createDocumentRenderRequest,
   createDocumentSnapshot,
+  sha256Hex,
 } from "../../framework/foundation/mod.ts"
 import { makePdfNativeDocumentRenderer } from "../../framework/platform/mod.ts"
 import { documentBenchmarkCorpus } from "./corpus.ts"
@@ -44,8 +45,12 @@ const policy: DocumentRenderPolicy = {
 
 const renderer = makePdfNativeDocumentRenderer({
   policy,
-  resolveAsset: ({ assetId }) =>
-    Effect.succeed(assetId === "logo-v1" || assetId === "signature-v1" ? samplePng : undefined),
+  resolveAsset: ({ assetId, version }) =>
+    Effect.succeed(
+      version === "1" && (assetId === "logo-v1" || assetId === "signature-v1")
+        ? samplePng
+        : undefined,
+    ),
 })
 
 type BenchmarkFixture = (typeof documentBenchmarkCorpus)[number]
@@ -54,6 +59,7 @@ const renderFixture = (
   fixture: BenchmarkFixture,
   snapshot: DocumentSnapshot,
   context: DocumentContext,
+  assetHash: string,
   index: number,
 ) =>
   Effect.gen(function* () {
@@ -67,6 +73,7 @@ const renderFixture = (
 
     const request = yield* createDocumentRenderRequest({
       tenantId,
+      fingerprintVersion: 2,
       snapshotId,
       snapshotChecksum: snapshot.checksum,
       astId: ast.astId,
@@ -76,7 +83,14 @@ const renderFixture = (
       documentSchemaVersion: 1,
       rendererFamily: "native-transactional",
       rendererVersion: "pdfnative@1.7.0",
-      assetVersions: fixture.assetBytes > 0 ? ["sample-assets@1"] : [],
+      assetVersions:
+        fixture.assetBytes > 0
+          ? ["logo-v1", "signature-v1"].map((assetId) => ({
+              assetId,
+              version: "1",
+              contentHash: assetHash,
+            }))
+          : [],
       capabilities: fixture.capabilities,
       astNodeCount: ast.nodes.length,
       pageCount: fixture.pageCount,
@@ -105,23 +119,26 @@ const benchmarkFixture = (fixture: BenchmarkFixture) =>
         })
 
         const context = documentContextFromSnapshot(snapshot)
+        const assetHash = yield* sha256Hex(samplePng)
         const startedAt = performance.now()
         const startedCpu = process.cpuUsage()
         let firstIterationMs = 0
         let lastBytes = 0
         let lastPages = 0
         let lastFingerprint = ""
+        let lastContentHash = ""
 
         for (let index = 0; index < iterations; index += 1) {
           const iterationStartedAt = performance.now()
 
-          const output = yield* renderFixture(fixture, snapshot, context, index)
+          const output = yield* renderFixture(fixture, snapshot, context, assetHash, index)
 
           if (index === 0) firstIterationMs = performance.now() - iterationStartedAt
 
           lastBytes = output.bytes.byteLength
           lastPages = output.metadata.pageCount
           lastFingerprint = output.metadata.renderFingerprint
+          lastContentHash = output.metadata.contentHash
         }
 
         const elapsedMs = Number((performance.now() - startedAt).toFixed(3))
@@ -142,6 +159,7 @@ const benchmarkFixture = (fixture: BenchmarkFixture) =>
           outputBytes: lastBytes,
           pages: lastPages,
           renderFingerprint: lastFingerprint,
+          contentHash: lastContentHash,
         }
       })
 
