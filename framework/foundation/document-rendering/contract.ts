@@ -353,7 +353,14 @@ export class DocumentRenderPolicyViolation extends Schema.TaggedError<DocumentRe
 export class DocumentRenderLimitExceeded extends Schema.TaggedError<DocumentRenderLimitExceeded>()(
   "DocumentRenderLimitExceeded",
   {
-    limit: Schema.Literals(["ast_nodes", "pages", "asset_bytes", "image_pixels", "output_bytes"]),
+    limit: Schema.Literals([
+      "ast_nodes",
+      "table_rows",
+      "pages",
+      "asset_bytes",
+      "image_pixels",
+      "output_bytes",
+    ]),
     actual: NonNegativeInteger,
     maximum: NonNegativeInteger,
   },
@@ -391,6 +398,7 @@ export const DocumentRenderPolicy = Schema.Struct({
   allowJavaScript: Schema.Boolean,
   allowNetwork: Schema.Boolean,
   maxAstNodes: PositiveInteger,
+  maxTableRows: NonNegativeInteger,
   maxPages: PositiveInteger,
   maxAssetBytes: NonNegativeInteger,
   maxImagePixels: PositiveInteger,
