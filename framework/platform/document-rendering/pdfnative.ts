@@ -12,6 +12,7 @@ import {
   type FontLoader,
   inspectDocumentLayout,
   loadFontData,
+  parseImage,
   type PdfLayoutOptions,
   registerFonts,
 } from "pdfnative"
@@ -105,6 +106,7 @@ const defaultPolicy: DocumentRenderPolicy = {
   maxAstNodes: 100_000,
   maxPages: 10_000,
   maxAssetBytes: 50_000_000,
+  maxImagePixels: 20_000_000,
 }
 
 /** Resolve only assets that the specified tenant is authorized to use. */
@@ -164,6 +166,38 @@ const loadFontEntries = (texts: ReadonlyArray<string>) =>
 
 type AssetBudget = { readonly usedBytes: number; readonly policy: DocumentRenderPolicy }
 
+const validateImage = (bytes: Uint8Array, assetId: string, policy: DocumentRenderPolicy) =>
+  Effect.gen(function* () {
+    if (detectImageFormat(bytes) === null) {
+      return yield* Effect.fail(
+        rendererFailure("asset-loading", "asset is not a supported PNG or JPEG image", { assetId }),
+      )
+    }
+
+    const dimensions = yield* Effect.try({
+      try: () => parseImage(bytes),
+      catch: (cause) => rendererFailure("asset-loading", "unable to parse image", cause),
+    })
+
+    const pixels = dimensions.width * dimensions.height
+
+    if (dimensions.width < 1 || dimensions.height < 1 || pixels > 2_147_483_647) {
+      return yield* Effect.fail(
+        rendererFailure("asset-loading", "image dimensions are invalid or unsupported", undefined),
+      )
+    }
+
+    if (pixels > policy.maxImagePixels) {
+      return yield* Effect.fail(
+        new DocumentRenderLimitExceeded({
+          limit: "image_pixels",
+          actual: pixels,
+          maximum: policy.maxImagePixels,
+        }),
+      )
+    }
+  })
+
 const loadAsset = (
   request: DocumentRenderRequest,
   assetId: string,
@@ -211,11 +245,7 @@ const loadAsset = (
       )
     }
 
-    if (detectImageFormat(bytes) === null) {
-      return yield* Effect.fail(
-        rendererFailure("asset-loading", "asset is not a supported PNG or JPEG image", { assetId }),
-      )
-    }
+    yield* validateImage(bytes, assetId, budget.policy)
 
     return bytes
   })

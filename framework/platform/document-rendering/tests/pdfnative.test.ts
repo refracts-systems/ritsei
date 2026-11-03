@@ -49,6 +49,7 @@ const policy: DocumentRenderPolicy = {
   maxAstNodes: 100,
   maxPages: 20,
   maxAssetBytes: 100_000,
+  maxImagePixels: 1_000_000,
 }
 
 const renderInput = () =>
@@ -449,6 +450,35 @@ describe("pdfnative document renderer", () => {
       assert.strictEqual(failure.limit, "asset_bytes")
       assert.strictEqual(failure.actual, pngBytes.byteLength * 2)
       assert.deepStrictEqual(resolvedIds, ["logo-v1", "signature-v1"])
+    }),
+  )
+
+  it.effect("rejects images exceeding the pixel budget before rendering", () =>
+    Effect.gen(function* () {
+      const input = yield* renderInput()
+      const oversized = Uint8Array.from(pngBytes)
+      const header = new DataView(oversized.buffer)
+      header.setUint32(16, 2)
+      header.setUint32(20, 2)
+      const contentHash = yield* sha256Hex(oversized)
+
+      const request = yield* createDocumentRenderRequest({
+        ...input.request,
+        assetVersions: input.request.assetVersions.map((asset) =>
+          asset.assetId === "logo-v1" ? { ...asset, contentHash } : asset,
+        ),
+      })
+
+      const limitedRenderer = makePdfNativeDocumentRenderer({
+        policy: { ...policy, maxImagePixels: 1 },
+        resolveAsset: () => Effect.succeed(oversized),
+      })
+
+      const failure = yield* Effect.flip(limitedRenderer.render({ ...input, request }))
+      assert.instanceOf(failure, DocumentRenderLimitExceeded)
+      assert.strictEqual(failure.limit, "image_pixels")
+      assert.strictEqual(failure.actual, 4)
+      assert.strictEqual(failure.maximum, 1)
     }),
   )
 
