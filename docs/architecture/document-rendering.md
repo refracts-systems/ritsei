@@ -623,6 +623,11 @@ applying an evaluation migration to production, production invoice enqueueing or
 a production PDF route, browser worker, template persistence model, or a production artifact-retention
 promise before the gates pass.
 
+Billing's evaluation invoice snapshot captures its issued number, names, date, lines and totals;
+it excludes the mutable open amount. The evaluation builder accepts names as input. Production
+issuance must resolve those names through the owning contracts in the posting transaction before
+persisting the snapshot; the evaluation builder alone is not authorization or evidence of origin.
+
 `pdfnative` and its RITSEI adapter are evaluation dependencies only until the activation gates pass.
 The adapter is used for conformance and benchmark evidence; it does not activate a production
 renderer profile. Browser compatibility remains documentation-only in this phase. Puppeteer,

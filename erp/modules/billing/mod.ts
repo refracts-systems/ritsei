@@ -1,6 +1,15 @@
 export { BillingCapabilities } from "./src/capabilities.ts"
 
 export {
+  CustomerInvoiceDocument,
+  InvoiceDocumentPayload,
+  InvoiceDocumentSnapshot,
+  InvoiceDocumentSnapshotInput,
+  makeInvoiceDocumentAst,
+  makeInvoiceDocumentSnapshot,
+} from "./src/document.ts"
+
+export {
   ApplySettlementInput,
   BillingDocument,
   BillingDocumentLine,

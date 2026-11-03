@@ -108,7 +108,7 @@ Gate evidence reviewed on 2026-11-04 on `codex/invoice-rendering-readiness` (not
 
 | Gate | Evidence and remaining work |
 | --- | --- |
-| Contract | Versioned rendering contracts and a Purchase Order snapshot exist. Billing's issued invoice snapshot and its binding to the artifact and invoice number remain to be implemented. |
+| Contract | Versioned rendering contracts and evaluation snapshots for Purchase Order and customer invoice exist. Billing's snapshot still needs trusted names resolved at posting, durable storage, and binding to the artifact and invoice number. |
 | Ownership | ADR-0102 and ADR-0110 assign invoices to Billing; the evaluation pilot is owned by Procurement. |
 | Security | Evaluation checks input and asset integrity, rejects unversioned layout options, and limits rows, pixels, asset bytes and generated output. Tenant authorization, trusted asset normalization, sandboxing and execution-time memory limits still need evidence. |
 | Determinism | The evaluation corpus produces identical PDF hashes in separate UTC and Asia/Bangkok processes on the same local runtime. Fingerprints bind asset hashes and the adapter version; version 1 evaluation inputs must be recreated. Other platforms, dependency versions and runtime environments still need evidence. |
