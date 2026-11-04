@@ -29,6 +29,20 @@ export const GetInvoiceRenderInput = Schema.Struct({
   invoiceId: Uuid,
 })
 
+export const InvoiceRenderArtifact = Schema.Struct({
+  artifactId: Uuid,
+  tenantId: Uuid,
+  invoiceId: Uuid,
+  snapshotId: Uuid,
+  astId: Uuid,
+  renderFingerprint: InvoiceRenderInputSchema.fields.request.fields.renderFingerprint,
+  contentHash: InvoiceRenderInputSchema.fields.snapshot.fields.checksum,
+  content: Schema.Uint8Array,
+  pageCount: Schema.Int.check(Schema.isGreaterThan(0)),
+})
+
+export type InvoiceRenderArtifact = Schema.Schema.Type<typeof InvoiceRenderArtifact>
+
 export class InvoiceRenderInputConflict extends Schema.TaggedError<InvoiceRenderInputConflict>()(
   "InvoiceRenderInputConflict",
   {
@@ -56,6 +70,12 @@ export interface InvoiceRenderEvaluationService {
     input: Schema.Codec.Encoded<typeof GetInvoiceRenderInput>,
   ) => Effect.Effect<
     InvoiceRenderInput | null,
+    AuthorizationDenied | DatabaseFailure | Schema.SchemaError
+  >
+  readonly getArtifact: (
+    input: Schema.Codec.Encoded<typeof GetInvoiceRenderInput>,
+  ) => Effect.Effect<
+    InvoiceRenderArtifact | null,
     AuthorizationDenied | DatabaseFailure | Schema.SchemaError
   >
 }

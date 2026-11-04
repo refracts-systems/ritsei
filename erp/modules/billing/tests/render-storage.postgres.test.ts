@@ -377,6 +377,15 @@ it.effect.skipIf(databaseUrl === undefined)(
             ${request.renderFingerprint}, ${hash}, ${bytes}, 1)
         `
 
+        const getArtifact = { principal, tenantId: fixture.tenantId, invoiceId }
+
+        assert.strictEqual(yield* allowed.getArtifact(getArtifact), null)
+        assert.instanceOf(yield* Effect.flip(denied.getArtifact(getArtifact)), AuthorizationDenied)
+        assert.instanceOf(
+          yield* Effect.flip(allowed.getArtifact({ ...getArtifact, tenantId: otherTenant!.id })),
+          AuthorizationDenied,
+        )
+
         assert.strictEqual(
           yield* failureCode(() => insertArtifact(artifactId, snapshot.snapshotId, "0".repeat(64))),
           "23514",
@@ -416,6 +425,32 @@ it.effect.skipIf(databaseUrl === undefined)(
         )
 
         yield* Effect.promise(() => insertArtifact(artifactId, snapshot.snapshotId, contentHash))
+
+        const artifact = yield* allowed.getArtifact(getArtifact)
+
+        assert.isNotNull(artifact)
+        assert.strictEqual(artifact?.artifactId, artifactId)
+        assert.strictEqual(artifact?.contentHash, contentHash)
+        assert.deepStrictEqual(artifact?.content, bytes)
+        assert.strictEqual(artifact?.renderFingerprint, request.renderFingerprint)
+
+        const otherReader = yield* makeInvoiceRenderEvaluationService.pipe(
+          Effect.provide(
+            Layer.merge(
+              Layer.succeed(Database, database),
+              makeAuthorizationTestLayer([
+                {
+                  userAccountId: principal.userAccountId,
+                  tenantId: otherTenant!.id,
+                  capability: BillingCapabilities.documentRead,
+                },
+              ]),
+            ),
+          ),
+        )
+
+        assert.isNull(yield* otherReader.getArtifact({ ...getArtifact, tenantId: otherTenant!.id }))
+
         assert.strictEqual(
           yield* failureCode(() => insertArtifact(uuidv7(), snapshot.snapshotId, contentHash)),
           "23505",
