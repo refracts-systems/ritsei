@@ -56,6 +56,7 @@ import {
   SettlementConflict,
   SettlementExceedsOpenAmount,
 } from "./errors.ts"
+import { makeBillingDocumentLoader } from "./document-store.ts"
 
 type Principal = Schema.Schema.Type<typeof PrincipalSchema>
 
@@ -283,65 +284,7 @@ export const makeBillingService = Effect.gen(function* () {
   const products = yield* ProductService
   const purchasing = yield* PurchaseDocumentService
   const approvals = yield* ApprovalService
-
-  const loadDocument = (tenantId: string, invoiceId: string, lock = false) =>
-    Effect.gen(function* () {
-      const loaded = yield* database.transaction(async (tx) => {
-        const query = tx
-          .select()
-          .from(invoices)
-          .where(and(eq(invoices.tenantId, tenantId), eq(invoices.id, invoiceId)))
-
-        const header = (await (lock ? query.for("update") : query))[0]
-
-        if (header === undefined) return undefined
-
-        const lines = await tx
-          .select()
-          .from(invoiceLines)
-          .where(and(eq(invoiceLines.tenantId, tenantId), eq(invoiceLines.invoiceId, invoiceId)))
-          .orderBy(asc(invoiceLines.id))
-
-        return { header, lines }
-      }, "billing.document.load")
-
-      if (loaded === undefined) {
-        return yield* Effect.fail(new BillingDocumentNotFound({ tenantId, invoiceId }))
-      }
-
-      const { header, lines } = loaded
-
-      return {
-        id: header.id,
-        tenantId: header.tenantId,
-        legalEntityId: header.legalEntityId,
-        kind: header.kind,
-        partyId: header.partyId,
-        number: header.number,
-        invoiceDate: header.invoiceDate,
-        subtotal: normalize(header.subtotal),
-        taxTotal: normalize(header.taxTotal),
-        total: normalize(header.total),
-        openAmount: normalize(header.openAmount),
-        sourceType: header.sourceType,
-        sourceId: header.sourceId,
-        creditedInvoiceId: header.creditedInvoiceId,
-        supplierReference: header.supplierReference,
-        journalEntryId: header.journalEntryId,
-        lines: lines.map((line) => ({
-          id: line.id,
-          productId: line.productId,
-          description: line.description,
-          quantity: line.quantity,
-          unitPrice: normalize(line.unitPrice),
-          netAmount: normalize(line.netAmount),
-          taxCodeId: line.taxCodeId,
-          taxAmount: normalize(line.taxAmount),
-          sourceLineId: line.sourceLineId,
-          matchedValue: normalize(line.matchedValue),
-        })),
-      } satisfies BillingDocument
-    })
+  const loadDocument = yield* makeBillingDocumentLoader
 
   const existing = (tenantId: string, invoiceId: string) =>
     loadDocument(tenantId, invoiceId).pipe(

@@ -51,6 +51,18 @@ export {
   validateInvoiceRenderInput,
 } from "./src/render-input.ts"
 
+export {
+  GetInvoiceRenderInput,
+  InvoiceRenderEvaluationService,
+  InvoiceRenderInputConflict,
+  StageInvoiceRenderInput,
+} from "./src/render-contract.ts"
+
+export {
+  InvoiceRenderEvaluationLive,
+  makeInvoiceRenderEvaluationService,
+} from "./src/render-service.ts"
+
 export { BillingLive } from "./src/service.ts"
 
 export { BillingModule } from "./manifest.ts"

@@ -634,6 +634,12 @@ The staged Billing schema binds one immutable render input and one immutable PDF
 invoice, verifies the PDF checksum in PostgreSQL, and rejects update, delete, and truncate. These
 tables alone do not prove authorization, an active lease, or atomic job completion; the candidate
 worker and owner service must enforce those guarantees before activation.
+An evaluation-only Billing layer stages and reads render inputs under the existing invoice-create
+and document-read capabilities, respectively. It validates the input and compares the snapshot's
+Billing-owned facts with the stored invoice and lines within the insertion transaction; the supplied
+names remain unverified. It returns the
+existing input on an identical replay, and reports a conflict for a different input. This layer is
+not composed into the production runtime.
 
 `pdfnative` and its RITSEI adapter are evaluation dependencies only until the activation gates pass.
 The adapter is used for conformance and benchmark evidence; it does not activate a production
