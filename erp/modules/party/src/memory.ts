@@ -80,6 +80,26 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
     return entity
   })
 
+  const lockDocumentParties = Effect.fn("PartyStore.memory.lockDocumentParties")(function* (
+    tenantId: string,
+    legalEntityId: string,
+    counterpartyId: string,
+  ) {
+    const entity = yield* getLegalEntity(tenantId, legalEntityId)
+    const issuer = stored.get(entity.organizationId)
+    const counterparty = stored.get(counterpartyId)
+
+    if (issuer === undefined || issuer.tenantId !== tenantId) {
+      return yield* Effect.fail(new PartyNotFound({ tenantId, partyId: entity.organizationId }))
+    }
+
+    if (counterparty === undefined || counterparty.tenantId !== tenantId) {
+      return yield* Effect.fail(new PartyNotFound({ tenantId, partyId: counterpartyId }))
+    }
+
+    return { issuer, counterparty }
+  })
+
   const getDetail = Effect.fn("PartyStore.memory.getDetail")(function* (
     tenantId: string,
     partyId: string,
@@ -425,6 +445,7 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
     list,
     getDetail,
     getLegalEntity,
+    lockDocumentParties,
     create,
     createLegalEntity,
     createBranch,

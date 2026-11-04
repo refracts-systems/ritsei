@@ -1,4 +1,4 @@
-import { and, asc, eq, ilike, ne } from "drizzle-orm"
+import { and, asc, eq, ilike, inArray, ne } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 
 import {
@@ -152,6 +152,52 @@ export const makePartyPostgresStore = Effect.gen(function* () {
     }
 
     return entity
+  })
+
+  const lockDocumentParties = Effect.fn("PartyStore.lockDocumentParties")(function* (
+    tenantId: string,
+    legalEntityId: string,
+    counterpartyId: string,
+  ) {
+    const loaded = yield* database.transaction(async (tx) => {
+      const [entity] = await tx
+        .select(legalEntitySelection)
+        .from(legalEntities)
+        .where(and(eq(legalEntities.tenantId, tenantId), eq(legalEntities.id, legalEntityId)))
+        .for("share")
+
+      if (entity === undefined) return undefined
+
+      const rows = await tx
+        .select(partySelection)
+        .from(parties)
+        .where(
+          and(
+            eq(parties.tenantId, tenantId),
+            inArray(parties.id, [entity.organizationId, counterpartyId]),
+          ),
+        )
+        .orderBy(asc(parties.id))
+        .for("share")
+
+      return { entity, rows }
+    }, "party.document_parties.lock")
+
+    if (loaded === undefined)
+      return yield* Effect.fail(new LegalEntityNotFound({ tenantId, legalEntityId }))
+
+    const issuer = loaded.rows.find((party) => party.id === loaded.entity.organizationId)
+    const counterparty = loaded.rows.find((party) => party.id === counterpartyId)
+
+    if (issuer === undefined)
+      return yield* Effect.fail(
+        new PartyNotFound({ tenantId, partyId: loaded.entity.organizationId }),
+      )
+
+    if (counterparty === undefined)
+      return yield* Effect.fail(new PartyNotFound({ tenantId, partyId: counterpartyId }))
+
+    return { issuer, counterparty }
   })
 
   const getDetail = Effect.fn("PartyStore.getDetail")(function* (
@@ -649,6 +695,7 @@ export const makePartyPostgresStore = Effect.gen(function* () {
     list,
     getDetail,
     getLegalEntity,
+    lockDocumentParties,
     create,
     createLegalEntity,
     createBranch,

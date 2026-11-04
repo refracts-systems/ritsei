@@ -168,6 +168,17 @@ export const GetLegalEntityInput = Schema.Struct({
   legalEntityId: Uuid,
 })
 
+export const LockDocumentPartiesInput = Schema.Struct({
+  principal: Principal,
+  tenantId: Uuid,
+  legalEntityId: Uuid,
+  counterpartyId: Uuid,
+})
+
+export const DocumentParties = Schema.Struct({ issuer: Party, counterparty: Party })
+
+export type DocumentParties = Schema.Schema.Type<typeof DocumentParties>
+
 export const CreatePartyInput = Schema.Struct({
   principal: Principal,
   tenantId: Uuid,
@@ -263,6 +274,13 @@ export interface PartyService {
   ) => Effect.Effect<
     LegalEntity,
     LegalEntityNotFound | AuthorizationDenied | DatabaseFailure | Schema.SchemaError
+  >
+  /** Call in the same Database transaction as the snapshot write to retain the locks. */
+  readonly lockDocumentParties: (
+    input: Schema.Codec.Encoded<typeof LockDocumentPartiesInput>,
+  ) => Effect.Effect<
+    DocumentParties,
+    LegalEntityNotFound | PartyNotFound | AuthorizationDenied | DatabaseFailure | Schema.SchemaError
   >
   readonly create: (
     input: Schema.Codec.Encoded<typeof CreatePartyInput>,

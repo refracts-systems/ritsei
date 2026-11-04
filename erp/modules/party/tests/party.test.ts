@@ -30,6 +30,7 @@ import {
   PartyCapabilities,
   PartyCreatedEvent,
   PartyEventPublisher,
+  PartyNotFound,
   PartyRelationship,
   PartyRelationshipAlreadyExists,
   PartyRelationshipNotFound,
@@ -107,6 +108,37 @@ describe("party contract", () => {
       assert.deepStrictEqual(
         yield* party.getLegalEntity({ principal, tenantId, legalEntityId: legalEntity.id }),
         legalEntity,
+      )
+      assert.deepStrictEqual(
+        yield* party.lockDocumentParties({
+          principal,
+          tenantId,
+          legalEntityId: legalEntity.id,
+          counterpartyId: organization.id,
+        }),
+        { issuer: organization, counterparty: organization },
+      )
+      assert.instanceOf(
+        yield* Effect.flip(
+          party.lockDocumentParties({
+            principal,
+            tenantId,
+            legalEntityId: legalEntity.id,
+            counterpartyId: deniedTenantId,
+          }),
+        ),
+        PartyNotFound,
+      )
+      assert.instanceOf(
+        yield* Effect.flip(
+          party.lockDocumentParties({
+            principal: { ...principal, userAccountId: "denied" },
+            tenantId,
+            legalEntityId: legalEntity.id,
+            counterpartyId: organization.id,
+          }),
+        ),
+        AuthorizationDenied,
       )
       assert.instanceOf(
         yield* Effect.flip(
