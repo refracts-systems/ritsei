@@ -182,6 +182,8 @@ export const invoiceArtifacts = billingSchema.table(
     snapshotId: uuid("snapshot_id").notNull(),
     astId: uuid("ast_id").notNull(),
     renderFingerprint: text("render_fingerprint").notNull(),
+    fenceScope: text("fence_scope").notNull(),
+    leaseGeneration: bigint("lease_generation", { mode: "string" }).notNull(),
     contentHash: text("content_hash").notNull(),
     content: bytea("content").notNull(),
     pageCount: integer("page_count").notNull(),
@@ -207,6 +209,8 @@ export const invoiceArtifacts = billingSchema.table(
       name: "invoice_artifacts_render_input_fkey",
     }),
     check("invoice_artifacts_pages_check", sql`${table.pageCount} > 0`),
+    check("invoice_artifacts_fence_scope_check", sql`${table.fenceScope} ~ '[^[:space:]]'`),
+    check("invoice_artifacts_lease_generation_check", sql`${table.leaseGeneration} > 0`),
     check(
       "invoice_artifacts_content_check",
       sql`octet_length(${table.content}) >= 5 and octet_length(${table.content}) <= 50000000 and

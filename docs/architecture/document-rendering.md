@@ -631,15 +631,17 @@ Its AST builder takes an explicit UUIDv7 identity so a retry can reuse the store
 produce the same render request. Billing validates the snapshot checksum, reconstructs the AST
 from that snapshot, and verifies the request's identities and fingerprint before staged persistence.
 The staged Billing schema binds one immutable render input and one immutable PDF to each customer
-invoice, verifies the PDF checksum in PostgreSQL, and rejects update, delete, and truncate. These
-tables alone do not prove authorization, an active lease, or atomic job completion; the candidate
-worker and owner service must enforce those guarantees before activation.
+invoice, verifies the PDF checksum in PostgreSQL, and rejects update, delete, and truncate.
+Artifact rows record the fence scope and positive lease generation, but those columns alone do not
+prove an active lease or atomic job completion; the candidate worker and owner service must enforce
+those guarantees before activation. Evaluation databases containing artifacts must be recreated
+before applying the fencing migration; production migration is not authorized.
 An evaluation-only Billing layer stages and reads render inputs under the existing invoice-create
-and document-read capabilities, respectively; artifact reads also require document-read. It validates the input and compares the snapshot's
-Billing-owned facts with the stored invoice and lines within the insertion transaction; the supplied
-names remain unverified. It returns the
-existing input on an identical replay, and reports a conflict for a different input. This layer is
-not composed into the production runtime.
+and document-read capabilities, respectively; artifact reads also require document-read. It validates
+the input and compares the snapshot's Billing-owned facts with the stored invoice and lines within
+the insertion transaction; the supplied names remain unverified. It returns the existing input on an
+identical replay, and reports a conflict for a different input. This layer is not composed into the
+production runtime.
 
 `pdfnative` and its RITSEI adapter are evaluation dependencies only until the activation gates pass.
 The adapter is used for conformance and benchmark evidence; it does not activate a production
