@@ -2,10 +2,12 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
 
+import { Database } from "../../../../framework/foundation/mod.ts"
 import {
   AuthorizationService,
   scopedCommand,
 } from "../../../../framework/modules/authorization/mod.ts"
+import { PartyService } from "../../party/mod.ts"
 import { BillingCapabilities } from "./capabilities.ts"
 import {
   GetInvoiceRenderInput,
@@ -17,6 +19,8 @@ import { makePostgresInvoiceRenderStore } from "./render-postgres.ts"
 
 export const makeInvoiceRenderEvaluationService = Effect.gen(function* () {
   const authorization = yield* AuthorizationService
+  const database = yield* Database
+  const parties = yield* PartyService
   const authorized = scopedCommand(authorization)
   const store = yield* makePostgresInvoiceRenderStore
 
@@ -41,7 +45,54 @@ export const makeInvoiceRenderEvaluationService = Effect.gen(function* () {
         )
       }
 
-      return yield* store.put(checked)
+      return yield* database.withTransaction(
+        Effect.gen(function* () {
+          const prior = yield* store.find(decoded.tenantId, checked.snapshot.source.id)
+
+          if (prior !== null) return yield* store.put(checked)
+
+          const legalEntity = yield* parties.getLegalEntity({
+            principal: decoded.principal,
+            tenantId: decoded.tenantId,
+            legalEntityId: checked.snapshot.payload.legalEntityId,
+          })
+
+          const issuer = yield* parties.getDetail({
+            principal: decoded.principal,
+            tenantId: decoded.tenantId,
+            partyId: legalEntity.organizationId,
+          })
+
+          const customer = yield* parties.getDetail({
+            principal: decoded.principal,
+            tenantId: decoded.tenantId,
+            partyId: checked.snapshot.payload.partyId,
+          })
+
+          if (issuer.party.name !== checked.snapshot.payload.issuerName) {
+            return yield* Effect.fail(
+              new InvoiceRenderInputInvalid({
+                tenantId: decoded.tenantId,
+                invoiceId: checked.snapshot.source.id,
+                reason: "issuer_name",
+              }),
+            )
+          }
+
+          if (customer.party.name !== checked.snapshot.payload.customerName) {
+            return yield* Effect.fail(
+              new InvoiceRenderInputInvalid({
+                tenantId: decoded.tenantId,
+                invoiceId: checked.snapshot.source.id,
+                reason: "customer_name",
+              }),
+            )
+          }
+
+          return yield* store.put(checked)
+        }),
+        "billing.render_input.verify_parties",
+      )
     }),
     get: Effect.fn("BillingRenderEvaluation.get")(function* (
       input: Schema.Codec.Encoded<typeof GetInvoiceRenderInput>,

@@ -39,6 +39,7 @@ import {
   makeInvoiceRenderQueueEvaluationService,
 } from "../../modules/billing/mod.ts"
 import { InventoryService } from "../../modules/inventory/mod.ts"
+import { makePartyService, PartyCapabilities, PartyService } from "../../modules/party/mod.ts"
 import {
   makeProcessJobEnqueuer,
   makeProcessService,
@@ -75,6 +76,11 @@ it.effect.skipIf(databaseUrl === undefined)(
               tenantId: fixture.tenantId,
               capability: BillingCapabilities.documentRead,
             },
+            {
+              userAccountId: principal.userAccountId,
+              tenantId: fixture.tenantId,
+              capability: PartyCapabilities.partyRead,
+            },
           ])
 
           const authorization = yield* AuthorizationService.pipe(Effect.provide(authorizationLayer))
@@ -92,8 +98,23 @@ it.effect.skipIf(databaseUrl === undefined)(
             ),
           )
 
+          const partyService = yield* makePartyService.pipe(
+            Effect.provide(
+              Layer.merge(
+                Layer.succeed(Database, database),
+                Layer.succeed(AuthorizationService, authorization),
+              ),
+            ),
+          )
+
           const billing = yield* makeInvoiceRenderEvaluationService.pipe(
-            Effect.provide(Layer.merge(Layer.succeed(Database, database), authorizationLayer)),
+            Effect.provide(
+              Layer.mergeAll(
+                Layer.succeed(Database, database),
+                Layer.succeed(PartyService, partyService),
+                authorizationLayer,
+              ),
+            ),
           )
 
           const completion = yield* makeInvoiceRenderCompletionService.pipe(
@@ -122,6 +143,14 @@ it.effect.skipIf(databaseUrl === undefined)(
           const invoiceId = uuidv7()
           const lineId = uuidv7()
           const journalEntryId = uuidv7()
+          const customerId = uuidv7()
+
+          yield* Effect.promise(
+            () => client`
+            insert into party.parties (id, tenant_id, kind, name)
+            values (${customerId}, ${fixture.tenantId}, 'organization', 'Customer')
+          `,
+          )
 
           yield* Effect.promise(
             () => client`
@@ -129,7 +158,7 @@ it.effect.skipIf(databaseUrl === undefined)(
         (id, tenant_id, legal_entity_id, kind, party_id, number, invoice_date,
          subtotal, tax_total, total, open_amount, journal_entry_id)
       values (${invoiceId}, ${fixture.tenantId}, ${fixture.legalEntityId}, 'customer_invoice',
-        ${fixture.organizationId}, 'INV-WORKER', '2026-11-04', 10, 1, 11, 11, ${journalEntryId})
+        ${customerId}, 'INV-WORKER', '2026-11-04', 10, 1, 11, 11, ${journalEntryId})
     `,
           )
           yield* Effect.promise(
@@ -145,7 +174,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               tenantId: fixture.tenantId,
               legalEntityId: fixture.legalEntityId,
               kind: "customer_invoice",
-              partyId: fixture.organizationId,
+              partyId: customerId,
               number: "INV-WORKER",
               invoiceDate: "2026-11-04",
               subtotal: "10.00",
@@ -175,7 +204,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             {
               snapshotId: uuidv7(),
               capturedAt: "2026-11-04T00:00:00.000Z",
-              issuerName: "Issuer",
+              issuerName: "Fixture Trading",
               customerName: "Customer",
             },
           )

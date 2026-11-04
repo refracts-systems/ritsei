@@ -9,6 +9,7 @@ import {
 } from "../../../../framework/foundation/mod.ts"
 import { Principal } from "../../../../framework/modules/auth/mod.ts"
 import type { AuthorizationDenied } from "../../../../framework/modules/authorization/mod.ts"
+import type { LegalEntityNotFound, PartyNotFound } from "../../party/mod.ts"
 import type { BillingDocumentNotFound } from "./errors.ts"
 import {
   InvoiceRenderInput as InvoiceRenderInputSchema,
@@ -59,6 +60,8 @@ type StageFailure =
   | DocumentHashFailure
   | InvoiceRenderInputConflict
   | InvoiceRenderInputInvalid
+  | LegalEntityNotFound
+  | PartyNotFound
   | Schema.SchemaError
 
 /** Isolated evaluation only; this layer is not composed into the production runtime. */
