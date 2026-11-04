@@ -659,9 +659,11 @@ The candidate evaluation worker claims the invoice job, verifies its payload aga
 input, renders it and invokes atomic completion. It requires document-read permission before claim.
 Ordinary failures are rescheduled with Process's attempt limit; after an uncertain completion the
 worker checks the authorized artifact read for the same ID, fingerprint and content hash. Unresolved
-database failures and lost leases are left for reconciliation or lease expiry. The worker renews
-its lease while rendering, but is not part of the production worker composition and has no hard
-process timeout; it does not by itself satisfy the isolation or operational gates.
+database failures and lost leases are left for reconciliation or lease expiry. The worker attempts
+to renew its lease while rendering; synchronous renderer work can block its event loop and delay
+renewal. Fenced completion rejects a superseded lease. The candidate is not part of the production
+worker composition and has no hard process timeout; it does not by itself satisfy the isolation or
+operational gates.
 
 `pdfnative` and its RITSEI adapter are evaluation dependencies only until the activation gates pass.
 The adapter is used for conformance and benchmark evidence; it does not activate a production
