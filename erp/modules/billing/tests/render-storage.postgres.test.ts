@@ -370,11 +370,17 @@ it.effect.skipIf(databaseUrl === undefined)(
         const contentHash = yield* sha256Hex(bytes)
         const artifactId = uuidv7()
 
-        const insertArtifact = (id: string, snapshotId: string, hash: string) => client`
+        const insertArtifact = (
+          id: string,
+          snapshotId: string,
+          hash: string,
+          scope = request.fenceScope,
+          generation = 1,
+        ) => client`
           insert into billing.invoice_artifacts
-            (id, tenant_id, invoice_id, snapshot_id, ast_id, render_fingerprint, content_hash, content, page_count)
+            (id, tenant_id, invoice_id, snapshot_id, ast_id, render_fingerprint, fence_scope, lease_generation, content_hash, content, page_count)
           values (${id}, ${fixture.tenantId}, ${invoiceId}, ${snapshotId}, ${ast.astId},
-            ${request.renderFingerprint}, ${hash}, ${bytes}, 1)
+            ${request.renderFingerprint}, ${scope}, ${generation}, ${hash}, ${bytes}, 1)
         `
 
         const getArtifact = { principal, tenantId: fixture.tenantId, invoiceId }
@@ -400,9 +406,9 @@ it.effect.skipIf(databaseUrl === undefined)(
             () => client`
             insert into billing.invoice_artifacts
               (id, tenant_id, invoice_id, snapshot_id, ast_id, render_fingerprint,
-               content_hash, content, page_count)
+               fence_scope, lease_generation, content_hash, content, page_count)
             values (${artifactId}, ${otherTenant!.id}, ${invoiceId}, ${snapshot.snapshotId},
-              ${ast.astId}, ${request.renderFingerprint}, ${contentHash}, ${bytes}, 1)
+              ${ast.astId}, ${request.renderFingerprint}, ${request.fenceScope}, 1, ${contentHash}, ${bytes}, 1)
           `,
           ),
           "23503",
@@ -416,10 +422,23 @@ it.effect.skipIf(databaseUrl === undefined)(
             () => client`
             insert into billing.invoice_artifacts
               (id, tenant_id, invoice_id, snapshot_id, ast_id, render_fingerprint,
-               content_hash, content, page_count)
+               fence_scope, lease_generation, content_hash, content, page_count)
             values (${artifactId}, ${fixture.tenantId}, ${invoiceId}, ${snapshot.snapshotId},
-              ${ast.astId}, ${request.renderFingerprint}, ${invalidHash}, ${invalidBytes}, 1)
+              ${ast.astId}, ${request.renderFingerprint}, ${request.fenceScope}, 1, ${invalidHash}, ${invalidBytes}, 1)
           `,
+          ),
+          "23514",
+        )
+
+        assert.strictEqual(
+          yield* failureCode(() =>
+            insertArtifact(artifactId, snapshot.snapshotId, contentHash, " "),
+          ),
+          "23514",
+        )
+        assert.strictEqual(
+          yield* failureCode(() =>
+            insertArtifact(artifactId, snapshot.snapshotId, contentHash, request.fenceScope, 0),
           ),
           "23514",
         )
