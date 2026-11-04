@@ -96,7 +96,7 @@ class UtcMetadataDate extends Date {
 const deterministicCreationDate = new UtcMetadataDate("2000-01-01T00:00:00.000Z")
 
 // Increment the adapter version when a change can affect the PDF bytes.
-export const pdfNativeRendererVersion = "ritsei-pdfnative@1+pdfnative@1.7.0"
+export const pdfNativeRendererVersion = "ritsei-pdfnative@2+pdfnative@1.7.0"
 
 const defaultPolicy: DocumentRenderPolicy = {
   rendererFamily: "native-transactional",
@@ -565,6 +565,16 @@ const renderPdfNativeDocument = (
 
     yield* validateInputReferences(context, ast, request)
     yield* validateInputIntegrity(context, ast, request)
+
+    if (ast.nodes.some((node) => Predicate.isTagged(node, "qr_code"))) {
+      return yield* Effect.fail(
+        rendererFailure(
+          "input-validation",
+          "QR rendering is unavailable: generated symbols failed independent decoding",
+          undefined,
+        ),
+      )
+    }
 
     const { blocks } = yield* toPdfBlocks(ast.nodes, request, options.resolveAsset, policy)
     const fontEntries = yield* loadFontEntries(textValues(ast.nodes))

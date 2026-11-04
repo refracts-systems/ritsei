@@ -83,7 +83,6 @@ const renderInput = () =>
         DocumentDividerNode.make({}),
         DocumentImageNode.make({ assetId: "logo-v1", alt: "Company logo" }),
         DocumentBarcodeNode.make({ value: "PO-2026-0001" }),
-        DocumentQrCodeNode.make({ value: "https://example.invalid/po/0001" }),
         DocumentSignatureNode.make({ assetId: "signature-v1", label: "Approved by" }),
       ],
     })
@@ -152,6 +151,7 @@ describe("pdfnative document renderer", () => {
             name: Schema.String,
             contentHash: Schema.optionalKey(Schema.String),
             skipped: Schema.optionalKey(Schema.Boolean),
+            reason: Schema.optionalKey(Schema.String),
           }),
         ),
       })
@@ -172,6 +172,16 @@ describe("pdfnative document renderer", () => {
       assert.isAbove(evidence(utc).length, 1)
       assert.isTrue(evidence(utc).every((fixture) => fixture.contentHash !== undefined))
       assert.deepStrictEqual(evidence(utc), evidence(bangkok))
+
+      const qrFixture = utc.fixtures.find((fixture) => fixture.name === "asset-and-code-heavy")
+
+      assert.isTrue(qrFixture?.skipped)
+      assert.include(qrFixture?.reason ?? "", "QR output failed independent decoding")
+      assert.isTrue(
+        utc.fixtures.some(
+          (fixture) => fixture.name === "asset-and-barcode" && fixture.skipped !== true,
+        ),
+      )
     }),
   )
 
@@ -285,6 +295,32 @@ describe("pdfnative document renderer", () => {
       const failure = yield* Effect.flip(renderer.render({ ...input, request }))
       assert.instanceOf(failure, DocumentRendererFailure)
       assert.strictEqual(failure.operation, "input-validation")
+    }),
+  )
+
+  it.effect("rejects QR output until independently decodable", () =>
+    Effect.gen(function* () {
+      const input = yield* renderInput()
+
+      const ast = yield* createDocumentAst({
+        ...input.ast,
+        nodes: [
+          ...input.ast.nodes,
+          DocumentQrCodeNode.make({ value: "https://example.invalid/po/0001" }),
+        ],
+      })
+
+      const request = yield* createDocumentRenderRequest({
+        ...input.request,
+        astChecksum: ast.checksum,
+        astNodeCount: ast.nodes.length,
+      })
+
+      const failure = yield* Effect.flip(renderer.render({ ...input, ast, request }))
+
+      assert.instanceOf(failure, DocumentRendererFailure)
+      assert.strictEqual(failure.operation, "input-validation")
+      assert.include(failure.reason, "QR rendering is unavailable")
     }),
   )
 
