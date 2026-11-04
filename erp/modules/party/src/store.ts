@@ -2,6 +2,7 @@ import type * as Effect from "effect/Effect"
 import type { DatabaseFailure } from "../../../../framework/foundation/mod.ts"
 import type {
   Branch,
+  DocumentParties,
   ExternalIdentifier,
   LegalEntity,
   Party,
@@ -48,6 +49,11 @@ export interface PartyStore {
     tenantId: string,
     legalEntityId: string,
   ) => Effect.Effect<LegalEntity, LegalEntityNotFound | Failure>
+  readonly lockDocumentParties: (
+    tenantId: string,
+    legalEntityId: string,
+    counterpartyId: string,
+  ) => Effect.Effect<DocumentParties, LegalEntityNotFound | PartyNotFound | Failure>
   readonly create: (
     tenantId: string,
     kind: PartyKind,

@@ -20,6 +20,7 @@ import {
   GetPartyDetailInput,
   GetPartyRelationshipInput,
   ListPartiesInput,
+  LockDocumentPartiesInput,
   PartyService,
   SetPartyRepresentationActiveInput,
 } from "./contract.ts"
@@ -126,6 +127,23 @@ export const makePartyServiceFromStore = <R>(
       })
 
       return yield* partyStore.getLegalEntity(decoded.tenantId, decoded.legalEntityId)
+    })
+
+    const lockDocumentParties = Effect.fn("PartyService.lockDocumentParties")(function* (
+      input: Schema.Codec.Encoded<typeof LockDocumentPartiesInput>,
+    ) {
+      const decoded = yield* Schema.decodeUnknownEffect(LockDocumentPartiesInput)(input)
+      yield* authorization.authorize({
+        principal: decoded.principal,
+        tenantId: decoded.tenantId,
+        capability: PartyCapabilities.partyRead,
+      })
+
+      return yield* partyStore.lockDocumentParties(
+        decoded.tenantId,
+        decoded.legalEntityId,
+        decoded.counterpartyId,
+      )
     })
 
     const createLegalEntity = Effect.fn("PartyService.createLegalEntity")(function* (
@@ -300,6 +318,7 @@ export const makePartyServiceFromStore = <R>(
       list,
       getDetail,
       getLegalEntity,
+      lockDocumentParties,
       create,
       createLegalEntity,
       createBranch,

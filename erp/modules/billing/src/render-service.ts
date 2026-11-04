@@ -9,6 +9,7 @@ import {
 } from "../../../../framework/modules/authorization/mod.ts"
 import { PartyService } from "../../party/mod.ts"
 import { BillingCapabilities } from "./capabilities.ts"
+import { makeBillingDocumentLoader } from "./document-store.ts"
 import {
   GetInvoiceRenderInput,
   InvoiceRenderEvaluationService,
@@ -21,6 +22,7 @@ export const makeInvoiceRenderEvaluationService = Effect.gen(function* () {
   const authorization = yield* AuthorizationService
   const database = yield* Database
   const parties = yield* PartyService
+  const loadDocument = yield* makeBillingDocumentLoader
   const authorized = scopedCommand(authorization)
   const store = yield* makePostgresInvoiceRenderStore
 
@@ -47,29 +49,20 @@ export const makeInvoiceRenderEvaluationService = Effect.gen(function* () {
 
       return yield* database.withTransaction(
         Effect.gen(function* () {
+          yield* loadDocument(decoded.tenantId, checked.snapshot.source.id, true)
+
           const prior = yield* store.find(decoded.tenantId, checked.snapshot.source.id)
 
           if (prior !== null) return yield* store.put(checked)
 
-          const legalEntity = yield* parties.getLegalEntity({
+          const names = yield* parties.lockDocumentParties({
             principal: decoded.principal,
             tenantId: decoded.tenantId,
             legalEntityId: checked.snapshot.payload.legalEntityId,
+            counterpartyId: checked.snapshot.payload.partyId,
           })
 
-          const issuer = yield* parties.getDetail({
-            principal: decoded.principal,
-            tenantId: decoded.tenantId,
-            partyId: legalEntity.organizationId,
-          })
-
-          const customer = yield* parties.getDetail({
-            principal: decoded.principal,
-            tenantId: decoded.tenantId,
-            partyId: checked.snapshot.payload.partyId,
-          })
-
-          if (issuer.party.name !== checked.snapshot.payload.issuerName) {
+          if (names.issuer.name !== checked.snapshot.payload.issuerName) {
             return yield* Effect.fail(
               new InvoiceRenderInputInvalid({
                 tenantId: decoded.tenantId,
@@ -79,7 +72,7 @@ export const makeInvoiceRenderEvaluationService = Effect.gen(function* () {
             )
           }
 
-          if (customer.party.name !== checked.snapshot.payload.customerName) {
+          if (names.counterparty.name !== checked.snapshot.payload.customerName) {
             return yield* Effect.fail(
               new InvoiceRenderInputInvalid({
                 tenantId: decoded.tenantId,
