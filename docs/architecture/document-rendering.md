@@ -627,7 +627,11 @@ Billing's evaluation invoice snapshot captures its issued number, names, date, l
 it excludes the mutable open amount. The evaluation builder accepts names as input. Production
 issuance must resolve those names through the owning contracts in the posting transaction before
 persisting the snapshot; the evaluation builder alone is not authorization or evidence of origin.
-Party's authorized legal-entity lookup resolves an issuer's organization ID for that future flow.
+Party's authorized legal-entity lookup resolves an issuer's organization ID. Evaluation staging
+checks both supplied names against Party under the same transaction as the input write; a replay
+uses the already stored snapshot even if the current Party name has changed.
+These evaluation reads do not lock Party records, so concurrent edits and the production posting
+transaction still need an explicit consistency decision and evidence before activation.
 Its AST builder takes an explicit UUIDv7 identity so a retry can reuse the stored identity and
 produce the same render request. Billing validates the snapshot checksum, reconstructs the AST
 from that snapshot, and verifies the request's identities and fingerprint before staged persistence.
@@ -640,7 +644,7 @@ before applying the fencing migration; production migration is not authorized.
 An evaluation-only Billing layer stages and reads render inputs under the existing invoice-create
 and document-read capabilities, respectively; artifact reads also require document-read. It validates
 the input and compares the snapshot's Billing-owned facts with the stored invoice and lines within
-the insertion transaction; the supplied names remain unverified. It returns the existing input on an
+the insertion transaction. It returns the existing input on an
 identical replay, and reports a conflict for a different input. This layer is not composed into the
 production runtime.
 

@@ -38,6 +38,7 @@ import {
   ProcessService,
 } from "../../process/mod.ts"
 import { SalesService } from "../../sales/mod.ts"
+import { makePartyService, PartyCapabilities, PartyService } from "../../party/mod.ts"
 import {
   type CustomerInvoiceDocument,
   BillingCapabilities,
@@ -74,6 +75,14 @@ it.effect.skipIf(databaseUrl === undefined)(
         const invoiceId = uuidv7()
         const journalEntryId = uuidv7()
         const lineId = uuidv7()
+        const customerId = uuidv7()
+
+        yield* Effect.promise(
+          () => client`
+          insert into party.parties (id, tenant_id, kind, name)
+          values (${customerId}, ${fixture.tenantId}, 'organization', 'Customer')
+        `,
+        )
 
         yield* Effect.promise(
           () => client`
@@ -81,7 +90,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               (id, tenant_id, legal_entity_id, kind, party_id, number, invoice_date,
                subtotal, tax_total, total, open_amount, journal_entry_id)
             values (${invoiceId}, ${fixture.tenantId}, ${fixture.legalEntityId}, 'customer_invoice',
-              ${fixture.organizationId}, 'INV-001', '2026-11-04', 10, 1, 11, 11, ${journalEntryId})
+              ${customerId}, 'INV-001', '2026-11-04', 10, 1, 11, 11, ${journalEntryId})
           `,
         )
 
@@ -98,7 +107,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           tenantId: fixture.tenantId,
           legalEntityId: fixture.legalEntityId,
           kind: "customer_invoice",
-          partyId: fixture.organizationId,
+          partyId: customerId,
           number: "INV-001",
           invoiceDate: "2026-11-04",
           subtotal: "10.00",
@@ -129,7 +138,7 @@ it.effect.skipIf(databaseUrl === undefined)(
         const snapshot = yield* makeInvoiceDocumentSnapshot(document, {
           snapshotId: uuidv7(),
           capturedAt: "2026-11-04T00:00:00.000Z",
-          issuerName: "Issuer",
+          issuerName: "Fixture Trading",
           customerName: "Customer",
         })
 
@@ -204,21 +213,40 @@ it.effect.skipIf(databaseUrl === undefined)(
         const database = makePostgresDatabase(client)
         const grant = { userAccountId: principal.userAccountId, tenantId: fixture.tenantId }
 
-        const allowed = yield* makeInvoiceRenderEvaluationService.pipe(
+        const allowedAuth = makeAuthorizationTestLayer([
+          { ...grant, capability: BillingCapabilities.customerInvoiceCreate },
+          { ...grant, capability: BillingCapabilities.documentRead },
+          { ...grant, capability: PartyCapabilities.partyRead },
+        ])
+
+        const partyAuthorization = yield* AuthorizationService.pipe(Effect.provide(allowedAuth))
+
+        const partyService = yield* makePartyService.pipe(
           Effect.provide(
             Layer.merge(
               Layer.succeed(Database, database),
-              makeAuthorizationTestLayer([
-                { ...grant, capability: BillingCapabilities.customerInvoiceCreate },
-                { ...grant, capability: BillingCapabilities.documentRead },
-              ]),
+              Layer.succeed(AuthorizationService, partyAuthorization),
+            ),
+          ),
+        )
+
+        const allowed = yield* makeInvoiceRenderEvaluationService.pipe(
+          Effect.provide(
+            Layer.mergeAll(
+              Layer.succeed(Database, database),
+              Layer.succeed(PartyService, partyService),
+              allowedAuth,
             ),
           ),
         )
 
         const denied = yield* makeInvoiceRenderEvaluationService.pipe(
           Effect.provide(
-            Layer.merge(Layer.succeed(Database, database), makeAuthorizationTestLayer([])),
+            Layer.mergeAll(
+              Layer.succeed(Database, database),
+              Layer.succeed(PartyService, partyService),
+              makeAuthorizationTestLayer([]),
+            ),
           ),
         )
 
@@ -229,6 +257,36 @@ it.effect.skipIf(databaseUrl === undefined)(
         }
 
         assert.instanceOf(yield* Effect.flip(denied.stage(stageInput)), AuthorizationDenied)
+
+        const noPartyReadLayer = makeAuthorizationTestLayer([
+          { ...grant, capability: BillingCapabilities.customerInvoiceCreate },
+        ])
+
+        const noPartyReadAuthorization = yield* AuthorizationService.pipe(
+          Effect.provide(noPartyReadLayer),
+        )
+
+        const noPartyReadParty = yield* makePartyService.pipe(
+          Effect.provide(
+            Layer.merge(
+              Layer.succeed(Database, database),
+              Layer.succeed(AuthorizationService, noPartyReadAuthorization),
+            ),
+          ),
+        )
+
+        const noPartyRead = yield* makeInvoiceRenderEvaluationService.pipe(
+          Effect.provide(
+            Layer.mergeAll(
+              Layer.succeed(Database, database),
+              Layer.succeed(PartyService, noPartyReadParty),
+              noPartyReadLayer,
+            ),
+          ),
+        )
+
+        assert.instanceOf(yield* Effect.flip(noPartyRead.stage(stageInput)), AuthorizationDenied)
+
         assert.instanceOf(
           yield* Effect.flip(allowed.get({ principal, tenantId: otherTenant!.id, invoiceId })),
           AuthorizationDenied,
@@ -239,7 +297,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           {
             snapshotId: uuidv7(),
             capturedAt: snapshot.capturedAt,
-            issuerName: "Issuer",
+            issuerName: "Fixture Trading",
             customerName: "Customer",
           },
         )
@@ -270,7 +328,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           {
             snapshotId: uuidv7(),
             capturedAt: snapshot.capturedAt,
-            issuerName: "Issuer",
+            issuerName: "Fixture Trading",
             customerName: "Customer",
           },
         )
@@ -299,7 +357,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           {
             snapshotId: uuidv7(),
             capturedAt: snapshot.capturedAt,
-            issuerName: "Issuer",
+            issuerName: "Fixture Trading",
             customerName: "Customer",
           },
         )
@@ -323,6 +381,38 @@ it.effect.skipIf(databaseUrl === undefined)(
 
         assert.instanceOf(forged, InvoiceRenderInputConflict)
         assert.strictEqual(forged.reason, "invoice_mismatch")
+
+        for (const [issuerName, customerName, reason] of [
+          ["Forged Issuer", "Customer", "issuer_name"],
+          ["Fixture Trading", "Forged Customer", "customer_name"],
+        ] as const) {
+          const nameSnapshot = yield* makeInvoiceDocumentSnapshot(document, {
+            snapshotId: uuidv7(),
+            capturedAt: snapshot.capturedAt,
+            issuerName,
+            customerName,
+          })
+
+          const nameAst = yield* makeInvoiceDocumentAst(nameSnapshot, { astId: uuidv7() })
+
+          const nameRequest = yield* createDocumentRenderRequest({
+            ...request,
+            snapshotId: nameSnapshot.snapshotId,
+            snapshotChecksum: nameSnapshot.checksum,
+            astId: nameAst.astId,
+            astChecksum: nameAst.checksum,
+          })
+
+          const invalidName = yield* Effect.flip(
+            allowed.stage({
+              ...stageInput,
+              input: { snapshot: nameSnapshot, ast: nameAst, request: nameRequest },
+            }),
+          )
+
+          assert.instanceOf(invalidName, InvoiceRenderInputInvalid)
+          assert.strictEqual(invalidName.reason, reason)
+        }
 
         const enqueuer = yield* makeProcessJobEnqueuer.pipe(
           Effect.provideService(Database, database),
@@ -383,12 +473,20 @@ it.effect.skipIf(databaseUrl === undefined)(
 
         const staged = stagedResults[0]
 
+        yield* Effect.promise(
+          () => client`update party.parties set name = 'Updated Customer' where id = ${customerId}`,
+        )
+
         const replay = yield* allowed.stage({
           ...stageInput,
           input: { ...stageInput.input, request: { ...request, correlationId: "replay" } },
         })
 
         assert.deepStrictEqual(replay, staged)
+
+        yield* Effect.promise(
+          () => client`update party.parties set name = 'Customer' where id = ${customerId}`,
+        )
         assert.deepStrictEqual(
           yield* allowed.get({ principal, tenantId: fixture.tenantId, invoiceId }),
           staged,
@@ -397,7 +495,7 @@ it.effect.skipIf(databaseUrl === undefined)(
         const secondSnapshot = yield* makeInvoiceDocumentSnapshot(document, {
           snapshotId: uuidv7(),
           capturedAt: "2026-11-04T00:00:00.000Z",
-          issuerName: "Issuer",
+          issuerName: "Fixture Trading",
           customerName: "Customer",
         })
 
@@ -672,8 +770,9 @@ it.effect.skipIf(databaseUrl === undefined)(
 
         const otherReader = yield* makeInvoiceRenderEvaluationService.pipe(
           Effect.provide(
-            Layer.merge(
+            Layer.mergeAll(
               Layer.succeed(Database, database),
+              Layer.succeed(PartyService, partyService),
               makeAuthorizationTestLayer([
                 {
                   userAccountId: principal.userAccountId,
@@ -745,7 +844,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           {
             snapshotId: uuidv7(),
             capturedAt: snapshot.capturedAt,
-            issuerName: "Issuer",
+            issuerName: "Fixture Trading",
             customerName: "Customer",
           },
         )
