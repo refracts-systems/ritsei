@@ -325,9 +325,20 @@ it.effect.skipIf(databaseUrl === undefined)(
             Layer.succeed(InvoiceEvaluationRenderer, makePdfNativeDocumentRenderer()),
           )
 
-          const result = yield* runInvoiceEvaluationOnce(workerInput).pipe(
-            Effect.provide(uncertainLayers),
+          const workers = yield* Effect.all(
+            [
+              runInvoiceEvaluationOnce(workerInput),
+              runInvoiceEvaluationOnce({ ...workerInput, workerId: "evaluation-worker-2" }),
+            ],
+            { concurrency: "unbounded" },
+          ).pipe(Effect.provide(uncertainLayers))
+
+          assert.deepStrictEqual(
+            new Set(workers.map((worker) => worker.status)),
+            new Set(["completed", "idle"]),
           )
+
+          const result = workers.find((worker) => worker.status === "completed")!
 
           assert.strictEqual(result.status, "completed")
           assert.strictEqual(result.invoiceId, invoiceId)
@@ -347,6 +358,16 @@ it.effect.skipIf(databaseUrl === undefined)(
 
           assert.include(renderedText, "INV-WORKER")
           assert.include(renderedText, "Customer")
+
+          const [stored] = yield* Effect.promise(
+            () => client<{ count: string; generation: string }[]>`
+              select count(*)::text as count, max(lease_generation)::text as generation
+              from billing.invoice_artifacts where tenant_id = ${fixture.tenantId} and invoice_id = ${invoiceId}
+            `,
+          )
+
+          assert.strictEqual(stored?.count, "1")
+          assert.strictEqual(stored?.generation, "3")
 
           assert.strictEqual(
             (yield* runInvoiceEvaluationOnce(workerInput).pipe(Effect.provide(layers))).status,
