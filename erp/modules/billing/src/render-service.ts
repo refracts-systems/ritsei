@@ -53,6 +53,16 @@ export const makeInvoiceRenderEvaluationService = Effect.gen(function* () {
 
       return yield* store.find(decoded.tenantId, decoded.invoiceId)
     }),
+    getArtifact: Effect.fn("BillingRenderEvaluation.getArtifact")(function* (
+      input: Schema.Codec.Encoded<typeof GetInvoiceRenderInput>,
+    ) {
+      const decoded = yield* authorized(
+        GetInvoiceRenderInput,
+        BillingCapabilities.documentRead,
+      )(input)
+
+      return yield* store.findArtifact(decoded.tenantId, decoded.invoiceId)
+    }),
   } satisfies InvoiceRenderEvaluationService
 })
 

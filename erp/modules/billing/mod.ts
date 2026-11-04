@@ -62,6 +62,7 @@ export {
 export {
   GetInvoiceRenderInput,
   InvoiceRenderEvaluationService,
+  InvoiceRenderArtifact,
   InvoiceRenderInputConflict,
   StageInvoiceRenderInput,
 } from "./src/render-contract.ts"

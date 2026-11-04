@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 
-import { invoiceRenderInputs } from "../../../../db/schema/billing.ts"
+import { invoiceArtifacts, invoiceRenderInputs } from "../../../../db/schema/billing.ts"
 import {
   Database,
   DatabaseFailure,
@@ -10,13 +10,46 @@ import {
 } from "../../../../framework/foundation/mod.ts"
 import { CustomerInvoiceDocument, makeInvoiceDocumentSnapshot } from "./document.ts"
 import { makeBillingDocumentLoader } from "./document-store.ts"
-import { InvoiceRenderInputConflict } from "./render-contract.ts"
+import { InvoiceRenderArtifact, InvoiceRenderInputConflict } from "./render-contract.ts"
 import { InvoiceRenderInput, validateInvoiceRenderInput } from "./render-input.ts"
 import type { InvoiceRenderStore } from "./render-store.ts"
 
 export const makePostgresInvoiceRenderStore = Effect.gen(function* () {
   const database = yield* Database
   const loadDocument = yield* makeBillingDocumentLoader
+
+  const findArtifact: InvoiceRenderStore["findArtifact"] = Effect.fn(
+    "BillingRenderStore.findArtifact",
+  )(function* (tenantId, invoiceId) {
+    const [row] = yield* database.query(
+      (db) =>
+        db
+          .select({
+            artifactId: invoiceArtifacts.id,
+            tenantId: invoiceArtifacts.tenantId,
+            invoiceId: invoiceArtifacts.invoiceId,
+            snapshotId: invoiceArtifacts.snapshotId,
+            astId: invoiceArtifacts.astId,
+            renderFingerprint: invoiceArtifacts.renderFingerprint,
+            contentHash: invoiceArtifacts.contentHash,
+            content: invoiceArtifacts.content,
+            pageCount: invoiceArtifacts.pageCount,
+          })
+          .from(invoiceArtifacts)
+          .where(
+            and(eq(invoiceArtifacts.tenantId, tenantId), eq(invoiceArtifacts.invoiceId, invoiceId)),
+          ),
+      "billing.render_artifact.find",
+    )
+
+    if (row === undefined) return null
+
+    return yield* Schema.decodeUnknownEffect(InvoiceRenderArtifact)(row).pipe(
+      Effect.mapError(
+        (cause) => new DatabaseFailure({ operation: "billing.render_artifact.decode", cause }),
+      ),
+    )
+  })
 
   const find: InvoiceRenderStore["find"] = Effect.fn("BillingRenderStore.find")(
     function* (tenantId, invoiceId) {
@@ -130,5 +163,5 @@ export const makePostgresInvoiceRenderStore = Effect.gen(function* () {
     ),
   )
 
-  return { put, find } satisfies InvoiceRenderStore
+  return { put, find, findArtifact } satisfies InvoiceRenderStore
 })
