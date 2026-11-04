@@ -74,6 +74,63 @@ const withParty = <A, E>(program: Effect.Effect<A, E, PartyService>) =>
   Effect.provide(program, makePartyTestLayer().pipe(Layer.provide(authorizationLayer)))
 
 describe("party contract", () => {
+  it.effect("reads a legal entity only with tenant-scoped party permission", () => {
+    const authorization = makeAuthorizationTestLayer([
+      ...[
+        PartyCapabilities.partyCreate,
+        PartyCapabilities.legalEntityCreate,
+        PartyCapabilities.partyRead,
+      ].map((capability) => ({ userAccountId: principal.userAccountId, tenantId, capability })),
+      {
+        userAccountId: principal.userAccountId,
+        tenantId: deniedTenantId,
+        capability: PartyCapabilities.partyRead,
+      },
+    ])
+
+    return Effect.gen(function* () {
+      const party = yield* PartyService
+
+      const organization = yield* party.create({
+        principal,
+        tenantId,
+        kind: "organization",
+        name: "Issuer",
+      })
+
+      const legalEntity = yield* party.createLegalEntity({
+        principal,
+        tenantId,
+        organizationId: organization.id,
+      })
+
+      assert.deepStrictEqual(
+        yield* party.getLegalEntity({ principal, tenantId, legalEntityId: legalEntity.id }),
+        legalEntity,
+      )
+      assert.instanceOf(
+        yield* Effect.flip(
+          party.getLegalEntity({
+            principal: { ...principal, userAccountId: "denied" },
+            tenantId,
+            legalEntityId: legalEntity.id,
+          }),
+        ),
+        AuthorizationDenied,
+      )
+      assert.instanceOf(
+        yield* Effect.flip(
+          party.getLegalEntity({
+            principal,
+            tenantId: deniedTenantId,
+            legalEntityId: legalEntity.id,
+          }),
+        ),
+        LegalEntityNotFound,
+      )
+    }).pipe(Effect.provide(makePartyTestLayer().pipe(Layer.provide(authorization))))
+  })
+
   it.effect("authorizes party creation and publishes its owner event", () =>
     Effect.gen(function* () {
       const published: EventEnvelopeContract[] = []

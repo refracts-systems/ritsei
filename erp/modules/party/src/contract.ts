@@ -162,6 +162,12 @@ export const GetPartyDetailInput = Schema.Struct({
   partyId: Uuid,
 })
 
+export const GetLegalEntityInput = Schema.Struct({
+  principal: Principal,
+  tenantId: Uuid,
+  legalEntityId: Uuid,
+})
+
 export const CreatePartyInput = Schema.Struct({
   principal: Principal,
   tenantId: Uuid,
@@ -251,6 +257,12 @@ export interface PartyService {
   ) => Effect.Effect<
     PartyDetail,
     PartyNotFound | AuthorizationDenied | DatabaseFailure | Schema.SchemaError
+  >
+  readonly getLegalEntity: (
+    input: Schema.Codec.Encoded<typeof GetLegalEntityInput>,
+  ) => Effect.Effect<
+    LegalEntity,
+    LegalEntityNotFound | AuthorizationDenied | DatabaseFailure | Schema.SchemaError
   >
   readonly create: (
     input: Schema.Codec.Encoded<typeof CreatePartyInput>,

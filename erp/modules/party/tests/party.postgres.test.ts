@@ -22,6 +22,7 @@ import {
   BranchAlreadyExists,
   ExternalIdentifierAlreadyAssigned,
   LegalEntityAlreadyExists,
+  LegalEntityNotFound,
   makePartyService,
   OrganizationRequired,
   PartyCapabilities,
@@ -321,6 +322,25 @@ it.effect.skipIf(databaseUrl === undefined)(
             tenantId: tenant.id,
             organizationId: organization.id,
           })
+
+          assert.deepStrictEqual(
+            yield* party.getLegalEntity({
+              principal,
+              tenantId: tenant.id,
+              legalEntityId: legalEntity.id,
+            }),
+            legalEntity,
+          )
+          assert.instanceOf(
+            yield* Effect.flip(
+              party.getLegalEntity({
+                principal,
+                tenantId: otherTenant.id,
+                legalEntityId: legalEntity.id,
+              }),
+            ),
+            LegalEntityNotFound,
+          )
 
           const secondLegalEntity = yield* party.createLegalEntity({
             principal,

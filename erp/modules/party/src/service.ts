@@ -16,6 +16,7 @@ import {
   CreatePartyRelationshipInput,
   CreatePartyRepresentationInput,
   FindRelatedPartyPathsInput,
+  GetLegalEntityInput,
   GetPartyDetailInput,
   GetPartyRelationshipInput,
   ListPartiesInput,
@@ -112,6 +113,19 @@ export const makePartyServiceFromStore = <R>(
       return Option.isSome(databaseOption)
         ? yield* databaseOption.value.withTransaction(createAndPublish, "party.create.atomic")
         : yield* createAndPublish
+    })
+
+    const getLegalEntity = Effect.fn("PartyService.getLegalEntity")(function* (
+      input: Schema.Codec.Encoded<typeof GetLegalEntityInput>,
+    ) {
+      const decoded = yield* Schema.decodeUnknownEffect(GetLegalEntityInput)(input)
+      yield* authorization.authorize({
+        principal: decoded.principal,
+        tenantId: decoded.tenantId,
+        capability: PartyCapabilities.partyRead,
+      })
+
+      return yield* partyStore.getLegalEntity(decoded.tenantId, decoded.legalEntityId)
     })
 
     const createLegalEntity = Effect.fn("PartyService.createLegalEntity")(function* (
@@ -285,6 +299,7 @@ export const makePartyServiceFromStore = <R>(
     return {
       list,
       getDetail,
+      getLegalEntity,
       create,
       createLegalEntity,
       createBranch,
