@@ -179,6 +179,9 @@ const withProcessOperationNames = (service: ProcessService): ProcessService => (
   completeJob: Effect.fn("ProcessService.completeJob")(
     (input: Parameters<typeof service.completeJob>[0]) => service.completeJob(input),
   ),
+  completeFencedJob: Effect.fn("ProcessService.completeFencedJob")(
+    (input: Parameters<typeof service.completeFencedJob>[0]) => service.completeFencedJob(input),
+  ),
   failJob: Effect.fn("ProcessService.failJob")((input: Parameters<typeof service.failJob>[0]) =>
     service.failJob(input),
   ),
@@ -1891,7 +1894,7 @@ export const makeProcessService = Effect.gen(function* () {
       return yield* decodeJob(toProcessJob(result.row), decoded.tenantId, decoded.jobId)
     })
 
-  const completeJob = (input: Schema.Codec.Encoded<typeof ProcessJobCompleteInput>) =>
+  const complete = (input: Schema.Codec.Encoded<typeof ProcessJobCompleteInput>, fenced: boolean) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ProcessJobCompleteInput)(input)
 
@@ -1904,23 +1907,43 @@ export const makeProcessService = Effect.gen(function* () {
             leaseOwner: processJobs.leaseOwner,
             leaseToken: processJobs.leaseToken,
             leaseGeneration: processJobs.leaseGeneration,
+            fenceScope: processJobs.fenceScope,
           })
           .from(processJobs)
           .where(and(eq(processJobs.id, decoded.jobId), eq(processJobs.tenantId, decoded.tenantId)))
           .for("update")
 
         if (current === undefined) return CompleteJobOutcome.NotFound()
-        const completedAt = now()
 
         if (
           current.status !== "leased" ||
           current.leaseUntil === null ||
-          current.leaseUntil <= completedAt ||
           current.leaseOwner !== decoded.workerId ||
           current.leaseToken !== decoded.leaseToken ||
           current.leaseGeneration !== decoded.leaseGeneration
         )
           return CompleteJobOutcome.LeaseLost()
+
+        if (fenced) {
+          const [scope] = await tx
+            .select({ generation: jobFenceScopes.generation })
+            .from(jobFenceScopes)
+            .where(
+              and(
+                eq(jobFenceScopes.tenantId, decoded.tenantId),
+                eq(jobFenceScopes.fenceScope, current.fenceScope),
+              ),
+            )
+            .for("update")
+
+          if (scope === undefined || scope.generation !== decoded.leaseGeneration) {
+            return CompleteJobOutcome.LeaseLost()
+          }
+        }
+
+        const completedAt = now()
+
+        if (current.leaseUntil <= completedAt) return CompleteJobOutcome.LeaseLost()
 
         const [completed] = await tx
           .update(processJobs)
@@ -2062,7 +2085,8 @@ export const makeProcessService = Effect.gen(function* () {
     markManualRecovery,
     claimJob,
     renewJob,
-    completeJob,
+    completeJob: (input) => complete(input, false),
+    completeFencedJob: (input) => complete(input, true),
     failJob,
   }
 

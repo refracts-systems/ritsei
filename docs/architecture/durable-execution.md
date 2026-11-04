@@ -76,6 +76,12 @@ is owned by [ADR-0052](../decisions/0052-separate-lease-capability-and-fencing-g
 invariants by [ADR-0053](../decisions/0053-clarify-per-job-lease-generation-invariants.md), and the
 identity separation by [ADR-0054](../decisions/0054-keep-fencing-and-idempotency-identities-orthogonal.md).
 
+`ProcessService.completeFencedJob` additionally locks the scope counter and rejects a generation
+superseded by another job in that scope. To protect a PostgreSQL mutation, the resource owner must
+call it inside the same database transaction, validate the returned job's identity and scope, and
+enforce its own durable fencing and idempotency rules before commit. A standalone completion call
+does not fence a later transaction or an external side effect.
+
 ## Direct Transaction Examples
 
 - post an invoice on the PostgreSQL profile;

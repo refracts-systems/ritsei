@@ -383,6 +383,37 @@ it.effect.skipIf(databaseUrl === undefined)(
           assert.strictEqual(generations.length, 2)
           assert.strictEqual(new Set(generations).size, 2)
           assert.deepStrictEqual(new Set(generations), new Set(["1", "2"]))
+
+          const oldJob = claimed.find((job) => job?.leaseGeneration === "1")!
+          const newJob = claimed.find((job) => job?.leaseGeneration === "2")!
+
+          const lease = (job: NonNullable<typeof oldJob>) => ({
+            tenantId: tenant!.id,
+            workerId: job.leaseOwner!,
+            jobId: job.jobId,
+            leaseToken: job.leaseToken!,
+            leaseGeneration: job.leaseGeneration,
+          })
+
+          assert.instanceOf(
+            yield* Effect.flip(process.completeFencedJob(lease(oldJob))),
+            ProcessJobLeaseLost,
+          )
+
+          const database = makePostgresDatabase(client)
+
+          const rolledBack = yield* Effect.flip(
+            database.withTransaction(
+              Effect.gen(function* () {
+                yield* process.completeFencedJob(lease(newJob))
+
+                return yield* Effect.fail("rollback")
+              }),
+            ),
+          )
+
+          assert.strictEqual(rolledBack, "rollback")
+          assert.strictEqual((yield* process.completeFencedJob(lease(newJob))).status, "completed")
         }),
       ),
     ),

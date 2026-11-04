@@ -126,6 +126,7 @@ const processService: ProcessServiceContract = {
   claimJob: unused,
   renewJob: unused,
   completeJob: unused,
+  completeFencedJob: unused,
   failJob: unused,
 }
 
