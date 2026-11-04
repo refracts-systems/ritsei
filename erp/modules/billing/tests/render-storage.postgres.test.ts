@@ -1,19 +1,35 @@
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
+import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
 
 import {
   createDocumentRenderRequest,
+  Database,
+  DatabaseFailure,
   sha256Hex,
   uuidv7,
 } from "../../../../framework/foundation/mod.ts"
-import { pdfNativeRendererVersion, runMigrations } from "../../../../framework/platform/mod.ts"
+import {
+  makePostgresDatabase,
+  pdfNativeRendererVersion,
+  runMigrations,
+} from "../../../../framework/platform/mod.ts"
+import {
+  AuthorizationDenied,
+  makeAuthorizationTestLayer,
+} from "../../../../framework/modules/authorization/mod.ts"
 import { seedErpFixture } from "../../../../tests/support/erp-fixture.ts"
 import { withTemporaryDatabase } from "../../../../tests/support/postgres-database.ts"
 import {
   type CustomerInvoiceDocument,
+  BillingCapabilities,
+  BillingDocumentNotFound,
+  InvoiceRenderInputConflict,
+  InvoiceRenderInputInvalid,
   makeInvoiceDocumentAst,
   makeInvoiceDocumentSnapshot,
+  makeInvoiceRenderEvaluationService,
 } from "../mod.ts"
 
 const databaseUrl = process.env["DATABASE_URL"]
@@ -35,6 +51,7 @@ it.effect.skipIf(databaseUrl === undefined)(
         const fixture = yield* seedErpFixture(client)
         const invoiceId = uuidv7()
         const journalEntryId = uuidv7()
+        const lineId = uuidv7()
 
         yield* Effect.promise(
           () => client`
@@ -43,6 +60,14 @@ it.effect.skipIf(databaseUrl === undefined)(
                subtotal, tax_total, total, open_amount, journal_entry_id)
             values (${invoiceId}, ${fixture.tenantId}, ${fixture.legalEntityId}, 'customer_invoice',
               ${fixture.organizationId}, 'INV-001', '2026-11-04', 10, 1, 11, 11, ${journalEntryId})
+          `,
+        )
+
+        yield* Effect.promise(
+          () => client`
+            insert into billing.invoice_lines
+              (id, tenant_id, invoice_id, description, quantity, unit_price, net_amount, tax_amount)
+            values (${lineId}, ${fixture.tenantId}, ${invoiceId}, 'Item', 1, 10, 10, 1)
           `,
         )
 
@@ -65,7 +90,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           journalEntryId,
           lines: [
             {
-              id: uuidv7(),
+              id: lineId,
               productId: null,
               description: "Item",
               quantity: "1",
@@ -153,7 +178,151 @@ it.effect.skipIf(databaseUrl === undefined)(
           "23503",
         )
 
-        yield* Effect.promise(() => insertInput(document.number, JSON.stringify(snapshot)))
+        const principal = { userAccountId: "render-user", sessionId: "render-session" }
+        const database = makePostgresDatabase(client)
+        const grant = { userAccountId: principal.userAccountId, tenantId: fixture.tenantId }
+
+        const allowed = yield* makeInvoiceRenderEvaluationService.pipe(
+          Effect.provide(
+            Layer.merge(
+              Layer.succeed(Database, database),
+              makeAuthorizationTestLayer([
+                { ...grant, capability: BillingCapabilities.customerInvoiceCreate },
+                { ...grant, capability: BillingCapabilities.documentRead },
+              ]),
+            ),
+          ),
+        )
+
+        const denied = yield* makeInvoiceRenderEvaluationService.pipe(
+          Effect.provide(
+            Layer.merge(Layer.succeed(Database, database), makeAuthorizationTestLayer([])),
+          ),
+        )
+
+        const stageInput = {
+          principal,
+          tenantId: fixture.tenantId,
+          input: { snapshot, ast, request },
+        }
+
+        assert.instanceOf(yield* Effect.flip(denied.stage(stageInput)), AuthorizationDenied)
+        assert.instanceOf(
+          yield* Effect.flip(allowed.get({ principal, tenantId: otherTenant!.id, invoiceId })),
+          AuthorizationDenied,
+        )
+
+        const otherSnapshot = yield* makeInvoiceDocumentSnapshot(
+          { ...document, tenantId: otherTenant!.id },
+          {
+            snapshotId: uuidv7(),
+            capturedAt: snapshot.capturedAt,
+            issuerName: "Issuer",
+            customerName: "Customer",
+          },
+        )
+
+        const otherAst = yield* makeInvoiceDocumentAst(otherSnapshot, { astId: uuidv7() })
+
+        const otherRequest = yield* createDocumentRenderRequest({
+          ...request,
+          tenantId: otherTenant!.id,
+          snapshotId: otherSnapshot.snapshotId,
+          snapshotChecksum: otherSnapshot.checksum,
+          astId: otherAst.astId,
+          astChecksum: otherAst.checksum,
+        })
+
+        const wrongTenant = yield* Effect.flip(
+          allowed.stage({
+            ...stageInput,
+            input: { snapshot: otherSnapshot, ast: otherAst, request: otherRequest },
+          }),
+        )
+
+        assert.instanceOf(wrongTenant, InvoiceRenderInputInvalid)
+        assert.strictEqual(wrongTenant.reason, "tenant")
+
+        const missingInvoice = yield* makeInvoiceDocumentSnapshot(
+          { ...document, id: uuidv7() },
+          {
+            snapshotId: uuidv7(),
+            capturedAt: snapshot.capturedAt,
+            issuerName: "Issuer",
+            customerName: "Customer",
+          },
+        )
+
+        const missingAst = yield* makeInvoiceDocumentAst(missingInvoice, { astId: uuidv7() })
+
+        const missingRequest = yield* createDocumentRenderRequest({
+          ...request,
+          snapshotId: missingInvoice.snapshotId,
+          snapshotChecksum: missingInvoice.checksum,
+          astId: missingAst.astId,
+          astChecksum: missingAst.checksum,
+        })
+
+        const missing = yield* Effect.flip(
+          allowed.stage({
+            ...stageInput,
+            input: { snapshot: missingInvoice, ast: missingAst, request: missingRequest },
+          }),
+        )
+
+        assert.instanceOf(missing, BillingDocumentNotFound)
+
+        const forgedSnapshot = yield* makeInvoiceDocumentSnapshot(
+          { ...document, total: "12.00" },
+          {
+            snapshotId: uuidv7(),
+            capturedAt: snapshot.capturedAt,
+            issuerName: "Issuer",
+            customerName: "Customer",
+          },
+        )
+
+        const forgedAst = yield* makeInvoiceDocumentAst(forgedSnapshot, { astId: uuidv7() })
+
+        const forgedRequest = yield* createDocumentRenderRequest({
+          ...request,
+          snapshotId: forgedSnapshot.snapshotId,
+          snapshotChecksum: forgedSnapshot.checksum,
+          astId: forgedAst.astId,
+          astChecksum: forgedAst.checksum,
+        })
+
+        const forged = yield* Effect.flip(
+          allowed.stage({
+            ...stageInput,
+            input: { snapshot: forgedSnapshot, ast: forgedAst, request: forgedRequest },
+          }),
+        )
+
+        assert.instanceOf(forged, InvoiceRenderInputConflict)
+        assert.strictEqual(forged.reason, "invoice_mismatch")
+
+        const stagedResults = yield* Effect.all(
+          [allowed.stage(stageInput), allowed.stage(stageInput)],
+          {
+            concurrency: "unbounded",
+          },
+        )
+
+        assert.deepStrictEqual(stagedResults[0], stagedResults[1])
+
+        const staged = stagedResults[0]
+
+        const replay = yield* allowed.stage({
+          ...stageInput,
+          input: { ...stageInput.input, request: { ...request, correlationId: "replay" } },
+        })
+
+        assert.deepStrictEqual(replay, staged)
+        assert.deepStrictEqual(
+          yield* allowed.get({ principal, tenantId: fixture.tenantId, invoiceId }),
+          staged,
+        )
 
         const secondSnapshot = yield* makeInvoiceDocumentSnapshot(document, {
           snapshotId: uuidv7(),
@@ -186,6 +355,16 @@ it.effect.skipIf(databaseUrl === undefined)(
           ),
           "23505",
         )
+
+        const conflict = yield* Effect.flip(
+          allowed.stage({
+            ...stageInput,
+            input: { snapshot: secondSnapshot, ast: secondAst, request: secondRequest },
+          }),
+        )
+
+        assert.instanceOf(conflict, InvoiceRenderInputConflict)
+        assert.strictEqual(conflict.reason, "existing_input")
 
         const bytes = Buffer.from("%PDF-1.7\n")
         const contentHash = yield* sha256Hex(bytes)
@@ -277,6 +456,62 @@ it.effect.skipIf(databaseUrl === undefined)(
         )
 
         assert.strictEqual(artifacts[0]?.count, "1")
+
+        const corruptInvoiceId = uuidv7()
+
+        yield* Effect.promise(
+          () => client`
+          insert into billing.invoices
+            (id, tenant_id, legal_entity_id, kind, party_id, number, invoice_date,
+             subtotal, tax_total, total, open_amount, journal_entry_id)
+          values (${corruptInvoiceId}, ${fixture.tenantId}, ${fixture.legalEntityId}, 'customer_invoice',
+            ${fixture.organizationId}, 'INV-002', '2026-11-04', 10, 1, 11, 11, ${uuidv7()})
+        `,
+        )
+
+        const corruptSnapshot = yield* makeInvoiceDocumentSnapshot(
+          { ...document, id: corruptInvoiceId, number: "INV-002" },
+          {
+            snapshotId: uuidv7(),
+            capturedAt: snapshot.capturedAt,
+            issuerName: "Issuer",
+            customerName: "Customer",
+          },
+        )
+
+        const corruptAst = yield* makeInvoiceDocumentAst(corruptSnapshot, { astId: uuidv7() })
+
+        const corruptRequest = yield* createDocumentRenderRequest({
+          ...request,
+          snapshotId: corruptSnapshot.snapshotId,
+          snapshotChecksum: corruptSnapshot.checksum,
+          astId: corruptAst.astId,
+          astChecksum: corruptAst.checksum,
+        })
+
+        const invalidSnapshot = {
+          ...corruptSnapshot,
+          payload: { ...corruptSnapshot.payload, lines: [] },
+        }
+
+        yield* Effect.promise(
+          () => client`
+          insert into billing.invoice_render_inputs
+            (id, tenant_id, invoice_id, invoice_number, snapshot_checksum, snapshot,
+             ast_id, ast_checksum, ast, render_fingerprint, render_request)
+          values (${corruptSnapshot.snapshotId}, ${fixture.tenantId}, ${corruptInvoiceId}, 'INV-002',
+            ${corruptSnapshot.checksum}, ${JSON.stringify(invalidSnapshot)}::jsonb,
+            ${corruptAst.astId}, ${corruptAst.checksum}, ${JSON.stringify(corruptAst)}::jsonb,
+            ${corruptRequest.renderFingerprint}, ${JSON.stringify(corruptRequest)}::jsonb)
+        `,
+        )
+
+        const corrupt = yield* Effect.flip(
+          allowed.get({ principal, tenantId: fixture.tenantId, invoiceId: corruptInvoiceId }),
+        )
+
+        assert.instanceOf(corrupt, DatabaseFailure)
+        assert.strictEqual(corrupt.operation, "billing.render_input.decode")
       }),
     ),
 )

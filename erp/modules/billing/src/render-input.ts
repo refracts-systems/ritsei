@@ -21,7 +21,7 @@ export class InvoiceRenderInputInvalid extends Schema.TaggedError<InvoiceRenderI
   {
     tenantId: InvoiceDocumentSnapshot.fields.tenantId,
     invoiceId: InvoiceDocumentSnapshot.fields.source.fields.id,
-    reason: Schema.Literals(["snapshot", "ast", "request"]),
+    reason: Schema.Literals(["tenant", "snapshot", "ast", "request"]),
   },
 ) {}
 
