@@ -8,6 +8,7 @@ import {
   createDocumentRenderRequest,
   Database,
   DatabaseFailure,
+  DurableJobEnqueuer,
   makeDocumentRenderJobPayload,
   sha256Hex,
   uuidv7,
@@ -44,10 +45,13 @@ import {
   InvoiceRenderInputConflict,
   InvoiceRenderInputInvalid,
   InvoiceRenderCompletionConflict,
+  InvoiceRenderEvaluationService,
+  InvoiceRenderQueueConflict,
   makeInvoiceDocumentAst,
   makeInvoiceDocumentSnapshot,
   makeInvoiceRenderEvaluationService,
   makeInvoiceRenderCompletionService,
+  makeInvoiceRenderQueueEvaluationService,
 } from "../mod.ts"
 
 const databaseUrl = process.env["DATABASE_URL"]
@@ -320,6 +324,54 @@ it.effect.skipIf(databaseUrl === undefined)(
         assert.instanceOf(forged, InvoiceRenderInputConflict)
         assert.strictEqual(forged.reason, "invoice_mismatch")
 
+        const enqueuer = yield* makeProcessJobEnqueuer.pipe(
+          Effect.provideService(Database, database),
+        )
+
+        const queue = yield* makeInvoiceRenderQueueEvaluationService.pipe(
+          Effect.provide(
+            Layer.mergeAll(
+              Layer.succeed(Database, database),
+              Layer.succeed(InvoiceRenderEvaluationService, allowed),
+              Layer.succeed(DurableJobEnqueuer, enqueuer),
+            ),
+          ),
+        )
+
+        const deniedQueue = yield* makeInvoiceRenderQueueEvaluationService.pipe(
+          Effect.provide(
+            Layer.mergeAll(
+              Layer.succeed(Database, database),
+              Layer.succeed(InvoiceRenderEvaluationService, denied),
+              Layer.succeed(DurableJobEnqueuer, enqueuer),
+            ),
+          ),
+        )
+
+        assert.instanceOf(
+          yield* Effect.flip(deniedQueue.stageAndEnqueue(stageInput)),
+          AuthorizationDenied,
+        )
+
+        const rolledBackQueue = yield* Effect.flip(
+          database.withTransaction(
+            Effect.gen(function* () {
+              yield* queue.stageAndEnqueue(stageInput)
+
+              return yield* Effect.fail("rollback staged input and job")
+            }),
+          ),
+        )
+
+        assert.strictEqual(rolledBackQueue, "rollback staged input and job")
+        assert.isNull(yield* allowed.get({ principal, tenantId: fixture.tenantId, invoiceId }))
+
+        const queuedCount = yield* Effect.promise(
+          () => client<{ count: string }[]>`select count(*)::text as count from process.jobs`,
+        )
+
+        assert.strictEqual(queuedCount[0]?.count, "0")
+
         const stagedResults = yield* Effect.all(
           [allowed.stage(stageInput), allowed.stage(stageInput)],
           {
@@ -480,17 +532,13 @@ it.effect.skipIf(databaseUrl === undefined)(
           ),
         )
 
-        const enqueuer = yield* makeProcessJobEnqueuer.pipe(
-          Effect.provideService(Database, database),
-        )
-
         const completion = yield* makeInvoiceRenderCompletionService.pipe(
           Effect.provide(
             Layer.merge(Layer.succeed(Database, database), Layer.succeed(ProcessService, process)),
           ),
         )
 
-        const payload = yield* makeDocumentRenderJobPayload(request)
+        const payload = { ...(yield* makeDocumentRenderJobPayload(request)), invoiceId }
 
         const jobInput = {
           tenantId: fixture.tenantId,
@@ -511,7 +559,15 @@ it.effect.skipIf(databaseUrl === undefined)(
         })
 
         assert.isNotNull(staleJob)
-        yield* enqueuer.enqueue(jobInput)
+
+        const queuedResults = yield* Effect.all(
+          [queue.stageAndEnqueue(stageInput), queue.stageAndEnqueue(stageInput)],
+          { concurrency: "unbounded" },
+        )
+
+        const [queued, queuedReplay] = queuedResults
+
+        assert.strictEqual(queuedReplay.jobId, queued.jobId)
 
         const job = yield* process.claimJob({
           tenantId: fixture.tenantId,
@@ -520,6 +576,7 @@ it.effect.skipIf(databaseUrl === undefined)(
         })
 
         assert.isNotNull(job)
+        assert.strictEqual(job!.jobId, queued.jobId)
 
         const complete = {
           tenantId: fixture.tenantId,
@@ -570,6 +627,11 @@ it.effect.skipIf(databaseUrl === undefined)(
             update process.jobs set payload = jsonb_set(payload, '{rendererVersion}', '"forged"'::jsonb)
             where id = ${job!.jobId}
           `,
+        )
+
+        assert.instanceOf(
+          yield* Effect.flip(queue.stageAndEnqueue(stageInput)),
+          InvoiceRenderQueueConflict,
         )
 
         const wrongPayload = yield* Effect.flip(completion.complete(complete))
