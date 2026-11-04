@@ -110,11 +110,11 @@ Gate evidence reviewed on 2026-11-04 on `codex/invoice-rendering-readiness` (not
 | --- | --- |
 | Contract | Versioned evaluation snapshots and a staged Billing schema bind invoice number, render input and one checksummed PDF. Evaluation services atomically enqueue inputs, authorize artifact reads and accept artifacts with a current Process lease. A candidate worker exercises the path; trusted names at posting and production activation remain open. |
 | Ownership | ADR-0102 and ADR-0110 assign invoices to Billing; the evaluation pilot is owned by Procurement. |
-| Security | Evaluation checks input and asset integrity, rejects unversioned layout options, and limits rows, pixels, asset bytes and generated output. Tenant authorization, trusted asset normalization, sandboxing and execution-time memory limits still need evidence. |
+| Security | Evaluation checks input and asset integrity, rejects unversioned layout options, limits rows, pixels, asset bytes and generated output, and tests tenant-scoped reads and lease checks. Trusted issuer/customer names, asset normalization, sandboxing and execution-time memory limits still need evidence. |
 | Determinism | The evaluation corpus produces identical PDF hashes in separate UTC and Asia/Bangkok processes on the same local runtime. Fingerprints bind asset hashes and the adapter version; version 1 evaluation inputs must be recreated. Other platforms, dependency versions and runtime environments still need evidence. |
 | Conformance | Tests cover repeated table headers, row identifiers, an explicit page break, multilingual text and font resources. Independent local inspection confirmed multilingual rendering and one PNG fixture; barcode/QR scanning, other fonts and assets, and further pagination cases still need evidence. |
-| Workload | The evaluation contract has a job identity and fencing scope; the memory store tests deduplication and stale writers. The benchmark records sequential renderer timing, CPU and process peak RSS. Production queue, worker, timeout, retry and reserve behavior remain unmeasured. |
-| Operations | Only an in-memory evaluation artifact store is present. Durable storage, retention, cleanup, monitoring and recovery need an operational design and evidence. |
+| Workload | Disposable PostgreSQL tests exercise the actual candidate queue and worker, atomic completion, stale leases, retries and uncertain completion. The benchmark records sequential renderer timing, CPU and process peak RSS. Worker concurrency, hard timeout, command reserve and production workload behavior remain unmeasured. |
+| Operations | A Billing-owned PostgreSQL artifact store and candidate recovery path exist for disposable evaluation databases. Production storage sizing, retention, cleanup, monitoring, alerts, backups and manual recovery still need an operational design and evidence. |
 | Dependency | `pdfnative` is pinned at 1.7.0 for evaluation. Its package notices and Node engine were inspected; distribution, security review and upgrade ownership still need evidence. |
 
 The 2026-11-03 dependency inspection found the following, without approving production use:
@@ -154,8 +154,8 @@ not this working note.
 
 ### B2: candidate operational approach
 
-This is a proposal for reviewing gate evidence, not an implemented service, a production
-retention promise, or an exception to the rendering architecture's current implementation
+This is a proposal for reviewing production gate evidence, not a production retention promise or
+an exception to the rendering architecture's current implementation
 boundary. The governing rules remain in [`document-rendering.md`](../architecture/document-rendering.md),
 [`durable-execution.md`](../architecture/durable-execution.md), and
 [`state-and-consistency.md`](../architecture/state-and-consistency.md).
@@ -187,13 +187,12 @@ boundary. The governing rules remain in [`document-rendering.md`](../architectur
   and escalate conflicts instead of deleting issued evidence. Correlation records should not expose
   invoice content or credentials.
 
-The existing Process PostgreSQL job tests, financial worker tests and memory artifact-store tests
-passed together on 2026-11-03 (3 files, 13 tests). They cover generic lease fencing, concurrent
-claims, expired-lease recovery, retry/manual-recovery behavior and in-memory deduplication. They do
-not run a renderer job, prove atomic artifact storage, establish resource limits, or satisfy the
-workload or operational gate. The renderer benchmark similarly measures the evaluation adapter,
-not a protected production worker. The storage implementation, timeout/retry values, operational
-owners, alert thresholds and retention policy remain unselected.
+The 2026-11-03 Process, financial worker and memory-store tests cover generic job and fencing
+behavior. The newer disposable-database Billing and worker tests additionally exercise renderer
+jobs, atomic storage, lease loss, retries and uncertain completion; they do not establish resource
+limits or satisfy the workload or operational gate. The renderer benchmark measures the evaluation
+adapter, not a protected production worker. Production storage sizing, timeout/retry values,
+operational owners, alert thresholds and retention policy remain unselected.
 
 Open owner questions that still affect scope (parity plan section 11): whether supplier bills should
 live in Billing or Procurement (the code puts them in Billing, per D2); whether the first pilots need
