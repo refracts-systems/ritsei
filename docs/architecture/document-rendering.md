@@ -655,6 +655,14 @@ or mismatch rolls back completion. A retry after a committed completion receives
 an authorized artifact read can reconcile the outcome. This service is not a production worker,
 and does not establish renderer isolation, trusted names, or the activation gates.
 
+The candidate evaluation worker claims the invoice job, verifies its payload against the staged
+input, renders it and invokes atomic completion. It requires document-read permission before claim.
+Ordinary failures are rescheduled with Process's attempt limit; after an uncertain completion the
+worker checks the authorized artifact read for the same ID, fingerprint and content hash. Unresolved
+database failures and lost leases are left for reconciliation or lease expiry. The worker is
+not part of the production worker composition, has no heartbeat or hard process timeout, and does
+not by itself satisfy the isolation or operational gates.
+
 `pdfnative` and its RITSEI adapter are evaluation dependencies only until the activation gates pass.
 The adapter is used for conformance and benchmark evidence; it does not activate a production
 renderer profile. Browser compatibility remains documentation-only in this phase. Puppeteer,
