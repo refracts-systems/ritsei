@@ -18,6 +18,34 @@ export const makePostgresInvoiceRenderStore = Effect.gen(function* () {
   const database = yield* Database
   const loadDocument = yield* makeBillingDocumentLoader
 
+  const insertArtifact: InvoiceRenderStore["insertArtifact"] = Effect.fn(
+    "BillingRenderStore.insertArtifact",
+  )(function* (artifact, fenceScope, leaseGeneration) {
+    const rows = yield* database.query(
+      (db) =>
+        db
+          .insert(invoiceArtifacts)
+          .values({
+            id: artifact.artifactId,
+            tenantId: artifact.tenantId,
+            invoiceId: artifact.invoiceId,
+            snapshotId: artifact.snapshotId,
+            astId: artifact.astId,
+            renderFingerprint: artifact.renderFingerprint,
+            contentHash: artifact.contentHash,
+            content: Buffer.from(artifact.content),
+            pageCount: artifact.pageCount,
+            fenceScope,
+            leaseGeneration,
+          })
+          .onConflictDoNothing()
+          .returning({ id: invoiceArtifacts.id }),
+      "billing.render_artifact.insert",
+    )
+
+    return rows.length === 1
+  })
+
   const findArtifact: InvoiceRenderStore["findArtifact"] = Effect.fn(
     "BillingRenderStore.findArtifact",
   )(function* (tenantId, invoiceId) {
@@ -163,5 +191,5 @@ export const makePostgresInvoiceRenderStore = Effect.gen(function* () {
     ),
   )
 
-  return { put, find, findArtifact } satisfies InvoiceRenderStore
+  return { put, find, findArtifact, insertArtifact } satisfies InvoiceRenderStore
 })

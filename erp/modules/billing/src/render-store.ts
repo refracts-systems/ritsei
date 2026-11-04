@@ -28,4 +28,9 @@ export interface InvoiceRenderStore {
     tenantId: string,
     invoiceId: string,
   ) => Effect.Effect<InvoiceRenderArtifact | null, DatabaseFailure>
+  readonly insertArtifact: (
+    artifact: InvoiceRenderArtifact,
+    fenceScope: string,
+    leaseGeneration: string,
+  ) => Effect.Effect<boolean, DatabaseFailure>
 }

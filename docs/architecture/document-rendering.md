@@ -643,6 +643,13 @@ the insertion transaction; the supplied names remain unverified. It returns the 
 identical replay, and reports a conflict for a different input. This layer is not composed into the
 production runtime.
 
+The evaluation-only completion service validates the PDF signature and size, checks the current
+Process lease and scope generation, matches the completed job to the stored input and render
+fingerprint, and stores the artifact in the same transaction as job completion. A failed insertion
+or mismatch rolls back completion. A retry after a committed completion receives a lease-lost error;
+an authorized artifact read can reconcile the outcome. This service is not a production worker,
+and does not establish renderer isolation, trusted names, or the activation gates.
+
 `pdfnative` and its RITSEI adapter are evaluation dependencies only until the activation gates pass.
 The adapter is used for conformance and benchmark evidence; it does not activate a production
 renderer profile. Browser compatibility remains documentation-only in this phase. Puppeteer,

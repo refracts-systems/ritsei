@@ -64,6 +64,14 @@ export {
   makeInvoiceRenderEvaluationService,
 } from "./src/render-service.ts"
 
+export {
+  CompleteInvoiceRender,
+  InvoiceRenderCompletionConflict,
+  InvoiceRenderCompletionLive,
+  InvoiceRenderCompletionService,
+  makeInvoiceRenderCompletionService,
+} from "./src/render-completion.ts"
+
 export { BillingLive } from "./src/service.ts"
 
 export { BillingModule } from "./manifest.ts"
