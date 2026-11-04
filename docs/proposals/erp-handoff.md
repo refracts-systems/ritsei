@@ -102,7 +102,8 @@ The rendering foundation already has snapshot, AST, request, and artifact contra
 artifact store, a Purchase Order pilot, and an evaluation-only `pdfnative` adapter. The existing
 tests and `pnpm run document:benchmark` provide partial evidence, not production activation. The
 benchmark measures a transactional table and explicit page break, but skips the separate
-`pagination-table` fixture because it requests the broader `paged-media` capability.
+`pagination-table` fixture because it requests the broader `paged-media` capability and skips the
+QR-containing fixture while QR rendering is disabled.
 
 Gate evidence reviewed on 2026-11-04 on `codex/invoice-rendering-readiness` (not yet merged):
 
@@ -112,10 +113,19 @@ Gate evidence reviewed on 2026-11-04 on `codex/invoice-rendering-readiness` (not
 | Ownership | ADR-0102 and ADR-0110 assign invoices to Billing; the evaluation pilot is owned by Procurement. |
 | Security | Evaluation checks input and asset integrity, locks and verifies issuer/customer names against Party when first staged, rejects unversioned layout options, limits rows, pixels, asset bytes and generated output, and tests tenant-scoped reads and lease checks. Trusted names during production posting, asset normalization, sandboxing and execution-time memory limits still need evidence. |
 | Determinism | The evaluation corpus produces identical PDF hashes in separate UTC and Asia/Bangkok processes on the same local runtime. Fingerprints bind asset hashes and the adapter version; version 1 evaluation inputs must be recreated. Other platforms, dependency versions and runtime environments still need evidence. |
-| Conformance | Tests cover repeated table headers, row identifiers, an explicit page break, multilingual text and font resources. Independent local inspection confirmed multilingual rendering and one PNG fixture; barcode/QR scanning, other fonts and assets, and further pagination cases still need evidence. |
+| Conformance | Tests cover repeated table headers, row identifiers, an explicit page break, multilingual text and font resources. An independent decoder read one Code 128 fixture, but could not read QR output; the adapter now rejects QR nodes. Other codes, fonts, assets and further pagination cases still need evidence. |
 | Workload | Disposable PostgreSQL tests exercise the actual candidate queue and worker, atomic completion, stale leases, retries and uncertain completion. The benchmark records sequential renderer timing, CPU and process peak RSS. Worker concurrency, hard timeout, command reserve and production workload behavior remain unmeasured. |
 | Operations | A Billing-owned PostgreSQL artifact store and candidate recovery path exist for disposable evaluation databases. Production storage sizing, retention, cleanup, monitoring, alerts, backups and manual recovery still need an operational design and evidence. |
 | Dependency | `pdfnative` is pinned at 1.7.0 for evaluation. Its package notices and Node engine were inspected; distribution, security review and upgrade ownership still need evidence. |
+
+On 2026-11-04, a Windows evaluation rasterized a generated PDF with PDFium (`pypdfium2` 5.14.0)
+and decoded it with ZXing-C++ 3.1.1. Code 128 `INV-2026-0001` decoded at 150, 300 and 600 dpi.
+An adjacent QR containing an example invoice URL did not; the QR alone also did not decode. A
+separate `pdfnative` matrix for `HELLO`, rendered with a four-module quiet zone, likewise failed
+decoding; a ZXing-generated `HELLO` QR decoded successfully as a control. This is a conformance
+blocker, not evidence that every barcode works. Adapter version 2
+rejects QR nodes; recreate evaluation inputs and jobs that reference adapter version 1. The decoder
+was installed only in a temporary directory and is not a project dependency.
 
 The 2026-11-03 dependency inspection found the following, without approving production use:
 

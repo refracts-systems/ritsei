@@ -1,4 +1,5 @@
 import * as Effect from "effect/Effect"
+import * as Predicate from "effect/Predicate"
 
 import { isMain } from "../entrypoint.ts"
 
@@ -115,6 +116,14 @@ const benchmarkFixture = (fixture: BenchmarkFixture) =>
         reason: "publishing capability is outside the pdfnative transactional adapter",
       })
     : Effect.gen(function* () {
+        if (fixture.nodes.some((node) => Predicate.isTagged(node, "qr_code"))) {
+          return {
+            name: fixture.name,
+            skipped: true,
+            reason: "QR output failed independent decoding and is disabled",
+          }
+        }
+
         const snapshot = yield* createDocumentSnapshot({
           snapshotId,
           tenantId,

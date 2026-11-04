@@ -504,6 +504,10 @@ do not prove that image contents are safe or cap the renderer's memory use: inpu
 output is allocated before their respective checks. Trusted asset normalization and isolated
 resource limits remain required.
 
+The evaluation adapter rejects QR nodes: independent decoding found that `pdfnative` 1.7.0 produces
+unreadable symbols, including a generated matrix with a quiet zone. A supported QR implementation
+and independent scan evidence are required before accepting those nodes or passing conformance.
+
 The capability resolver must reject a template whose declared requirements exceed the selected
 renderer or tenant policy. A compatibility escape hatch must not become an authorization escape
 hatch.

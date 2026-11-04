@@ -83,6 +83,17 @@ export const documentBenchmarkCorpus: ReadonlyArray<DocumentBenchmarkFixture> = 
     assetBytes: 0,
   },
   {
+    name: "asset-and-barcode",
+    nodes: [
+      DocumentImageNode.make({ assetId: "logo-v1", alt: "Company logo" }),
+      DocumentBarcodeNode.make({ value: "PO-2026-0001" }),
+      DocumentSignatureNode.make({ assetId: "signature-v1", label: "Approved by" }),
+    ],
+    capabilities: ["svg"],
+    pageCount: 1,
+    assetBytes: 128_000,
+  },
+  {
     name: "asset-and-code-heavy",
     nodes: [
       DocumentImageNode.make({ assetId: "logo-v1", alt: "Company logo" }),
