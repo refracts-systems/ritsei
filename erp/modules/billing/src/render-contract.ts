@@ -38,7 +38,7 @@ export const InvoiceRenderArtifact = Schema.Struct({
   renderFingerprint: InvoiceRenderInputSchema.fields.request.fields.renderFingerprint,
   contentHash: InvoiceRenderInputSchema.fields.snapshot.fields.checksum,
   content: Schema.Uint8Array,
-  pageCount: Schema.Int.check(Schema.isGreaterThan(0)),
+  pageCount: Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 2_147_483_647 })),
 })
 
 export type InvoiceRenderArtifact = Schema.Schema.Type<typeof InvoiceRenderArtifact>

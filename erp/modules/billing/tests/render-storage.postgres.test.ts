@@ -2,11 +2,13 @@ import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
+import * as TestClock from "effect/testing/TestClock"
 
 import {
   createDocumentRenderRequest,
   Database,
   DatabaseFailure,
+  makeDocumentRenderJobPayload,
   sha256Hex,
   uuidv7,
 } from "../../../../framework/foundation/mod.ts"
@@ -17,19 +19,35 @@ import {
 } from "../../../../framework/platform/mod.ts"
 import {
   AuthorizationDenied,
+  AuthorizationService,
   makeAuthorizationTestLayer,
 } from "../../../../framework/modules/authorization/mod.ts"
+import { MessagingService } from "../../../../framework/modules/messaging/mod.ts"
 import { seedErpFixture } from "../../../../tests/support/erp-fixture.ts"
+import { partial } from "../../../../tests/support/partial.ts"
 import { withTemporaryDatabase } from "../../../../tests/support/postgres-database.ts"
+import { AccountingService } from "../../accounting/mod.ts"
+import { InventoryService } from "../../inventory/mod.ts"
+import {
+  makeProcessJobEnqueuer,
+  makeProcessService,
+  ProcessDocumentJobTypes,
+  ProcessJobLeaseLost,
+  ProcessJobNotFound,
+  ProcessService,
+} from "../../process/mod.ts"
+import { SalesService } from "../../sales/mod.ts"
 import {
   type CustomerInvoiceDocument,
   BillingCapabilities,
   BillingDocumentNotFound,
   InvoiceRenderInputConflict,
   InvoiceRenderInputInvalid,
+  InvoiceRenderCompletionConflict,
   makeInvoiceDocumentAst,
   makeInvoiceDocumentSnapshot,
   makeInvoiceRenderEvaluationService,
+  makeInvoiceRenderCompletionService,
 } from "../mod.ts"
 
 const databaseUrl = process.env["DATABASE_URL"]
@@ -443,7 +461,144 @@ it.effect.skipIf(databaseUrl === undefined)(
           "23514",
         )
 
-        yield* Effect.promise(() => insertArtifact(artifactId, snapshot.snapshotId, contentHash))
+        const authorization = yield* AuthorizationService.pipe(
+          Effect.provide(makeAuthorizationTestLayer([])),
+        )
+
+        const process = yield* TestClock.withLive(
+          makeProcessService.pipe(
+            Effect.provide(
+              Layer.mergeAll(
+                Layer.succeed(Database, database),
+                Layer.succeed(AuthorizationService, authorization),
+                Layer.succeed(SalesService, partial<SalesService>()({})),
+                Layer.succeed(InventoryService, partial<InventoryService>()({})),
+                Layer.succeed(AccountingService, partial<AccountingService>()({})),
+                Layer.succeed(MessagingService, partial<MessagingService>()({})),
+              ),
+            ),
+          ),
+        )
+
+        const enqueuer = yield* makeProcessJobEnqueuer.pipe(
+          Effect.provideService(Database, database),
+        )
+
+        const completion = yield* makeInvoiceRenderCompletionService.pipe(
+          Effect.provide(
+            Layer.merge(Layer.succeed(Database, database), Layer.succeed(ProcessService, process)),
+          ),
+        )
+
+        const payload = yield* makeDocumentRenderJobPayload(request)
+
+        const jobInput = {
+          tenantId: fixture.tenantId,
+          jobType: ProcessDocumentJobTypes.invoiceRender,
+          idempotencyKey: payload.idempotencyKey,
+          priority: 0,
+          payload,
+          correlationId: payload.correlationId,
+          fenceScope: payload.fenceScope,
+        }
+
+        yield* enqueuer.enqueue({ ...jobInput, idempotencyKey: `stale:${uuidv7()}` })
+
+        const staleJob = yield* process.claimJob({
+          tenantId: fixture.tenantId,
+          workerId: "worker-stale",
+          jobType: ProcessDocumentJobTypes.invoiceRender,
+        })
+
+        assert.isNotNull(staleJob)
+        yield* enqueuer.enqueue(jobInput)
+
+        const job = yield* process.claimJob({
+          tenantId: fixture.tenantId,
+          workerId: "worker-current",
+          jobType: ProcessDocumentJobTypes.invoiceRender,
+        })
+
+        assert.isNotNull(job)
+
+        const complete = {
+          tenantId: fixture.tenantId,
+          invoiceId,
+          artifactId,
+          workerId: "worker-current",
+          jobId: job!.jobId,
+          leaseToken: job!.leaseToken!,
+          leaseGeneration: job!.leaseGeneration,
+          content: bytes,
+          pageCount: 1,
+        }
+
+        const stale = yield* Effect.flip(
+          completion.complete({
+            ...complete,
+            workerId: "worker-stale",
+            jobId: staleJob!.jobId,
+            leaseToken: staleJob!.leaseToken!,
+            leaseGeneration: staleJob!.leaseGeneration,
+          }),
+        )
+
+        assert.instanceOf(stale, ProcessJobLeaseLost)
+
+        assert.instanceOf(
+          yield* Effect.flip(completion.complete({ ...complete, tenantId: otherTenant!.id })),
+          ProcessJobNotFound,
+        )
+
+        const missingInput = yield* Effect.flip(
+          completion.complete({ ...complete, invoiceId: uuidv7() }),
+        )
+
+        assert.instanceOf(missingInput, InvoiceRenderCompletionConflict)
+        assert.strictEqual(missingInput.reason, "input_missing")
+        assert.isNull(yield* allowed.getArtifact(getArtifact))
+
+        const invalidOutput = yield* Effect.flip(
+          completion.complete({ ...complete, content: Buffer.from("invalid") }),
+        )
+
+        assert.instanceOf(invalidOutput, InvoiceRenderCompletionConflict)
+        assert.strictEqual(invalidOutput.reason, "invalid_output")
+
+        yield* Effect.promise(
+          () => client`
+            update process.jobs set payload = jsonb_set(payload, '{rendererVersion}', '"forged"'::jsonb)
+            where id = ${job!.jobId}
+          `,
+        )
+
+        const wrongPayload = yield* Effect.flip(completion.complete(complete))
+
+        assert.instanceOf(wrongPayload, InvoiceRenderCompletionConflict)
+        assert.strictEqual(wrongPayload.reason, "job_mismatch")
+        assert.isNull(yield* allowed.getArtifact(getArtifact))
+
+        yield* Effect.promise(
+          () =>
+            client`update process.jobs set payload = ${JSON.stringify(payload)}::jsonb where id = ${job!.jobId}`,
+        )
+
+        const rolledBack = yield* Effect.flip(
+          database.withTransaction(
+            Effect.gen(function* () {
+              yield* completion.complete(complete)
+
+              return yield* Effect.fail("rollback after artifact insertion")
+            }),
+          ),
+        )
+
+        assert.strictEqual(rolledBack, "rollback after artifact insertion")
+        assert.isNull(yield* allowed.getArtifact(getArtifact))
+
+        const accepted = yield* completion.complete(complete)
+        assert.strictEqual(accepted.contentHash, contentHash)
+        assert.instanceOf(yield* Effect.flip(completion.complete(complete)), ProcessJobLeaseLost)
 
         const artifact = yield* allowed.getArtifact(getArtifact)
 
