@@ -385,6 +385,8 @@ export interface ProcessService {
     | ProcessJobNotFound
     | ProcessJobLeaseLost
   >
+  /** For a fenced write, call inside the same Database transaction as the resource mutation. */
+  readonly completeFencedJob: ProcessService["completeJob"]
   readonly failJob: (
     input: Schema.Codec.Encoded<typeof ProcessJobFailInput>,
   ) => Effect.Effect<
