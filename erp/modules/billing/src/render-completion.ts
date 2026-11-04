@@ -6,7 +6,6 @@ import * as Schema from "effect/Schema"
 import {
   canonicalizeJson,
   Database,
-  DocumentRenderJobPayload,
   // This is a pure payload builder, not an Effect service constructor.
   // eslint-disable-next-line anti-slop-effect/no-service-constructor-imports
   makeDocumentRenderJobPayload,
@@ -20,6 +19,7 @@ import {
 } from "../../process/mod.ts"
 import { InvoiceDocumentAstInput } from "./document.ts"
 import { InvoiceRenderArtifact } from "./render-contract.ts"
+import { InvoiceRenderJobPayload } from "./render-job.ts"
 import { makePostgresInvoiceRenderStore } from "./render-postgres.ts"
 
 export const CompleteInvoiceRender = Schema.Struct({
@@ -82,9 +82,12 @@ export const makeInvoiceRenderCompletionService = Effect.gen(function* () {
 
           if (stored === null) return yield* Effect.fail(conflict("input_missing"))
 
-          const expected = yield* makeDocumentRenderJobPayload(stored.request)
+          const expected = {
+            ...(yield* makeDocumentRenderJobPayload(stored.request)),
+            invoiceId: decoded.invoiceId,
+          }
 
-          const payload = yield* Schema.decodeUnknownEffect(DocumentRenderJobPayload)(
+          const payload = yield* Schema.decodeUnknownEffect(InvoiceRenderJobPayload)(
             job.payload,
           ).pipe(Effect.catchTag("SchemaError", () => Effect.fail(conflict("job_mismatch"))))
 

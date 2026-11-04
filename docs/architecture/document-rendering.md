@@ -643,6 +643,11 @@ the insertion transaction; the supplied names remain unverified. It returns the 
 identical replay, and reports a conflict for a different input. This layer is not composed into the
 production runtime.
 
+An evaluation-only queue service stages the input and enqueues the Process job in one transaction.
+Its Billing-specific job payload adds the invoice ID to the generic render payload; a replay returns
+the existing job only if its scope and payload match. Earlier evaluation jobs without the invoice ID
+must be recreated in a disposable database. Production posting does not call this service.
+
 The evaluation-only completion service validates the PDF signature and size, checks the current
 Process lease and scope generation, matches the completed job to the stored input and render
 fingerprint, and stores the artifact in the same transaction as job completion. A failed insertion
