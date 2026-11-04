@@ -19,6 +19,7 @@ export {
   CreatePartyRepresentationInput,
   ExternalIdentifier,
   FindRelatedPartyPathsInput,
+  GetLegalEntityInput,
   GetPartyDetailInput,
   GetPartyRelationshipInput,
   LegalEntity,

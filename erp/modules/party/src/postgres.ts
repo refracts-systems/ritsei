@@ -134,6 +134,26 @@ export const makePartyPostgresStore = Effect.gen(function* () {
     return rows.map(({ legalEntityId, ...party }) => ({ party, legalEntityId }))
   })
 
+  const getLegalEntity = Effect.fn("PartyStore.getLegalEntity")(function* (
+    tenantId: string,
+    legalEntityId: string,
+  ) {
+    const [entity] = yield* database.query(
+      (db) =>
+        db
+          .select(legalEntitySelection)
+          .from(legalEntities)
+          .where(and(eq(legalEntities.tenantId, tenantId), eq(legalEntities.id, legalEntityId))),
+      "party.legal_entity.get",
+    )
+
+    if (entity === undefined) {
+      return yield* Effect.fail(new LegalEntityNotFound({ tenantId, legalEntityId }))
+    }
+
+    return entity
+  })
+
   const getDetail = Effect.fn("PartyStore.getDetail")(function* (
     tenantId: string,
     partyId: string,
@@ -628,6 +648,7 @@ export const makePartyPostgresStore = Effect.gen(function* () {
   return {
     list,
     getDetail,
+    getLegalEntity,
     create,
     createLegalEntity,
     createBranch,

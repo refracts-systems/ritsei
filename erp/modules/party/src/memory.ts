@@ -67,6 +67,19 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
       }),
   )
 
+  const getLegalEntity = Effect.fn("PartyStore.memory.getLegalEntity")(function* (
+    tenantId: string,
+    legalEntityId: string,
+  ) {
+    const entity = legalEntities.get(legalEntityId)
+
+    if (entity === undefined || entity.tenantId !== tenantId) {
+      return yield* Effect.fail(new LegalEntityNotFound({ tenantId, legalEntityId }))
+    }
+
+    return entity
+  })
+
   const getDetail = Effect.fn("PartyStore.memory.getDetail")(function* (
     tenantId: string,
     partyId: string,
@@ -411,6 +424,7 @@ export const makePartyMemoryStore = (validUserAccountIds?: ReadonlySet<string>):
   return {
     list,
     getDetail,
+    getLegalEntity,
     create,
     createLegalEntity,
     createBranch,

@@ -627,6 +627,7 @@ Billing's evaluation invoice snapshot captures its issued number, names, date, l
 it excludes the mutable open amount. The evaluation builder accepts names as input. Production
 issuance must resolve those names through the owning contracts in the posting transaction before
 persisting the snapshot; the evaluation builder alone is not authorization or evidence of origin.
+Party's authorized legal-entity lookup resolves an issuer's organization ID for that future flow.
 Its AST builder takes an explicit UUIDv7 identity so a retry can reuse the stored identity and
 produce the same render request. Billing validates the snapshot checksum, reconstructs the AST
 from that snapshot, and verifies the request's identities and fingerprint before staged persistence.

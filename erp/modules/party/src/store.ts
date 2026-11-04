@@ -44,6 +44,10 @@ export interface PartyStore {
     tenantId: string,
     partyId: string,
   ) => Effect.Effect<PartyDetail, PartyNotFound | Failure>
+  readonly getLegalEntity: (
+    tenantId: string,
+    legalEntityId: string,
+  ) => Effect.Effect<LegalEntity, LegalEntityNotFound | Failure>
   readonly create: (
     tenantId: string,
     kind: PartyKind,
