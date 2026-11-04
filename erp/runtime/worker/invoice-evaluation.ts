@@ -114,11 +114,18 @@ export const runInvoiceEvaluationOnce = Effect.fn("InvoiceEvaluationWorker.runOn
         return yield* Effect.fail(invalid())
       }
 
-      const rendered = yield* renderer.render({
-        context: documentContextFromSnapshot(staged.snapshot),
-        ast: staged.ast,
-        request: staged.request,
-      })
+      const heartbeat = Effect.forever(
+        Effect.sleep("1 minute").pipe(Effect.andThen(process.renewJob(lease)), Effect.asVoid),
+      )
+
+      const rendered = yield* Effect.raceAllFirst([
+        renderer.render({
+          context: documentContextFromSnapshot(staged.snapshot),
+          ast: staged.ast,
+          request: staged.request,
+        }),
+        heartbeat,
+      ])
 
       candidate = {
         invoiceId: payload.invoiceId,
