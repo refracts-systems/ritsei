@@ -323,8 +323,8 @@ manifest must come from a trusted owner and the resolver must enforce tenant acc
 hash alone does not establish authorization. The current evaluation fingerprint and job payload
 formats are version 2; version 1 evaluation inputs must be recreated.
 The evaluation adapter uses a fixed layout; renderer-specific options are rejected until their
-effects can be represented and versioned in the render input. Its renderer version identifies both
-the adapter and the pinned backend, and the adapter rejects requests for another version. Changes
+effects can be represented and versioned in the render input. Its renderer version identifies the
+adapter and all byte-affecting rendering packages, and the adapter rejects requests for another version. Changes
 that can affect PDF bytes require a new adapter version.
 
 ## 7. Determinism and issued artifacts
@@ -504,9 +504,15 @@ do not prove that image contents are safe or cap the renderer's memory use: inpu
 output is allocated before their respective checks. Trusted asset normalization and isolated
 resource limits remain required.
 
-The evaluation adapter rejects QR nodes: independent decoding found that `pdfnative` 1.7.0 produces
-unreadable symbols, including a generated matrix with a quiet zone. A supported QR implementation
-and independent scan evidence are required before accepting those nodes or passing conformance.
+The evaluation adapter uses the pinned, dependency-free `qr` 0.7.2 encoder to produce QR matrices:
+independent decoding found `pdfnative` 1.7.0's QR output unreadable even with a quiet zone. This
+additional encoder is necessary to represent QR nodes safely; its license, security, distribution
+and upgrade ownership remain part of the dependency gate. The encoder does not emit a UTF-8 ECI
+declaration, so the adapter accepts only printable ASCII QR data up to 1,024 bytes; it rejects other
+text instead of relying on scanner-specific charset guessing. It uses four quiet-zone modules and a
+minimum module size of 1.2 points, limits a document to 25 QR nodes and 4,096 total QR bytes, and
+binds the encoder version into the renderer identity. Scan evidence does not by itself pass the
+conformance gate.
 
 The capability resolver must reject a template whose declared requirements exceed the selected
 renderer or tenant policy. A compatibility escape hatch must not become an authorization escape

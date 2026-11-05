@@ -356,6 +356,8 @@ export class DocumentRenderLimitExceeded extends Schema.TaggedError<DocumentRend
     limit: Schema.Literals([
       "ast_nodes",
       "table_rows",
+      "qr_nodes",
+      "qr_bytes",
       "pages",
       "asset_bytes",
       "image_pixels",

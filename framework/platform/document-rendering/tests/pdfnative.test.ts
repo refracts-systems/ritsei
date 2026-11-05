@@ -1,6 +1,8 @@
 import { assert, describe, it } from "@effect/vitest"
 import { execFileSync } from "node:child_process"
+import { readFileSync } from "node:fs"
 import { createRequire } from "node:module"
+import { dirname, join } from "node:path"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import { extractText, validatePdfUA } from "pdfnative"
@@ -83,6 +85,7 @@ const renderInput = () =>
         DocumentDividerNode.make({}),
         DocumentImageNode.make({ assetId: "logo-v1", alt: "Company logo" }),
         DocumentBarcodeNode.make({ value: "PO-2026-0001" }),
+        DocumentQrCodeNode.make({ value: "https://example.invalid/po/0001" }),
         DocumentSignatureNode.make({ assetId: "signature-v1", label: "Approved by" }),
       ],
     })
@@ -127,7 +130,18 @@ describe("pdfnative document renderer", () => {
       createRequire(import.meta.url)("pdfnative/package.json"),
     )
 
-    assert.isTrue(pdfNativeRendererVersion.endsWith(`+pdfnative@${metadata.version}`))
+    assert.include(pdfNativeRendererVersion, `+pdfnative@${metadata.version}+`)
+  })
+
+  it("identifies the installed QR encoder version", () => {
+    const entry = createRequire(import.meta.url).resolve("qr")
+
+    const metadata = Schema.decodeUnknownSync(Schema.Struct({ version: Schema.String }))(
+      JSON.parse(readFileSync(join(dirname(entry), "package.json"), "utf8")),
+    )
+
+    assert.strictEqual(metadata.version, "0.7.2")
+    assert.include(pdfNativeRendererVersion, `qr@${metadata.version}`)
   })
 
   it.effect("renders the benchmark corpus with identical bytes across process timezones", () =>
@@ -175,8 +189,7 @@ describe("pdfnative document renderer", () => {
 
       const qrFixture = utc.fixtures.find((fixture) => fixture.name === "asset-and-code-heavy")
 
-      assert.isTrue(qrFixture?.skipped)
-      assert.include(qrFixture?.reason ?? "", "QR output failed independent decoding")
+      assert.notStrictEqual(qrFixture?.skipped, true)
       assert.isTrue(
         utc.fixtures.some(
           (fixture) => fixture.name === "asset-and-barcode" && fixture.skipped !== true,
@@ -298,29 +311,51 @@ describe("pdfnative document renderer", () => {
     }),
   )
 
-  it.effect("rejects QR output until independently decodable", () =>
+  it.effect("renders bounded QR payloads and rejects malformed or oversized data", () =>
     Effect.gen(function* () {
       const input = yield* renderInput()
 
-      const ast = yield* createDocumentAst({
-        ...input.ast,
-        nodes: [
-          ...input.ast.nodes,
-          DocumentQrCodeNode.make({ value: "https://example.invalid/po/0001" }),
-        ],
-      })
+      const renderQrs = (values: ReadonlyArray<string>) =>
+        Effect.gen(function* () {
+          const ast = yield* createDocumentAst({
+            ...input.ast,
+            nodes: values.map((value) => DocumentQrCodeNode.make({ value })),
+          })
 
-      const request = yield* createDocumentRenderRequest({
-        ...input.request,
-        astChecksum: ast.checksum,
-        astNodeCount: ast.nodes.length,
-      })
+          const request = yield* createDocumentRenderRequest({
+            ...input.request,
+            astChecksum: ast.checksum,
+            astNodeCount: ast.nodes.length,
+          })
 
-      const failure = yield* Effect.flip(renderer.render({ ...input, ast, request }))
+          return yield* renderer.render({ ...input, ast, request })
+        })
 
-      assert.instanceOf(failure, DocumentRendererFailure)
-      assert.strictEqual(failure.operation, "input-validation")
-      assert.include(failure.reason, "QR rendering is unavailable")
+      for (const value of ["HELLO", "https://example.invalid/po/0001", "a".repeat(1_024)]) {
+        const output = yield* renderQrs([value])
+
+        assert.strictEqual(String.fromCharCode(...output.bytes.slice(0, 5)), "%PDF-")
+        assert.strictEqual(output.metadata.status, "ready")
+      }
+
+      for (const value of ["a".repeat(1_025), "タグihan-香港", "\uD800", "\u0001ABC"]) {
+        const failure = yield* Effect.flip(renderQrs([value]))
+
+        assert.instanceOf(failure, DocumentRendererFailure)
+        assert.strictEqual(failure.operation, "input-validation")
+      }
+
+      const tooManyCodes = yield* Effect.flip(renderQrs(Array.from({ length: 26 }, () => "x")))
+
+      assert.instanceOf(tooManyCodes, DocumentRenderLimitExceeded)
+      assert.strictEqual(tooManyCodes.limit, "qr_nodes")
+
+      const tooManyBytes = yield* Effect.flip(
+        renderQrs(Array.from({ length: 5 }, () => "a".repeat(1_024))),
+      )
+
+      assert.instanceOf(tooManyBytes, DocumentRenderLimitExceeded)
+      assert.strictEqual(tooManyBytes.limit, "qr_bytes")
     }),
   )
 

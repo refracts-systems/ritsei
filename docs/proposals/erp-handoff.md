@@ -102,8 +102,7 @@ The rendering foundation already has snapshot, AST, request, and artifact contra
 artifact store, a Purchase Order pilot, and an evaluation-only `pdfnative` adapter. The existing
 tests and `pnpm run document:benchmark` provide partial evidence, not production activation. The
 benchmark measures a transactional table and explicit page break, but skips the separate
-`pagination-table` fixture because it requests the broader `paged-media` capability and skips the
-QR-containing fixture while QR rendering is disabled.
+`pagination-table` fixture because it requests the broader `paged-media` capability.
 
 Gate evidence reviewed on 2026-11-04 on `codex/invoice-rendering-readiness` (not yet merged):
 
@@ -113,19 +112,26 @@ Gate evidence reviewed on 2026-11-04 on `codex/invoice-rendering-readiness` (not
 | Ownership | ADR-0102 and ADR-0110 assign invoices to Billing; the evaluation pilot is owned by Procurement. |
 | Security | Evaluation checks input and asset integrity, locks and verifies issuer/customer names against Party when first staged, rejects unversioned layout options, limits rows, pixels, asset bytes and generated output, and tests tenant-scoped reads and lease checks. Trusted names during production posting, asset normalization, sandboxing and execution-time memory limits still need evidence. |
 | Determinism | The evaluation corpus produces identical PDF hashes in separate UTC and Asia/Bangkok processes on the same local runtime. Fingerprints bind asset hashes and the adapter version; version 1 evaluation inputs must be recreated. Other platforms, dependency versions and runtime environments still need evidence. |
-| Conformance | Tests cover repeated table headers, row identifiers, an explicit page break, multilingual text and font resources. An independent decoder read one Code 128 fixture, but could not read QR output; the adapter now rejects QR nodes. Other codes, fonts, assets and further pagination cases still need evidence. |
+| Conformance | Tests cover repeated table headers, row identifiers, an explicit page break, multilingual text and font resources. The independently decoded ASCII QR and Code 128 cases below pass with adapter version 3. Unicode QR, other codes, fonts, assets, scanner conditions and pagination cases still need evidence. |
 | Workload | Disposable PostgreSQL tests exercise the actual candidate queue and worker, atomic completion, stale leases, retries and uncertain completion. The benchmark records sequential renderer timing, CPU and process peak RSS. Worker concurrency, hard timeout, command reserve and production workload behavior remain unmeasured. |
 | Operations | A Billing-owned PostgreSQL artifact store and candidate recovery path exist for disposable evaluation databases. Production storage sizing, retention, cleanup, monitoring, alerts, backups and manual recovery still need an operational design and evidence. |
-| Dependency | `pdfnative` is pinned at 1.7.0 for evaluation. Its package notices and Node engine were inspected; distribution, security review and upgrade ownership still need evidence. |
+| Dependency | `pdfnative` 1.7.0 and the QR encoder `qr` 0.7.2 are pinned for evaluation. Their production distribution, security review and upgrade ownership still need evidence. |
 
 On 2026-11-04, a Windows evaluation rasterized a generated PDF with PDFium (`pypdfium2` 5.14.0)
 and decoded it with ZXing-C++ 3.1.1. Code 128 `INV-2026-0001` decoded at 150, 300 and 600 dpi.
 An adjacent QR containing an example invoice URL did not; the QR alone also did not decode. A
 separate `pdfnative` matrix for `HELLO`, rendered with a four-module quiet zone, likewise failed
-decoding; a ZXing-generated `HELLO` QR decoded successfully as a control. This is a conformance
-blocker, not evidence that every barcode works. Adapter version 2
-rejects QR nodes; recreate evaluation inputs and jobs that reference adapter version 1. The decoder
-was installed only in a temporary directory and is not a project dependency.
+decoding; a ZXing-generated `HELLO` QR decoded successfully as a control. Adapter version 2 rejected
+QR nodes rather than returning unreadable output.
+
+On 2026-11-05, adapter version 3 used `qr` 0.7.2 to generate QR vectors while retaining `pdfnative`
+for the PDF. PDFium and ZXing-C++ decoded five actual adapter outputs, each with an adjacent Code 128
+barcode, at 150, 300 and 600 dpi. Inputs covered a short value, URL, invoice number, 1,024-byte value
+and exploratory Unicode text. Because the encoder does not declare UTF-8 ECI, the adapter accepts only
+printable ASCII; a scanner guessing Unicode correctly is insufficient. This is limited local evidence,
+not proof for all payloads, printers or scanners.
+The decoder was installed only in a temporary directory and is not a project dependency. Recreate
+evaluation inputs and jobs tied to earlier renderer versions.
 
 The 2026-11-03 dependency inspection found the following, without approving production use:
 
@@ -142,10 +148,21 @@ The 2026-11-03 dependency inspection found the following, without approving prod
   migrations and the web build, but has no explicit third-party-notice copy step. Verify the actual
   release artifact and embedding/subsetting treatment, rather than assuming the package's local
   files are present in the distributed bundle.
+
 - `pnpm audit --prod --json` on that date reported no `pdfnative` advisory; it failed on existing
   `seroval` advisories in the web dependency graph. An advisory scan is not a security review.
   Inspect renderer input handling, font and image processing, release provenance and supported
   deployment runtimes, then assign an upgrade and vulnerability-response owner before activation.
+
+The 2026-11-05 evaluation adds the exact root dependency `qr` 0.7.2 because the selected PDF
+backend emitted unreadable QR matrices. Its package declares MIT or Apache-2.0, Node >=20.19 and
+no runtime dependencies. `pnpm audit --prod` reported no advisory for `qr`; it reported one critical,
+four high and one moderate advisory for the inherited `seroval` dependency, including
+[GHSA-p6vx-979v-rg4c](https://github.com/advisories/GHSA-p6vx-979v-rg4c). Audit output is a point
+in time, not a production security approval; review both dependencies and distribution notices before
+activation. The listed fixes require `seroval` >=1.6.10, while the pinned `solid-js` and
+`@solidjs/web` 2.0.0-rc.6 packages declare `~1.5.4`; an override would cross the upstream
+compatibility range and needs its own compatibility and security review.
 
 1. Build and measure the staged job, Billing-owned artifact implementation and worker under
    [ADR-0112](../decisions/0112-stage-invoice-rendering-before-activation.md), using disposable
