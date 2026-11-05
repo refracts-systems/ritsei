@@ -16,6 +16,7 @@ import {
   type PdfLayoutOptions,
   registerFonts,
 } from "pdfnative"
+import { encodeQR } from "qr"
 
 import { uuidv7 } from "../../foundation/ids/mod.ts"
 import {
@@ -94,9 +95,12 @@ class UtcMetadataDate extends Date {
 }
 
 const deterministicCreationDate = new UtcMetadataDate("2000-01-01T00:00:00.000Z")
+const maxQrBytesPerCode = 1_024
+const maxQrBytesPerDocument = 4_096
+const maxQrNodesPerDocument = 25
 
 // Increment the adapter version when a change can affect the PDF bytes.
-export const pdfNativeRendererVersion = "ritsei-pdfnative@2+pdfnative@1.7.0"
+export const pdfNativeRendererVersion = "ritsei-pdfnative@3+pdfnative@1.7.0+qr@0.7.2"
 
 const defaultPolicy: DocumentRenderPolicy = {
   rendererFamily: "native-transactional",
@@ -133,7 +137,7 @@ const rendererFailure = (operation: string, reason: string, cause: unknown) =>
 
 const textValues = (nodes: ReadonlyArray<DocumentNode>) =>
   nodes.flatMap((node) => {
-    if ("value" in node) return [node.value]
+    if (Predicate.isTagged(node, "text")) return [node.value]
 
     if ("headers" in node) return [...node.headers, ...node.rows.flat()]
 
@@ -252,7 +256,7 @@ const loadAsset = (
     return bytes
   })
 
-type StaticDocumentNode = Exclude<DocumentNode, { _tag: "image" | "signature" }>
+type StaticDocumentNode = Exclude<DocumentNode, { _tag: "image" | "signature" | "qr_code" }>
 
 const toStaticPdfBlock = (node: StaticDocumentNode): PdfDocumentBlock =>
   Match.valueTags(node, {
@@ -282,12 +286,87 @@ const toStaticPdfBlock = (node: StaticDocumentNode): PdfDocumentBlock =>
       data: node.value,
       align: "center",
     }),
-    qr_code: (node): PdfDocumentBlock => ({
-      type: "barcode",
-      format: "qr",
-      data: node.value,
-      align: "center",
-    }),
+  })
+
+const qrDataSize = (value: string) =>
+  Effect.gen(function* () {
+    // The encoder does not emit UTF-8 ECI; ASCII avoids scanner-dependent decoding.
+    if (value.length > maxQrBytesPerCode || !/^[\x20-\x7E]+$/.test(value)) {
+      return yield* Effect.fail(
+        rendererFailure(
+          "input-validation",
+          "QR data must be printable ASCII and at most 1024 bytes",
+          undefined,
+        ),
+      )
+    }
+
+    return value.length
+  })
+
+const validateQrBudget = (nodes: ReadonlyArray<DocumentNode>) =>
+  Effect.gen(function* () {
+    let count = 0
+    let totalBytes = 0
+
+    for (const node of nodes) {
+      if (!Predicate.isTagged(node, "qr_code")) continue
+
+      count += 1
+
+      if (count > maxQrNodesPerDocument) {
+        return yield* Effect.fail(
+          new DocumentRenderLimitExceeded({
+            limit: "qr_nodes",
+            actual: count,
+            maximum: maxQrNodesPerDocument,
+          }),
+        )
+      }
+
+      totalBytes += yield* qrDataSize(node.value)
+
+      if (totalBytes > maxQrBytesPerDocument) {
+        return yield* Effect.fail(
+          new DocumentRenderLimitExceeded({
+            limit: "qr_bytes",
+            actual: totalBytes,
+            maximum: maxQrBytesPerDocument,
+          }),
+        )
+      }
+    }
+  })
+
+const toQrBlock = (value: string) =>
+  Effect.gen(function* () {
+    yield* qrDataSize(value)
+
+    return yield* Effect.try({
+      try: () => {
+        const matrix = encodeQR(value, "raw", { ecc: "medium", encoding: "byte", border: 4 })
+
+        const data = matrix
+          .flatMap((row, y) => row.flatMap((dark, x) => (dark ? [`M${x} ${y}h1v1h-1z`] : [])))
+          .join("")
+
+        const size = Math.max(100, matrix.length * 1.2)
+
+        const block: PdfDocumentBlock = {
+          type: "svg",
+          data,
+          width: size,
+          height: size,
+          viewBox: [0, 0, matrix.length, matrix.length],
+          fill: "#000000",
+          align: "center",
+          alt: "QR code",
+        }
+
+        return { blocks: [block], assetBytes: 0 }
+      },
+      catch: (cause) => rendererFailure("qr-encoding", "QR encoding failed", cause),
+    })
   })
 
 const toImageBlocks = (
@@ -345,6 +424,7 @@ const toPdfBlocks = (
         Match.tag("signature", (signature) =>
           toSignatureBlocks(signature, request, resolveAsset, budget),
         ),
+        Match.tag("qr_code", (qr) => toQrBlock(qr.value)),
         Match.orElse((rest) => Effect.succeed({ blocks: [toStaticPdfBlock(rest)], assetBytes: 0 })),
       )
 
@@ -565,16 +645,7 @@ const renderPdfNativeDocument = (
 
     yield* validateInputReferences(context, ast, request)
     yield* validateInputIntegrity(context, ast, request)
-
-    if (ast.nodes.some((node) => Predicate.isTagged(node, "qr_code"))) {
-      return yield* Effect.fail(
-        rendererFailure(
-          "input-validation",
-          "QR rendering is unavailable: generated symbols failed independent decoding",
-          undefined,
-        ),
-      )
-    }
+    yield* validateQrBudget(ast.nodes)
 
     const { blocks } = yield* toPdfBlocks(ast.nodes, request, options.resolveAsset, policy)
     const fontEntries = yield* loadFontEntries(textValues(ast.nodes))
