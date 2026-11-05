@@ -3,6 +3,7 @@ import * as Deferred from "effect/Deferred"
 import * as Effect from "effect/Effect"
 import * as Fiber from "effect/Fiber"
 import * as TestClock from "effect/testing/TestClock"
+import type { Sql } from "postgres"
 
 import { Database, uuidv7 } from "../../../../framework/foundation/mod.ts"
 import {
@@ -43,6 +44,25 @@ const databaseUrl = process.env["DATABASE_URL"]
 
 const postgresFailure = <A>(effect: () => Promise<A>) =>
   Effect.tryPromise({ try: effect, catch: (cause) => cause }).pipe(Effect.flip)
+
+const waitForDocumentPartyLocks = (client: Sql) =>
+  Effect.gen(function* () {
+    for (let attempt = 0; attempt < 40; attempt += 1) {
+      const [activity] = yield* Effect.promise(
+        () => client<{ waiting: string }[]>`
+          select count(*)::text as waiting from pg_stat_activity
+          where datname = current_database() and pid <> pg_backend_pid()
+            and query like '%document_party_lock_probe%' and wait_event_type = 'Lock'
+        `,
+      )
+
+      if (activity?.waiting === "2") return true
+
+      yield* TestClock.withLive(Effect.sleep("25 millis"))
+    }
+
+    return false
+  })
 
 it.effect.skipIf(databaseUrl === undefined)(
   "enforces scoped external identifier uniqueness in PostgreSQL",
@@ -392,24 +412,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               client`update party.parties /* document_party_lock_probe */ set name = 'Scope Issuer Updated' where id = ${organization.id}`,
           ).pipe(Effect.forkChild)
 
-          let waitingForLock = false
-
-          for (let attempt = 0; attempt < 40; attempt += 1) {
-            const [activity] = yield* Effect.promise(
-              () => client<{ waiting: string }[]>`
-              select count(*)::text as waiting from pg_stat_activity
-                where datname = current_database() and pid <> pg_backend_pid()
-                  and query like '%document_party_lock_probe%' and wait_event_type = 'Lock'
-            `,
-            )
-
-            if (activity?.waiting === "2") {
-              waitingForLock = true
-              break
-            }
-
-            yield* TestClock.withLive(Effect.sleep("25 millis"))
-          }
+          const waitingForLock = yield* waitForDocumentPartyLocks(client)
 
           assert.isTrue(updateStarted)
           assert.isTrue(waitingForLock)
