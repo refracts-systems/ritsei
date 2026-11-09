@@ -73,6 +73,9 @@ function SessionRouteBoundary(props: { session: Session; children: () => JSX.Ele
     defaultOptions: {
       queries: {
         retry: false,
+        // A failed read is shown with its retry action. Solid can build a component again under
+        // its boundary, and a new observer must not quietly repeat the failed request.
+        retryOnMount: false,
         staleTime: 0,
         gcTime: 0,
         refetchOnWindowFocus: false,

@@ -110,8 +110,8 @@ function SessionRecovery() {
   return null
 }
 
+// The router preloads no link unless a strategy is passed, so none is.
 const Router = createRouter({
-  preloadLinks: false,
   routes: [
     { path: "/", component: HomeRoute },
     { path: "/login", component: Connection },
