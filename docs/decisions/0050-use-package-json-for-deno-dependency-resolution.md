@@ -5,7 +5,7 @@
 - Amends: ADR-0017 dependency-resolution mechanism
 - Compatible with: ADR-0017 native Effect Deno adapter
 - Supersedes: ADR-0022
-- Superseded by: None
+- Superseded by: ADR-0075 for dependency-manifest ownership; ADR-0087 for Deno resolution
 
 > **Related documents**
 >

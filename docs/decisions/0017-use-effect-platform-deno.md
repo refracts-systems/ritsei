@@ -1,9 +1,9 @@
 # ADR-0017: Use the canonical Effect Deno adapter
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-08-03
 - Supersedes: The HTTP runtime-adapter portion of ADR-0012
-- Superseded by: None
+- Superseded by: ADR-0022, then ADR-0087 (Node.js runtime and `@effect/platform-node` adapter)
 
 > **Related documents**
 >

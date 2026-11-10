@@ -14,8 +14,8 @@ current system; ADRs preserve decision history.
 
 ## Status Values
 
-- Superseded
-- Superseded
+- Proposed
+- Accepted
 - Rejected
 - Deprecated
 - Superseded
@@ -24,28 +24,28 @@ current system; ADRs preserve decision history.
 
 | ADR                                                                                           | Decision                                                                                         | Status     |
 | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ---------- |
-| [`0001`](./0001-use-modular-monolith.md)                                                      | Use a modular monolith                                                                           | Superseded |
-| [`0002`](./0002-use-effect-deno-and-drizzle.md)                                               | Use Effect, Deno, and Drizzle                                                                    | Superseded |
+| [`0001`](./0001-use-modular-monolith.md)                                                      | Use a modular monolith                                                                           | Accepted   |
+| [`0002`](./0002-use-effect-deno-and-drizzle.md)                                               | Use Effect, Deno, and Drizzle                                                                    | Accepted   |
 | [`0003`](./0003-postgresql-is-transactional-truth.md)                                         | PostgreSQL is transactional truth                                                                | Superseded |
-| [`0004`](./0004-separate-events-jobs-and-workflows.md)                                        | Separate events, jobs, and workflows                                                             | Superseded |
-| [`0005`](./0005-use-ltree-and-sql-pgq-selectively.md)                                         | Use `ltree` and SQL/PGQ selectively                                                              | Superseded |
-| [`0006`](./0006-use-capability-based-authorization.md)                                        | Use scoped capability authorization                                                              | Superseded |
+| [`0004`](./0004-separate-events-jobs-and-workflows.md)                                        | Separate events, jobs, and workflows                                                             | Accepted   |
+| [`0005`](./0005-use-ltree-and-sql-pgq-selectively.md)                                         | Use `ltree` and SQL/PGQ selectively                                                              | Accepted   |
+| [`0006`](./0006-use-capability-based-authorization.md)                                        | Use scoped capability authorization                                                              | Accepted   |
 | [`0007`](./0007-adopt-tiered-plugin-trust.md)                                                 | Adopt tiered plugin trust                                                                        | Superseded |
 | [`0008`](./0008-gate-zig-behind-benchmarks.md)                                                | Gate Zig behind benchmarks                                                                       | Superseded |
-| [`0009`](./0009-use-solidjs-2.md)                                                             | Use SolidJS 2.0 for the frontend                                                                 | Superseded |
-| [`0010`](./0010-use-vite-solidjs-spa.md)                                                      | Use a Vite-based SolidJS SPA                                                                     | Superseded |
+| [`0009`](./0009-use-solidjs-2.md)                                                             | Use SolidJS 2.0 for the frontend                                                                 | Accepted   |
+| [`0010`](./0010-use-vite-solidjs-spa.md)                                                      | Use a Vite-based SolidJS SPA                                                                     | Accepted   |
 | [`0011`](./0011-financial-ledger-engine.md)                                                   | Financial ledger execution engine                                                                | Superseded |
-| [`0012`](./0012-use-drizzle-schema-flow-and-effect-http.md)                                   | Use the Drizzle schema flow and Effect-native HTTP                                               | Superseded |
-| [`0013`](./0013-version-external-standard-adapters.md)                                        | Isolate external standards behind versioned adapters                                             | Superseded |
-| [`0014`](./0014-separate-internal-and-external-identifiers.md)                                | Separate internal identity from external identifiers                                             | Superseded |
-| [`0015`](./0015-one-semantic-owner-per-invariant.md)                                          | Assign one semantic owner per invariant                                                          | Superseded |
-| [`0016`](./0016-isolate-jurisdiction-localization.md)                                         | Isolate localization from primitive cores                                                        | Superseded |
-| [`0017`](./0017-use-effect-platform-deno.md)                                                  | Use the canonical Effect Deno adapter                                                            | Accepted   |
+| [`0012`](./0012-use-drizzle-schema-flow-and-effect-http.md)                                   | Use the Drizzle schema flow and Effect-native HTTP                                               | Accepted   |
+| [`0013`](./0013-version-external-standard-adapters.md)                                        | Isolate external standards behind versioned adapters                                             | Accepted   |
+| [`0014`](./0014-separate-internal-and-external-identifiers.md)                                | Separate internal identity from external identifiers                                             | Accepted   |
+| [`0015`](./0015-one-semantic-owner-per-invariant.md)                                          | Assign one semantic owner per invariant                                                          | Accepted   |
+| [`0016`](./0016-isolate-jurisdiction-localization.md)                                         | Isolate localization from primitive cores                                                        | Accepted   |
+| [`0017`](./0017-use-effect-platform-deno.md)                                                  | Use the canonical Effect Deno adapter                                                            | Superseded |
 | [`0018`](./0018-adopt-typed-process-studio.md)                                                | Adopt a typed, domain-aware Process Studio                                                       | Accepted   |
 | [`0019`](./0019-adopt-integration-surface-profile.md)                                         | Adopt a typed external integration surface profile                                               | Accepted   |
 | [`0020`](./0020-adopt-capability-release-and-runtime-governance.md)                           | Adopt capability release and runtime governance                                                  | Superseded |
 | [`0021`](./0021-define-p0-scope-and-identity-model.md)                                        | Define the P0 scope and identity model                                                           | Accepted   |
-| [`0022`](./0022-update-effect-v4-to-beta-103.md)                                              | Update Effect v4 and Deno adapter to beta.103                                                    | Accepted   |
+| [`0022`](./0022-update-effect-v4-to-beta-103.md)                                              | Update Effect v4 and Deno adapter to beta.103                                                    | Superseded |
 | [`0023`](./0023-adopt-capability-oriented-plugin-contribution.md)                             | Adopt capability-oriented plugin contribution                                                    | Superseded |
 | [`0024`](./0024-adopt-effect-schema-as-canonical-contract-schema.md)                          | Adopt Effect Schema as the canonical contract schema                                             | Accepted   |
 | [`0025`](./0025-introduce-stateful-entity-runtime.md)                                         | Introduce a Stateful Entity Runtime                                                              | Superseded |
@@ -73,7 +73,7 @@ current system; ADRs preserve decision history.
 | [`0047`](./0047-define-procurement-goods-receipt-boundary.md)                                 | Define the Procurement Goods Receipt boundary                                                    | Accepted   |
 | [`0048`](./0048-define-effect-application-architecture-and-frontend-state-ownership.md)       | Define Effect application architecture and frontend state ownership                              | Accepted   |
 | [`0049`](./0049-keep-solid-compiler-at-rendering-boundary.md)                                 | Keep the Solid compiler at the rendering boundary                                                | Accepted   |
-| [`0050`](./0050-use-package-json-for-deno-dependency-resolution.md)                           | Use package.json and npm exports for Deno dependency resolution                                  | Superseded |
+| [`0050`](./0050-use-package-json-for-deno-dependency-resolution.md)                           | Use package.json and npm exports for Deno dependency resolution                                  | Accepted   |
 | [`0051`](./0051-adopt-uuidv7-for-persistent-identities.md)                                    | Adopt UUIDv7 for persistent identities                                                           | Accepted   |
 | [`0052`](./0052-separate-lease-capability-and-fencing-generation.md)                          | Separate lease capability from fencing generation                                                | Accepted   |
 | [`0053`](./0053-clarify-per-job-lease-generation-invariants.md)                               | Clarify per-job lease-generation invariants                                                      | Accepted   |
