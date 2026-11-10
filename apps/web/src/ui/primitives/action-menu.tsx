@@ -14,6 +14,7 @@ const styles = {
   // The panel renders in place (no Portal): under the pinned Solid 2 alpha, Kobalte's popper only
   // computes a position when the content shares the trigger's subtree.
   root: css({ position: "relative", display: "inline-flex" }),
+  // The panel grows from the control that opened it, not from its own center.
   content: css({
     zIndex: "modal",
     minWidth: "[13rem]",
@@ -22,18 +23,19 @@ const styles = {
     color: "text",
     borderWidth: "1px",
     borderColor: "boundary",
-    borderRadius: "overlay",
-    boxShadow: "overlay",
+    borderRadius: "menu",
+    boxShadow: "floating",
+    transformOrigin: "var(--kb-menu-content-transform-origin)",
+    animationStyle: "pop-in",
     _focusVisible: { outline: "none" },
   }),
   item: css({
     display: "flex",
     alignItems: "center",
     minHeight: "8",
-    px: "2.5",
-    borderRadius: "control",
-    textStyle: "label",
-    fontWeight: "regular",
+    px: "2",
+    borderRadius: "item",
+    textStyle: "body",
     color: "text",
     cursor: "pointer",
     outline: "none",

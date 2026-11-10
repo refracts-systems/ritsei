@@ -3,7 +3,6 @@ import { css } from "../generated/css/index.js"
 // Approved semantic text styles. Components should not choose raw type tokens.
 export const typography = {
   body: css({ textStyle: "body" }),
-  bodyCompact: css({ textStyle: "bodyCompact" }),
   label: css({ textStyle: "label" }),
   helper: css({ textStyle: "helper" }),
   metadata: css({ textStyle: "metadata" }),

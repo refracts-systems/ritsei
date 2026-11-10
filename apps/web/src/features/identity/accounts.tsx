@@ -11,6 +11,7 @@ import { createDialogOpenChange, Dialog } from "../../ui/primitives/dialog.tsx"
 import { FormField } from "../../ui/primitives/form-field.tsx"
 import { Form } from "../../ui/primitives/form.tsx"
 import { Input } from "../../ui/primitives/input.tsx"
+import { Select } from "../../ui/primitives/select.tsx"
 import {
   createAccountEmailMutation,
   createAccountMutation,
@@ -430,15 +431,15 @@ function AccountCollection() {
             </label>
             <label class={[layout.fieldLabel, layout.filterField]}>
               Global status
-              <select
-                class={layout.filterSelect}
+              <Select
                 value={status()}
                 onChange={(event) => setStatus(event.currentTarget.value)}
-              >
-                <option value="all">All statuses</option>
-                <option value="active">Active</option>
-                <option value="disabled">Disabled</option>
-              </select>
+                options={[
+                  { value: "all", label: "All statuses" },
+                  { value: "active", label: "Active" },
+                  { value: "disabled", label: "Disabled" },
+                ]}
+              />
             </label>
             <Button type="button" onClick={() => void query.refetch()}>
               Reload accounts

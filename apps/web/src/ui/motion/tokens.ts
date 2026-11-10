@@ -2,16 +2,22 @@ export const motionDuration = {
   none: 0,
   instant: 80,
   fast: 120,
+  press: 160,
   normal: 180,
   deliberate: 240,
   slow: 320,
 } as const
 
+// No ease-in: it holds back the first frame, which is the one the user is watching.
 export const motionEasing = {
-  standard: [0.2, 0, 0, 1],
-  enter: [0.16, 1, 0.3, 1],
-  exit: [0.4, 0, 1, 1],
-  emphasized: [0.16, 1, 0.3, 1],
+  // Hover and color changes.
+  standard: [0.25, 0.1, 0.25, 1],
+  // Anything entering, leaving, or answering a press.
+  out: [0.23, 1, 0.32, 1],
+  // Something already on screen that moves or changes size.
+  inOut: [0.77, 0, 0.175, 1],
+  // The navigation drawer.
+  drawer: [0.32, 0.72, 0, 1],
 } as const
 
 export const motionDistance = {
@@ -23,28 +29,29 @@ export const motionDistance = {
 
 export const semanticMotion = {
   feedback: {
-    duration: motionDuration.instant,
-    easing: motionEasing.standard,
+    duration: motionDuration.press,
+    easing: motionEasing.out,
   },
   enter: {
     duration: motionDuration.normal,
-    easing: motionEasing.enter,
+    easing: motionEasing.out,
   },
+  // Leaving is quicker than arriving: the system is answering, not asking.
   exit: {
-    duration: motionDuration.instant,
-    easing: motionEasing.exit,
+    duration: motionDuration.fast,
+    easing: motionEasing.out,
   },
   disclosure: {
     duration: motionDuration.normal,
-    easing: motionEasing.standard,
+    easing: motionEasing.out,
   },
   spatial: {
     duration: motionDuration.deliberate,
-    easing: motionEasing.standard,
+    easing: motionEasing.inOut,
   },
-  emphasis: {
-    duration: motionDuration.normal,
-    easing: motionEasing.emphasized,
+  drawer: {
+    duration: motionDuration.deliberate,
+    easing: motionEasing.drawer,
   },
 } as const
 
