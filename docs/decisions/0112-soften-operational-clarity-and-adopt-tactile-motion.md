@@ -104,7 +104,7 @@ owned by [`design-system.md`](../architecture/design-system.md).
   used these names.
 - A missing spacing or size step is now a type error at authoring time instead of an unused
   variable in the stylesheet. Add the step to the config when a design needs it.
-- The stylesheet has about 650 bytes of headroom under its budget.
+- The stylesheet has about 750 bytes of headroom under its budget.
 - The visual-contract baseline was regenerated. Pixel-level visual regression remains an
   activation gate (design-system Section 23).
 - The concept images referenced from the design system show the earlier cobalt treatment and are
