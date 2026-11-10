@@ -1,4 +1,4 @@
-import { createSignal, For, Show, useContext } from "solid-js"
+import { createSignal, For, Show, untrack, useContext } from "solid-js"
 import { today } from "../../shared/form-values.ts"
 import { CommandFeedback, QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
 import { createProductsQuery, createWarehousesQuery } from "../../shared/lookups.ts"
@@ -144,7 +144,8 @@ function RecordDeliveryDialog(props: {
 /** How much of a confirmed order is delivered, with the delivery and invoicing steps. */
 export function OrderDelivery(props: { orderId: string; reloadOrder: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
-  const query = createOrderFulfillmentQuery(scope, props.orderId)
+  const orderId = untrack(() => props.orderId)
+  const query = createOrderFulfillmentQuery(scope, orderId)
   const products = createProductsQuery(scope)
   const productName = (id: string) => products.data.find((product) => product.id === id)?.name
   const reload = () => reloaded(Promise.all([query.refetch(), props.reloadOrder()]))

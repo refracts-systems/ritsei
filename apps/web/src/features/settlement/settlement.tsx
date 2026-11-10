@@ -1,5 +1,5 @@
 import { useNavigate } from "@solidjs/router"
-import { createMemo, For, Show, useContext } from "solid-js"
+import { createMemo, For, Show, untrack, useContext } from "solid-js"
 import { formText as text, isDate, today } from "../../shared/form-values.ts"
 import { type Names, namesFrom } from "../../shared/party-names.ts"
 import { QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
@@ -292,11 +292,11 @@ function AgingSection(props: {
 }) {
   const scope = useContext(ApiRuntime)
 
-  const query = createAgingQuery(scope, {
-    legalEntityId: props.legalEntityId,
-    side: props.side,
-    asOf: props.asOf,
-  })
+  // Read once: the query is built for the legal entity, side, and date this section opened with.
+  const query = createAgingQuery(
+    scope,
+    untrack(() => ({ legalEntityId: props.legalEntityId, side: props.side, asOf: props.asOf })),
+  )
 
   return (
     <section class={[surface(), layout.stack]} aria-labelledby="settlement-aging-heading">
@@ -372,12 +372,16 @@ function StatementTable(props: {
 }) {
   const scope = useContext(ApiRuntime)
 
-  const query = createStatementQuery(scope, {
-    legalEntityId: props.legalEntityId,
-    partyId: props.partyId,
-    from: props.from,
-    to: props.to,
-  })
+  // Read once: the query is built for the statement this table opened with.
+  const query = createStatementQuery(
+    scope,
+    untrack(() => ({
+      legalEntityId: props.legalEntityId,
+      partyId: props.partyId,
+      from: props.from,
+      to: props.to,
+    })),
+  )
 
   return (
     <QueryBoundary label="statement" retry={() => reloaded(query.refetch())}>
@@ -515,10 +519,12 @@ type WorkspaceRoute = SettlementRoute & {
 
 function PaymentRegister(props: { names: Names; route: WorkspaceRoute }) {
   const scope = useContext(ApiRuntime)
+  // Read once: the query is built for the route this register opened with.
+  const opened = untrack(() => props.route)
 
   const payments = createPaymentsQuery(scope, {
-    legalEntityId: props.route.legalEntityId,
-    direction: props.route.direction,
+    legalEntityId: opened.legalEntityId,
+    direction: opened.direction,
   })
 
   return (
@@ -553,15 +559,17 @@ function PaymentRegister(props: { names: Names; route: WorkspaceRoute }) {
 
 function SelectedPayment(props: { names: Names; route: WorkspaceRoute }) {
   const scope = useContext(ApiRuntime)
+  // Read once: the queries are built for the route this payment opened with.
+  const opened = untrack(() => props.route)
 
   const payments = createPaymentsQuery(scope, {
-    legalEntityId: props.route.legalEntityId,
-    direction: props.route.direction,
+    legalEntityId: opened.legalEntityId,
+    direction: opened.direction,
   })
 
   const numbersQuery = createDocumentNumbersQuery(scope, {
-    legalEntityId: props.route.legalEntityId,
-    side: sideOf(props.route.direction),
+    legalEntityId: opened.legalEntityId,
+    side: sideOf(opened.direction),
   })
 
   const numbers = createMemo(() => new Map(numbersQuery.data.map((item) => [item.id, item.number])))

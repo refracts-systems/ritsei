@@ -1,5 +1,5 @@
 import { useNavigate } from "@solidjs/router"
-import { createMemo, For, Show, useContext } from "solid-js"
+import { createMemo, For, Show, untrack, useContext } from "solid-js"
 import { formText as text } from "../../shared/form-values.ts"
 import { type Names, namesFrom } from "../../shared/party-names.ts"
 import { QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
@@ -327,10 +327,11 @@ function DocumentList(props: {
 }) {
   const scope = useContext(ApiRuntime)
 
-  const query = createBillingDocumentsQuery(scope, {
-    legalEntityId: props.legalEntityId,
-    side: props.side,
-  })
+  // Read once: the query is built for the legal entity and side this list opened with.
+  const query = createBillingDocumentsQuery(
+    scope,
+    untrack(() => ({ legalEntityId: props.legalEntityId, side: props.side })),
+  )
 
   return (
     <QueryBoundary label="billing documents" retry={() => reloaded(query.refetch())}>
