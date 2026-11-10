@@ -19,7 +19,7 @@
 >   [`./analytical-isolation-and-semantic-projection-patterns.md`](./analytical-isolation-and-semantic-projection-patterns.md)
 > - State and consistency: [`../state-and-consistency.md`](../state-and-consistency.md)
 > - Non-interference ADR:
->   [`../../decisions/0034-adopt-non-interference-overload-isolation.md`](../../decisions/0034-adopt-non-interference-overload-isolation.md)
+>   [`../../decisions/0034-adopt-non-interference-overload-isolation.md`](../../decisions/archive/0034-adopt-non-interference-overload-isolation.md)
 
 ## Purpose
 

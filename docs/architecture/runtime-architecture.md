@@ -27,9 +27,9 @@
 > - Durable execution: [`./durable-execution.md`](./durable-execution.md)
 > - Process Studio: [`./process-studio.md`](./process-studio.md)
 > - Stateful runtime ADR:
->   [`../decisions/0025-introduce-stateful-entity-runtime.md`](../decisions/0025-introduce-stateful-entity-runtime.md)
+>   [`../decisions/0025-introduce-stateful-entity-runtime.md`](../decisions/archive/0025-introduce-stateful-entity-runtime.md)
 > - Experimental `celld` adapter:
->   [`../decisions/0026-evaluate-celld-runtime-adapter.md`](../decisions/0026-evaluate-celld-runtime-adapter.md)
+>   [`../decisions/0026-evaluate-celld-runtime-adapter.md`](../decisions/archive/0026-evaluate-celld-runtime-adapter.md)
 
 ## Position
 

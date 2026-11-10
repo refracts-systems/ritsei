@@ -7,10 +7,10 @@
 
 > **Related documents**
 >
-> - ADR index: [`./README.md`](./README.md)
-> - Product vision: [`../product/vision.md`](../product/vision.md)
-> - Orthogonal design reference: [`../architecture/reference/orthogonal-erp-design.md`](../architecture/reference/orthogonal-erp-design.md)
-> - PostgreSQL architecture: [`../architecture/postgresql-19-architecture.md`](../architecture/postgresql-19-architecture.md)
+> - ADR index: [`./README.md`](../README.md)
+> - Product vision: [`../product/vision.md`](../../product/vision.md)
+> - Orthogonal design reference: [`../architecture/reference/orthogonal-erp-design.md`](../../architecture/reference/orthogonal-erp-design.md)
+> - PostgreSQL architecture: [`../architecture/postgresql-19-architecture.md`](../../architecture/postgresql-19-architecture.md)
 > - Transactional-truth ADR: [`./0003-postgresql-is-transactional-truth.md`](./0003-postgresql-is-transactional-truth.md)
 
 ## Context

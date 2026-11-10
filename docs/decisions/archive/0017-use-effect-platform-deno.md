@@ -7,9 +7,9 @@
 
 > **Related documents**
 >
-> - ADR index: [`./README.md`](./README.md)
+> - ADR index: [`./README.md`](../README.md)
 > - Canonical architecture:
->   [`../architecture/architecture-spec-v4.md`](../architecture/architecture-spec-v4.md)
+>   [`../architecture/architecture-spec-v4.md`](../../architecture/architecture-spec-v4.md)
 
 ## Context
 

@@ -9,15 +9,15 @@
 
 > **Related documents**
 >
-> - ADR index: [`./README.md`](./README.md)
-> - Frontend architecture: [`../architecture/frontend.md`](../architecture/frontend.md)
+> - ADR index: [`./README.md`](../README.md)
+> - Frontend architecture: [`../architecture/frontend.md`](../../architecture/frontend.md)
 > - Design system architecture:
->   [`../architecture/design-system.md`](../architecture/design-system.md)
+>   [`../architecture/design-system.md`](../../architecture/design-system.md)
 > - Active architecture:
->   [`../architecture/architecture-spec-v4.md`](../architecture/architecture-spec-v4.md)
-> - Process Studio: [`../architecture/process-studio.md`](../architecture/process-studio.md)
+>   [`../architecture/architecture-spec-v4.md`](../../architecture/architecture-spec-v4.md)
+> - Process Studio: [`../architecture/process-studio.md`](../../architecture/process-studio.md)
 > - Frontend state ownership:
->   [`./0048-define-effect-application-architecture-and-frontend-state-ownership.md`](./0048-define-effect-application-architecture-and-frontend-state-ownership.md)
+>   [`./0048-define-effect-application-architecture-and-frontend-state-ownership.md`](../0048-define-effect-application-architecture-and-frontend-state-ownership.md)
 
 ## Context
 
@@ -37,7 +37,7 @@ single primitive source and a constrained styling boundary.
 ## Decision
 
 RITSEI adopts the semantic frontend design-system architecture defined in
-[`design-system.md`](../architecture/design-system.md).
+[`design-system.md`](../../architecture/design-system.md).
 
 The governing philosophy is:
 
@@ -234,8 +234,8 @@ contract without copying page-specific styling or inventing a competing workflow
 
 ## Related Documents
 
-- [`../architecture/design-system.md`](../architecture/design-system.md)
-- [`../architecture/frontend.md`](../architecture/frontend.md)
-- [`../architecture/process-studio.md`](../architecture/process-studio.md)
-- [`./0010-use-vite-solidjs-spa.md`](./0010-use-vite-solidjs-spa.md)
-- [`./0048-define-effect-application-architecture-and-frontend-state-ownership.md`](./0048-define-effect-application-architecture-and-frontend-state-ownership.md)
+- [`../architecture/design-system.md`](../../architecture/design-system.md)
+- [`../architecture/frontend.md`](../../architecture/frontend.md)
+- [`../architecture/process-studio.md`](../../architecture/process-studio.md)
+- [`./0010-use-vite-solidjs-spa.md`](../0010-use-vite-solidjs-spa.md)
+- [`./0048-define-effect-application-architecture-and-frontend-state-ownership.md`](../0048-define-effect-application-architecture-and-frontend-state-ownership.md)

@@ -11,7 +11,7 @@
 > - ERP primitive roadmap: [`../roadmap/erp-primitives.md`](../roadmap/erp-primitives.md)
 > - Events, jobs, and workflows: [`./0004-separate-events-jobs-and-workflows.md`](./0004-separate-events-jobs-and-workflows.md)
 > - Typed Process Studio: [`./0018-adopt-typed-process-studio.md`](./0018-adopt-typed-process-studio.md)
-> - Capability governance: [`./0020-adopt-capability-release-and-runtime-governance.md`](./0020-adopt-capability-release-and-runtime-governance.md)
+> - Capability governance: [`./0020-adopt-capability-release-and-runtime-governance.md`](./archive/0020-adopt-capability-release-and-runtime-governance.md)
 > - Contract schemas: [`./0024-adopt-effect-schema-as-canonical-contract-schema.md`](./0024-adopt-effect-schema-as-canonical-contract-schema.md)
 > - Order lifecycle and PgQue gate: [`./0033-extend-order-lifecycle-and-gate-pgque.md`](./0033-extend-order-lifecycle-and-gate-pgque.md)
 > - Messaging architecture: [`../architecture/pgque-messaging.md`](../architecture/pgque-messaging.md)

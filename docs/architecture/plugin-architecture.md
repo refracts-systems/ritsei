@@ -25,9 +25,9 @@
 > - Framework and flagship ERP (current extension rule):
 >   [`../decisions/0091-adopt-framework-and-flagship-erp.md`](../decisions/0091-adopt-framework-and-flagship-erp.md)
 > - Plugin ADR (superseded by ADR-0091):
->   [`../decisions/0007-adopt-tiered-plugin-trust.md`](../decisions/0007-adopt-tiered-plugin-trust.md)
+>   [`../decisions/0007-adopt-tiered-plugin-trust.md`](../decisions/archive/0007-adopt-tiered-plugin-trust.md)
 > - Capability-oriented contribution ADR (superseded by ADR-0091):
->   [`../decisions/0023-adopt-capability-oriented-plugin-contribution.md`](../decisions/0023-adopt-capability-oriented-plugin-contribution.md)
+>   [`../decisions/0023-adopt-capability-oriented-plugin-contribution.md`](../decisions/archive/0023-adopt-capability-oriented-plugin-contribution.md)
 > - Localization ADR:
 >   [`../decisions/0016-isolate-jurisdiction-localization.md`](../decisions/0016-isolate-jurisdiction-localization.md)
 
@@ -52,7 +52,7 @@ model, table, repository, or domain implementation.
 A plugin therefore participates in a domain through an explicit capability
 surface rather than becoming another implementation of the domain's model.
 The original rationale is in
-[`../decisions/0023-adopt-capability-oriented-plugin-contribution.md`](../decisions/0023-adopt-capability-oriented-plugin-contribution.md),
+[`../decisions/0023-adopt-capability-oriented-plugin-contribution.md`](../decisions/archive/0023-adopt-capability-oriented-plugin-contribution.md),
 superseded by ADR-0091, whose §3 keeps this model as the clean-core rule.
 
 Generated structural ergonomics is tooling, not a second ownership system. It may scaffold schemas,

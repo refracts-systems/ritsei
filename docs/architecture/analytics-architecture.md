@@ -19,7 +19,7 @@
 > - Canonical architecture: [`./architecture-spec-v4.md`](./architecture-spec-v4.md)
 > - Workload isolation: [`./workload-isolation.md`](./workload-isolation.md)
 > - Source-of-truth and derived-capability non-interference:
->   [`../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md`](../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md)
+>   [`../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md`](../decisions/archive/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md)
 > - State and consistency: [`./state-and-consistency.md`](./state-and-consistency.md)
 > - Authorization: [`./authorization.md`](./authorization.md)
 > - Process Studio: [`./process-studio.md`](./process-studio.md)
@@ -29,7 +29,7 @@
 > - Search architecture: [`./search-architecture.md`](./search-architecture.md)
 > - Deployment notes: [`../deployment/README.md`](../deployment/README.md)
 > - Analytic Plane ADR:
->   [`../decisions/0043-adopt-rebuildable-analytic-plane.md`](../decisions/0043-adopt-rebuildable-analytic-plane.md)
+>   [`../decisions/0043-adopt-rebuildable-analytic-plane.md`](../decisions/archive/0043-adopt-rebuildable-analytic-plane.md)
 > - Governed AI recommendation and agent boundary:
 >   [`../decisions/0063-define-governed-ai-recommendation-and-agent-boundary.md`](../decisions/0063-define-governed-ai-recommendation-and-agent-boundary.md)
 > - Comparative reference:

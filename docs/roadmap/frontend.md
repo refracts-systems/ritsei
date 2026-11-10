@@ -26,7 +26,7 @@
 > - Native Solid 2 and Effect integration:
 >   [`../decisions/0072-prefer-native-solid-reactivity-for-effect-integration.md`](../decisions/0072-prefer-native-solid-reactivity-for-effect-integration.md)
 > - Semantic design system:
->   [`../decisions/0056-adopt-ritsei-semantic-frontend-design-system.md`](../decisions/0056-adopt-ritsei-semantic-frontend-design-system.md)
+>   [`../decisions/0056-adopt-ritsei-semantic-frontend-design-system.md`](../decisions/archive/0056-adopt-ritsei-semantic-frontend-design-system.md)
 > - Visual language:
 >   [`../decisions/0090-adopt-operational-clarity-visual-language.md`](../decisions/0090-adopt-operational-clarity-visual-language.md)
 

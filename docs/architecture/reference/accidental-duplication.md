@@ -17,7 +17,7 @@
 > - Messaging ownership:
 >   [`../../decisions/0038-move-internal-event-delivery-to-messaging.md`](../../decisions/0038-move-internal-event-delivery-to-messaging.md)
 > - Experimental `celld` adapter:
->   [`../../decisions/0026-evaluate-celld-runtime-adapter.md`](../../decisions/0026-evaluate-celld-runtime-adapter.md)
+>   [`../../decisions/0026-evaluate-celld-runtime-adapter.md`](../../decisions/archive/0026-evaluate-celld-runtime-adapter.md)
 > - Engineering lineage: [`./engineering-lineage.md`](./engineering-lineage.md)
 
 ## Purpose

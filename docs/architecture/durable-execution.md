@@ -9,7 +9,7 @@
 > - Financial ledger: [`./financial-ledger.md`](./financial-ledger.md)
 > - Process Studio semantics: [`./process-studio.md`](./process-studio.md)
 > - Capability release and runtime governance:
->   [`../decisions/0020-adopt-capability-release-and-runtime-governance.md`](../decisions/0020-adopt-capability-release-and-runtime-governance.md)
+>   [`../decisions/0020-adopt-capability-release-and-runtime-governance.md`](../decisions/archive/0020-adopt-capability-release-and-runtime-governance.md)
 > - Active runtime: [`./architecture-spec-v4.md`](./architecture-spec-v4.md)
 > - Async ADR:
 >   [`../decisions/0004-separate-events-jobs-and-workflows.md`](../decisions/0004-separate-events-jobs-and-workflows.md)
@@ -116,7 +116,7 @@ A workflow must not replace a local transaction invariant.
 The runtime must persist step state, execution context, idempotency keys, retry state, unknown
 external outcomes, compensation progress, and manual-recovery state. Detailed Process Studio
 release, promotion, authority, and observability semantics are governed by
-[`../decisions/0020-adopt-capability-release-and-runtime-governance.md`](../decisions/0020-adopt-capability-release-and-runtime-governance.md).
+[`../decisions/0020-adopt-capability-release-and-runtime-governance.md`](../decisions/archive/0020-adopt-capability-release-and-runtime-governance.md).
 
 Typed action/event catalogs, Process IR, definition versioning, static validation, and compensation
 semantics are owned by [`process-studio.md`](./process-studio.md). The durable engine must preserve

@@ -13,7 +13,7 @@
 > **Related documents**
 >
 > - Document rendering architecture: [`../document-rendering.md`](../document-rendering.md)
-> - Document AST decision: [`../../decisions/0081-adopt-document-ast-rendering-platform.md`](../../decisions/0081-adopt-document-ast-rendering-platform.md)
+> - Document AST decision: [`../../decisions/0081-adopt-document-ast-rendering-platform.md`](../../decisions/archive/0081-adopt-document-ast-rendering-platform.md)
 > - P2 document and financial baseline: [`../../decisions/0036-define-p2-document-and-financial-baseline.md`](../../decisions/0036-define-p2-document-and-financial-baseline.md)
 > - Documentation boundaries: [`../../documentation-boundaries.md`](../../documentation-boundaries.md)
 

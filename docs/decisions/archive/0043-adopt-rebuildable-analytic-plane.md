@@ -8,15 +8,15 @@
 
 > **Related documents**
 >
-> - ADR index: [`./README.md`](./README.md)
+> - ADR index: [`./README.md`](../README.md)
 > - Canonical architecture:
->   [`../architecture/architecture-spec-v4.md`](../architecture/architecture-spec-v4.md)
+>   [`../architecture/architecture-spec-v4.md`](../../architecture/architecture-spec-v4.md)
 > - Analytics architecture:
 >   ../architecture/analytics-architecture.md
 > - Workload isolation:
 >   ../architecture/workload-isolation.md
 > - State and consistency:
->   [`../architecture/state-and-consistency.md`](../architecture/state-and-consistency.md)
+>   [`../architecture/state-and-consistency.md`](../../architecture/state-and-consistency.md)
 > - Comparative reference:
 >   ../architecture/reference/analytical-isolation-and-semantic-projection-patterns.md
 

@@ -30,7 +30,7 @@
 >   [`../decisions/0019-adopt-integration-surface-profile.md`](../decisions/0019-adopt-integration-surface-profile.md)
 > - Plugin architecture: [`./plugin-architecture.md`](./plugin-architecture.md)
 > - Capability-oriented plugin contribution:
->   [`../decisions/0023-adopt-capability-oriented-plugin-contribution.md`](../decisions/0023-adopt-capability-oriented-plugin-contribution.md)
+>   [`../decisions/0023-adopt-capability-oriented-plugin-contribution.md`](../decisions/archive/0023-adopt-capability-oriented-plugin-contribution.md)
 > - Frontend architecture: [`./frontend.md`](./frontend.md)
 > - Design system architecture: [`./design-system.md`](./design-system.md)
 > - Frontend SPA decision:
@@ -55,7 +55,7 @@
 > - P0 scope and identity model:
 >   [`../decisions/0021-define-p0-scope-and-identity-model.md`](../decisions/0021-define-p0-scope-and-identity-model.md)
 > - Effect v4 beta.103 update:
->   [`../decisions/0022-update-effect-v4-to-beta-103.md`](../decisions/0022-update-effect-v4-to-beta-103.md)
+>   [`../decisions/0022-update-effect-v4-to-beta-103.md`](../decisions/archive/0022-update-effect-v4-to-beta-103.md)
 > - Package-manager migration (current): [`../decisions/0087-adopt-node-lts-and-pnpm-toolchain.md`](../decisions/0087-adopt-node-lts-and-pnpm-toolchain.md)
 > - Deno package dependency resolution (historical):
 >   [`../decisions/0050-use-package-json-for-deno-dependency-resolution.md`](../decisions/0050-use-package-json-for-deno-dependency-resolution.md)
@@ -66,7 +66,7 @@
 > - Jurisdiction localization:
 >   [`../decisions/0016-isolate-jurisdiction-localization.md`](../decisions/0016-isolate-jurisdiction-localization.md)
 > - Native Deno Effect adapter (superseded by ADR-0087):
->   [`../decisions/0017-use-effect-platform-deno.md`](../decisions/0017-use-effect-platform-deno.md)
+>   [`../decisions/0017-use-effect-platform-deno.md`](../decisions/archive/0017-use-effect-platform-deno.md)
 > - Typed Process Studio:
 >   [`../decisions/0018-adopt-typed-process-studio.md`](../decisions/0018-adopt-typed-process-studio.md)
 > - ADR index: [`../decisions/README.md`](../decisions/README.md)
@@ -77,16 +77,16 @@
 > - Target designs for workload isolation, the Stateful Entity Runtime, and the analytic plane:
 >   [`../decisions/0093-retain-isolation-runtime-and-analytic-target-designs.md`](../decisions/0093-retain-isolation-runtime-and-analytic-target-designs.md)
 > - Non-interference overload isolation (superseded by ADR-0091, target retained by ADR-0093):
->   [`../decisions/0034-adopt-non-interference-overload-isolation.md`](../decisions/0034-adopt-non-interference-overload-isolation.md)
+>   [`../decisions/0034-adopt-non-interference-overload-isolation.md`](../decisions/archive/0034-adopt-non-interference-overload-isolation.md)
 > - Source-of-truth and derived-capability non-interference (superseded by ADR-0091, target retained
 >   by ADR-0093):
->   [`../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md`](../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md)
+>   [`../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md`](../decisions/archive/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md)
 > - Rebuildable Analytic Plane (superseded by ADR-0091, target retained by ADR-0093):
->   [`../decisions/0043-adopt-rebuildable-analytic-plane.md`](../decisions/0043-adopt-rebuildable-analytic-plane.md)
+>   [`../decisions/0043-adopt-rebuildable-analytic-plane.md`](../decisions/archive/0043-adopt-rebuildable-analytic-plane.md)
 > - Governed AI recommendation and agent boundary:
 >   [`../decisions/0063-define-governed-ai-recommendation-and-agent-boundary.md`](../decisions/0063-define-governed-ai-recommendation-and-agent-boundary.md)
 > - Proposed explicit progressive trust boundaries:
->   [`../decisions/0084-establish-explicit-progressive-trust-boundaries.md`](../decisions/0084-establish-explicit-progressive-trust-boundaries.md)
+>   [`../decisions/0084-establish-explicit-progressive-trust-boundaries.md`](../decisions/archive/0084-establish-explicit-progressive-trust-boundaries.md)
 
 ## Decision
 
@@ -504,7 +504,7 @@ version-pinned.
 
 Capability stability, execution principals, delegation, SoD, business observability, retry,
 unknown-outcome handling, and environment promotion are governed by
-[`../decisions/0020-adopt-capability-release-and-runtime-governance.md`](../decisions/0020-adopt-capability-release-and-runtime-governance.md).
+[`../decisions/0020-adopt-capability-release-and-runtime-governance.md`](../decisions/archive/0020-adopt-capability-release-and-runtime-governance.md).
 
 Committed effects are not treated as if a later SQL rollback could erase them. Domains may publish
 explicit compensating commands, and process definitions select compensation or manual-recovery

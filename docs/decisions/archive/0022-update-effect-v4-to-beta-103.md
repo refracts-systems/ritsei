@@ -7,8 +7,8 @@
 
 > **Related documents**
 >
-> - ADR index: [`./README.md`](./README.md)
-> - Canonical architecture: [`../architecture/architecture-spec-v4.md`](../architecture/architecture-spec-v4.md)
+> - ADR index: [`./README.md`](../README.md)
+> - Canonical architecture: [`../architecture/architecture-spec-v4.md`](../../architecture/architecture-spec-v4.md)
 > - Previous Deno adapter decision: [`./0017-use-effect-platform-deno.md`](./0017-use-effect-platform-deno.md)
 
 ## Context

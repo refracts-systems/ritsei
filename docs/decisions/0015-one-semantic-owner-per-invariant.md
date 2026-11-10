@@ -52,7 +52,7 @@ The final ownership registry for a capability must be recorded in its canonical 
 before implementation. A financial execution engine may enforce transfer-level constraints and be
 authoritative for accepted engine facts, but it does not become the semantic owner of Accounting
 policy, authorization, posting meaning, or correction commands; those remain with the owning domain
-under [`0040-adopt-tigerbeetle-financial-ledger.md`](./0040-adopt-tigerbeetle-financial-ledger.md).
+under [`0040-adopt-tigerbeetle-financial-ledger.md`](./archive/0040-adopt-tigerbeetle-financial-ledger.md).
 
 ## Alternatives Considered
 

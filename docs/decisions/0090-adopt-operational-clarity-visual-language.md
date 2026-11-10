@@ -16,7 +16,7 @@
 > - Frontend architecture: [`../architecture/frontend.md`](../architecture/frontend.md)
 > - Typography: [`./0076-adopt-ritsei-typography-system.md`](./0076-adopt-ritsei-typography-system.md)
 > - Iconography: [`./0077-adopt-ritsei-iconography-system.md`](./0077-adopt-ritsei-iconography-system.md)
-> - Renderer selection: [`./0070-select-vgpu-and-defer-typegpu.md`](./0070-select-vgpu-and-defer-typegpu.md)
+> - Renderer selection: [`./0070-select-vgpu-and-defer-typegpu.md`](./archive/0070-select-vgpu-and-defer-typegpu.md)
 
 ## Context
 

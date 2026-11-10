@@ -9,10 +9,10 @@
 
 > **Related documents**
 >
-> - ADR index: [`./README.md`](./README.md)
-> - Design system: [`../architecture/design-system.md`](../architecture/design-system.md)
-> - Frontend architecture: [`../architecture/frontend.md`](../architecture/frontend.md)
-> - Architecture enforcement: [`../architecture/architecture-enforcement.md`](../architecture/architecture-enforcement.md)
+> - ADR index: [`./README.md`](../README.md)
+> - Design system: [`../architecture/design-system.md`](../../architecture/design-system.md)
+> - Frontend architecture: [`../architecture/frontend.md`](../../architecture/frontend.md)
+> - Architecture enforcement: [`../architecture/architecture-enforcement.md`](../../architecture/architecture-enforcement.md)
 > - Semantic frontend design system: [`./0056-adopt-ritsei-semantic-frontend-design-system.md`](./0056-adopt-ritsei-semantic-frontend-design-system.md)
 
 ## Context
@@ -159,4 +159,4 @@ Before broad frontend adoption, prove:
 - no frontend representation becomes an authorization, transaction, workflow, or domain-state
   authority.
 
-The detailed current contract is maintained in [`../architecture/design-system.md`](../architecture/design-system.md).
+The detailed current contract is maintained in [`../architecture/design-system.md`](../../architecture/design-system.md).

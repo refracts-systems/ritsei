@@ -10,9 +10,9 @@
 >
 > - State and consistency: [`../state-and-consistency.md`](../state-and-consistency.md)
 > - Stateful runtime ADR:
->   [`../../decisions/0025-introduce-stateful-entity-runtime.md`](../../decisions/0025-introduce-stateful-entity-runtime.md)
+>   [`../../decisions/0025-introduce-stateful-entity-runtime.md`](../../decisions/archive/0025-introduce-stateful-entity-runtime.md)
 > - `celld` evaluation:
->   [`../../decisions/0026-evaluate-celld-runtime-adapter.md`](../../decisions/0026-evaluate-celld-runtime-adapter.md)
+>   [`../../decisions/0026-evaluate-celld-runtime-adapter.md`](../../decisions/archive/0026-evaluate-celld-runtime-adapter.md)
 
 ## Purpose
 

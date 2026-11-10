@@ -12,7 +12,7 @@
 >   [`../architecture/integration-architecture.md`](../architecture/integration-architecture.md)
 > - Process Studio: [`../architecture/process-studio.md`](../architecture/process-studio.md)
 > - External standards adapters: [`./0013-version-external-standard-adapters.md`](./0013-version-external-standard-adapters.md)
-> - Plugin trust: [`./0007-adopt-tiered-plugin-trust.md`](./0007-adopt-tiered-plugin-trust.md)
+> - Plugin trust: [`./0007-adopt-tiered-plugin-trust.md`](./archive/0007-adopt-tiered-plugin-trust.md)
 
 ## Context
 

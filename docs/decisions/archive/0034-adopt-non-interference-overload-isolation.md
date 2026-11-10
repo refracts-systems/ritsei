@@ -8,17 +8,17 @@
 
 > **Related documents**
 >
-> - ADR index: [`./README.md`](./README.md)
+> - ADR index: [`./README.md`](../README.md)
 > - Canonical architecture:
->   [`../architecture/architecture-spec-v4.md`](../architecture/architecture-spec-v4.md)
+>   [`../architecture/architecture-spec-v4.md`](../../architecture/architecture-spec-v4.md)
 > - Workload isolation:
 >   ../architecture/workload-isolation.md
 > - State and consistency:
->   [`../architecture/state-and-consistency.md`](../architecture/state-and-consistency.md)
+>   [`../architecture/state-and-consistency.md`](../../architecture/state-and-consistency.md)
 > - PostgreSQL architecture:
->   [`../architecture/postgresql-19-architecture.md`](../architecture/postgresql-19-architecture.md)
+>   [`../architecture/postgresql-19-architecture.md`](../../architecture/postgresql-19-architecture.md)
 > - Capability naming:
->   [`./0031-capability-naming-and-business-verb-conventions.md`](./0031-capability-naming-and-business-verb-conventions.md)
+>   [`./0031-capability-naming-and-business-verb-conventions.md`](../0031-capability-naming-and-business-verb-conventions.md)
 > - Comparative reference:
 >   ../architecture/reference/hard-isolation-patterns.md
 
@@ -257,6 +257,6 @@ Before production claims hard query-to-command non-interference, prove the valid
 
 ## Related Documents
 
-- [`../architecture/search-architecture.md`](../architecture/search-architecture.md)
-- [`../architecture/state-and-consistency.md`](../architecture/state-and-consistency.md)
-- [`../deployment/README.md`](../deployment/README.md)
+- [`../architecture/search-architecture.md`](../../architecture/search-architecture.md)
+- [`../architecture/state-and-consistency.md`](../../architecture/state-and-consistency.md)
+- [`../deployment/README.md`](../../deployment/README.md)

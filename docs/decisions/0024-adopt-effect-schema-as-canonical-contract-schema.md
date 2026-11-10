@@ -19,7 +19,7 @@
 > - External integration profile:
 >   [`./0019-adopt-integration-surface-profile.md`](./0019-adopt-integration-surface-profile.md)
 > - Plugin contribution:
->   [`./0023-adopt-capability-oriented-plugin-contribution.md`](./0023-adopt-capability-oriented-plugin-contribution.md)
+>   [`./0023-adopt-capability-oriented-plugin-contribution.md`](./archive/0023-adopt-capability-oriented-plugin-contribution.md)
 > - Frontend architecture: [`../architecture/frontend.md`](../architecture/frontend.md)
 > - Integration architecture:
 >   [`../architecture/integration-architecture.md`](../architecture/integration-architecture.md)
@@ -230,4 +230,4 @@ The decision is validated when:
 - [`./0012-use-drizzle-schema-flow-and-effect-http.md`](./0012-use-drizzle-schema-flow-and-effect-http.md)
 - [`./0013-version-external-standard-adapters.md`](./0013-version-external-standard-adapters.md)
 - [`./0019-adopt-integration-surface-profile.md`](./0019-adopt-integration-surface-profile.md)
-- [`./0023-adopt-capability-oriented-plugin-contribution.md`](./0023-adopt-capability-oriented-plugin-contribution.md)
+- [`./0023-adopt-capability-oriented-plugin-contribution.md`](./archive/0023-adopt-capability-oriented-plugin-contribution.md)

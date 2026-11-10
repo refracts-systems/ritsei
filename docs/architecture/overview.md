@@ -160,7 +160,7 @@ Provider outage, stale revocation, missing tenant context, or unknown relationsh
 Document rendering is a proposed output platform rather than a business authority. Owner-local
 snapshots feed a versioned Document AST; renderer families remain replaceable and browser rendering
 is an explicit compatibility path. See [`./document-rendering.md`](./document-rendering.md) and
-[ADR-0081](../decisions/0081-adopt-document-ast-rendering-platform.md). The proposal is not active
+[ADR-0081](../decisions/archive/0081-adopt-document-ast-rendering-platform.md). The proposal is not active
 until its contract, security, determinism, workload, and dependency gates pass.
 
 Communication is an intent-driven platform boundary. Domains publish business facts through
@@ -191,8 +191,8 @@ reserved command resources.
 WorkloadCells and optional tenant-aware shuffle sharding narrow deployment blast radius without
 changing domain ownership, public identity, authorization, or PostgreSQL truth. See
 ./workload-isolation.md,
-[ADR-0034](../decisions/0034-adopt-non-interference-overload-isolation.md), and
-[ADR-0083](../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md).
+[ADR-0034](../decisions/archive/0034-adopt-non-interference-overload-isolation.md), and
+[ADR-0083](../decisions/archive/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md).
 
 ## Analytics
 

@@ -9,10 +9,10 @@
 
 > **Related documents**
 >
-> - ADR index: [`./README.md`](./README.md)
+> - ADR index: [`./README.md`](../README.md)
 > - Financial staging infrastructure selection:
 >   ../financial/staging-infrastructure-selection.md
-> - Financial ledger architecture: [`../architecture/financial-ledger.md`](../architecture/financial-ledger.md)
+> - Financial ledger architecture: [`../architecture/financial-ledger.md`](../../architecture/financial-ledger.md)
 > - Proposed Cloudflare edge/evidence boundary:
 >   [`./0065-propose-cloudflare-financial-edge-evidence-plane.md`](./0065-propose-cloudflare-financial-edge-evidence-plane.md)
 

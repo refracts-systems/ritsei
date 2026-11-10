@@ -9,13 +9,13 @@
 
 > **Related documents**
 >
-> - ADR index: [`./README.md`](./README.md)
-> - Decision map: [`./decision-map.md`](./decision-map.md)
-> - Design system: [`../architecture/design-system.md`](../architecture/design-system.md)
-> - Frontend architecture: [`../architecture/frontend.md`](../architecture/frontend.md)
+> - ADR index: [`./README.md`](../README.md)
+> - Decision map: [`./decision-map.md`](../decision-map.md)
+> - Design system: [`../architecture/design-system.md`](../../architecture/design-system.md)
+> - Frontend architecture: [`../architecture/frontend.md`](../../architecture/frontend.md)
 > - Cartographic visual grammar decision: [`./0069-adopt-cartographic-enterprise-visual-grammar.md`](./0069-adopt-cartographic-enterprise-visual-grammar.md)
 > - Universal cartographic archetypes: [`./0071-adopt-universal-cartographic-archetypes.md`](./0071-adopt-universal-cartographic-archetypes.md)
-> - Architecture enforcement: [`../architecture/architecture-enforcement.md`](../architecture/architecture-enforcement.md)
+> - Architecture enforcement: [`../architecture/architecture-enforcement.md`](../../architecture/architecture-enforcement.md)
 
 ## Context
 

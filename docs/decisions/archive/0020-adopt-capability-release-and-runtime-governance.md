@@ -7,12 +7,12 @@
 
 > **Related documents**
 >
-> - ADR index: [`./README.md`](./README.md)
-> - Process Studio architecture: [`../architecture/process-studio.md`](../architecture/process-studio.md)
-> - Process Studio roadmap: [`../roadmap/process-studio.md`](../roadmap/process-studio.md)
-> - Authorization architecture: [`../architecture/authorization.md`](../architecture/authorization.md)
-> - Durable execution: [`../architecture/durable-execution.md`](../architecture/durable-execution.md)
-> - Testing strategy: [`../development/testing.md`](../development/testing.md)
+> - ADR index: [`./README.md`](../README.md)
+> - Process Studio architecture: [`../architecture/process-studio.md`](../../architecture/process-studio.md)
+> - Process Studio roadmap: [`../roadmap/process-studio.md`](../../roadmap/process-studio.md)
+> - Authorization architecture: [`../architecture/authorization.md`](../../architecture/authorization.md)
+> - Durable execution: [`../architecture/durable-execution.md`](../../architecture/durable-execution.md)
+> - Testing strategy: [`../development/testing.md`](../../development/testing.md)
 
 ## Context
 
@@ -357,8 +357,8 @@ The decision is validated when:
 
 ## Related Documents
 
-- [`../architecture/process-studio.md`](../architecture/process-studio.md)
-- [`../architecture/authorization.md`](../architecture/authorization.md)
-- [`../architecture/durable-execution.md`](../architecture/durable-execution.md)
-- [`../architecture/integration-architecture.md`](../architecture/integration-architecture.md)
-- [`../development/testing.md`](../development/testing.md)
+- [`../architecture/process-studio.md`](../../architecture/process-studio.md)
+- [`../architecture/authorization.md`](../../architecture/authorization.md)
+- [`../architecture/durable-execution.md`](../../architecture/durable-execution.md)
+- [`../architecture/integration-architecture.md`](../../architecture/integration-architecture.md)
+- [`../development/testing.md`](../../development/testing.md)

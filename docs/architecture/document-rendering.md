@@ -3,7 +3,7 @@
 > **Status:** Target design for the framework documents capability
 >
 > **Framework reset ([ADR-0091](../decisions/0091-adopt-framework-and-flagship-erp.md)):**
-> [ADR-0081](../decisions/0081-adopt-document-ast-rendering-platform.md) is superseded. The first
+> [ADR-0081](../decisions/archive/0081-adopt-document-ast-rendering-platform.md) is superseded. The first
 > ERP documents (invoice, delivery note, purchase order, statement) use PDF templates, and the
 > existing code in `framework/foundation/document-rendering` and
 > `framework/platform/document-rendering` moves to `framework/documents`
@@ -23,7 +23,7 @@
 > - Runtime architecture: [`./architecture-spec-v4.md`](./architecture-spec-v4.md)
 > - Durable execution: [`./durable-execution.md`](./durable-execution.md)
 > - Source-of-truth and derived-capability non-interference (superseded by ADR-0091):
->   [`../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md`](../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md)
+>   [`../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md`](../decisions/archive/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md)
 > - Framework and flagship ERP:
 >   [`../decisions/0091-adopt-framework-and-flagship-erp.md`](../decisions/0091-adopt-framework-and-flagship-erp.md)
 > - State and consistency: [`./state-and-consistency.md`](./state-and-consistency.md)
@@ -39,7 +39,7 @@
 > - Document platform versus Odoo-style rendering reference:
 >   [`./reference/document-platform-vs-odoo.md`](./reference/document-platform-vs-odoo.md)
 > - Document rendering decision (superseded by ADR-0091):
->   [`../decisions/0081-adopt-document-ast-rendering-platform.md`](../decisions/0081-adopt-document-ast-rendering-platform.md)
+>   [`../decisions/0081-adopt-document-ast-rendering-platform.md`](../decisions/archive/0081-adopt-document-ast-rendering-platform.md)
 
 ## 1. Position
 
@@ -231,7 +231,7 @@ Renderer selection is capability-based, not library-based.
 | `lightweight-browser` | Lightpanda candidate | Future browser-compatible fast path | Watchlist only |
 | `native-performance` | Krilla candidate | Future measured high-throughput native path | Deferred until profiling proves need |
 
-No row authorizes a dependency installation. Activation requires the gates in [ADR-0081](../decisions/0081-adopt-document-ast-rendering-platform.md).
+No row authorizes a dependency installation. Activation requires the gates in [ADR-0081](../decisions/archive/0081-adopt-document-ast-rendering-platform.md).
 
 ### 5.1 Transactional default
 

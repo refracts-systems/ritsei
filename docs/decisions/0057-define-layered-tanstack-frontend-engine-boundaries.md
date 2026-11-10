@@ -208,4 +208,4 @@ Activation requires:
 - [`../architecture/design-system.md`](../architecture/design-system.md)
 - [`./0010-use-vite-solidjs-spa.md`](./0010-use-vite-solidjs-spa.md)
 - [`./0048-define-effect-application-architecture-and-frontend-state-ownership.md`](./0048-define-effect-application-architecture-and-frontend-state-ownership.md)
-- [`./0056-adopt-ritsei-semantic-frontend-design-system.md`](./0056-adopt-ritsei-semantic-frontend-design-system.md)
+- [`./0056-adopt-ritsei-semantic-frontend-design-system.md`](./archive/0056-adopt-ritsei-semantic-frontend-design-system.md)

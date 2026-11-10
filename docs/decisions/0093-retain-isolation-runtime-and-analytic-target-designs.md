@@ -19,11 +19,11 @@
 > - Stateful Entity Runtime: [`../architecture/runtime-architecture.md`](../architecture/runtime-architecture.md)
 > - Analytic plane: [`../architecture/analytics-architecture.md`](../architecture/analytics-architecture.md)
 > - Earlier decisions (superseded by ADR-0091):
->   [`./0025-introduce-stateful-entity-runtime.md`](./0025-introduce-stateful-entity-runtime.md),
->   [`./0026-evaluate-celld-runtime-adapter.md`](./0026-evaluate-celld-runtime-adapter.md),
->   [`./0034-adopt-non-interference-overload-isolation.md`](./0034-adopt-non-interference-overload-isolation.md),
->   [`./0043-adopt-rebuildable-analytic-plane.md`](./0043-adopt-rebuildable-analytic-plane.md),
->   [`./0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md`](./0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md)
+>   [`./0025-introduce-stateful-entity-runtime.md`](./archive/0025-introduce-stateful-entity-runtime.md),
+>   [`./0026-evaluate-celld-runtime-adapter.md`](./archive/0026-evaluate-celld-runtime-adapter.md),
+>   [`./0034-adopt-non-interference-overload-isolation.md`](./archive/0034-adopt-non-interference-overload-isolation.md),
+>   [`./0043-adopt-rebuildable-analytic-plane.md`](./archive/0043-adopt-rebuildable-analytic-plane.md),
+>   [`./0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md`](./archive/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md)
 
 ## Context
 

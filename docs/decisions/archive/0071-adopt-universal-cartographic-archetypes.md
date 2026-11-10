@@ -9,10 +9,10 @@
 
 > **Related documents**
 >
-> - ADR index: [`./README.md`](./README.md)
-> - Decision map: [`./decision-map.md`](./decision-map.md)
-> - Design system: [`../architecture/design-system.md`](../architecture/design-system.md)
-> - Frontend architecture: [`../architecture/frontend.md`](../architecture/frontend.md)
+> - ADR index: [`./README.md`](../README.md)
+> - Decision map: [`./decision-map.md`](../decision-map.md)
+> - Design system: [`../architecture/design-system.md`](../../architecture/design-system.md)
+> - Frontend architecture: [`../architecture/frontend.md`](../../architecture/frontend.md)
 > - Cartographic renderer selection: [`./0070-select-vgpu-and-defer-typegpu.md`](./0070-select-vgpu-and-defer-typegpu.md)
 > - Cartographic visual grammar: [`./0069-adopt-cartographic-enterprise-visual-grammar.md`](./0069-adopt-cartographic-enterprise-visual-grammar.md)
 

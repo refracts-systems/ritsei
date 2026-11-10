@@ -20,13 +20,13 @@
 > - Softer surfaces and tactile motion: [`../decisions/0112-soften-operational-clarity-and-adopt-tactile-motion.md`](../decisions/0112-soften-operational-clarity-and-adopt-tactile-motion.md)
 > - Frontend architecture: [`./frontend.md`](./frontend.md)
 > - Active architecture: [`./architecture-spec-v4.md`](./architecture-spec-v4.md)
-> - Design-system ownership decision: [`../decisions/0056-adopt-ritsei-semantic-frontend-design-system.md`](../decisions/0056-adopt-ritsei-semantic-frontend-design-system.md)
+> - Design-system ownership decision: [`../decisions/0056-adopt-ritsei-semantic-frontend-design-system.md`](../decisions/archive/0056-adopt-ritsei-semantic-frontend-design-system.md)
 > - Typography decision: [`../decisions/0076-adopt-ritsei-typography-system.md`](../decisions/0076-adopt-ritsei-typography-system.md)
 > - Iconography decision: [`../decisions/0077-adopt-ritsei-iconography-system.md`](../decisions/0077-adopt-ritsei-iconography-system.md)
 > - Motion decision: [`../decisions/0078-adopt-ritsei-motion-system.md`](../decisions/0078-adopt-ritsei-motion-system.md)
 > - Solid 2 primitive selection: [`../decisions/0074-switch-to-kobalte-for-solid2-accessible-primitives.md`](../decisions/0074-switch-to-kobalte-for-solid2-accessible-primitives.md)
-> - Optional visualization renderer: [`../decisions/0070-select-vgpu-and-defer-typegpu.md`](../decisions/0070-select-vgpu-and-defer-typegpu.md)
-> - Superseded visual direction (historical): [`../decisions/0069-adopt-cartographic-enterprise-visual-grammar.md`](../decisions/0069-adopt-cartographic-enterprise-visual-grammar.md), [`../decisions/0071-adopt-universal-cartographic-archetypes.md`](../decisions/0071-adopt-universal-cartographic-archetypes.md)
+> - Optional visualization renderer: [`../decisions/0070-select-vgpu-and-defer-typegpu.md`](../decisions/archive/0070-select-vgpu-and-defer-typegpu.md)
+> - Superseded visual direction (historical): [`../decisions/0069-adopt-cartographic-enterprise-visual-grammar.md`](../decisions/archive/0069-adopt-cartographic-enterprise-visual-grammar.md), [`../decisions/0071-adopt-universal-cartographic-archetypes.md`](../decisions/archive/0071-adopt-universal-cartographic-archetypes.md)
 > - Frontend state ownership: [`../decisions/0048-define-effect-application-architecture-and-frontend-state-ownership.md`](../decisions/0048-define-effect-application-architecture-and-frontend-state-ownership.md)
 > - Vite and SolidJS SPA: [`../decisions/0010-use-vite-solidjs-spa.md`](../decisions/0010-use-vite-solidjs-spa.md)
 > - Process Studio: [`./process-studio.md`](./process-studio.md)
@@ -925,7 +925,7 @@ than 320ms. Spatial distances stay 2, 4, 8, and 16px.
 
 HTML owns interaction and semantics. Standard forms, tables, and record views are 100% semantic
 HTML/CSS. SVG and Canvas are used for charts and relationship views; the optional `vgpu` WebGPU
-adapter selected by [ADR-0070](../decisions/0070-select-vgpu-and-defer-typegpu.md) is reserved for
+adapter selected by [ADR-0070](../decisions/archive/0070-select-vgpu-and-defer-typegpu.md) is reserved for
 measured high-volume visualization and stays behind the RITSEI renderer adapter.
 
 The fallback hierarchy is mandatory: `WebGPU → Canvas/SVG → CSS → static semantic UI`. No critical

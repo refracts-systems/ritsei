@@ -18,7 +18,7 @@
 > - State and consistency: [`../state-and-consistency.md`](../state-and-consistency.md)
 > - Hard-isolation reference: [`./hard-isolation-patterns.md`](./hard-isolation-patterns.md)
 > - Analytic Plane ADR:
->   [`../../decisions/0043-adopt-rebuildable-analytic-plane.md`](../../decisions/0043-adopt-rebuildable-analytic-plane.md)
+>   [`../../decisions/0043-adopt-rebuildable-analytic-plane.md`](../../decisions/archive/0043-adopt-rebuildable-analytic-plane.md)
 
 ## Purpose and Method
 

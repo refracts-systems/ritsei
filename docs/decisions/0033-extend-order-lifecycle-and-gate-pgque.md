@@ -9,7 +9,7 @@
 >
 > - ADR index: [`./README.md`](./README.md)
 > - Superseded workflow:
->   [`./0032-order-confirmation-cross-domain-workflow.md`](./0032-order-confirmation-cross-domain-workflow.md)
+>   [`./0032-order-confirmation-cross-domain-workflow.md`](./archive/0032-order-confirmation-cross-domain-workflow.md)
 > - Canonical transaction rules:
 >   [`../architecture/state-and-consistency.md`](../architecture/state-and-consistency.md)
 > - Messaging: [`../architecture/pgque-messaging.md`](../architecture/pgque-messaging.md)
@@ -18,7 +18,7 @@
 > - Integration boundary:
 >   [`../architecture/integration-architecture.md`](../architecture/integration-architecture.md)
 > - Financial ledger authority:
->   [`./0040-adopt-tigerbeetle-financial-ledger.md`](./0040-adopt-tigerbeetle-financial-ledger.md)
+>   [`./0040-adopt-tigerbeetle-financial-ledger.md`](./archive/0040-adopt-tigerbeetle-financial-ledger.md)
 
 ## Context
 

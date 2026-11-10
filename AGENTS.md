@@ -32,6 +32,7 @@ When documents conflict, use this order:
 `ARCHITECTURE.md` is a summary entrypoint; it does not supersede the specification or accepted
 ADRs. Do not silently resolve contradictions: report them and update the relevant source of truth.
 Create a new ADR for significant decisions; supersede accepted ADRs instead of rewriting them.
+Superseded ADRs are in `docs/decisions/archive/`: history to consult, never a rule to implement.
 
 ## Working Rules
 

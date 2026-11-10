@@ -62,5 +62,5 @@ Keep `deno.json` responsible for runtime, compiler, task, formatting, and lint c
 ## Related Documents
 
 - [`../architecture/architecture-spec-v4.md`](../architecture/architecture-spec-v4.md)
-- [`./0017-use-effect-platform-deno.md`](./0017-use-effect-platform-deno.md)
-- [`./0022-update-effect-v4-to-beta-103.md`](./0022-update-effect-v4-to-beta-103.md)
+- [`./0017-use-effect-platform-deno.md`](./archive/0017-use-effect-platform-deno.md)
+- [`./0022-update-effect-v4-to-beta-103.md`](./archive/0022-update-effect-v4-to-beta-103.md)
