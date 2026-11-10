@@ -14,6 +14,7 @@ import type {
 } from "../../shared/contracts/generated/process.ts"
 import { CommandFeedback, QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
 import { ApiRuntime, type ApiScope } from "../../shared/runtime.ts"
+import { formatCount } from "../../ui/foundations/format.ts"
 import { layout } from "../../ui/foundations/layout.ts"
 import { DataTable } from "../../ui/patterns/data-table.tsx"
 import { EntityWorkspace } from "../../ui/patterns/entity-workspace.tsx"
@@ -469,7 +470,9 @@ function DesignPanel(props: {
               cannot release or authorize a definition.
             </p>
           </div>
-          <Badge tone="info">{(props.catalog.data ?? []).length} entries</Badge>
+          <Badge tone="info">
+            {formatCount((props.catalog.data ?? []).length, "entry", "entries")}
+          </Badge>
         </div>
         <QueryBoundary
           variant="retry"
@@ -559,7 +562,9 @@ export function ProcessStudio() {
               payloads.
             </p>
           </div>
-          <Badge tone="info">{(runtime.data ?? []).length} instances</Badge>
+          <Badge tone="info">
+            {formatCount((runtime.data ?? []).length, "instance", "instances")}
+          </Badge>
         </div>
         <QueryBoundary
           variant="retry"
@@ -649,7 +654,7 @@ export function ProcessStudio() {
           <h2 id="process-history-heading">Operator history</h2>
           <p>Durable control records show who acted, why, and which idempotency key was used.</p>
         </div>
-        <Badge tone="info">{(controls.data ?? []).length} records</Badge>
+        <Badge tone="info">{formatCount((controls.data ?? []).length, "record", "records")}</Badge>
       </div>
       <QueryBoundary
         variant="retry"

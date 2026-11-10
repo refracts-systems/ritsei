@@ -1,16 +1,32 @@
 import { defineAnimationStyles, defineConfig, definePreset } from "@pandacss/dev"
 import pandaPreset from "@pandacss/preset-panda"
 
-// The stock preset minus categories RITSEI does not use (its ~240-variable color palette, blurs,
-// aspect ratios, stock shadows, and stock animations). RITSEI emits only its own colors, shadows,
-// and keyframes, which keeps the shipped stylesheet inside the 50 KB budget (ADR-0090).
+// The stock preset minus what RITSEI does not use: its ~240-variable color palette, blurs, aspect
+// ratios, shadows, and animations, and the font, type, radius, duration, and easing scales that
+// RITSEI defines itself below. Spacing and sizes keep only the steps of the 4px grid in reach.
+// Every token ships as a CSS variable whether used or not, so this is what keeps the stylesheet
+// inside its 50 KB budget (ADR-0090). A missing step is a type error, not a silent fallback.
 const {
   blurs: _blurs,
   aspectRatios: _aspectRatios,
   animations: _animations,
   shadows: _shadows,
+  fonts: _fonts,
+  fontSizes: _fontSizes,
+  fontWeights: _fontWeights,
+  lineHeights: _lineHeights,
+  letterSpacings: _letterSpacings,
+  radii: _radii,
+  durations: _durations,
+  easings: _easings,
+  spacing: presetSpacing = {},
+  sizes: presetSizes = {},
   ...presetTokens
 } = pandaPreset.theme?.tokens ?? {}
+
+// Named steps (`full`, `md`, `fit`) stay; numbered steps stop at 5rem.
+const withinReach = <Scale extends object>(scale: Scale) =>
+  Object.fromEntries(Object.entries(scale).filter(([step]) => !(Number(step) > 20)))
 
 const ritseiBasePreset = definePreset({
   ...pandaPreset,
@@ -20,6 +36,8 @@ const ritseiBasePreset = definePreset({
     keyframes: {},
     tokens: {
       ...presetTokens,
+      spacing: withinReach(presetSpacing),
+      sizes: withinReach(presetSizes),
       colors: {
         transparent: { value: "transparent" },
         current: { value: "currentColor" },
@@ -28,12 +46,14 @@ const ritseiBasePreset = definePreset({
   },
 })
 
+// Overlays animate in and leave at once: the pinned Kobalte alpha unmounts a closed overlay
+// immediately, so an exit animation would never be seen.
 const motionAnimationStyles = defineAnimationStyles({
   "enter-subtle": {
     value: {
       animationName: "enter-subtle",
       animationDuration: "normal",
-      animationTimingFunction: "enter",
+      animationTimingFunction: "out",
       animationFillMode: "both",
       _motionReduce: {
         animationName: "fade-in",
@@ -42,17 +62,23 @@ const motionAnimationStyles = defineAnimationStyles({
       },
     },
   },
-  "exit-subtle": {
+  "fade-in": {
     value: {
-      animationName: "exit-subtle",
-      animationDuration: "fast",
-      animationTimingFunction: "exit",
+      animationName: "fade-in",
+      animationDuration: "normal",
+      animationTimingFunction: "out",
       animationFillMode: "both",
-      _motionReduce: {
-        animationName: "fade-out",
-        animationDuration: "instant",
-        animationTimingFunction: "linear",
-      },
+    },
+  },
+  // Scale and fade from the element's transform origin: the center for a dialog, the trigger for a
+  // menu. Never from scale(0): nothing appears out of nothing.
+  "pop-in": {
+    value: {
+      animationName: "pop-in",
+      animationDuration: "normal",
+      animationTimingFunction: "out",
+      animationFillMode: "both",
+      _motionReduce: { animationName: "fade-in" },
     },
   },
 })
@@ -69,42 +95,40 @@ export default defineConfig({
   exclude: ["./src/ui/generated/**"],
   outdir: "src/ui/generated",
   outExtension: "js",
-  conditions: { dark: "[data-theme=dark] &" },
+  conditions: {
+    dark: "[data-theme=dark] &",
+    // A touch screen reports hover on tap and leaves it stuck, so hover styles apply only where a
+    // pointer can really hover.
+    hover: ["@media (hover: hover) and (pointer: fine)", "&:is(:hover, [data-hover])"],
+  },
   theme: {
     extend: {
       tokens: {
         colors: {
           // Primitive palettes. Feature code never consumes these directly.
-          steel: {
+          neutral: {
             0: { value: "#FFFFFF" },
-            25: { value: "#FAFBFC" },
-            50: { value: "#F5F6F8" },
-            75: { value: "#F0F2F5" },
-            100: { value: "#E9ECF0" },
-            150: { value: "#E3E6EB" },
-            200: { value: "#D3D8DF" },
-            400: { value: "#8A93A0" },
-            500: { value: "#6B7380" },
-            600: { value: "#5B6370" },
-            800: { value: "#2B3039" },
-            900: { value: "#161A20" },
-          },
-          graphite: {
-            500: { value: "#5F6672" },
-            600: { value: "#3A3F48" },
-            700: { value: "#2C3139" },
-            750: { value: "#262A31" },
-            800: { value: "#1D2127" },
-            850: { value: "#1A1D23" },
-            900: { value: "#15181D" },
-            925: { value: "#121418" },
-            950: { value: "#0E1014" },
+            50: { value: "#FAFAFA" },
+            100: { value: "#F4F4F5" },
+            150: { value: "#EDEDEF" },
+            200: { value: "#E4E4E7" },
+            300: { value: "#D4D4D8" },
+            400: { value: "#A1A1AA" },
+            450: { value: "#8B8B94" },
+            500: { value: "#71717A" },
+            550: { value: "#6A6A72" },
+            600: { value: "#52525B" },
+            750: { value: "#2E2E33" },
+            800: { value: "#27272A" },
+            825: { value: "#232327" },
+            850: { value: "#1F1F23" },
+            900: { value: "#18181B" },
+            925: { value: "#131316" },
+            950: { value: "#09090B" },
           },
           cobalt: {
             50: { value: "#EEF2FF" },
-            100: { value: "#DCE4FE" },
             300: { value: "#A9BCFF" },
-            400: { value: "#98B0FF" },
             500: { value: "#7C9BFF" },
             600: { value: "#2E52D6" },
             700: { value: "#2442B0" },
@@ -142,6 +166,7 @@ export default defineConfig({
           semibold: { value: "600" },
         },
         lineHeights: {
+          none: { value: "1" },
           xs: { value: "16px" },
           sm: { value: "18px" },
           md: { value: "20px" },
@@ -153,7 +178,6 @@ export default defineConfig({
         },
         letterSpacings: {
           display: { value: "-0.02em" },
-          pageHeading: { value: "-0.012em" },
           heading: { value: "-0.006em" },
           normal: { value: "0" },
           label: { value: "0.04em" },
@@ -168,15 +192,19 @@ export default defineConfig({
           dialog: { value: "calc(100% - 2rem)" },
           shellViewport: { value: "100dvh" },
           sidebar: { value: "15rem" },
-          sidebarCollapsed: { value: "3.5rem" },
           topbar: { value: "3rem" },
-          inspector: { value: "24rem" },
-          content: { value: "90rem" },
         },
+        // Nested radii step down by the padding between them (a 10px menu with 4px padding holds
+        // 6px items), so inner and outer corners stay concentric.
         radii: {
-          control: { value: "6px" },
-          surface: { value: "8px" },
-          overlay: { value: "10px" },
+          xs: { value: "2px" },
+          item: { value: "6px" },
+          control: { value: "8px" },
+          menu: { value: "10px" },
+          surface: { value: "12px" },
+          overlay: { value: "14px" },
+          panel: { value: "14px" },
+          full: { value: "9999px" },
         },
         zIndex: {
           base: { value: "0" },
@@ -184,54 +212,67 @@ export default defineConfig({
           modal: { value: "1100" },
           skipLink: { value: "1200" },
         },
+        // Durations and curves mirror ui/motion/tokens.ts, which the runtime wrapper reads. A config
+        // may not import UI internals, so tests/frontend/motion.test.ts keeps the two equal and
+        // enforces the rules: no ease-in, nothing past 320ms.
         durations: {
           none: { value: "0ms" },
           instant: { value: "80ms" },
           fast: { value: "120ms" },
+          press: { value: "160ms" },
           normal: { value: "180ms" },
           deliberate: { value: "240ms" },
           slow: { value: "320ms" },
+          // One turn of the loading spinner: a loop, not a transition.
+          spin: { value: "600ms" },
         },
         easings: {
-          standard: { value: "cubic-bezier(0.2, 0, 0, 1)" },
-          enter: { value: "cubic-bezier(0.16, 1, 0.3, 1)" },
-          exit: { value: "cubic-bezier(0.4, 0, 1, 1)" },
-          emphasized: { value: "cubic-bezier(0.16, 1, 0.3, 1)" },
+          linear: { value: "linear" },
+          // Hover and color changes.
+          standard: { value: "cubic-bezier(0.25, 0.1, 0.25, 1)" },
+          // Anything entering, leaving, or answering a press.
+          out: { value: "cubic-bezier(0.23, 1, 0.32, 1)" },
+          // Something already on screen that moves or changes size.
+          inOut: { value: "cubic-bezier(0.77, 0, 0.175, 1)" },
+          // The navigation drawer.
+          drawer: { value: "cubic-bezier(0.32, 0.72, 0, 1)" },
         },
       },
       semanticTokens: {
         colors: {
           // Surfaces
-          backdrop: pair("rgba(14, 16, 20, 0.45)", "rgba(0, 0, 0, 0.66)"),
-          canvas: pair("{colors.steel.50}", "{colors.graphite.950}"),
-          content: pair("{colors.steel.0}", "{colors.graphite.900}"),
-          contentSubtle: pair("{colors.steel.25}", "{colors.graphite.850}"),
-          contentHover: pair("{colors.steel.75}", "{colors.graphite.800}"),
-          contentSelected: pair("{colors.cobalt.50}", "{colors.cobalt.900}"),
-          navigation: pair("{colors.steel.25}", "{colors.graphite.925}"),
+          backdrop: pair("rgba(9, 9, 11, 0.5)", "rgba(0, 0, 0, 0.7)"),
+          canvas: pair("{colors.neutral.50}", "{colors.neutral.950}"),
+          content: pair("{colors.neutral.0}", "{colors.neutral.925}"),
+          contentSubtle: pair("{colors.neutral.50}", "{colors.neutral.900}"),
+          contentHover: pair("{colors.neutral.100}", "{colors.neutral.850}"),
+          contentActive: pair("{colors.neutral.150}", "{colors.neutral.800}"),
           // Text
-          text: pair("{colors.steel.900}", "#E6E8EB"),
-          muted: pair("{colors.steel.600}", "#9AA1AC"),
+          text: pair("{colors.neutral.900}", "{colors.neutral.150}"),
+          muted: pair("{colors.neutral.550}", "{colors.neutral.400}"),
           // Borders
-          boundary: pair("{colors.steel.150}", "{colors.graphite.750}"),
-          boundaryControl: pair("{colors.steel.200}", "{colors.graphite.600}"),
-          boundaryStrong: pair("{colors.steel.400}", "{colors.graphite.500}"),
-          // Action
-          action: pair("{colors.cobalt.600}", "{colors.cobalt.500}"),
-          actionHover: pair("{colors.cobalt.700}", "{colors.cobalt.400}"),
-          actionText: pair("{colors.cobalt.700}", "{colors.cobalt.300}"),
-          actionSubtle: pair("{colors.cobalt.50}", "{colors.cobalt.900}"),
-          onAction: pair("{colors.steel.0}", "{colors.graphite.950}"),
+          boundary: pair("{colors.neutral.200}", "{colors.neutral.825}"),
+          boundaryControl: pair("{colors.neutral.300}", "{colors.neutral.750}"),
+          boundaryStrong: pair("{colors.neutral.450}", "{colors.neutral.500}"),
+          // Commands: ink, not the accent.
+          action: pair("{colors.neutral.900}", "{colors.neutral.50}"),
+          actionHover: pair("{colors.neutral.750}", "{colors.neutral.200}"),
+          onAction: pair("{colors.neutral.50}", "{colors.neutral.900}"),
+          // The one accent: links, focus, and selection.
+          accent: pair("{colors.cobalt.600}", "{colors.cobalt.500}"),
+          accentSubtle: pair("{colors.cobalt.50}", "{colors.cobalt.900}"),
+          link: pair("{colors.cobalt.700}", "{colors.cobalt.300}"),
           focusRing: pair("{colors.cobalt.600}", "{colors.cobalt.500}"),
+          focusHalo: pair("rgba(46, 82, 214, 0.28)", "rgba(124, 155, 255, 0.4)"),
           // Status: foreground, background, border per tone.
           danger: pair("#C0352B", "#FF8A80"),
           dangerHover: pair("#A12B22", "#FFA59D"),
-          onDanger: pair("{colors.steel.0}", "{colors.graphite.950}"),
+          onDanger: pair("{colors.neutral.0}", "{colors.neutral.950}"),
           status: {
             neutral: {
-              fg: pair("{colors.steel.600}", "#B3B9C2"),
-              bg: pair("#F1F3F5", "#1F232A"),
-              border: pair("#DDE1E6", "#30353D"),
+              fg: pair("{colors.neutral.600}", "#B4B4BB"),
+              bg: pair("{colors.neutral.100}", "{colors.neutral.850}"),
+              border: pair("{colors.neutral.200}", "{colors.neutral.750}"),
             },
             success: {
               fg: pair("#127A52", "#5FD3A0"),
@@ -255,28 +296,40 @@ export default defineConfig({
             },
           },
           icon: {
-            default: pair("{colors.steel.900}", "#E6E8EB"),
-            muted: pair("{colors.steel.600}", "#9AA1AC"),
-            subtle: pair("{colors.steel.500}", "#7C8390"),
+            muted: pair("{colors.neutral.550}", "{colors.neutral.400}"),
+            subtle: pair("{colors.neutral.500}", "#7C7C85"),
             success: pair("#127A52", "#5FD3A0"),
             warning: pair("#9A5B00", "#F2C46B"),
             danger: pair("#C0352B", "#FF8A80"),
             info: pair("#1F64B8", "#7DB5FF"),
-            disabled: pair("#A3AAB4", "#4F5560"),
-            inverse: pair("{colors.steel.0}", "{colors.graphite.950}"),
+            disabled: pair("{colors.neutral.400}", "{colors.neutral.600}"),
+            inverse: pair("{colors.neutral.0}", "{colors.neutral.950}"),
           },
         },
+        // Four steps of depth. In the dark theme a hairline of light does the separating.
         shadows: {
+          control: {
+            value: {
+              base: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+              _dark: "0 1px 2px 0 rgba(0, 0, 0, 0.4)",
+            },
+          },
           raised: {
             value: {
-              base: "0 1px 2px rgba(16, 24, 40, 0.05)",
-              _dark: "0 1px 2px rgba(0, 0, 0, 0.4)",
+              base: "0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.06)",
+              _dark: "0 1px 2px 0 rgba(0, 0, 0, 0.5)",
+            },
+          },
+          floating: {
+            value: {
+              base: "0 8px 20px -6px rgba(0, 0, 0, 0.12), 0 2px 6px -2px rgba(0, 0, 0, 0.06)",
+              _dark: "0 8px 24px -6px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.06)",
             },
           },
           overlay: {
             value: {
-              base: "0 16px 40px -8px rgba(16, 24, 40, 0.18), 0 4px 12px -4px rgba(16, 24, 40, 0.08)",
-              _dark: "0 16px 40px -8px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.06)",
+              base: "0 24px 48px -12px rgba(0, 0, 0, 0.22), 0 6px 16px -6px rgba(0, 0, 0, 0.1)",
+              _dark: "0 24px 48px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.06)",
             },
           },
         },
@@ -286,137 +339,108 @@ export default defineConfig({
           from: { opacity: 0, transform: "translateY(4px)" },
           to: { opacity: 1, transform: "translateY(0)" },
         },
-        "exit-subtle": {
-          from: { opacity: 1, transform: "translateY(0)" },
-          to: { opacity: 0, transform: "translateY(2px)" },
-        },
         "fade-in": {
           from: { opacity: 0 },
           to: { opacity: 1 },
         },
-        "fade-out": {
-          from: { opacity: 1 },
-          to: { opacity: 0 },
+        "pop-in": {
+          from: { opacity: 0, transform: "scale(0.96)" },
+          to: { opacity: 1, transform: "scale(1)" },
         },
+        spin: { to: { transform: "rotate(360deg)" } },
       },
       animationStyles: motionAnimationStyles,
+      // The family and normal tracking are inherited from `body` (form controls inherit them
+      // through the reset), so a style names them only when it differs.
       textStyles: {
         body: {
           value: {
             fontFamily: "body",
+            letterSpacing: "normal",
             fontSize: "md",
             fontWeight: "regular",
             lineHeight: "md",
-            letterSpacing: "normal",
-          },
-        },
-        bodyCompact: {
-          value: {
-            fontFamily: "body",
-            fontSize: "sm",
-            fontWeight: "regular",
-            lineHeight: "sm",
-            letterSpacing: "normal",
           },
         },
         label: {
           value: {
-            fontFamily: "body",
-            fontSize: "sm",
+            fontSize: "md",
             fontWeight: "medium",
-            lineHeight: "sm",
-            letterSpacing: "normal",
+            lineHeight: "md",
           },
         },
         helper: {
           value: {
-            fontFamily: "body",
-            fontSize: "xs",
+            fontSize: "sm",
             fontWeight: "regular",
-            lineHeight: "xs",
-            letterSpacing: "normal",
+            lineHeight: "sm",
           },
         },
         metadata: {
           value: {
-            fontFamily: "body",
             fontSize: "xs",
             fontWeight: "medium",
             lineHeight: "xs",
-            letterSpacing: "normal",
           },
         },
         tableHeader: {
           value: {
-            fontFamily: "body",
-            fontSize: "xs",
+            fontSize: "sm",
             fontWeight: "medium",
-            lineHeight: "xs",
-            letterSpacing: "normal",
+            lineHeight: "md",
           },
         },
         tableCell: {
           value: {
-            fontFamily: "body",
-            fontSize: "sm",
+            fontSize: "md",
             fontWeight: "regular",
             lineHeight: "md",
-            letterSpacing: "normal",
           },
         },
         pageTitle: {
           value: {
-            fontFamily: "body",
-            fontSize: "2xl",
+            fontSize: "3xl",
             fontWeight: "semibold",
-            lineHeight: "2xl",
-            letterSpacing: "pageHeading",
+            lineHeight: "3xl",
+            letterSpacing: "display",
           },
         },
         sectionTitle: {
           value: {
-            fontFamily: "body",
-            fontSize: "md",
+            fontSize: "lg",
             fontWeight: "semibold",
-            lineHeight: "md",
+            lineHeight: "lg",
             letterSpacing: "heading",
           },
         },
         display: {
           value: {
-            fontFamily: "body",
-            fontSize: "3xl",
+            fontSize: "4xl",
             fontWeight: "semibold",
-            lineHeight: "3xl",
+            lineHeight: "4xl",
             letterSpacing: "display",
             fontVariantNumeric: "tabular-nums",
           },
         },
         button: {
           value: {
-            fontFamily: "body",
-            fontSize: "sm",
+            fontSize: "md",
             fontWeight: "medium",
-            lineHeight: "sm",
-            letterSpacing: "normal",
+            lineHeight: "md",
           },
         },
         status: {
           value: {
-            fontFamily: "body",
             fontSize: "xs",
             fontWeight: "medium",
             lineHeight: "xs",
-            letterSpacing: "normal",
           },
         },
         numeric: {
           value: {
-            fontFamily: "body",
             fontSize: "md",
             fontWeight: "medium",
             lineHeight: "md",
-            letterSpacing: "normal",
             fontVariantNumeric: "tabular-nums",
           },
         },
@@ -426,7 +450,6 @@ export default defineConfig({
             fontSize: "xs",
             fontWeight: "regular",
             lineHeight: "xs",
-            letterSpacing: "normal",
           },
         },
       },
@@ -445,20 +468,26 @@ export default defineConfig({
             minHeight: "9",
             px: "3",
             color: "text",
-            bg: "content",
+            // Color only, never the `background` shorthand: a select keeps its arrow image.
+            bgColor: "content",
             whiteSpace: "nowrap",
-            boxShadow: "raised",
-            transitionProperty: "[background-color, border-color, color, box-shadow]",
-            transitionDuration: "fast",
-            transitionTimingFunction: "standard",
+            boxShadow: "control",
+            // Named properties only: `all` would animate whatever else changes.
+            transitionProperty: "[background-color, border-color, color, box-shadow, transform]",
+            transitionDuration: "press",
+            transitionTimingFunction: "out",
             _motionReduce: { transitionDuration: "none" },
-            _hover: { bg: "contentHover" },
+            _hover: { bgColor: "contentHover" },
+            // A button answers a press at once. Fields do not move.
+            _motionSafe: { "&:is(button):active:not(:disabled)": { transform: "scale(0.97)" } },
+            // A soft halo outside a solid edge: the edge carries the 3:1 focus contrast.
             _focusVisible: {
-              outline: "[2px solid]",
-              outlineColor: "focusRing",
-              outlineOffset: "[2px]",
+              outline: "[3px solid]",
+              outlineColor: "focusHalo",
+              outlineOffset: "[0px]",
+              borderColor: "focusRing",
             },
-            _disabled: { cursor: "not-allowed", opacity: "0.55", _hover: { bg: "content" } },
+            _disabled: { cursor: "not-allowed", opacity: "0.5", _hover: { bgColor: "content" } },
             "@media (forced-colors: active)": {
               color: "ButtonText",
               background: "ButtonFace",
@@ -467,15 +496,16 @@ export default defineConfig({
           },
           variants: {
             kind: {
-              secondary: { textStyle: "button", cursor: "pointer" },
+              secondary: { textStyle: "button", px: "4", cursor: "pointer" },
               action: {
                 textStyle: "button",
-                bg: "action",
+                px: "4",
+                bgColor: "action",
                 color: "onAction",
                 borderColor: "action",
                 cursor: "pointer",
-                _hover: { bg: "actionHover", borderColor: "actionHover" },
-                _disabled: { _hover: { bg: "action", borderColor: "action" } },
+                _hover: { bgColor: "actionHover", borderColor: "actionHover" },
+                _disabled: { _hover: { bgColor: "action", borderColor: "action" } },
                 "@media (forced-colors: active)": {
                   color: "ButtonText",
                   background: "ButtonFace",
@@ -484,36 +514,49 @@ export default defineConfig({
               },
               ghost: {
                 textStyle: "button",
-                bg: "transparent",
+                bgColor: "transparent",
                 borderColor: "transparent",
                 boxShadow: "none",
                 color: "muted",
                 cursor: "pointer",
-                _hover: { bg: "contentHover", color: "text" },
-                _disabled: { _hover: { bg: "transparent" } },
+                _hover: { bgColor: "contentHover", color: "text" },
+                _disabled: { _hover: { bgColor: "transparent" } },
               },
               danger: {
                 textStyle: "button",
-                bg: "danger",
+                px: "4",
+                bgColor: "danger",
                 color: "onDanger",
                 borderColor: "danger",
                 cursor: "pointer",
-                _hover: { bg: "dangerHover", borderColor: "dangerHover" },
+                _hover: { bgColor: "dangerHover", borderColor: "dangerHover" },
               },
               input: {
                 justifyContent: "flex-start",
                 width: "full",
                 maxWidth: "xl",
                 borderColor: "boundaryStrong",
-                boxShadow: "none",
                 textAlign: "start",
-                _hover: { bg: "content", borderColor: "muted" },
+                _hover: { bgColor: "content", borderColor: "muted" },
                 _placeholder: { color: "muted" },
+                "&[aria-invalid=true]": { borderColor: "danger" },
+                // The platform arrow differs per browser and crowds the edge, so a select draws
+                // its own.
+                "&:is(select)": {
+                  appearance: "none",
+                  pr: "9",
+                  bgImage:
+                    "[url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%2371717A' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E\")]",
+                  bgRepeat: "no-repeat",
+                  bgPosition: "[right 0.625rem center]",
+                  bgSize: "[1rem]",
+                  cursor: "pointer",
+                },
               },
             },
             size: {
               md: {},
-              sm: { minHeight: "8", px: "2.5" },
+              sm: { minHeight: "8", px: "3" },
             },
           },
           defaultVariants: { size: "md" },
@@ -521,23 +564,25 @@ export default defineConfig({
         surface: {
           className: "surface",
           base: {
+            // A table that bleeds to the edges reads this, so it follows the padding at every width.
+            "--surface-pad": { base: "{spacing.4}", md: "{spacing.6}" },
             minWidth: "0",
             bg: "content",
             borderWidth: "1px",
             borderColor: "boundary",
             borderRadius: "surface",
             boxShadow: "raised",
-            p: "4",
+            p: "[var(--surface-pad)]",
           },
           variants: {
             tone: {
               default: {},
-              subtle: { bg: "contentSubtle", boxShadow: "none" },
+              subtle: { "--surface-pad": "{spacing.4}", bg: "contentSubtle", boxShadow: "none" },
               flush: {
                 p: "0",
                 overflow: "hidden",
-                "& th:first-child, & td:first-child": { pl: "4" },
-                "& th:last-child, & td:last-child": { pr: "4" },
+                "& th:first-child, & td:first-child": { pl: "[var(--surface-pad)]" },
+                "& th:last-child, & td:last-child": { pr: "[var(--surface-pad)]" },
               },
             },
           },
@@ -556,6 +601,7 @@ export default defineConfig({
       WebkitFontSmoothing: "antialiased",
       MozOsxFontSmoothing: "grayscale",
       textRendering: "optimizeLegibility",
+      WebkitTapHighlightColor: "transparent",
     },
     body: { margin: "0", textStyle: "body" },
     // Printing shows only the document marked for it, so "Print" can also save a PDF.
@@ -574,13 +620,13 @@ export default defineConfig({
     },
     "[data-theme=dark]": { colorScheme: "dark" },
     "[data-theme=light]": { colorScheme: "light" },
-    "::selection": { bg: "actionSubtle", color: "text" },
+    "::selection": { bg: "accentSubtle", color: "text" },
     h1: { textStyle: "pageTitle" },
     h2: { textStyle: "sectionTitle" },
     h3: { textStyle: "label", fontWeight: "semibold" },
-    p: { maxWidth: "[72ch]" },
+    p: { maxWidth: "[65ch]" },
     a: {
-      color: "actionText",
+      color: "link",
       textDecoration: "underline",
       textDecorationColor: "[color-mix(in srgb, currentColor 40%, transparent)]",
       textUnderlineOffset: "3px",
@@ -613,22 +659,19 @@ export default defineConfig({
     "thead th": {
       textStyle: "tableHeader",
       color: "muted",
-      bg: "contentSubtle",
-      py: "2",
       whiteSpace: "nowrap",
     },
     "tbody th": { textStyle: "tableCell", fontWeight: "medium" },
     td: { textStyle: "tableCell" },
-    "tbody tr": {
-      transitionProperty: "[background-color]",
-      transitionDuration: "instant",
+    // Rows are scanned all day, so the hover tint is immediate: a trailing fade would only lag.
+    "@media (hover: hover) and (pointer: fine)": {
+      "tbody tr:hover": { bg: "contentSubtle" },
     },
-    "tbody tr:hover": { bg: "contentHover" },
     "tbody tr:last-child > *": { borderBottomWidth: "0" },
     caption: { textAlign: "left", color: "muted", pb: "3", textStyle: "helper" },
     "[role=alert]": { color: "danger" },
     "p[role=status]": { color: "muted" },
-    "h2 + p": { color: "muted", textStyle: "bodyCompact", mt: "-2" },
+    "h2 + p": { color: "muted", mt: "-2.5" },
     code: { fontFamily: "mono", fontSize: "[0.92em]" },
     "td code, tbody th code": {
       display: "inline-block",

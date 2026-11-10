@@ -25,6 +25,22 @@ const kinds = {
 
 const styles = {
   loading: css({ cursor: "wait" }),
+  // A quick turn reads as a quick load. The label already says "Loading", so reduced motion
+  // drops the spinner instead of slowing it.
+  spinner: css({
+    width: "3.5",
+    height: "3.5",
+    flexShrink: "0",
+    borderRadius: "full",
+    borderWidth: "2px",
+    borderColor: "[currentColor]",
+    borderRightColor: "transparent",
+    animationName: "spin",
+    animationDuration: "spin",
+    animationTimingFunction: "linear",
+    animationIterationCount: "infinite",
+    _motionReduce: { display: "none" },
+  }),
   iconOnly: css({ px: "0", minWidth: "9", "&.control--size_sm": { minWidth: "8" } }),
 }
 
@@ -43,7 +59,14 @@ export function Button(props: ButtonProps) {
         props.class,
       ]}
     >
-      {props.loading ? "Loading…" : props.children}
+      {props.loading ? (
+        <>
+          <span class={styles.spinner} aria-hidden="true" />
+          Loading…
+        </>
+      ) : (
+        props.children
+      )}
     </button>
   )
 }

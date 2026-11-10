@@ -107,6 +107,8 @@ ADR-0010  Vite-based SolidJS SPA
               +--> ADR-0090 Operational Clarity visual language
                         +--> neutral surfaces, one cobalt accent, status color only for status
                         +--> light icon navigation, 48px topbar, compact density
+                        +--> ADR-0112 softens it: untinted neutrals, ink commands, an inset
+                             workspace sheet, 14px text, and motion by frequency of use
                         +--> cartography renderer kept as a visualization tool only
 
 ADR-0030  UserAccount lifecycle and tenant membership
@@ -184,7 +186,8 @@ and deno.lock-based resolution; it deliberately defers a root catalog until mult
 share a version invariant. ADR-0076 amends the typography direction in ADR-0056 without changing
 its Panda styling boundary. ADR-0077 amends the iconography direction in ADR-0056 while preserving
 its provider-neutral design-system boundary. ADR-0078 amends the motion direction in ADR-0056 while
-preserving Solid state ownership and Kobalte accessibility ownership. ADR-0079 records the dnd-kit
+preserving Solid state ownership and Kobalte accessibility ownership. ADR-0112 amends the values of
+ADR-0090 and the curves and press feedback of ADR-0078 without changing either's ownership rules. ADR-0079 records the dnd-kit
 provider target but blocks activation until its Solid 2 compatibility evidence passes. ADR-0080
 records Boneyard as a static geometry provider behind a Solid-native RITSEI Skeleton boundary while
 ADR-0072 remains the reactive ownership authority. Fallow and ast-grep remain the generic enforcement owners while only

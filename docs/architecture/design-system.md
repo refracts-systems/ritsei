@@ -17,6 +17,7 @@
 > **Related documents**
 >
 > - Visual language decision: [`../decisions/0090-adopt-operational-clarity-visual-language.md`](../decisions/0090-adopt-operational-clarity-visual-language.md)
+> - Softer surfaces and tactile motion: [`../decisions/0112-soften-operational-clarity-and-adopt-tactile-motion.md`](../decisions/0112-soften-operational-clarity-and-adopt-tactile-motion.md)
 > - Frontend architecture: [`./frontend.md`](./frontend.md)
 > - Active architecture: [`./architecture-spec-v4.md`](./architecture-spec-v4.md)
 > - Design-system ownership decision: [`../decisions/0056-adopt-ritsei-semantic-frontend-design-system.md`](../decisions/0056-adopt-ritsei-semantic-frontend-design-system.md)
@@ -60,12 +61,15 @@ visual language is therefore **Operational Clarity**:
 Three principles govern every decision:
 
 1. **Hierarchy before decoration.** Position, size, weight, and spacing establish what matters.
-   Color and depth are reserved for meaning: action, selection, and status.
-2. **One accent, many neutrals.** A single cobalt accent marks what is interactive or selected.
-   Everything else is a calm, cool neutral. Semantic status colors appear only where a status exists.
-3. **Density with breathing room.** Enterprise users scan many records. Tables and forms are compact
-   (13–14px text, 36px controls, 40px rows) on a strict 4px grid, with enough whitespace between
-   groups that structure is visible at a glance.
+   Color and depth are reserved for meaning: selection, focus, and status.
+2. **Ink for commands, one accent for meaning.** The primary command is ink: near-black on light,
+   near-white on dark. A single cobalt accent is kept for links, keyboard focus, and selection.
+   Everything else is an untinted neutral. Semantic status colors appear only where a status exists.
+3. **Density with breathing room.** Enterprise users scan many records. Controls stay compact
+   (36px controls, 40px rows, 14px text) on a strict 4px grid, while surfaces pad 24px and groups
+   sit 24px apart, so structure is visible at a glance.
+4. **Motion by frequency.** What a user does hundreds of times a day does not animate. What happens
+   occasionally moves quickly, eases out, and starts from where it came from (Section 18).
 
 The language learns from proven operational software: SAP Fiori's floorplan discipline and object
 identity, the information density of financial terminals, and the restraint of modern product tools
@@ -75,8 +79,9 @@ precision, and the quality of its information architecture, not from ornament.
 The UI MUST remain deterministic, readable, accessible, power-conscious, and fast. A visual effect
 that reduces those properties is a defect, not brand expression.
 
-Concept references (generated with GPT Image during the ADR-0090 redesign; non-normative — this
-document and the token sources are authoritative):
+Concept references (generated with GPT Image during the ADR-0090 redesign; historical and
+non-normative — they show the cobalt treatment that ADR-0112 replaced, and this document and the
+token sources are authoritative):
 [light](./assets/operational-clarity-concept-light.png) ·
 [dark](./assets/operational-clarity-concept-dark.png). The concept shows a KPI strip, pagination,
 and a ⌘K search field that are not implemented yet; they MUST NOT be added as inert UI.
@@ -86,7 +91,10 @@ and a ⌘K search field that are not implemented yet; they MUST NOT be added as 
 The target character is:
 
 - **Precise:** exact alignment, tabular numerals, consistent spacing, crisp 1px boundaries.
-- **Calm:** cool neutral surfaces, no saturated backgrounds, no gradients, no glow.
+- **Calm:** untinted neutral surfaces, soft corners, no saturated backgrounds, no gradients, no
+  glow.
+- **Responsive:** every press is answered at once; nothing the user repeats is made to wait for an
+  animation.
 - **Trustworthy:** financial values and identifiers are exact, aligned, and never ambiguous.
 - **Efficient:** the shortest path from orientation to action; no screen-filling hero headers.
 - **Consistent:** every workspace uses the same shell, header, toolbar, table, and inspector rules.
@@ -348,9 +356,8 @@ value.
 ### Primitive palettes
 
 ```text
-steel     cool neutral for light surfaces and text     #FFFFFF … #161A20
-graphite  cool neutral for dark surfaces                #5F6672 … #0E1014
-cobalt    the single interactive accent                 #EEF2FF … #1B2440
+neutral   one untinted scale for both themes            #FFFFFF … #09090B
+cobalt    the single accent: links, focus, selection   #EEF2FF … #1B2440
 ```
 
 Status hues (green, amber, red, blue) are defined directly as semantic status triples rather than as
@@ -360,47 +367,50 @@ general-purpose palettes, so they cannot be used decoratively.
 
 | Token | Light | Dark | Use |
 |---|---|---|---|
-| `canvas` | `#F5F6F8` | `#0E1014` | Application background behind surfaces |
-| `content` | `#FFFFFF` | `#15181D` | Surfaces: tables, forms, panels, topbar |
-| `contentSubtle` | `#FAFBFC` | `#1A1D23` | Table headers, toolbars, inset regions |
-| `contentHover` | `#F0F2F5` | `#1D2127` | Row and control hover |
-| `contentSelected` | `#EEF2FF` | `#1B2440` | Selected row or item |
-| `navigation` | `#FAFBFC` | `#121418` | Global navigation column |
-| `text` | `#161A20` | `#E6E8EB` | Primary text |
-| `muted` | `#5B6370` | `#9AA1AC` | Secondary text, labels, metadata |
-| `boundary` | `#E3E6EB` | `#262A31` | Hairline dividers and surface borders |
-| `boundaryControl` | `#D3D8DF` | `#3A3F48` | Button borders |
-| `boundaryStrong` | `#8A93A0` | `#5F6672` | Input borders (≥ 3:1 non-text contrast) |
-| `action` | `#2E52D6` | `#7C9BFF` | Primary buttons, active indicators |
-| `actionHover` | `#2442B0` | `#98B0FF` | Primary hover |
-| `actionText` | `#2442B0` | `#A9BCFF` | Links and selected navigation text |
-| `actionSubtle` | `#EEF2FF` | `#1B2440` | Selected navigation and tinted accents |
-| `onAction` | `#FFFFFF` | `#0E1014` | Text on `action` |
-| `focusRing` | `#2E52D6` | `#7C9BFF` | Keyboard focus outline |
-| `danger` / `onDanger` | `#C0352B` / white | `#FF8A80` / `#0E1014` | Destructive buttons, errors |
-| `backdrop` | 45% ink | 66% black | Modal and drawer scrim |
+| `canvas` | `#FAFAFA` | `#09090B` | Application background and the navigation column |
+| `content` | `#FFFFFF` | `#131316` | The workspace sheet and surfaces: tables, forms, panels, dialogs |
+| `contentSubtle` | `#FAFAFA` | `#18181B` | Toolbars, inset regions, table row hover |
+| `contentHover` | `#F4F4F5` | `#1F1F23` | Control and navigation hover, quiet fills |
+| `contentActive` | `#EDEDEF` | `#27272A` | The current navigation destination |
+| `text` | `#18181B` | `#EDEDEF` | Primary text |
+| `muted` | `#6A6A72` | `#A1A1AA` | Secondary text, descriptions, metadata |
+| `boundary` | `#E4E4E7` | `#232327` | Dividers and surface borders |
+| `boundaryControl` | `#D4D4D8` | `#2E2E33` | Button borders |
+| `boundaryStrong` | `#8B8B94` | `#71717A` | Input borders (≥ 3:1 non-text contrast) |
+| `action` | `#18181B` | `#FAFAFA` | Primary button fill (ink) |
+| `actionHover` | `#2E2E33` | `#E4E4E7` | Primary hover |
+| `onAction` | `#FAFAFA` | `#18181B` | Text on `action` |
+| `accent` | `#2E52D6` | `#7C9BFF` | Selection edge |
+| `accentSubtle` | `#EEF2FF` | `#1B2440` | Selected row, text selection |
+| `link` | `#2442B0` | `#A9BCFF` | Links |
+| `focusRing` | `#2E52D6` | `#7C9BFF` | The solid edge of the keyboard focus indicator |
+| `focusHalo` | cobalt at 28% | cobalt at 40% | The soft 3px halo outside that edge |
+| `danger` / `onDanger` | `#C0352B` / white | `#FF8A80` / `#09090B` | Destructive buttons, errors |
+| `backdrop` | 50% ink | 70% black | Modal and drawer scrim |
 
 Status triples (`status.<tone>.fg | bg | border`) exist for `neutral`, `success`, `warning`, `danger`,
 and `info`. Foreground values meet 4.5:1 on both `content` and their own tinted background.
-`icon.*` tokens mirror the text and status foregrounds for glyphs.
+`icon.*` tokens mirror the text and status foregrounds for glyphs. `muted` meets 4.5:1 on every
+neutral surface it can sit on, including `contentHover` and `contentActive`.
 
 ### Usage rules
 
-- The accent is reserved for: primary actions, links, focus, current location, and selection. It
-  MUST NOT be used for decoration, headings, or large fills.
-- A view SHOULD contain at most one primary (`action`) button per region; sibling commands use the
-  secondary or ghost treatment.
+- The accent is reserved for links, keyboard focus, and selection. It MUST NOT be used for buttons,
+  the current navigation destination, decoration, headings, or large fills.
+- Commands are ink. A view SHOULD contain at most one primary (`action`) button per region; sibling
+  commands use the secondary or ghost treatment.
 - Status color MUST accompany a text label (and, for badges, a dot). Color alone is prohibited.
 - Normal text MUST meet WCAG 2.2 AA 4.5:1; large text 3:1. Input borders, focus indicators, and
   meaningful chart marks MUST meet 3:1 non-text contrast.
-- Dark mode is defined separately, not inverted. It uses cool graphite surfaces with raised
-  surfaces lighter than the canvas, and a lighter accent so contrast holds.
+- Dark mode is defined separately, not inverted. It uses the dark end of the same neutral scale
+  with surfaces lighter than the canvas, a near-white command fill, and a lighter accent so contrast
+  holds.
 - High-contrast (`forced-colors`) mode MUST preserve state through borders, text, and system colors.
 
 ## 9. Light and dark mode
 
-Light mode is the default operational theme: a cool `canvas` with white `content` surfaces and
-hairline boundaries. Dark mode is a first-class alternative for low-light work: `canvas` is the
+Light mode is the default operational theme: a near-white `canvas` holding the white workspace
+sheet, with white surfaces separated by hairline boundaries and a faint shadow. Dark mode is a first-class alternative for low-light work: `canvas` is the
 darkest layer, surfaces step up in lightness, and borders replace most shadows.
 
 The shell resolves the theme from the user's stored choice, then `prefers-color-scheme`. The
@@ -421,25 +431,29 @@ Semantic text styles (components MUST use these instead of raw sizes):
 
 | Style | Size / line | Weight | Use |
 |---|---|---|---|
-| `pageTitle` | 20 / 28 | 600 | One `h1` per workspace |
-| `sectionTitle` | 14 / 20 | 600 | Surface and section headings (`h2`) |
-| `body` | 14 / 20 | 400 | Default text |
-| `bodyCompact` | 13 / 18 | 400 | Descriptions, detail lists, dense copy |
-| `label` | 13 / 18 | 500 | Form labels, navigation, tabs |
-| `button` | 13 / 18 | 500 | Button labels |
-| `tableHeader` | 12 / 16 | 500 | Column headers (muted, sentence case) |
-| `tableCell` | 13 / 20 | 400 | Table cells |
-| `helper` / `metadata` | 12 / 16 | 400 / 500 | Hints, captions, timestamps |
+| `pageTitle` | 24 / 32 | 600 | One `h1` per workspace, tracking −0.02em |
+| `sectionTitle` | 16 / 24 | 600 | Surface and section headings (`h2`) |
+| `body` | 14 / 20 | 400 | Default text, descriptions, detail lists, navigation |
+| `label` | 14 / 20 | 500 | Form labels, tabs |
+| `button` | 14 / 20 | 500 | Button labels |
+| `tableHeader` | 13 / 20 | 500 | Column headers (muted, sentence case) |
+| `tableCell` | 14 / 20 | 400 | Table cells |
+| `helper` | 13 / 18 | 400 | Hints and field errors |
+| `metadata` | 12 / 16 | 500 | Captions, timestamps, navigation section labels |
 | `status` | 12 / 16 | 500 | Badges |
 | `numeric` | 14 / 20 | 500 | Standalone figures, tabular numerals |
-| `display` | 24 / 32 | 600 | Key figures in summaries only |
+| `display` | 32 / 40 | 600 | Key figures in summaries only |
 | `code` | 12 / 16 | 400 | Identifiers (mono) |
+
+One reading size (14/20) carries body text, labels, buttons, and table cells; hierarchy comes from
+weight and color, not from a ladder of near-identical sizes. Running text is capped at 65
+characters per line.
 
 Rules: primary information MUST NOT fall below 12px; all tables use `tabular-nums`; numeric columns
 are right-aligned; labels, headings, and navigation use sentence case; no text style uses
 all-caps for body content. The system MUST remain usable under 200% zoom, OS text scaling, long
 labels, and localization. See [ADR-0076](../decisions/0076-adopt-ritsei-typography-system.md); the
-size mapping above is amended by ADR-0090.
+size mapping above is set by ADR-0112, which amends ADR-0090.
 
 ### Iconography
 
@@ -458,23 +472,23 @@ renders the regular glyph. See [ADR-0077](../decisions/0077-adopt-ritsei-iconogr
 
 ### Motion
 
-Motion preserves the user's mental map. PandaCSS owns CSS transitions, keyframes, animation styles,
-durations, easings, component states, and reduced-motion conditions. Motion owns only runtime geometry,
-springs, gestures, reordering, orchestration, and complex SVG behavior. Solid owns state and lifecycle;
-Kobalte owns accessible interaction semantics; business state remains outside the animation layer.
+PandaCSS owns CSS transitions, keyframes, animation styles, durations, easings, component states,
+and reduced-motion conditions. Motion owns only runtime geometry, springs, gestures, reordering,
+orchestration, and complex SVG behavior. Solid owns state and lifecycle; Kobalte owns accessible
+interaction semantics; business state remains outside the animation layer. The rules for when and
+how the interface moves are in [Section 18](#18-motion-system).
 
-Canonical motion tokens are 0, 80, 120, 180, 240, and 320ms, with 2, 4, 8, and 16px spatial
-distances. Motion MUST be causal, quiet, purposeful, interruptible, and state-driven. CSS is the
-first choice; runtime animation requires a real geometry, gesture, physics, interruption, or
-orchestration need. Reduced-motion users retain state feedback while unnecessary spatial traversal is
-removed. Animation MUST NOT decide whether a command, transaction, authorization decision, or workflow
-step succeeds.
+Durations and curves are defined in `apps/web/src/ui/motion/tokens.ts`, which the runtime wrapper
+reads. The Panda config repeats them, because a config may not import UI internals, and
+`tests/frontend/motion.test.ts` fails if the two differ.
 
 The current runtime wrapper uses `motion@13.2.0` through `apps/web/src/ui/motion/`. Feature code MUST
 not import Motion directly or use `motion/react`; it consumes the RITSEI wrapper. High-frequency
 surfaces and Process Studio require interruption, unmount, reduced-motion, and performance testing.
 
-See [ADR-0078](../decisions/0078-adopt-ritsei-motion-system.md) for the decision record.
+See [ADR-0078](../decisions/0078-adopt-ritsei-motion-system.md) and
+[ADR-0112](../decisions/0112-soften-operational-clarity-and-adopt-tactile-motion.md) for the
+decision records.
 
 ### Drag and drop
 
@@ -502,17 +516,24 @@ See [ADR-0079](../decisions/0079-gate-dnd-kit-solid2-activation.md) for the deci
 
 ```text
 4px base grid
-spacing scale   4 · 6 · 8 · 10 · 12 · 16 · 20 · 24 · 32 · 48
+spacing scale   2px to 80px on the 4px grid, with 2px half steps below 24px
 controls        36px (md, default) · 32px (sm, toolbars and dense surfaces)
-table rows      ~40px (10px vertical cell padding, 13px text)
-radii           6px controls · 8px surfaces · 10px overlays · full for badges
+table rows      ~40px (10px vertical cell padding, 14px text)
+radii           6px items · 8px controls · 10px menus · 12px surfaces · 14px dialogs and the
+                workspace sheet · full for badges
 borders         1px hairline (boundary); inputs use boundaryStrong
 ```
+
+Nested corners are concentric: an inner radius is the outer radius less the padding between them
+(a 10px menu with 4px padding holds 6px items).
 
 Rules:
 
 - Feature code MUST NOT introduce arbitrary spacing; use the layout and recipe names.
-- Gap between page-level groups is 16–20px; inside a surface, 16px padding and 12–16px gaps.
+- Gap between page-level groups is 16–24px; a surface pads 24px (16px on a phone and in toolbars)
+  with 16px gaps inside. The padding is one variable (`--surface-pad`) that a bleeding table reads.
+- The numbered spacing and size steps stop at 80px (5rem); a larger step is a type error at
+  authoring time and is added to the Panda config when a design needs it.
 - The workspace stays full width for dense tables; an inspector column is 24rem and appears only
   when the workspace has something to inspect.
 - Density profiles: `comfortable` (reading, review, touch), `compact` (default operational work),
@@ -521,14 +542,15 @@ Rules:
 
 ## 12. Surfaces, borders, and elevation
 
-RITSEI uses four surface levels. Depth comes primarily from tone and borders; shadows are minimal.
+RITSEI uses five surface levels. Depth comes from tone, a hairline, and a small shadow.
 
 | Level | Treatment | Use |
 |---|---|---|
-| L0 Canvas | `canvas`, no border | Application background |
-| L1 Surface | `content`, 1px `boundary`, 8px radius, `raised` shadow (1px, 5%) | Tables, forms, sections, cards |
-| L1 Subtle | `contentSubtle`, 1px `boundary`, no shadow | Filter toolbars, status strips |
-| L2 Overlay | `content`, 1px `boundary`, 10px radius, `overlay` shadow | Dialogs, popovers, mobile drawer |
+| L0 Canvas | `canvas`, no border | Application background and the navigation column |
+| L1 Sheet | `content`, 1px `boundary`, 14px radius, `raised` shadow, inset 8px from the canvas | The workspace on desktop; full-bleed on a phone |
+| L2 Surface | `content`, 1px `boundary`, 12px radius, `raised` shadow | Tables, forms, sections, cards |
+| L2 Subtle | `contentSubtle`, 1px `boundary`, no shadow | Filter toolbars, status strips |
+| L3 Overlay | `content`, 1px `boundary`, 14px radius and `overlay` shadow (dialogs, drawer) or 10px radius and `floating` shadow (menus) | Dialogs, menus, mobile drawer |
 
 Rules:
 
@@ -604,28 +626,32 @@ DENSITY AND RESPONSIVE BEHAVIOR
 
 ### Tables
 
-Tables MUST remain semantic HTML. Header row on `contentSubtle` with 12px muted labels; 13px cells;
-hairline row separators; hover tint; selected rows tinted with an accent edge; numeric columns
-right-aligned; captions visually hidden (`sr-only`) when a visible heading already names the table.
+Tables MUST remain semantic HTML. An untinted header row with 13px muted labels; 14px cells;
+hairline row separators; an immediate hover tint with no transition; selected rows tinted with an
+accent edge; numeric columns right-aligned; captions visually hidden (`sr-only`) when a visible heading already names the table.
 Canvas MUST NOT replace a standard enterprise table.
 
 ### Forms
 
-Labels above controls (13px medium), helper text below (12px muted), errors in `danger` and
-associated with the control. Inputs are 36px with `boundaryStrong` borders and a 2px focus ring.
+Labels above controls (14px medium), helper text below (13px muted), errors in `danger` and
+associated with the control. Inputs are 36px with `boundaryStrong` borders and an 8px radius; an
+invalid field takes a `danger` border. Keyboard focus is a solid `focusRing` edge with a 3px
+`focusHalo` outside it; links and rows, which have no edge, keep a 2px offset ring. A select draws
+its own arrow instead of the platform one.
 Group related fields with a fieldset; actions sit at the end of the form or dialog footer.
 
 ### Buttons
 
 | Variant | Use |
 |---|---|
-| `primary` | The single most important command in a region |
+| `primary` | The single most important command in a region; ink, not the accent |
 | `secondary` | Other commands (default) |
 | `ghost` | Low-emphasis and toolbar commands, icon-only utilities |
 | `danger` | Destructive commands, always confirmed |
 
 Sizes are `md` (36px) and `sm` (32px). Labels name the action and match the resulting confirmation.
-Loading buttons keep their width semantics and expose `aria-busy`.
+A button answers a press by scaling to 0.97; fields do not move. Loading buttons show a spinner
+beside the label and expose `aria-busy`.
 
 ### Action menu
 
@@ -642,9 +668,16 @@ REQUIRES       commands expressed as Dialogs (or other launchers) rendered as ch
 A `Dialog` rendered inside an `ActionMenu` does not render its trigger button; it registers its
 trigger label as a menu item, opens after the menu has closed and released focus, and returns focus
 to the menu control when it closes. Keep the primary command and at most one frequent secondary
-command visible beside the menu. The menu panel renders in place rather than in a Portal: under the
-pinned Kobalte Solid 2 alpha, popper positioning only runs when the panel shares the trigger's
-subtree. Revisit when Kobalte is upgraded.
+command visible beside the menu. The panel grows from the control that opened it (its transform
+origin is the trigger). It renders in place rather than in a Portal: under the pinned Kobalte Solid
+2 alpha, popper positioning only runs when the panel shares the trigger's subtree. Revisit when
+Kobalte is upgraded.
+
+### Tabs
+
+A segmented control: a quiet track with the selected tab as a raised chip that slides between
+positions. Use it for a few sibling views of one workspace, never for navigation between
+workspaces.
 
 ### Badges
 
@@ -676,8 +709,10 @@ global topbar:
 | Command surface | What authorized business command can I perform? | Context-bound actions and their feedback | Navigation or frontend authorization authority |
 
 In the current implementation the RITSEI wordmark sits at the top of the global navigation column,
-and local navigation renders as a breadcrumb-style strip (`Area / Section`) at the start of the
-48px topbar, followed by the operating context (tenant) and global utilities (theme, sign out).
+which lies on the canvas. The workspace is a rounded sheet inset 8px from the canvas on desktop and
+the whole screen on a phone. Local navigation renders as a breadcrumb-style strip (`Area / Section`)
+at the start of the sheet's 48px topbar, followed by the operating context (tenant) and global
+utilities (theme, sign out).
 
 The topbar search and command entry MAY share a visual field, but search, destinations, objects, and
 mutating commands MUST remain semantically distinguishable. The global entry SHOULD support direct
@@ -717,10 +752,10 @@ collapsed state supports workspace-heavy work. The collapsed icon rail MUST NOT 
 or discoverable state. In collapsed mode, every destination MUST retain an accessible name; a tooltip
 MAY supplement, but MUST NOT replace, that name.
 
-The global navigation is one continuous light column on the `navigation` token, separated from the
-workspace by a hairline. The current destination uses the `actionSubtle` tint, `actionText` label,
-a filled icon, and `aria-current="page"`. It MUST NOT use a saturated fill, a large colored tile, or
-a glow as its active treatment.
+The global navigation is one continuous column on the `canvas` token; the edge of the workspace
+sheet separates the two, so the column has no border of its own on desktop. The current destination
+uses the `contentActive` fill, medium weight, a filled icon, and `aria-current="page"`. It MUST NOT
+use the accent, a saturated fill, a large colored tile, or a glow as its active treatment.
 
 Local navigation MAY be a contextual side navigator, compact tabs/sections, or omitted when the
 workspace needs no second navigation level. It MUST collapse or disappear when its width burdens the
@@ -762,7 +797,7 @@ compete with navigation labels, current location, and operational state.
 ### Cards
 
 Cards are reserved for groups that materially improve comprehension, such as the workspace launcher
-on My work. Card-inside-card, every-metric-as-card, and decorative cards SHOULD NOT be used.
+on My work. A card that is a link lifts its border and shadow on hover and answers a press. Card-inside-card, every-metric-as-card, and decorative cards SHOULD NOT be used.
 
 ### Charts
 
@@ -824,12 +859,64 @@ All interactive controls MUST provide:
 
 ## 18. Motion system
 
-Motion explains change; it does not make a static screen look premium. Utility motion (hover,
-focus, selection) is 80–120ms; structural motion (navigation drawer, inspector, dialogs) is
-180–240ms. All motion respects `prefers-reduced-motion`, which removes spatial movement while keeping
-state feedback. Scenes default to static or event-driven rendering; there is no permanent animation
-loop for static content. The full rules are in the Motion subsection of Section 10 and
-[ADR-0078](../decisions/0078-adopt-ritsei-motion-system.md).
+Motion explains change; it does not make a static screen look premium. Before anything animates,
+answer in order: should it move at all, why, on which curve, and how fast.
+
+**Frequency decides.**
+
+| How often a user sees it | Rule | Here |
+|---|---|---|
+| Hundreds of times a day | No animation | Table row hover, keyboard commands, collapsing the navigation, switching theme |
+| Tens of times a day | A color change only, 160ms or less | Navigation hover (80ms), control hover (160ms) |
+| Occasionally | Standard motion | Dialogs, menus, the phone drawer, tabs |
+| Rarely | May carry more | None yet; onboarding and empty-state illustration would qualify |
+
+Route changes and lists do not animate or stagger: they are seen all day, where motion reads as
+delay.
+
+**Curves.** No curve eases in: it holds back the first frame, which is the one the user watches.
+
+| Token | Curve | Use |
+|---|---|---|
+| `out` | `cubic-bezier(0.23, 1, 0.32, 1)` | Anything entering, leaving, or answering a press |
+| `inOut` | `cubic-bezier(0.77, 0, 0.175, 1)` | Something that moves or resizes while staying on screen |
+| `drawer` | `cubic-bezier(0.32, 0.72, 0, 1)` | The navigation drawer |
+| `standard` | `cubic-bezier(0.25, 0.1, 0.25, 1)` | Hover and color changes |
+
+**Durations.** 0, 80, 120, 160 (press), 180, 240, and 320ms; nothing in the interface runs longer
+than 320ms. Spatial distances stay 2, 4, 8, and 16px.
+
+| Element | Motion |
+|---|---|
+| Button, card link | Scale to 0.97 (0.985 for a card) while pressed, 160ms `out` |
+| Dialog | Fade and scale from 0.96, 180ms `out`, from its own center |
+| Menu | Fade and scale from 0.96, 180ms `out`, from the control that opened it |
+| Scrim | Fade in, 180ms `out` |
+| Navigation drawer (phone) | Slide by its own width, 240ms `drawer` |
+| Tabs chip | Slide and resize, 180ms `inOut` |
+| Loading spinner | One turn in 600ms, linear |
+
+**Rules.**
+
+- Nothing enters from `scale(0)`; an entrance starts at 0.96 with opacity.
+- A popover's transform origin is its trigger. A dialog is anchored to nothing and keeps its center.
+- Overlays leave at once. The pinned Kobalte alpha unmounts a closed overlay immediately, so no exit
+  animation is specified; leaving faster than arriving is the intended asymmetry.
+- Only `transform` and `opacity` animate. Transitions name their properties; `transition: all` is
+  not used. The tabs chip is the one exception: Kobalte sets its width together with its transform,
+  and it is a single small layer.
+- Hover styles apply only under `(hover: hover) and (pointer: fine)`, so a touch screen never leaves
+  one stuck after a tap.
+- Under `prefers-reduced-motion`, movement and scale are removed and fades stay; the spinner is
+  hidden because the label already says "Loading".
+- Motion is causal and state-driven. It MUST NOT decide whether a command, transaction,
+  authorization decision, or workflow step succeeds.
+- Scenes default to static or event-driven rendering; there is no permanent animation loop for
+  static content.
+
+`tests/frontend/motion.test.ts` fails if a curve eases in or a duration passes 320ms. See
+[ADR-0078](../decisions/0078-adopt-ritsei-motion-system.md) for ownership and
+[ADR-0112](../decisions/0112-soften-operational-clarity-and-adopt-tactile-motion.md) for these rules.
 
 ## 19. HTML, CSS, SVG, Canvas, and WebGPU
 
@@ -845,9 +932,10 @@ code MUST NOT import `vgpu` or raw WebGPU objects.
 
 ## 20. Shadow and overlay constraints
 
-Two shadows exist: `raised` (1px, ~5% opacity) for L1 surfaces and controls, and `overlay` for
-dialogs, popovers, and the mobile drawer. In dark mode borders do most of the separation and
-shadows are deeper but rarer. Blur, translucency, glass, and colored glows are not used.
+Four shadows exist, each a small step: `control` (1px, 5%) for buttons and fields, `raised` for
+surfaces and the workspace sheet, `floating` for menus, and `overlay` for dialogs and the mobile
+drawer. In dark mode a hairline of light does most of the separation and shadows are deeper but
+rarer. Blur, translucency, glass, and colored glows are not used.
 
 ## 21. Token and styling contract
 
@@ -855,7 +943,8 @@ The token hierarchy is `primitive → semantic → recipe/component → state`. 
 substrate with `strictTokens` enabled. The constrained authoring surface is:
 
 ```text
-semantic tokens       canvas, content*, text, muted, boundary*, action*, status.*, icon.*
+semantic tokens       canvas, content*, text, muted, boundary*, action*, accent*, link, focus*,
+                      status.*, icon.*
 recipes               control (kind: secondary | action | ghost | danger | input; size: md | sm)
                       surface (tone: default | subtle | flush)
 layouts               ui/foundations/layout.ts named classes
@@ -864,9 +953,14 @@ formatting            ui/foundations/format.ts
 css()                 inside apps/web/src/ui only, as a reviewed escape hatch
 ```
 
-Panda's stock preset is used without its color palette, blurs, aspect ratios, stock shadows, and
-stock keyframes, so the shipped stylesheet carries only RITSEI tokens and stays inside the 50 KB
-stylesheet budget enforced by `apps/web/src/ui/accessibility.test.ts`.
+Panda's stock preset is used without its color palette, blurs, aspect ratios, stock shadows, stock
+keyframes, and the font, type, radius, duration, and easing scales that RITSEI defines itself; its
+spacing and size scales keep only the steps in reach. Every token ships as a CSS variable whether
+used or not, so this keeps the shipped stylesheet inside the 50 KB budget enforced by
+`apps/web/src/ui/accessibility.test.ts`.
+
+A DOM island that cannot use the recipes (the process designer) reads the semantic token variables
+(`var(--colors-content)`, `var(--radii-control)`) instead of raw values, so it follows the theme.
 
 Feature code MUST NOT use raw colors, primitive palette tokens, arbitrary spacing, broad styled JSX
 props, unapproved recipes, or vendor-specific primitive styling. Panda only extracts styles from
@@ -1087,10 +1181,11 @@ This design system does not:
 ## 25. Final formula
 
 ```text
-Neutral canvas + white surfaces + hairline borders
-One cobalt accent for action, selection, and focus
+Neutral canvas + a white workspace sheet + soft hairline surfaces
+Ink for commands; one cobalt accent for links, focus, and selection
 Status color only with a status label
-14px body · 13px tables · 36px controls · 4px grid
+14px text · 36px controls · 24px surface padding · 4px grid
+Motion by frequency: answer every press, ease out, stay under 320ms
 Semantic HTML first; visualization only for a declared question
 ```
 

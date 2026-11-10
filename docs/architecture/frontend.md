@@ -19,7 +19,7 @@
 > - Skeleton architecture: [`./skeleton.md`](./skeleton.md)
 > - Solid 2 accessible primitive selection: [`../decisions/0074-switch-to-kobalte-for-solid2-accessible-primitives.md`](../decisions/0074-switch-to-kobalte-for-solid2-accessible-primitives.md)
 > - Dependency ownership: [`../decisions/0075-partition-dependency-ownership-by-application-boundary.md`](../decisions/0075-partition-dependency-ownership-by-application-boundary.md)
-> - Visual language: [`../decisions/0090-adopt-operational-clarity-visual-language.md`](../decisions/0090-adopt-operational-clarity-visual-language.md) (supersedes ADR-0069 and ADR-0071)
+> - Visual language: [`../decisions/0090-adopt-operational-clarity-visual-language.md`](../decisions/0090-adopt-operational-clarity-visual-language.md) (supersedes ADR-0069 and ADR-0071), amended by [`../decisions/0112-soften-operational-clarity-and-adopt-tactile-motion.md`](../decisions/0112-soften-operational-clarity-and-adopt-tactile-motion.md)
 > - Cartographic renderer selection: [`../decisions/0070-select-vgpu-and-defer-typegpu.md`](../decisions/0070-select-vgpu-and-defer-typegpu.md)
 > - Layered TanStack frontend engine boundaries:
 >   [`../decisions/0057-define-layered-tanstack-frontend-engine-boundaries.md`](../decisions/0057-define-layered-tanstack-frontend-engine-boundaries.md)
