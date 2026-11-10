@@ -9,13 +9,13 @@
 
 > **Related documents**
 >
-> - ADR index: [`./README.md`](./README.md)
-> - Document rendering architecture: [`../architecture/document-rendering.md`](../architecture/document-rendering.md)
-> - P2 document and financial baseline: [`./0036-define-p2-document-and-financial-baseline.md`](./0036-define-p2-document-and-financial-baseline.md)
-> - One semantic owner per invariant: [`./0015-one-semantic-owner-per-invariant.md`](./0015-one-semantic-owner-per-invariant.md)
-> - Owner-local business surface: [`./0046-adopt-owner-local-business-surface-and-generated-ergonomics.md`](./0046-adopt-owner-local-business-surface-and-generated-ergonomics.md)
-> - Durable execution: [`../architecture/durable-execution.md`](../architecture/durable-execution.md)
-> - UUIDv7 persistent identities: [`./0051-adopt-uuidv7-for-persistent-identities.md`](./0051-adopt-uuidv7-for-persistent-identities.md)
+> - ADR index: [`./README.md`](../README.md)
+> - Document rendering architecture: [`../architecture/document-rendering.md`](../../architecture/document-rendering.md)
+> - P2 document and financial baseline: [`./0036-define-p2-document-and-financial-baseline.md`](../0036-define-p2-document-and-financial-baseline.md)
+> - One semantic owner per invariant: [`./0015-one-semantic-owner-per-invariant.md`](../0015-one-semantic-owner-per-invariant.md)
+> - Owner-local business surface: [`./0046-adopt-owner-local-business-surface-and-generated-ergonomics.md`](../0046-adopt-owner-local-business-surface-and-generated-ergonomics.md)
+> - Durable execution: [`../architecture/durable-execution.md`](../../architecture/durable-execution.md)
+> - UUIDv7 persistent identities: [`./0051-adopt-uuidv7-for-persistent-identities.md`](../0051-adopt-uuidv7-for-persistent-identities.md)
 
 ## Context
 
@@ -229,5 +229,5 @@ add a database migration.
 ## Related Documents
 
 The detailed current target and non-goals are maintained in
-[`../architecture/document-rendering.md`](../architecture/document-rendering.md). Business document
+[`../architecture/document-rendering.md`](../../architecture/document-rendering.md). Business document
 ownership remains governed by the owning domain and ADR-0036.

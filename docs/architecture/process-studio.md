@@ -32,21 +32,21 @@
 > - Framework and flagship ERP (deferral and extension rule):
 >   [`../decisions/0091-adopt-framework-and-flagship-erp.md`](../decisions/0091-adopt-framework-and-flagship-erp.md)
 > - Source-of-truth and derived-capability non-interference (superseded by ADR-0091):
->   [`../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md`](../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md)
+>   [`../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md`](../decisions/archive/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md)
 > - External integration surface: [`./integration-architecture.md`](./integration-architecture.md)
 > - Authorization: [`./authorization.md`](./authorization.md)
 > - Identity and principals: [`./identity-and-principals.md`](./identity-and-principals.md)
 > - HTTP API boundary: [`./api.md`](./api.md)
 > - Plugin trust: [`./plugin-architecture.md`](./plugin-architecture.md)
 > - Capability-oriented plugin contribution (superseded by ADR-0091):
->   [`../decisions/0023-adopt-capability-oriented-plugin-contribution.md`](../decisions/0023-adopt-capability-oriented-plugin-contribution.md)
+>   [`../decisions/0023-adopt-capability-oriented-plugin-contribution.md`](../decisions/archive/0023-adopt-capability-oriented-plugin-contribution.md)
 > - Frontend architecture: [`./frontend.md`](./frontend.md)
 > - Design system and Interaction Grammar: [`./design-system.md`](./design-system.md)
 > - Testing strategy: [`../development/testing.md`](../development/testing.md)
 > - Process Studio decision (amended by ADR-0091):
 >   [`../decisions/0018-adopt-typed-process-studio.md`](../decisions/0018-adopt-typed-process-studio.md)
 > - Capability release and runtime governance (superseded by ADR-0091):
->   [`../decisions/0020-adopt-capability-release-and-runtime-governance.md`](../decisions/0020-adopt-capability-release-and-runtime-governance.md)
+>   [`../decisions/0020-adopt-capability-release-and-runtime-governance.md`](../decisions/archive/0020-adopt-capability-release-and-runtime-governance.md)
 > - Governed AI recommendation and agent boundary:
 >   [`../decisions/0063-define-governed-ai-recommendation-and-agent-boundary.md`](../decisions/0063-define-governed-ai-recommendation-and-agent-boundary.md)
 > - Process Pack positioning:

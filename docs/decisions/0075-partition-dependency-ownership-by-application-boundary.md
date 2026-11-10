@@ -4,7 +4,7 @@
 - Date: 2026-09-05
 - Amends: ADR-0050 for dependency-manifest ownership
 - Compatible with: ADR-0010, ADR-0057, ADR-0072, ADR-0074
-- Supersedes: ADR-0050
+- Supersedes: ADR-0050 for dependency-manifest ownership only
 - Superseded by: None
 
 > **Related documents**

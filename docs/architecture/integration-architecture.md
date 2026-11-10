@@ -17,7 +17,7 @@
 > - Plugin trust: [`./plugin-architecture.md`](./plugin-architecture.md)
 > - Messaging: [`./pgque-messaging.md`](./pgque-messaging.md)
 > - Source-of-truth and derived-capability non-interference:
->   [`../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md`](../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md)
+>   [`../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md`](../decisions/archive/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md)
 > - Search architecture: [`./search-architecture.md`](./search-architecture.md)
 > - External standards ADR: [`../decisions/0013-version-external-standard-adapters.md`](../decisions/0013-version-external-standard-adapters.md)
 > - Integration profile ADR: [`../decisions/0019-adopt-integration-surface-profile.md`](../decisions/0019-adopt-integration-surface-profile.md)

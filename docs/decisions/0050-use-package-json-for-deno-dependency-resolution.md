@@ -5,7 +5,7 @@
 - Amends: ADR-0017 dependency-resolution mechanism
 - Compatible with: ADR-0017 native Effect Deno adapter
 - Supersedes: ADR-0022
-- Superseded by: None
+- Superseded by: ADR-0075 for dependency-manifest ownership; ADR-0087 for Deno resolution
 
 > **Related documents**
 >
@@ -62,5 +62,5 @@ Keep `deno.json` responsible for runtime, compiler, task, formatting, and lint c
 ## Related Documents
 
 - [`../architecture/architecture-spec-v4.md`](../architecture/architecture-spec-v4.md)
-- [`./0017-use-effect-platform-deno.md`](./0017-use-effect-platform-deno.md)
-- [`./0022-update-effect-v4-to-beta-103.md`](./0022-update-effect-v4-to-beta-103.md)
+- [`./0017-use-effect-platform-deno.md`](./archive/0017-use-effect-platform-deno.md)
+- [`./0022-update-effect-v4-to-beta-103.md`](./archive/0022-update-effect-v4-to-beta-103.md)

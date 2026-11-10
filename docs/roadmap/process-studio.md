@@ -18,7 +18,7 @@
 > - Domain maturity: [`./domain-maturity.md`](./domain-maturity.md)
 > - Process Pack Library: [`./process-pack-library.md`](./process-pack-library.md)
 > - Capability governance:
->   [`../decisions/0020-adopt-capability-release-and-runtime-governance.md`](../decisions/0020-adopt-capability-release-and-runtime-governance.md)
+>   [`../decisions/0020-adopt-capability-release-and-runtime-governance.md`](../decisions/archive/0020-adopt-capability-release-and-runtime-governance.md)
 > - AI boundary:
 >   [`../decisions/0063-define-governed-ai-recommendation-and-agent-boundary.md`](../decisions/0063-define-governed-ai-recommendation-and-agent-boundary.md)
 > - Durable execution:
@@ -77,7 +77,7 @@ Before Process Studio 0.8 work starts, resolve:
 ```
 
 Billing remains outside the current release scope under
-[ADR-0060](../decisions/0060-defer-billing-and-settlement-scope.md). This gate means the boundary is
+[ADR-0060](../decisions/archive/0060-defer-billing-and-settlement-scope.md). This gate means the boundary is
 explicit, not that Billing is implemented.
 
 ## Sequence

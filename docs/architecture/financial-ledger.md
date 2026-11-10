@@ -23,13 +23,13 @@
 > - Framework reset (PostgreSQL is the only active authority):
 >   [`../decisions/0091-adopt-framework-and-flagship-erp.md`](../decisions/0091-adopt-framework-and-flagship-erp.md)
 > - Earlier ledger decision (superseded by ADR-0091, target engine retained by ADR-0092):
->   [`../decisions/0040-adopt-tigerbeetle-financial-ledger.md`](../decisions/0040-adopt-tigerbeetle-financial-ledger.md)
+>   [`../decisions/0040-adopt-tigerbeetle-financial-ledger.md`](../decisions/archive/0040-adopt-tigerbeetle-financial-ledger.md)
 > - Runtime authority separation (amended by ADR-0091):
 >   [`../decisions/0041-separate-deployment-profile-and-financial-authority.md`](../decisions/0041-separate-deployment-profile-and-financial-authority.md)
 > - Exact amount boundary:
 >   [`../decisions/0042-exact-financial-amount-boundary.md`](../decisions/0042-exact-financial-amount-boundary.md)
 > - Previous ledger decision:
->   [`../decisions/0011-financial-ledger-engine.md`](../decisions/0011-financial-ledger-engine.md)
+>   [`../decisions/0011-financial-ledger-engine.md`](../decisions/archive/0011-financial-ledger-engine.md)
 > - State and consistency: [`./state-and-consistency.md`](./state-and-consistency.md)
 > - Authorization: [`./authorization.md`](./authorization.md)
 > - Identity and principals: [`./identity-and-principals.md`](./identity-and-principals.md)

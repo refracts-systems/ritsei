@@ -160,7 +160,7 @@ Provider outage, stale revocation, missing tenant context, or unknown relationsh
 Document rendering is a proposed output platform rather than a business authority. Owner-local
 snapshots feed a versioned Document AST; renderer families remain replaceable and browser rendering
 is an explicit compatibility path. See [`./document-rendering.md`](./document-rendering.md) and
-[ADR-0081](../decisions/0081-adopt-document-ast-rendering-platform.md). The proposal is not active
+[ADR-0081](../decisions/archive/0081-adopt-document-ast-rendering-platform.md). The proposal is not active
 until its contract, security, determinism, workload, and dependency gates pass.
 
 Communication is an intent-driven platform boundary. Domains publish business facts through
@@ -172,7 +172,11 @@ document, and communication records, not a universal `chatter_messages` authorit
 [`./communication.md`](./communication.md) and
 [ADR-0082](../decisions/0082-adopt-communication-platform-boundaries.md).
 
-## Non-Interference
+## Non-Interference Target
+
+The following describes the inactive target retained by
+[ADR-0093](../decisions/0093-retain-isolation-runtime-and-analytic-target-designs.md); the current
+implementation is summarized at the top of this page.
 
 Class A source-of-truth reads and writes use only their owner-local critical dependencies. Class B
 operational capabilities and Class C projections consume committed facts asynchronously and may lag,
@@ -190,9 +194,7 @@ reserved command resources.
 
 WorkloadCells and optional tenant-aware shuffle sharding narrow deployment blast radius without
 changing domain ownership, public identity, authorization, or PostgreSQL truth. See
-./workload-isolation.md,
-[ADR-0034](../decisions/0034-adopt-non-interference-overload-isolation.md), and
-[ADR-0083](../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md).
+[`workload-isolation.md`](./workload-isolation.md) and [ADR-0093](../decisions/0093-retain-isolation-runtime-and-analytic-target-designs.md).
 
 ## Analytics
 

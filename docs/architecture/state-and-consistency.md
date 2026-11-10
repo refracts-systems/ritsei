@@ -10,7 +10,7 @@
 > - PostgreSQL architecture: [`./postgresql-19-architecture.md`](./postgresql-19-architecture.md)
 > - Search architecture: [`./search-architecture.md`](./search-architecture.md)
 > - Source-of-truth and derived-capability non-interference:
->   [`../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md`](../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md)
+>   [`../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md`](../decisions/archive/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md)
 > - Authorization: [`./authorization.md`](./authorization.md)
 > - Identity and principals: [`./identity-and-principals.md`](./identity-and-principals.md)
 > - HTTP API boundary: [`./api.md`](./api.md)
@@ -19,10 +19,10 @@
 > - Historical PostgreSQL truth ADR:
 >   [`../decisions/0003-postgresql-is-transactional-truth.md`](../decisions/0003-postgresql-is-transactional-truth.md)
 > - Stateful runtime ADR:
->   [`../decisions/0025-introduce-stateful-entity-runtime.md`](../decisions/0025-introduce-stateful-entity-runtime.md)
+>   [`../decisions/0025-introduce-stateful-entity-runtime.md`](../decisions/archive/0025-introduce-stateful-entity-runtime.md)
 > - Financial ledger architecture: [`./financial-ledger.md`](./financial-ledger.md)
 > - Financial ledger ADR:
->   [`../decisions/0040-adopt-tigerbeetle-financial-ledger.md`](../decisions/0040-adopt-tigerbeetle-financial-ledger.md)
+>   [`../decisions/0040-adopt-tigerbeetle-financial-ledger.md`](../decisions/archive/0040-adopt-tigerbeetle-financial-ledger.md)
 > - Replica read-your-writes ADR:
 >   [`../decisions/0039-select-postgresql-wait-for-for-replica-read-your-writes.md`](../decisions/0039-select-postgresql-wait-for-for-replica-read-your-writes.md)
 > - Logical database and physical placement ADR:

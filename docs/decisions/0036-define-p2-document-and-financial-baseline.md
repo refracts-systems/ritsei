@@ -10,7 +10,7 @@
 > - ADR index: [`./README.md`](./README.md)
 > - ERP primitive roadmap: [`../roadmap/erp-primitives.md`](../roadmap/erp-primitives.md)
 > - Order lifecycle: [`./0033-extend-order-lifecycle-and-gate-pgque.md`](./0033-extend-order-lifecycle-and-gate-pgque.md)
-> - Ledger engine boundary: [`./0040-adopt-tigerbeetle-financial-ledger.md`](./0040-adopt-tigerbeetle-financial-ledger.md)
+> - Ledger engine boundary: [`./0040-adopt-tigerbeetle-financial-ledger.md`](./archive/0040-adopt-tigerbeetle-financial-ledger.md)
 > - Financial ledger architecture: [`../architecture/financial-ledger.md`](../architecture/financial-ledger.md)
 > - Jurisdiction localization: [`./0016-isolate-jurisdiction-localization.md`](./0016-isolate-jurisdiction-localization.md)
 > - State and consistency: [`../architecture/state-and-consistency.md`](../architecture/state-and-consistency.md)

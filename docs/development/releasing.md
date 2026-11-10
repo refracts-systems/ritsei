@@ -10,7 +10,7 @@
 > - Product release authority:
 >   [`../decisions/0066-adopt-single-product-semver-authority.md`](../decisions/0066-adopt-single-product-semver-authority.md)
 > - Capability release governance:
->   [`../decisions/0020-adopt-capability-release-and-runtime-governance.md`](../decisions/0020-adopt-capability-release-and-runtime-governance.md)
+>   [`../decisions/0020-adopt-capability-release-and-runtime-governance.md`](../decisions/archive/0020-adopt-capability-release-and-runtime-governance.md)
 > - Commit-message standard: [`./commit-message-guidelines.md`](./commit-message-guidelines.md)
 > - Roadmap index: [`../roadmap/README.md`](../roadmap/README.md)
 > - Artifact evidence: [`../operations/release-artifact-evidence.json`](../operations/release-artifact-evidence.json)

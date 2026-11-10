@@ -8,17 +8,17 @@
 
 > **Related documents**
 >
-> - ADR index: [`./README.md`](./README.md)
+> - ADR index: [`./README.md`](../README.md)
 > - Stateful Entity Runtime decision:
 >   [`./0025-introduce-stateful-entity-runtime.md`](./0025-introduce-stateful-entity-runtime.md)
 > - Runtime architecture:
 >   ../architecture/runtime-architecture.md
 > - State and consistency:
->   [`../architecture/state-and-consistency.md`](../architecture/state-and-consistency.md)
+>   [`../architecture/state-and-consistency.md`](../../architecture/state-and-consistency.md)
 > - Workload isolation:
 >   ../architecture/workload-isolation.md
 > - Runtime comparison:
->   [`../architecture/reference/erp-runtime-comparison.md`](../architecture/reference/erp-runtime-comparison.md)
+>   [`../architecture/reference/erp-runtime-comparison.md`](../../architecture/reference/erp-runtime-comparison.md)
 
 ## Context
 
@@ -70,7 +70,7 @@ PostgreSQL remains canonical for non-ledger business facts and control-plane sta
 transfer, balance, and transfer-history authority follows
 [ADR-0040](./0040-adopt-tigerbeetle-financial-ledger.md) when that profile is activated. A selected
 runtime field must therefore follow the canonical, rebuildable, runtime-durable, or ephemeral
-classification in [`state-and-consistency.md`](../architecture/state-and-consistency.md). A later
+classification in [`state-and-consistency.md`](../../architecture/state-and-consistency.md). A later
 ADR would be required to make a `celld` SQLite fact canonical for RITSEI.
 
 ## Proposal

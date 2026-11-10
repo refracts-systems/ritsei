@@ -9,10 +9,10 @@
 
 > **Related documents**
 >
-> - Domain maturity roadmap: [`../roadmap/domain-maturity.md`](../roadmap/domain-maturity.md)
-> - Process Studio roadmap: [`../roadmap/process-studio.md`](../roadmap/process-studio.md)
-> - ERP primitive roadmap: [`../roadmap/erp-primitives.md`](../roadmap/erp-primitives.md)
-> - Financial ledger architecture: [`../architecture/financial-ledger.md`](../architecture/financial-ledger.md)
+> - Domain maturity roadmap: [`../roadmap/domain-maturity.md`](../../roadmap/domain-maturity.md)
+> - Process Studio roadmap: [`../roadmap/process-studio.md`](../../roadmap/process-studio.md)
+> - ERP primitive roadmap: [`../roadmap/erp-primitives.md`](../../roadmap/erp-primitives.md)
+> - Financial ledger architecture: [`../architecture/financial-ledger.md`](../../architecture/financial-ledger.md)
 
 ## Context
 
@@ -94,7 +94,7 @@ This decision is valid while:
 
 ## Related Documents
 
-- [`../roadmap/domain-maturity.md`](../roadmap/domain-maturity.md)
-- [`../roadmap/process-studio.md`](../roadmap/process-studio.md)
-- [`../roadmap/erp-primitives.md`](../roadmap/erp-primitives.md)
-- [`../decisions/0019-adopt-integration-surface-profile.md`](./0019-adopt-integration-surface-profile.md)
+- [`../roadmap/domain-maturity.md`](../../roadmap/domain-maturity.md)
+- [`../roadmap/process-studio.md`](../../roadmap/process-studio.md)
+- [`../roadmap/erp-primitives.md`](../../roadmap/erp-primitives.md)
+- [`../decisions/0019-adopt-integration-surface-profile.md`](../0019-adopt-integration-surface-profile.md)

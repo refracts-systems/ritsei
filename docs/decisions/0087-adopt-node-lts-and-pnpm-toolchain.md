@@ -4,7 +4,7 @@
 - Date: 2026-10-18
 - Amends: None
 - Compatible with: ADR-0010 (Vite/SolidJS SPA), the Effect v4 HTTP API standard, and the platform boundaries established by the foundation/platform architecture documents
-- Supersedes: None
+- Supersedes: ADR-0017; the Deno runtime and toolchain portions of ADR-0002 and ADR-0050
 - Superseded by: None
 
 > **Related documents**

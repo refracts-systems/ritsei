@@ -96,5 +96,5 @@ combine icon, text, and color.
 
 - [`../architecture/design-system.md`](../architecture/design-system.md)
 - [`./0056-adopt-ritsei-semantic-frontend-design-system.md`](./0056-adopt-ritsei-semantic-frontend-design-system.md)
-- [`./0069-adopt-cartographic-enterprise-visual-grammar.md`](./0069-adopt-cartographic-enterprise-visual-grammar.md)
+- [`./0069-adopt-cartographic-enterprise-visual-grammar.md`](./archive/0069-adopt-cartographic-enterprise-visual-grammar.md)
 - [`./0076-adopt-ritsei-typography-system.md`](./0076-adopt-ritsei-typography-system.md)

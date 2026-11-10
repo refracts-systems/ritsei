@@ -1,6 +1,6 @@
 # ADR-0003: PostgreSQL Is the Transactional Source of Truth
 
-- Status: Superseded
+- Status: Accepted
 - Date: 2026-08-01
 - Supersedes: None
 - Superseded by: ADR-0040 (financial-ledger authority scope)

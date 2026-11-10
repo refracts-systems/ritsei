@@ -7,11 +7,11 @@
 
 > **Related documents**
 >
-> - ADR index: [`./README.md`](./README.md)
-> - Plugin architecture: [`../architecture/plugin-architecture.md`](../architecture/plugin-architecture.md)
-> - Process Studio: [`../architecture/process-studio.md`](../architecture/process-studio.md)
+> - ADR index: [`./README.md`](../README.md)
+> - Plugin architecture: [`../architecture/plugin-architecture.md`](../../architecture/plugin-architecture.md)
+> - Process Studio: [`../architecture/process-studio.md`](../../architecture/process-studio.md)
 > - Tiered plugin trust: [`./0007-adopt-tiered-plugin-trust.md`](./0007-adopt-tiered-plugin-trust.md)
-> - Semantic invariant ownership: [`./0015-one-semantic-owner-per-invariant.md`](./0015-one-semantic-owner-per-invariant.md)
+> - Semantic invariant ownership: [`./0015-one-semantic-owner-per-invariant.md`](../0015-one-semantic-owner-per-invariant.md)
 
 ## Context
 
@@ -135,6 +135,6 @@ extensions are the initial priorities.
 
 ## Related Documents
 
-- [`../architecture/plugin-architecture.md`](../architecture/plugin-architecture.md)
-- [`../roadmap/domain-maturity.md`](../roadmap/domain-maturity.md)
-- [`../roadmap/erp-primitives.md`](../roadmap/erp-primitives.md)
+- [`../architecture/plugin-architecture.md`](../../architecture/plugin-architecture.md)
+- [`../roadmap/domain-maturity.md`](../../roadmap/domain-maturity.md)
+- [`../roadmap/erp-primitives.md`](../../roadmap/erp-primitives.md)

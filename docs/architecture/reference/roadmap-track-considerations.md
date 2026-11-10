@@ -65,7 +65,7 @@ A new track is justified only when it has:
 Canonical evidence:
 
   Criteria**
-- [`../../decisions/0034-adopt-non-interference-overload-isolation.md`](../../decisions/0034-adopt-non-interference-overload-isolation.md)
+- [`../../decisions/0034-adopt-non-interference-overload-isolation.md`](../../decisions/archive/0034-adopt-non-interference-overload-isolation.md)
 - [`../postgresql-19-architecture.md`](../postgresql-19-architecture.md), **Guarantee Boundary** and
   **Operational Requirements**
 - [`../../operations/database-roles.md`](../../operations/database-roles.md)
@@ -123,7 +123,7 @@ Canonical evidence:
 - [`../design-system.md`](../design-system.md), **Activation, validation, and governance**
 - [`../../decisions/0048-define-effect-application-architecture-and-frontend-state-ownership.md`](../../decisions/0048-define-effect-application-architecture-and-frontend-state-ownership.md)
 - [`../../decisions/0056-adopt-ritsei-semantic-frontend-design-system.md`](../../decisions/0056-adopt-ritsei-semantic-frontend-design-system.md)
-- [`../../decisions/0069-adopt-cartographic-enterprise-visual-grammar.md`](../../decisions/0069-adopt-cartographic-enterprise-visual-grammar.md)
+- [`../../decisions/0069-adopt-cartographic-enterprise-visual-grammar.md`](../../decisions/archive/0069-adopt-cartographic-enterprise-visual-grammar.md)
 
 ### Registered gates
 

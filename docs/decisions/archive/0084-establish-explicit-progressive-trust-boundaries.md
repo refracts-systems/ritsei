@@ -9,14 +9,14 @@
 
 > **Related documents**
 >
-> - ADR index: [`./README.md`](./README.md)
-> - Canonical architecture: [`../architecture/architecture-spec-v4.md`](../architecture/architecture-spec-v4.md)
-> - HTTP API boundary: [`../architecture/api.md`](../architecture/api.md)
-> - Identity and principals: [`../architecture/identity-and-principals.md`](../architecture/identity-and-principals.md)
-> - Authorization: [`../architecture/authorization.md`](../architecture/authorization.md)
-> - Integration surface: [`../architecture/integration-architecture.md`](../architecture/integration-architecture.md)
-> - Process Studio: [`../architecture/process-studio.md`](../architecture/process-studio.md)
-> - Governed AI boundary: [`./0063-define-governed-ai-recommendation-and-agent-boundary.md`](./0063-define-governed-ai-recommendation-and-agent-boundary.md)
+> - ADR index: [`./README.md`](../README.md)
+> - Canonical architecture: [`../architecture/architecture-spec-v4.md`](../../architecture/architecture-spec-v4.md)
+> - HTTP API boundary: [`../architecture/api.md`](../../architecture/api.md)
+> - Identity and principals: [`../architecture/identity-and-principals.md`](../../architecture/identity-and-principals.md)
+> - Authorization: [`../architecture/authorization.md`](../../architecture/authorization.md)
+> - Integration surface: [`../architecture/integration-architecture.md`](../../architecture/integration-architecture.md)
+> - Process Studio: [`../architecture/process-studio.md`](../../architecture/process-studio.md)
+> - Governed AI boundary: [`./0063-define-governed-ai-recommendation-and-agent-boundary.md`](../0063-define-governed-ai-recommendation-and-agent-boundary.md)
 
 ## Context
 
@@ -155,8 +155,8 @@ validation should demonstrate:
 
 ## Related Documents
 
-- [ADR-0024: Adopt Effect Schema as the canonical contract schema](./0024-adopt-effect-schema-as-canonical-contract-schema.md)
-- [ADR-0058: Define provider-neutral identity and authentication boundary](./0058-define-provider-neutral-identity-and-authentication-boundary.md)
-- [ADR-0059: Define replaceable relationship authorization engine](./0059-define-replaceable-relationship-authorization-engine.md)
-- [ADR-0063: Define governed AI recommendation and agent boundary](./0063-define-governed-ai-recommendation-and-agent-boundary.md)
+- [ADR-0024: Adopt Effect Schema as the canonical contract schema](../0024-adopt-effect-schema-as-canonical-contract-schema.md)
+- [ADR-0058: Define provider-neutral identity and authentication boundary](../0058-define-provider-neutral-identity-and-authentication-boundary.md)
+- [ADR-0059: Define replaceable relationship authorization engine](../0059-define-replaceable-relationship-authorization-engine.md)
+- [ADR-0063: Define governed AI recommendation and agent boundary](../0063-define-governed-ai-recommendation-and-agent-boundary.md)
 - [ADR-0083: Enforce non-interference between source-of-truth domains and derived capabilities](./0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md)

@@ -11,9 +11,9 @@
 > - Capability authorization:
 >   [`./0006-use-capability-based-authorization.md`](./0006-use-capability-based-authorization.md)
 > - Capability release and runtime governance:
->   [`./0020-adopt-capability-release-and-runtime-governance.md`](./0020-adopt-capability-release-and-runtime-governance.md)
+>   [`./0020-adopt-capability-release-and-runtime-governance.md`](./archive/0020-adopt-capability-release-and-runtime-governance.md)
 > - Capability-oriented plugin contribution:
->   [`./0023-adopt-capability-oriented-plugin-contribution.md`](./0023-adopt-capability-oriented-plugin-contribution.md)
+>   [`./0023-adopt-capability-oriented-plugin-contribution.md`](./archive/0023-adopt-capability-oriented-plugin-contribution.md)
 > - Public vocabulary:
 >   [`./0029-rename-user-and-party-public-vocabulary.md`](./0029-rename-user-and-party-public-vocabulary.md)
 > - Authorization architecture:

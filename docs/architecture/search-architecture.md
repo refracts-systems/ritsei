@@ -11,7 +11,7 @@
 > - Canonical architecture: [`./architecture-spec-v4.md`](./architecture-spec-v4.md)
 > - PostgreSQL architecture: [`./postgresql-19-architecture.md`](./postgresql-19-architecture.md)
 > - Source-of-truth and derived-capability non-interference:
->   [`../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md`](../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md)
+>   [`../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md`](../decisions/archive/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md)
 > - State and consistency: [`./state-and-consistency.md`](./state-and-consistency.md)
 > - Messaging: [`./pgque-messaging.md`](./pgque-messaging.md)
 > - Authorization: [`./authorization.md`](./authorization.md)

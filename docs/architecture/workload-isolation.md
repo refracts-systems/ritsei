@@ -38,9 +38,9 @@
 > - Testing strategy: [`../development/testing.md`](../development/testing.md)
 > - Deployment notes: [`../deployment/README.md`](../deployment/README.md)
 > - Non-interference overload ADR:
->   [`../decisions/0034-adopt-non-interference-overload-isolation.md`](../decisions/0034-adopt-non-interference-overload-isolation.md)
+>   [`../decisions/0034-adopt-non-interference-overload-isolation.md`](../decisions/archive/0034-adopt-non-interference-overload-isolation.md)
 > - Source-of-truth and derived-capability non-interference ADR:
->   [`../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md`](../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md)
+>   [`../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md`](../decisions/archive/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md)
 > - Comparative reference:
 >   [`./reference/hard-isolation-patterns.md`](./reference/hard-isolation-patterns.md)
 

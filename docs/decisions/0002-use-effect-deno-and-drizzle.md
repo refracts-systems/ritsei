@@ -3,7 +3,7 @@
 - Status: Accepted
 - Date: 2026-08-01
 - Supersedes: None
-- Superseded by: None
+- Superseded by: ADR-0087 for the Deno runtime and toolchain only
 
 > **Related documents**
 >

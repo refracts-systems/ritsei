@@ -1,6 +1,6 @@
 # ADR-0056: Adopt the RITSEI Semantic Frontend Design System
 
-- Status: Superseded
+- Status: Accepted
 - Date: 2026-08-26
 - Amends: ADR-0010 only for the accessible primitive and styling foundation selection
 - Compatible with: ADR-0009, ADR-0010, ADR-0024, ADR-0048, ADR-0049

@@ -11,8 +11,8 @@
 >
 > - ADR index: [`./README.md`](./README.md)
 > - PostgreSQL control-plane architecture: [`../architecture/postgresql-19-architecture.md`](../architecture/postgresql-19-architecture.md)
-> - Financial ledger authority: [`./0040-adopt-tigerbeetle-financial-ledger.md`](./0040-adopt-tigerbeetle-financial-ledger.md)
-> - Non-interference: [`./0034-adopt-non-interference-overload-isolation.md`](./0034-adopt-non-interference-overload-isolation.md)
+> - Financial ledger authority: [`./0040-adopt-tigerbeetle-financial-ledger.md`](./archive/0040-adopt-tigerbeetle-financial-ledger.md)
+> - Non-interference: [`./0034-adopt-non-interference-overload-isolation.md`](./archive/0034-adopt-non-interference-overload-isolation.md)
 > - State and consistency:
 >   [`../architecture/state-and-consistency.md`](../architecture/state-and-consistency.md)
 > - PostgreSQL architecture:

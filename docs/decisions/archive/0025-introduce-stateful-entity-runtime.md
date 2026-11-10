@@ -8,21 +8,21 @@
 
 > **Related documents**
 >
-> - ADR index: [`./README.md`](./README.md)
+> - ADR index: [`./README.md`](../README.md)
 > - Runtime architecture:
 >   ../architecture/runtime-architecture.md
 > - State and consistency:
->   [`../architecture/state-and-consistency.md`](../architecture/state-and-consistency.md)
+>   [`../architecture/state-and-consistency.md`](../../architecture/state-and-consistency.md)
 > - Canonical architecture:
->   [`../architecture/architecture-spec-v4.md`](../architecture/architecture-spec-v4.md)
+>   [`../architecture/architecture-spec-v4.md`](../../architecture/architecture-spec-v4.md)
 > - PostgreSQL truth history:
->   [`./0003-postgresql-is-transactional-truth.md`](./0003-postgresql-is-transactional-truth.md)
+>   [`./0003-postgresql-is-transactional-truth.md`](../0003-postgresql-is-transactional-truth.md)
 > - Financial ledger authority:
 >   [`./0040-adopt-tigerbeetle-financial-ledger.md`](./0040-adopt-tigerbeetle-financial-ledger.md)
 > - Semantic ownership:
->   [`./0015-one-semantic-owner-per-invariant.md`](./0015-one-semantic-owner-per-invariant.md)
+>   [`./0015-one-semantic-owner-per-invariant.md`](../0015-one-semantic-owner-per-invariant.md)
 > - Events, jobs, and workflows:
->   [`./0004-separate-events-jobs-and-workflows.md`](./0004-separate-events-jobs-and-workflows.md)
+>   [`./0004-separate-events-jobs-and-workflows.md`](../0004-separate-events-jobs-and-workflows.md)
 > - `celld` evaluation:
 >   [`./0026-evaluate-celld-runtime-adapter.md`](./0026-evaluate-celld-runtime-adapter.md)
 

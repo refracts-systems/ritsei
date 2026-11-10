@@ -19,7 +19,7 @@
 >
 > **Detailed semantics belong to:**
 > [`../architecture/workload-isolation.md`](../architecture/workload-isolation.md) and
-> [`../decisions/0034-adopt-non-interference-overload-isolation.md`](../decisions/0034-adopt-non-interference-overload-isolation.md).
+> [`../decisions/0034-adopt-non-interference-overload-isolation.md`](../decisions/archive/0034-adopt-non-interference-overload-isolation.md).
 >
 > **Related documents**
 >

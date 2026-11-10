@@ -14,7 +14,7 @@
 > - Framework and flagship ERP decision:
 >   [`./0091-adopt-framework-and-flagship-erp.md`](./0091-adopt-framework-and-flagship-erp.md)
 > - Earlier TigerBeetle decision (superseded):
->   [`./0040-adopt-tigerbeetle-financial-ledger.md`](./0040-adopt-tigerbeetle-financial-ledger.md)
+>   [`./0040-adopt-tigerbeetle-financial-ledger.md`](./archive/0040-adopt-tigerbeetle-financial-ledger.md)
 > - Financial ledger architecture: [`../architecture/financial-ledger.md`](../architecture/financial-ledger.md)
 > - Exact amount boundary: [`./0042-exact-financial-amount-boundary.md`](./0042-exact-financial-amount-boundary.md)
 

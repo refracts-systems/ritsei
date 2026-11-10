@@ -12,7 +12,7 @@
 > - ADR index: [`./README.md`](./README.md)
 > - Release workflow: [`../development/releasing.md`](../development/releasing.md)
 > - Capability release governance:
->   [`./0020-adopt-capability-release-and-runtime-governance.md`](./0020-adopt-capability-release-and-runtime-governance.md)
+>   [`./0020-adopt-capability-release-and-runtime-governance.md`](./archive/0020-adopt-capability-release-and-runtime-governance.md)
 > - Roadmap index: [`../roadmap/README.md`](../roadmap/README.md)
 
 ## Context
@@ -91,4 +91,4 @@ plus migration and upgrade caveats.
 
 - [`../development/releasing.md`](../development/releasing.md)
 - [`../roadmap/README.md`](../roadmap/README.md)
-- [`./0020-adopt-capability-release-and-runtime-governance.md`](./0020-adopt-capability-release-and-runtime-governance.md)
+- [`./0020-adopt-capability-release-and-runtime-governance.md`](./archive/0020-adopt-capability-release-and-runtime-governance.md)

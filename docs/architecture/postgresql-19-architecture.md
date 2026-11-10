@@ -10,7 +10,7 @@
 >   [`./hierarchy-and-graph-selection.md`](./hierarchy-and-graph-selection.md)
 > - Financial ledger architecture: [`./financial-ledger.md`](./financial-ledger.md)
 > - Financial ledger ADR:
->   [`../decisions/0040-adopt-tigerbeetle-financial-ledger.md`](../decisions/0040-adopt-tigerbeetle-financial-ledger.md)
+>   [`../decisions/0040-adopt-tigerbeetle-financial-ledger.md`](../decisions/archive/0040-adopt-tigerbeetle-financial-ledger.md)
 > - Historical transactional-truth ADR:
 >   [`../decisions/0003-postgresql-is-transactional-truth.md`](../decisions/0003-postgresql-is-transactional-truth.md)
 > - Replica read-your-writes ADR:

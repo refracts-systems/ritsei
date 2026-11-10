@@ -7,17 +7,17 @@
 
 > **Related documents**
 >
-> - ADR index: [`./README.md`](./README.md)
+> - ADR index: [`./README.md`](../README.md)
 > - Canonical architecture:
->   [`../architecture/architecture-spec-v4.md`](../architecture/architecture-spec-v4.md)
+>   [`../architecture/architecture-spec-v4.md`](../../architecture/architecture-spec-v4.md)
 > - Transactional consistency:
->   [`../architecture/state-and-consistency.md`](../architecture/state-and-consistency.md)
-> - Messaging: [`../architecture/pgque-messaging.md`](../architecture/pgque-messaging.md)
+>   [`../architecture/state-and-consistency.md`](../../architecture/state-and-consistency.md)
+> - Messaging: [`../architecture/pgque-messaging.md`](../../architecture/pgque-messaging.md)
 > - Durable execution:
->   [`../architecture/durable-execution.md`](../architecture/durable-execution.md)
-> - Process Studio: [`../architecture/process-studio.md`](../architecture/process-studio.md)
+>   [`../architecture/durable-execution.md`](../../architecture/durable-execution.md)
+> - Process Studio: [`../architecture/process-studio.md`](../../architecture/process-studio.md)
 > - Capability naming:
->   [`./0031-capability-naming-and-business-verb-conventions.md`](./0031-capability-naming-and-business-verb-conventions.md)
+>   [`./0031-capability-naming-and-business-verb-conventions.md`](../0031-capability-naming-and-business-verb-conventions.md)
 
 ## Context
 

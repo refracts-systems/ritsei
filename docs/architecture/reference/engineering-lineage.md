@@ -14,9 +14,9 @@
 > - Messaging: [`../pgque-messaging.md`](../pgque-messaging.md)
 > - Accidental duplication: [`./accidental-duplication.md`](./accidental-duplication.md)
 > - Stateful Entity Runtime:
->   [`../../decisions/0025-introduce-stateful-entity-runtime.md`](../../decisions/0025-introduce-stateful-entity-runtime.md)
+>   [`../../decisions/0025-introduce-stateful-entity-runtime.md`](../../decisions/archive/0025-introduce-stateful-entity-runtime.md)
 > - `celld` adapter evaluation:
->   [`../../decisions/0026-evaluate-celld-runtime-adapter.md`](../../decisions/0026-evaluate-celld-runtime-adapter.md)
+>   [`../../decisions/0026-evaluate-celld-runtime-adapter.md`](../../decisions/archive/0026-evaluate-celld-runtime-adapter.md)
 
 ## Why this document exists
 
@@ -160,7 +160,7 @@ required only for an approved entity category whose execution contract says so.
 - [`celld` security documentation](https://github.com/denoland/celld/blob/main/docs/security.md)
 
 The repository's binding position is in
-[ADR-0026](../../decisions/0026-evaluate-celld-runtime-adapter.md): `celld` remains
+[ADR-0026](../../decisions/archive/0026-evaluate-celld-runtime-adapter.md): `celld` remains
 proposed/experimental, domain packages must not import its APIs, and a local/direct adapter must
 remain possible. Under the current architecture, PostgreSQL remains canonical for control-plane and
 non-ledger facts while ADR-0040 governs the activated financial authority.

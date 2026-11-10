@@ -25,8 +25,8 @@
 > - Iconography decision: [`../decisions/0077-adopt-ritsei-iconography-system.md`](../decisions/0077-adopt-ritsei-iconography-system.md)
 > - Motion decision: [`../decisions/0078-adopt-ritsei-motion-system.md`](../decisions/0078-adopt-ritsei-motion-system.md)
 > - Solid 2 primitive selection: [`../decisions/0074-switch-to-kobalte-for-solid2-accessible-primitives.md`](../decisions/0074-switch-to-kobalte-for-solid2-accessible-primitives.md)
-> - Optional visualization renderer: [`../decisions/0070-select-vgpu-and-defer-typegpu.md`](../decisions/0070-select-vgpu-and-defer-typegpu.md)
-> - Superseded visual direction (historical): [`../decisions/0069-adopt-cartographic-enterprise-visual-grammar.md`](../decisions/0069-adopt-cartographic-enterprise-visual-grammar.md), [`../decisions/0071-adopt-universal-cartographic-archetypes.md`](../decisions/0071-adopt-universal-cartographic-archetypes.md)
+> - Historical visualization renderer selection (superseded by ADR-0091): [`../decisions/0070-select-vgpu-and-defer-typegpu.md`](../decisions/archive/0070-select-vgpu-and-defer-typegpu.md)
+> - Superseded visual direction (historical): [`../decisions/0069-adopt-cartographic-enterprise-visual-grammar.md`](../decisions/archive/0069-adopt-cartographic-enterprise-visual-grammar.md), [`../decisions/0071-adopt-universal-cartographic-archetypes.md`](../decisions/archive/0071-adopt-universal-cartographic-archetypes.md)
 > - Frontend state ownership: [`../decisions/0048-define-effect-application-architecture-and-frontend-state-ownership.md`](../decisions/0048-define-effect-application-architecture-and-frontend-state-ownership.md)
 > - Vite and SolidJS SPA: [`../decisions/0010-use-vite-solidjs-spa.md`](../decisions/0010-use-vite-solidjs-spa.md)
 > - Process Studio: [`./process-studio.md`](./process-studio.md)
@@ -924,14 +924,14 @@ than 320ms. Spatial distances stay 2, 4, 8, and 16px.
 ## 19. HTML, CSS, SVG, Canvas, and WebGPU
 
 HTML owns interaction and semantics. Standard forms, tables, and record views are 100% semantic
-HTML/CSS. SVG and Canvas are used for charts and relationship views; the optional `vgpu` WebGPU
-adapter selected by [ADR-0070](../decisions/0070-select-vgpu-and-defer-typegpu.md) is reserved for
-measured high-volume visualization and stays behind the RITSEI renderer adapter.
+HTML/CSS. SVG and Canvas are used for charts and relationship views. ADR-0091 superseded the
+[earlier `vgpu` selection](../decisions/archive/0070-select-vgpu-and-defer-typegpu.md) and removed the
+WebGPU track; reintroducing it requires a named need, measurement, and a new ADR.
 
 The fallback hierarchy is mandatory: `WebGPU → Canvas/SVG → CSS → static semantic UI`. No critical
 action, value, status, or relationship may exist only in pixels. WebGPU MUST NOT own semantics,
 fetching, authorization, business aggregation, workflow state, or authoritative facts, and feature
-code MUST NOT import `vgpu` or raw WebGPU objects.
+code MUST NOT import renderer libraries or raw WebGPU objects.
 
 ## 20. Shadow and overlay constraints
 
@@ -1119,7 +1119,7 @@ Frontend activation gates include:
 - dnd-kit pointer/keyboard parity where used;
 - deterministic renderer output and accessible fallbacks;
 - the same renderer adapter contract in browser, headless Node, and deterministic mock paths;
-- `vgpu/node` headless validation and `vgpu/mock` CI coverage when the adapter is activated;
+- headless validation and mock CI coverage if a WebGPU adapter is activated;
 - bundle, route, frame-time, memory, and interaction performance measurements;
 - no permanent GPU animation for static scenes;
 - power behavior during long-lived enterprise sessions; and

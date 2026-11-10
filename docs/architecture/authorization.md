@@ -15,7 +15,7 @@
 > - Plugin trust model: [`./plugin-architecture.md`](./plugin-architecture.md)
 > - Process Studio: [`./process-studio.md`](./process-studio.md)
 > - Process governance ADR:
->   [`../decisions/0020-adopt-capability-release-and-runtime-governance.md`](../decisions/0020-adopt-capability-release-and-runtime-governance.md)
+>   [`../decisions/0020-adopt-capability-release-and-runtime-governance.md`](../decisions/archive/0020-adopt-capability-release-and-runtime-governance.md)
 > - Governed AI recommendation and agent boundary:
 >   [`../decisions/0063-define-governed-ai-recommendation-and-agent-boundary.md`](../decisions/0063-define-governed-ai-recommendation-and-agent-boundary.md)
 > - Identity and principals: [`./identity-and-principals.md`](./identity-and-principals.md)

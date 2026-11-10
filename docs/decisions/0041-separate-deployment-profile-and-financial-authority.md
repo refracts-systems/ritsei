@@ -9,7 +9,7 @@
 >
 > - ADR index: [`./README.md`](./README.md)
 > - TigerBeetle ledger decision:
->   [`./0040-adopt-tigerbeetle-financial-ledger.md`](./0040-adopt-tigerbeetle-financial-ledger.md)
+>   [`./0040-adopt-tigerbeetle-financial-ledger.md`](./archive/0040-adopt-tigerbeetle-financial-ledger.md)
 > - Financial ledger architecture:
 >   [`../architecture/financial-ledger.md`](../architecture/financial-ledger.md)
 > - Deployment notes: [`../deployment/README.md`](../deployment/README.md)

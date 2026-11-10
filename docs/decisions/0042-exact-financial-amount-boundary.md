@@ -3,7 +3,7 @@
 - Status: Accepted
 - Date: 2026-08-19
 - Owners: Accounting and Sales
-- Related: [ADR-0040](./0040-adopt-tigerbeetle-financial-ledger.md), [financial ledger architecture](../architecture/financial-ledger.md)
+- Related: [ADR-0040](./archive/0040-adopt-tigerbeetle-financial-ledger.md), [financial ledger architecture](../architecture/financial-ledger.md)
 
 ## Context
 
