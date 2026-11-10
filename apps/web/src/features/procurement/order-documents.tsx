@@ -1,4 +1,4 @@
-import { createSignal, For, Show, useContext } from "solid-js"
+import { createSignal, For, Show, untrack, useContext } from "solid-js"
 import { today } from "../../shared/form-values.ts"
 import { createProductsQuery, createWarehousesQuery } from "../../shared/lookups.ts"
 import { CommandFeedback, QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
@@ -179,7 +179,8 @@ function StockDialog(props: {
 
 function ReleaseButton(props: { id: string; reload: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
-  const mutation = createReleaseMutation(scope, props.id)
+  const id = untrack(() => props.id)
+  const mutation = createReleaseMutation(scope, id)
 
   return (
     <div class={layout.stack}>
@@ -210,7 +211,8 @@ function ReleaseButton(props: { id: string; reload: () => Promise<void> }) {
 /** Ordered, received, and returned quantities, and the steps the order's status allows. */
 export function OrderDocuments(props: { id: string; reloadOrder: () => Promise<void> }) {
   const scope = useContext(ApiRuntime)
-  const query = createPurchaseMatchingQuery(scope, props.id)
+  const id = untrack(() => props.id)
+  const query = createPurchaseMatchingQuery(scope, id)
   const products = createProductsQuery(scope)
   const productName = (id: string) => products.data.find((product) => product.id === id)?.name
   const reload = () => reloaded(Promise.all([query.refetch(), props.reloadOrder()]))

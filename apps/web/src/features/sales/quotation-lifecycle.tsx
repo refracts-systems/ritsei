@@ -1,6 +1,6 @@
 import { useNavigate } from "@solidjs/router"
 import * as Predicate from "effect/Predicate"
-import { For, Show, useContext } from "solid-js"
+import { For, Show, untrack, useContext } from "solid-js"
 import { CommandFeedback, QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
 import { createProductsQuery } from "../../shared/lookups.ts"
 import { ApiRuntime } from "../../shared/runtime.ts"
@@ -96,7 +96,9 @@ function QuotationSteps(props: { quotation: QuotationDocument; reload: () => Pro
   const scope = useContext(ApiRuntime)
   const navigate = useNavigate()
 
-  const mutation = createQuotationActionMutation(scope, props.quotation.id, (result) => {
+  const id = untrack(() => props.quotation.id)
+
+  const mutation = createQuotationActionMutation(scope, id, (result) => {
     if (Predicate.hasProperty(result, "orderId") && Predicate.isString(result.orderId)) {
       navigate(`/sales/orders/${encodeURIComponent(result.orderId)}`)
     }

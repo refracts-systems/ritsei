@@ -771,7 +771,8 @@ function RepresentationTable(props: { detail: PartyDetailValue; reload: () => Pr
 
 function RelatedPaths(props: { partyId: string; legalEntities: PartyDirectoryAccessor }) {
   const scope = useContext(ApiRuntime)
-  const query = createRelatedPartyPathsQuery(scope, props.partyId, { limit: 100 })
+  const partyId = untrack(() => props.partyId)
+  const query = createRelatedPartyPathsQuery(scope, partyId, { limit: 100 })
 
   const nameForParty = (partyId: string) =>
     props.legalEntities().find((entry) => entry.party.id === partyId)?.party.name ?? partyId

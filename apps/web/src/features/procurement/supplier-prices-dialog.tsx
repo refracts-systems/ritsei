@@ -1,4 +1,4 @@
-import { createSignal, Show, useContext } from "solid-js"
+import { createSignal, Show, untrack, useContext } from "solid-js"
 import { createProductsQuery } from "../../shared/lookups.ts"
 import { CommandFeedback, QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
 import { ApiRuntime } from "../../shared/runtime.ts"
@@ -17,7 +17,8 @@ import { priceFailureMessages } from "./documents.ts"
 
 function PriceList(props: { supplierAccountId: string }) {
   const scope = useContext(ApiRuntime)
-  const prices = createSupplierPricesQuery(scope, props.supplierAccountId)
+  const supplierAccountId = untrack(() => props.supplierAccountId)
+  const prices = createSupplierPricesQuery(scope, supplierAccountId)
   const products = createProductsQuery(scope)
   const mutation = createSetPriceMutation(scope)
   const [invalid, setInvalid] = createSignal(false)

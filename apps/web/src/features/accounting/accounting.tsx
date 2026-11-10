@@ -1,7 +1,7 @@
 import * as Predicate from "effect/Predicate"
 import { useNavigate } from "@solidjs/router"
 import type { JSX } from "@solidjs/web"
-import { createSignal, For, Show, useContext } from "solid-js"
+import { createSignal, For, Show, untrack, useContext } from "solid-js"
 import type {
   Account,
   AccountingConfiguration,
@@ -637,7 +637,9 @@ function ClosePeriodDialog(props: { period: AccountingPeriod; reload: () => Prom
   const scope = useContext(ApiRuntime)
   const [open, setOpen] = createSignal(false)
 
-  const mutation = createClosePeriodMutation(scope, props.period.id, () => {
+  const periodId = untrack(() => props.period.id)
+
+  const mutation = createClosePeriodMutation(scope, periodId, () => {
     setOpen(false)
     void props.reload()
   })

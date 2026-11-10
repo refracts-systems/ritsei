@@ -4,7 +4,7 @@ import {
   useDialogContext,
 } from "@kobalte/core/dialog"
 import type { JSX } from "@solidjs/web"
-import { createEffect, createSignal, onSettled, Show } from "solid-js"
+import { createEffect, createSignal, onSettled, Show, untrack } from "solid-js"
 import { css } from "../generated/css/index.js"
 import { Icon } from "../icons/index.ts"
 import { type ActionMenuRegistry, useActionMenu } from "./action-menu-context.ts"
@@ -171,7 +171,8 @@ const registerMenuTrigger = (
 export function Dialog(props: DialogProps) {
   const menu = useActionMenu()
   const state = createDialogState(props)
-  const controlled = menu !== null || props.open !== undefined
+  // Whether the caller or an enclosing menu drives the dialog is decided once, when it is created.
+  const controlled = menu !== null || untrack(() => props.open) !== undefined
   onSettled(() =>
     registerMenuTrigger(
       menu,
@@ -180,10 +181,13 @@ export function Dialog(props: DialogProps) {
     ),
   )
 
+  // `open` is its own prop, not part of a computed spread: Kobalte's dialog parts read their
+  // generated id once in the component body, and a computed spread is evaluated for every prop.
   return (
     <KobalteDialog
       modal
-      {...(controlled ? { open: state.open(), onOpenChange: state.setOpen } : {})}
+      open={controlled ? state.open() : undefined}
+      onOpenChange={controlled ? state.setOpen : undefined}
     >
       <Show when={menu === null && props.trigger}>
         <KobalteDialog.Trigger as={Button} variant={props.triggerVariant} type="button">
