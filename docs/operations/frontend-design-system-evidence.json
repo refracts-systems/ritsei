@@ -7,7 +7,6 @@
       "status": "approved_with_risk",
       "proof": "docs/operations/frontend-implementation.md",
       "compatibility": {
-        "bundle": "passed",
         "build": "passed",
         "peerRange": "accepted_risk"
       },
@@ -109,24 +108,6 @@
     "vendor-boundaries": {
       "status": "passed",
       "proof": "docs/operations/frontend-implementation.md"
-    },
-    "cartography-fallback": {
-      "status": "passed",
-      "proof": "docs/operations/frontend-implementation.md",
-      "contract": "apps/web/src/ui/renderers/cartography/cartography-field.tsx",
-      "projection": "apps/web/src/features/identity/projections/account-network.ts",
-      "browserTest": "tests/frontend/cartography.test.ts",
-      "scope": [
-        "renderer-neutral archetypes and material mapping",
-        "deterministic SVG geometry",
-        "semantic text fallback",
-        "native marker keyboard selection",
-        "reduced motion",
-        "forced colors",
-        "200% zoom",
-        "axe WCAG 2A/AA"
-      ],
-      "webgpu": "not_activated"
     }
   }
 }

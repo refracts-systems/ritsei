@@ -241,9 +241,10 @@ provider is scoped to the designer surface rather than the whole ERP. dnd-kit ma
 source, target, collision, ordering, and transform state; it must not persist coordinates or decide
 whether a process mutation is authorized.
 
-The current repository targets Solid 2 release candidates, while `@dnd-kit/solid@0.5.0` currently
-fails the real Vite compatibility probe because its published bundle imports the removed `solid-js/web`
-package path. Activation is therefore blocked by ADR-0079. Do not add a legacy React package, a
+The current repository targets Solid 2 release candidates. When it was last checked,
+`@dnd-kit/solid@0.5.0` failed a real Vite build because its published bundle imports the removed
+`solid-js/web` package path. Activation is therefore blocked by ADR-0079, and the package is not
+installed (ADR-0113). Do not add a legacy React package, a
 Solid 1 compatibility shim, or a Vite alias to manufacture compatibility. Once the gate passes, the
 browser interaction must translate `DragEnd` into a typed Process Studio intent, validate it against
 the current definition/version and authorization boundary, and only then persist canonical layout or

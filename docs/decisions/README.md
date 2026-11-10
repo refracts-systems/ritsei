@@ -136,5 +136,6 @@ current system; ADRs preserve decision history.
 | [`0110`](./0110-issue-invoices-as-immutable-numbered-artifacts-and-send-by-communication.md) | Issue invoices as immutable numbered artifacts and send them through communication | Accepted   |
 | [`0111`](./0111-sequence-localization-id-on-public-contracts.md) | Build Indonesian localization on public contracts, in two stages | Accepted   |
 | [`0112`](./0112-soften-operational-clarity-and-adopt-tactile-motion.md) | Soften Operational Clarity and adopt tactile motion | Accepted   |
+| [`0113`](./0113-retire-frontend-compatibility-probes-and-visual-contract-test.md) | Retire frontend compatibility probes and the visual contract test | Accepted   |
 
 Accepted ADRs must not be rewritten to alter history. Create a new ADR and use `Supersedes`.

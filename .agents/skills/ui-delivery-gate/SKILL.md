@@ -18,9 +18,8 @@ rules themselves live in the design system and frontend documents; this skill ne
 # Do Not Use This Skill When
 
 - the change is backend-only, with no screen or generated contract change;
-- the task is only a token or recipe value covered by the visual-contract baseline; update the
-  baseline as [Design System §23](../../../docs/architecture/design-system.md#23-activation-validation-and-governance)
-  describes.
+- the task is only a token or recipe value; no screen flow changes, so the token or recipe diff is
+  the review.
 
 # Required Context
 

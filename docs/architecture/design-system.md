@@ -497,12 +497,13 @@ collision, sortable preview, constraints, overlays, auto-scroll, and drag access
 drag-state appearance, Solid owns ephemeral interaction state, Motion owns only optional post-drop
 continuity, and the domain owns the meaning and persistence of a drop.
 
-Activation is currently **not_activated**. The published Solid adapter imports `solid-js/web`, which is
-not exported by the repository's Solid 2 package layout. The compatibility probe records this as a
-blocked build. RITSEI MUST NOT hide the failure with a Vite alias, Solid 1 compatibility shim, the
-legacy React package family, or an application-wide drag context. No production feature may import the
-adapter until a real Solid 2 build, pointer/keyboard interaction, accessibility, and reduced-motion
-gate passes.
+Activation is currently **not_activated** and the package is not installed. When it was last
+checked, the published Solid adapter imported `solid-js/web`, which is not exported by the
+repository's Solid 2 package layout. RITSEI MUST NOT hide the failure with a Vite alias, Solid 1
+compatibility shim, the legacy React package family, or an application-wide drag context. No
+production feature may import the adapter until a real Solid 2 build, pointer/keyboard interaction,
+accessibility, and reduced-motion gate passes; the dependency is added in the same change as the
+RITSEI adapter.
 
 When activated, the provider boundary MUST be local to a meaningful interaction surface, drag handles
 SHOULD be explicit for dense Process Studio nodes, and one transform owner applies at a time: dnd-kit
@@ -510,7 +511,9 @@ during active manipulation, Motion during custom post-drop settle, and the Proce
 camera movement. A visual drop is intent, not business truth; final movement must become a validated
 process command before persistence.
 
-See [ADR-0079](../decisions/0079-gate-dnd-kit-solid2-activation.md) for the decision record.
+See [ADR-0079](../decisions/0079-gate-dnd-kit-solid2-activation.md) for the decision record and
+[ADR-0113](../decisions/0113-retire-frontend-compatibility-probes-and-visual-contract-test.md) for
+why the probe and the pinned dependency were removed.
 
 ## 11. Grid, spacing, and density
 
@@ -1099,17 +1102,13 @@ until it has:
 - empty, loading, error, and degraded behavior;
 - density, responsive, zoom, and localization review;
 - contrast and high-contrast evidence;
-- reduced-motion behavior;
-- a component or interaction test when behavior is non-trivial; and
-- visual regression coverage when a shared visual contract changes.
+- reduced-motion behavior; and
+- a component or interaction test when behavior is non-trivial.
 
-Visual regression is enforced by `tests/frontend/visual-contract.test.ts`. It records the computed
-styles (colors, borders, radii, shadows, typography, and control heights) of the shell, primitives,
-and patterns in light and dark themes and compares them with
-`tests/frontend/visual-contract.baseline.json`. Computed styles are deterministic across operating
-systems, so the same baseline holds on Windows and Linux CI; pixel screenshots are not used because
-font rasterization differs between platforms. After an intentional design change, regenerate the
-baseline with `RITSEI_UPDATE_VISUAL_CONTRACT=1` and review the JSON diff with the change.
+There is no visual regression baseline. A shared visual rule that can be stated as a rule has a test
+that states it (the motion rules in Section 18, contrast through the axe scans, the stylesheet
+budget); a change to a token or recipe value is reviewed as its diff. See
+[ADR-0113](../decisions/0113-retire-frontend-compatibility-probes-and-visual-contract-test.md).
 
 Frontend activation gates include:
 
