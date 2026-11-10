@@ -4,6 +4,10 @@ Rules for coding agents working in the RITSEI repository. Keep this file short: 
 every session. Area-specific rules live in nested `AGENTS.md` files next to the code they govern;
 subsystem rules live in the canonical architecture documents linked below.
 
+A rule belongs here only when an agent would otherwise get it wrong and no check would catch it.
+A rule that a check enforces is named once, with its check. A fact that can be read from the code
+or the directory tree is left out.
+
 > **Related documents**
 >
 > - Project overview: [`./README.md`](./README.md)
@@ -33,12 +37,14 @@ Create a new ADR for significant decisions; supersede accepted ADRs instead of r
 
 - Inspect existing code and tests before introducing a new pattern; preserve naming and directory
   conventions.
-- Make the smallest change that fully solves the task. Avoid unrelated refactoring.
-- Solve the requested outcome, not the surrounding roadmap. Reuse existing commands, tests, and
-  harnesses; do not add evaluators, registries, generators, policy schemas, CI gates, or browser
-  harnesses unless asked or an existing check demonstrably cannot validate a task-required invariant.
-- Stop when the requested change and its relevant checks are complete. Report unrelated failures
-  separately; do not repair inherited debt without authorization.
+- Solve the requested outcome completely, with the smallest change that does so, not the surrounding
+  roadmap. Reuse existing commands, tests, and harnesses; do not add evaluators, registries,
+  generators, policy schemas, CI gates, or browser harnesses unless asked or an existing check
+  demonstrably cannot validate a task-required invariant.
+- Never pass over a defect in silence. When you find one outside the task, fix it in the same
+  change if it is in a file the task already changes, the fix is a few lines, and an existing test
+  or check covers it. Otherwise report it with evidence (file, line, how it fails) and leave it.
+  Unrelated refactoring and larger inherited debt need authorization.
 - Do not add dependencies without a documented reason. Declare each dependency in the manifest of the
   boundary that consumes it (root `package.json` for repository-wide and tooling packages,
   `apps/web/package.json` for web-only packages), with exact versions, then run `pnpm install`.
@@ -69,8 +75,9 @@ Skills supplement, and never replace, repository ownership, tooling, and validat
 ## Reference Sources
 
 - **Effect v4:** consult the vendored source at `./vendor/effect` before writing or changing Effect
-  code; do not rely on v3 memory. Use v4 names (`Effect.catch`, `Effect.catchCause`,
-  `Effect.mapError`), never `catchAll`/`catchAllCause`.
+  code; do not rely on v3 memory. `fallow:audit` rejects the v3 names (`Effect.catchAll`,
+  `Context.Tag`, `Effect.fork`, and the rest of the list in
+  `tooling/fallow/rules/ritsei-static-policy.json`).
 - **Drizzle:** runtime `drizzle-orm` is pinned in the root `package.json`; the migration generator
   is pinned independently to Drizzle Kit `1.0.0-rc.4`. The vendored `vendor/drizzle-orm` is a
   `v1.0.0-rc.4` reference only. Revalidate the migration graph, typecheck, and integration tests
@@ -84,11 +91,11 @@ A domain module exposes commands and queries, Effect service interfaces, public 
 through Effect Schema, and production/test `Layer` values. Tables, repositories, and internals stay
 private.
 
-- Import other domains only through their public entry points (`mod.ts`); never import their tables
-  or repositories, and never mutate another module's tables. Cross-module work uses a typed service
-  contract, including inside a shared PostgreSQL transaction.
-- Keep the package graph acyclic and respect the schema ownership registry (`db/ownership.toml`).
-  Do not bypass a failing boundary check with an undocumented allowlist.
+- Import other domains only through their public entry points (`mod.ts`), and never mutate another
+  module's tables. Cross-module work uses a typed service contract, including inside a shared
+  PostgreSQL transaction.
+- `boundary:lint` enforces public entry points, layer direction, and the schema ownership registry
+  (`db/ownership.toml`). Do not bypass a failing boundary check with an undocumented allowlist.
 - Domains must not import `celld`, Durable Object, fleet, bucket, ownership-protocol, PostgreSQL
   driver, or TigerBeetle APIs. The financial ledger depends on an engine-independent port; engine
   selection belongs in the current financial-ledger ADR.
@@ -100,19 +107,23 @@ private.
 contract.ts -> errors.ts -> service.ts -> store.ts -> postgres.ts/memory.ts -> layers.ts -> handler
 ```
 
-- `contract.ts`: public Effect Schema DTOs, service keys, operation contracts.
-- `errors.ts`: public tagged business failures.
-- `service.ts`: named `Effect.fn("Domain.operation")` workflows and orchestration. Operations take
-  the encoded type of their input schema (`Schema.Codec.Encoded<typeof XInput>`), never `unknown`,
-  and still decode it (ADR-0105).
-- `store.ts`: private semantic persistence ports; `postgres.ts` is the Drizzle implementation;
-  `memory.ts` exists when a deterministic test implementation can preserve the same invariants.
-- `layers.ts`: named production/test composition; `mod.ts` exports only contract, errors,
+The shape is a default, not a quota. A capability that owns a mutable fact (a table, a balance, a
+document, a state transition) uses all of it. One that only reads or calculates may need no store,
+memory implementation, or layer of its own; do not create empty files to fill the shape. The
+contract, the tagged errors, and the authorization check are never optional.
+
+- Copy the nearest module for what each file holds. `store.ts` is a private semantic persistence
+  port, `postgres.ts` its Drizzle implementation, and `memory.ts` exists only when a deterministic
+  test implementation can preserve the same invariants. `mod.ts` exports only contract, errors,
   operations, layers, and the module manifest.
+- `service.ts` operations are named `Effect.fn("Domain.operation")`. They take the encoded type of
+  their input schema (`Schema.Codec.Encoded<typeof XInput>`), never `unknown`, and still decode it
+  (ADR-0105).
 - `manifest.ts`: the module's declared dependencies, schemas, capabilities, released actions and
-  events, consumed events, HTTP groups, and pages (ADR-0094); keep it in step with the code.
-  Scaffold new ERP modules with `pnpm run ritsei new module <name> [--entity <entity>]`, and run
-  `pnpm run ritsei gen` after changing a manifest; never edit `*.gen.ts` files by hand.
+  events, consumed events, HTTP groups, and pages (ADR-0094). Scaffold new ERP modules with
+  `pnpm run ritsei new module <name> [--entity <entity>]`, and run `pnpm run ritsei gen` after
+  changing a manifest; never edit `*.gen.ts` files by hand. `tests/architecture/modules.test.ts`
+  fails when the manifest and the code differ.
 - Each ERP module owns its HTTP group, handlers, and error mapping in `http.ts`, built on
   `framework/modules/http`; only `erp/runtime` composes it into `RitseiApi`. Handlers stay thin.
 - Preserve tenant scope, authorization, tagged failures, transactions, idempotency, events, and
@@ -123,9 +134,9 @@ contract.ts -> errors.ts -> service.ts -> store.ts -> postgres.ts/memory.ts -> l
 
 - New persistent entity, stored event, stored line, workflow, and other index-visible identities use
   UUIDv7. PostgreSQL-owned IDs use the `uuidv7()` default from `db/schema/common.ts`; application-
-  created IDs use the foundation-owned `uuidv7()` helper. Never use `crypto.randomUUID()` for
-  persistent identities or generated test UUID fixtures (UUIDv4 is valid only for opaque ephemeral
-  lease tokens).
+  created IDs use the foundation-owned `uuidv7()` helper. `boundary:lint` rejects
+  `crypto.randomUUID()`, including in test fixtures; UUIDv4 is valid only for opaque ephemeral
+  lease tokens.
 - A random lease token is not fencing. Stale-writer fencing needs a per-scope monotonic `BIGINT`
   generation enforced at the mutation boundary. Keep fencing generation and idempotency identity
   separate.
@@ -178,18 +189,17 @@ extensions/    (later) modules from other developers and customers
 ```
 
 - `framework/` never imports `erp/` or `extensions/`; `erp/` and `extensions/` use only public
-  entry points. `tooling/architecture.ts` and Fallow zones enforce this. Framework:
-  `framework/foundation/`, `framework/platform/`, and `framework/modules/` (auth, identity,
-  authorization, messaging, integrations, module, http, numbering, approvals). ERP:
-  `erp/modules/` (party, product, tax, sales, procurement, inventory, accounting, billing,
-  settlement, documents, localization_id, process, communication) and `erp/runtime/` (server, worker, and composition). `db/`, `apps/web/`, `tests/`, and `tooling/` stay at the root.
+  entry points. `boundary:lint` enforces this. The kernel is `framework/foundation/`,
+  `framework/platform/`, and `framework/modules/`; the ERP is `erp/modules/` and `erp/runtime/`
+  (server, worker, and composition). `db/`, `apps/web/`, `tests/`, and `tooling/` stay at the root.
 - Modules extend each other only through public contracts, events, and released extension points,
   never by patching another module's models, tables, or views.
 - Extract, don't speculate: add a framework capability only together with an ERP module that uses
   it. Keep engine-neutral ports with exactly one used implementation.
 - PostgreSQL does everything until a named user's measured need says otherwise; delete rather than
-  gate capabilities that are off the roadmap. ADR-0092 and ADR-0093 keep TigerBeetle, workload
-  isolation, the Stateful Entity Runtime, and the analytic plane as inactive target designs: no
+  gate capabilities that are off the roadmap. The exceptions are decided: ADR-0092 and ADR-0093 keep
+  TigerBeetle, workload isolation, the Stateful Entity Runtime, and the analytic plane as inactive
+  target designs. Their documents, and the TigerBeetle cutover code in Accounting, stay; no
   production path may depend on them until an activation ADR.
 - The process engine is deferred until Order-to-Cash and Procure-to-Pay run end to end.
 
@@ -226,17 +236,17 @@ authorization, deployment or configuration, or extension boundaries.
 
 ## Testing
 
-- All TypeScript tests use `@effect/vitest`: import `assert`, `describe`, `it` only from it, never
-  from `vitest`; no `Deno.test`.
+- All TypeScript tests use `@effect/vitest`. `fallow:audit` rejects imports from `vitest`,
+  `Deno.test`, and `Effect.runPromise`/`runSync` in tests.
 - Use `it.effect` for Effect-returning tests (`it.live` only when live services are intended, plain
-  `it` for pure synchronous tests). No `Effect.runPromise`/`runSync` and no `try`/`catch` around
-  Effect execution; capture typed failures with `Effect.flip` or `Effect.result`.
+  `it` for pure synchronous tests). No `try`/`catch` around Effect execution; capture typed failures
+  with `Effect.flip` or `Effect.result`.
 - Use `assert` from `@effect/vitest`, not `expect` or manual `throw`.
+- Tests verify behavior and invariants, not constants, third-party packages, or regenerated
+  baselines; [`testing.md`](./docs/development/testing.md) owns what is worth testing.
 - Acquire external resources with scoped constructors and release them in finalizers.
 - Run worktree-local tests with `pnpm run check:affected`; reserve `pnpm run test` for the full
   suite and CI.
-- Vendored subtrees and `node_modules` are excluded from tests, coverage, formatting, linting, type
-  checking, and boundary scans.
 
 ## Validation
 
@@ -260,5 +270,5 @@ unverified.
 
 ## Completion Report
 
-Summarize what changed and why, the validation performed, documentation or ADR changes, and remaining
-risks and assumptions.
+Summarize what changed and why, the validation performed, documentation or ADR changes, defects
+found outside the task (fixed or left), and remaining risks and assumptions.

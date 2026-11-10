@@ -1,6 +1,6 @@
 ---
 name: add-capability
-description: "Use to add or change a RITSEI business capability end to end: a terse ERP request (add warehouse transfers, tambahkan fitur retur pembelian), a new command/query/tagged error in a module's public contract, a protected business action or authorization capability, or an HTTP endpoint in erp/runtime/api."
+description: "Use to add or change a RITSEI business capability end to end: a terse ERP request (add warehouse transfers, tambahkan fitur retur pembelian), a new command/query/tagged error in a module's public contract, a protected business action or authorization capability, or an HTTP endpoint in a module's http.ts."
 ---
 
 # Purpose
@@ -26,7 +26,7 @@ neighbor and implementing only the delta. Covers contract, errors, service, auth
 - A new primitive (domain, layer, event mechanism, workflow engine, authorization mechanism) needs
   an ADR; prefer the existing paved road.
 
-# 2. Contract and errors (`modules/<domain>`)
+# 2. Contract and errors (`erp/modules/<domain>` or `framework/modules/<domain>`)
 
 - Follow the feature shape in [`AGENTS.md`](../../../AGENTS.md#default-effect-feature-shape).
   Public surface is Effect Schema DTOs, an Effect service, commands/queries, tagged errors, layers.
@@ -48,14 +48,17 @@ neighbor and implementing only the delta. Covers contract, errors, service, auth
 - Audit package and production RLS paths are not implemented: report that gap for high-risk actions
   rather than faking either.
 
-# 4. HTTP (`erp/runtime/api`)
+# 4. HTTP (the module's `http.ts`)
 
-- Add the endpoint to its `HttpApiGroup` in `api.ts`; keep the handler in `handlers.ts` thin: obtain
-  context, call the public service. Wire a new service layer in `mod.ts` only if missing.
+- An ERP module owns its routes (ADR-0094). Add the endpoint to the module's `HttpApiGroup` in
+  `http.ts`, its tagged errors to the module's `apiErrorMapping`, and a thin handler in the same
+  file: obtain the principal, call the public service. Declare a new group in `manifest.ts` and run
+  `pnpm run ritsei gen`; `erp/runtime` composes it. Framework groups, bootstrap, and middleware stay
+  in `erp/runtime/api`.
 - Decode with Effect Schema, protect with the bearer middleware, map domain errors to stable
   transport errors without persistence details.
-- Extend the OpenAPI/route test. Consult `vendor/effect` before changing HttpApi or Layer code.
-  Folder rules: [`erp/runtime/api/AGENTS.md`](../../../erp/runtime/api/AGENTS.md).
+- Extend the module's HTTP integration test in `erp/runtime/api/`. Consult `vendor/effect` before
+  changing HttpApi or Layer code. Folder rules: [`erp/runtime/api/AGENTS.md`](../../../erp/runtime/api/AGENTS.md).
 
 # 5. Prove invariants and validate
 

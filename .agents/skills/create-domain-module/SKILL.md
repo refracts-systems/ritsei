@@ -1,6 +1,6 @@
 ---
 name: create-domain-module
-description: "Use when adding a new modules/<domain> capability, assigning a new schema owner, or when a request says to create a domain such as supplier contracts, fulfillment, settlement, or evidence."
+description: "Use when adding a new module under framework/modules, erp/modules, or extensions, assigning a new schema owner, or when a request says to create a domain such as supplier contracts, fulfillment, settlement, or evidence."
 ---
 
 # Purpose
@@ -88,7 +88,7 @@ Use `pnpm run db:generate` and `pnpm run db:check` only when the domain owns per
 
 # Required Checks
 
-- public tests import only `modules/<domain>/mod.ts`;
+- public tests import only `<root>/<domain>/mod.ts`;
 - ownership registry and migration checks pass when persistence is added;
 - package dependency graph remains acyclic;
 - every public tagged failure and authorization path is tested;

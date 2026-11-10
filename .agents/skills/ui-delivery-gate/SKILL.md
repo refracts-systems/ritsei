@@ -23,17 +23,18 @@ rules themselves live in the design system and frontend documents; this skill ne
 
 # Required Context
 
-Read, in this order, before writing the screen:
+Before writing the screen, read `apps/web/AGENTS.md` and the nearest existing workspace of the same
+Product Pattern under `apps/web/src/features/` with its test in `tests/frontend/`. That neighbor is
+the template. Open a document below only for what the neighbor does not show:
 
-1. `apps/web/AGENTS.md`.
-2. [Frontend: Frontend agent entry](../../../docs/architecture/frontend.md#frontend-agent-entry), and
-   its Error Model and Authorization UX sections.
-3. [Design System §6](../../../docs/architecture/design-system.md#6-product-patterns) (Product
-   Patterns), §15 (content and formatting), and §17 (interaction and accessibility).
-4. The nearest existing workspace of the same Product Pattern under `apps/web/src/features/`, and
-   its test in `tests/frontend/`.
-5. The key-flow targets in [`docs/proposals/ux-acceptance.md`](../../../docs/proposals/ux-acceptance.md)
-   when the screen belongs to one of those flows.
+- no neighbor of that pattern exists:
+  [Design System §6](../../../docs/architecture/design-system.md#6-product-patterns) (Product
+  Patterns);
+- the screen adds a failure or permission state: the Error Model and Authorization UX sections of
+  [Frontend: Frontend agent entry](../../../docs/architecture/frontend.md#frontend-agent-entry);
+- the screen adds wording, number or date formats, or keyboard behavior: Design System §15 and §17;
+- the screen belongs to a key flow:
+  [`docs/proposals/ux-acceptance.md`](../../../docs/proposals/ux-acceptance.md).
 
 # Steps
 
