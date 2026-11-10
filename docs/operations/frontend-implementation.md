@@ -133,16 +133,17 @@ feature-owned User Accounts projection, and an HTML/SVG fallback; optional WebGP
   geometry, native marker-button keyboard activation, reduced motion, forced colors, 200% zoom, and
   axe WCAG 2A/AA checks. The textual summary and User Accounts table remain authoritative.
 - `deno task --cwd apps/web compatibility` passes the Kobalte Solid 2 bundle probe with
-  `@kobalte/core@2.0.0-alpha.1`. `tests/frontend/kobalte.test.ts`,
+  `@kobalte/core@2.0.0-alpha.4` on Solid `2.0.0-rc.16`. `tests/frontend/kobalte.test.ts`,
   `tests/frontend/workflow.test.ts`, `tests/frontend/party-workflow.test.ts`,
   `tests/frontend/access-workflow.test.ts`, `tests/frontend/procurement-workflow.test.ts`,
   `tests/frontend/inventory-workflow.test.ts`, `tests/frontend/sales-workflow.test.ts`, and
   `tests/frontend/accounting-workflow.test.ts` cover the exercised Dialog probe plus the production
   confirmation, account-creation, Party-creation, Access-administration, Procurement, Inventory, and
   Sales lifecycle wrappers: keyboard opening, focus containment/restoration, Escape and explicit
-  close, reduced motion, forced colors, and axe WCAG 2A/AA checks. The exact Solid 2 RC peer-range
-  mismatch is an explicitly accepted prerelease risk; production use remains limited to those tested
-  RITSEI wrapper usage paths.
+  close, reduced motion, forced colors, and axe WCAG 2A/AA checks. Kobalte `2.0.0-alpha.4`
+  names Solid `2.0.0-rc.16` as its exact peer, so the earlier peer-range mismatch is gone; it is
+  still an alpha, an explicitly accepted prerelease risk, and production use remains limited to
+  those tested RITSEI wrapper usage paths.
 - `deno task --cwd apps/web storybook:build` and the CI smoke test pass with the pinned
   `storybook-solidjs-vite@11.0.0-next-20260903183420` adapter and `storybook@11.0.0-alpha.0`, using
   upstream compatibility reference commit `c6b884cc26f35852655c0d61a6f577af89977d2f`. The adapter's

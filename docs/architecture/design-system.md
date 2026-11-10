@@ -798,8 +798,9 @@ Kobalte is the single headless accessibility source behind RITSEI-owned componen
 NOT import Kobalte, dnd-kit, Panda-generated artifacts, or renderer libraries directly.
 
 The pinned Kobalte Solid 2 alpha is permitted under an explicit `approved_with_risk` evidence record.
-The known RC peer-range mismatch is accepted only while the compatibility/build checks and the
-browser behavior test pass; a failed compatibility or behavior check remains blocked. Production
+The alpha is accepted only while the compatibility/build checks and the browser behavior test
+pass (its peer range names the pinned Solid release candidate exactly, so there is no peer
+mismatch); a failed compatibility or behavior check remains blocked. Production
 approval is per exercised primitive, not global: each activated primitive requires a RITSEI wrapper,
 an application usage path, and a browser interaction/accessibility test. Unused or untested Kobalte
 primitives are not approved. Native semantic HTML remains the fallback and rollback path.
