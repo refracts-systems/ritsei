@@ -22,6 +22,8 @@ ADR-0077 is the current semantic iconography and provider-adapter boundary.
 ADR-0078 is the current motion ownership and runtime-wrapper boundary.
 ADR-0079 is the current dnd-kit/Solid 2 activation gate and blocked-state boundary.
 ADR-0080 is the current Solid-native Boneyard skeleton boundary.
+ADR-0113 removes the dnd-kit and Boneyard probes and pinned dependencies and the computed-style
+visual contract test; ADR-0079 and ADR-0080 keep their provider targets and import rules.
 ADR-0081 is the proposed renderer-independent Document AST and document-rendering platform boundary.
 ADR-0082 is the current SAP-separated Communication Platform and Activity Timeline projection boundary.
 ADR-0084 is a proposed cross-cutting progressive trust model; it is not an active canonical rule until accepted.
@@ -227,6 +229,7 @@ by ADR-0040.
 | [ADR-0078](./0078-adopt-ritsei-motion-system.md) | Current motion direction | PandaCSS owns CSS motion; Motion owns runtime geometry through a RITSEI wrapper; Solid owns state and Kobalte owns accessibility |
 | [ADR-0079](./0079-gate-dnd-kit-solid2-activation.md) | Current drag/drop direction | dnd-kit Solid is the target provider, but activation is blocked by the Solid 2 `solid-js/web` export incompatibility; no shim or legacy React package |
 | [ADR-0080](./0080-adopt-solid-native-boneyard-skeleton-boundary.md) | Current skeleton direction | Solid owns skeleton state and lifecycle; Boneyard supplies immutable geometry artifacts behind a RITSEI-owned adapter |
+| [ADR-0113](./0113-retire-frontend-compatibility-probes-and-visual-contract-test.md) | Current frontend evidence boundary | dnd-kit and Boneyard are targets that are not installed; Kobalte evidence is the wrapper tests in the application; there is no visual regression baseline |
 | [ADR-0081](./0081-adopt-document-ast-rendering-platform.md) | Proposed document-rendering direction | Owner-local snapshots feed a renderer-independent Document AST; native transactional rendering is the default candidate, while HTML/browser paths remain capability-gated |
 | [ADR-0082](./0082-adopt-communication-platform-boundaries.md) | Current communication boundary | Domains publish facts or communication intents; recipient/context/template resolution, immutable artifacts, delivery attempts, and provider adapters remain separate, while Activity Timeline is a rebuildable projection |
 | [ADR-0083](./0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md) | Current cross-cutting non-interference boundary | Source-of-truth critical paths remain independent of derived capabilities; ADR-0034 owns detailed workload/resource proof |

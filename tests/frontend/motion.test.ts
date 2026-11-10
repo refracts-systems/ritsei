@@ -1,23 +1,6 @@
 import { assert, it } from "@effect/vitest"
 import pandaConfig from "../../apps/web/panda.config.ts"
-import {
-  motionDistance,
-  motionDuration,
-  motionEasing,
-  motionSpring,
-  prefersReducedMotion,
-  semanticMotion,
-} from "../../apps/web/src/ui/motion/index.ts"
-
-it("keeps RITSEI motion tokens semantic and reduced-motion safe", () => {
-  assert.equal(motionDuration.normal, 180)
-  assert.equal(motionDuration.press, 160)
-  assert.equal(motionDistance.subtle, 4)
-  assert.deepEqual(motionEasing.out, [0.23, 1, 0.32, 1])
-  assert.equal(semanticMotion.spatial.duration, 240)
-  assert.equal(motionSpring.spatial.damping, 35)
-  assert.isFalse(prefersReducedMotion())
-})
+import { motionDuration, motionEasing, semanticMotion } from "../../apps/web/src/ui/motion/index.ts"
 
 it("never eases in and never runs interface motion past 320ms", () => {
   // An ease-in curve starts flat: its first control point sits on the time axis (y1 = 0) away

@@ -129,15 +129,12 @@ feature-owned User Accounts projection, and an HTML/SVG fallback; optional WebGP
 - The accessibility test runs axe WCAG 2A/AA checks and exercises narrow layout, reduced motion,
   forced colors, skip-link focus, labeled controls, keyboard traversal, validation focus, 200% zoom,
   route splitting, bundle limits, interaction latency, and bounded repeated use.
-- The cartographic fallback test exercises typed archetype/material projection, deterministic SVG
-  geometry, native marker-button keyboard activation, reduced motion, forced colors, 200% zoom, and
-  axe WCAG 2A/AA checks. The textual summary and User Accounts table remain authoritative.
-- `deno task --cwd apps/web compatibility` passes the Kobalte Solid 2 bundle probe with
-  `@kobalte/core@2.0.0-alpha.4` on Solid `2.0.0-rc.16`. `tests/frontend/kobalte.test.ts`,
+- The web build bundles `@kobalte/core@2.0.0-alpha.4` on Solid `2.0.0-rc.16`; the separate bundle
+  probe and probe application were removed by ADR-0113. `tests/frontend/kobalte.test.ts`,
   `tests/frontend/workflow.test.ts`, `tests/frontend/party-workflow.test.ts`,
   `tests/frontend/access-workflow.test.ts`, `tests/frontend/procurement-workflow.test.ts`,
   `tests/frontend/inventory-workflow.test.ts`, `tests/frontend/sales-workflow.test.ts`, and
-  `tests/frontend/accounting-workflow.test.ts` cover the exercised Dialog probe plus the production
+  `tests/frontend/accounting-workflow.test.ts` cover the production
   confirmation, account-creation, Party-creation, Access-administration, Procurement, Inventory, and
   Sales lifecycle wrappers: keyboard opening, focus containment/restoration, Escape and explicit
   close, reduced motion, forced colors, and axe WCAG 2A/AA checks. Kobalte `2.0.0-alpha.4`

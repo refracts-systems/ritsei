@@ -259,7 +259,10 @@ SolidJS 2.0 tests should focus on:
 - query-key stability and invalidation behavior;
 - large-table pagination and virtualization behavior.
 
-Do not test incidental signal or memo implementation details.
+Do not test incidental signal or memo implementation details. Do not add a test that asserts a
+constant equals itself, that exercises a third-party package instead of the RITSEI wrapper around
+it, or that compares against a baseline which is regenerated to pass
+([ADR-0113](../decisions/0113-retire-frontend-compatibility-probes-and-visual-contract-test.md)).
 
 ## Test Layers
 

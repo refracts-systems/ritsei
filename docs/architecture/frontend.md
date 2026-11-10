@@ -346,7 +346,7 @@ PostgreSQL
 | Styling foundation | Constrained Panda CSS profile |
 | Runtime motion | RITSEI Motion wrapper; CSS first, runtime geometry only when required |
 | Skeleton loading UI | Solid-native RITSEI Skeleton boundary; Boneyard supplies static geometry artifacts only |
-| Direct manipulation | `@dnd-kit/solid` target; activation blocked by the Solid 2 compatibility gate |
+| Direct manipulation | `@dnd-kit/solid` target; not installed, activation blocked by ADR-0079 |
 | Backend | Separate Effect-on-Deno API |
 | Transactional database | PostgreSQL |
 

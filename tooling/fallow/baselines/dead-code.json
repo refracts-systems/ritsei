@@ -41,7 +41,7 @@
   "boundary_coverage_violations": [],
   "boundary_call_violations": [],
   "policy_violations": [],
-  "stale_suppressions": ["stale-suppression:apps/web/src/ui/compatibility/dnd.tsx:1"],
+  "stale_suppressions": [],
   "unused_catalog_entries": [],
   "empty_catalog_groups": [],
   "unresolved_catalog_references": [],

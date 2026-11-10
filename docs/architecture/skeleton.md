@@ -38,11 +38,11 @@ Product features must not import Boneyard directly. The current repository keeps
 `apps/web/src/ui/`; a future published package may expose the same contract as
 `@ritsei/ui/skeleton`.
 
-The architecture is accepted as a design target. `boneyard-js@1.10.0` is installed as a web
-**development dependency** for core/API and build-capture validation only. It is not imported by the
-production application and the RITSEI Solid adapter is not activated.
+The architecture is accepted as a design target. `boneyard-js` is not installed and the RITSEI Solid
+adapter is not activated; the dependency is added in the same change as the adapter
+([ADR-0113](../decisions/0113-retire-frontend-compatibility-probes-and-visual-contract-test.md)).
 
-Validation on September 6, 2026:
+Validation of `boneyard-js@1.10.0` on September 6, 2026, before the probe was removed:
 
 - the framework-neutral core API (`computeLayout`, `normalizeBone`, `renderBones`, and
   `snapshotBones`) bundles and runs;
@@ -180,9 +180,8 @@ resolves the active geometry, and renders Solid JSX.
 
 A build-only browser flag or snapshot hook must not become part of the application runtime contract.
 The production bundle must not include a React adapter, React runtime, Playwright browser bundle, or
-Boneyard implementation details that are unnecessary for rendering committed artifacts. The current
-core bundle probe proves this for the imported core entry; the future RITSEI adapter still requires
-its own production bundle proof. Do not import `boneyard-js/vite` or the CLI from application code.
+Boneyard implementation details that are unnecessary for rendering committed artifacts. The RITSEI
+adapter requires its own production bundle proof when it is added. Do not import `boneyard-js/vite` or the CLI from application code.
 
 ## 7. Styling, motion, and accessibility
 
@@ -220,8 +219,8 @@ as semantic theme or motion policy values, never as a TenantService dependency.
 ## 9. React-free and dependency rules
 
 RITSEI must not add `react`, `react-dom`, `preact/compat`, or `boneyard-js/react` for skeletons.
-The intended core dependency is framework-neutral Boneyard core behind the RITSEI adapter. Until
-that adapter exists, `boneyard-js` remains a development dependency because the package also ships
+The intended core dependency is framework-neutral Boneyard core behind the RITSEI adapter. When the
+adapter is added, `boneyard-js` starts as a development dependency because the package also ships
 capture tooling with a Playwright dependency. Moving it into production dependencies requires a
 measured adapter bundle and deployment-footprint decision.
 
