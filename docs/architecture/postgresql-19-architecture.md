@@ -12,7 +12,7 @@
 > - Financial ledger ADR:
 >   [`../decisions/0040-adopt-tigerbeetle-financial-ledger.md`](../decisions/archive/0040-adopt-tigerbeetle-financial-ledger.md)
 > - Historical transactional-truth ADR:
->   [`../decisions/0003-postgresql-is-transactional-truth.md`](../decisions/archive/0003-postgresql-is-transactional-truth.md)
+>   [`../decisions/0003-postgresql-is-transactional-truth.md`](../decisions/0003-postgresql-is-transactional-truth.md)
 > - Replica read-your-writes ADR:
 >   [`../decisions/0039-select-postgresql-wait-for-for-replica-read-your-writes.md`](../decisions/0039-select-postgresql-wait-for-for-replica-read-your-writes.md)
 > - Logical database and physical placement ADR:

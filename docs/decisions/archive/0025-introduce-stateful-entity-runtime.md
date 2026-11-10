@@ -16,7 +16,7 @@
 > - Canonical architecture:
 >   [`../architecture/architecture-spec-v4.md`](../../architecture/architecture-spec-v4.md)
 > - PostgreSQL truth history:
->   [`./0003-postgresql-is-transactional-truth.md`](./0003-postgresql-is-transactional-truth.md)
+>   [`./0003-postgresql-is-transactional-truth.md`](../0003-postgresql-is-transactional-truth.md)
 > - Financial ledger authority:
 >   [`./0040-adopt-tigerbeetle-financial-ledger.md`](./0040-adopt-tigerbeetle-financial-ledger.md)
 > - Semantic ownership:

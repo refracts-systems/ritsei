@@ -11,7 +11,7 @@
 >
 > - ADR index: [`./README.md`](../README.md)
 > - Previous ledger-engine decision: [`./0011-financial-ledger-engine.md`](./0011-financial-ledger-engine.md)
-> - Previous PostgreSQL truth decision: [`./0003-postgresql-is-transactional-truth.md`](./0003-postgresql-is-transactional-truth.md)
+> - Previous PostgreSQL truth decision: [`./0003-postgresql-is-transactional-truth.md`](../0003-postgresql-is-transactional-truth.md)
 > - Financial ledger architecture: [`../architecture/financial-ledger.md`](../../architecture/financial-ledger.md)
 > - PostgreSQL architecture: [`../architecture/postgresql-19-architecture.md`](../../architecture/postgresql-19-architecture.md)
 > - State and consistency: [`../architecture/state-and-consistency.md`](../../architecture/state-and-consistency.md)

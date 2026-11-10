@@ -20,7 +20,7 @@
 > - Solid 2 accessible primitive selection: [`../decisions/0074-switch-to-kobalte-for-solid2-accessible-primitives.md`](../decisions/0074-switch-to-kobalte-for-solid2-accessible-primitives.md)
 > - Dependency ownership: [`../decisions/0075-partition-dependency-ownership-by-application-boundary.md`](../decisions/0075-partition-dependency-ownership-by-application-boundary.md)
 > - Visual language: [`../decisions/0090-adopt-operational-clarity-visual-language.md`](../decisions/0090-adopt-operational-clarity-visual-language.md) (supersedes ADR-0069 and ADR-0071), amended by [`../decisions/0112-soften-operational-clarity-and-adopt-tactile-motion.md`](../decisions/0112-soften-operational-clarity-and-adopt-tactile-motion.md)
-> - Cartographic renderer selection: [`../decisions/0070-select-vgpu-and-defer-typegpu.md`](../decisions/archive/0070-select-vgpu-and-defer-typegpu.md)
+> - Historical cartographic renderer selection (superseded by ADR-0091): [`../decisions/0070-select-vgpu-and-defer-typegpu.md`](../decisions/archive/0070-select-vgpu-and-defer-typegpu.md)
 > - Layered TanStack frontend engine boundaries:
 >   [`../decisions/0057-define-layered-tanstack-frontend-engine-boundaries.md`](../decisions/0057-define-layered-tanstack-frontend-engine-boundaries.md)
 > - Solid compiler boundary: [`../decisions/0049-keep-solid-compiler-at-rendering-boundary.md`](../decisions/0049-keep-solid-compiler-at-rendering-boundary.md)
@@ -63,10 +63,10 @@ Motion is available only through the RITSEI-owned runtime wrapper for geometry a
 
 Frontend rendering is HTML-first: DOM owns semantics, interaction, accessibility, tables, forms, and
 standard record surfaces. SVG, Canvas, and optional WebGPU render only approved visual projections or
-material layers behind replaceable adapters and tested semantic fallbacks. `vgpu` is the selected
-optional WebGPU implementation behind the cartography adapter; it is not a direct feature dependency.
-WebGPU MUST NOT own business state, authorization, or the only representation of a critical value or
-action.
+material layers behind replaceable adapters and tested semantic fallbacks. ADR-0091 superseded the
+`vgpu` selection and removed the WebGPU track; any reintroduction requires a named need, measurement,
+and a new ADR. WebGPU MUST NOT own business state, authorization, or the only representation of a
+critical value or action.
 
 It may be introduced only when server rendering, a frontend-owned BFF,
 server-session management, server functions, or unified full-stack deployment
@@ -948,7 +948,7 @@ Frontend changes should use the smallest useful combination of:
 - end-to-end tests for critical ERP workflows;
 - renderer-neutral projection and semantic-material tests;
 - deterministic fallback and mock-renderer tests;
-- headless renderer smoke tests when `vgpu` is activated; and
+- headless renderer smoke tests if a renderer is activated; and
 - accessibility and reduced-motion tests around visualizations.
 
 Tests should assert user-visible behavior and public contracts rather than

@@ -122,7 +122,7 @@ Canonical evidence:
   **Completion Criteria**
 - [`../design-system.md`](../design-system.md), **Activation, validation, and governance**
 - [`../../decisions/0048-define-effect-application-architecture-and-frontend-state-ownership.md`](../../decisions/0048-define-effect-application-architecture-and-frontend-state-ownership.md)
-- [`../../decisions/0056-adopt-ritsei-semantic-frontend-design-system.md`](../../decisions/archive/0056-adopt-ritsei-semantic-frontend-design-system.md)
+- [`../../decisions/0056-adopt-ritsei-semantic-frontend-design-system.md`](../../decisions/0056-adopt-ritsei-semantic-frontend-design-system.md)
 - [`../../decisions/0069-adopt-cartographic-enterprise-visual-grammar.md`](../../decisions/archive/0069-adopt-cartographic-enterprise-visual-grammar.md)
 
 ### Registered gates

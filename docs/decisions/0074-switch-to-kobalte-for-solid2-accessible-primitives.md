@@ -103,4 +103,4 @@ The exact pinned dependency and peer warning remain part of the review record.
 
 - [`../architecture/frontend.md`](../architecture/frontend.md)
 - [`../architecture/design-system.md`](../architecture/design-system.md)
-- [`./0056-adopt-ritsei-semantic-frontend-design-system.md`](./archive/0056-adopt-ritsei-semantic-frontend-design-system.md)
+- [`./0056-adopt-ritsei-semantic-frontend-design-system.md`](./0056-adopt-ritsei-semantic-frontend-design-system.md)

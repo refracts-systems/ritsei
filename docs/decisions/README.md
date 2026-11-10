@@ -26,7 +26,7 @@ current system; ADRs preserve decision history.
 | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ---------- |
 | [`0001`](./0001-use-modular-monolith.md)                                                      | Use a modular monolith                                                                           | Accepted   |
 | [`0002`](./0002-use-effect-deno-and-drizzle.md)                                               | Use Effect, Deno, and Drizzle                                                                    | Accepted   |
-| [`0003`](./archive/0003-postgresql-is-transactional-truth.md)                                         | PostgreSQL is transactional truth                                                                | Superseded |
+| [`0003`](./0003-postgresql-is-transactional-truth.md)                                         | PostgreSQL is transactional truth                                                                | Accepted   |
 | [`0004`](./0004-separate-events-jobs-and-workflows.md)                                        | Separate events, jobs, and workflows                                                             | Accepted   |
 | [`0005`](./0005-use-ltree-and-sql-pgq-selectively.md)                                         | Use `ltree` and SQL/PGQ selectively                                                              | Accepted   |
 | [`0006`](./0006-use-capability-based-authorization.md)                                        | Use scoped capability authorization                                                              | Accepted   |
@@ -79,7 +79,7 @@ current system; ADRs preserve decision history.
 | [`0053`](./0053-clarify-per-job-lease-generation-invariants.md)                               | Clarify per-job lease-generation invariants                                                      | Accepted   |
 | [`0054`](./0054-keep-fencing-and-idempotency-identities-orthogonal.md)                        | Keep fencing and idempotency identities orthogonal                                               | Accepted   |
 | [`0055`](./0055-use-explicit-fence-scopes-for-shared-job-streams.md)                          | Use explicit fence scopes for shared job streams                                                 | Accepted   |
-| [`0056`](./archive/0056-adopt-ritsei-semantic-frontend-design-system.md)                              | Adopt the RITSEI semantic frontend design system                                                 | Superseded |
+| [`0056`](./0056-adopt-ritsei-semantic-frontend-design-system.md)                              | Adopt the RITSEI semantic frontend design system                                                 | Accepted   |
 | [`0057`](./0057-define-layered-tanstack-frontend-engine-boundaries.md)                        | Define layered TanStack frontend engine boundaries                                               | Accepted   |
 | [`0058`](./0058-define-provider-neutral-identity-and-authentication-boundary.md)              | Define provider-neutral identity and authentication boundary; recommend ZITADEL                  | Accepted   |
 | [`0059`](./0059-define-replaceable-relationship-authorization-engine.md)                      | Define replaceable relationship authorization engine; support SpiceDB                            | Accepted   |
@@ -140,5 +140,5 @@ current system; ADRs preserve decision history.
 
 Accepted ADRs must not be rewritten to alter history. Create a new ADR and use `Supersedes`.
 
-Superseded ADRs live in [`./archive/`](./archive/README.md). They are history, not current rules; the
-index above links to them there.
+Superseded ADRs live in [`./archive/`](./archive/README.md). The index links to them there; check the
+scope of supersession and the current owning documents before relying on an earlier decision.

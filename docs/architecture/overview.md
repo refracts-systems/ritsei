@@ -172,7 +172,11 @@ document, and communication records, not a universal `chatter_messages` authorit
 [`./communication.md`](./communication.md) and
 [ADR-0082](../decisions/0082-adopt-communication-platform-boundaries.md).
 
-## Non-Interference
+## Non-Interference Target
+
+The following describes the inactive target retained by
+[ADR-0093](../decisions/0093-retain-isolation-runtime-and-analytic-target-designs.md); the current
+implementation is summarized at the top of this page.
 
 Class A source-of-truth reads and writes use only their owner-local critical dependencies. Class B
 operational capabilities and Class C projections consume committed facts asynchronously and may lag,
@@ -190,9 +194,7 @@ reserved command resources.
 
 WorkloadCells and optional tenant-aware shuffle sharding narrow deployment blast radius without
 changing domain ownership, public identity, authorization, or PostgreSQL truth. See
-./workload-isolation.md,
-[ADR-0034](../decisions/archive/0034-adopt-non-interference-overload-isolation.md), and
-[ADR-0083](../decisions/archive/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md).
+[`workload-isolation.md`](./workload-isolation.md) and [ADR-0093](../decisions/0093-retain-isolation-runtime-and-analytic-target-designs.md).
 
 ## Analytics
 

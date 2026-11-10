@@ -89,6 +89,6 @@ Söhne remains unbundled until its future brand decision is approved.
 ## Related Documents
 
 - [`../architecture/design-system.md`](../architecture/design-system.md)
-- [`./0056-adopt-ritsei-semantic-frontend-design-system.md`](./archive/0056-adopt-ritsei-semantic-frontend-design-system.md)
+- [`./0056-adopt-ritsei-semantic-frontend-design-system.md`](./0056-adopt-ritsei-semantic-frontend-design-system.md)
 - [`./0069-adopt-cartographic-enterprise-visual-grammar.md`](./archive/0069-adopt-cartographic-enterprise-visual-grammar.md)
 - [`./0074-switch-to-kobalte-for-solid2-accessible-primitives.md`](./0074-switch-to-kobalte-for-solid2-accessible-primitives.md)

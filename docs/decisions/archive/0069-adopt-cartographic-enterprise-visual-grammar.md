@@ -13,7 +13,7 @@
 > - Design system: [`../architecture/design-system.md`](../../architecture/design-system.md)
 > - Frontend architecture: [`../architecture/frontend.md`](../../architecture/frontend.md)
 > - Architecture enforcement: [`../architecture/architecture-enforcement.md`](../../architecture/architecture-enforcement.md)
-> - Semantic frontend design system: [`./0056-adopt-ritsei-semantic-frontend-design-system.md`](./0056-adopt-ritsei-semantic-frontend-design-system.md)
+> - Semantic frontend design system: [`./0056-adopt-ritsei-semantic-frontend-design-system.md`](../0056-adopt-ritsei-semantic-frontend-design-system.md)
 
 ## Context
 

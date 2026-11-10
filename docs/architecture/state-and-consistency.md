@@ -17,7 +17,7 @@
 > - Messaging and outbox: [`./pgque-messaging.md`](./pgque-messaging.md)
 > - Durable execution: [`./durable-execution.md`](./durable-execution.md)
 > - Historical PostgreSQL truth ADR:
->   [`../decisions/0003-postgresql-is-transactional-truth.md`](../decisions/archive/0003-postgresql-is-transactional-truth.md)
+>   [`../decisions/0003-postgresql-is-transactional-truth.md`](../decisions/0003-postgresql-is-transactional-truth.md)
 > - Stateful runtime ADR:
 >   [`../decisions/0025-introduce-stateful-entity-runtime.md`](../decisions/archive/0025-introduce-stateful-entity-runtime.md)
 > - Financial ledger architecture: [`./financial-ledger.md`](./financial-ledger.md)

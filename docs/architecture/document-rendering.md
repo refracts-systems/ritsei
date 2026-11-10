@@ -231,7 +231,8 @@ Renderer selection is capability-based, not library-based.
 | `lightweight-browser` | Lightpanda candidate | Future browser-compatible fast path | Watchlist only |
 | `native-performance` | Krilla candidate | Future measured high-throughput native path | Deferred until profiling proves need |
 
-No row authorizes a dependency installation. Activation requires the gates in [ADR-0081](../decisions/archive/0081-adopt-document-ast-rendering-platform.md).
+No row authorizes a dependency installation. The proposed capability must meet the activation
+gates in Section 12, subject to the framework reset described above.
 
 ### 5.1 Transactional default
 
