@@ -24,3 +24,9 @@ export const formatDecimal = (value: string, locale?: string): string => {
 
   return `${sign}${grouped}${fraction === undefined ? "" : `${separators(locale).decimal}${fraction}`}`
 }
+
+const plural = new Intl.PluralRules("en")
+
+/** A count with its noun in the right number: `1 entry`, `3 entries`. */
+export const formatCount = (count: number, one: string, other: string): string =>
+  `${count} ${plural.select(count) === "one" ? one : other}`
