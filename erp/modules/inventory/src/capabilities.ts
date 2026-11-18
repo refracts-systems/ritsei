@@ -14,5 +14,6 @@ export const InventoryCapabilities = {
   stockTransferComplete: "inventory.stock_transfer.complete",
   stockIssue: "inventory.stock.issue",
   stockCount: "inventory.stock.count",
+  openingStockLoad: "inventory.opening_stock.load",
   valuationRead: "inventory.valuation.read",
 } as const

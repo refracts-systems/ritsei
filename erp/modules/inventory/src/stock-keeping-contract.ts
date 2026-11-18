@@ -6,10 +6,12 @@ import {
   CalendarDate,
   type DatabaseFailure,
   FinancialMajorAmount,
+  InstantString,
   Uuid,
   PositiveQuantity,
   NonNegativeQuantity,
   DottedName,
+  TrimmedText,
 } from "../../../../framework/foundation/mod.ts"
 import { Principal } from "../../../../framework/modules/auth/mod.ts"
 import type { AuthorizationDenied } from "../../../../framework/modules/authorization/mod.ts"
@@ -18,6 +20,11 @@ import type { ProductNotFound } from "../../product/mod.ts"
 import type { Item } from "./contract.ts"
 import type {
   InventoryReferenceNotFound,
+  OpeningStockAlreadyLoaded,
+  OpeningStockConflict,
+  OpeningStockInTransitNotCarried,
+  OpeningStockLotTrackingUnsupported,
+  OpeningStockReservationsNotCarried,
   StockNotStockable,
   StockUnavailable,
   StockValuationUnavailable,
@@ -97,6 +104,81 @@ export const CountStockInput = Schema.Struct({
   ),
 })
 
+const OpeningTracking = Schema.Literals(["none", "lot", "expiry"])
+
+/** The owner's approval of the one-time revaluation of opening stock to moving average. */
+export const OpeningRevaluation = Schema.Struct({
+  /** Names the adjustment, for example "FIFO to moving average at cutoff". */
+  name: TrimmedText(120),
+  approvedBy: TrimmedText(120),
+  approvedAt: InstantString,
+  reference: TrimmedText(200),
+})
+
+/**
+ * The cutover position of items in one warehouse. Quantities are physical on hand. The source
+ * declares what the load does not carry (tracking, reservations, goods in transit), and the load
+ * rejects anything other than none, so no source position is dropped unseen (ADR-0118).
+ */
+export const OpeningStockInput = Schema.Struct({
+  ...ScopedInput,
+  warehouseId: Uuid,
+  /** The opening document id; a retry of the same document returns the recorded load. */
+  openingId: Uuid,
+  /** The business date the source's quantities and values are as of. */
+  cutoffDate: CalendarDate,
+  /** Required exactly when a line states a moving-average value. */
+  revaluation: Schema.optionalKey(OpeningRevaluation),
+  lines: DocumentLines(
+    Schema.Struct({
+      itemId: Uuid,
+      quantity: Quantity,
+      /** The line's total value as the source reports it. */
+      sourceValue: FinancialMajorAmount,
+      /** The line's total value at moving average, when the source values stock another way. */
+      movingAverageValue: Schema.optionalKey(FinancialMajorAmount),
+      tracking: OpeningTracking,
+      reservedQuantity: NonNegativeQuantity,
+      inTransitQuantity: NonNegativeQuantity,
+    }),
+  ),
+}).check(
+  Schema.makeFilter(
+    (input) =>
+      (input.revaluation !== undefined) ===
+      input.lines.some((line) => line.movingAverageValue !== undefined),
+    { expected: "a revaluation approval exactly when a line states a moving-average value" },
+  ),
+)
+
+export const OpeningStockLine = Schema.Struct({
+  itemId: Uuid,
+  movementId: Uuid,
+  quantity: Quantity,
+  sourceValue: FinancialMajorAmount,
+  /** The value now held: the moving-average value, or the source value when not revalued. */
+  value: FinancialMajorAmount,
+  /** Signed: the value held less the source value. */
+  adjustment: Schema.String,
+})
+
+/**
+ * The loaded position. `valueToClear` is the source total the accounting owner offsets against
+ * the migration clearing account; `adjustment` is the approved revaluation difference.
+ */
+export const OpeningStockLoad = Schema.Struct({
+  legalEntityId: Uuid,
+  openingId: Uuid,
+  warehouseId: Uuid,
+  cutoffDate: CalendarDate,
+  lines: Schema.Array(OpeningStockLine),
+  valueToClear: FinancialMajorAmount,
+  adjustment: Schema.String,
+  value: FinancialMajorAmount,
+})
+
+export type OpeningStockLoad = Schema.Schema.Type<typeof OpeningStockLoad>
+
 export const ValuationReportInput = Schema.Struct({ ...ScopedInput, legalEntityId: Uuid })
 
 export const ValuedStockLine = Schema.Struct({
@@ -153,6 +235,22 @@ export interface StockKeepingService {
   readonly countStock: (
     input: Schema.Codec.Encoded<typeof CountStockInput>,
   ) => Effect.Effect<ValuedStockMovement, MovementFailure>
+  /**
+   * Loads the cutover position of a warehouse once (ADR-0118). It posts no journal: the accounting
+   * owner offsets `valueToClear` against the migration clearing account.
+   */
+  readonly loadOpeningStock: (
+    input: Schema.Codec.Encoded<typeof OpeningStockInput>,
+  ) => Effect.Effect<
+    OpeningStockLoad,
+    | InventoryReferenceNotFound
+    | OpeningStockAlreadyLoaded
+    | OpeningStockConflict
+    | OpeningStockInTransitNotCarried
+    | OpeningStockLotTrackingUnsupported
+    | OpeningStockReservationsNotCarried
+    | CommonFailure
+  >
   readonly valuation: (
     input: Schema.Codec.Encoded<typeof ValuationReportInput>,
   ) => Effect.Effect<StockValuation, CommonFailure>

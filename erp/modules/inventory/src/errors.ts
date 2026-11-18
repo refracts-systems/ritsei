@@ -187,3 +187,36 @@ export class StockValuationUnavailable extends Schema.TaggedError<StockValuation
   "StockValuationUnavailable",
   { tenantId: Uuid, legalEntityId: Uuid, itemId: Uuid, requested: Schema.String },
 ) {}
+
+/**
+ * The source flags the item as lot or expiry tracked. The target holds no batch identity, so the
+ * stock stays under source authority until it can (ADR-0118).
+ */
+export class OpeningStockLotTrackingUnsupported extends Schema.TaggedError<OpeningStockLotTrackingUnsupported>()(
+  "OpeningStockLotTrackingUnsupported",
+  { tenantId: Uuid, itemId: Uuid, tracking: Schema.Literals(["lot", "expiry"]) },
+) {}
+
+/** The source holds reservations on the item. Open orders re-reserve it after the load. */
+export class OpeningStockReservationsNotCarried extends Schema.TaggedError<OpeningStockReservationsNotCarried>()(
+  "OpeningStockReservationsNotCarried",
+  { tenantId: Uuid, itemId: Uuid, reserved: Schema.String },
+) {}
+
+/** The source has goods in transit for the item. They continue as a confirmed stock transfer. */
+export class OpeningStockInTransitNotCarried extends Schema.TaggedError<OpeningStockInTransitNotCarried>()(
+  "OpeningStockInTransitNotCarried",
+  { tenantId: Uuid, itemId: Uuid, inTransit: Schema.String },
+) {}
+
+/** The warehouse already holds an opening position for the item; it is loaded once. */
+export class OpeningStockAlreadyLoaded extends Schema.TaggedError<OpeningStockAlreadyLoaded>()(
+  "OpeningStockAlreadyLoaded",
+  { tenantId: Uuid, warehouseId: Uuid, itemId: Uuid },
+) {}
+
+/** The opening document was already loaded with different content. */
+export class OpeningStockConflict extends Schema.TaggedError<OpeningStockConflict>()(
+  "OpeningStockConflict",
+  { tenantId: Uuid, openingId: Uuid },
+) {}
