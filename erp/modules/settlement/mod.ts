@@ -1,3 +1,7 @@
+export { bankStatementHeader, parseBankStatement } from "./src/bank-statement.ts"
+
+export type { ParsedBankLine } from "./src/bank-statement.ts"
+
 export { SettlementCapabilities } from "./src/capabilities.ts"
 
 export {
@@ -6,22 +10,33 @@ export {
   AllocatePaymentInput,
   Allocation,
   AssignPartyTermInput,
+  BankLineMatch,
+  BankReconciliation,
+  BankReconciliationInput,
+  BankStatement,
   CreatePaymentTermInput,
   CustomerStatement,
+  ImportBankStatementInput,
   ListPaymentsInput,
   MakePaymentInput,
+  MatchBankLineInput,
   Payment,
   PaymentDirection,
   PaymentTerm,
   ReceivePaymentInput,
+  ReverseBankMatchInput,
   SettlementService,
   SettlementSide,
   StatementEntry,
   StatementInput,
+  Withholding,
 } from "./src/contract.ts"
 
 export type {
   AgingReport as AgingReportType,
+  BankMatchFailure,
+  BankReconciliation as BankReconciliationType,
+  BankStatement as BankStatementType,
   CustomerStatement as CustomerStatementType,
   Payment as PaymentType,
   PaymentFailure,
@@ -32,6 +47,12 @@ export {
   AllocationBeforePayment,
   AllocationExceedsPayment,
   AllocationMismatch,
+  BankLineNotFound,
+  BankMatchExceedsAvailable,
+  BankMatchMismatch,
+  BankMatchNotFound,
+  InvalidBankStatement,
+  InvalidWithholding,
   PaymentNotFound,
   PaymentTermAlreadyExists,
   PaymentTermNotFound,

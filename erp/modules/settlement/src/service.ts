@@ -1,10 +1,13 @@
 import type { CapabilityType } from "../../../../framework/modules/authorization/mod.ts"
-import { and, asc, desc, eq, inArray, lte, sql } from "drizzle-orm"
+import { and, asc, count, desc, eq, inArray, isNull, lte, sql } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
 
 import {
+  bankLineMatches,
+  bankStatementLines,
+  bankStatements,
   partyPaymentTerms,
   paymentAllocations,
   payments,
@@ -17,6 +20,7 @@ import {
   formatSignedMinor,
   isDatabaseConstraint,
   requireExactMajorToMinor,
+  sha256Hex,
   uuidv7,
   typedKeys,
 } from "../../../../framework/foundation/mod.ts"
@@ -26,19 +30,29 @@ import {
   scopedCommand,
 } from "../../../../framework/modules/authorization/mod.ts"
 import { NumberingService } from "../../../../framework/modules/numbering/mod.ts"
-import { GeneralLedgerService } from "../../accounting/mod.ts"
+import {
+  AccountingLegalEntityNotFound,
+  AccountNotFound,
+  GeneralLedgerService,
+} from "../../accounting/mod.ts"
 import { BillingService } from "../../billing/mod.ts"
+import { parseBankStatement } from "./bank-statement.ts"
 import { SettlementCapabilities } from "./capabilities.ts"
 import {
   AgingInput,
   AllocatePaymentInput,
   AssignPartyTermInput,
+  BankReconciliationInput,
   CreatePaymentTermInput,
+  ImportBankStatementInput,
   ListPaymentsInput,
   MakePaymentInput,
+  MatchBankLineInput,
+  type BankLineMatch,
   type Payment,
   type PaymentDirection,
   ReceivePaymentInput,
+  ReverseBankMatchInput,
   SettlementService,
   StatementInput,
 } from "./contract.ts"
@@ -46,6 +60,11 @@ import {
   AllocationBeforePayment,
   AllocationExceedsPayment,
   AllocationMismatch,
+  BankLineNotFound,
+  BankMatchExceedsAvailable,
+  BankMatchMismatch,
+  BankMatchNotFound,
+  InvalidWithholding,
   PaymentNotFound,
   PaymentTermAlreadyExists,
   PaymentTermNotFound,
@@ -65,6 +84,94 @@ const rules = {
   incoming: { side: "receivable", kind: "customer_invoice", prefix: "RCV/" },
   outgoing: { side: "payable", kind: "supplier_bill", prefix: "PAY/" },
 } as const
+
+/** The withholding of a receipt; absent unless the payer withheld tax. */
+const withholdingOf = (row: typeof payments.$inferSelect) =>
+  row.withholdingReference === null || row.withholdingAccountId === null
+    ? {}
+    : {
+        withholding: {
+          amount: normalize(row.withheldAmount),
+          certificateReference: row.withholdingReference,
+          accountId: row.withholdingAccountId,
+        },
+      }
+
+const normalizeSigned = (value: string) => major(signedMinor(value))
+
+const abs = (value: bigint) => (value < 0n ? -value : value)
+
+/** The cash a payment brought in or sent out: what it settles less any withholding. */
+const cashOf = (payment: Payment) =>
+  minor(payment.amount) -
+  (payment.withholding === undefined ? 0n : minor(payment.withholding.amount))
+
+/** Why a line and a payment cannot be matched, if they cannot. */
+const matchMismatch = (
+  line: { readonly amount: bigint; readonly legalEntityId: string; readonly bankAccountId: string },
+  payment: Payment,
+) => {
+  if (line.legalEntityId !== payment.legalEntityId) return "legal_entity" as const
+
+  if (line.bankAccountId !== payment.cashAccountId) return "bank_account" as const
+
+  return line.amount > 0n === (payment.direction === "incoming")
+    ? undefined
+    : ("direction" as const)
+}
+
+type ReceiptInput = Schema.Schema.Type<typeof ReceivePaymentInput>
+
+const withheldOf = (input: ReceiptInput) =>
+  input.withholding === undefined ? 0n : minor(input.withholding.amount)
+
+/** Withheld tax settles documents with the cash, so it must leave cash and be allocated. */
+const checkWithholding = (input: ReceiptInput) => {
+  const withheld = withheldOf(input)
+
+  const allocated = input.allocations.reduce(
+    (sum, allocation) => sum + minor(allocation.amount),
+    0n,
+  )
+
+  const reason =
+    withheld >= minor(input.amount)
+      ? ("not_below_payment" as const)
+      : withheld > allocated
+        ? ("not_allocated" as const)
+        : undefined
+
+  return reason === undefined
+    ? Effect.void
+    : Effect.fail(new InvalidWithholding({ tenantId: input.tenantId, reason }))
+}
+
+/** The journal lines of a payment: cash against the control account, withholding as a claim. */
+const paymentLines = (direction: PaymentDirection, input: ReceiptInput) => {
+  const cash =
+    input.cashAccountId === undefined
+      ? { role: "cash" as const }
+      : { accountId: input.cashAccountId }
+
+  const counter = { role: rules[direction].side } as const
+
+  if (direction === "outgoing") {
+    return [
+      { ...counter, debit: input.amount, credit: "0" },
+      { ...cash, debit: "0", credit: input.amount },
+    ]
+  }
+
+  const withholding = input.withholding
+
+  return [
+    { ...cash, debit: major(minor(input.amount) - withheldOf(input)), credit: "0" },
+    ...(withholding === undefined
+      ? []
+      : [{ accountId: withholding.accountId, debit: withholding.amount, credit: "0" }]),
+    { ...counter, debit: "0", credit: input.amount },
+  ]
+}
 
 type BucketName = "current" | "days1To30" | "days31To60" | "days61To90" | "over90" | "unapplied"
 
@@ -169,6 +276,7 @@ export const makeSettlementService = Effect.gen(function* () {
           invoiceId: row.invoiceId,
           amount: normalize(row.amount),
         })),
+        ...withholdingOf(header),
       } satisfies Payment
     })
 
@@ -271,6 +379,8 @@ export const makeSettlementService = Effect.gen(function* () {
           if (recorded !== undefined) return recorded
         }
 
+        yield* checkWithholding(input)
+
         const paymentId = input.paymentId ?? uuidv7()
         const rule = rules[direction]
 
@@ -285,13 +395,6 @@ export const makeSettlementService = Effect.gen(function* () {
           })
           .pipe(Effect.catchTag("SchemaError", (error) => Effect.die(error)))
 
-        const cash =
-          input.cashAccountId === undefined
-            ? { role: "cash" as const }
-            : { accountId: input.cashAccountId }
-
-        const counter = { role: rule.side } as const
-
         const journal = yield* ledger.postDocumentEntry({
           principal: input.principal,
           tenantId: input.tenantId,
@@ -300,16 +403,7 @@ export const makeSettlementService = Effect.gen(function* () {
           reference: `settlement/payment/${paymentId}`,
           description: allocated.number,
           source: { type: "settlement.payment", id: paymentId },
-          lines:
-            direction === "incoming"
-              ? [
-                  { ...cash, debit: input.amount, credit: "0" },
-                  { ...counter, debit: "0", credit: input.amount },
-                ]
-              : [
-                  { ...counter, debit: input.amount, credit: "0" },
-                  { ...cash, debit: "0", credit: input.amount },
-                ],
+          lines: paymentLines(direction, input),
         })
 
         yield* database.query(
@@ -326,6 +420,9 @@ export const makeSettlementService = Effect.gen(function* () {
               unallocatedAmount: input.amount,
               cashAccountId: input.cashAccountId ?? null,
               journalEntryId: journal.id,
+              withheldAmount: major(withheldOf(input)),
+              withholdingReference: input.withholding?.certificateReference ?? null,
+              withholdingAccountId: input.withholding?.accountId ?? null,
             }),
           "settlement.payment.insert",
         )
@@ -591,6 +688,7 @@ export const makeSettlementService = Effect.gen(function* () {
         allocations: allocations
           .filter((row) => row.paymentId === header.id)
           .map((row) => ({ invoiceId: row.invoiceId, amount: normalize(row.amount) })),
+        ...withholdingOf(header),
       }))
     }, "settlement.payment.list")
   })
@@ -729,6 +827,419 @@ export const makeSettlementService = Effect.gen(function* () {
     }
   })
 
+  const importBankStatement = Effect.fn("SettlementService.importBankStatement")(function* (
+    input: Schema.Codec.Encoded<typeof ImportBankStatementInput>,
+  ) {
+    const decoded = yield* authorized(
+      ImportBankStatementInput,
+      SettlementCapabilities.bankStatementImport,
+    )(input)
+
+    const lines = yield* parseBankStatement(decoded.content)
+
+    const checksum = yield* sha256Hex(decoded.content).pipe(
+      Effect.catchTag("DocumentHashFailure", Effect.die),
+    )
+
+    const { tenantId, legalEntityId, bankAccountId } = decoded
+
+    return yield* database
+      .transaction(async (tx) => {
+        const inserted = await tx
+          .insert(bankStatements)
+          .values({
+            tenantId,
+            legalEntityId,
+            bankAccountId,
+            sourceName: decoded.sourceName,
+            checksum,
+            importedBy: decoded.principal.userAccountId,
+          })
+          .onConflictDoNothing({
+            target: [
+              bankStatements.tenantId,
+              bankStatements.legalEntityId,
+              bankStatements.bankAccountId,
+              bankStatements.checksum,
+            ],
+          })
+          .returning()
+
+        const created = inserted[0]
+
+        if (created !== undefined) {
+          await tx.insert(bankStatementLines).values(
+            lines.map((line) => ({
+              tenantId,
+              statementId: created.id,
+              lineNumber: line.lineNumber,
+              bookingDate: line.bookingDate,
+              description: line.description,
+              reference: line.reference,
+              amount: line.amount,
+            })),
+          )
+
+          return { header: created, lineCount: lines.length }
+        }
+
+        // The same content was imported before: return that statement.
+        const [existing] = await tx
+          .select()
+          .from(bankStatements)
+          .where(
+            and(
+              eq(bankStatements.tenantId, tenantId),
+              eq(bankStatements.legalEntityId, legalEntityId),
+              eq(bankStatements.bankAccountId, bankAccountId),
+              eq(bankStatements.checksum, checksum),
+            ),
+          )
+
+        const [total] = await tx
+          .select({ lineCount: count() })
+          .from(bankStatementLines)
+          .where(
+            and(
+              eq(bankStatementLines.tenantId, tenantId),
+              eq(bankStatementLines.statementId, existing!.id),
+            ),
+          )
+
+        return { header: existing!, lineCount: total!.lineCount }
+      }, "settlement.bank_statement.import")
+      .pipe(
+        Effect.map(({ header, lineCount }) => ({
+          id: header.id,
+          tenantId: header.tenantId,
+          legalEntityId: header.legalEntityId,
+          bankAccountId: header.bankAccountId,
+          sourceName: header.sourceName,
+          checksum: header.checksum,
+          lineCount,
+        })),
+        Effect.mapError((error) =>
+          isDatabaseConstraint(error, "bank_statements_bank_account_fkey", "23503")
+            ? new AccountNotFound({ tenantId })
+            : isDatabaseConstraint(error, "bank_statements_legal_entity_fkey", "23503")
+              ? new AccountingLegalEntityNotFound({ tenantId, legalEntityId })
+              : error,
+        ),
+      )
+  })
+
+  const matchOf = (row: typeof bankLineMatches.$inferSelect): BankLineMatch => ({
+    id: row.id,
+    tenantId: row.tenantId,
+    lineId: row.lineId,
+    paymentId: row.paymentId,
+    amount: normalize(row.amount),
+    reversed: row.reversedAt !== null,
+  })
+
+  /** What active matches already cover, summed by line or by payment. */
+  const matchedTotal = (tenantId: string, by: "line" | "payment", id: string) =>
+    database
+      .query(
+        (db) =>
+          db
+            .select({ total: sql<string>`coalesce(sum(${bankLineMatches.amount}), 0)` })
+            .from(bankLineMatches)
+            .where(
+              and(
+                eq(bankLineMatches.tenantId, tenantId),
+                eq(by === "line" ? bankLineMatches.lineId : bankLineMatches.paymentId, id),
+                isNull(bankLineMatches.reversedAt),
+              ),
+            ),
+        `settlement.bank_match.total_by_${by}`,
+      )
+      .pipe(Effect.map((rows) => minor(rows[0]!.total)))
+
+  /** Locks a statement line and reads the legal entity and bank account of its statement. */
+  const lockBankLine = (tenantId: string, lineId: string) =>
+    Effect.gen(function* () {
+      const [line] = yield* database.query(
+        (db) =>
+          db
+            .select({
+              amount: bankStatementLines.amount,
+              statementId: bankStatementLines.statementId,
+            })
+            .from(bankStatementLines)
+            .where(
+              and(eq(bankStatementLines.tenantId, tenantId), eq(bankStatementLines.id, lineId)),
+            )
+            .for("update"),
+        "settlement.bank_match.line",
+      )
+
+      if (line === undefined) return yield* Effect.fail(new BankLineNotFound({ tenantId, lineId }))
+
+      const [statement] = yield* database.query(
+        (db) =>
+          db
+            .select({
+              legalEntityId: bankStatements.legalEntityId,
+              bankAccountId: bankStatements.bankAccountId,
+            })
+            .from(bankStatements)
+            .where(
+              and(eq(bankStatements.tenantId, tenantId), eq(bankStatements.id, line.statementId)),
+            ),
+        "settlement.bank_match.statement",
+      )
+
+      return { amount: signedMinor(line.amount), ...statement! }
+    })
+
+  /** The match a retried command already recorded, if the caller gave a match id. */
+  const recordedMatch = (tenantId: string, matchId: string | undefined) =>
+    matchId === undefined
+      ? Effect.succeed(undefined)
+      : database
+          .query(
+            (db) =>
+              db
+                .select()
+                .from(bankLineMatches)
+                .where(
+                  and(eq(bankLineMatches.tenantId, tenantId), eq(bankLineMatches.id, matchId)),
+                ),
+            "settlement.bank_match.recorded",
+          )
+          .pipe(Effect.map(([row]) => (row === undefined ? undefined : matchOf(row))))
+
+  const matchBankLine = Effect.fn("SettlementService.matchBankLine")(function* (
+    input: Schema.Codec.Encoded<typeof MatchBankLineInput>,
+  ) {
+    const decoded = yield* authorized(
+      MatchBankLineInput,
+      SettlementCapabilities.bankStatementReconcile,
+    )(input)
+
+    const { tenantId, lineId, paymentId } = decoded
+
+    return yield* database.withTransaction(
+      Effect.gen(function* () {
+        // Lock the line, then the payment, so concurrent matches of either serialize.
+        const line = yield* lockBankLine(tenantId, lineId)
+        const recorded = yield* recordedMatch(tenantId, decoded.matchId)
+
+        if (recorded !== undefined) return recorded
+
+        const payment = yield* loadPayment(tenantId, paymentId, true)
+        const mismatch = matchMismatch(line, payment)
+
+        if (mismatch !== undefined)
+          return yield* Effect.fail(
+            new BankMatchMismatch({ tenantId, lineId, paymentId, reason: mismatch }),
+          )
+
+        const lineOpen = abs(line.amount) - (yield* matchedTotal(tenantId, "line", lineId))
+        const paymentOpen = cashOf(payment) - (yield* matchedTotal(tenantId, "payment", paymentId))
+        const available = lineOpen < paymentOpen ? lineOpen : paymentOpen
+
+        if (minor(decoded.amount) > available) {
+          return yield* Effect.fail(
+            new BankMatchExceedsAvailable({
+              tenantId,
+              lineId,
+              paymentId,
+              available: major(available),
+              requested: normalize(decoded.amount),
+            }),
+          )
+        }
+
+        const [match] = yield* database.query(
+          (db) =>
+            db
+              .insert(bankLineMatches)
+              .values({
+                id: decoded.matchId ?? uuidv7(),
+                tenantId,
+                lineId,
+                paymentId,
+                amount: decoded.amount,
+                matchedBy: decoded.principal.userAccountId,
+              })
+              .returning(),
+          "settlement.bank_match.insert",
+        )
+
+        return matchOf(match!)
+      }),
+      "settlement.bank_match.atomic",
+    )
+  })
+
+  const reverseBankMatch = Effect.fn("SettlementService.reverseBankMatch")(function* (
+    input: Schema.Codec.Encoded<typeof ReverseBankMatchInput>,
+  ) {
+    const decoded = yield* authorized(
+      ReverseBankMatchInput,
+      SettlementCapabilities.bankStatementReconcile,
+    )(input)
+
+    const { tenantId, matchId } = decoded
+
+    return yield* database.withTransaction(
+      Effect.gen(function* () {
+        const [reversed] = yield* database.query(
+          (db) =>
+            db
+              .update(bankLineMatches)
+              .set({ reversedAt: new Date(), reversedBy: decoded.principal.userAccountId })
+              .where(
+                and(
+                  eq(bankLineMatches.tenantId, tenantId),
+                  eq(bankLineMatches.id, matchId),
+                  isNull(bankLineMatches.reversedAt),
+                ),
+              )
+              .returning(),
+          "settlement.bank_match.reverse",
+        )
+
+        if (reversed !== undefined) return matchOf(reversed)
+
+        // Already reversed, or never existed.
+        const [existing] = yield* database.query(
+          (db) =>
+            db
+              .select()
+              .from(bankLineMatches)
+              .where(and(eq(bankLineMatches.tenantId, tenantId), eq(bankLineMatches.id, matchId))),
+          "settlement.bank_match.load",
+        )
+
+        return existing === undefined
+          ? yield* Effect.fail(new BankMatchNotFound({ tenantId, matchId }))
+          : matchOf(existing)
+      }),
+      "settlement.bank_match.reverse.atomic",
+    )
+  })
+
+  const bankReconciliation = Effect.fn("SettlementService.bankReconciliation")(function* (
+    input: Schema.Codec.Encoded<typeof BankReconciliationInput>,
+  ) {
+    const decoded = yield* authorized(
+      BankReconciliationInput,
+      SettlementCapabilities.reportRead,
+    )(input)
+
+    const { tenantId, legalEntityId, bankAccountId } = decoded
+    const limit = decoded.limit ?? 100
+
+    const matchedOnLine = sql<string>`coalesce((
+      select sum(${bankLineMatches.amount}) from ${bankLineMatches}
+      where ${bankLineMatches.tenantId} = ${bankStatementLines.tenantId}
+        and ${bankLineMatches.lineId} = ${bankStatementLines.id}
+        and ${bankLineMatches.reversedAt} is null
+    ), 0)`
+
+    const unmatchedOnLine = sql<string>`abs(${bankStatementLines.amount}) - ${matchedOnLine}`
+
+    const matchedOnPayment = sql<string>`coalesce((
+      select sum(${bankLineMatches.amount}) from ${bankLineMatches}
+      where ${bankLineMatches.tenantId} = ${payments.tenantId}
+        and ${bankLineMatches.paymentId} = ${payments.id}
+        and ${bankLineMatches.reversedAt} is null
+    ), 0)`
+
+    const unmatchedCash = sql<string>`${payments.amount} - ${payments.withheldAmount} - ${matchedOnPayment}`
+
+    const lines = yield* database.query(
+      (db) =>
+        db
+          .select({
+            id: bankStatementLines.id,
+            statementId: bankStatementLines.statementId,
+            lineNumber: bankStatementLines.lineNumber,
+            bookingDate: bankStatementLines.bookingDate,
+            description: bankStatementLines.description,
+            reference: bankStatementLines.reference,
+            amount: bankStatementLines.amount,
+            unmatched: unmatchedOnLine,
+          })
+          .from(bankStatementLines)
+          .innerJoin(
+            bankStatements,
+            and(
+              eq(bankStatements.tenantId, bankStatementLines.tenantId),
+              eq(bankStatements.id, bankStatementLines.statementId),
+            ),
+          )
+          .where(
+            and(
+              eq(bankStatements.tenantId, tenantId),
+              eq(bankStatements.legalEntityId, legalEntityId),
+              eq(bankStatements.bankAccountId, bankAccountId),
+              sql`${unmatchedOnLine} > 0`,
+            ),
+          )
+          .orderBy(
+            asc(bankStatementLines.bookingDate),
+            asc(bankStatementLines.statementId),
+            asc(bankStatementLines.lineNumber),
+          )
+          .limit(limit),
+      "settlement.bank_reconciliation.lines",
+    )
+
+    const unmatchedPayments = yield* database.query(
+      (db) =>
+        db
+          .select({
+            id: payments.id,
+            number: payments.number,
+            direction: payments.direction,
+            partyId: payments.partyId,
+            paymentDate: payments.paymentDate,
+            unallocatedAmount: payments.unallocatedAmount,
+            unmatched: unmatchedCash,
+          })
+          .from(payments)
+          .where(
+            and(
+              eq(payments.tenantId, tenantId),
+              eq(payments.legalEntityId, legalEntityId),
+              eq(payments.cashAccountId, bankAccountId),
+              sql`${unmatchedCash} > 0`,
+            ),
+          )
+          .orderBy(asc(payments.paymentDate), asc(payments.number))
+          .limit(limit),
+      "settlement.bank_reconciliation.payments",
+    )
+
+    return {
+      legalEntityId,
+      bankAccountId,
+      lines: lines.map((line) => ({
+        id: line.id,
+        statementId: line.statementId,
+        lineNumber: line.lineNumber,
+        bookingDate: line.bookingDate,
+        description: line.description,
+        reference: line.reference,
+        amount: normalizeSigned(line.amount),
+        unmatchedAmount: normalize(line.unmatched),
+      })),
+      payments: unmatchedPayments.map((payment) => ({
+        id: payment.id,
+        number: payment.number,
+        direction: payment.direction,
+        partyId: payment.partyId,
+        paymentDate: payment.paymentDate,
+        unmatchedCash: normalize(payment.unmatched),
+        unallocatedAmount: normalize(payment.unallocatedAmount),
+      })),
+    }
+  })
+
   return {
     createPaymentTerm,
     assignPartyTerm,
@@ -738,6 +1249,10 @@ export const makeSettlementService = Effect.gen(function* () {
     listPayments,
     aging,
     customerStatement,
+    importBankStatement,
+    matchBankLine,
+    reverseBankMatch,
+    bankReconciliation,
   } satisfies SettlementService
 })
 

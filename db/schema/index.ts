@@ -172,6 +172,9 @@ export {
 } from "./billing.ts"
 
 export {
+  bankLineMatches,
+  bankStatementLines,
+  bankStatements,
   partyPaymentTerms,
   paymentAllocations,
   paymentDirection,
