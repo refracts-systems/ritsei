@@ -132,6 +132,8 @@ export const ListImportRowsInput = Schema.Struct({
   tenantId: Uuid,
   batchId: Uuid,
   status: Schema.optionalKey(ImportRowStatus),
+  /** Return rows after this row number, to page through a batch in row order. */
+  afterRowNumber: Schema.optionalKey(Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))),
   limit: Schema.optionalKey(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 500 }))),
 })
 

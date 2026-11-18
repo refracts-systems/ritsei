@@ -1,4 +1,4 @@
-import { and, asc, count, eq, inArray, ne, notExists } from "drizzle-orm"
+import { and, asc, count, eq, gt, inArray, ne, notExists } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 
@@ -132,7 +132,7 @@ export const makeOnboardingPostgresStore = Effect.fn("Onboarding.makePostgresSto
             }
           }),
         ),
-    listRows: (tenantId, batchId, status, limit) =>
+    listRows: (tenantId, batchId, status, afterRowNumber, limit) =>
       database
         .query(
           (db) =>
@@ -143,6 +143,7 @@ export const makeOnboardingPostgresStore = Effect.fn("Onboarding.makePostgresSto
                 and(
                   eq(importRows.tenantId, tenantId),
                   eq(importRows.batchId, batchId),
+                  gt(importRows.rowNumber, afterRowNumber),
                   status === undefined ? undefined : eq(importRows.status, status),
                 ),
               )

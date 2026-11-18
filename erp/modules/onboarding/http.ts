@@ -51,7 +51,16 @@ export const OnboardingHttpGroup = HttpApiGroup.make("Onboarding").add(
   HttpApiEndpoint.get("listImportRows", "/onboarding/imports/:id/rows", {
     params: { id: Uuid },
     headers: TenantHeaders,
-    query: { status: Schema.optionalKey(ImportRowStatus), limit: ReadLimit },
+    query: {
+      status: Schema.optionalKey(ImportRowStatus),
+      afterRowNumber: Schema.optionalKey(
+        Schema.NumberFromString.pipe(
+          Schema.check(Schema.isInt()),
+          Schema.check(Schema.isGreaterThanOrEqualTo(0)),
+        ),
+      ),
+      limit: ReadLimit,
+    },
     success: Schema.Array(ImportRow),
     error: ApiErrors,
   }).middleware(BearerAuth),

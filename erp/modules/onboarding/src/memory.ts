@@ -92,9 +92,10 @@ export const makeOnboardingMemoryStore = (): OnboardingStore => {
         : Effect.succeed(batch)
     },
     countRows: (_tenantId, batchId) => Effect.sync(() => countsOf(batchId)),
-    listRows: (_tenantId, batchId, status, limit) =>
+    listRows: (_tenantId, batchId, status, afterRowNumber, limit) =>
       Effect.sync(() =>
         rowsOf(batchId)
+          .filter((row) => row.rowNumber > afterRowNumber)
           .filter((row) => status === undefined || row.status === status)
           .slice(0, limit),
       ),

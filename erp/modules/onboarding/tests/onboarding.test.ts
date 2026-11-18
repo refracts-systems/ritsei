@@ -217,6 +217,19 @@ describe("onboarding module", () => {
           ],
         )
 
+        const page = yield* onboarding.listRows({
+          ...ref,
+          batchId: staged.summary.batch.id,
+          status: "invalid",
+          afterRowNumber: 5,
+          limit: 2,
+        })
+
+        assert.deepStrictEqual(
+          page.map((row) => row.rowNumber),
+          [6, 7],
+        )
+
         const leaked = JSON.stringify(rows)
 
         for (const value of ["Wrong Kind", "Bad Role", "boss", "Dup One"]) {

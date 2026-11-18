@@ -62,11 +62,12 @@ export interface OnboardingStore {
     tenantId: string,
     batchId: string,
   ) => Effect.Effect<RowCounts, DatabaseFailure>
-  /** Rows in row-number order. */
+  /** Rows numbered after `afterRowNumber` (0 for the first page), in row-number order. */
   readonly listRows: (
     tenantId: string,
     batchId: string,
     status: ImportRowStatus | undefined,
+    afterRowNumber: number,
     limit: number,
   ) => Effect.Effect<ReadonlyArray<StoredImportRow>, DatabaseFailure>
   readonly findIdentities: (

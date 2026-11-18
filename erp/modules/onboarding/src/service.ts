@@ -18,6 +18,7 @@ import {
   type ImportBatchSummary,
   type ImportRehearsal,
   type ImportRow,
+  type ImportRowStatus,
   type ImportRowError,
   ListImportRowsInput,
   MaxImportRows,
@@ -65,6 +66,10 @@ export const makeOnboardingServiceFromStore = <R>(
     const party = yield* PartyService
     const databaseOption = yield* Effect.serviceOption(Database)
     const authorized = scopedCommand(authorization)
+
+    /** Every row of a batch in one status; a batch holds at most `MaxImportRows`. */
+    const allRows = (tenantId: string, batchId: string, status: ImportRowStatus) =>
+      onboardingStore.listRows(tenantId, batchId, status, 0, MaxImportRows)
 
     const summarize = Effect.fn("OnboardingService.summarize")(function* (batch: ImportBatch) {
       const counts = yield* onboardingStore.countRows(batch.tenantId, batch.id)
@@ -131,6 +136,7 @@ export const makeOnboardingServiceFromStore = <R>(
         decoded.tenantId,
         decoded.batchId,
         decoded.status,
+        decoded.afterRowNumber ?? 0,
         decoded.limit ?? 200,
       )
 
@@ -148,7 +154,8 @@ export const makeOnboardingServiceFromStore = <R>(
       const { tenantId, batchId } = decoded
       const batch = yield* onboardingStore.getBatch(tenantId, batchId)
       const startedAt = yield* Clock.currentTimeMillis
-      const pending = yield* onboardingStore.listRows(tenantId, batchId, "pending", MaxImportRows)
+
+      const pending = yield* allRows(tenantId, batchId, "pending")
 
       const identities = yield* onboardingStore.findIdentities(
         tenantId,
@@ -173,7 +180,8 @@ export const makeOnboardingServiceFromStore = <R>(
       )
 
       const counts = yield* onboardingStore.countRows(tenantId, batchId)
-      const invalid = yield* onboardingStore.listRows(tenantId, batchId, "invalid", MaxImportRows)
+      const invalid = yield* allRows(tenantId, batchId, "invalid")
+
       const tally = new Map<ImportRowError["code"], number>()
 
       for (const error of invalid.flatMap((row) => row.errors)) {
@@ -218,7 +226,7 @@ export const makeOnboardingServiceFromStore = <R>(
         )
       }
 
-      const pending = yield* onboardingStore.listRows(tenantId, batchId, "pending", MaxImportRows)
+      const pending = yield* allRows(tenantId, batchId, "pending")
 
       /**
        * One record, one transaction: the owner command, the identity-map entry, and the row's

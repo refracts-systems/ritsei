@@ -100,9 +100,11 @@ migration-first reference's other decisions.
 
 ### Negative
 
-- Each imported record publishes the owner's normal event (`party.created`), because the owner
-  command is the real one. Consumers react to imports as they do to native creation. Whether imports
-  need a way to suppress routine outbound notifications is not decided here.
+- Each imported record appends the owner's normal event (`party.created`) to the outbox, because the
+  owner command is the real one. No module manifest consumes `party.created` today, so an import
+  triggers no reaction yet. A future consumer would react to imports as to native creation, and
+  whether imports need a way to suppress routine outbound notifications is not decided here.
+- Per-record errors page by row number (`afterRowNumber`, at most 500 rows per page; 200 over HTTP).
 - A batch has no web screen yet; the path is the HTTP API.
 - A changed source record is reported and stays blocked until a later slice defines updates.
 
