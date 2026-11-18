@@ -51,7 +51,7 @@ code are English.
 | Custom fields as an owner extension point (Product, Sales customer; web edits the customer's) | Done ([ADR-0109](../decisions/0109-release-custom-fields-as-an-extension-point.md)) | `tests/chains/custom-fields.postgres.test.ts` |
 | `localization_id` Stage A: Indonesian chart, PPN codes, NPWP/NIK checks, one setup command | Done ([ADR-0111](../decisions/0111-sequence-localization-id-on-public-contracts.md)) | `tests/chains/localization-id.postgres.test.ts` |
 | CSV import of parties: stage, validate, rehearse, apply through owner commands, resume without duplicates | Built; [ADR-0115](../decisions/0115-stage-and-apply-csv-imports-in-an-onboarding-module.md) is **Proposed**. HTTP API only, no screen; parties only | `erp/modules/onboarding/tests` |
-| Bank statement import (one CSV profile), manual matching to payment cash, and withholding on receipts | Done in Settlement, API only; no web screen ([ADR-0115](../decisions/0115-import-bank-statements-and-record-receipt-withholding.md)) | `tests/chains/bank-reconciliation.postgres.test.ts` |
+| Bank statement import (one CSV profile), manual matching to payment cash, and withholding on receipts | Built in Settlement, API only; no web screen, and the payment screens send no bank account yet, so only API receipts naming one can be matched (proposed in [ADR-0115](../decisions/0115-import-bank-statements-and-record-receipt-withholding.md)) | `tests/chains/bank-reconciliation.postgres.test.ts` |
 | Web screens | Sales, billing, settlement (payments), product, tax, approvals, identity, authorization, inventory, procurement, process studio, documents | `tests/frontend/*.test.ts` |
 | Invoice PDF | The browser prints a billing document; no stored artifact, no email | n/a |
 

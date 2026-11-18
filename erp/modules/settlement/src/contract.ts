@@ -57,7 +57,7 @@ const PositiveAmount = FinancialMajorAmount.check(
  */
 export const Withholding = Schema.Struct({
   amount: PositiveAmount,
-  /** The payer's withholding certificate number (bukti potong). */
+  /** The payer's withholding certificate number. */
   certificateReference: Text,
   accountId: Uuid,
 })

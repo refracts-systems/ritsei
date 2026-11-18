@@ -5,7 +5,12 @@ import * as Result from "effect/Result"
 import { uuidv7 } from "../../framework/foundation/mod.ts"
 import { AuthorizationDenied } from "../../framework/modules/authorization/mod.ts"
 import { runMigrations } from "../../framework/platform/mod.ts"
-import { AccountingCapabilities, GeneralLedgerService } from "../../erp/modules/accounting/mod.ts"
+import {
+  AccountingCapabilities,
+  AccountingLegalEntityNotFound,
+  AccountNotFound,
+  GeneralLedgerService,
+} from "../../erp/modules/accounting/mod.ts"
 import { BillingCapabilities, BillingService } from "../../erp/modules/billing/mod.ts"
 import { InventoryCapabilities, StockKeepingService } from "../../erp/modules/inventory/mod.ts"
 import { PartyCapabilities, PartyService } from "../../erp/modules/party/mod.ts"
@@ -228,6 +233,23 @@ it.effect.skipIf(databaseUrl === undefined)(
 
           assert.instanceOf(rejected, InvalidBankStatement)
           assert.strictEqual(rejected.row, 5)
+
+          // An unknown bank account or legal entity is a business failure, not a database one.
+          const unknownAccount = yield* Effect.flip(importFile(file, uuidv7()))
+
+          assert.instanceOf(unknownAccount, AccountNotFound)
+
+          const unknownEntity = yield* Effect.flip(
+            settlement.importBankStatement({
+              ...scope,
+              legalEntityId: uuidv7(),
+              bankAccountId: bank.id,
+              sourceName: "oct.csv",
+              content: file,
+            }),
+          )
+
+          assert.instanceOf(unknownEntity, AccountingLegalEntityNotFound)
 
           const counts = yield* Effect.promise(
             () => client<{ statements: number; lines: number }[]>`

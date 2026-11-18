@@ -1,6 +1,6 @@
 # ADR-0115: Import Bank Statements and Record Withholding on Receipts in Settlement
 
-- Status: Accepted
+- Status: Proposed
 - Date: 2026-11-19
 - Amends: ADR-0102 (bank statements no longer stay out of Settlement)
 - Compatible with: ADR-0016, ADR-0042, ADR-0051, ADR-0098, ADR-0111
@@ -46,9 +46,10 @@ for the Indonesian localization module. Settlement must not compute tax or name 
    payment's cash. The cash of a payment is its amount less any withholding. A client-chosen match
    id makes a retry return the recorded match. A match never changes a payment, an allocation, or the
    ledger. Matches are only added and reversed: `reverseBankMatch` marks a match reversed and keeps
-   it as history, so a wrong match is corrected by a new fact, not by deletion. Concurrent matches
-   serialize on the line and the payment, and deferred database checks enforce the same limits.
-   A payment without an explicit bank account cannot be matched.
+   it as history, so a wrong match is corrected by a new fact, not by deletion. The service
+   serializes concurrent matches by locking the line and then the payment. Deferred database checks
+   reject totals above the same limits, but they do not lock, so the service is the only supported
+   writer. A payment without an explicit bank account cannot be matched.
 4. **Nothing is matched automatically, and what is unmatched stays visible.** `bankReconciliation`
    lists the statement lines of a bank account with an unmatched amount, and its payments with
    unmatched cash, each payment with its unallocated (on-account) amount. Existing aging and
@@ -90,7 +91,9 @@ for the Indonesian localization module. Settlement must not compute tax or name 
 
 - Only one CSV profile, one currency, and a statement without balances: opening and closing balance
   checks against the ledger remain manual.
-- Payments recorded without a bank account cannot be matched until one is chosen when recording.
+- Payments recorded without a bank account can never be matched, because payments are immutable. The
+  web payment screens do not send a bank account today, so receipts recorded there are not
+  reconcilable until the screen offers one.
 - Withholding is trusted input: Settlement does not verify rates or certificates.
 
 ### Risks

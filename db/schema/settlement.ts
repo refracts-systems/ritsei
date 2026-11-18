@@ -93,7 +93,7 @@ export const payments = settlementSchema.table(
     journalEntryId: uuid("journal_entry_id").notNull(),
     /** Tax the payer withheld from this receipt: it settles receivables but is not cash received. */
     withheldAmount: money("withheld_amount").default("0"),
-    /** The payer's withholding certificate (bukti potong) number. */
+    /** The payer's withholding certificate number. */
     withholdingReference: text("withholding_reference"),
     /** The account that holds the withheld tax as a claim against the tax authority. */
     withholdingAccountId: uuid("withholding_account_id"),
