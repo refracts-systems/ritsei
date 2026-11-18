@@ -3,6 +3,7 @@ import type * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 
 import {
+  CalendarDate,
   type DatabaseFailure,
   FinancialMajorAmount,
   formatSignedMinor,
@@ -12,7 +13,12 @@ import {
 } from "../../../../framework/foundation/mod.ts"
 import { Principal } from "../../../../framework/modules/auth/mod.ts"
 import type { AuthorizationDenied } from "../../../../framework/modules/authorization/mod.ts"
-import type { TaxCodeAlreadyExists, TaxCodeNotFound, TaxProductNotFound } from "./errors.ts"
+import type {
+  TaxCodeAlreadyExists,
+  TaxCodeNotFound,
+  TaxCodeRateAlreadyExists,
+  TaxProductNotFound,
+} from "./errors.ts"
 
 const Text = TrimmedText(128)
 const ScopedInput = { principal: Principal, tenantId: Uuid }
@@ -41,6 +47,20 @@ export const TaxCode = Schema.Struct({
 })
 
 export type TaxCode = Schema.Schema.Type<typeof TaxCode>
+
+/**
+ * A dated rate: from `effectiveFrom` on, until a later period, the tax code charges `rate` instead
+ * of its own. Before the first period the code's own rate applies.
+ */
+export const TaxCodeRate = Schema.Struct({
+  tenantId: Uuid,
+  taxCodeId: Uuid,
+  effectiveFrom: CalendarDate,
+  /** Normalized to four decimals. */
+  rate: Schema.String,
+})
+
+export type TaxCodeRate = Schema.Schema.Type<typeof TaxCodeRate>
 
 export const ProductTaxDefault = Schema.Struct({
   tenantId: Uuid,
@@ -84,6 +104,13 @@ export const CreateTaxCodeInput = Schema.Struct({
   direction: TaxDirection,
 })
 
+export const AddTaxCodeRateInput = Schema.Struct({
+  ...ScopedInput,
+  taxCodeId: Uuid,
+  effectiveFrom: CalendarDate,
+  rate: TaxRate,
+})
+
 export const SetProductTaxDefaultInput = Schema.Struct({
   ...ScopedInput,
   productId: Uuid,
@@ -97,10 +124,14 @@ export const DetermineTaxCodesInput = Schema.Struct({
   productIds: Schema.Array(Uuid).check(Schema.isMaxLength(500)),
 })
 
-/** Tax-exclusive amounts; a line without a tax code is untaxed. */
+/**
+ * Tax-exclusive amounts; a line without a tax code is untaxed. With a `date` (the transaction
+ * date) each code charges the rate in force that day; without one it charges its own rate.
+ */
 export const ComputeTaxInput = Schema.Struct({
   ...ScopedInput,
   direction: TaxDirection,
+  date: Schema.optionalKey(CalendarDate),
   lines: Schema.Array(
     Schema.Struct({
       key: Schema.String,
@@ -121,6 +152,10 @@ export interface TaxService {
   readonly createTaxCode: (
     input: Schema.Codec.Encoded<typeof CreateTaxCodeInput>,
   ) => Effect.Effect<TaxCode, TaxCodeAlreadyExists | CommonFailure>
+  /** Adds a dated rate to a code. A period is never changed: a rate change is a later period. */
+  readonly addTaxCodeRate: (
+    input: Schema.Codec.Encoded<typeof AddTaxCodeRateInput>,
+  ) => Effect.Effect<TaxCodeRate, TaxCodeNotFound | TaxCodeRateAlreadyExists | CommonFailure>
   readonly setProductTaxDefault: (
     input: Schema.Codec.Encoded<typeof SetProductTaxDefaultInput>,
   ) => Effect.Effect<ProductTaxDefault, TaxCodeNotFound | TaxProductNotFound | CommonFailure>

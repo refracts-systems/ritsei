@@ -1,6 +1,7 @@
 export { TaxCapabilities } from "./src/capabilities.ts"
 
 export {
+  AddTaxCodeRateInput,
   ComputeTaxInput,
   CreateTaxCodeInput,
   DetermineTaxCodesInput,
@@ -9,6 +10,7 @@ export {
   SetProductTaxDefaultInput,
   taxOn,
   TaxCode,
+  TaxCodeRate,
   TaxComputation,
   TaxDirection,
   TaxRate,
@@ -21,7 +23,12 @@ export type {
   TaxService as TaxServiceContract,
 } from "./src/contract.ts"
 
-export { TaxCodeAlreadyExists, TaxCodeNotFound, TaxProductNotFound } from "./src/errors.ts"
+export {
+  TaxCodeAlreadyExists,
+  TaxCodeNotFound,
+  TaxCodeRateAlreadyExists,
+  TaxProductNotFound,
+} from "./src/errors.ts"
 
 export { makeTaxService, makeTaxTestLayer, TaxLive } from "./src/layers.ts"
 

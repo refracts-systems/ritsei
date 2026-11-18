@@ -10,12 +10,14 @@ import {
 } from "../../../../framework/modules/authorization/mod.ts"
 import { TaxCapabilities } from "./capabilities.ts"
 import {
+  AddTaxCodeRateInput,
   ComputeTaxInput,
   CreateTaxCodeInput,
   DetermineTaxCodesInput,
   ListTaxCodesInput,
   SetProductTaxDefaultInput,
   taxOn,
+  type TaxCodeRate,
   type TaxService,
 } from "./contract.ts"
 import { TaxCodeNotFound } from "./errors.ts"
@@ -46,6 +48,15 @@ export const makeTaxServiceFromStore = <R>(storeEffect: Effect.Effect<TaxStore, 
       const { principal: _principal, ...command } = decoded
 
       return yield* store.createTaxCode({ ...command, code: command.code.toUpperCase() })
+    })
+
+    const addTaxCodeRate = Effect.fn("TaxService.addTaxCodeRate")(function* (
+      input: Schema.Codec.Encoded<typeof AddTaxCodeRateInput>,
+    ) {
+      const decoded = yield* authorized(AddTaxCodeRateInput, TaxCapabilities.taxRateSchedule)(input)
+      const { principal: _principal, ...value } = decoded
+
+      return yield* store.addTaxCodeRate(value)
     })
 
     const setProductTaxDefault = Effect.fn("TaxService.setProductTaxDefault")(function* (
@@ -106,6 +117,20 @@ export const makeTaxServiceFromStore = <R>(storeEffect: Effect.Effect<TaxStore, 
         }
       }
 
+      // The rate in force on the transaction date is the latest period starting on or before it;
+      // before the first period, or without a date, the code charges its own rate.
+      const periodRates = new Map<string, TaxCodeRate>()
+
+      if (decoded.date !== undefined) {
+        for (const period of yield* store.ratePeriodsUpTo(decoded.tenantId, ids, decoded.date)) {
+          const latest = periodRates.get(period.taxCodeId)
+
+          if (latest === undefined || latest.effectiveFrom < period.effectiveFrom) {
+            periodRates.set(period.taxCodeId, period)
+          }
+        }
+      }
+
       const summary = new Map<string, { base: bigint; tax: bigint }>()
       let totalTax = 0n
 
@@ -116,7 +141,8 @@ export const makeTaxServiceFromStore = <R>(storeEffect: Effect.Effect<TaxStore, 
 
         const code = codes.get(line.taxCodeId)!
         // Tax is computed per line and rounded half up, so document totals equal line sums.
-        const tax = taxOn(line.base, code.rate)
+        const rate = periodRates.get(code.id)?.rate ?? code.rate
+        const tax = taxOn(line.base, rate)
         const current = summary.get(code.id) ?? { base: 0n, tax: 0n }
         summary.set(code.id, {
           base: current.base + minor(line.base),
@@ -124,7 +150,7 @@ export const makeTaxServiceFromStore = <R>(storeEffect: Effect.Effect<TaxStore, 
         })
         totalTax += minor(tax)
 
-        return { key: line.key, taxCodeId: code.id, rate: code.rate, base: line.base, tax }
+        return { key: line.key, taxCodeId: code.id, rate, base: line.base, tax }
       })
 
       return {
@@ -141,6 +167,7 @@ export const makeTaxServiceFromStore = <R>(storeEffect: Effect.Effect<TaxStore, 
     return {
       listTaxCodes,
       createTaxCode,
+      addTaxCodeRate,
       setProductTaxDefault,
       determineTaxCodes,
       computeTax,
