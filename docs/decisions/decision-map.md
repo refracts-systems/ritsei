@@ -26,6 +26,8 @@ ADR-0113 removes the dnd-kit and Boneyard probes and pinned dependencies and the
 visual contract test; ADR-0079 and ADR-0080 keep their provider targets and import rules.
 ADR-0114 adopts Solid 2 stable and explicitly bounds the published Kobalte peer mismatch to tested
 wrapper paths; ADR-0074's remaining accessibility and rollback rules continue to apply.
+ADR-0115 (proposed) places CSV import staging, the source identity map, and per-record apply through
+owner commands in the ERP `onboarding` module.
 ADR-0081 is a superseded document-rendering proposal; ADR-0091 resets that direction.
 ADR-0082 is the current SAP-separated Communication Platform and Activity Timeline projection boundary.
 ADR-0084 is a superseded progressive-trust proposal, replaced by ADR-0091.

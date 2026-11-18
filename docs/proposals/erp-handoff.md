@@ -50,6 +50,7 @@ code are English.
 | Credit limit: gate on order confirmation, customer lock, counts open invoices and confirmed-not-invoiced orders | Done ([ADR-0108](../decisions/0108-gate-order-confirmation-on-customer-credit-limit.md)) | `tests/chains/concurrent-commands.postgres.test.ts` (fails without the lock) |
 | Custom fields as an owner extension point (Product, Sales customer; web edits the customer's) | Done ([ADR-0109](../decisions/0109-release-custom-fields-as-an-extension-point.md)) | `tests/chains/custom-fields.postgres.test.ts` |
 | `localization_id` Stage A: Indonesian chart, PPN codes, NPWP/NIK checks, one setup command | Done ([ADR-0111](../decisions/0111-sequence-localization-id-on-public-contracts.md)) | `tests/chains/localization-id.postgres.test.ts` |
+| CSV import of parties: stage, validate, rehearse, apply through owner commands, resume without duplicates | Built; [ADR-0115](../decisions/0115-stage-and-apply-csv-imports-in-an-onboarding-module.md) is **Proposed**. HTTP API only, no screen; parties only | `erp/modules/onboarding/tests` |
 | Web screens | Sales, billing, settlement (payments), product, tax, approvals, identity, authorization, inventory, procurement, process studio, documents | `tests/frontend/*.test.ts` |
 | Invoice PDF | The browser prints a billing document; no stored artifact, no email | n/a |
 
@@ -86,7 +87,7 @@ Each item gets its own branch from `main`. Items marked **needs owner** wait for
 | B2 | Invoice artifacts and email (F2) | Stored immutable PDF via `pdfnative`, then manual "Send" over SMTP; automatic send later as a per-tenant setting, off by default. Rendering stays a job. `pdfnative` is added in its own change only after the eight activation gates pass | ADR-0110, [`document-rendering.md`](../architecture/document-rendering.md) section 12 |
 | B3 | `localization_id` Stage B | PPh 23 and PPh 4(2) withholding on supplier bills (needs a Billing extension point for withheld amounts); dated tax rates (Tax has no validity periods); Coretax e-Faktur export as a versioned adapter run by a job | ADR-0111 |
 | B4 | Custom fields leftovers | Retire a field and purge values; embed values in the base DTO under a `custom` key (owner's choice); a Product screen | ADR-0109 |
-| B5 | Pilot readiness | Spreadsheet import of masters and opening balances; bank statement import and manual reconciliation; profit and loss and balance sheet | Parity plan Phase 8 |
+| B5 | Pilot readiness | Spreadsheet import of parties is built (ADR-0115, proposed). Open: products and other masters, opening balances, an import screen, bank statement import and manual reconciliation; profit and loss and balance sheet | Parity plan Phase 8, ADR-0115 |
 | B6 | Tests the risk list names | Two transactions settling one invoice at once; `TRUNCATE` is not blocked by any trigger; multi-currency, several legal entities per tenant, concurrent postings across entities | [`erp-chains-next-steps.md`](./erp-chains-next-steps.md) section 5 |
 | B7 | Module kernel leftovers | Apply a generated migration to a live database in CI; sidebar navigation for generated modules | ADR-0094 |
 | B8 | Stale documents | `architecture-spec-v4.md` still shows the pre-restructure `modules/` tree; restored target-design documents name old paths | Parity plan section 10.2 |

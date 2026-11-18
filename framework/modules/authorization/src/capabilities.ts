@@ -112,6 +112,10 @@ export const CapabilityIds = [
   "approvals.policy.configure",
   "approvals.request.read",
   "localization_id.setup.apply",
+  "onboarding.import.stage",
+  "onboarding.import.read",
+  "onboarding.import.rehearse",
+  "onboarding.import.apply",
   "procurement.supplier_price.configure",
   "procurement.supplier_price.read",
   "procurement.purchase_return.create",
@@ -169,6 +173,7 @@ export const CapabilityOwner = Schema.Literals([
   "settlement",
   "approvals",
   "localization_id",
+  "onboarding",
 ])
 
 export type CapabilityOwner = Schema.Schema.Type<typeof CapabilityOwner>
@@ -372,6 +377,10 @@ export const CapabilityDefinitions: ReadonlyArray<CapabilityDefinition> = [
   definition("approvals.policy.configure", "approvals", "policy", "configure"),
   definition("approvals.request.read", "approvals", "request", "read"),
   definition("localization_id.setup.apply", "localization_id", "setup", "apply"),
+  definition("onboarding.import.stage", "onboarding", "import", "stage"),
+  definition("onboarding.import.read", "onboarding", "import", "read"),
+  definition("onboarding.import.rehearse", "onboarding", "import", "rehearse"),
+  definition("onboarding.import.apply", "onboarding", "import", "apply"),
   definition("procurement.supplier_price.configure", "procurement", "supplier_price", "configure"),
   definition("procurement.supplier_price.read", "procurement", "supplier_price", "read"),
   definition("procurement.purchase_return.create", "procurement", "purchase_return", "create"),

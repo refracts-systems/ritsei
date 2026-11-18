@@ -38,6 +38,7 @@ export default defineConfig({
     "custom_fields",
     "product",
     "tax",
+    "onboarding",
   ],
   breakpoints: true,
   strict: true,

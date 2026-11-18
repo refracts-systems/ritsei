@@ -150,6 +150,16 @@ export {
   salesSchema,
 } from "./sales.ts"
 
+export {
+  importBatches,
+  importBatchStatus,
+  importObjectKind,
+  importRows,
+  importRowStatus,
+  onboardingSchema,
+  sourceIdentities,
+} from "./onboarding.ts"
+
 export { productTaxDefaults, taxCodes, taxDirection, taxSchema } from "./tax.ts"
 
 export {

@@ -57,6 +57,7 @@ import { TaxLive } from "../modules/tax/mod.ts"
 import { BillingCreditExposureLive, BillingLive } from "../modules/billing/mod.ts"
 import { SettlementLive } from "../modules/settlement/mod.ts"
 import { DocumentsLive } from "../modules/documents/mod.ts"
+import { OnboardingLive } from "../modules/onboarding/mod.ts"
 import {
   IndonesianChartTemplatesLive,
   IndonesianIdentifierSchemesLive,
@@ -299,6 +300,10 @@ export const serviceLayers = (
     ),
   )
 
+  const OnboardingServiceLive = OnboardingLive.pipe(
+    Layer.provide(Layer.merge(BusinessRequirements, PartyLive)),
+  )
+
   const ApplicationLive = Layer.mergeAll(
     IdentityLive,
     AuthLive,
@@ -329,6 +334,7 @@ export const serviceLayers = (
     ApprovalServiceLive,
     PurchaseDocumentServiceLive,
     OrderToCashServiceLive,
+    OnboardingServiceLive,
   )
 
   return ApplicationLive
