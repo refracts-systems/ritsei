@@ -11,6 +11,8 @@
 >
 > **Related documents**
 >
+> - Later comparison at `772fb7a` and migration-first implications:
+>   [Migration-first ERP and framework comparison](../architecture/reference/migration-first-erp-comparison.md)
 > - Framework and flagship ERP decision:
 >   [`../decisions/0091-adopt-framework-and-flagship-erp.md`](../decisions/0091-adopt-framework-and-flagship-erp.md)
 > - Framework reset phases and flagship scope: [`./framework-reset.md`](./framework-reset.md)

@@ -54,6 +54,7 @@
 - [`./architecture/reference/sql-pgq-use-cases.md`](./architecture/reference/sql-pgq-use-cases.md)
 - [`./architecture/reference/ltree-notes.md`](./architecture/reference/ltree-notes.md)
 - [`./architecture/reference/erp-runtime-comparison.md`](./architecture/reference/erp-runtime-comparison.md)
+- [Migration-first ERP and framework comparison](./architecture/reference/migration-first-erp-comparison.md) (RITSEI, Odoo 20.0, and public SAP)
 - [`./architecture/reference/process-pack-positioning.md`](./architecture/reference/process-pack-positioning.md)
 - [`./architecture/reference/hard-isolation-patterns.md`](./architecture/reference/hard-isolation-patterns.md)
 - [`./architecture/reference/analytical-isolation-and-semantic-projection-patterns.md`](./architecture/reference/analytical-isolation-and-semantic-projection-patterns.md)
