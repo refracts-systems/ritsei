@@ -20,6 +20,7 @@ import {
   PreparedEmail,
   RecipientSnapshot,
   SenderIdentity,
+  uuidv7,
 } from "../../../../framework/foundation/mod.ts"
 import {
   EventEnvelope,
@@ -31,7 +32,10 @@ import {
   CommunicationPolicy,
   CommunicationProcessingResult,
   CommunicationService,
+  HistoricalDispatchOutcome,
+  HistoricalDispatchResult,
   ProcessPurchaseOrderConfirmedInput,
+  RecordHistoricalDispatchInput,
   RetryCommunicationInput,
 } from "./contract.ts"
 import { CommunicationNotFound, CommunicationStateFailure } from "./errors.ts"
@@ -57,6 +61,23 @@ interface StoredCommunication {
   result: CommunicationProcessingResult
   readonly attempts: DeliveryAttempt[]
 }
+
+const historicalIntentType = "historical-document-dispatch"
+
+const historicalStatuses = {
+  sent: { attempt: "accepted", communication: "accepted" },
+  failed: { attempt: "failed", communication: "failed" },
+  unknown: { attempt: "unknown", communication: "reconciling" },
+} as const satisfies Record<
+  HistoricalDispatchOutcome,
+  { attempt: DeliveryAttempt["status"]; communication: Communication["status"] }
+>
+
+const historicalFailureCodes = {
+  sent: null,
+  failed: "historical-delivery-failed",
+  unknown: "historical-delivery-unknown",
+} as const satisfies Record<HistoricalDispatchOutcome, string | null>
 
 const eventKey = (event: Pick<EventEnvelope, "tenantId" | "eventId">) =>
   `${event.tenantId}:${event.eventId}`
@@ -134,6 +155,13 @@ export const makeCommunicationService = Effect.gen(function* () {
   const byEvent = new Map<string, string>()
   const byIdempotency = new Map<string, string>()
   const byCommunicationId = new Map<string, StoredCommunication>()
+
+  const historicalByKey = new Map<
+    string,
+    { readonly input: RecordHistoricalDispatchInput; readonly result: HistoricalDispatchResult }
+  >()
+
+  const historicalIds = new Set<string>()
 
   const processEvent = (event: EventEnvelope) =>
     Effect.gen(function* () {
@@ -241,8 +269,89 @@ export const makeCommunicationService = Effect.gen(function* () {
     return { ...stored.result, duplicate: true }
   })
 
+  const recordHistoricalDispatch = Effect.fn("CommunicationService.recordHistoricalDispatch")(
+    function* (input: Schema.Codec.Encoded<typeof RecordHistoricalDispatchInput>) {
+      const decoded = yield* Schema.decodeUnknownEffect(RecordHistoricalDispatchInput)(input)
+      const key = `${decoded.tenantId}:${decoded.sourceSystem}:${decoded.sourceReference}`
+      const existing = historicalByKey.get(key)
+
+      if (existing !== undefined) {
+        if (JSON.stringify(existing.input) !== JSON.stringify(decoded)) {
+          return yield* Effect.fail(
+            new CommunicationStateFailure({
+              reason: "historical dispatch was already recorded with different evidence",
+            }),
+          )
+        }
+
+        return { ...existing.result, duplicate: true }
+      }
+
+      const statuses = historicalStatuses[decoded.outcome]
+      const communicationId = uuidv7()
+      const subject = decoded.subject
+
+      const communication: Communication = {
+        communicationId,
+        tenantId: decoded.tenantId,
+        intentType: historicalIntentType,
+        subject,
+        audience: { type: "historical-recipients", subject },
+        channels: ["email"],
+        status: statuses.communication,
+        recipientSnapshot:
+          decoded.recipients.length === 0
+            ? null
+            : {
+                audience: { type: "historical-recipients", subject },
+                to: decoded.recipients,
+                cc: [],
+                bcc: [],
+                resolverId: "historical-import",
+                resolverVersion: 1,
+                resolvedAt: decoded.observedAt,
+              },
+        template: null,
+        artifactId: null,
+        createdAt: new Date().toISOString(),
+      }
+
+      const attempt: DeliveryAttempt = {
+        attemptId: uuidv7(),
+        communicationId,
+        tenantId: decoded.tenantId,
+        attemptNumber: 1,
+        providerId: decoded.providerId,
+        status: statuses.attempt,
+        providerMessageId: decoded.providerMessageId,
+        providerEvidenceId: null,
+        failureCode: decoded.failureCode ?? historicalFailureCodes[decoded.outcome],
+        startedAt: decoded.observedAt,
+        completedAt: decoded.observedAt,
+      }
+
+      const result: HistoricalDispatchResult = {
+        duplicate: false,
+        communication,
+        attempt,
+        document: decoded.document,
+      }
+
+      historicalByKey.set(key, { input: decoded, result })
+      historicalIds.add(communicationId)
+
+      return result
+    },
+  )
+
   const send = (communicationId: string, retry: boolean) =>
     Effect.gen(function* () {
+      if (historicalIds.has(communicationId)) {
+        return yield* Effect.fail(
+          new CommunicationStateFailure({ reason: "historical dispatch is never sent or retried" }),
+        )
+      }
+
       const stored = byCommunicationId.get(communicationId)
 
       if (stored === undefined) {
@@ -302,6 +411,7 @@ export const makeCommunicationService = Effect.gen(function* () {
 
   const service: CommunicationService = {
     processPurchaseOrderConfirmed,
+    recordHistoricalDispatch,
     deliver,
     retry,
   }

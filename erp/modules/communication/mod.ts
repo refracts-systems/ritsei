@@ -4,7 +4,11 @@ export {
   CommunicationProcessingResult,
   CommunicationService,
   CommunicationTestTransport,
+  HistoricalDispatchOutcome,
+  HistoricalDispatchResult,
+  HistoricalDocumentRef,
   ProcessPurchaseOrderConfirmedInput,
+  RecordHistoricalDispatchInput,
   RetryCommunicationInput,
 } from "./src/contract.ts"
 
