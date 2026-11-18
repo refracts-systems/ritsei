@@ -53,7 +53,7 @@ const PositiveAmount = FinancialMajorAmount.check(
 
 /**
  * Tax the payer withheld from a receipt, kept as a claim on `accountId`. It settles receivables
- * together with the cash but is not cash received; settlement computes no tax (ADR-0115).
+ * together with the cash but is not cash received; settlement computes no tax (ADR-0116).
  */
 export const Withholding = Schema.Struct({
   amount: PositiveAmount,
@@ -263,7 +263,7 @@ export const ImportBankStatementInput = Schema.Struct({
   legalEntityId: Uuid,
   bankAccountId: Uuid,
   sourceName: TrimmedText(256),
-  /** The statement file as CSV text in the profile ADR-0115 documents. */
+  /** The statement file as CSV text in the profile ADR-0116 documents. */
   content: Schema.String.check(Schema.isMaxLength(2_000_000)),
 })
 
@@ -338,7 +338,7 @@ export interface SettlementService {
     input: Schema.Codec.Encoded<typeof StatementInput>,
   ) => Effect.Effect<CustomerStatement, CommonFailure>
   /**
-   * Imports a bank statement file as immutable lines (ADR-0115). A repeat of the same content for
+   * Imports a bank statement file as immutable lines (ADR-0116). A repeat of the same content for
    * the same bank account returns the statement already imported.
    */
   readonly importBankStatement: (

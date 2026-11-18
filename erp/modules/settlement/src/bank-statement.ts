@@ -9,7 +9,7 @@ import {
 import { InvalidBankStatement } from "./errors.ts"
 
 /**
- * The one bank statement profile settlement imports (ADR-0115): UTF-8 CSV with a header row of
+ * The one bank statement profile settlement imports (ADR-0116): UTF-8 CSV with a header row of
  * exactly `date,description,reference,amount`. Fields follow RFC 4180 quoting. `date` is an ISO
  * calendar date. `amount` is a signed decimal with a dot and at most two decimals, no thousands
  * separators: positive is money in, negative is money out, zero is rejected. `description` is

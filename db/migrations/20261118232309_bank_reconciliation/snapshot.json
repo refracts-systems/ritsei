@@ -1,9 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "0992caa9-6323-440f-a446-9b6230ca3ded",
+  "id": "23f0ed73-8048-4d20-86dc-383e534b7a99",
   "prevIds": [
-    "db8c6a34-ea79-42cc-8f1a-10fb45cf945b"
+    "a815b760-7ff4-4939-b141-ed4e93261336"
   ],
   "ddl": [
     {
@@ -48,6 +48,10 @@
     },
     {
       "name": "numbering",
+      "entityType": "schemas"
+    },
+    {
+      "name": "onboarding",
       "entityType": "schemas"
     },
     {
@@ -292,6 +296,34 @@
       "name": "financial_verification_status",
       "entityType": "enums",
       "schema": "accounting"
+    },
+    {
+      "values": [
+        "staged",
+        "rehearsed",
+        "applied"
+      ],
+      "name": "import_batch_status",
+      "entityType": "enums",
+      "schema": "onboarding"
+    },
+    {
+      "values": [
+        "party"
+      ],
+      "name": "import_object_kind",
+      "entityType": "enums",
+      "schema": "onboarding"
+    },
+    {
+      "values": [
+        "pending",
+        "invalid",
+        "applied"
+      ],
+      "name": "import_row_status",
+      "entityType": "enums",
+      "schema": "onboarding"
     },
     {
       "values": [
@@ -685,6 +717,18 @@
     },
     {
       "isRlsEnabled": false,
+      "name": "import_batches",
+      "entityType": "tables",
+      "schema": "onboarding"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "import_rows",
+      "entityType": "tables",
+      "schema": "onboarding"
+    },
+    {
+      "isRlsEnabled": false,
       "name": "invoice_lines",
       "entityType": "tables",
       "schema": "billing"
@@ -1000,6 +1044,12 @@
       "name": "sessions",
       "entityType": "tables",
       "schema": "auth"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "source_identities",
+      "entityType": "tables",
+      "schema": "onboarding"
     },
     {
       "isRlsEnabled": false,
@@ -5180,6 +5230,357 @@
       "entityType": "columns",
       "schema": "accounting",
       "table": "financial_verification_artifacts"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "uuidv7()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "tenant_id",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "source_instance",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "source_version",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "type": "import_object_kind",
+      "typeSchema": "onboarding",
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "object_kind",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "file_checksum",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "mapping_revision",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "uploaded_by",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "type": "import_batch_status",
+      "typeSchema": "onboarding",
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'staged'",
+      "generated": null,
+      "identity": null,
+      "name": "status",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "row_count",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "rehearsal",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "rehearsed_at",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "applied_at",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "uuidv7()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "tenant_id",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "batch_id",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "row_number",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "source_id",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "content_hash",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "fields",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
+      "type": "import_row_status",
+      "typeSchema": "onboarding",
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'pending'",
+      "generated": null,
+      "identity": null,
+      "name": "status",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'[]'",
+      "generated": null,
+      "identity": null,
+      "name": "errors",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "native_id",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "applied_at",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_rows"
     },
     {
       "type": "uuid",
@@ -11205,6 +11606,123 @@
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
+      "default": "uuidv7()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "source_identities"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "tenant_id",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "source_identities"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "source_instance",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "source_identities"
+    },
+    {
+      "type": "import_object_kind",
+      "typeSchema": "onboarding",
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "object_kind",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "source_identities"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "source_id",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "source_identities"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "native_id",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "source_identities"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "content_hash",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "source_identities"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "batch_id",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "source_identities"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "source_identities"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
       "default": null,
       "generated": null,
       "identity": null,
@@ -12723,6 +13241,41 @@
       "nameExplicit": true,
       "columns": [
         {
+          "value": "batch_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "status",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "row_number",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "import_rows_batch_status_idx",
+      "entityType": "indexes",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
           "value": "tenant_id",
           "isExpression": false,
           "asc": true,
@@ -14063,6 +14616,42 @@
       "entityType": "fks",
       "schema": "accounting",
       "table": "financial_verification_artifacts"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id"
+      ],
+      "schemaTo": "auth",
+      "tableTo": "tenants",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "import_batches_tenant_id_fkey",
+      "entityType": "fks",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "batch_id"
+      ],
+      "schemaTo": "onboarding",
+      "tableTo": "import_batches",
+      "columnsTo": [
+        "tenant_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "import_rows_batch_fkey",
+      "entityType": "fks",
+      "schema": "onboarding",
+      "table": "import_rows"
     },
     {
       "nameExplicit": true,
@@ -15861,6 +16450,42 @@
     {
       "nameExplicit": true,
       "columns": [
+        "tenant_id"
+      ],
+      "schemaTo": "auth",
+      "tableTo": "tenants",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "source_identities_tenant_id_fkey",
+      "entityType": "fks",
+      "schema": "onboarding",
+      "table": "source_identities"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "batch_id"
+      ],
+      "schemaTo": "onboarding",
+      "tableTo": "import_batches",
+      "columnsTo": [
+        "tenant_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "source_identities_batch_fkey",
+      "entityType": "fks",
+      "schema": "onboarding",
+      "table": "source_identities"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
         "tenant_id",
         "warehouse_id"
       ],
@@ -16703,6 +17328,26 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "import_batches_pkey",
+      "schema": "onboarding",
+      "table": "import_batches",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "import_rows_pkey",
+      "schema": "onboarding",
+      "table": "import_rows",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "invoice_lines_pkey",
       "schema": "billing",
       "table": "invoice_lines",
@@ -17076,6 +17721,16 @@
       "name": "sessions_pkey",
       "schema": "auth",
       "table": "sessions",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "source_identities_pkey",
+      "schema": "onboarding",
+      "table": "source_identities",
       "entityType": "pks"
     },
     {
@@ -17627,6 +18282,45 @@
       "entityType": "uniques",
       "schema": "accounting",
       "table": "financial_verification_artifacts"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "id"
+      ],
+      "nullsNotDistinct": false,
+      "name": "import_batches_tenant_id_id_key",
+      "entityType": "uniques",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "source_instance",
+        "object_kind",
+        "file_checksum",
+        "mapping_revision"
+      ],
+      "nullsNotDistinct": false,
+      "name": "import_batches_file_key",
+      "entityType": "uniques",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "batch_id",
+        "row_number"
+      ],
+      "nullsNotDistinct": false,
+      "name": "import_rows_batch_row_key",
+      "entityType": "uniques",
+      "schema": "onboarding",
+      "table": "import_rows"
     },
     {
       "nameExplicit": true,
@@ -18374,6 +19068,34 @@
       "entityType": "uniques",
       "schema": "auth",
       "table": "sessions"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "source_instance",
+        "object_kind",
+        "source_id"
+      ],
+      "nullsNotDistinct": false,
+      "name": "source_identities_source_key",
+      "entityType": "uniques",
+      "schema": "onboarding",
+      "table": "source_identities"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "source_instance",
+        "object_kind",
+        "native_id"
+      ],
+      "nullsNotDistinct": false,
+      "name": "source_identities_native_key",
+      "entityType": "uniques",
+      "schema": "onboarding",
+      "table": "source_identities"
     },
     {
       "nameExplicit": true,
@@ -19232,6 +19954,76 @@
       "table": "financial_verification_artifacts"
     },
     {
+      "value": "\"source_instance\" = btrim(\"source_instance\") and \"source_instance\" ~ '[^[:space:]]'",
+      "name": "import_batches_source_instance_check",
+      "entityType": "checks",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "value": "\"file_checksum\" ~ '^[0-9a-f]{64}$'",
+      "name": "import_batches_file_checksum_check",
+      "entityType": "checks",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "value": "\"row_count\" >= 0",
+      "name": "import_batches_row_count_check",
+      "entityType": "checks",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "value": "(\"status\" = 'staged') = (\"rehearsed_at\" is null and \"rehearsal\" is null)",
+      "name": "import_batches_rehearsed_check",
+      "entityType": "checks",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "value": "(\"status\" = 'applied') = (\"applied_at\" is not null)",
+      "name": "import_batches_applied_check",
+      "entityType": "checks",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "value": "\"row_number\" >= 1",
+      "name": "import_rows_row_number_check",
+      "entityType": "checks",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
+      "value": "\"content_hash\" ~ '^[0-9a-f]{64}$'",
+      "name": "import_rows_content_hash_check",
+      "entityType": "checks",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
+      "value": "jsonb_typeof(\"errors\") = 'array'",
+      "name": "import_rows_errors_check",
+      "entityType": "checks",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
+      "value": "(\"status\" = 'invalid') = (jsonb_array_length(\"errors\") > 0)",
+      "name": "import_rows_invalid_check",
+      "entityType": "checks",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
+      "value": "(\"status\" = 'applied') = (\"native_id\" is not null and \"applied_at\" is not null)",
+      "name": "import_rows_applied_check",
+      "entityType": "checks",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
       "value": "\"matched_value\" >= 0",
       "name": "invoice_lines_matched_value_check",
       "entityType": "checks",
@@ -19986,6 +20778,20 @@
       "entityType": "checks",
       "schema": "auth",
       "table": "sessions"
+    },
+    {
+      "value": "\"source_id\" ~ '[^[:space:]]'",
+      "name": "source_identities_source_id_check",
+      "entityType": "checks",
+      "schema": "onboarding",
+      "table": "source_identities"
+    },
+    {
+      "value": "\"content_hash\" ~ '^[0-9a-f]{64}$'",
+      "name": "source_identities_content_hash_check",
+      "entityType": "checks",
+      "schema": "onboarding",
+      "table": "source_identities"
     },
     {
       "value": "\"on_hand\" >= 0",

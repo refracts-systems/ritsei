@@ -170,7 +170,7 @@ export const paymentAllocations = settlementSchema.table(
 
 /**
  * One imported bank statement file. The checksum of the file content makes a repeated import of
- * the same file return this statement instead of creating a second one (ADR-0115).
+ * the same file return this statement instead of creating a second one (ADR-0116).
  */
 export const bankStatements = settlementSchema.table(
   "bank_statements",

@@ -2,7 +2,7 @@
 -- reviewed: 2026-11-19
 -- generated-by: drizzle-kit 1.0.0-rc.4 --custom
 -- rationale: keep imported statements and lines immutable, keep matches within the line and the
---   payment cash they relate to, and keep withheld tax allocated to receivables (ADR-0115)
+--   payment cash they relate to, and keep withheld tax allocated to receivables (ADR-0116)
 
 CREATE OR REPLACE FUNCTION settlement.assert_withholding_allocated()
 RETURNS trigger

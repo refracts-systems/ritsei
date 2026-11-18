@@ -2,7 +2,7 @@
 -- reviewed: 2026-11-19
 -- generated-by: drizzle-kit 1.0.0-rc.4
 -- rationale: store imported bank statements and their manual matches to payments, and the
---   withholding a payer deducted from a receipt (ADR-0115). New tables; existing payments get a
+--   withholding a payer deducted from a receipt (ADR-0116). New tables; existing payments get a
 --   zero withheld amount, which is what they always were.
 
 CREATE TABLE "settlement"."bank_line_matches" (

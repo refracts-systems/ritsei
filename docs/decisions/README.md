@@ -139,7 +139,7 @@ current system; ADRs preserve decision history.
 | [`0113`](./0113-retire-frontend-compatibility-probes-and-visual-contract-test.md) | Retire frontend compatibility probes and the visual contract test | Accepted   |
 | [`0114`](./0114-adopt-solid-2-stable-with-bounded-kobalte-risk.md) | Adopt Solid 2 stable with a bounded Kobalte peer risk | Accepted   |
 | [`0115`](./0115-stage-and-apply-csv-imports-in-an-onboarding-module.md) | Stage and apply CSV imports in an onboarding module | Proposed   |
-| [`0115`](./0115-import-bank-statements-and-record-receipt-withholding.md) | Import bank statements and record receipt withholding in Settlement | Proposed   |
+| [`0116`](./0116-import-bank-statements-and-record-receipt-withholding.md) | Import bank statements and record receipt withholding in Settlement | Proposed   |
 
 Accepted ADRs must not be rewritten to alter history. Create a new ADR and use `Supersedes`.
 
