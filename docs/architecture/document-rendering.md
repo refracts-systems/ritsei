@@ -342,9 +342,9 @@ for a new render; it does not rewrite historical output. Reproduction may be byt
 backend guarantees it, or semantically equivalent under a documented renderer conformance policy.
 
 A document issued before cutover has no snapshot, template, or renderer version to reproduce, so it
-is not rendered again. Its owning domain retains the source bytes as an imported artifact with
-provenance (source system, source reference, content hash, media type), never as a rendered artifact
-that carries a render fingerprint
+is not rendered again. The proposed rule is that its owning domain keeps an imported-artifact
+record with provenance (source system, source reference, content hash, media type), never a rendered
+artifact that carries a render fingerprint; this is not implemented yet
 ([ADR-0115](../decisions/0115-retain-imported-documents-and-record-historical-dispatch-outcomes.md)).
 
 PDF is evidence/output, not source of truth:

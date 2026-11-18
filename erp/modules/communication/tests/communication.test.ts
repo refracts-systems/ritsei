@@ -267,7 +267,7 @@ it.effect("never delivers or retries a historical dispatch", () =>
   ),
 )
 
-it.effect("rejects a historical dispatch with an invalid content hash", () =>
+it.effect("rejects a historical dispatch with an invalid hash or a sent failure code", () =>
   withCommunication(
     Effect.gen(function* () {
       const service = yield* CommunicationService
@@ -280,6 +280,12 @@ it.effect("rejects a historical dispatch with an invalid content hash", () =>
       )
 
       assert.strictEqual(failure._tag, "SchemaError")
+
+      const sentWithFailure = yield* Effect.flip(
+        service.recordHistoricalDispatch({ ...historicalDispatch, failureCode: "mailbox-full" }),
+      )
+
+      assert.strictEqual(sentWithFailure._tag, "SchemaError")
     }),
   ),
 )

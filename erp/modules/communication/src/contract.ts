@@ -30,12 +30,6 @@ const Uuid = Schema.String.check(Schema.isUUID())
 const NonEmptyString = Schema.String.check(Schema.isPattern(/\S/))
 const Sha256 = Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/))
 
-const Slug = Schema.String.check(
-  Schema.makeFilter((value) => /^[a-z][a-z0-9._-]*$/.test(value), {
-    expected: "a lowercase communication slug",
-  }),
-)
-
 export const ProcessPurchaseOrderConfirmedInput = Schema.Struct({
   event: EventEnvelope,
 })
@@ -71,17 +65,21 @@ export type HistoricalDocumentRef = Schema.Schema.Type<typeof HistoricalDocument
 
 export const RecordHistoricalDispatchInput = Schema.Struct({
   tenantId: Uuid,
-  sourceSystem: Slug,
+  sourceSystem: CommunicationSubject.fields.owner,
   sourceReference: NonEmptyString,
   subject: CommunicationSubject,
   document: HistoricalDocumentRef,
   recipients: Schema.Array(RecipientMailbox),
   outcome: HistoricalDispatchOutcome,
-  providerId: Slug,
-  providerMessageId: Schema.NullOr(NonEmptyString),
-  failureCode: Schema.NullOr(Slug),
+  providerId: DeliveryAttempt.fields.providerId,
+  providerMessageId: DeliveryAttempt.fields.providerMessageId,
+  failureCode: DeliveryAttempt.fields.failureCode,
   observedAt: InstantString,
-})
+}).check(
+  Schema.makeFilter((input) => input.outcome !== "sent" || input.failureCode === null, {
+    expected: "a sent historical dispatch without a failure code",
+  }),
+)
 
 export type RecordHistoricalDispatchInput = Schema.Schema.Type<typeof RecordHistoricalDispatchInput>
 
