@@ -78,6 +78,11 @@ Skills supplement, and never replace, repository ownership, tooling, and validat
 
 ## Reference Sources
 
+- **Solid frontend:** before implementing or reworking Solid UI, consult the local Solid source at
+  `vendor/solidjs`; for routing changes, also consult `vendor/solid-router`. These ignored clones are
+  references, not dependency sources. If missing, clone `https://github.com/solidjs/solid.git` and
+  `https://github.com/solidjs/solid-router.git` there, and check out the tags matching the installed
+  versions in `apps/web/package.json` before relying on their behavior.
 - **Effect v4:** consult the vendored source at `./vendor/effect` before writing or changing Effect
   code; do not rely on v3 memory. `fallow:audit` rejects the v3 names (`Effect.catchAll`,
   `Context.Tag`, `Effect.fork`, and the rest of the list in

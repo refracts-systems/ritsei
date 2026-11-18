@@ -1,5 +1,4 @@
 allowBuilds:
   msgpackr-extract: true
 minimumReleaseAgeExclude:
-  - "@effect/atom-solid@4.0.0"
   - effect@4.0.0

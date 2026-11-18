@@ -1,7 +1,17 @@
 import * as Predicate from "effect/Predicate"
 import * as Match from "effect/Match"
 import type { JSX } from "@solidjs/web"
-import { createEffect, createSignal, For, onSettled, Show, useContext } from "solid-js"
+import {
+  createEffect,
+  createRoot,
+  createSignal,
+  For,
+  getOwner,
+  onSettled,
+  runWithOwner,
+  Show,
+  useContext,
+} from "solid-js"
 import { failureMessage } from "../../shared/api.ts"
 import type {
   OperateRuntimeInput,
@@ -451,6 +461,13 @@ function DesignPanel(props: {
     setMountedDesigner(next)
   }
 
+  // Solid runs refs in an effect callback; use a child owner for the designer's reactive root.
+  const designerRef = createRoot(() => {
+    const owner = getOwner()
+
+    return (host: HTMLDivElement) => runWithOwner(owner, () => mountDesigner(host))
+  })
+
   createEffect(
     () => ({ designer: mountedDesigner(), catalog: props.catalog.data ?? [] }),
     ({ designer: next, catalog }) => {
@@ -501,7 +518,7 @@ function DesignPanel(props: {
           </Show>
         </div>
         <div
-          ref={mountDesigner}
+          ref={designerRef}
           class={styles.designerHost}
           aria-label="Process definition designer"
         />

@@ -137,6 +137,7 @@ current system; ADRs preserve decision history.
 | [`0111`](./0111-sequence-localization-id-on-public-contracts.md) | Build Indonesian localization on public contracts, in two stages | Accepted   |
 | [`0112`](./0112-soften-operational-clarity-and-adopt-tactile-motion.md) | Soften Operational Clarity and adopt tactile motion | Accepted   |
 | [`0113`](./0113-retire-frontend-compatibility-probes-and-visual-contract-test.md) | Retire frontend compatibility probes and the visual contract test | Accepted   |
+| [`0114`](./0114-adopt-solid-2-stable-with-bounded-kobalte-risk.md) | Adopt Solid 2 stable with a bounded Kobalte peer risk | Accepted   |
 
 Accepted ADRs must not be rewritten to alter history. Create a new ADR and use `Supersedes`.
 

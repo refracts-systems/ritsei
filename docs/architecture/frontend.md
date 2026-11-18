@@ -275,10 +275,10 @@ on generated output or a particular compiler pass. Supported Vite/compiler
 changes are validated as frontend build changes, including behavior,
 accessibility, bundle output, and measured performance.
 
-Solid 2.0 remains a pre-release dependency as of August 23, 2026. Its release
-risk is contained by keeping the Effect application model and backend contracts
-independent of the renderer and compiler. See [`ADR-0049`](../decisions/0049-keep-solid-compiler-at-rendering-boundary.md)
-for the decision record.
+The web application pins the Solid 2.0 stable runtime and renderer. The Effect application model
+and backend contracts remain independent of the renderer and compiler; see
+[`ADR-0049`](../decisions/0049-keep-solid-compiler-at-rendering-boundary.md). Individual frontend
+dependencies can still be prereleases and require their own compatibility evidence.
 
 ## Why an SPA Fits RITSEI
 
