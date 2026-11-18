@@ -170,3 +170,116 @@ it.effect(
     }),
   { timeout: 120_000 },
 )
+
+it.effect(
+  "ignores delayed tenant switches after a newer selection or sign-out",
+  () =>
+    Effect.gen(function* () {
+      const { page, url, errors } = yield* builtApp
+      yield* Effect.promise(async () => {
+        const first = "01900000-0000-7000-8000-000000000010"
+        const second = "01900000-0000-7000-8000-000000000011"
+        const third = "01900000-0000-7000-8000-000000000012"
+        const userAccountId = "01900000-0000-7000-8000-000000000001"
+        await mockLocalAuth(page, "race-session", first, {
+          memberships: [first, second, third].map((tenantId) => ({
+            userAccountId,
+            tenantId,
+            status: "active" as const,
+          })),
+        })
+        let gate = Promise.withResolvers<void>()
+        await page.route("**/api/auth/session", async (route) => {
+          if (route.request().headers()["x-tenant-id"] === second) await gate.promise
+          await route.fallback()
+        })
+        await page.route("**/api/auth/logout", (route) => route.fulfill({ status: 204 }))
+        await page.goto(url)
+        await page.getByRole("button", { name: "Sign in locally", exact: true }).click()
+        await page.getByRole("heading", { name: "My work", exact: true }).waitFor()
+        const tenant = page.getByRole("combobox", { name: "Active tenant", exact: true })
+
+        const pendingSecond = () =>
+          page.waitForRequest(
+            (request) =>
+              request.url().endsWith("/api/auth/session") &&
+              request.headers()["x-tenant-id"] === second,
+          )
+
+        let started = pendingSecond()
+        await tenant.selectOption(second)
+        await started
+
+        const thirdResponse = page.waitForResponse(
+          (response) =>
+            response.url().endsWith("/api/auth/session") &&
+            response.request().headers()["x-tenant-id"] === third,
+        )
+
+        await tenant.selectOption(third)
+        await thirdResponse
+        await page.waitForFunction(
+          (id) =>
+            document.querySelector<HTMLSelectElement>('[aria-label="Active tenant"]')?.value === id,
+          third,
+        )
+
+        const lateResponse = page.waitForResponse(
+          (response) =>
+            response.url().endsWith("/api/auth/session") &&
+            response.request().headers()["x-tenant-id"] === second,
+        )
+
+        gate.resolve()
+        await lateResponse
+
+        const staleTenant = await page
+          .waitForFunction(
+            (id) =>
+              document.querySelector<HTMLSelectElement>('[aria-label="Active tenant"]')?.value ===
+              id,
+            second,
+            { timeout: 500 },
+          )
+          .then(
+            () => true,
+            () => false,
+          )
+
+        assert.isFalse(staleTenant)
+        assert.equal(await tenant.inputValue(), third)
+
+        gate = Promise.withResolvers<void>()
+        started = pendingSecond()
+        await tenant.selectOption(second)
+        await started
+        await page.getByRole("button", { name: "Sign out", exact: true }).click()
+        await page
+          .getByRole("dialog", { name: "Sign out of RITSEI?" })
+          .getByRole("button", { name: "Sign out", exact: true })
+          .click()
+        await page.getByRole("button", { name: "Sign in locally", exact: true }).waitFor()
+
+        const afterLogout = page.waitForResponse(
+          (response) =>
+            response.url().endsWith("/api/auth/session") &&
+            response.request().headers()["x-tenant-id"] === second,
+        )
+
+        gate.resolve()
+        await afterLogout
+
+        const resurrected = await page
+          .getByRole("heading", { name: "My work", exact: true })
+          .waitFor({ timeout: 500 })
+          .then(
+            () => true,
+            () => false,
+          )
+
+        assert.isFalse(resurrected)
+        assert.deepEqual(errors, [])
+      })
+    }),
+  { timeout: 120_000 },
+)

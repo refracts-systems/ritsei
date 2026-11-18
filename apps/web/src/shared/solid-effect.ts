@@ -1,8 +1,9 @@
 /**
  * Solid 2 × Effect production bridge.
  *
- * Context path — Effect's `R` channel is carried by a scoped `ManagedRuntime`
- * in Solid Context. `createRuntime` ties the Layer scope to the Solid owner,
+ * Context path — a scoped `ManagedRuntime` is carried in Solid Context.
+ * Effects requiring services also receive that runtime explicitly for type checking.
+ * `createRuntime` ties the Layer scope to the Solid owner,
  * so service lifetime follows subtree lifetime instead of a global registry.
  *
  * Read path — `runEffect` adapts one Effect to Solid's AsyncIterable protocol.
@@ -24,9 +25,8 @@ type SolidEffectRuntime = ManagedRuntime.ManagedRuntime<never, never>
  * The scoped Effect runtime used by the Solid application subtree.
  *
  * The context erases the provider's concrete service set so nested providers
- * can carry different `R` values through one Solid context. `resolveFork`
- * performs that narrow cast only at this integration boundary; callers keep
- * their concrete `Effect<A, E, R>` types.
+ * can carry different `R` values through one Solid context. Effects requiring
+ * services must receive a matching typed runtime explicitly.
  */
 export const RuntimeContext = createContext<SolidEffectRuntime | null>(null)
 
@@ -71,14 +71,14 @@ function resolveRuntime(): SolidEffectRuntime {
  * Capture the provider once for a read or action. A feature must not rebuild
  * the application environment with ad hoc `Effect.provide` calls here.
  */
-function resolveFork() {
-  const runtime = resolveRuntime()
+function resolveFork<R>(runtime?: ManagedRuntime.ManagedRuntime<R, never>) {
+  if (runtime) return <A, E>(effect: Effect.Effect<A, E, R>) => runtime.runFork(effect)
 
-  return <A, E, R>(effect: Effect.Effect<A, E, R>) =>
-    // RuntimeContext intentionally erases the provider's concrete R so nested
-    // providers can carry different service sets through one Solid context.
-    // SAFETY: the runtime was built with the services this effect requires.
-    runtime.runFork(effect as Effect.Effect<A, E, never>)
+  const context = resolveRuntime()
+
+  return <A, E>(effect: Effect.Effect<A, E, R>) =>
+    // SAFETY: the public overloads allow an omitted runtime only for R = never.
+    context.runFork(effect as Effect.Effect<A, E, never>)
 }
 
 /**
@@ -89,8 +89,16 @@ function resolveFork() {
  * lifecycle hook: supersession/disposal calls `return()`, which interrupts the
  * fiber and waits for its finalizers before the iterator closes.
  */
-export function runEffect<A, E, R = never>(effect: Effect.Effect<A, E, R>): AsyncIterable<A> {
-  const fork = resolveFork()
+export function runEffect<A, E>(effect: Effect.Effect<A, E, never>): AsyncIterable<A>
+export function runEffect<A, E, R>(
+  effect: Effect.Effect<A, E, R>,
+  runtime: ManagedRuntime.ManagedRuntime<R, never>,
+): AsyncIterable<A>
+export function runEffect<A, E, R>(
+  effect: Effect.Effect<A, E, R>,
+  runtime?: ManagedRuntime.ManagedRuntime<R, never>,
+): AsyncIterable<A> {
+  const fork = resolveFork(runtime)
 
   return {
     [Symbol.asyncIterator]() {
@@ -156,9 +164,24 @@ export class ActionInterruptedError extends Error {
 // execution. `R` remains the shared service requirement for its yielded steps.
 type SagaStep<R> = Effect.Effect<unknown, unknown, R>
 
+/** Preserve the success type and forward injected failures to the action generator. */
+export function* actionStep<A, E, R>(
+  effect: Effect.Effect<A, E, R>,
+): Generator<Effect.Effect<A, E, R>, A, unknown> {
+  // SAFETY: the runner resumes this iterator only with the successful value of this Effect.
+  return (yield effect) as A
+}
+
 export interface EffectAction<Args extends unknown[], A> {
   (...args: Args): Promise<A>
   interrupt(): void
+}
+
+interface ActionFlight {
+  fiber: Fiber.Fiber<unknown, unknown> | null
+  cancelled: boolean
+  recovering: boolean
+  readonly settled: Promise<void>
 }
 
 /**
@@ -166,36 +189,47 @@ export interface EffectAction<Args extends unknown[], A> {
  *
  * The Solid action owns optimistic presentation writes; Effect owns service
  * calls, typed failures, interruption, and resource finalizers. Action generators
- * yield Effects directly so injected failures reach the generator's catch block;
- * `yield*` is reserved for Effect's own generator protocol. Compensation across
+ * use `yield* actionStep(effect)` to retain each step's success type and forward
+ * injected failures to the generator's catch block. Compensation across
  * already-completed steps belongs in the generator's catch block.
  * Use for explicit workflows; TanStack Query remains the owner of shared
  * server-state caching and invalidation.
  */
-export function effectAction<Args extends unknown[], A, R = never>(
+export function effectAction<Args extends unknown[], A>(
+  genFn: (...args: Args) => Generator<SagaStep<never>, A, never>,
+): EffectAction<Args, A>
+export function effectAction<Args extends unknown[], A, R>(
   genFn: (...args: Args) => Generator<SagaStep<R>, A, never>,
+  runtime: ManagedRuntime.ManagedRuntime<R, never>,
+): EffectAction<Args, A>
+export function effectAction<Args extends unknown[], A, R>(
+  genFn: (...args: Args) => Generator<SagaStep<R>, A, never>,
+  runtime?: ManagedRuntime.ManagedRuntime<R, never>,
 ): EffectAction<Args, A> {
-  const fork = resolveFork()
-  let inFlight: Fiber.Fiber<unknown, unknown> | null = null
+  const fork = resolveFork(runtime)
+  let active: ActionFlight | undefined
 
   // Solid's action transaction provides the optimistic UI boundary; each
   // yielded Effect below provides the interruptible application step.
-  const base = action(function* (...args: Args) {
+  const base = action(function* (flight: ActionFlight, ...args: Args) {
     const iterator = genFn(...args)
     let step = iterator.next()
 
     while (!step.done) {
       const fiber = fork(step.value)
-      inFlight = fiber
+      flight.fiber = fiber
       const exit: Exit.Exit<unknown, unknown> = yield Effect.runPromise(Fiber.await(fiber))
 
-      if (inFlight === fiber) inFlight = null
+      if (flight.fiber === fiber) flight.fiber = null
 
       if (Exit.isSuccess(exit)) {
         // SAFETY: the saga generator is typed to receive the value of the step it yielded.
         step = iterator.next(exit.value as never)
       } else if (Exit.isFailure(exit)) {
         const cause = exit.cause
+        // Recovery steps belong to this flight and must not be interrupted by
+        // a later invocation while compensating already-completed work.
+        flight.recovering = true
 
         if (Exit.hasInterrupts(exit)) {
           step = iterator.throw(new ActionInterruptedError())
@@ -208,19 +242,48 @@ export function effectAction<Args extends unknown[], A, R = never>(
     return step.value
   })
 
-  // A new invocation supersedes the previous in-flight step instead of
-  // allowing two workflow flights to race silently.
-  const invoke = (...args: Args) => {
-    invoke.interrupt()
+  const cancel = (flight: ActionFlight) => {
+    if (flight.cancelled) return
+    flight.cancelled = true
 
-    return base(...args)
+    if (!flight.recovering && flight.fiber) void Effect.runPromise(Fiber.interrupt(flight.fiber))
+  }
+
+  // A replacement waits for interruption, finalizers, and compensation of
+  // its predecessor before starting another workflow.
+  const invoke = (...args: Args) => {
+    const previous = active
+
+    if (previous) cancel(previous)
+    const completion = Promise.withResolvers<void>()
+
+    const flight: ActionFlight = {
+      fiber: null,
+      cancelled: false,
+      recovering: false,
+      settled: completion.promise,
+    }
+
+    active = flight
+
+    const run = async () => {
+      if (previous) await previous.settled
+
+      if (flight.cancelled) throw new ActionInterruptedError()
+
+      return base(flight, ...args)
+    }
+
+    return run().finally(() => {
+      flight.fiber = null
+
+      if (active === flight) active = undefined
+      completion.resolve()
+    })
   }
 
   invoke.interrupt = () => {
-    const fiber = inFlight
-    inFlight = null
-
-    if (fiber) void Effect.runPromise(Fiber.interrupt(fiber))
+    if (active) cancel(active)
   }
 
   return invoke

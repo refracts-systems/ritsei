@@ -2,6 +2,7 @@ import { assert, describe, it } from "@effect/vitest"
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
+import type * as ManagedRuntime from "effect/ManagedRuntime"
 import * as Predicate from "effect/Predicate"
 import {
   createComponent,
@@ -24,7 +25,10 @@ class TestService extends Context.Service<TestService, { readonly value: number 
 
 const TestServiceLive = Layer.succeed(TestService, { value: 42 })
 
-function mountRuntime<R>(layer: Layer.Layer<R>, children: () => Element) {
+function mountRuntime<R>(
+  layer: Layer.Layer<R>,
+  children: (runtime: ManagedRuntime.ManagedRuntime<R, never>) => Element,
+) {
   let dispose = () => {}
 
   createRoot((rootDispose) => {
@@ -34,7 +38,7 @@ function mountRuntime<R>(layer: Layer.Layer<R>, children: () => Element) {
     const provider = createComponent(RuntimeContext, {
       value: runtime,
       get children() {
-        return children()
+        return children(runtime)
       },
     })
 
@@ -70,8 +74,11 @@ describe("Solid 2 × Effect production bridge", () => {
     Effect.promise(async () => {
       let source: AsyncIterable<number> | undefined
 
-      const dispose = mountRuntime(TestServiceLive, () => {
-        source = runEffect(Effect.map(TestService, (service) => service.value))
+      const dispose = mountRuntime(TestServiceLive, (runtime) => {
+        source = runEffect(
+          Effect.map(TestService, (service) => service.value),
+          runtime,
+        )
 
         return null
       })
@@ -97,8 +104,11 @@ describe("Solid 2 × Effect production bridge", () => {
 
       let source: AsyncIterable<number> | undefined
 
-      const dispose = mountRuntime(layer, () => {
-        source = runEffect(Effect.map(TestService, (service) => service.value))
+      const dispose = mountRuntime(layer, (runtime) => {
+        source = runEffect(
+          Effect.map(TestService, (service) => service.value),
+          runtime,
+        )
 
         return null
       })

@@ -36,7 +36,7 @@ import {
   type Reservation,
   reserveInventory,
 } from "./api"
-import { ActionInterruptedError, effectAction } from "./solid-effect"
+import { ActionInterruptedError, actionStep, effectAction } from "./solid-effect"
 
 type Phase = "idle" | "reserving" | "charging" | "finalizing"
 
@@ -82,14 +82,16 @@ export function Checkout() {
 
     try {
       setPhase("reserving")
-      reservation = yield reserveInventory(items)
+      reservation = yield* actionStep(reserveInventory(items))
       setPhase("charging")
-      charge = yield chargeCard(
-        items.reduce((sum, item) => sum + item.price * item.quantity, 0),
-        decline,
+      charge = yield* actionStep(
+        chargeCard(
+          items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+          decline,
+        ),
       )
       setPhase("finalizing")
-      const order = yield createOrder(items, reservation, charge)
+      const order = yield* actionStep(createOrder(items, reservation, charge))
       setNotice({
         kind: "success",
         text: `Order ${order.id} confirmed — $${order.total.toFixed(2)}`,
@@ -101,9 +103,9 @@ export function Checkout() {
       // Saga compensation, in reverse order of what committed. Mid-step
       // cleanup (voiding a half-done authorization) already ran via the
       // interrupted step's own finalizers.
-      if (charge) yield refundCharge(charge)
+      if (charge) yield* actionStep(refundCharge(charge))
 
-      if (reservation) yield releaseReservation(reservation)
+      if (reservation) yield* actionStep(releaseReservation(reservation))
 
       if (e instanceof CardDeclinedError) {
         setNotice({
@@ -156,8 +158,8 @@ export function Checkout() {
         <h2>Checkout saga</h2>
         <p>
           Three Effect steps inside one Solid action transaction. Cancel mid-charge (it takes ~2.6s)
-          or toggle the decline: the fiber is interrupted, compensations run server-side, and the
-          optimistic UI reverts — automatically on both sides.
+          or toggle the decline: the fiber is interrupted, explicit compensations run, and the
+          optimistic UI reverts.
         </p>
       </header>
 

@@ -155,14 +155,19 @@ Solid Context
             -> Solid async read/action boundary
 ```
 
-- `R` is carried by the nearest `ManagedRuntime` in Solid Context, not by a
-  global registry.
+- Solid Context scopes the `ManagedRuntime`; pass the matching typed runtime to
+  `runEffect` or `effectAction` when an Effect requires services so TypeScript
+  can verify `R`. Effects without requirements can use the nearest context.
 - Runtime and Layer cleanup follows the Solid owner that created the provider;
   nested providers override services for their subtree only.
 - A read adapter must propagate Solid superseding/disposal into Effect fiber
-  interruption and preserve Effect failure/finalization on the way back.
+  interruption and preserve Effect failure/finalization on the way back. Solid
+  does not await iterator closure before starting a replacement; finalizers
+  can overlap the next read.
 - An action adapter must preserve typed failures, interruption, compensation,
-  and service scope without moving business authority into the browser.
+  and service scope without moving business authority into the browser. The
+  bridge waits for a superseded action's local recovery before its replacement;
+  interruption does not prove that a remote write was rolled back.
 - Solid signals, memos, stores, and context own local presentation state.
 - TanStack Solid Query owns cache policy for shared remote server state; its results
   must not be mirrored into Atom or an unrelated store.
@@ -177,8 +182,9 @@ independent of Solid and Atom.
 
 The production bridge is
 [`apps/web/src/shared/solid-effect.ts`](../../apps/web/src/shared/solid-effect.ts). The connected
-session route provides its single session-scoped `ManagedRuntime` through both `ApiRuntime` and
-`RuntimeContext`; it does not create a second runtime for the same session.
+route provides one `ManagedRuntime` for its active tenant session through both
+`ApiRuntime` and `RuntimeContext`. The runtime is disposed when the route
+unmounts or its session changes.
 
 The runnable evidence harness remains at
 [`apps/web/src/experiments/solid-effect/`](../../apps/web/src/experiments/solid-effect/):
@@ -517,6 +523,10 @@ A feature should expose reusable query modules rather than constructing ad hoc
 request behavior inside route components. The shared `createServerQuery` policy
 adds tenant-scoped identity and bounded cache profiles; the feature still owns
 validated input, endpoint loading, and invalidation.
+
+Each connected route owns its query client for the active tenant session.
+Leaving the route or replacing the session clears that client's data, so a
+return visit can fetch again even within the query's freshness window.
 
 ```ts
 const invoiceKey = ["invoices", "list"] as const
