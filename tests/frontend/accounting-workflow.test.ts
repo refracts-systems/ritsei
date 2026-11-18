@@ -189,6 +189,22 @@ it.effect(
           [],
         )
 
+        const menuTrigger = page.getByRole("button", { name: "More actions", exact: true })
+        await menuTrigger.focus()
+        await page.keyboard.press("Enter")
+        const menu = page.getByRole("menu")
+        await menu.waitFor()
+        await page.waitForFunction(() => document.activeElement?.closest('[role="menu"]') !== null)
+        await page.keyboard.press("ArrowDown")
+        await page.waitForFunction(
+          () => document.activeElement?.getAttribute("role") === "menuitem",
+        )
+        await page.keyboard.press("Escape")
+        await menu.waitFor({ state: "hidden" })
+        await page.waitForFunction(() =>
+          document.activeElement?.textContent?.includes("More actions"),
+        )
+
         await chooseMoreAction(page, "Configure legal entity")
         const configurationDialog = page.getByRole("dialog", { name: "Configure legal entity" })
         await configurationDialog

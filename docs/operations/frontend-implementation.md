@@ -129,7 +129,7 @@ feature-owned User Accounts projection, and an HTML/SVG fallback; optional WebGP
 - The accessibility test runs axe WCAG 2A/AA checks and exercises narrow layout, reduced motion,
   forced colors, skip-link focus, labeled controls, keyboard traversal, validation focus, 200% zoom,
   route splitting, bundle limits, interaction latency, and bounded repeated use.
-- The web build bundles `@kobalte/core@2.0.0-alpha.4` on Solid `2.0.0-rc.16`; the separate bundle
+- The web build bundles `@kobalte/core@2.0.0-alpha.4` on Solid `2.0.0`; the separate bundle
   probe and probe application were removed by ADR-0113. `tests/frontend/kobalte.test.ts`,
   `tests/frontend/workflow.test.ts`, `tests/frontend/party-workflow.test.ts`,
   `tests/frontend/access-workflow.test.ts`, `tests/frontend/procurement-workflow.test.ts`,
@@ -138,9 +138,9 @@ feature-owned User Accounts projection, and an HTML/SVG fallback; optional WebGP
   confirmation, account-creation, Party-creation, Access-administration, Procurement, Inventory, and
   Sales lifecycle wrappers: keyboard opening, focus containment/restoration, Escape and explicit
   close, reduced motion, forced colors, and axe WCAG 2A/AA checks. Kobalte `2.0.0-alpha.4`
-  names Solid `2.0.0-rc.16` as its exact peer, so the earlier peer-range mismatch is gone; it is
-  still an alpha, an explicitly accepted prerelease risk, and production use remains limited to
-  those tested RITSEI wrapper usage paths.
+  names Solid `2.0.0-rc.16` as its exact peer, so the stable pairing has a published peer mismatch.
+  [ADR-0114](../decisions/0114-adopt-solid-2-stable-with-bounded-kobalte-risk.md) records the bounded
+  risk, evidence, and rollback; production use remains limited to tested RITSEI wrapper paths.
 - `deno task --cwd apps/web storybook:build` and the CI smoke test pass with the pinned
   `storybook-solidjs-vite@11.0.0-next-20260903183420` adapter and `storybook@11.0.0-alpha.0`, using
   upstream compatibility reference commit `c6b884cc26f35852655c0d61a6f577af89977d2f`. The adapter's

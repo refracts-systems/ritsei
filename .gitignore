@@ -1,4 +1,6 @@
 node_modules/
+/vendor/solidjs/
+/vendor/solid-router/
 .fallow/
 .auto/
 .pi/

@@ -63,6 +63,7 @@
 
 ## Proposals
 
+- [`./proposals/solidjs-2-stable-migration.md`](./proposals/solidjs-2-stable-migration.md)
 - [`./proposals/boneyard-js-solid/README.md`](./proposals/boneyard-js-solid/README.md)
 - [`./proposals/erp-module-parity-plan.md`](./proposals/erp-module-parity-plan.md)
 - [`./proposals/erp-chains-next-steps.md`](./proposals/erp-chains-next-steps.md)

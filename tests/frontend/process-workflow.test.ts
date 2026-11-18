@@ -192,6 +192,19 @@ it.effect(
 
         await connectAndOpenProcessStudio(page, url)
         await page.getByText("Confirm sales order", { exact: true }).first().waitFor()
+        await page.getByRole("tab", { name: "Design", exact: true }).focus()
+        await page.keyboard.press("ArrowRight")
+        await page.waitForFunction(() => {
+          const active = document.activeElement
+
+          return (
+            active?.getAttribute("role") === "tab" &&
+            active.textContent === "Monitor" &&
+            active.getAttribute("aria-selected") === "true"
+          )
+        })
+        await page.getByText(instanceId, { exact: true }).waitFor()
+        await page.getByRole("tab", { name: "Design", exact: true }).click()
         await page.getByRole("tab", { name: "Monitor", exact: true }).click()
         await page.getByText(instanceId, { exact: true }).waitFor()
         await page.getByRole("tab", { name: "Inbox", exact: true }).click()
@@ -211,6 +224,22 @@ it.effect(
         await page.getByRole("tab", { name: "Design", exact: true }).click()
         await page.getByRole("button", { name: "Validate draft", exact: true }).click()
         await page.getByText(/Backend catalog validation passed/).waitFor()
+
+        // Leaving and returning recreates the designer under a live reactive owner.
+        await page.getByRole("link", { name: "User accounts", exact: true }).click()
+        await page.getByRole("heading", { name: "User accounts", exact: true }).waitFor()
+        await page.getByRole("link", { name: "Process Studio", exact: true }).click()
+        await page.getByRole("heading", { name: "Process Studio", exact: true }).waitFor()
+        await page.getByRole("button", { name: "Validate draft", exact: true }).waitFor()
+        await page.evaluate(() => {
+          document.documentElement.style.zoom = "2"
+        })
+        assert.isTrue(
+          await page.getByRole("button", { name: "Validate draft", exact: true }).isVisible(),
+        )
+        await page.evaluate(() => {
+          document.documentElement.style.zoom = ""
+        })
 
         assert.equal(
           requests.find((request) => request.path === "/process/catalog")?.headers.authorization,

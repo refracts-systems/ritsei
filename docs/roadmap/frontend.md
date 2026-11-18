@@ -126,10 +126,10 @@ roadmap completion:
 
 - **Compatibility spike:** Vite, SolidJS 2, Panda CSS, the generated semantic recipe surface,
   TanStack Solid Query, Playwright, and axe run through the web-owned manifest plus shared
-  repository tooling. The Kobalte Solid 2 probe bundles successfully with
-  `@kobalte/core@2.0.0-alpha.4` on Solid `2.0.0-rc.16`, and the browser probe covers the exercised
-  Dialog contract. The alpha is explicitly accepted as `approved_with_risk` with exact pins and
-  rollback (its peer range now names the pinned Solid release candidate exactly); Dialog is active only through the tested RITSEI confirmation, account-creation,
+  repository tooling. The app bundles `@kobalte/core@2.0.0-alpha.4` on Solid `2.0.0`, and
+  application browser tests cover the exercised wrappers. Its published peer range still names
+  Solid `2.0.0-rc.16`; [ADR-0114](../decisions/0114-adopt-solid-2-stable-with-bounded-kobalte-risk.md)
+  records the bounded risk and rollback. Dialog is active only through the tested RITSEI confirmation, account-creation,
   Party-creation, and Access-administration wrappers. TanStack Solid Query is active. TanStack Solid
   Table and Form remain unactivated because the current published adapters still import Solid 1
   paths or APIs that the pinned SolidJS 2 runtime intentionally does not expose; the application
