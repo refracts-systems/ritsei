@@ -1,6 +1,7 @@
 // The experiment uses the production Solid/Effect bridge directly.
 export {
   ActionInterruptedError,
+  actionStep,
   createRuntime,
   effectAction,
   MissingRuntimeContextError,

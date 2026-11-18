@@ -8,17 +8,11 @@
 // interrupted by Solid closing the flight's iterator. No debounce, no
 // AbortController, no request bookkeeping anywhere in this component.
 
-import { createMemo, createSignal, Errored, For, isPending, latest, Loading, Show } from "solid-js"
-import { type Package, searchPackages } from "./api"
+import type { ManagedRuntime } from "effect"
+import { createMemo, createSignal, Errored, isPending, latest, Loading, Show } from "solid-js"
+import { type Package, type SearchConfig, searchPackages } from "./api"
+import { PackageList } from "./package-list"
 import { runEffect } from "./solid-effect"
-
-function formatDownloads(n: number) {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M"
-
-  if (n >= 1_000) return Math.round(n / 1_000) + "k"
-
-  return String(n)
-}
 
 function Results(props: { results: () => Package[]; query: string }) {
   const list = () => latest(props.results)
@@ -33,25 +27,13 @@ function Results(props: { results: () => Package[]; query: string }) {
           </p>
         }
       >
-        <ul>
-          <For each={list()}>
-            {(pkg) => (
-              <li>
-                <div>
-                  <span class="pkg-name">{pkg.name}</span>
-                  <span class="pkg-desc">{pkg.description}</span>
-                </div>
-                <span class="pkg-downloads">{formatDownloads(pkg.downloads)}/wk</span>
-              </li>
-            )}
-          </For>
-        </ul>
+        <PackageList packages={list()} />
       </Show>
     </div>
   )
 }
 
-export function Typeahead() {
+export function Typeahead(props: { runtime: ManagedRuntime.ManagedRuntime<SearchConfig, never> }) {
   const [query, setQuery] = createSignal("")
 
   // The whole data layer. searchPackages carries retry w/ backoff, timeout,
@@ -62,7 +44,7 @@ export function Typeahead() {
 
     if (!q) return []
 
-    return runEffect(searchPackages(q))
+    return runEffect(searchPackages(q), props.runtime)
   })
 
   return (

@@ -37,6 +37,7 @@ function LogPanel() {
 
 export function App() {
   const [tab, setTab] = createSignal<Tab>("typeahead")
+  const runtime = createRuntime(SearchConfigLive)
 
   return (
     <Errored
@@ -54,7 +55,7 @@ export function App() {
       {/* Effect's R channel rides Solid context: this ManagedRuntime provides
           SearchConfig to every Effect forked below it, and its Layer scope is
           disposed when this subtree unmounts. */}
-      <RuntimeContext value={createRuntime(SearchConfigLive)}>
+      <RuntimeContext value={runtime}>
         <div class="app">
           <header class="app-header">
             <h1>
@@ -98,7 +99,7 @@ export function App() {
                 </Show>
               }
             >
-              <Typeahead />
+              <Typeahead runtime={runtime} />
             </Show>
             <LogPanel />
           </main>

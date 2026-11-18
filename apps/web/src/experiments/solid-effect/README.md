@@ -47,8 +47,9 @@ The comparison that matters isn't Solid 1.x — it's that these seams don't exis
 - **A tree to put services in.** Effect's requirement channel (`R`) needs someone to provide
   `Layer`s and scope their lifetimes. Solid context _is_ that structure: `createRuntime(layer)`
   builds a `ManagedRuntime` disposed by `onCleanup` (service lifetime = subtree lifetime), and
-  `runEffect`/`effectAction` resolve it from the nearest `RuntimeContext` — so providing a different
-  runtime lower in the tree overrides services for that subtree only, hierarchically, the same way
+  Effects without service requirements resolve the nearest `RuntimeContext`; pass the typed runtime
+  explicitly when an Effect needs services, so its `R` channel is checked. Providing a different
+  runtime lower in the tree scopes services for that subtree, the same way
   any Solid context works. Cross-subtree sharing is Effect's own machinery, not ours: nested
   providers pass the parent runtime's `MemoMap` to `ManagedRuntime.make`, so a layer used by several
   subtrees is built once and finalized by Effect's refcounting when the last subtree unmounts. A
@@ -60,7 +61,7 @@ The comparison that matters isn't Solid 1.x — it's that these seams don't exis
 const results = createMemo<Package[]>(() => {
   const q = query().trim()
   if (!q) return []
-  return runEffect(searchPackages(q)) // Effect w/ retry + backoff + timeout + typed errors
+  return runEffect(searchPackages(q), runtime) // runtime provides SearchConfig
 })
 ```
 
@@ -72,6 +73,8 @@ knowing about the other. Type fast and watch the event log: every superseded key
 cancelled through the fiber bridge rather than merely ignored. No debounce, no `AbortController`,
 no request bookkeeping in the component. Solid's `isPending` observation can still delay the
 iterator close; see the honest notes below.
+Solid does not wait for `return()` to finish before starting the next flight, so a finalizer may
+overlap its replacement.
 
 Note the granularity: a plain `Effect.runPromise` result would _not_ be interruptible (Solid drops
 stale promises by identity; it has no way to abort them). Routing through the iterator protocol is
@@ -82,19 +85,18 @@ what connects Solid's flight lifecycle to Effect's fiber lifecycle.
 ```tsx
 const placeOrder = effectAction(function* (items, decline) {
   setPhase("reserving");
-  const reservation = yield reserveInventory(items); // each yield = one transaction step,
+  const reservation = yield* actionStep(reserveInventory(items)); // one transaction step,
   setPhase("charging"); //                             run as an interruptible fiber
-  const charge = yield chargeCard(total, decline);
+  const charge = yield* actionStep(chargeCard(total, decline));
   ...
 });
 ```
 
 Solid's `action` runs a generator as a transaction: writes between yields commit atomically per
 step, and `createOptimistic` writes revert when the action settles. The action generator yields each
-Effect directly to `effectAction`'s driver loop **with full inferred types** — each `yield` is both
-an interruptible fiber step and a transaction boundary. `yield*` remains Effect's own generator
-protocol and is not used for action steps because Effect v4's single-shot iterator intentionally
-has no `throw` method for injected action failures.
+Effect through `actionStep` to `effectAction`'s driver loop with its success type preserved. Each
+step is an interruptible fiber step and a transaction boundary. Do not `yield*` an Effect directly:
+Effect v4's single-shot iterator has no `throw` method for injected action failures.
 
 Two properties fall out:
 
@@ -108,10 +110,11 @@ Two properties fall out:
   order of what committed (refund the charge, release the inventory hold) — as further transaction
   steps — while the interrupted step's own `onInterrupt` finalizers cover mid-step cleanup (voiding
   a half-done authorization). Rethrowing rejects the action, which reverts the optimistic UI
-  automatically. Client and server roll back together; the component contains no undo logic.
+  automatically. Server-side compensation is an explicit business command, not an automatic rollback.
 
-A superseding invocation interrupts the previous one's in-flight fiber before starting, so a
-double-submit cancels (with compensation) rather than silently racing.
+A superseding invocation interrupts the previous one's in-flight fiber and waits for its local
+finalizers and recovery to finish before starting. A stalled recovery delays its replacement.
+Interruption alone does not establish whether a remote write committed.
 
 ## Honest notes
 
@@ -121,10 +124,10 @@ double-submit cancels (with compensation) rather than silently racing.
   difference from running one big `Effect.gen` program.
 - Effect's typed error channel degrades to a thrown value at `<Errored>` on the read path. Inside
   `effectAction` generators it survives (`instanceof` narrows `Data.TaggedError` classes).
-- Services/`Layer` ride Solid context: the app provides a scoped `ManagedRuntime` through
-  `RuntimeContext`, and `searchPackages` requires `SearchConfig` through the typed `R` channel.
-  `runEffect` resolves the runtime at the reading computation, `effectAction` at component setup;
-  both fail fast when no provider exists. One composition note: `ManagedRuntime.make` wants a
+- The app provides a scoped `ManagedRuntime` through `RuntimeContext`, and passes that typed runtime
+  to `runEffect` because `searchPackages` requires `SearchConfig`. Calls without service
+  requirements can use context and fail fast when no provider exists. One composition note:
+  `ManagedRuntime.make` wants a
   self-contained layer (`RIn = never`), so a child provider whose layer depends on parent services
   composes with `Layer.provideMerge` — the shared `MemoMap` makes the overlapping construction
   free.

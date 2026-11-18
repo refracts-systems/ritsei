@@ -131,8 +131,10 @@ export function App() {
   const [user, setUser] = createSignal<AuthenticatedUser | null>(null)
   const [tenants, setTenants] = createSignal<readonly TenantOption[]>([])
   const [capabilities, setCapabilities] = createSignal<readonly Capability[]>([])
+  let sessionGeneration = 0
 
   const replace = (next: Session | null, details?: AuthSession) => {
+    sessionGeneration++
     setSession(next)
 
     if (next === null || details === undefined) {
@@ -149,22 +151,24 @@ export function App() {
   const selectTenant = async (tenantId: string) => {
     if (!tenants().some((tenant) => tenant.tenantId === tenantId)) return
     const current = session()
+    const generation = ++sessionGeneration
 
     if (current === null || current.tenantId === tenantId) return
 
-    try {
-      const details = await getAuthSession(current.token, tenantId)
-
-      if (details.activeTenant?.tenantId !== tenantId) return
-      setUser(details.user)
-      setTenants(details.memberships)
-      setCapabilities(details.capabilities)
-      setSession({ ...current, tenantId })
-    } catch (error) {
-      if (error instanceof AuthClientFailure && error.kind === "unauthorized") {
+    const details = await getAuthSession(current.token, tenantId).catch((error) => {
+      if (
+        generation === sessionGeneration &&
+        error instanceof AuthClientFailure &&
+        error.kind === "unauthorized"
+      ) {
         globalThis.dispatchEvent(new Event("ritsei:unauthorized"))
       }
-    }
+
+      return null
+    })
+
+    if (generation !== sessionGeneration || details?.activeTenant?.tenantId !== tenantId) return
+    replace({ ...current, tenantId }, details)
   }
 
   return (

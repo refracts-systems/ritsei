@@ -32,6 +32,7 @@ import {
   SearchConfigLive,
   searchPackages,
 } from "./api"
+import { PackageList } from "./package-list"
 
 // @effect/atom-solid@4.0.0 still imports Solid 1-only APIs. This tiny
 // Solid 2 bridge keeps the same RegistryProvider/useAtom surface over Atom's
@@ -81,14 +82,6 @@ function RegistryProvider(props: { children: JSX.Element }) {
   onCleanup(() => registry.dispose())
 
   return <RegistryContext value={registry}>{props.children}</RegistryContext>
-}
-
-function formatDownloads(n: number) {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M"
-
-  if (n >= 1_000) return Math.round(n / 1_000) + "k"
-
-  return String(n)
 }
 
 function AtomTypeahead() {
@@ -159,19 +152,7 @@ function AtomTypeahead() {
                   when={results().length > 0}
                   fallback={<p class="empty">No packages match “{q()}”.</p>}
                 >
-                  <ul>
-                    <For each={results()}>
-                      {(pkg) => (
-                        <li>
-                          <div>
-                            <span class="pkg-name">{pkg.name}</span>
-                            <span class="pkg-desc">{pkg.description}</span>
-                          </div>
-                          <span class="pkg-downloads">{formatDownloads(pkg.downloads)}/wk</span>
-                        </li>
-                      )}
-                    </For>
-                  </ul>
+                  <PackageList packages={results()} />
                 </Show>
               </div>
             </Match>
