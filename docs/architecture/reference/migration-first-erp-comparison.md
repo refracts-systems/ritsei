@@ -12,6 +12,27 @@
 > - Earlier parity plan and subsequent implementation — [ERP Module Parity Plan](../../proposals/erp-module-parity-plan.md), [ERP Build-out Handoff](../../proposals/erp-handoff.md)
 > - Canonical rules — [state and consistency](../state-and-consistency.md), [financial ledger](../financial-ledger.md), [integration surface](../integration-architecture.md), [plugin architecture](../plugin-architecture.md)
 
+## Decisions requested from reviewers
+
+These are proposed defaults to debate. Each can change multiple domains and goes through the
+[ADR workflow](../../development/documentation-workflow.md#adr-gate) before implementation.
+
+1. **Opening balance semantics.** Every open AR, AP, and stock item is loaded by its owner
+   against a `migration clearing` account. All other GL balances enter through one opening
+   journal. Sign-off requires the clearing account to be zero per legal entity. See
+   [section 4A](#a-scope-the-cutover-before-reading-files).
+2. **Valuation method at cutover.** RITSEI values stock at moving average. A source on FIFO or
+   standard cost is revalued once at the cutoff, and the difference is shown and approved as
+   a named opening adjustment. See section 4A.
+3. **First source adapter.** Choose by the first named pilot's incumbent, with Accurate,
+   Zahir, Jurnal (Mekari), and spreadsheets considered before SAP Business One. Odoo remains
+   a candidate where the pilot runs it, most likely release 14 to 17 rather than 20.
+4. **Cutover date.** Default to the first day of a month, ideally the start of a fiscal year,
+   so one SPT Masa PPN period is not split across two systems.
+5. **Parallel run.** Read-only shadow comparison is allowed. Dual-write is not.
+6. **Section 7 status.** It is a bounded follow-on experiment, not a step in the
+   [recommended sequence](#recommended-sequence) of this proposal.
+
 1. [The premise and evidence](#1-the-premise)
 2. [ERP depth and what needs to migrate](#2-erp-depth-and-what-needs-to-migrate)
 3. [Framework and extensibility](#3-framework-and-extensibility)
@@ -54,7 +75,7 @@ the neutral domains. [Business Packs](../../product/vision.md#business-pack-libr
 
 | Lifecycle | What must travel | Evidence that the move succeeded |
 | --- | --- | --- |
-| **Adopt RITSEI** from spreadsheets, Odoo, SAP Business One, or another incumbent | Master data, opening positions, selected open transactions, source references, retained evidence, and the applicable module behavior | The opening position ties out, required custom behavior is accounted for, the first live transactions work, and the first period can close. |
+| **Adopt RITSEI** from spreadsheets, Accurate, Zahir, Jurnal, Odoo, or another incumbent. SAP Business One is a design reference more than a likely source | Master data, opening positions, selected open transactions, source references, retained evidence, and the applicable module behavior | The opening position ties out, required custom behavior is accounted for, the first live transactions work, and the first period can close. |
 | **Run in stages** while moving a second company, warehouse, or function | Agreed ownership by scope, integration mappings, and any authorized deltas | One operational writer for each scope, with visible exceptions and no duplicate accounting or stock effects. |
 | **Upgrade RITSEI** in place, including a trusted extension | Schema evolution, data semantics, jobs in progress, public contracts, and configured behavior | Existing tenants, integrations, and released extensions still pass rehearsed business scenarios. |
 | **Hand over data** to an auditor or successor system | Portable, permission-scoped records and evidence with reference IDs and versioned formats | A recipient can reconcile the export to the reported figures and find the underlying documents. |
@@ -67,7 +88,9 @@ the neutral domains. [Business Packs](../../product/vision.md#business-pack-libr
   corresponding operational surface. The passing chain tests establish behavior for their
   fixtures, independently of tenant onboarding, rollout, or live support.
 - Odoo means **20.0**, with Community add-ons distinguished from Enterprise apps or capabilities
-  that depend on the deployment and edition. See the [20.0 add-on tree][odoo-addons] and
+  that depend on the deployment and edition. The columns are mostly version-generic. Customers
+  to migrate are more likely on 14 to 17, so check version-specific behavior against the
+  customer's release. See the [20.0 add-on tree][odoo-addons] and
   [edition comparison][odoo-editions].
 - SAP Business One (B1) is the near-peer for a small distributor. S/4HANA Cloud Public Edition
   is the enterprise design reference. The two have different extension APIs and scope.
@@ -192,10 +215,45 @@ RITSEI should make the same distinction in its own terms. [SAP initial data scop
 | Disposition | When to use it | How operations continue |
 | --- | --- | --- |
 | **Native master** | An item, party, unit, warehouse, or tax identity is needed on day one | A RITSEI owner validates it and records the source reference. Existing documents can resolve it consistently. |
-| **Opening position** | Stock quantities and values, ledger balances, open AR/AP, and unapplied cash affect today's business | Owners establish approved starting positions at the cutoff. Decide which positions generate ledger entries and which are represented by the opening journal so every amount contributes once. |
+| **Opening position** | Stock quantities and values, ledger balances, open AR/AP, and unapplied cash affect today's business | Owners establish approved starting positions at the cutoff. Proposed default below. |
 | **Open process** | An order or receipt is partly fulfilled and must continue after the move | Preserve the line-level remainder, the supported open state, and its source links. Test the next normal business action in RITSEI. |
 | **Read-only history** | A closed record is needed for audit, returns, reference, or customer support | Retain the approved evidence and a reference. If a later action requires a link or a reversal, its owner defines the supported route from that reference. |
 | **Retained in source** | The target lacks a required semantic, contract, or jurisdictional capability | Keep that scope owned by the source and document its handoff condition. A blocked capability is visible in scope review before anyone changes authority. |
+
+**Proposed default for opening positions.** Each open AR, AP, and stock item is loaded by its
+owner (`billing`, `settlement`, `inventory`) with the offsetting entry in a `migration clearing`
+account. Every other GL balance, such as cash, fixed assets, equity, and accruals, enters through
+one opening journal per legal entity. Control accounts for AR, AP, and stock receive their
+balance only from the owner loads, never from the opening journal, so no amount is counted
+twice. Sign-off requires the clearing account to be exactly zero per legal entity at the
+cutoff. A nonzero balance is a blocking exception. This is the duplication the Business One
+guidance warns about, turned into a testable rule.
+
+**Valuation at cutover.** RITSEI values stock at moving average. When the source uses FIFO or
+standard cost, load quantities with the source's value, revalue once to moving average at the
+cutoff, and record the difference as a named, owner-approved opening adjustment. Report it
+beside the control totals. Do not carry the source's valuation layers into the target.
+
+**Cutover date and tax period.** Default to the first day of a month, ideally the start of a
+fiscal year. A cutoff in the middle of a tax period splits one SPT Masa PPN across two systems
+and needs its own written filing plan.
+
+**Indonesia-specific cases to state before the pilot.**
+
+- An invoice that already has a faktur pajak in Coretax and is returned or corrected after
+  cutover needs a nota retur or replacement faktur that references the original. While Coretax
+  is excluded from month one, this runs manually and the runbook names who does it.
+- Partial payments on open receivables must state how PPh 23 withheld by the customer is
+  treated: the bukti potong, the residual, and the receivable it clears.
+- Identifiers such as NIK, NPWP, and employee data are personal data under UU PDP (No. 27 of
+  2022). Minimization, access, retention, and deletion in the staging area follow from that
+  law, and the legal basis is recorded for the pilot. Legal review is outside this document.
+
+**Parallel run.** Customers will ask for one. Allow a read-only shadow comparison, where the
+target is loaded from the same snapshot and its controls are compared with the source while
+the source stays authoritative. Do not allow dual-write. Two writers produce two stock and
+ledger histories that cannot be reconciled, which breaks the one-writer-per-scope rule in
+section 4E.
 
 ### B. Stage and map without producing business effects
 
@@ -403,16 +461,29 @@ adapter and profile; broader source support needs its own fixtures.
 | **5. Prove external contribution and upgrade** | One supplier PO exporter or other named extension, built through the same composition path, running against a supported old fixture | Install, exercise, upgrade, retry and retire it with explicit contract expectations. Extract common framework code only after seeing real repeated needs. |
 | **6. Expand depth and portability** | A second source format, a second tenant cohort, a measured need for lot/expiry or pricing, or an explicit localization requirement | Capture what changed in mapping, cutover, reconciliation and support. Evidence determines the next ERP owner or framework primitive. |
 
-The first design reviews should settle the opening accounting semantics, the first supported
-legacy data cohort, the conditions for transferring authority, and the publishing contract
-for the first extension. Those choices can affect multiple domains and should follow the
-repository's [ADR workflow](../../development/documentation-workflow.md#adr-gate) before
-implementation. This comparison supplies evidence and candidate acceptance criteria for
-those decisions.
+The first design reviews should settle the items in [Decisions requested from reviewers](#decisions-requested-from-reviewers).
+Pick the first source adapter from the pilot's actual incumbent and market data, not from
+whose documentation is tidiest. Section 7 is a follow-on experiment that starts only after
+steps 1 and 2 have run. It is not one of the six steps. Volumes (SKUs, open documents, ledger
+lines), the target cutover duration, and team size are not yet known. The pilot agreement must
+state them, because the pilot measures below depend on them.
 
 ## 7. Migrate the module and its custom behavior
 
-Data migration carries the employee records. Module migration also carries what the source
+> **Status:** a bounded follow-on experiment, outside the recommended sequence. It is not
+> committed roadmap and starts only after a real opening-position cutover has run.
+
+**What it costs and what it assumes.** Finding the effective behavior of an Odoo customer is
+hard. Behavior comes from `super()` chains, monkeypatches, server actions, Studio changes,
+`ir.rule` records, stored computed fields, and OCA modules, and no static reading is complete.
+Using source fixtures as an oracle also requires a runnable copy of the customer's Odoo at
+the customer's version. That copy, its hosting, and the person who can operate it are a
+precondition the customer must supply. Customers are more likely on Odoo 14 to 17 than 20, so
+the first fixtures should match their release. Verify any claim about release 20 changes
+(for example bank-journal consistency, simplified access rights, and MCP) against the
+official release notes before relying on it.
+
+Data migration carries the records. Module migration also carries what the source
 does with those records and how that behavior differs for this customer. The proposed unit of
 review is **one source module as a tree of business capabilities**. The root is the module,
 branches are recognizable jobs or submodules, and leaves are separately observable rules,
@@ -420,12 +491,16 @@ fields, actions, outputs, or side effects. Each leaf has its own migration decis
 tree also records standard behaviors whose semantics matter to the imported customizations.
 
 **Preserve the full inventory even when conversion is partial.** The generator must produce
-a reviewable draft or an explicit blocker for every discovered custom behavior in the
-agreed scope. This is the proposed meaning of forced generation. Discovery is allowed to
-be incomplete where evidence is inaccessible, provided the report names the missing
-coverage. Completion means that nothing in the discovered inventory disappears between
-analysis, generation, and review. Finishing a draft does not establish equivalent behavior
-or authorize activation.
+a verified mapping or implementation, a draft awaiting evidence, or an explicit blocker
+for every discovered custom behavior in the agreed scope. This is **inventory closure**.
+Discovery can be incomplete where evidence is inaccessible if the report names the missing
+coverage. The detailed inventory stays traceable even when AI has resolved the work.
+
+**Who decides what.** AI can close technical findings alone: format mismatches, type and
+dependency errors, missing fixtures, and failing replay checks. Any leaf that touches money,
+stock, or authorization still needs a human sign-off by the fact's business owner, however
+fast the review is. So an operator may have nothing left to decide on technical findings,
+but a signature remains for those leaves.
 
 ### The tree places capabilities and the graph records dependencies
 
@@ -437,29 +512,30 @@ dependencies across branches and modules as a graph. A source dependency cycle i
 to inspect before the target is composed. The compiled RITSEI module graph still follows
 the existing ownership and acyclicity rules. [Module registry](../../decisions/0094-adopt-module-manifest-registry-and-generator.md)
 
-This illustrative tree uses HR because it is easy to recognize. It is a migration example
-and does not describe an installed RITSEI HR module or a particular customer's implementation.
+This illustrative tree uses a distributor's Sales module because it is the first segment in
+scope. It is a migration example and does not describe a particular customer's implementation.
 
 ```text
-HR
-├── Employee administration
-│   ├── Employee number and employment status
-│   ├── Custom cost-center field and form visibility
-│   └── Employee activation notification
-├── Leave
-│   ├── Annual entitlement and employment-date proration
-│   ├── Custom manager approval threshold
-│   └── Cancellation and restoration of leave balance
-└── Attendance
-    ├── Shift and clock-in capture
-    ├── Custom late-arrival rule and exceptions
-    └── Monthly export to payroll
+Sales
+├── Order entry
+│   ├── Carton quantity custom field and unit conversion
+│   ├── Per-salesman discount approval threshold
+│   └── Order confirmation notification
+├── Credit
+│   ├── Customer credit limit per salesman
+│   ├── Block on overdue invoices
+│   └── Release of a blocked order by a manager
+└── Pricing
+    ├── Customer-specific pricelist
+    ├── Custom rounding rule on carton price
+    └── Monthly price export to a channel
 ```
 
-The monthly export depends on Attendance, Employee administration, and an external Payroll
-contract. Where the source HR module also imports an Accounting model, capture what it reads
-or changes and why. Target composition would use released contracts owned by those modules.
-The HR tree remains navigable even if the target implementations span several packages.
+The monthly price export depends on Pricing, Product, and an external channel contract. The
+credit leaves depend on open receivables owned by `billing` and `settlement`. Where the source
+Sales module also reads an Accounting model, capture what it reads or changes and why. Target
+composition would use released contracts owned by those modules. The tree remains navigable
+even if the target implementations span several packages.
 
 ### Analyze the installed behavior before generating
 
@@ -480,8 +556,8 @@ The HR tree remains navigable even if the target implementations span several pa
 3. **Describe the business consequences.** Record inputs, outputs, dates and units, actors
    and scope, owned facts, validation, failure and recovery paths, audit evidence, side
    effects, and dependencies. For important behavior, capture representative source cases
-   and expected outcomes. Use authorized, minimized fixtures, especially for employee,
-   compensation, and attendance data. Analyze source artifacts as evidence. Any observation
+   and expected outcomes. Use authorized, minimized fixtures, especially for customer,
+   pricing, and credit data. Analyze source artifacts as evidence. Any observation
    that requires execution belongs in a separately approved rehearsal environment.
 4. **Find the target leaf and its owner.** Place a customization where its invariant belongs.
    If there is no owner or released contribution point, describe the missing piece and
@@ -490,7 +566,7 @@ The HR tree remains navigable even if the target implementations span several pa
    business role determines whether it belongs in a service, policy, projection, or
    integration on the target.
 5. **Generate a traceable review package.** Include a capability tree, dependency map,
-   source-to-target coverage report, target drafts where supported, and test cases or
+   source-to-target coverage report, working target changes or drafts, and test cases or
    evidence requests. Assign a stable ID to each discovered source behavior and keep its
    source reference, source version or fingerprint, assumptions, target owner, dependencies,
    mapping disposition, and reason for any blocker. Preserve the record for each source
@@ -500,14 +576,14 @@ The HR tree remains navigable even if the target implementations span several pa
 
 ### What the generator can propose for each leaf
 
-| Disposition | HR example | Draft to produce |
+| Disposition | Distributor example | Draft to produce |
 | --- | --- | --- |
-| **Use an existing public capability** | An approval follows a supported policy and escalation mechanism | A mapping to the named capability, required scope and grants, and acceptance cases that compare source and target. |
-| **Contribute through a released extension point** | A custom employee field whose owner explicitly supports typed fields and field visibility | A typed contribution and its data mapping. Generate the permission checks and UI proposal as separate concerns. HR field support is hypothetical. |
-| **Compose a workflow** | Leave above five days needs a second approval and generates a notification | A draft flow using released actions, with the original conditions, default branches, denial path, and task visibility represented. |
-| **Add an adapter or projection** | Payroll expects a monthly attendance export; HR owns the attendance facts | A connector or read projection draft that uses published data and translates the partner format. Include the data scope, schedule, cutoff, and redelivery behavior. |
-| **Propose a new owner capability** | Leave accrual, proration, and cancellation require authoritative balances that the target does not own today | A domain proposal with source cases, invariants, and unresolved design questions. For the example snapshot, there is no installed HR owner. Creating one would require a reviewed domain decision. |
-| **Retain in source or block** | A proprietary payroll rule affects money and its exact behavior cannot be established from available evidence | A blocked leaf with provenance, scope, and mitigation. Keep Payroll's write authority at the source until the approved replacement can reproduce the required behavior. |
+| **Use an existing public capability** | An order above a limit needs approval under a supported policy and escalation mechanism | A mapping to the named capability, required scope and grants, and acceptance cases that compare source and target. |
+| **Contribute through a released extension point** | A carton-quantity field on a product, where the owner supports typed custom fields | A typed contribution and its data mapping. Generate the permission checks and UI proposal as separate concerns. |
+| **Compose a workflow** | A discount above 10 percent by a given salesman needs a second approval and a notification | A draft flow using released actions, with the original conditions, default branches, denial path, and task visibility represented. |
+| **Add an adapter or projection** | A channel expects a monthly price export; Sales owns the prices | A connector or read projection draft that uses published data and translates the partner format. Include the data scope, schedule, cutoff, and redelivery behavior. |
+| **Propose a new owner capability** | A credit limit per salesman needs an authoritative exposure the owner does not model today | A domain proposal with source cases, invariants, and unresolved design questions. Creating a new owner requires a reviewed domain decision. |
+| **Retain in source or block** | A pricing rule affects money and its exact behavior cannot be established from available evidence | A blocked leaf with provenance, scope, and mitigation. Keep the pricing write authority at the source until the approved replacement can reproduce the required behavior. |
 
 For extensions, use the [contribution model](../plugin-architecture.md#contribution-model).
 Generated drafts live outside the active ERP composition until the owner reviews them.
@@ -517,20 +593,71 @@ a balance, changes an issued document, or posts to the ledger requires review by
 fact's owner. Generating an extension cannot create public permissions, prove
 organizational segregation, or install customer code by itself.
 
+### Let AI turn the reviewed mapping into a working submodule
+
+The proposed default is an implementable change in a review branch. A draft is lightweight
+on a resolved leaf. Its source reference, mapping, code diff or configuration, and validation
+results are the draft. Reviewers can inspect that evidence when they need it. The migration
+summary groups complete work by submodule and calls out the few decisions that remain.
+A submodule can reach review with zero blockers when all of its required behavior has
+supporting evidence, a valid target owner, and passing acceptance checks.
+
+Use the smallest target surface that carries the behavior. A leaf can become configuration
+on an existing extension point. A coherent branch can become a submodule in the owner
+package when it belongs to that owner, or a contribution in the customer's extension
+when it is customer-specific. A branch becomes a separately registered module only when
+it needs its own owner or deployment boundary. Keep the source tree intact so reviewers
+can trace several leaves to the same implementation without losing any individual rule.
+The current CLI scaffolds flagship module structure. Direct generation of customer
+submodules and integration into a review build are proposed capabilities. Reuse the
+existing code and conventions wherever they fit. [Module generator](../../decisions/0094-adopt-module-manifest-registry-and-generator.md)
+
+| Situation | What AI can complete in the review branch | What remains visible |
+| --- | --- | --- |
+| **Exact match to a released capability** | Generate configuration or mapping, use the owner's existing API, and verify the source examples against the target. | The resolved leaf, target contract version, and verification result. |
+| **Several leaves form a known submodule** | Generate the submodule's code, typed mappings, adapters or workflow configuration, and focused fixtures. Compose it in the review build through approved contracts and run the relevant checks. | One submodule change with traceability and evidence for each source leaf. |
+| **Fixable technical obstacle** | Resolve a documented format mismatch, add a source fixture, or repair the implementation against a known contract. Rerun the failing check and keep the original semantic expectation. | A resolved finding in the evidence. It no longer needs operator attention. |
+| **A missing business decision or capability** | Complete independent leaves and prepare the smallest safe scaffold for affected work. Keep the dependent behavior out of active composition. | One concise question or blocker with the affected leaves, an example, the owner, and the available choices. |
+
+The AI should work through a bounded cycle of generating, checking, and fixing in the
+review branch. It can use the source fixtures as an oracle and the target checks to catch
+type, dependency, authorization, and replay errors. Domain or browser checks matter
+where UI behavior affects the outcome. Evidence comes from source records and approved
+examples independent of the generated implementation. Passing TypeScript and exercising
+the happy path provide evidence for those checks alone. Missing evidence, a surprising
+currency or permission change, or a new owner/invariant remains a review item. A model's
+confidence score does not resolve it.
+
+**First slice.** A Product packaging submodule can carry a source custom field for carton
+quantity plus the mapping that reads and writes it through Product's existing
+[`product.product` extension point](../../../erp/modules/product/manifest.ts). Given the
+field type, source ID, unit, and expected round trip, AI can generate the mapping and code,
+run an isolated import, verify repeat import and authorized reads, and present one reviewable
+change. If source configuration also uses the field to convert stock between cartons and
+pieces, that behavior is a separate leaf. It becomes executable only through the
+Inventory owner's supported unit conversion semantics. Otherwise the operator gets one
+short item explaining the missing semantics, while the field migration stays ready.
+
+The review build and its tests do not transfer operational authority. Activating a
+generated extension or switching live writes follows the existing owner review and
+the [cutover procedure](#e-transfer-authority-once-per-scope). For the credit-limit
+example, AI could still generate a separately testable scaffold and approved independent
+contributions. Per-salesman exposure needs a Sales owner decision before activation.
+
 ### Verify that the tree lost no leaves
 
 | Check | Evidence |
 | --- | --- |
 | **Inventory closure** | Every discovered source artifact and behavior is linked to a leaf with a disposition. Unknown or inaccessible source coverage is listed separately. A second scan of the same source distinguishes unchanged, changed, and newly discovered leaves. |
-| **Semantic closure** | Compare source and target scenarios for normal paths, boundary conditions, permission denials, failures, and corrections. For a leave threshold, test one day below, exactly at, and above the threshold, including an employee whose organization changes while the request is pending. |
-| **Dependency closure** | Every target draft names the contracts it needs. Unavailable or unapproved dependencies keep the affected leaf blocked. Confirm that one branch can stay with the source without sending the same payroll result twice. |
+| **Semantic closure** | Compare source and target scenarios for normal paths, boundary conditions, permission denials, failures, and corrections. For a discount threshold, test one rupiah below, exactly at, and above the threshold, including a salesman whose assignment changes while the order is pending approval. |
+| **Dependency closure** | Every target draft names the contracts it needs. Unavailable or unapproved dependencies keep the affected leaf blocked. Confirm that one branch can stay with the source without sending the same price export twice. |
 | **Release closure** | Required leaves are verified, or a documented coexistence arrangement keeps their source behavior available under one authority. A business owner signs off by capability. A generated count cannot substitute for this outcome. |
 
-An initial experiment should map one customer module or one submodule with a real
-customization, using authorized sanitized evidence, and show its tree and drafts in
-review. It can be valuable even if no leaf is activated. Build generation around the
-first proven repeatable mapping. Add executable contributions only after the intended
-owner, public surface, authorization, and regression cases are known.
+An initial experiment should map one existing module or submodule with a real customization,
+using authorized, sanitized evidence. It should produce one testable submodule and show
+that resolved technical findings need no manual ticket, while leaves touching money, stock, or authorization are signed off by their owner. Include a case with one missing business
+decision to check that the operator sees only the remaining decision and that all source
+behavior stays accounted for. Extract reusable generation around that first proven mapping.
 
 ## Public sources
 
