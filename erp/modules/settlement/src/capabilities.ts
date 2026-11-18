@@ -4,4 +4,6 @@ export const SettlementCapabilities = {
   paymentReceive: "settlement.payment.receive",
   paymentMake: "settlement.payment.make",
   reportRead: "settlement.report.read",
+  bankStatementImport: "settlement.bank_statement.import",
+  bankStatementReconcile: "settlement.bank_statement.reconcile",
 } as const

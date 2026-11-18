@@ -21,14 +21,18 @@ import {
 import {
   AgingReport,
   Allocation,
+  BankLineMatch,
+  BankReconciliation,
+  BankStatement,
   CustomerStatement,
   Payment,
   PaymentDirection,
   SettlementService,
   SettlementSide,
+  Withholding,
 } from "./mod.ts"
 
-const PaymentPayload = Schema.Struct({
+const PaymentFields = {
   paymentId: Schema.optionalKey(Uuid),
   legalEntityId: Uuid,
   partyId: Uuid,
@@ -36,12 +40,19 @@ const PaymentPayload = Schema.Struct({
   amount: FinancialMajorAmount,
   cashAccountId: Schema.optionalKey(Uuid),
   allocations: Schema.Array(Allocation),
+}
+
+const PaymentPayload = Schema.Struct(PaymentFields)
+
+const ReceiptPayload = Schema.Struct({
+  ...PaymentFields,
+  withholding: Schema.optionalKey(Withholding),
 })
 
 export const SettlementHttpGroup = HttpApiGroup.make("Settlement").add(
   HttpApiEndpoint.post("receivePayment", "/settlement/receipts", {
     headers: TenantHeaders,
-    payload: PaymentPayload,
+    payload: ReceiptPayload,
     success: Payment.pipe(HttpApiSchema.status(201)),
     error: ApiErrors,
   }).middleware(BearerAuth),
@@ -84,6 +95,40 @@ export const SettlementHttpGroup = HttpApiGroup.make("Settlement").add(
     success: CustomerStatement,
     error: ApiErrors,
   }).middleware(BearerAuth),
+  HttpApiEndpoint.post("importBankStatement", "/settlement/bank-statements", {
+    headers: TenantHeaders,
+    payload: Schema.Struct({
+      legalEntityId: Uuid,
+      bankAccountId: Uuid,
+      sourceName: Schema.String,
+      content: Schema.String,
+    }),
+    success: BankStatement.pipe(HttpApiSchema.status(201)),
+    error: ApiErrors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.post("matchBankLine", "/settlement/bank-matches", {
+    headers: TenantHeaders,
+    payload: Schema.Struct({
+      matchId: Schema.optionalKey(Uuid),
+      lineId: Uuid,
+      paymentId: Uuid,
+      amount: FinancialMajorAmount,
+    }),
+    success: BankLineMatch.pipe(HttpApiSchema.status(201)),
+    error: ApiErrors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.post("reverseBankMatch", "/settlement/bank-matches/:id/reversal", {
+    params: { id: Uuid },
+    headers: TenantHeaders,
+    success: BankLineMatch,
+    error: ApiErrors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.get("bankReconciliation", "/settlement/bank-reconciliation", {
+    headers: TenantHeaders,
+    query: { legalEntityId: Uuid, bankAccountId: Uuid, limit: ReadLimit },
+    success: BankReconciliation,
+    error: ApiErrors,
+  }).middleware(BearerAuth),
 )
 
 const SettlementHttpApi = moduleApi(SettlementHttpGroup)
@@ -96,9 +141,15 @@ export const SettlementHttpErrors = apiErrorMapping({
   AllocationBeforePayment: "conflict",
   AllocationExceedsPayment: "conflict",
   AllocationMismatch: "conflict",
+  BankLineNotFound: "not_found",
+  BankMatchExceedsAvailable: "conflict",
+  BankMatchMismatch: "conflict",
+  BankMatchNotFound: "not_found",
   BillingDocumentNotFound: "not_found",
   FinancialEngineActivated: "conflict",
+  InvalidBankStatement: "invalid_request",
   InvalidJournalLine: "conflict",
+  InvalidWithholding: "conflict",
   JournalIdempotencyConflict: "conflict",
   PaymentNotFound: "not_found",
   PostingRuleNotFound: "conflict",
@@ -185,6 +236,62 @@ export const SettlementHttpHandlers = HttpApiBuilder.group(
 
             return yield* SettlementHttpErrors.apiEffect(
               settlement.customerStatement({
+                principal,
+                tenantId: headers["x-tenant-id"],
+                ...query,
+              }),
+            )
+          }),
+        )
+        .handle(
+          "importBankStatement",
+          Effect.fn("Http.Settlement.importBankStatement")(function* ({ headers, payload }) {
+            const principal = yield* CurrentPrincipal
+
+            return yield* SettlementHttpErrors.apiEffect(
+              settlement.importBankStatement({
+                principal,
+                tenantId: headers["x-tenant-id"],
+                ...payload,
+              }),
+            )
+          }),
+        )
+        .handle(
+          "matchBankLine",
+          Effect.fn("Http.Settlement.matchBankLine")(function* ({ headers, payload }) {
+            const principal = yield* CurrentPrincipal
+
+            return yield* SettlementHttpErrors.apiEffect(
+              settlement.matchBankLine({
+                principal,
+                tenantId: headers["x-tenant-id"],
+                ...payload,
+              }),
+            )
+          }),
+        )
+        .handle(
+          "reverseBankMatch",
+          Effect.fn("Http.Settlement.reverseBankMatch")(function* ({ headers, params }) {
+            const principal = yield* CurrentPrincipal
+
+            return yield* SettlementHttpErrors.apiEffect(
+              settlement.reverseBankMatch({
+                principal,
+                tenantId: headers["x-tenant-id"],
+                matchId: params.id,
+              }),
+            )
+          }),
+        )
+        .handle(
+          "bankReconciliation",
+          Effect.fn("Http.Settlement.bankReconciliation")(function* ({ headers, query }) {
+            const principal = yield* CurrentPrincipal
+
+            return yield* SettlementHttpErrors.apiEffect(
+              settlement.bankReconciliation({
                 principal,
                 tenantId: headers["x-tenant-id"],
                 ...query,
