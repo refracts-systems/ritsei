@@ -138,13 +138,13 @@ current system; ADRs preserve decision history.
 | [`0112`](./0112-soften-operational-clarity-and-adopt-tactile-motion.md) | Soften Operational Clarity and adopt tactile motion | Accepted   |
 | [`0113`](./0113-retire-frontend-compatibility-probes-and-visual-contract-test.md) | Retire frontend compatibility probes and the visual contract test | Accepted   |
 | [`0114`](./0114-adopt-solid-2-stable-with-bounded-kobalte-risk.md) | Adopt Solid 2 stable with a bounded Kobalte peer risk | Accepted   |
-| [`0115`](./0115-stage-and-apply-csv-imports-in-an-onboarding-module.md) | Stage and apply CSV imports in an onboarding module | Proposed   |
-| [`0116`](./0116-import-bank-statements-and-record-receipt-withholding.md) | Import bank statements and record receipt withholding in Settlement | Proposed   |
-| [`0117`](./0117-load-opening-positions-against-migration-clearing.md) | Load opening positions against a migration clearing account | Proposed   |
-| [`0118`](./0118-load-opening-stock-at-cutover-without-lots-or-open-positions.md) | Load opening stock at cutover without lots or open positions | Proposed   |
-| [`0119`](./0119-date-tax-rates-with-periods-on-the-tax-code.md) | Date tax rates with periods on the tax code | Proposed   |
+| [`0115`](./0115-stage-and-apply-csv-imports-in-an-onboarding-module.md) | Stage and apply CSV imports in an onboarding module | Accepted   |
+| [`0116`](./0116-import-bank-statements-and-record-receipt-withholding.md) | Import bank statements and record receipt withholding in Settlement | Accepted   |
+| [`0117`](./0117-load-opening-positions-against-migration-clearing.md) | Load opening positions against a migration clearing account | Accepted   |
+| [`0118`](./0118-load-opening-stock-at-cutover-without-lots-or-open-positions.md) | Load opening stock at cutover without lots or open positions | Accepted   |
+| [`0119`](./0119-date-tax-rates-with-periods-on-the-tax-code.md) | Date tax rates with periods on the tax code | Accepted   |
 | [`0120`](./0120-retain-imported-documents-and-record-historical-dispatch-outcomes.md) | Retain imported documents and record historical dispatch outcomes | Proposed   |
-| [`0121`](./0121-post-opening-stock-against-migration-clearing-in-the-load.md) | Post opening stock against migration clearing in the load | Proposed   |
+| [`0121`](./0121-post-opening-stock-against-migration-clearing-in-the-load.md) | Post opening stock against migration clearing in the load | Accepted   |
 
 Accepted ADRs must not be rewritten to alter history. Create a new ADR and use `Supersedes`.
 

@@ -1,6 +1,6 @@
 # ADR-0118: Load Opening Stock at Cutover Without Lots or Open Positions
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-19
 - Amends: ADR-0100 (point 4, how opening stock is received)
 - Compatible with: ADR-0015, ADR-0096, ADR-0101
