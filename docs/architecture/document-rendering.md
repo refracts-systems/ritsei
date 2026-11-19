@@ -341,6 +341,12 @@ When a document is issued, its artifact is immutable. A later template version c
 for a new render; it does not rewrite historical output. Reproduction may be byte-identical where the
 backend guarantees it, or semantically equivalent under a documented renderer conformance policy.
 
+A document issued before cutover has no snapshot, template, or renderer version to reproduce, so it
+is not rendered again. The proposed rule is that its owning domain keeps an imported-artifact
+record with provenance (source system, source reference, content hash, media type), never a rendered
+artifact that carries a render fingerprint; this is not implemented yet
+([ADR-0120](../decisions/0120-retain-imported-documents-and-record-historical-dispatch-outcomes.md)).
+
 PDF is evidence/output, not source of truth:
 
 ```text

@@ -233,6 +233,29 @@ Provider acceptance never proves recipient delivery. An unknown attempt moves th
 communication into `reconciling` (or keeps it operationally pending) until a canonical provider
 event or explicit manual recovery resolves the uncertainty.
 
+### 6.1 Historical dispatch evidence
+
+A cutover can bring evidence that a document was emailed before RITSEI held the customer
+([ADR-0120](../decisions/0120-retain-imported-documents-and-record-historical-dispatch-outcomes.md)).
+`recordHistoricalDispatch` stores that evidence as one communication with one attempt. It records an
+outcome; it never renders, resolves recipients, or calls a transport, so an import cannot email a
+customer.
+
+| Source evidence | Attempt status | Communication status |
+| --- | --- | --- |
+| Sent, with provider evidence | `accepted` | `accepted` |
+| Failed | `failed` | `failed` |
+| Unknown, or the evidence is ambiguous | `unknown` | `reconciling` |
+
+A historical dispatch is not claimed as `delivered` unless a later canonical provider event says so.
+It carries a reference to the retained source bytes (`documentArtifactId`, SHA-256, filename, media
+type), which the document's owner stores. Its identity is `tenant_id + source_system +
+source_reference`: a replay returns the stored record, and a replay with different evidence fails.
+`deliver` and `retry` reject a historical communication, because it has no rendered artifact and its
+original recipients and content are not ours to resubmit. An `unknown` record stays `reconciling`
+until a person resolves it; resolution is not yet a command. Like the rest of this document, it is
+memory-only today.
+
 ## 7. Idempotency and retry
 
 The logical idempotency identity is derived from stable business semantics:

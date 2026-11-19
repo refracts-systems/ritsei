@@ -1,4 +1,4 @@
-import { and, asc, eq, or, gt, sql } from "drizzle-orm"
+import { and, asc, eq, inArray, or, gt, sql } from "drizzle-orm"
 import * as Data from "effect/Data"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
@@ -8,6 +8,7 @@ import {
   items,
   itemValuations,
   movements,
+  openingStockPositions,
   stockBalances,
   valuationEntries,
   warehouses,
@@ -30,6 +31,11 @@ import { ProductService } from "../../product/mod.ts"
 import { InventoryCapabilities } from "./capabilities.ts"
 import {
   InventoryReferenceNotFound,
+  OpeningStockAlreadyLoaded,
+  OpeningStockConflict,
+  OpeningStockInTransitNotCarried,
+  OpeningStockLotTrackingUnsupported,
+  OpeningStockReservationsNotCarried,
   StockNotStockable,
   StockUnavailable,
   StockValuationUnavailable,
@@ -37,6 +43,9 @@ import {
 import {
   CountStockInput,
   IssueValuedStockInput,
+  type OpeningRevaluation,
+  OpeningStockInput,
+  type OpeningStockLoad,
   ReceiveValuedStockInput,
   RegisterProductItemInput,
   StockKeepingService,
@@ -65,16 +74,20 @@ type PlannedLine = {
   readonly fallbackUnitCost?: bigint
 }
 
-type Plan = {
-  readonly principal: Principal
+/** What locking and writing stock need of a move. */
+type Movement = {
   readonly tenantId: string
   readonly warehouseId: string
-  readonly postingDate: string
   readonly source: { readonly type: string; readonly id: string }
   readonly reason: string
   readonly itemIds: ReadonlyArray<string>
+}
+
+type Plan = Movement & {
   /** Resolves the changes against locked on-hand stock; a count compares counted quantities. */
   readonly resolve: (onHand: ReadonlyMap<string, bigint>) => ReadonlyArray<PlannedLine>
+  readonly principal: Principal
+  readonly postingDate: string
   readonly gainRole: PostingRoleType
   readonly lossRole: PostingRoleType
 }
@@ -164,7 +177,7 @@ const journalFor = (
 /** The tagged failure for a line that cannot move. */
 const lineFailure = (
   reason: "unavailable" | "unvalued",
-  plan: Plan,
+  plan: Movement,
   legalEntityId: string,
   line: PlannedLine,
 ) => {
@@ -176,6 +189,102 @@ const lineFailure = (
     : new StockValuationUnavailable({ ...scope, legalEntityId })
 }
 
+/** One loaded line; every amount is minor units. */
+type OpeningRow = {
+  readonly itemId: string
+  readonly movementId: string
+  readonly quantity: bigint
+  readonly sourceValue: bigint
+  readonly value: bigint
+}
+
+/** Distinct from the source type earlier opening receipts used, which carry no position. */
+const OPENING_SOURCE_TYPE = "inventory.opening_stock_load"
+
+/** The first source position the load does not carry: tracked batches, reservations, transit. */
+const openingRejection = (
+  tenantId: string,
+  lines: Schema.Schema.Type<typeof OpeningStockInput>["lines"],
+) => {
+  for (const line of lines) {
+    const scope = { tenantId, itemId: line.itemId }
+
+    if (line.tracking !== "none") {
+      return new OpeningStockLotTrackingUnsupported({ ...scope, tracking: line.tracking })
+    }
+
+    if (line.reservedQuantity !== "0") {
+      return new OpeningStockReservationsNotCarried({ ...scope, reserved: line.reservedQuantity })
+    }
+
+    if (line.inTransitQuantity !== "0") {
+      return new OpeningStockInTransitNotCarried({ ...scope, inTransit: line.inTransitQuantity })
+    }
+  }
+
+  return undefined
+}
+
+/** The loaded position: the source total to clear, the revaluation difference, and the value held. */
+const toOpeningLoad = (
+  legalEntityId: string,
+  opening: Pick<
+    Schema.Schema.Type<typeof OpeningStockInput>,
+    "openingId" | "warehouseId" | "cutoffDate"
+  >,
+  rows: ReadonlyArray<OpeningRow>,
+): OpeningStockLoad => {
+  const total = (pick: (row: OpeningRow) => bigint) =>
+    rows.reduce((sum, row) => sum + pick(row), 0n)
+
+  return {
+    legalEntityId,
+    openingId: opening.openingId,
+    warehouseId: opening.warehouseId,
+    cutoffDate: opening.cutoffDate,
+    lines: rows.map((row) => ({
+      itemId: row.itemId,
+      movementId: row.movementId,
+      quantity: row.quantity.toString(),
+      sourceValue: major(row.sourceValue),
+      value: major(row.value),
+      adjustment: major(row.value - row.sourceValue),
+    })),
+    valueToClear: major(total((row) => row.sourceValue)),
+    adjustment: major(total((row) => row.value - row.sourceValue)),
+    value: major(total((row) => row.value)),
+  }
+}
+
+/** The approval columns of an opening position; all null when the line was not revalued. */
+const approvalColumns = (
+  revaluation: Schema.Schema.Type<typeof OpeningRevaluation> | undefined,
+) => ({
+  adjustmentName: revaluation?.name ?? null,
+  approvedBy: revaluation?.approvedBy ?? null,
+  approvedAt: revaluation === undefined ? null : new Date(revaluation.approvedAt),
+  approvalReference: revaluation?.reference ?? null,
+})
+
+/** A recorded load repeats the request when every item, quantity, and value agree. */
+const sameOpening = (recorded: ReadonlyArray<OpeningRow>, requested: ReadonlyArray<OpeningRow>) => {
+  const byItem = new Map(recorded.map((row) => [row.itemId.toLowerCase(), row]))
+
+  return (
+    recorded.length === requested.length &&
+    requested.every((row) => {
+      const found = byItem.get(row.itemId.toLowerCase())
+
+      return (
+        found !== undefined &&
+        found.quantity === row.quantity &&
+        found.sourceValue === row.sourceValue &&
+        found.value === row.value
+      )
+    })
+  )
+}
+
 export const makeStockKeepingService = Effect.gen(function* () {
   const database = yield* Database
   const authorization = yield* AuthorizationService
@@ -183,7 +292,7 @@ export const makeStockKeepingService = Effect.gen(function* () {
   const ledger = yield* GeneralLedgerService
   const productService = yield* ProductService
 
-  const replay = (tenantId: string, source: Plan["source"], legalEntityId: string) =>
+  const replay = (tenantId: string, source: Movement["source"], legalEntityId: string) =>
     database
       .query(
         (db) =>
@@ -225,7 +334,7 @@ export const makeStockKeepingService = Effect.gen(function* () {
       )
 
   /** Locks balances and valuations in item order so concurrent documents cannot deadlock. */
-  const lockStock = (plan: Plan, legalEntityId: string) =>
+  const lockStock = (plan: Movement, legalEntityId: string) =>
     database.transaction(async (tx) => {
       const state: LockedStock = { units: new Map(), balances: new Map(), valuations: new Map() }
 
@@ -289,7 +398,7 @@ export const makeStockKeepingService = Effect.gen(function* () {
   /** Writes one valued line: balance, movement, valuation, and its valuation entry. */
   const writeLine = async (
     tx: DrizzleTransaction,
-    plan: Plan,
+    plan: Movement,
     legalEntityId: string,
     line: ValuedLine,
     unitOfMeasure: string,
@@ -375,7 +484,7 @@ export const makeStockKeepingService = Effect.gen(function* () {
     }
   }
 
-  const loadWarehouseLegalEntity = (plan: Plan) =>
+  const loadWarehouseLegalEntity = (plan: Movement) =>
     Effect.gen(function* () {
       const warehouse = (yield* database.query(
         (db) =>
@@ -621,6 +730,185 @@ export const makeStockKeepingService = Effect.gen(function* () {
     })
   })
 
+  /** The recorded opening load of a document, with the warehouse it was loaded into. */
+  const recordedOpening = (tenantId: string, openingId: string) =>
+    database.query(
+      (db) =>
+        db
+          .select({
+            warehouseId: openingStockPositions.warehouseId,
+            cutoffDate: openingStockPositions.cutoffDate,
+            itemId: openingStockPositions.itemId,
+            movementId: openingStockPositions.movementId,
+            quantity: openingStockPositions.quantity,
+            sourceValue: openingStockPositions.sourceValue,
+            value: valuationEntries.value,
+          })
+          .from(valuationEntries)
+          .innerJoin(
+            openingStockPositions,
+            and(
+              eq(openingStockPositions.tenantId, valuationEntries.tenantId),
+              eq(openingStockPositions.movementId, valuationEntries.movementId),
+            ),
+          )
+          .where(
+            and(
+              eq(valuationEntries.tenantId, tenantId),
+              eq(valuationEntries.sourceType, OPENING_SOURCE_TYPE),
+              eq(valuationEntries.sourceId, openingId),
+            ),
+          )
+          .orderBy(asc(valuationEntries.itemId)),
+      "inventory.opening_stock.recorded",
+    )
+
+  const loadOpeningStock = Effect.fn("StockKeepingService.loadOpeningStock")(function* (
+    input: Schema.Codec.Encoded<typeof OpeningStockInput>,
+  ) {
+    const decoded = yield* authorized(
+      OpeningStockInput,
+      InventoryCapabilities.openingStockLoad,
+    )(input)
+
+    const rejection = openingRejection(decoded.tenantId, decoded.lines)
+
+    if (rejection !== undefined) return yield* Effect.fail(rejection)
+
+    const requested = decoded.lines
+      .map((line) => {
+        const sourceValue = minor(line.sourceValue)
+
+        return {
+          itemId: line.itemId,
+          movementId: "",
+          quantity: BigInt(line.quantity),
+          sourceValue,
+          value:
+            line.movingAverageValue === undefined ? sourceValue : minor(line.movingAverageValue),
+        }
+      })
+      .toSorted((left, right) => left.itemId.localeCompare(right.itemId))
+
+    const movement: Movement = {
+      tenantId: decoded.tenantId,
+      warehouseId: decoded.warehouseId,
+      source: { type: OPENING_SOURCE_TYPE, id: decoded.openingId },
+      reason: "opening stock",
+      itemIds: requested.map((row) => row.itemId),
+    }
+
+    return yield* database.withTransaction(
+      Effect.gen(function* () {
+        const legalEntityId = yield* loadWarehouseLegalEntity(movement)
+
+        // Locking the valuation rows first serializes two loads of one item, so the reads below
+        // see whatever the other load committed.
+        const locked = yield* lockStock(movement, legalEntityId)
+
+        if (locked.missingItemId !== undefined) {
+          return yield* Effect.fail(
+            new InventoryReferenceNotFound({
+              tenantId: decoded.tenantId,
+              warehouseId: decoded.warehouseId,
+              itemId: locked.missingItemId,
+            }),
+          )
+        }
+
+        const recorded = yield* recordedOpening(decoded.tenantId, decoded.openingId)
+
+        if (recorded.length > 0) {
+          const rows = recorded.map((row) => ({
+            itemId: row.itemId,
+            movementId: row.movementId,
+            quantity: BigInt(row.quantity),
+            sourceValue: requireExactMajorToMinor(row.sourceValue, 2),
+            value: requireExactMajorToMinor(row.value ?? "0", 2),
+          }))
+
+          // A document is one approved bundle: a retry repeats it, and a changed one is a conflict.
+          return recorded[0]!.warehouseId === decoded.warehouseId &&
+            recorded[0]!.cutoffDate === decoded.cutoffDate &&
+            sameOpening(rows, requested)
+            ? toOpeningLoad(legalEntityId, decoded, rows)
+            : yield* Effect.fail(
+                new OpeningStockConflict({
+                  tenantId: decoded.tenantId,
+                  openingId: decoded.openingId,
+                }),
+              )
+        }
+
+        const opened = (yield* database.query(
+          (db) =>
+            db
+              .select({ itemId: openingStockPositions.itemId })
+              .from(openingStockPositions)
+              .where(
+                and(
+                  eq(openingStockPositions.tenantId, decoded.tenantId),
+                  eq(openingStockPositions.warehouseId, decoded.warehouseId),
+                  inArray(openingStockPositions.itemId, movement.itemIds),
+                ),
+              )
+              .limit(1),
+          "inventory.opening_stock.opened",
+        ))[0]
+
+        if (opened !== undefined) {
+          return yield* Effect.fail(
+            new OpeningStockAlreadyLoaded({
+              tenantId: decoded.tenantId,
+              warehouseId: decoded.warehouseId,
+              itemId: opened.itemId,
+            }),
+          )
+        }
+
+        const state = locked.state!
+        const revaluation = decoded.revaluation
+
+        const rows = yield* database.transaction(async (tx) => {
+          const written: OpeningRow[] = []
+
+          // The receipt value is the value held, so the valuation entry stays one receipt per line.
+          for (const request of requested) {
+            const stated = decoded.lines.find((line) => line.itemId === request.itemId)!
+
+            const result = await writeLine(
+              tx,
+              movement,
+              legalEntityId,
+              { itemId: request.itemId, quantity: request.quantity, value: request.value },
+              state.units.get(request.itemId)!,
+              null,
+            )
+
+            await tx.insert(openingStockPositions).values({
+              tenantId: decoded.tenantId,
+              warehouseId: decoded.warehouseId,
+              itemId: request.itemId,
+              movementId: result.movementId,
+              cutoffDate: decoded.cutoffDate,
+              quantity: request.quantity.toString(),
+              sourceValue: major(request.sourceValue),
+              adjustment: major(request.value - request.sourceValue),
+              // Only a line the owner revalued carries the approval.
+              ...approvalColumns(stated.movingAverageValue === undefined ? undefined : revaluation),
+            })
+            written.push({ ...request, movementId: result.movementId })
+          }
+
+          return written
+        }, "inventory.opening_stock.write")
+
+        return toOpeningLoad(legalEntityId, decoded, rows)
+      }),
+      "inventory.opening_stock.load",
+    )
+  })
+
   const valuation = Effect.fn("StockKeepingService.valuation")(function* (
     input: Schema.Codec.Encoded<typeof ValuationReportInput>,
   ) {
@@ -667,6 +955,7 @@ export const makeStockKeepingService = Effect.gen(function* () {
     receiveValued,
     issueValued,
     countStock,
+    loadOpeningStock,
     valuation,
   } satisfies StockKeepingService
 })

@@ -16,6 +16,7 @@ export const indonesiaTrading: ChartTemplate = {
     { code: "1-1200", name: "Piutang usaha", type: "asset", parentCode: "1-0000" },
     { code: "1-1300", name: "Persediaan barang dagang", type: "asset", parentCode: "1-0000" },
     { code: "1-1400", name: "PPN masukan", type: "asset", parentCode: "1-0000" },
+    { code: "1-1900", name: "Penampung migrasi", type: "asset", parentCode: "1-0000" },
     { code: "2-0000", name: "Kewajiban", type: "liability" },
     { code: "2-1100", name: "Utang usaha", type: "liability", parentCode: "2-0000" },
     { code: "2-1200", name: "PPN keluaran", type: "liability", parentCode: "2-0000" },
@@ -37,6 +38,7 @@ export const indonesiaTrading: ChartTemplate = {
   ],
   postingRules: {
     cash: "1-1100",
+    migration_clearing: "1-1900",
     receivable: "1-1200",
     inventory: "1-1300",
     input_tax: "1-1400",

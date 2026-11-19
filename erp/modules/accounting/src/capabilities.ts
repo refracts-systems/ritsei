@@ -22,4 +22,5 @@ export const AccountingCapabilities = {
   postingRuleRead: "accounting.posting_rule.read",
   documentJournalPost: "accounting.document_journal.post",
   ledgerRead: "accounting.ledger.read",
+  openingBalancePost: "accounting.opening_balance.post",
 } as const

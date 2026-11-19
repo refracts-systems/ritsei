@@ -4,6 +4,15 @@ import * as Effect from "effect/Effect"
 import type { Page, Route } from "playwright"
 import { builtApp, connectToTenant, forbiddenBody, notFoundBody } from "./browser.ts"
 
+// A dialog fades in; a contrast scan taken during the fade reads the half-transparent text.
+// A cancelled animation (the previous dialog closing) rejects `finished`, so settle instead.
+const entranceFinished = (page: Page) =>
+  page.evaluate(() =>
+    Promise.allSettled(document.getAnimations().map((animation) => animation.finished)).then(
+      () => true,
+    ),
+  )
+
 const tenantId = "01900000-0000-7000-8000-000000000010"
 const activeMemberId = "01900000-0000-7000-8000-000000000020"
 const suspendedMemberId = "01900000-0000-7000-8000-000000000021"
@@ -251,6 +260,7 @@ it.effect(
 
         await page.getByRole("button", { name: "Suspend membership", exact: true }).click()
         const suspendDialog = page.getByRole("dialog", { name: "Suspend tenant membership" })
+        assert.isTrue(await entranceFinished(page))
         assert.deepEqual(
           (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()).violations,
           [],

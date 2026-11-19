@@ -14,6 +14,8 @@ import {
   LocalizationIdHttpHandlers,
 } from "../modules/localization_id/http.ts"
 import { LocalizationIdModule } from "../modules/localization_id/mod.ts"
+import { OnboardingHttpGroup, OnboardingHttpHandlers } from "../modules/onboarding/http.ts"
+import { OnboardingModule } from "../modules/onboarding/mod.ts"
 import { PartyHttpGroup, PartyHttpHandlers } from "../modules/party/http.ts"
 import { PartyModule } from "../modules/party/mod.ts"
 import { ProcessHttpGroup, ProcessHttpHandlers } from "../modules/process/http.ts"
@@ -37,6 +39,7 @@ export const ErpModules: ReadonlyArray<ModuleManifest> = [
   DocumentsModule,
   InventoryModule,
   LocalizationIdModule,
+  OnboardingModule,
   PartyModule,
   ProcessModule,
   ProcurementModule,
@@ -53,6 +56,7 @@ export const ErpHttpGroups = [
   DocumentsHttpGroup,
   InventoryHttpGroup,
   LocalizationIdHttpGroup,
+  OnboardingHttpGroup,
   PartyHttpGroup,
   ProcessHttpGroup,
   ProcurementHttpGroup,
@@ -69,6 +73,7 @@ export const ErpHttpHandlers = [
   DocumentsHttpHandlers,
   InventoryHttpHandlers,
   LocalizationIdHttpHandlers,
+  OnboardingHttpHandlers,
   PartyHttpHandlers,
   ProcessHttpHandlers,
   ProcurementHttpHandlers,

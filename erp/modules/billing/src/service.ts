@@ -97,6 +97,8 @@ export type DraftDocument = {
   readonly kind: InvoiceKind
   readonly partyId: string
   readonly invoiceDate: string
+  /** The date whose tax rates apply; the invoice date unless a credit note keeps the original's. */
+  readonly taxDate?: string
   readonly sourceType: string | null
   readonly sourceId: string | null
   readonly creditedInvoiceId: string | null
@@ -432,6 +434,7 @@ export const makeBillingService = Effect.gen(function* () {
         principal: draft.principal,
         tenantId: draft.tenantId,
         direction,
+        date: draft.taxDate ?? draft.invoiceDate,
         lines: priced.map((line) => ({
           key: line.key,
           base: line.netAmount,
@@ -935,6 +938,7 @@ export const makeBillingService = Effect.gen(function* () {
           kind: creditKind,
           partyId: invoice.partyId,
           invoiceDate: decoded.creditDate,
+          taxDate: invoice.invoiceDate,
           sourceType: invoice.sourceType,
           sourceId: invoice.sourceId,
           creditedInvoiceId: invoice.id,

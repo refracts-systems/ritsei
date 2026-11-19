@@ -64,6 +64,7 @@ export {
   items,
   movementKind,
   movements,
+  openingStockPositions,
   reservations,
   reservationStatus,
   stockBalances,
@@ -150,7 +151,17 @@ export {
   salesSchema,
 } from "./sales.ts"
 
-export { productTaxDefaults, taxCodes, taxDirection, taxSchema } from "./tax.ts"
+export {
+  importBatches,
+  importBatchStatus,
+  importObjectKind,
+  importRows,
+  importRowStatus,
+  onboardingSchema,
+  sourceIdentities,
+} from "./onboarding.ts"
+
+export { productTaxDefaults, taxCodeRates, taxCodes, taxDirection, taxSchema } from "./tax.ts"
 
 export {
   billingSchema,
@@ -162,6 +173,9 @@ export {
 } from "./billing.ts"
 
 export {
+  bankLineMatches,
+  bankStatementLines,
+  bankStatements,
   partyPaymentTerms,
   paymentAllocations,
   paymentDirection,

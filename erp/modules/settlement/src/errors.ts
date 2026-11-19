@@ -33,3 +33,48 @@ export class AllocationMismatch extends Schema.TaggedError<AllocationMismatch>()
   "AllocationMismatch",
   { tenantId: Uuid, paymentId: Uuid, invoiceId: Uuid },
 ) {}
+
+/** The withheld amount leaves no cash in the payment, or is not allocated to documents. */
+export class InvalidWithholding extends Schema.TaggedError<InvalidWithholding>()(
+  "InvalidWithholding",
+  { tenantId: Uuid, reason: Schema.Literals(["not_below_payment", "not_allocated"]) },
+) {}
+
+/** The statement file does not follow the import profile; nothing is imported. */
+export class InvalidBankStatement extends Schema.TaggedError<InvalidBankStatement>()(
+  "InvalidBankStatement",
+  { row: Schema.Int, reason: Schema.String },
+) {}
+
+export class BankLineNotFound extends Schema.TaggedError<BankLineNotFound>()("BankLineNotFound", {
+  tenantId: Uuid,
+  lineId: Uuid,
+}) {}
+
+export class BankMatchNotFound extends Schema.TaggedError<BankMatchNotFound>()(
+  "BankMatchNotFound",
+  { tenantId: Uuid, matchId: Uuid },
+) {}
+
+/** The line and the payment belong to another legal entity or bank account, or the other direction. */
+export class BankMatchMismatch extends Schema.TaggedError<BankMatchMismatch>()(
+  "BankMatchMismatch",
+  {
+    tenantId: Uuid,
+    lineId: Uuid,
+    paymentId: Uuid,
+    reason: Schema.Literals(["legal_entity", "bank_account", "direction"]),
+  },
+) {}
+
+/** The amount is more than what is still unmatched on the line or on the payment's cash. */
+export class BankMatchExceedsAvailable extends Schema.TaggedError<BankMatchExceedsAvailable>()(
+  "BankMatchExceedsAvailable",
+  {
+    tenantId: Uuid,
+    lineId: Uuid,
+    paymentId: Uuid,
+    available: Schema.String,
+    requested: Schema.String,
+  },
+) {}

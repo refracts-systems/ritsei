@@ -37,14 +37,17 @@ import {
   FinancialStagingEvidenceRecord,
   FinancialVerificationArtifact,
   FinancialVerificationEvidence,
+  BalanceSheet,
   GeneralLedger,
   GeneralLedgerService,
   JournalEntry,
   LedgerAccount,
   LedgerEntry,
   LedgerLineInput,
+  MigrationClearingVerification,
   PostingRole,
   PostingRule,
+  ProfitAndLoss,
   TrialBalance,
   JournalLine,
   RevenuePostingProfile,
@@ -370,6 +373,42 @@ export const AccountingHttpGroup = HttpApiGroup.make("Accounting").add(
     success: LedgerEntry.pipe(HttpApiSchema.status(201)),
     error: errors,
   }).middleware(BearerAuth),
+  HttpApiEndpoint.post("postOpeningJournal", "/accounting/legal-entities/:id/opening-journal", {
+    params: { id: Uuid },
+    headers: tenantHeaders,
+    payload: Schema.Struct({
+      postingDate: CalendarDate,
+      description: Schema.optionalKey(ShortString),
+      lines: BoundedArray(LedgerLineInput),
+    }),
+    success: LedgerEntry.pipe(HttpApiSchema.status(201)),
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.get(
+    "verifyMigrationClearing",
+    "/accounting/legal-entities/:id/migration-clearing",
+    {
+      params: { id: Uuid },
+      headers: tenantHeaders,
+      query: { asOf: CalendarDate },
+      success: MigrationClearingVerification,
+      error: errors,
+    },
+  ).middleware(BearerAuth),
+  HttpApiEndpoint.get("profitAndLoss", "/accounting/legal-entities/:id/profit-and-loss", {
+    params: { id: Uuid },
+    headers: tenantHeaders,
+    query: { from: CalendarDate, to: CalendarDate },
+    success: ProfitAndLoss,
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.get("balanceSheet", "/accounting/legal-entities/:id/balance-sheet", {
+    params: { id: Uuid },
+    headers: tenantHeaders,
+    query: { asOf: CalendarDate },
+    success: BalanceSheet,
+    error: errors,
+  }).middleware(BearerAuth),
   HttpApiEndpoint.get("trialBalance", "/accounting/legal-entities/:id/trial-balance", {
     params: { id: Uuid },
     headers: tenantHeaders,
@@ -435,6 +474,9 @@ export const AccountingHttpErrors = apiErrorMapping({
   InvalidRevenuePostingProfile: "conflict",
   JournalIdempotencyConflict: "conflict",
   JournalReferenceAlreadyExists: "conflict",
+  MigrationClearingNotZero: "conflict",
+  OpeningJournalControlAccount: "conflict",
+  OpeningJournalNotPosted: "conflict",
   RevenueJournalNotFound: "not_found",
   RevenuePostingProfileAlreadyExists: "conflict",
   RevenuePostingProfileNotFound: "not_found",
@@ -533,6 +575,70 @@ export const AccountingHttpHandlers = HttpApiBuilder.group(
                 tenantId: headers["x-tenant-id"],
                 legalEntityId: params.id,
                 ...payload,
+              }),
+            )
+          }),
+        )
+        .handle(
+          "postOpeningJournal",
+          Effect.fn("Http.Accounting.postOpeningJournal")(function* ({ headers, params, payload }) {
+            const principal = yield* CurrentPrincipal
+
+            return yield* coreApiEffect(
+              ledger.postOpeningJournal({
+                principal,
+                tenantId: headers["x-tenant-id"],
+                legalEntityId: params.id,
+                ...payload,
+              }),
+            )
+          }),
+        )
+        .handle(
+          "verifyMigrationClearing",
+          Effect.fn("Http.Accounting.verifyMigrationClearing")(function* ({
+            headers,
+            params,
+            query,
+          }) {
+            const principal = yield* CurrentPrincipal
+
+            return yield* coreApiEffect(
+              ledger.verifyMigrationClearing({
+                principal,
+                tenantId: headers["x-tenant-id"],
+                legalEntityId: params.id,
+                ...query,
+              }),
+            )
+          }),
+        )
+        .handle(
+          "profitAndLoss",
+          Effect.fn("Http.Accounting.profitAndLoss")(function* ({ headers, params, query }) {
+            const principal = yield* CurrentPrincipal
+
+            return yield* coreApiEffect(
+              ledger.profitAndLoss({
+                principal,
+                tenantId: headers["x-tenant-id"],
+                legalEntityId: params.id,
+                ...query,
+              }),
+            )
+          }),
+        )
+        .handle(
+          "balanceSheet",
+          Effect.fn("Http.Accounting.balanceSheet")(function* ({ headers, params, query }) {
+            const principal = yield* CurrentPrincipal
+
+            return yield* coreApiEffect(
+              ledger.balanceSheet({
+                principal,
+                tenantId: headers["x-tenant-id"],
+                legalEntityId: params.id,
+                ...query,
               }),
             )
           }),

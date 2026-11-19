@@ -70,12 +70,12 @@ it.effect.skipIf(databaseUrl === undefined)(
 
           const chart = yield* ledger.applyChartTemplate({ ...scope, template: "neutral_trading" })
           const again = yield* ledger.applyChartTemplate({ ...scope, template: "neutral_trading" })
-          assert.strictEqual(chart.length, 18)
+          assert.strictEqual(chart.length, 19)
           assert.deepStrictEqual(again, chart)
           const byCode = new Map(chart.map((account) => [account.code, account]))
           assert.strictEqual(byCode.get("1200")!.parentAccountId, byCode.get("1000")!.id)
           const rules = yield* ledger.listPostingRules(scope)
-          assert.strictEqual(rules.length, 11)
+          assert.strictEqual(rules.length, 12)
 
           const mismatchedParent = yield* Effect.flip(
             ledger.createAccount({

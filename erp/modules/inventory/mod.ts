@@ -82,6 +82,10 @@ export { InventoryModule } from "./manifest.ts"
 export {
   CountStockInput,
   IssueValuedStockInput,
+  OpeningRevaluation,
+  OpeningStockInput,
+  OpeningStockLine,
+  OpeningStockLoad,
   ReceiveValuedStockInput,
   RegisterProductItemInput,
   StockKeepingService,
@@ -92,11 +96,20 @@ export {
 } from "./src/stock-keeping-contract.ts"
 
 export type {
+  OpeningStockLoad as OpeningStockLoadType,
   StockKeepingService as StockKeepingServiceContract,
   StockValuation as StockValuationType,
   ValuedStockMovement as ValuedStockMovementType,
 } from "./src/stock-keeping-contract.ts"
 
-export { StockNotStockable, StockValuationUnavailable } from "./src/errors.ts"
+export {
+  OpeningStockAlreadyLoaded,
+  OpeningStockConflict,
+  OpeningStockInTransitNotCarried,
+  OpeningStockLotTrackingUnsupported,
+  OpeningStockReservationsNotCarried,
+  StockNotStockable,
+  StockValuationUnavailable,
+} from "./src/errors.ts"
 
 export { StockKeepingLive } from "./src/stock-keeping.ts"

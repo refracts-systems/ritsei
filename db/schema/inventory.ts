@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm"
 import {
   bigint,
   check,
+  date,
   foreignKey,
   pgSchema,
   primaryKey,
@@ -345,5 +346,68 @@ export const valuationEntries = inventorySchema.table(
       sql`(${table.quantity} > 0 and ${table.value} >= 0) or (${table.quantity} < 0 and ${table.value} <= 0)`,
     ),
     check("valuation_entries_source_check", sql`${table.sourceType} ~ '^[a-z][a-z0-9_.]*$'`),
+  ],
+)
+
+/**
+ * The approved starting position of an item in a warehouse at cutover, with the source value and
+ * the one-time revaluation to moving average (ADR-0118). A warehouse and item are opened once.
+ */
+export const openingStockPositions = inventorySchema.table(
+  "opening_stock_positions",
+  {
+    id: id(),
+    tenantId: uuid("tenant_id").notNull(),
+    warehouseId: uuid("warehouse_id").notNull(),
+    itemId: uuid("item_id").notNull(),
+    movementId: uuid("movement_id").notNull(),
+    /** The business date the position is as of: the cutoff the source totals were taken at. */
+    cutoffDate: date("cutoff_date", { mode: "string" }).notNull(),
+    quantity: bigint("quantity", { mode: "string" }).notNull(),
+    /** The value the source reports: the amount to clear against the migration clearing account. */
+    sourceValue: money("source_value"),
+    /** Signed: the moving-average value less the source value. */
+    adjustment: money("adjustment").default("0"),
+    adjustmentName: text("adjustment_name"),
+    approvedBy: text("approved_by"),
+    approvedAt: timestamp("approved_at", { withTimezone: true }),
+    approvalReference: text("approval_reference"),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    unique("opening_stock_positions_warehouse_item_key").on(
+      table.tenantId,
+      table.warehouseId,
+      table.itemId,
+    ),
+    unique("opening_stock_positions_movement_key").on(table.tenantId, table.movementId),
+    foreignKey({
+      columns: [table.tenantId, table.warehouseId],
+      foreignColumns: [warehouses.tenantId, warehouses.id],
+      name: "opening_stock_positions_warehouse_fkey",
+    }),
+    foreignKey({
+      columns: [table.tenantId, table.itemId],
+      foreignColumns: [items.tenantId, items.id],
+      name: "opening_stock_positions_item_fkey",
+    }),
+    foreignKey({
+      columns: [table.tenantId, table.movementId],
+      foreignColumns: [movements.tenantId, movements.id],
+      name: "opening_stock_positions_movement_fkey",
+    }),
+    check(
+      "opening_stock_positions_amounts_check",
+      sql`${table.quantity} > 0 and ${table.sourceValue} >= 0 and
+      ${table.sourceValue} + ${table.adjustment} >= 0`,
+    ),
+    check(
+      "opening_stock_positions_approval_check",
+      sql`(${table.adjustmentName} is null and ${table.approvedBy} is null and
+        ${table.approvedAt} is null and ${table.approvalReference} is null and
+        ${table.adjustment} = 0) or
+      (${table.adjustmentName} ~ '[^[:space:]]' and ${table.approvedBy} ~ '[^[:space:]]' and
+        ${table.approvedAt} is not null and ${table.approvalReference} ~ '[^[:space:]]')`,
+    ),
   ],
 )

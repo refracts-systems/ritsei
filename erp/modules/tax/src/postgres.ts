@@ -1,11 +1,23 @@
-import { and, asc, eq, inArray } from "drizzle-orm"
+import { and, asc, eq, inArray, lte } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 
-import { productTaxDefaults, taxCodes } from "../../../../db/schema/tax.ts"
+import { productTaxDefaults, taxCodeRates, taxCodes } from "../../../../db/schema/tax.ts"
 import { Database, isDatabaseConstraint } from "../../../../framework/foundation/mod.ts"
 import { normalizeRate } from "./contract.ts"
-import { TaxCodeAlreadyExists, TaxCodeNotFound, TaxProductNotFound } from "./errors.ts"
+import {
+  TaxCodeAlreadyExists,
+  TaxCodeNotFound,
+  TaxCodeRateAlreadyExists,
+  TaxProductNotFound,
+} from "./errors.ts"
 import type { TaxStore } from "./store.ts"
+
+const rateSelection = {
+  tenantId: taxCodeRates.tenantId,
+  taxCodeId: taxCodeRates.taxCodeId,
+  effectiveFrom: taxCodeRates.effectiveFrom,
+  rate: taxCodeRates.rate,
+}
 
 const selection = {
   id: taxCodes.id,
@@ -81,6 +93,54 @@ export const makeTaxPostgresStore = Effect.fn("Tax.makePostgresStore")(function*
               : error,
           ),
         ),
+    addTaxCodeRate: (value) =>
+      database
+        .query(
+          (db) =>
+            db
+              .insert(taxCodeRates)
+              .values({
+                tenantId: value.tenantId,
+                taxCodeId: value.taxCodeId,
+                effectiveFrom: value.effectiveFrom,
+                rate: value.rate,
+              })
+              .returning(rateSelection),
+          "tax.tax_code_rate.add",
+        )
+        .pipe(
+          Effect.map((rows) => normalized(rows[0]!)),
+          Effect.mapError((error) => {
+            if (isDatabaseConstraint(error, "tax_code_rates_pkey")) {
+              return new TaxCodeRateAlreadyExists(value)
+            }
+
+            if (isDatabaseConstraint(error, "tax_code_rates_tax_code_fkey", "23503")) {
+              return new TaxCodeNotFound({ tenantId: value.tenantId, taxCodeId: value.taxCodeId })
+            }
+
+            return error
+          }),
+        ),
+    ratePeriodsUpTo: (tenantId, taxCodeIds, date) =>
+      taxCodeIds.length === 0
+        ? Effect.succeed([])
+        : database
+            .query(
+              (db) =>
+                db
+                  .select(rateSelection)
+                  .from(taxCodeRates)
+                  .where(
+                    and(
+                      eq(taxCodeRates.tenantId, tenantId),
+                      inArray(taxCodeRates.taxCodeId, [...taxCodeIds]),
+                      lte(taxCodeRates.effectiveFrom, date),
+                    ),
+                  ),
+              "tax.tax_code_rate.list",
+            )
+            .pipe(Effect.map((rows) => rows.map(normalized))),
     setProductTaxDefault: (value) =>
       database
         .query(

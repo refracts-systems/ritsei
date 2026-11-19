@@ -17,7 +17,12 @@ import {
   uuidv7,
 } from "../../../../framework/foundation/mod.ts"
 import { NumberingService } from "../../../../framework/modules/numbering/mod.ts"
-import type { LedgerAccount, LedgerEntry, PostingRole } from "./general-ledger-contract.ts"
+import {
+  type LedgerAccount,
+  type LedgerEntry,
+  OPENING_BALANCE_SOURCE,
+  type PostingRole,
+} from "./general-ledger-contract.ts"
 import {
   type GeneralLedgerStore,
   type PostEntryCommand,
@@ -392,6 +397,23 @@ export const makeGeneralLedgerPostgresStore = Effect.fn("GeneralLedger.makePostg
       return { lines: resolved }
     }
 
+    /** The first account a new entry puts on a control role it must not touch, if any. */
+    const controlLine = (
+      command: PostEntryCommand,
+      lines: ReadonlyArray<AccountLine>,
+      rules: ReadonlyMap<PostingRole, string>,
+    ) => {
+      for (const role of command.controlRoles ?? []) {
+        const accountId = rules.get(role)
+
+        if (accountId !== undefined && lines.some((line) => line.accountId === accountId)) {
+          return PostEntryOutcome.ControlAccountLine({ role, accountId })
+        }
+      }
+
+      return undefined
+    }
+
     /** A retried posting must repeat the entry it posted before. */
     const replay = (
       existing: NonNullable<Effect.Success<ReturnType<typeof loadEntry>>>,
@@ -480,6 +502,9 @@ export const makeGeneralLedgerPostgresStore = Effect.fn("GeneralLedger.makePostg
           const existing = yield* loadEntry(command.tenantId, command.reference)
 
           if (existing !== undefined) return replay(existing, command, resolved.lines)
+          const control = controlLine(command, resolved.lines, context.success.rules)
+
+          if (control !== undefined) return control
           const entryId = uuidv7()
 
           const allocated = yield* numbering
@@ -498,6 +523,27 @@ export const makeGeneralLedgerPostgresStore = Effect.fn("GeneralLedger.makePostg
         }),
         "accounting.ledger.entry.atomic",
       )
+
+    const openingEntryId: GeneralLedgerStore["openingEntryId"] = (query) =>
+      database
+        .query(
+          (db) =>
+            db
+              .select({ id: journalEntries.id })
+              .from(journalEntries)
+              .where(
+                and(
+                  eq(journalEntries.tenantId, query.tenantId),
+                  eq(journalEntries.legalEntityId, query.legalEntityId),
+                  eq(journalEntries.sourceType, OPENING_BALANCE_SOURCE),
+                  inArray(journalEntries.status, [...POSTED_STATUSES]),
+                  lte(journalEntries.postingDate, query.asOf),
+                ),
+              )
+              .limit(1),
+          "accounting.ledger.opening_entry",
+        )
+        .pipe(Effect.map((rows) => rows[0]?.id))
 
     const accountActivity: GeneralLedgerStore["accountActivity"] = (query) =>
       database
@@ -602,6 +648,7 @@ export const makeGeneralLedgerPostgresStore = Effect.fn("GeneralLedger.makePostg
       setPostingRule,
       listPostingRules,
       postEntry,
+      openingEntryId,
       accountActivity,
       ledgerLines,
     } satisfies GeneralLedgerStore

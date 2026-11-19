@@ -15,6 +15,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core"
 
@@ -56,6 +57,7 @@ export const postingRole = accountingSchema.enum("posting_role", [
   "purchase_price_variance",
   "inventory_adjustment",
   "cash",
+  "migration_clearing",
 ])
 
 export const financialEngine = accountingSchema.enum("financial_engine", [
@@ -569,6 +571,10 @@ export const journalEntries = accountingSchema.table(
       table.number,
     ),
     index("journal_entries_ledger_idx").on(table.tenantId, table.legalEntityId, table.postingDate),
+    // At most one opening journal per legal entity (ADR-0117), whatever its reference.
+    uniqueIndex("journal_entries_opening_balance_key")
+      .on(table.tenantId, table.legalEntityId)
+      .where(sql`${table.sourceType} = 'accounting.opening_balance'`),
     foreignKey({
       columns: [table.tenantId, table.legalEntityId],
       foreignColumns: [legalEntities.tenantId, legalEntities.id],

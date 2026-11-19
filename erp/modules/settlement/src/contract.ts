@@ -12,7 +12,11 @@ import {
 } from "../../../../framework/foundation/mod.ts"
 import { Principal } from "../../../../framework/modules/auth/mod.ts"
 import type { AuthorizationDenied } from "../../../../framework/modules/authorization/mod.ts"
-import type { PostEntryFailure } from "../../accounting/mod.ts"
+import type {
+  AccountingLegalEntityNotFound,
+  AccountNotFound,
+  PostEntryFailure,
+} from "../../accounting/mod.ts"
 import type {
   BillingDocumentNotFound,
   SettlementConflict,
@@ -43,6 +47,21 @@ export type PaymentTerm = Schema.Schema.Type<typeof PaymentTerm>
 
 export const Allocation = Schema.Struct({ invoiceId: Uuid, amount: FinancialMajorAmount })
 
+const PositiveAmount = FinancialMajorAmount.check(
+  Schema.makeFilter((value) => /[1-9]/.test(value), { expected: "a positive amount" }),
+)
+
+/**
+ * Tax the payer withheld from a receipt, kept as a claim on `accountId`. It settles receivables
+ * together with the cash but is not cash received; settlement computes no tax (ADR-0116).
+ */
+export const Withholding = Schema.Struct({
+  amount: PositiveAmount,
+  /** The payer's withholding certificate number. */
+  certificateReference: Text,
+  accountId: Uuid,
+})
+
 export const Payment = Schema.Struct({
   id: Uuid,
   tenantId: Uuid,
@@ -51,11 +70,14 @@ export const Payment = Schema.Struct({
   partyId: Uuid,
   number: Schema.String,
   paymentDate: CalendarDate,
+  /** What the payment settles: the cash received plus any withholding. */
   amount: FinancialMajorAmount,
   unallocatedAmount: FinancialMajorAmount,
   cashAccountId: Schema.NullOr(Uuid),
   journalEntryId: Uuid,
   allocations: Schema.Array(Allocation),
+  /** Present only when the payer withheld tax from this receipt. */
+  withholding: Schema.optionalKey(Withholding),
 })
 
 export type Payment = Schema.Schema.Type<typeof Payment>
@@ -124,9 +146,7 @@ const PaymentFields = {
   legalEntityId: Uuid,
   partyId: Uuid,
   paymentDate: CalendarDate,
-  amount: FinancialMajorAmount.check(
-    Schema.makeFilter((value) => /[1-9]/.test(value), { expected: "a positive amount" }),
-  ),
+  amount: PositiveAmount,
   /** The bank or cash account; the `cash` posting role when omitted. */
   cashAccountId: Schema.optionalKey(Uuid),
   allocations: Schema.Array(Allocation).check(
@@ -138,7 +158,12 @@ const PaymentFields = {
   ),
 }
 
-export const ReceivePaymentInput = Schema.Struct(PaymentFields)
+export const ReceivePaymentInput = Schema.Struct({
+  ...PaymentFields,
+  /** Tax the payer withheld: part of `amount`, so the cash received is `amount` less this. */
+  withholding: Schema.optionalKey(Withholding),
+})
+
 export const MakePaymentInput = Schema.Struct(PaymentFields)
 
 export const AllocatePaymentInput = Schema.Struct({
@@ -174,9 +199,104 @@ export const StatementInput = Schema.Struct({
   to: CalendarDate,
 })
 
+export const BankStatement = Schema.Struct({
+  id: Uuid,
+  tenantId: Uuid,
+  legalEntityId: Uuid,
+  /** The ledger account of the bank the statement belongs to. */
+  bankAccountId: Uuid,
+  sourceName: Schema.String,
+  /** SHA-256 of the imported file content; the same content is never imported twice. */
+  checksum: Schema.String,
+  lineCount: Schema.Int,
+})
+
+export type BankStatement = Schema.Schema.Type<typeof BankStatement>
+
+export const BankLineMatch = Schema.Struct({
+  id: Uuid,
+  tenantId: Uuid,
+  lineId: Uuid,
+  paymentId: Uuid,
+  amount: FinancialMajorAmount,
+  reversed: Schema.Boolean,
+})
+
+export type BankLineMatch = Schema.Schema.Type<typeof BankLineMatch>
+
+export const BankReconciliation = Schema.Struct({
+  legalEntityId: Uuid,
+  bankAccountId: Uuid,
+  /** Statement lines with an amount still unmatched, oldest first. */
+  lines: Schema.Array(
+    Schema.Struct({
+      id: Uuid,
+      statementId: Uuid,
+      lineNumber: Schema.Int,
+      bookingDate: CalendarDate,
+      description: Schema.String,
+      reference: Schema.NullOr(Schema.String),
+      /** Positive is money in. */
+      amount: SignedAmount,
+      unmatchedAmount: FinancialMajorAmount,
+    }),
+  ),
+  /** Payments on the bank account with cash still unmatched, oldest first. */
+  payments: Schema.Array(
+    Schema.Struct({
+      id: Uuid,
+      number: Schema.String,
+      direction: PaymentDirection,
+      partyId: Uuid,
+      paymentDate: CalendarDate,
+      unmatchedCash: FinancialMajorAmount,
+      /** Cash on account: the part of the payment not allocated to documents. */
+      unallocatedAmount: FinancialMajorAmount,
+    }),
+  ),
+})
+
+export type BankReconciliation = Schema.Schema.Type<typeof BankReconciliation>
+
+export const ImportBankStatementInput = Schema.Struct({
+  ...ScopedInput,
+  legalEntityId: Uuid,
+  bankAccountId: Uuid,
+  sourceName: TrimmedText(256),
+  /** The statement file as CSV text in the profile ADR-0116 documents. */
+  content: Schema.String.check(Schema.isMaxLength(2_000_000)),
+})
+
+export const MatchBankLineInput = Schema.Struct({
+  ...ScopedInput,
+  /** Client-chosen id that makes a retried command return the recorded match. */
+  matchId: Schema.optionalKey(Uuid),
+  lineId: Uuid,
+  paymentId: Uuid,
+  /** The cash matched, at most what is unmatched on both the line and the payment. */
+  amount: PositiveAmount,
+})
+
+export const ReverseBankMatchInput = Schema.Struct({ ...ScopedInput, matchId: Uuid })
+
+export const BankReconciliationInput = Schema.Struct({
+  ...ScopedInput,
+  legalEntityId: Uuid,
+  bankAccountId: Uuid,
+  limit: Schema.optionalKey(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 200 }))),
+})
+
 type CommonFailure = AuthorizationDenied | DatabaseFailure | Schema.SchemaError
 
+export type BankMatchFailure =
+  | SettlementErrors.BankLineNotFound
+  | SettlementErrors.BankMatchExceedsAvailable
+  | SettlementErrors.BankMatchMismatch
+  | SettlementErrors.PaymentNotFound
+  | CommonFailure
+
 export type PaymentFailure =
+  | SettlementErrors.InvalidWithholding
   | SettlementErrors.AllocationBeforePayment
   | SettlementErrors.AllocationExceedsPayment
   | SettlementErrors.AllocationMismatch
@@ -217,6 +337,31 @@ export interface SettlementService {
   readonly customerStatement: (
     input: Schema.Codec.Encoded<typeof StatementInput>,
   ) => Effect.Effect<CustomerStatement, CommonFailure>
+  /**
+   * Imports a bank statement file as immutable lines (ADR-0116). A repeat of the same content for
+   * the same bank account returns the statement already imported.
+   */
+  readonly importBankStatement: (
+    input: Schema.Codec.Encoded<typeof ImportBankStatementInput>,
+  ) => Effect.Effect<
+    BankStatement,
+    | SettlementErrors.InvalidBankStatement
+    | AccountNotFound
+    | AccountingLegalEntityNotFound
+    | CommonFailure
+  >
+  /** Manually matches statement line cash to payment cash; a retried `matchId` returns the match. */
+  readonly matchBankLine: (
+    input: Schema.Codec.Encoded<typeof MatchBankLineInput>,
+  ) => Effect.Effect<BankLineMatch, BankMatchFailure>
+  /** Reverses a match so the line and the payment cash are unmatched again; repeatable. */
+  readonly reverseBankMatch: (
+    input: Schema.Codec.Encoded<typeof ReverseBankMatchInput>,
+  ) => Effect.Effect<BankLineMatch, SettlementErrors.BankMatchNotFound | CommonFailure>
+  /** Unmatched statement lines and unmatched payment cash of one bank account. */
+  readonly bankReconciliation: (
+    input: Schema.Codec.Encoded<typeof BankReconciliationInput>,
+  ) => Effect.Effect<BankReconciliation, CommonFailure>
 }
 
 export const SettlementService = Context.Service<SettlementService>("RITSEI/SettlementService")

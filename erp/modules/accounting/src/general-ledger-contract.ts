@@ -40,9 +40,13 @@ export const PostingRole = Schema.Literals([
   "purchase_price_variance",
   "inventory_adjustment",
   "cash",
+  "migration_clearing",
 ])
 
 export type PostingRole = Schema.Schema.Type<typeof PostingRole>
+
+/** The source type of the one opening journal per legal entity (ADR-0117). */
+export const OPENING_BALANCE_SOURCE = "accounting.opening_balance"
 
 /** A chart template id such as `neutral_trading`; localizations add their own. */
 export const ChartTemplateId = Schema.String.check(Schema.isPattern(/^[a-z][a-z0-9_]{0,63}$/))
@@ -142,6 +146,56 @@ export const GeneralLedger = Schema.Struct({
 
 export type GeneralLedger = Schema.Schema.Type<typeof GeneralLedger>
 
+/** One account's own activity in its natural sign: debit minus credit for assets and expenses, credit minus debit otherwise. Roll up by `parentAccountId`. */
+export const StatementRow = Schema.Struct({
+  accountId: Uuid,
+  code: AccountCode,
+  name: TrimmedNonEmptyString,
+  parentAccountId: Schema.NullOr(Uuid),
+  amount: SignedAmount,
+})
+
+export const StatementSection = Schema.Struct({
+  rows: Schema.Array(StatementRow),
+  total: SignedAmount,
+})
+
+export const ProfitAndLoss = Schema.Struct({
+  legalEntityId: Uuid,
+  from: CalendarDate,
+  to: CalendarDate,
+  revenue: StatementSection,
+  expenses: StatementSection,
+  netIncome: SignedAmount,
+})
+
+export type ProfitAndLoss = Schema.Schema.Type<typeof ProfitAndLoss>
+
+/**
+ * Balances at the end of `asOf`. Nothing closes a fiscal year yet, so `unclosedEarnings` is every
+ * revenue minus every expense posted up to `asOf`, and it balances the sheet.
+ */
+export const BalanceSheet = Schema.Struct({
+  legalEntityId: Uuid,
+  asOf: CalendarDate,
+  assets: StatementSection,
+  liabilities: StatementSection,
+  equity: StatementSection,
+  unclosedEarnings: SignedAmount,
+  totalLiabilitiesAndEquity: SignedAmount,
+})
+
+export type BalanceSheet = Schema.Schema.Type<typeof BalanceSheet>
+
+export const MigrationClearingVerification = Schema.Struct({
+  legalEntityId: Uuid,
+  accountId: Uuid,
+  asOf: CalendarDate,
+  openingEntryId: Uuid,
+})
+
+export type MigrationClearingVerification = Schema.Schema.Type<typeof MigrationClearingVerification>
+
 export const RoleBalance = Schema.Struct({
   legalEntityId: Uuid,
   role: PostingRole,
@@ -199,6 +253,38 @@ export const PostDocumentEntryInput = Schema.Struct({
 
 export type PostDocumentEntryCommand = Schema.Schema.Type<typeof PostDocumentEntryInput>
 
+/**
+ * The one opening journal of a legal entity: every GL balance except the AR, AP, and stock control
+ * accounts, which their owners load against `migration_clearing` (ADR-0117). It is keyed by the
+ * legal entity, so repeating the same command returns the posted entry.
+ */
+export const PostOpeningJournalInput = Schema.Struct({
+  ...ScopedInput,
+  legalEntityId: Uuid,
+  postingDate: CalendarDate,
+  description: Schema.optionalKey(Schema.String.check(Schema.isMaxLength(500))),
+  lines: Schema.Array(LedgerLineInput).check(Schema.isMinLength(2)),
+})
+
+export const VerifyMigrationClearingInput = Schema.Struct({
+  ...ScopedInput,
+  legalEntityId: Uuid,
+  asOf: CalendarDate,
+})
+
+export const ProfitAndLossInput = Schema.Struct({
+  ...ScopedInput,
+  legalEntityId: Uuid,
+  from: CalendarDate,
+  to: CalendarDate,
+})
+
+export const BalanceSheetInput = Schema.Struct({
+  ...ScopedInput,
+  legalEntityId: Uuid,
+  asOf: CalendarDate,
+})
+
 export const TrialBalanceInput = Schema.Struct({
   ...ScopedInput,
   legalEntityId: Uuid,
@@ -233,6 +319,10 @@ export type PostEntryFailure =
   | AccountingErrors.PostingRuleNotFound
   | AccountingErrors.UnbalancedJournal
   | CommonFailure
+
+export type PostOpeningJournalFailure =
+  | AccountingErrors.OpeningJournalControlAccount
+  | PostEntryFailure
 
 /**
  * The general ledger: chart of accounts, posting rules, numbered legal-entity journals, and the
@@ -274,6 +364,28 @@ export interface GeneralLedgerService {
   readonly postDocumentEntry: (
     input: Schema.Codec.Encoded<typeof PostDocumentEntryInput>,
   ) => Effect.Effect<LedgerEntry, PostEntryFailure>
+  readonly postOpeningJournal: (
+    input: Schema.Codec.Encoded<typeof PostOpeningJournalInput>,
+  ) => Effect.Effect<LedgerEntry, PostOpeningJournalFailure>
+  /**
+   * Succeeds only when the legal entity has an opening journal and `migration_clearing` is exactly
+   * zero at `asOf`; otherwise sign-off is blocked.
+   */
+  readonly verifyMigrationClearing: (
+    input: Schema.Codec.Encoded<typeof VerifyMigrationClearingInput>,
+  ) => Effect.Effect<
+    MigrationClearingVerification,
+    | AccountingErrors.MigrationClearingNotZero
+    | AccountingErrors.OpeningJournalNotPosted
+    | AccountingErrors.PostingRuleNotFound
+    | CommonFailure
+  >
+  readonly profitAndLoss: (
+    input: Schema.Codec.Encoded<typeof ProfitAndLossInput>,
+  ) => Effect.Effect<ProfitAndLoss, CommonFailure>
+  readonly balanceSheet: (
+    input: Schema.Codec.Encoded<typeof BalanceSheetInput>,
+  ) => Effect.Effect<BalanceSheet, CommonFailure>
   readonly trialBalance: (
     input: Schema.Codec.Encoded<typeof TrialBalanceInput>,
   ) => Effect.Effect<TrialBalance, CommonFailure>

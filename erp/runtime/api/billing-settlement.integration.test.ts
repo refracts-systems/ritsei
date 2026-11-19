@@ -18,6 +18,9 @@ import {
 } from "../../modules/billing/mod.ts"
 import { SettlementHttpHandlers } from "../../modules/settlement/http.ts"
 import {
+  BankMatchExceedsAvailable,
+  BankMatchNotFound,
+  InvalidBankStatement,
   SettlementService,
   type PaymentType,
   type SettlementServiceContract,
@@ -72,18 +75,18 @@ const TestHttpServices = Layer.mergeAll(Path.layer, Etag.layerWeak, HttpPlatform
   Layer.provideMerge(FileSystem.layerNoop({})),
 )
 
+const bearer = Layer.succeed(BearerAuth, {
+  bearer: (effect) => Effect.provideService(effect, CurrentPrincipal, principal),
+})
+
+const bearerClient = HttpApiMiddleware.layerClient(BearerAuth, ({ request, next }) =>
+  next(HttpClientRequest.bearerToken(request, "billing-token")),
+)
+
 it.layer(TestHttpServices)("billing and settlement API contracts", (it) => {
   it.effect("forwards tenant and bearer context and maps typed failures", () =>
     Effect.gen(function* () {
       const observed: unknown[] = []
-
-      const bearer = Layer.succeed(BearerAuth, {
-        bearer: (effect) => Effect.provideService(effect, CurrentPrincipal, principal),
-      })
-
-      const bearerClient = HttpApiMiddleware.layerClient(BearerAuth, ({ request, next }) =>
-        next(HttpClientRequest.bearerToken(request, "billing-token")),
-      )
 
       const billing = partial<BillingServiceContract>()({
         listDocuments: (input: Parameters<BillingServiceContract["listDocuments"]>[0]) =>
@@ -194,6 +197,147 @@ it.layer(TestHttpServices)("billing and settlement API contracts", (it) => {
       const received = observed.at(-1) as { tenantId: string; amount: string }
       assert.strictEqual(received.tenantId, tenantId)
       assert.strictEqual(received.amount, "11.10")
+    }),
+  )
+
+  it.effect("forwards withholding and bank reconciliation commands and maps their failures", () =>
+    Effect.gen(function* () {
+      const observed: unknown[] = []
+      const lineId = "018f3000-0000-7000-8000-000000000008"
+      const matchId = "018f3000-0000-7000-8000-000000000009"
+      const bankAccountId = "018f3000-0000-7000-8000-00000000000a"
+      const withholdingAccountId = "018f3000-0000-7000-8000-00000000000b"
+
+      const withholding = {
+        amount: "0.20",
+        certificateReference: "BP-0001",
+        accountId: withholdingAccountId,
+      }
+
+      const match = { id: matchId, tenantId, lineId, paymentId, amount: "10.90", reversed: false }
+
+      const settlement = partial<SettlementServiceContract>()({
+        receivePayment: (input: Parameters<SettlementServiceContract["receivePayment"]>[0]) =>
+          Effect.sync(() => {
+            observed.push(input)
+
+            return { ...payment, withholding }
+          }),
+        importBankStatement: (
+          input: Parameters<SettlementServiceContract["importBankStatement"]>[0],
+        ) =>
+          input.content === ""
+            ? Effect.fail(new InvalidBankStatement({ row: 1, reason: "no statement lines" }))
+            : Effect.succeed({
+                id: lineId,
+                tenantId,
+                legalEntityId,
+                bankAccountId,
+                sourceName: input.sourceName,
+                checksum: "0".repeat(64),
+                lineCount: 1,
+              }),
+        matchBankLine: (input: Parameters<SettlementServiceContract["matchBankLine"]>[0]) =>
+          input.amount === "99.00"
+            ? Effect.fail(
+                new BankMatchExceedsAvailable({
+                  tenantId,
+                  lineId,
+                  paymentId,
+                  available: "10.90",
+                  requested: "99.00",
+                }),
+              )
+            : Effect.succeed(match),
+        reverseBankMatch: (input: Parameters<SettlementServiceContract["reverseBankMatch"]>[0]) =>
+          input.matchId === matchId
+            ? Effect.succeed({ ...match, reversed: true })
+            : Effect.fail(new BankMatchNotFound({ tenantId, matchId: input.matchId })),
+        bankReconciliation: () =>
+          Effect.succeed({ legalEntityId, bankAccountId, lines: [], payments: [] }),
+      })
+
+      const handlers = SettlementHttpHandlers.pipe(
+        Layer.provide(bearer),
+        Layer.provide(Layer.succeed(SettlementService, settlement)),
+      )
+
+      const client = yield* HttpApiTest.groups(RitseiApi, ["Settlement"]).pipe(
+        Effect.provide(Layer.mergeAll(handlers, bearerClient, bearer)),
+      )
+
+      const headers = { "x-tenant-id": tenantId }
+
+      const received = yield* client.Settlement.receivePayment({
+        headers,
+        payload: {
+          legalEntityId,
+          partyId,
+          paymentDate: "2026-10-24",
+          amount: "11.10",
+          allocations: [{ invoiceId, amount: "11.10" }],
+          withholding,
+        },
+      })
+
+      assert.deepStrictEqual(received.withholding, withholding)
+      // SAFETY: the test calls this double only with inputs of the shape it reads.
+      assert.deepStrictEqual((observed.at(-1) as { withholding: unknown }).withholding, withholding)
+
+      const statement = yield* client.Settlement.importBankStatement({
+        headers,
+        payload: { legalEntityId, bankAccountId, sourceName: "oct.csv", content: "x" },
+      })
+
+      assert.strictEqual(statement.sourceName, "oct.csv")
+
+      const invalid = yield* Effect.flip(
+        client.Settlement.importBankStatement({
+          headers,
+          payload: { legalEntityId, bankAccountId, sourceName: "oct.csv", content: "" },
+        }),
+      )
+
+      assert.strictEqual(invalid._tag, "ApiConflict")
+
+      assert.deepStrictEqual(
+        yield* client.Settlement.matchBankLine({
+          headers,
+          payload: { lineId, paymentId, amount: "10.90" },
+        }),
+        match,
+      )
+
+      const over = yield* Effect.flip(
+        client.Settlement.matchBankLine({
+          headers,
+          payload: { lineId, paymentId, amount: "99.00" },
+        }),
+      )
+
+      assert.strictEqual(over._tag, "ApiConflict")
+
+      assert.strictEqual(
+        (yield* client.Settlement.reverseBankMatch({ params: { id: matchId }, headers })).reversed,
+        true,
+      )
+
+      const unknown = yield* Effect.flip(
+        client.Settlement.reverseBankMatch({
+          params: { id: "018f3000-0000-7000-8000-0000000000ff" },
+          headers,
+        }),
+      )
+
+      assert.strictEqual(unknown._tag, "ApiNotFound")
+
+      assert.deepStrictEqual(
+        yield* client.Settlement.bankReconciliation({
+          headers,
+          query: { legalEntityId, bankAccountId },
+        }),
+        { legalEntityId, bankAccountId, lines: [], payments: [] },
+      )
     }),
   )
 })
