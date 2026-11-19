@@ -69,7 +69,7 @@ function DeliveryForm(props: {
             {...fieldProps}
             name="deliveryDate"
             type="date"
-            value={today()}
+            defaultValue={today()}
             required
             disabled={mutation.isPending}
           />
@@ -86,7 +86,7 @@ function DeliveryForm(props: {
                 name={`quantity-${line.orderLineId}`}
                 inputmode="numeric"
                 autocomplete="off"
-                value={String(remainingQuantity(line))}
+                defaultValue={String(remainingQuantity(line))}
                 disabled={mutation.isPending}
               />
             )}

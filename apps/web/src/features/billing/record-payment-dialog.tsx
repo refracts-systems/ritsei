@@ -49,7 +49,7 @@ function RecordPaymentForm(props: {
             {...fieldProps}
             name="paymentDate"
             type="date"
-            value={today()}
+            defaultValue={today()}
             required
             disabled={mutation.isPending}
           />
@@ -58,7 +58,7 @@ function RecordPaymentForm(props: {
       <MoneyField
         label="Amount"
         name="amount"
-        value={props.document.openAmount}
+        defaultValue={props.document.openAmount}
         required
         disabled={mutation.isPending}
         error={invalid() ? "Enter a date and an amount such as 100.00." : undefined}

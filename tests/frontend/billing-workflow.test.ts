@@ -352,6 +352,18 @@ it.effect(
           (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()).violations,
           [],
         )
+
+        // An invalid amount is explained beside the field, which keeps what was typed.
+        const amount = dialog.getByRole("textbox", { name: "Amount" })
+        await amount.fill("abc")
+        await dialog.getByRole("button", { name: "Receive payment", exact: true }).click()
+        await dialog.getByText("Enter a date and an amount such as 100.00.").waitFor()
+        assert.equal(await amount.inputValue(), "abc")
+        assert.equal(await amount.getAttribute("aria-invalid"), "true")
+        assert.include((await amount.getAttribute("aria-describedby")) ?? "", "-error")
+        assert.isUndefined(paymentBody)
+
+        await amount.fill("111.00")
         await dialog.getByRole("button", { name: "Receive payment", exact: true }).click()
         await dialog.waitFor({ state: "hidden" })
 

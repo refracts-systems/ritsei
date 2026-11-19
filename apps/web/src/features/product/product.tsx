@@ -126,7 +126,7 @@ function CreateProductDialog(props: { reload: () => Promise<void> }) {
               {...fieldProps}
               name="type"
               options={typeOptions}
-              value="stockable"
+              defaultValue="stockable"
               required
               disabled={mutation.isPending}
             />

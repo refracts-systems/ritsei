@@ -68,7 +68,7 @@ function BillForm(props: { orderId: string; close: () => void; onCreated: (id: s
             {...fieldProps}
             name="billDate"
             type="date"
-            value={today()}
+            defaultValue={today()}
             required
             disabled={mutation.isPending}
           />
@@ -86,7 +86,7 @@ function BillForm(props: { orderId: string; close: () => void; onCreated: (id: s
                   name={`quantity-${line.purchaseOrderLineId}`}
                   inputmode="numeric"
                   autocomplete="off"
-                  value={String(billableQuantity(line))}
+                  defaultValue={String(billableQuantity(line))}
                   disabled={mutation.isPending}
                 />
               )}
@@ -98,7 +98,7 @@ function BillForm(props: { orderId: string; close: () => void; onCreated: (id: s
                   name={`unitPrice-${line.purchaseOrderLineId}`}
                   inputmode="decimal"
                   autocomplete="off"
-                  value={line.unitPrice}
+                  defaultValue={line.unitPrice}
                   disabled={mutation.isPending}
                 />
               )}

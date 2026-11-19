@@ -31,11 +31,16 @@ export function FormField(props: FormFieldProps) {
     [props.helperText && descriptionId, props.error && errorId].filter(Boolean).join(" ") ||
     undefined
 
-  const controlProps = () => ({
+  // The control renders once; its ARIA attributes are getters so a spread onto it still updates.
+  const controlProps = {
     id,
-    "aria-describedby": describedBy(),
-    "aria-invalid": props.error ? ("true" as const) : undefined,
-  })
+    get "aria-describedby"() {
+      return describedBy()
+    },
+    get "aria-invalid"() {
+      return props.error ? ("true" as const) : undefined
+    },
+  }
 
   return (
     <div class={styles.root}>
@@ -43,7 +48,7 @@ export function FormField(props: FormFieldProps) {
         {props.label}
         {props.required && <span aria-hidden="true">*</span>}
       </label>
-      {Predicate.isFunction(children) ? children(controlProps()) : children}
+      {Predicate.isFunction(children) ? untrack(() => children(controlProps)) : children}
       {props.helperText && (
         <div class={styles.help} id={descriptionId}>
           {props.helperText}

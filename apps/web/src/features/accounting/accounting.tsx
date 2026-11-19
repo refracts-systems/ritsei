@@ -190,7 +190,7 @@ function ConfigureLegalEntityDialog(props: { reload: () => Promise<void> }) {
             <Input
               {...fieldProps}
               name="baseCurrency"
-              value="USD"
+              defaultValue="USD"
               maxlength={3}
               autocomplete="off"
               spellcheck={false}
@@ -207,7 +207,7 @@ function ConfigureLegalEntityDialog(props: { reload: () => Promise<void> }) {
               type="number"
               min={1}
               max={12}
-              value="1"
+              defaultValue="1"
               required
               disabled={mutation.isPending}
             />
@@ -219,7 +219,7 @@ function ConfigureLegalEntityDialog(props: { reload: () => Promise<void> }) {
               {...fieldProps}
               name="postingEnabled"
               options={postingOptions}
-              value="true"
+              defaultValue="true"
               required
               disabled={mutation.isPending}
             />

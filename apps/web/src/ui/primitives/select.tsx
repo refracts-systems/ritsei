@@ -14,18 +14,24 @@ export type SelectProps = Omit<
 > & {
   readonly options: readonly SelectOption[]
   readonly placeholder?: string
+  /** The initial choice of an uncontrolled select; unlike `value`, it is never written back over the user's choice. */
+  readonly defaultValue?: string
   readonly class?: JSX.ClassValue
 }
 
 export function Select(props: SelectProps) {
   return (
     <select
-      {...omit(props, "options", "placeholder", "class")}
+      {...omit(props, "options", "placeholder", "defaultValue", "class")}
       class={[control({ kind: "input" }), props.class]}
     >
       {props.placeholder && <option value="">{props.placeholder}</option>}
       {props.options.map((option) => (
-        <option value={option.value} disabled={option.disabled}>
+        <option
+          value={option.value}
+          disabled={option.disabled}
+          defaultSelected={option.value === props.defaultValue}
+        >
           {option.label}
         </option>
       ))}

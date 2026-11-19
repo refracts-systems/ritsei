@@ -230,7 +230,7 @@ function EmailEditor(props: {
               type="email"
               inputmode="email"
               autocomplete="off"
-              value={account.email}
+              defaultValue={account.email}
               required
               disabled={mutation.isPending}
             />

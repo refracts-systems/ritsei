@@ -106,7 +106,7 @@ function StockForm(props: {
             {...fieldProps}
             name="date"
             type="date"
-            value={today()}
+            defaultValue={today()}
             required
             disabled={mutation.isPending}
           />
@@ -123,7 +123,7 @@ function StockForm(props: {
                 name={`quantity-${line.purchaseOrderLineId}`}
                 inputmode="numeric"
                 autocomplete="off"
-                value={String(words().limit(line))}
+                defaultValue={String(words().limit(line))}
                 disabled={mutation.isPending}
               />
             )}
