@@ -1,7 +1,7 @@
--- owners: billing
--- reviewed: 2026-11-04
+-- owners: billing, process
+-- reviewed: 2026-11-19
 -- generated-by: drizzle-kit 1.0.0-rc.4
--- rationale: preserve versioned invoice render inputs and their single verified PDF (ADR-0112).
+-- rationale: stage versioned invoice render inputs, the single verified PDF with its lease fence, and the render job type for isolated evaluation under ADR-0122. Evaluation databases only; no production migration is authorized.
 
 CREATE TABLE "billing"."invoice_artifacts" (
 	"id" uuid PRIMARY KEY DEFAULT uuidv7(),
@@ -10,12 +10,16 @@ CREATE TABLE "billing"."invoice_artifacts" (
 	"snapshot_id" uuid NOT NULL,
 	"ast_id" uuid NOT NULL,
 	"render_fingerprint" text NOT NULL,
+	"fence_scope" text NOT NULL,
+	"lease_generation" bigint NOT NULL,
 	"content_hash" text NOT NULL,
 	"content" bytea NOT NULL,
 	"page_count" integer NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "invoice_artifacts_invoice_key" UNIQUE("tenant_id","invoice_id"),
 	CONSTRAINT "invoice_artifacts_pages_check" CHECK ("page_count" > 0),
+	CONSTRAINT "invoice_artifacts_fence_scope_check" CHECK ("fence_scope" ~ '[^[:space:]]'),
+	CONSTRAINT "invoice_artifacts_lease_generation_check" CHECK ("lease_generation" > 0),
 	CONSTRAINT "invoice_artifacts_content_check" CHECK (octet_length("content") >= 5 and octet_length("content") <= 50000000 and
       substring("content" from 1 for 5) = decode('255044462d', 'hex') and
       "content_hash" = encode(sha256("content"), 'hex'))
@@ -65,4 +69,5 @@ CREATE TABLE "billing"."invoice_render_inputs" (
 --> statement-breakpoint
 ALTER TABLE "billing"."invoices" ADD CONSTRAINT "invoices_tenant_id_number_kind_key" UNIQUE("tenant_id","id","number","kind");--> statement-breakpoint
 ALTER TABLE "billing"."invoice_artifacts" ADD CONSTRAINT "invoice_artifacts_render_input_fkey" FOREIGN KEY ("tenant_id","invoice_id","snapshot_id","ast_id","render_fingerprint") REFERENCES "billing"."invoice_render_inputs"("tenant_id","invoice_id","id","ast_id","render_fingerprint");--> statement-breakpoint
-ALTER TABLE "billing"."invoice_render_inputs" ADD CONSTRAINT "invoice_render_inputs_invoice_fkey" FOREIGN KEY ("tenant_id","invoice_id","invoice_number","invoice_kind") REFERENCES "billing"."invoices"("tenant_id","id","number","kind");
+ALTER TABLE "billing"."invoice_render_inputs" ADD CONSTRAINT "invoice_render_inputs_invoice_fkey" FOREIGN KEY ("tenant_id","invoice_id","invoice_number","invoice_kind") REFERENCES "billing"."invoices"("tenant_id","id","number","kind");--> statement-breakpoint
+ALTER TABLE "process"."jobs" DROP CONSTRAINT "process_jobs_type_check", ADD CONSTRAINT "process_jobs_type_check" CHECK ("job_type" in ('process.order_confirmation.post_commit', 'process.order_cancellation.post_commit', 'process.order_fulfillment.post_commit', 'accounting.financial_operation.submit', 'accounting.financial_operation.reconcile', 'billing.invoice.render'));

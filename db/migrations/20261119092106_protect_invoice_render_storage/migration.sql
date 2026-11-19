@@ -1,8 +1,8 @@
 -- Custom SQL migration file, put your code below! --
 -- owners: billing
--- reviewed: 2026-11-04
+-- reviewed: 2026-11-19
 -- generated-by: drizzle-kit 1.0.0-rc.4 --custom
--- rationale: prevent mutation or truncation of issued render inputs and artifacts (ADR-0112).
+-- rationale: prevent mutation or truncation of issued render inputs and artifacts (ADR-0122).
 
 CREATE TRIGGER invoice_render_inputs_immutable_trigger
 BEFORE UPDATE OR DELETE ON billing.invoice_render_inputs

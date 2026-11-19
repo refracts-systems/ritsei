@@ -1,9 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "1fd4254a-c167-4983-8acd-e816ad7c89c8",
+  "id": "0f912c28-f3e3-40b4-ae3c-bb9c2e7c723e",
   "prevIds": [
-    "db8c6a34-ea79-42cc-8f1a-10fb45cf945b"
+    "73d998f6-4164-4639-8a44-80b9c876c59f"
   ],
   "ddl": [
     {
@@ -48,6 +48,10 @@
     },
     {
       "name": "numbering",
+      "entityType": "schemas"
+    },
+    {
+      "name": "onboarding",
       "entityType": "schemas"
     },
     {
@@ -295,6 +299,34 @@
     },
     {
       "values": [
+        "staged",
+        "rehearsed",
+        "applied"
+      ],
+      "name": "import_batch_status",
+      "entityType": "enums",
+      "schema": "onboarding"
+    },
+    {
+      "values": [
+        "party"
+      ],
+      "name": "import_object_kind",
+      "entityType": "enums",
+      "schema": "onboarding"
+    },
+    {
+      "values": [
+        "pending",
+        "invalid",
+        "applied"
+      ],
+      "name": "import_row_status",
+      "entityType": "enums",
+      "schema": "onboarding"
+    },
+    {
+      "values": [
         "customer_invoice",
         "customer_credit_note",
         "supplier_bill",
@@ -376,7 +408,8 @@
         "goods_received_not_invoiced",
         "purchase_price_variance",
         "inventory_adjustment",
-        "cash"
+        "cash",
+        "migration_clearing"
       ],
       "name": "posting_role",
       "entityType": "enums",
@@ -553,6 +586,24 @@
     },
     {
       "isRlsEnabled": false,
+      "name": "bank_line_matches",
+      "entityType": "tables",
+      "schema": "settlement"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "bank_statement_lines",
+      "entityType": "tables",
+      "schema": "settlement"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "bank_statements",
+      "entityType": "tables",
+      "schema": "settlement"
+    },
+    {
+      "isRlsEnabled": false,
       "name": "billing_sources",
       "entityType": "tables",
       "schema": "billing"
@@ -667,7 +718,37 @@
     },
     {
       "isRlsEnabled": false,
+      "name": "import_batches",
+      "entityType": "tables",
+      "schema": "onboarding"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "import_rows",
+      "entityType": "tables",
+      "schema": "onboarding"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "imported_artifacts",
+      "entityType": "tables",
+      "schema": "billing"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "invoice_artifacts",
+      "entityType": "tables",
+      "schema": "billing"
+    },
+    {
+      "isRlsEnabled": false,
       "name": "invoice_lines",
+      "entityType": "tables",
+      "schema": "billing"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "invoice_render_inputs",
       "entityType": "tables",
       "schema": "billing"
     },
@@ -754,6 +835,12 @@
       "name": "number_series",
       "entityType": "tables",
       "schema": "numbering"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "opening_stock_positions",
+      "entityType": "tables",
+      "schema": "inventory"
     },
     {
       "isRlsEnabled": false,
@@ -985,6 +1072,12 @@
     },
     {
       "isRlsEnabled": false,
+      "name": "source_identities",
+      "entityType": "tables",
+      "schema": "onboarding"
+    },
+    {
+      "isRlsEnabled": false,
       "name": "stock_balances",
       "entityType": "tables",
       "schema": "inventory"
@@ -1012,6 +1105,12 @@
       "name": "supplier_prices",
       "entityType": "tables",
       "schema": "procurement"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "tax_code_rates",
+      "entityType": "tables",
+      "schema": "tax"
     },
     {
       "isRlsEnabled": false,
@@ -1483,6 +1582,344 @@
       "entityType": "columns",
       "schema": "approvals",
       "table": "approval_requests"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "uuidv7()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "settlement",
+      "table": "bank_line_matches"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "tenant_id",
+      "entityType": "columns",
+      "schema": "settlement",
+      "table": "bank_line_matches"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "line_id",
+      "entityType": "columns",
+      "schema": "settlement",
+      "table": "bank_line_matches"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "payment_id",
+      "entityType": "columns",
+      "schema": "settlement",
+      "table": "bank_line_matches"
+    },
+    {
+      "type": "numeric(24,2)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "amount",
+      "entityType": "columns",
+      "schema": "settlement",
+      "table": "bank_line_matches"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "matched_by",
+      "entityType": "columns",
+      "schema": "settlement",
+      "table": "bank_line_matches"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "reversed_at",
+      "entityType": "columns",
+      "schema": "settlement",
+      "table": "bank_line_matches"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "reversed_by",
+      "entityType": "columns",
+      "schema": "settlement",
+      "table": "bank_line_matches"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "settlement",
+      "table": "bank_line_matches"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "uuidv7()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "settlement",
+      "table": "bank_statement_lines"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "tenant_id",
+      "entityType": "columns",
+      "schema": "settlement",
+      "table": "bank_statement_lines"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "statement_id",
+      "entityType": "columns",
+      "schema": "settlement",
+      "table": "bank_statement_lines"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "line_number",
+      "entityType": "columns",
+      "schema": "settlement",
+      "table": "bank_statement_lines"
+    },
+    {
+      "type": "date",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "booking_date",
+      "entityType": "columns",
+      "schema": "settlement",
+      "table": "bank_statement_lines"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "description",
+      "entityType": "columns",
+      "schema": "settlement",
+      "table": "bank_statement_lines"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "reference",
+      "entityType": "columns",
+      "schema": "settlement",
+      "table": "bank_statement_lines"
+    },
+    {
+      "type": "numeric(24,2)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "amount",
+      "entityType": "columns",
+      "schema": "settlement",
+      "table": "bank_statement_lines"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "settlement",
+      "table": "bank_statement_lines"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "uuidv7()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "settlement",
+      "table": "bank_statements"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "tenant_id",
+      "entityType": "columns",
+      "schema": "settlement",
+      "table": "bank_statements"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "legal_entity_id",
+      "entityType": "columns",
+      "schema": "settlement",
+      "table": "bank_statements"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "bank_account_id",
+      "entityType": "columns",
+      "schema": "settlement",
+      "table": "bank_statements"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "source_name",
+      "entityType": "columns",
+      "schema": "settlement",
+      "table": "bank_statements"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "checksum",
+      "entityType": "columns",
+      "schema": "settlement",
+      "table": "bank_statements"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "imported_by",
+      "entityType": "columns",
+      "schema": "settlement",
+      "table": "bank_statements"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "settlement",
+      "table": "bank_statements"
     },
     {
       "type": "uuid",
@@ -4835,6 +5272,669 @@
       "identity": null,
       "name": "id",
       "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "tenant_id",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "source_instance",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "source_version",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "type": "import_object_kind",
+      "typeSchema": "onboarding",
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "object_kind",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "file_checksum",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "mapping_revision",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "uploaded_by",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "type": "import_batch_status",
+      "typeSchema": "onboarding",
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'staged'",
+      "generated": null,
+      "identity": null,
+      "name": "status",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "row_count",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "rehearsal",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "rehearsed_at",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "applied_at",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "uuidv7()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "tenant_id",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "batch_id",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "row_number",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "source_id",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "content_hash",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "fields",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
+      "type": "import_row_status",
+      "typeSchema": "onboarding",
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'pending'",
+      "generated": null,
+      "identity": null,
+      "name": "status",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'[]'",
+      "generated": null,
+      "identity": null,
+      "name": "errors",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "native_id",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "applied_at",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "uuidv7()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "imported_artifacts"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "tenant_id",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "imported_artifacts"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "invoice_id",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "imported_artifacts"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "source_system",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "imported_artifacts"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "source_reference",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "imported_artifacts"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "filename",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "imported_artifacts"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "media_type",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "imported_artifacts"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "content_hash",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "imported_artifacts"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "byte_size",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "imported_artifacts"
+    },
+    {
+      "type": "bytea",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "content",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "imported_artifacts"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "imported_by",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "imported_artifacts"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "imported_artifacts"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "uuidv7()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "invoice_artifacts"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "tenant_id",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "invoice_artifacts"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "invoice_id",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "invoice_artifacts"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "snapshot_id",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "invoice_artifacts"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "ast_id",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "invoice_artifacts"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "render_fingerprint",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "invoice_artifacts"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "fence_scope",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "invoice_artifacts"
+    },
+    {
+      "type": "bigint",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "lease_generation",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "invoice_artifacts"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "content_hash",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "invoice_artifacts"
+    },
+    {
+      "type": "bytea",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "content",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "invoice_artifacts"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "page_count",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "invoice_artifacts"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "invoice_artifacts"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "uuidv7()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
       "schema": "billing",
       "table": "invoice_lines"
     },
@@ -4993,6 +6093,175 @@
       "entityType": "columns",
       "schema": "billing",
       "table": "invoice_lines"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "uuidv7()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "invoice_render_inputs"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "tenant_id",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "invoice_render_inputs"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "invoice_id",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "invoice_render_inputs"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "invoice_number",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "invoice_render_inputs"
+    },
+    {
+      "type": "invoice_kind",
+      "typeSchema": "billing",
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'customer_invoice'",
+      "generated": null,
+      "identity": null,
+      "name": "invoice_kind",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "invoice_render_inputs"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "snapshot_checksum",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "invoice_render_inputs"
+    },
+    {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "snapshot",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "invoice_render_inputs"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "ast_id",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "invoice_render_inputs"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "ast_checksum",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "invoice_render_inputs"
+    },
+    {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "ast",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "invoice_render_inputs"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "render_fingerprint",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "invoice_render_inputs"
+    },
+    {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "render_request",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "invoice_render_inputs"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "billing",
+      "table": "invoice_render_inputs"
     },
     {
       "type": "uuid",
@@ -6663,6 +7932,188 @@
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
+      "default": "uuidv7()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "opening_stock_positions"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "tenant_id",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "opening_stock_positions"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "warehouse_id",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "opening_stock_positions"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "item_id",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "opening_stock_positions"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "movement_id",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "opening_stock_positions"
+    },
+    {
+      "type": "date",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "cutoff_date",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "opening_stock_positions"
+    },
+    {
+      "type": "bigint",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "quantity",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "opening_stock_positions"
+    },
+    {
+      "type": "numeric(24,2)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "source_value",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "opening_stock_positions"
+    },
+    {
+      "type": "numeric(24,2)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'0'",
+      "generated": null,
+      "identity": null,
+      "name": "adjustment",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "opening_stock_positions"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "adjustment_name",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "opening_stock_positions"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "approved_by",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "opening_stock_positions"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "approved_at",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "opening_stock_positions"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "approval_reference",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "opening_stock_positions"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "opening_stock_positions"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
       "default": null,
       "generated": null,
       "identity": null,
@@ -8227,6 +9678,45 @@
       "generated": null,
       "identity": null,
       "name": "journal_entry_id",
+      "entityType": "columns",
+      "schema": "settlement",
+      "table": "payments"
+    },
+    {
+      "type": "numeric(24,2)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'0'",
+      "generated": null,
+      "identity": null,
+      "name": "withheld_amount",
+      "entityType": "columns",
+      "schema": "settlement",
+      "table": "payments"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "withholding_reference",
+      "entityType": "columns",
+      "schema": "settlement",
+      "table": "payments"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "withholding_account_id",
       "entityType": "columns",
       "schema": "settlement",
       "table": "payments"
@@ -10810,6 +12300,123 @@
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
+      "default": "uuidv7()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "source_identities"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "tenant_id",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "source_identities"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "source_instance",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "source_identities"
+    },
+    {
+      "type": "import_object_kind",
+      "typeSchema": "onboarding",
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "object_kind",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "source_identities"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "source_id",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "source_identities"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "native_id",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "source_identities"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "content_hash",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "source_identities"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "batch_id",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "source_identities"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "onboarding",
+      "table": "source_identities"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
       "default": null,
       "generated": null,
       "identity": null,
@@ -11259,6 +12866,71 @@
       "entityType": "columns",
       "schema": "procurement",
       "table": "supplier_prices"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "tenant_id",
+      "entityType": "columns",
+      "schema": "tax",
+      "table": "tax_code_rates"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "tax_code_id",
+      "entityType": "columns",
+      "schema": "tax",
+      "table": "tax_code_rates"
+    },
+    {
+      "type": "date",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "effective_from",
+      "entityType": "columns",
+      "schema": "tax",
+      "table": "tax_code_rates"
+    },
+    {
+      "type": "numeric(7,4)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "rate",
+      "entityType": "columns",
+      "schema": "tax",
+      "table": "tax_code_rates"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "tax",
+      "table": "tax_code_rates"
     },
     {
       "type": "uuid",
@@ -12328,6 +14000,69 @@
       "nameExplicit": true,
       "columns": [
         {
+          "value": "batch_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "status",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "row_number",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "import_rows_batch_status_idx",
+      "entityType": "indexes",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "tenant_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "invoice_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "imported_artifacts_invoice_idx",
+      "entityType": "indexes",
+      "schema": "billing",
+      "table": "imported_artifacts"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
           "value": "tenant_id",
           "isExpression": false,
           "asc": true,
@@ -12481,6 +14216,34 @@
       "method": "btree",
       "concurrently": false,
       "name": "journal_entries_ledger_idx",
+      "entityType": "indexes",
+      "schema": "accounting",
+      "table": "journal_entries"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "tenant_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "legal_entity_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": "\"source_type\" = 'accounting.opening_balance'",
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "journal_entries_opening_balance_key",
       "entityType": "indexes",
       "schema": "accounting",
       "table": "journal_entries"
@@ -12907,6 +14670,101 @@
       "entityType": "fks",
       "schema": "approvals",
       "table": "approval_requests"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "line_id"
+      ],
+      "schemaTo": "settlement",
+      "tableTo": "bank_statement_lines",
+      "columnsTo": [
+        "tenant_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "bank_line_matches_line_fkey",
+      "entityType": "fks",
+      "schema": "settlement",
+      "table": "bank_line_matches"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "payment_id"
+      ],
+      "schemaTo": "settlement",
+      "tableTo": "payments",
+      "columnsTo": [
+        "tenant_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "bank_line_matches_payment_fkey",
+      "entityType": "fks",
+      "schema": "settlement",
+      "table": "bank_line_matches"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "statement_id"
+      ],
+      "schemaTo": "settlement",
+      "tableTo": "bank_statements",
+      "columnsTo": [
+        "tenant_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "bank_statement_lines_statement_fkey",
+      "entityType": "fks",
+      "schema": "settlement",
+      "table": "bank_statement_lines"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "legal_entity_id"
+      ],
+      "schemaTo": "party",
+      "tableTo": "legal_entities",
+      "columnsTo": [
+        "tenant_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "bank_statements_legal_entity_fkey",
+      "entityType": "fks",
+      "schema": "settlement",
+      "table": "bank_statements"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "bank_account_id"
+      ],
+      "schemaTo": "accounting",
+      "tableTo": "accounts",
+      "columnsTo": [
+        "tenant_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "bank_statements_bank_account_fkey",
+      "entityType": "fks",
+      "schema": "settlement",
+      "table": "bank_statements"
     },
     {
       "nameExplicit": true,
@@ -13577,6 +15435,103 @@
     {
       "nameExplicit": true,
       "columns": [
+        "tenant_id"
+      ],
+      "schemaTo": "auth",
+      "tableTo": "tenants",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "import_batches_tenant_id_fkey",
+      "entityType": "fks",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "batch_id"
+      ],
+      "schemaTo": "onboarding",
+      "tableTo": "import_batches",
+      "columnsTo": [
+        "tenant_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "import_rows_batch_fkey",
+      "entityType": "fks",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id"
+      ],
+      "schemaTo": "auth",
+      "tableTo": "tenants",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "imported_artifacts_tenant_id_fkey",
+      "entityType": "fks",
+      "schema": "billing",
+      "table": "imported_artifacts"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "invoice_id"
+      ],
+      "schemaTo": "billing",
+      "tableTo": "invoices",
+      "columnsTo": [
+        "tenant_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "imported_artifacts_invoice_fkey",
+      "entityType": "fks",
+      "schema": "billing",
+      "table": "imported_artifacts"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "invoice_id",
+        "snapshot_id",
+        "ast_id",
+        "render_fingerprint"
+      ],
+      "schemaTo": "billing",
+      "tableTo": "invoice_render_inputs",
+      "columnsTo": [
+        "tenant_id",
+        "invoice_id",
+        "id",
+        "ast_id",
+        "render_fingerprint"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "invoice_artifacts_render_input_fkey",
+      "entityType": "fks",
+      "schema": "billing",
+      "table": "invoice_artifacts"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
         "tenant_id",
         "invoice_id"
       ],
@@ -13592,6 +15547,29 @@
       "entityType": "fks",
       "schema": "billing",
       "table": "invoice_lines"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "invoice_id",
+        "invoice_number",
+        "invoice_kind"
+      ],
+      "schemaTo": "billing",
+      "tableTo": "invoices",
+      "columnsTo": [
+        "tenant_id",
+        "id",
+        "number",
+        "kind"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "invoice_render_inputs_invoice_fkey",
+      "entityType": "fks",
+      "schema": "billing",
+      "table": "invoice_render_inputs"
     },
     {
       "nameExplicit": true,
@@ -14032,6 +16010,63 @@
       "entityType": "fks",
       "schema": "numbering",
       "table": "number_series"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "warehouse_id"
+      ],
+      "schemaTo": "inventory",
+      "tableTo": "warehouses",
+      "columnsTo": [
+        "tenant_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "opening_stock_positions_warehouse_fkey",
+      "entityType": "fks",
+      "schema": "inventory",
+      "table": "opening_stock_positions"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "item_id"
+      ],
+      "schemaTo": "inventory",
+      "tableTo": "items",
+      "columnsTo": [
+        "tenant_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "opening_stock_positions_item_fkey",
+      "entityType": "fks",
+      "schema": "inventory",
+      "table": "opening_stock_positions"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "movement_id"
+      ],
+      "schemaTo": "inventory",
+      "tableTo": "movements",
+      "columnsTo": [
+        "tenant_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "opening_stock_positions_movement_fkey",
+      "entityType": "fks",
+      "schema": "inventory",
+      "table": "opening_stock_positions"
     },
     {
       "nameExplicit": true,
@@ -14574,6 +16609,25 @@
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
       "name": "payments_cash_account_fkey",
+      "entityType": "fks",
+      "schema": "settlement",
+      "table": "payments"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "withholding_account_id"
+      ],
+      "schemaTo": "accounting",
+      "tableTo": "accounts",
+      "columnsTo": [
+        "tenant_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "payments_withholding_account_fkey",
       "entityType": "fks",
       "schema": "settlement",
       "table": "payments"
@@ -15352,6 +17406,42 @@
     {
       "nameExplicit": true,
       "columns": [
+        "tenant_id"
+      ],
+      "schemaTo": "auth",
+      "tableTo": "tenants",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "source_identities_tenant_id_fkey",
+      "entityType": "fks",
+      "schema": "onboarding",
+      "table": "source_identities"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "batch_id"
+      ],
+      "schemaTo": "onboarding",
+      "tableTo": "import_batches",
+      "columnsTo": [
+        "tenant_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "source_identities_batch_fkey",
+      "entityType": "fks",
+      "schema": "onboarding",
+      "table": "source_identities"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
         "tenant_id",
         "warehouse_id"
       ],
@@ -15540,6 +17630,25 @@
       "entityType": "fks",
       "schema": "procurement",
       "table": "supplier_prices"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "tax_code_id"
+      ],
+      "schemaTo": "tax",
+      "tableTo": "tax_codes",
+      "columnsTo": [
+        "tenant_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "tax_code_rates_tax_code_fkey",
+      "entityType": "fks",
+      "schema": "tax",
+      "table": "tax_code_rates"
     },
     {
       "nameExplicit": true,
@@ -16010,6 +18119,18 @@
     },
     {
       "columns": [
+        "tenant_id",
+        "tax_code_id",
+        "effective_from"
+      ],
+      "nameExplicit": false,
+      "name": "tax_code_rates_pkey",
+      "entityType": "pks",
+      "schema": "tax",
+      "table": "tax_code_rates"
+    },
+    {
+      "columns": [
         "user_account_id",
         "tenant_id"
       ],
@@ -16047,6 +18168,36 @@
       "name": "approval_requests_pkey",
       "schema": "approvals",
       "table": "approval_requests",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "bank_line_matches_pkey",
+      "schema": "settlement",
+      "table": "bank_line_matches",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "bank_statement_lines_pkey",
+      "schema": "settlement",
+      "table": "bank_statement_lines",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "bank_statements_pkey",
+      "schema": "settlement",
+      "table": "bank_statements",
       "entityType": "pks"
     },
     {
@@ -16164,9 +18315,59 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "import_batches_pkey",
+      "schema": "onboarding",
+      "table": "import_batches",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "import_rows_pkey",
+      "schema": "onboarding",
+      "table": "import_rows",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "imported_artifacts_pkey",
+      "schema": "billing",
+      "table": "imported_artifacts",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "invoice_artifacts_pkey",
+      "schema": "billing",
+      "table": "invoice_artifacts",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "invoice_lines_pkey",
       "schema": "billing",
       "table": "invoice_lines",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "invoice_render_inputs_pkey",
+      "schema": "billing",
+      "table": "invoice_render_inputs",
       "entityType": "pks"
     },
     {
@@ -16247,6 +18448,16 @@
       "name": "number_series_pkey",
       "schema": "numbering",
       "table": "number_series",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "opening_stock_positions_pkey",
+      "schema": "inventory",
+      "table": "opening_stock_positions",
       "entityType": "pks"
     },
     {
@@ -16544,6 +18755,16 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "source_identities_pkey",
+      "schema": "onboarding",
+      "table": "source_identities",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "stock_transfer_lines_pkey",
       "schema": "inventory",
       "table": "stock_transfer_lines",
@@ -16702,6 +18923,69 @@
       "entityType": "uniques",
       "schema": "approvals",
       "table": "approval_requests"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "id"
+      ],
+      "nullsNotDistinct": false,
+      "name": "bank_line_matches_tenant_id_id_key",
+      "entityType": "uniques",
+      "schema": "settlement",
+      "table": "bank_line_matches"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "id"
+      ],
+      "nullsNotDistinct": false,
+      "name": "bank_statement_lines_tenant_id_id_key",
+      "entityType": "uniques",
+      "schema": "settlement",
+      "table": "bank_statement_lines"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "statement_id",
+        "line_number"
+      ],
+      "nullsNotDistinct": false,
+      "name": "bank_statement_lines_number_key",
+      "entityType": "uniques",
+      "schema": "settlement",
+      "table": "bank_statement_lines"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "id"
+      ],
+      "nullsNotDistinct": false,
+      "name": "bank_statements_tenant_id_id_key",
+      "entityType": "uniques",
+      "schema": "settlement",
+      "table": "bank_statements"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "legal_entity_id",
+        "bank_account_id",
+        "checksum"
+      ],
+      "nullsNotDistinct": false,
+      "name": "bank_statements_checksum_key",
+      "entityType": "uniques",
+      "schema": "settlement",
+      "table": "bank_statements"
     },
     {
       "nameExplicit": true,
@@ -17033,7 +19317,124 @@
         "id"
       ],
       "nullsNotDistinct": false,
+      "name": "import_batches_tenant_id_id_key",
+      "entityType": "uniques",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "source_instance",
+        "object_kind",
+        "file_checksum",
+        "mapping_revision"
+      ],
+      "nullsNotDistinct": false,
+      "name": "import_batches_file_key",
+      "entityType": "uniques",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "batch_id",
+        "row_number"
+      ],
+      "nullsNotDistinct": false,
+      "name": "import_rows_batch_row_key",
+      "entityType": "uniques",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "id"
+      ],
+      "nullsNotDistinct": false,
+      "name": "imported_artifacts_tenant_id_id_key",
+      "entityType": "uniques",
+      "schema": "billing",
+      "table": "imported_artifacts"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "source_system",
+        "source_reference"
+      ],
+      "nullsNotDistinct": false,
+      "name": "imported_artifacts_source_key",
+      "entityType": "uniques",
+      "schema": "billing",
+      "table": "imported_artifacts"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "invoice_id"
+      ],
+      "nullsNotDistinct": false,
+      "name": "invoice_artifacts_invoice_key",
+      "entityType": "uniques",
+      "schema": "billing",
+      "table": "invoice_artifacts"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "invoice_id"
+      ],
+      "nullsNotDistinct": false,
+      "name": "invoice_render_inputs_invoice_key",
+      "entityType": "uniques",
+      "schema": "billing",
+      "table": "invoice_render_inputs"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "invoice_id",
+        "id",
+        "ast_id",
+        "render_fingerprint"
+      ],
+      "nullsNotDistinct": false,
+      "name": "invoice_render_inputs_artifact_fkey_key",
+      "entityType": "uniques",
+      "schema": "billing",
+      "table": "invoice_render_inputs"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "id"
+      ],
+      "nullsNotDistinct": false,
       "name": "invoices_tenant_id_id_key",
+      "entityType": "uniques",
+      "schema": "billing",
+      "table": "invoices"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "id",
+        "number",
+        "kind"
+      ],
+      "nullsNotDistinct": false,
+      "name": "invoices_tenant_id_number_kind_key",
       "entityType": "uniques",
       "schema": "billing",
       "table": "invoices"
@@ -17237,6 +19638,31 @@
       "entityType": "uniques",
       "schema": "numbering",
       "table": "number_series"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "warehouse_id",
+        "item_id"
+      ],
+      "nullsNotDistinct": false,
+      "name": "opening_stock_positions_warehouse_item_key",
+      "entityType": "uniques",
+      "schema": "inventory",
+      "table": "opening_stock_positions"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "movement_id"
+      ],
+      "nullsNotDistinct": false,
+      "name": "opening_stock_positions_movement_key",
+      "entityType": "uniques",
+      "schema": "inventory",
+      "table": "opening_stock_positions"
     },
     {
       "nameExplicit": true,
@@ -17777,6 +20203,34 @@
       "nameExplicit": true,
       "columns": [
         "tenant_id",
+        "source_instance",
+        "object_kind",
+        "source_id"
+      ],
+      "nullsNotDistinct": false,
+      "name": "source_identities_source_key",
+      "entityType": "uniques",
+      "schema": "onboarding",
+      "table": "source_identities"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "source_instance",
+        "object_kind",
+        "native_id"
+      ],
+      "nullsNotDistinct": false,
+      "name": "source_identities_native_key",
+      "entityType": "uniques",
+      "schema": "onboarding",
+      "table": "source_identities"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
         "transfer_id",
         "item_id"
       ],
@@ -18005,6 +20459,41 @@
       "entityType": "checks",
       "schema": "approvals",
       "table": "approval_requests"
+    },
+    {
+      "value": "\"amount\" > 0",
+      "name": "bank_line_matches_amount_check",
+      "entityType": "checks",
+      "schema": "settlement",
+      "table": "bank_line_matches"
+    },
+    {
+      "value": "(\"reversed_at\" is null) = (\"reversed_by\" is null)",
+      "name": "bank_line_matches_reversal_check",
+      "entityType": "checks",
+      "schema": "settlement",
+      "table": "bank_line_matches"
+    },
+    {
+      "value": "\"amount\" <> 0",
+      "name": "bank_statement_lines_amount_check",
+      "entityType": "checks",
+      "schema": "settlement",
+      "table": "bank_statement_lines"
+    },
+    {
+      "value": "\"line_number\" > 0",
+      "name": "bank_statement_lines_number_check",
+      "entityType": "checks",
+      "schema": "settlement",
+      "table": "bank_statement_lines"
+    },
+    {
+      "value": "\"checksum\" ~ '^[0-9a-f]{64}$'",
+      "name": "bank_statements_checksum_check",
+      "entityType": "checks",
+      "schema": "settlement",
+      "table": "bank_statements"
     },
     {
       "value": "\"consumer_id\" ~ '[^[:space:]]'",
@@ -18595,6 +21084,139 @@
       "table": "financial_verification_artifacts"
     },
     {
+      "value": "\"source_instance\" = btrim(\"source_instance\") and \"source_instance\" ~ '[^[:space:]]'",
+      "name": "import_batches_source_instance_check",
+      "entityType": "checks",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "value": "\"file_checksum\" ~ '^[0-9a-f]{64}$'",
+      "name": "import_batches_file_checksum_check",
+      "entityType": "checks",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "value": "\"row_count\" >= 0",
+      "name": "import_batches_row_count_check",
+      "entityType": "checks",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "value": "(\"status\" = 'staged') = (\"rehearsed_at\" is null and \"rehearsal\" is null)",
+      "name": "import_batches_rehearsed_check",
+      "entityType": "checks",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "value": "(\"status\" = 'applied') = (\"applied_at\" is not null)",
+      "name": "import_batches_applied_check",
+      "entityType": "checks",
+      "schema": "onboarding",
+      "table": "import_batches"
+    },
+    {
+      "value": "\"row_number\" >= 1",
+      "name": "import_rows_row_number_check",
+      "entityType": "checks",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
+      "value": "\"content_hash\" ~ '^[0-9a-f]{64}$'",
+      "name": "import_rows_content_hash_check",
+      "entityType": "checks",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
+      "value": "jsonb_typeof(\"errors\") = 'array'",
+      "name": "import_rows_errors_check",
+      "entityType": "checks",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
+      "value": "(\"status\" = 'invalid') = (jsonb_array_length(\"errors\") > 0)",
+      "name": "import_rows_invalid_check",
+      "entityType": "checks",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
+      "value": "(\"status\" = 'applied') = (\"native_id\" is not null and \"applied_at\" is not null)",
+      "name": "import_rows_applied_check",
+      "entityType": "checks",
+      "schema": "onboarding",
+      "table": "import_rows"
+    },
+    {
+      "value": "\"source_system\" ~ '^[a-z][a-z0-9._-]*$' and\n      \"source_reference\" ~ '[^[:space:]]' and char_length(\"source_reference\") <= 256",
+      "name": "imported_artifacts_source_check",
+      "entityType": "checks",
+      "schema": "billing",
+      "table": "imported_artifacts"
+    },
+    {
+      "value": "\"filename\" ~ '[^[:space:]]' and char_length(\"filename\") <= 255 and\n      strpos(\"filename\", '/') = 0 and strpos(\"filename\", chr(92)) = 0 and\n      \"filename\" !~ '[[:cntrl:]]'",
+      "name": "imported_artifacts_filename_check",
+      "entityType": "checks",
+      "schema": "billing",
+      "table": "imported_artifacts"
+    },
+    {
+      "value": "\"media_type\" ~ '^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$' and\n      char_length(\"media_type\") <= 127",
+      "name": "imported_artifacts_media_type_check",
+      "entityType": "checks",
+      "schema": "billing",
+      "table": "imported_artifacts"
+    },
+    {
+      "value": "\"content_hash\" = encode(sha256(\"content\"), 'hex')",
+      "name": "imported_artifacts_hash_check",
+      "entityType": "checks",
+      "schema": "billing",
+      "table": "imported_artifacts"
+    },
+    {
+      "value": "\"byte_size\" = octet_length(\"content\") and\n      \"byte_size\" between 1 and 10485760",
+      "name": "imported_artifacts_size_check",
+      "entityType": "checks",
+      "schema": "billing",
+      "table": "imported_artifacts"
+    },
+    {
+      "value": "\"page_count\" > 0",
+      "name": "invoice_artifacts_pages_check",
+      "entityType": "checks",
+      "schema": "billing",
+      "table": "invoice_artifacts"
+    },
+    {
+      "value": "\"fence_scope\" ~ '[^[:space:]]'",
+      "name": "invoice_artifacts_fence_scope_check",
+      "entityType": "checks",
+      "schema": "billing",
+      "table": "invoice_artifacts"
+    },
+    {
+      "value": "\"lease_generation\" > 0",
+      "name": "invoice_artifacts_lease_generation_check",
+      "entityType": "checks",
+      "schema": "billing",
+      "table": "invoice_artifacts"
+    },
+    {
+      "value": "octet_length(\"content\") >= 5 and octet_length(\"content\") <= 50000000 and\n      substring(\"content\" from 1 for 5) = decode('255044462d', 'hex') and\n      \"content_hash\" = encode(sha256(\"content\"), 'hex')",
+      "name": "invoice_artifacts_content_check",
+      "entityType": "checks",
+      "schema": "billing",
+      "table": "invoice_artifacts"
+    },
+    {
       "value": "\"matched_value\" >= 0",
       "name": "invoice_lines_matched_value_check",
       "entityType": "checks",
@@ -18607,6 +21229,41 @@
       "entityType": "checks",
       "schema": "billing",
       "table": "invoice_lines"
+    },
+    {
+      "value": "\"invoice_kind\" = 'customer_invoice'",
+      "name": "invoice_render_inputs_kind_check",
+      "entityType": "checks",
+      "schema": "billing",
+      "table": "invoice_render_inputs"
+    },
+    {
+      "value": "\"snapshot_checksum\" ~ '^[0-9a-f]{64}$' and\n      \"ast_checksum\" ~ '^[0-9a-f]{64}$' and \"render_fingerprint\" ~ '^[0-9a-f]{64}$'",
+      "name": "invoice_render_inputs_hashes_check",
+      "entityType": "checks",
+      "schema": "billing",
+      "table": "invoice_render_inputs"
+    },
+    {
+      "value": "(jsonb_typeof(\"snapshot\") = 'object' and\n      \"snapshot\"->>'snapshotId' = \"id\"::text and\n      \"snapshot\"->>'tenantId' = \"tenant_id\"::text and\n      \"snapshot\"->>'checksum' = \"snapshot_checksum\" and\n      \"snapshot\"->'source'->>'owner' = 'billing' and\n      \"snapshot\"->'source'->>'type' = 'customer_invoice' and\n      \"snapshot\"->'source'->>'id' = \"invoice_id\"::text and\n      \"snapshot\"->'payload'->>'number' = \"invoice_number\") is true",
+      "name": "invoice_render_inputs_snapshot_check",
+      "entityType": "checks",
+      "schema": "billing",
+      "table": "invoice_render_inputs"
+    },
+    {
+      "value": "(jsonb_typeof(\"ast\") = 'object' and\n      \"ast\"->>'astId' = \"ast_id\"::text and\n      \"ast\"->>'snapshotId' = \"id\"::text and\n      \"ast\"->>'checksum' = \"ast_checksum\" and\n      \"ast\"->>'documentType' = 'customer_invoice') is true",
+      "name": "invoice_render_inputs_ast_check",
+      "entityType": "checks",
+      "schema": "billing",
+      "table": "invoice_render_inputs"
+    },
+    {
+      "value": "(jsonb_typeof(\"render_request\") = 'object' and\n      \"render_request\"->>'tenantId' = \"tenant_id\"::text and\n      \"render_request\"->>'snapshotId' = \"id\"::text and\n      \"render_request\"->>'snapshotChecksum' = \"snapshot_checksum\" and\n      \"render_request\"->>'astId' = \"ast_id\"::text and\n      \"render_request\"->>'astChecksum' = \"ast_checksum\" and\n      \"render_request\"->>'renderFingerprint' = \"render_fingerprint\" and\n      \"render_request\"->>'fingerprintVersion' = '2') is true",
+      "name": "invoice_render_inputs_request_check",
+      "entityType": "checks",
+      "schema": "billing",
+      "table": "invoice_render_inputs"
     },
     {
       "value": "\"amount\" > 0",
@@ -18861,6 +21518,20 @@
       "table": "number_series"
     },
     {
+      "value": "\"quantity\" > 0 and \"source_value\" >= 0 and\n      \"source_value\" + \"adjustment\" >= 0",
+      "name": "opening_stock_positions_amounts_check",
+      "entityType": "checks",
+      "schema": "inventory",
+      "table": "opening_stock_positions"
+    },
+    {
+      "value": "(\"adjustment_name\" is null and \"approved_by\" is null and\n        \"approved_at\" is null and \"approval_reference\" is null and\n        \"adjustment\" = 0) or\n      (\"adjustment_name\" ~ '[^[:space:]]' and \"approved_by\" ~ '[^[:space:]]' and\n        \"approved_at\" is not null and \"approval_reference\" ~ '[^[:space:]]')",
+      "name": "opening_stock_positions_approval_check",
+      "entityType": "checks",
+      "schema": "inventory",
+      "table": "opening_stock_positions"
+    },
+    {
       "value": "\"list_price\" >= 0 and \"discount_percent\" between 0 and 100",
       "name": "order_line_terms_price_check",
       "entityType": "checks",
@@ -19003,6 +21674,13 @@
     {
       "value": "\"amount\" > 0 and \"unallocated_amount\" >= 0 and \"unallocated_amount\" <= \"amount\"",
       "name": "payments_amounts_check",
+      "entityType": "checks",
+      "schema": "settlement",
+      "table": "payments"
+    },
+    {
+      "value": "\"withheld_amount\" >= 0 and \"withheld_amount\" < \"amount\"\n        and (\"withheld_amount\" = 0) = (\"withholding_reference\" is null)\n        and (\"withheld_amount\" = 0) = (\"withholding_account_id\" is null)\n        and (\"withheld_amount\" = 0 or \"direction\" = 'incoming')",
+      "name": "payments_withholding_check",
       "entityType": "checks",
       "schema": "settlement",
       "table": "payments"
@@ -19344,6 +22022,20 @@
       "table": "sessions"
     },
     {
+      "value": "\"source_id\" ~ '[^[:space:]]'",
+      "name": "source_identities_source_id_check",
+      "entityType": "checks",
+      "schema": "onboarding",
+      "table": "source_identities"
+    },
+    {
+      "value": "\"content_hash\" ~ '^[0-9a-f]{64}$'",
+      "name": "source_identities_content_hash_check",
+      "entityType": "checks",
+      "schema": "onboarding",
+      "table": "source_identities"
+    },
+    {
       "value": "\"on_hand\" >= 0",
       "name": "stock_balances_on_hand_check",
       "entityType": "checks",
@@ -19384,6 +22076,13 @@
       "entityType": "checks",
       "schema": "procurement",
       "table": "supplier_prices"
+    },
+    {
+      "value": "\"rate\" >= 0 and \"rate\" <= 100",
+      "name": "tax_code_rates_rate_check",
+      "entityType": "checks",
+      "schema": "tax",
+      "table": "tax_code_rates"
     },
     {
       "value": "\"code\" = upper(btrim(\"code\")) and \"code\" ~ '[^[:space:]]'",

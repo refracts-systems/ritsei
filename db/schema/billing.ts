@@ -101,7 +101,7 @@ export const invoices = billingSchema.table(
   ],
 )
 
-/** Evaluation-only immutable render inputs for an issued customer invoice (ADR-0112). */
+/** Evaluation-only immutable render inputs for an issued customer invoice (ADR-0122). */
 export const invoiceRenderInputs = billingSchema.table(
   "invoice_render_inputs",
   {

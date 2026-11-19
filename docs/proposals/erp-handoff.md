@@ -168,7 +168,7 @@ activation. The listed fixes require `seroval` >=1.6.10, while the pinned `solid
 compatibility range and needs its own compatibility and security review.
 
 1. Build and measure the staged job, Billing-owned artifact implementation and worker under
-   [ADR-0112](../decisions/0122-stage-invoice-rendering-before-activation.md), using disposable
+   [ADR-0122](../decisions/0122-stage-invoice-rendering-before-activation.md), using disposable
    nonproduction databases. Complete and review evidence for all eight rendering gates, including
    pagination, fidelity, isolation, determinism, workload behavior, retention and recovery, and
    dependency ownership. Do not infer a gate passes from one test or benchmark.
