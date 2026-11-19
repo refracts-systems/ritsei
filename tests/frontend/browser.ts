@@ -175,6 +175,19 @@ export const builtApp = Effect.gen(function* () {
   }
 })
 
+/**
+ * Waits for a dialog's entrance to finish. A scan taken during the fade reads half-transparent
+ * text, and the focus trap moves focus to the first control while the dialog is still entering, so
+ * a key pressed too early lands on the wrong element. A cancelled animation (the previous dialog
+ * closing) rejects `finished`, so settle instead.
+ */
+export const entranceFinished = (page: Page) =>
+  page.evaluate(() =>
+    Promise.allSettled(document.getAnimations().map((animation) => animation.finished)).then(
+      () => true,
+    ),
+  )
+
 /** Opens the workspace's "More actions" menu and selects one of its commands. */
 export const chooseMoreAction = async (page: Page, name: string) => {
   await page.getByRole("button", { name: "More actions", exact: true }).click()
