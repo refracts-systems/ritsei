@@ -1,6 +1,6 @@
 # ADR-0121: Post Opening Stock Against Migration Clearing in the Load
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-19
 - Amends: ADR-0118 (point 2, which said the load posts no journal)
 - Compatible with: ADR-0015, ADR-0096, ADR-0117

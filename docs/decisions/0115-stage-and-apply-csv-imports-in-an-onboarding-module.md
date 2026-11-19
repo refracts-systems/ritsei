@@ -1,6 +1,6 @@
 # ADR-0115: Stage and Apply CSV Imports in an Onboarding Module
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-19
 - Amends: None
 - Compatible with: ADR-0014, ADR-0015, ADR-0051, ADR-0091, ADR-0094

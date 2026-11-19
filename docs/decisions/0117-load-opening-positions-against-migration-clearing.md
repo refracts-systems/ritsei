@@ -1,6 +1,6 @@
 # ADR-0117: Load Opening Positions Against a Migration Clearing Account
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-19
 - Amends: ADR-0096 (adds a posting role, a capability, and the opening journal), ADR-0100 (point 4: opening stock)
 - Compatible with: ADR-0015, ADR-0091, ADR-0095
