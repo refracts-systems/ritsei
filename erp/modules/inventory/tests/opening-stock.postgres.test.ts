@@ -123,7 +123,7 @@ it.effect.skipIf(databaseUrl === undefined)(
         const positions = yield* Effect.promise(
           () => client<{ item_id: string; adjustment: string; approved_by: string | null }[]>`
             select item_id, adjustment::text, approved_by from inventory.opening_stock_positions
-            where tenant_id = ${tenantId} order by adjustment
+            where tenant_id = ${tenantId} order by adjustment::numeric
           `,
         )
 
