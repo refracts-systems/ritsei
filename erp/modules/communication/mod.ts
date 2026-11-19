@@ -1,10 +1,16 @@
+export { CommunicationCapabilities } from "./src/capabilities.ts"
+
 export {
   CommunicationConfiguration,
   CommunicationPolicy,
   CommunicationProcessingResult,
   CommunicationService,
   CommunicationTestTransport,
+  HistoricalDispatchOutcome,
+  HistoricalDispatchResult,
+  HistoricalDocumentRef,
   ProcessPurchaseOrderConfirmedInput,
+  RecordHistoricalDispatchInput,
   RetryCommunicationInput,
 } from "./src/contract.ts"
 
