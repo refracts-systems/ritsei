@@ -2,7 +2,7 @@ import { AxeBuilder } from "@axe-core/playwright"
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import type { Page } from "playwright"
-import { builtApp, connectToTenant, fulfillJson, mockRoutes } from "./browser.ts"
+import { builtApp, connectToTenant, entranceFinished, fulfillJson, mockRoutes } from "./browser.ts"
 import type { RouteHandler } from "./browser.ts"
 
 const tenantId = "01910000-0000-7000-8000-000000000010"
@@ -63,6 +63,8 @@ it.effect(
         // A malformed amount is explained and nothing is sent.
         await credit.getByRole("button", { name: "Set credit limit" }).click()
         const dialog = page.getByRole("dialog", { name: "Set credit limit" })
+        await dialog.waitFor()
+        assert.isTrue(await entranceFinished(page))
         await dialog.getByLabel("Credit limit").fill("5000.555")
         await dialog.getByRole("button", { name: "Save limit", exact: true }).click()
         await dialog.getByText("Enter an amount such as 5000.00, or leave it empty.").waitFor()
@@ -76,6 +78,9 @@ it.effect(
 
         // Emptying the field removes the limit.
         await credit.getByRole("button", { name: "Set credit limit" }).click()
+        await dialog.waitFor()
+        assert.isTrue(await entranceFinished(page))
+        // Clearing presses Delete on the focused element; the focus trap must be done moving focus.
         await dialog.getByLabel("Credit limit").fill("")
         await dialog.getByRole("button", { name: "Save limit", exact: true }).click()
         await dialog.waitFor({ state: "hidden" })

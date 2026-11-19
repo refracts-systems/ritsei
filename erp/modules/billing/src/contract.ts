@@ -10,6 +10,7 @@ import {
   PositiveQuantity,
   SignedAmount,
   DottedName,
+  TrimmedText,
 } from "../../../../framework/foundation/mod.ts"
 import { Principal } from "../../../../framework/modules/auth/mod.ts"
 import type { AuthorizationDenied } from "../../../../framework/modules/authorization/mod.ts"
@@ -166,6 +167,87 @@ export const ListBillingDocumentsInput = Schema.Struct({
   creditedInvoiceId: Schema.optionalKey(Uuid),
 })
 
+/** The most bytes of one retained source document; the database enforces the same limit. */
+export const MaxImportedArtifactBytes = 10_485_760
+
+// The base64 text of the largest document, so an oversized payload is refused before it is decoded.
+const MaxImportedArtifactBase64 = Math.ceil(MaxImportedArtifactBytes / 3) * 4
+
+const ImportedArtifactContent = Schema.String.check(
+  Schema.isMaxLength(MaxImportedArtifactBase64),
+).pipe(
+  Schema.decodeTo(
+    Schema.Uint8ArrayFromBase64.check(
+      Schema.isMinLength(1),
+      Schema.isMaxLength(MaxImportedArtifactBytes),
+    ),
+  ),
+)
+
+/** A lowercase slug naming the system that issued the document, such as `legacy_erp`. */
+const SourceSystem = Schema.String.check(
+  Schema.isPattern(/^[a-z][a-z0-9._-]*$/),
+  Schema.isMaxLength(64),
+)
+
+const Filename = TrimmedText(255).check(Schema.isPattern(/^[^/\\\p{Cc}]+$/u))
+
+const MediaType = Schema.String.check(
+  Schema.isPattern(/^[a-z0-9][a-z0-9!#$&^_.+-]*\/[a-z0-9][a-z0-9!#$&^_.+-]*$/),
+  Schema.isMaxLength(127),
+)
+
+/** What is known about retained bytes; the bytes themselves leave only through a read. */
+export const ImportedArtifact = Schema.Struct({
+  id: Uuid,
+  tenantId: Uuid,
+  invoiceId: Schema.NullOr(Uuid),
+  sourceSystem: SourceSystem,
+  sourceReference: TrimmedText(256),
+  filename: Filename,
+  mediaType: MediaType,
+  /** SHA-256 of the bytes as lowercase hex, computed by the server. */
+  contentHash: Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/)),
+  byteSize: Schema.Int,
+  importedBy: Schema.String,
+})
+
+export type ImportedArtifact = Schema.Schema.Type<typeof ImportedArtifact>
+
+export const ImportArtifactResult = Schema.Struct({
+  /** True when the same source document was retained before and its record is returned. */
+  duplicate: Schema.Boolean,
+  artifact: ImportedArtifact,
+})
+
+export type ImportArtifactResult = Schema.Schema.Type<typeof ImportArtifactResult>
+
+/** A retained document with its bytes, for download. */
+export const ImportedArtifactDownload = Schema.Struct({
+  ...ImportedArtifact.fields,
+  content: Schema.Uint8ArrayFromBase64,
+})
+
+export type ImportedArtifactDownload = Schema.Schema.Type<typeof ImportedArtifactDownload>
+
+/**
+ * Retains the bytes of a document the incumbent system issued (ADR-0120). The hash is computed
+ * from the bytes, never taken from the caller.
+ */
+export const ImportArtifactInput = Schema.Struct({
+  ...ScopedInput,
+  sourceSystem: SourceSystem,
+  sourceReference: TrimmedText(256),
+  /** The posted invoice the bytes evidence, when RITSEI holds one. */
+  invoiceId: Schema.optionalKey(Uuid),
+  filename: Filename,
+  mediaType: MediaType,
+  /** The document bytes as base64 text. */
+  content: ImportedArtifactContent,
+})
+
+export const GetImportedArtifactInput = Schema.Struct({ ...ScopedInput, artifactId: Uuid })
+
 type CommonFailure = AuthorizationDenied | DatabaseFailure | Schema.SchemaError
 
 export type InvoiceFailure =
@@ -229,6 +311,24 @@ export interface BillingService {
   readonly listOpenItems: (
     input: Schema.Codec.Encoded<typeof ListOpenItemsInput>,
   ) => Effect.Effect<ReadonlyArray<OpenItem>, CommonFailure>
+  /**
+   * Retains the bytes of a document the source system issued. One record per tenant, source system,
+   * and source reference: a replay with the same evidence returns the record, different evidence
+   * fails. It never renders and never touches rendered invoice artifacts.
+   */
+  readonly importArtifact: (
+    input: Schema.Codec.Encoded<typeof ImportArtifactInput>,
+  ) => Effect.Effect<
+    ImportArtifactResult,
+    BillingErrors.BillingDocumentNotFound | BillingErrors.ImportedArtifactConflict | CommonFailure
+  >
+  /** Returns a retained document with its bytes, under the document read capability. */
+  readonly getImportedArtifact: (
+    input: Schema.Codec.Encoded<typeof GetImportedArtifactInput>,
+  ) => Effect.Effect<
+    ImportedArtifactDownload,
+    BillingErrors.ImportedArtifactNotFound | CommonFailure
+  >
 }
 
 export const BillingService = Context.Service<BillingService>("RITSEI/BillingService")

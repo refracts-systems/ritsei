@@ -6,14 +6,17 @@ import * as Schema from "effect/Schema"
 
 import {
   billingSources,
+  importedArtifacts,
   invoiceLines,
   invoices,
   invoiceSettlements,
 } from "../../../../db/schema/billing.ts"
 import {
   Database,
+  isDatabaseConstraint,
   formatSignedMinor,
   requireExactMajorToMinor,
+  sha256Hex,
   uuidv7,
 } from "../../../../framework/foundation/mod.ts"
 import type { Principal as PrincipalSchema } from "../../../../framework/modules/auth/mod.ts"
@@ -43,6 +46,8 @@ import {
   GetBillingDocumentInput,
   type InvoiceKind,
   InvoiceSalesOrderInput,
+  GetImportedArtifactInput,
+  ImportArtifactInput,
   isCreditNote,
   ListBillingDocumentsInput,
   ListOpenItemsInput,
@@ -52,6 +57,8 @@ import {
   BillExceedsReceipt,
   BillingDocumentNotFound,
   CreditExceedsInvoice,
+  ImportedArtifactConflict,
+  ImportedArtifactNotFound,
   NothingToInvoice,
   SettlementConflict,
   SettlementExceedsOpenAmount,
@@ -1069,6 +1076,130 @@ export const makeBillingService = Effect.gen(function* () {
     }))
   })
 
+  /** Everything about a retained document except its bytes. */
+  const importedArtifactColumns = {
+    id: importedArtifacts.id,
+    tenantId: importedArtifacts.tenantId,
+    invoiceId: importedArtifacts.invoiceId,
+    sourceSystem: importedArtifacts.sourceSystem,
+    sourceReference: importedArtifacts.sourceReference,
+    filename: importedArtifacts.filename,
+    mediaType: importedArtifacts.mediaType,
+    contentHash: importedArtifacts.contentHash,
+    byteSize: importedArtifacts.byteSize,
+    importedBy: importedArtifacts.importedBy,
+  }
+
+  const importArtifact = Effect.fn("BillingService.importArtifact")(function* (
+    input: Schema.Codec.Encoded<typeof ImportArtifactInput>,
+  ) {
+    const decoded = yield* authorized(
+      ImportArtifactInput,
+      BillingCapabilities.importedArtifactImport,
+    )(input)
+
+    // The hash is the server's own: the caller supplies bytes, never a digest to trust.
+    const contentHash = yield* sha256Hex(decoded.content).pipe(
+      Effect.catchTag("DocumentHashFailure", Effect.die),
+    )
+
+    const { tenantId, sourceSystem, sourceReference } = decoded
+    const invoiceId = decoded.invoiceId ?? null
+
+    return yield* database
+      .transaction(async (tx) => {
+        const [created] = await tx
+          .insert(importedArtifacts)
+          .values({
+            tenantId,
+            invoiceId,
+            sourceSystem,
+            sourceReference,
+            filename: decoded.filename,
+            mediaType: decoded.mediaType,
+            contentHash,
+            byteSize: decoded.content.byteLength,
+            content: Buffer.from(decoded.content),
+            importedBy: decoded.principal.userAccountId,
+          })
+          .onConflictDoNothing({
+            target: [
+              importedArtifacts.tenantId,
+              importedArtifacts.sourceSystem,
+              importedArtifacts.sourceReference,
+            ],
+          })
+          .returning(importedArtifactColumns)
+
+        if (created !== undefined) return { duplicate: false, artifact: created }
+
+        const [existing] = await tx
+          .select(importedArtifactColumns)
+          .from(importedArtifacts)
+          .where(
+            and(
+              eq(importedArtifacts.tenantId, tenantId),
+              eq(importedArtifacts.sourceSystem, sourceSystem),
+              eq(importedArtifacts.sourceReference, sourceReference),
+            ),
+          )
+
+        return { duplicate: true, artifact: existing! }
+      }, "billing.imported_artifact.import")
+      .pipe(
+        Effect.mapError((error) =>
+          isDatabaseConstraint(error, "imported_artifacts_invoice_fkey", "23503") &&
+          invoiceId !== null
+            ? new BillingDocumentNotFound({ tenantId, invoiceId })
+            : error,
+        ),
+        Effect.flatMap((result) =>
+          result.duplicate &&
+          (result.artifact.contentHash !== contentHash ||
+            result.artifact.invoiceId !== invoiceId ||
+            result.artifact.filename !== decoded.filename ||
+            result.artifact.mediaType !== decoded.mediaType)
+            ? Effect.fail(new ImportedArtifactConflict({ tenantId, sourceSystem, sourceReference }))
+            : Effect.succeed(result),
+        ),
+      )
+  })
+
+  const getImportedArtifact = Effect.fn("BillingService.getImportedArtifact")(function* (
+    input: Schema.Codec.Encoded<typeof GetImportedArtifactInput>,
+  ) {
+    const decoded = yield* authorized(
+      GetImportedArtifactInput,
+      BillingCapabilities.documentRead,
+    )(input)
+
+    const rows = yield* database.query(
+      (db) =>
+        db
+          .select({ ...importedArtifactColumns, content: importedArtifacts.content })
+          .from(importedArtifacts)
+          .where(
+            and(
+              eq(importedArtifacts.tenantId, decoded.tenantId),
+              eq(importedArtifacts.id, decoded.artifactId),
+            ),
+          ),
+      "billing.imported_artifact.get",
+    )
+
+    const row = rows[0]
+
+    if (row === undefined) {
+      return yield* new ImportedArtifactNotFound({
+        tenantId: decoded.tenantId,
+        artifactId: decoded.artifactId,
+      })
+    }
+
+    // The driver returns a Buffer; callers get plain bytes.
+    return { ...row, content: new Uint8Array(row.content) }
+  })
+
   return {
     invoiceSalesOrder,
     billPurchaseOrder,
@@ -1077,6 +1208,8 @@ export const makeBillingService = Effect.gen(function* () {
     getDocument,
     listDocuments,
     listOpenItems,
+    importArtifact,
+    getImportedArtifact,
   } satisfies BillingService
 })
 

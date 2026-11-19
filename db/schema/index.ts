@@ -166,6 +166,7 @@ export { productTaxDefaults, taxCodeRates, taxCodes, taxDirection, taxSchema } f
 export {
   billingSchema,
   billingSources,
+  importedArtifacts,
   invoiceKind,
   invoiceLines,
   invoices,

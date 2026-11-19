@@ -2,16 +2,13 @@ import { AxeBuilder } from "@axe-core/playwright"
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import type { Page, Route } from "playwright"
-import { builtApp, connectToTenant, forbiddenBody, notFoundBody } from "./browser.ts"
-
-// A dialog fades in; a contrast scan taken during the fade reads the half-transparent text.
-// A cancelled animation (the previous dialog closing) rejects `finished`, so settle instead.
-const entranceFinished = (page: Page) =>
-  page.evaluate(() =>
-    Promise.allSettled(document.getAnimations().map((animation) => animation.finished)).then(
-      () => true,
-    ),
-  )
+import {
+  builtApp,
+  connectToTenant,
+  entranceFinished,
+  forbiddenBody,
+  notFoundBody,
+} from "./browser.ts"
 
 const tenantId = "01900000-0000-7000-8000-000000000010"
 const activeMemberId = "01900000-0000-7000-8000-000000000020"

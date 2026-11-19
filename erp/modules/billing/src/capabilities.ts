@@ -5,4 +5,5 @@ export const BillingCapabilities = {
   supplierBillCreate: "billing.supplier_bill.create",
   documentRead: "billing.document.read",
   settlementApply: "billing.settlement.apply",
+  importedArtifactImport: "billing.imported_artifact.import",
 } as const
