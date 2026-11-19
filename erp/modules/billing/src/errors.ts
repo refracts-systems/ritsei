@@ -7,6 +7,18 @@ export class BillingDocumentNotFound extends Schema.TaggedError<BillingDocumentN
   { tenantId: Uuid, invoiceId: Uuid },
 ) {}
 
+/** No retained document has this id in the tenant. */
+export class ImportedArtifactNotFound extends Schema.TaggedError<ImportedArtifactNotFound>()(
+  "ImportedArtifactNotFound",
+  { tenantId: Uuid, artifactId: Uuid },
+) {}
+
+/** The source document was retained before with different bytes, filename, type, or invoice. */
+export class ImportedArtifactConflict extends Schema.TaggedError<ImportedArtifactConflict>()(
+  "ImportedArtifactConflict",
+  { tenantId: Uuid, sourceSystem: Schema.String, sourceReference: Schema.String },
+) {}
+
 /** The source has no delivered or received quantity left to bill. */
 export class NothingToInvoice extends Schema.TaggedError<NothingToInvoice>()("NothingToInvoice", {
   tenantId: Uuid,

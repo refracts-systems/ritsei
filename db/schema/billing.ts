@@ -1,10 +1,12 @@
 import { sql } from "drizzle-orm"
 import {
   bigint,
+  bytea,
   check,
   date,
   foreignKey,
   index,
+  integer,
   pgSchema,
   primaryKey,
   text,
@@ -173,5 +175,74 @@ export const billingSources = billingSchema.table(
       foreignColumns: [tenants.id],
       name: "billing_sources_tenant_id_fkey",
     }).onDelete("cascade"),
+  ],
+)
+
+/**
+ * Bytes of a document issued by the incumbent system (ADR-0120), kept as evidence and never
+ * rendered again. It has no snapshot, render fingerprint, or fence, so it is not an invoice
+ * artifact. One row per source document; the row never changes after insert.
+ */
+export const importedArtifacts = billingSchema.table(
+  "imported_artifacts",
+  {
+    id: id(),
+    tenantId: uuid("tenant_id").notNull(),
+    /** The posted invoice the bytes evidence, when one exists in RITSEI. */
+    invoiceId: uuid("invoice_id"),
+    sourceSystem: text("source_system").notNull(),
+    sourceReference: text("source_reference").notNull(),
+    filename: text("filename").notNull(),
+    mediaType: text("media_type").notNull(),
+    /** SHA-256 of `content` as lowercase hex; the database recomputes it, so it cannot disagree. */
+    contentHash: text("content_hash").notNull(),
+    byteSize: integer("byte_size").notNull(),
+    content: bytea("content").notNull(),
+    importedBy: text("imported_by").notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    unique("imported_artifacts_tenant_id_id_key").on(table.tenantId, table.id),
+    unique("imported_artifacts_source_key").on(
+      table.tenantId,
+      table.sourceSystem,
+      table.sourceReference,
+    ),
+    index("imported_artifacts_invoice_idx").on(table.tenantId, table.invoiceId),
+    foreignKey({
+      columns: [table.tenantId],
+      foreignColumns: [tenants.id],
+      name: "imported_artifacts_tenant_id_fkey",
+    }),
+    foreignKey({
+      columns: [table.tenantId, table.invoiceId],
+      foreignColumns: [invoices.tenantId, invoices.id],
+      name: "imported_artifacts_invoice_fkey",
+    }),
+    check(
+      "imported_artifacts_source_check",
+      sql`${table.sourceSystem} ~ '^[a-z][a-z0-9._-]*$' and
+      ${table.sourceReference} ~ '[^[:space:]]' and char_length(${table.sourceReference}) <= 256`,
+    ),
+    check(
+      "imported_artifacts_filename_check",
+      sql`${table.filename} ~ '[^[:space:]]' and char_length(${table.filename}) <= 255 and
+      strpos(${table.filename}, '/') = 0 and strpos(${table.filename}, chr(92)) = 0 and
+      ${table.filename} !~ '[[:cntrl:]]'`,
+    ),
+    check(
+      "imported_artifacts_media_type_check",
+      sql`${table.mediaType} ~ '^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$' and
+      char_length(${table.mediaType}) <= 127`,
+    ),
+    check(
+      "imported_artifacts_hash_check",
+      sql`${table.contentHash} = encode(sha256(${table.content}), 'hex')`,
+    ),
+    check(
+      "imported_artifacts_size_check",
+      sql`${table.byteSize} = octet_length(${table.content}) and
+      ${table.byteSize} between 1 and 10485760`,
+    ),
   ],
 )

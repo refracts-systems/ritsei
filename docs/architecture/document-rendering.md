@@ -344,7 +344,8 @@ backend guarantees it, or semantically equivalent under a documented renderer co
 A document issued before cutover has no snapshot, template, or renderer version to reproduce, so it
 is not rendered again. The proposed rule is that its owning domain keeps an imported-artifact
 record with provenance (source system, source reference, content hash, media type), never a rendered
-artifact that carries a render fingerprint; this is not implemented yet
+artifact that carries a render fingerprint. Billing implements it as `billing.imported_artifacts`
+(bytes in PostgreSQL, immutable, hash recomputed by the database; no HTTP route yet)
 ([ADR-0120](../decisions/0120-retain-imported-documents-and-record-historical-dispatch-outcomes.md)).
 
 PDF is evidence/output, not source of truth:
