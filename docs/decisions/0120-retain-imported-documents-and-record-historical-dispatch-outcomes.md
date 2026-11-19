@@ -53,6 +53,17 @@ without inventing the evidence.
 - The first change implements only the Communication side, which is memory-only today. Billing's
   imported-artifact record is not built: it needs a table, its invariants, and PostgreSQL
   integration tests. Until it exists, the reference in the communication record points at nothing.
+- Billing's imported-artifact record now exists (a follow-up change, same ADR). `billing.imported_artifacts`
+  holds the bytes in PostgreSQL `bytea` (at most 10 MiB; the artifact-bytes row of the rendering
+  ownership table stays open for rendered artifacts and deployment profiles that need object
+  storage). The database recomputes the SHA-256 and the byte size and rejects a mismatch; a trigger
+  rejects every update and delete. Identity is `tenant + source system + source reference`: a
+  replay with the same bytes and metadata returns the record, a replay that differs fails with
+  `ImportedArtifactConflict`. `BillingService.importArtifact` needs the new capability
+  `billing.imported_artifact.import` and hashes the bytes on the server; `getImportedArtifact`
+  returns the bytes under `billing.document.read`, as decision 1 says. An optional `invoiceId`
+  links the bytes to a posted invoice when RITSEI holds one. There is no HTTP route yet.
+  Communication still does not verify the reference: a check would make it depend on Billing.
 - Resolving an `unknown` historical outcome has no command yet.
 - Live transport failures still leave no recorded attempt; that is separate from this decision.
 
