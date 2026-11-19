@@ -29,10 +29,13 @@ export type PostEntryCommand = {
   readonly description: string | null
   readonly source: { readonly type: string; readonly id: string } | null
   readonly lines: ReadonlyArray<ResolvedLine>
+  /** The entry must not touch the accounts these roles resolve to, checked in the posting transaction. */
+  readonly controlRoles?: ReadonlyArray<PostingRole>
 }
 
 export type PostEntryOutcome = Data.TaggedEnum<{
   Posted: { readonly entry: LedgerEntry }
+  ControlAccountLine: { readonly role: PostingRole; readonly accountId: string }
   NotConfigured: {}
   EngineActivated: {}
   PeriodNotOpen: {}
@@ -86,6 +89,12 @@ export interface GeneralLedgerStore {
   readonly postEntry: (
     command: PostEntryCommand,
   ) => Effect.Effect<PostEntryOutcome, DatabaseFailure>
+  /** The posted opening journal of a legal entity dated on or before `asOf`, if any. */
+  readonly openingEntryId: (query: {
+    readonly tenantId: string
+    readonly legalEntityId: string
+    readonly asOf: string
+  }) => Effect.Effect<string | undefined, DatabaseFailure>
   readonly accountActivity: (query: {
     readonly tenantId: string
     readonly legalEntityId: string

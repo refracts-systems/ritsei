@@ -222,3 +222,34 @@ export class InvalidParentAccount extends Schema.TaggedError<InvalidParentAccoun
     parentAccountId: Uuid,
   },
 ) {}
+
+/** An opening journal line names an AR, AP, or stock control account; owner loads fill those. */
+export class OpeningJournalControlAccount extends Schema.TaggedError<OpeningJournalControlAccount>()(
+  "OpeningJournalControlAccount",
+  {
+    tenantId: Uuid,
+    legalEntityId: Uuid,
+    role: Schema.String,
+    accountId: Uuid,
+  },
+) {}
+
+/** The legal entity has no opening journal on or before the date, so a zero balance proves nothing. */
+export class OpeningJournalNotPosted extends Schema.TaggedError<OpeningJournalNotPosted>()(
+  "OpeningJournalNotPosted",
+  {
+    tenantId: Uuid,
+    legalEntityId: Uuid,
+  },
+) {}
+
+/** The migration clearing account is not exactly zero at the cutoff: a blocking sign-off exception. */
+export class MigrationClearingNotZero extends Schema.TaggedError<MigrationClearingNotZero>()(
+  "MigrationClearingNotZero",
+  {
+    tenantId: Uuid,
+    legalEntityId: Uuid,
+    asOf: Schema.String,
+    balance: Schema.String,
+  },
+) {}

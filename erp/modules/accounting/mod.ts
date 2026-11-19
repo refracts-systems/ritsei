@@ -200,10 +200,13 @@ export {
   JournalIdempotencyConflict,
   JournalLine,
   JournalReferenceAlreadyExists,
+  MigrationClearingNotZero,
   ListFinancialStagingEvidenceInput,
   makeAccountingService,
   makeAccountingTestLayer,
   OpenPeriodInput,
+  OpeningJournalControlAccount,
+  OpeningJournalNotPosted,
   PostJournalInput,
   PostRevenueForOrderInput,
   PrepareTigerBeetleCutoverInput,
@@ -234,20 +237,27 @@ export type { ChartTemplate, TemplateAccount } from "./src/chart-templates.ts"
 export { ChartTemplateRegistry } from "./src/chart-templates.ts"
 
 export {
+  BalanceSheet,
   ChartTemplateId,
   GeneralLedger,
   GeneralLedgerService,
   LedgerAccount,
   LedgerEntry,
   LedgerLineInput,
+  MigrationClearingVerification,
   PostingRole,
   PostingRule,
+  ProfitAndLoss,
   RoleBalance,
   TrialBalance,
 } from "./src/general-ledger-contract.ts"
 
 export type {
+  BalanceSheet as BalanceSheetType,
   GeneralLedger as GeneralLedgerType,
+  ProfitAndLoss as ProfitAndLossType,
+  MigrationClearingVerification as MigrationClearingVerificationType,
+  PostOpeningJournalFailure,
   GeneralLedgerService as GeneralLedgerServiceContract,
   LedgerAccount as LedgerAccountType,
   LedgerEntry as LedgerEntryType,

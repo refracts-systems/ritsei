@@ -7,6 +7,7 @@ import {
   addDays,
   formatSignedMinor,
   requireExactMajorToMinor,
+  requireSignedMajorToMinor,
   typedEntries,
 } from "../../../../framework/foundation/mod.ts"
 import type { Principal } from "../../../../framework/modules/auth/mod.ts"
@@ -16,8 +17,10 @@ import {
 } from "../../../../framework/modules/authorization/mod.ts"
 import { AccountingCapabilities } from "./capabilities.ts"
 import { ChartTemplateRegistry, templateById } from "./chart-templates.ts"
+import { buildBalanceSheet, buildProfitAndLoss } from "./financial-statements.ts"
 import {
   ApplyChartTemplateInput,
+  BalanceSheetInput,
   ConfigurePostingRuleInput,
   CreateLedgerAccountInput,
   GeneralLedgerInput,
@@ -25,10 +28,15 @@ import {
   type LedgerLineInput,
   ListChartInput,
   ListPostingRulesInput,
+  OPENING_BALANCE_SOURCE,
   PostDocumentEntryInput,
   PostManualEntryInput,
+  PostOpeningJournalInput,
+  type PostingRole,
+  ProfitAndLossInput,
   RoleBalanceInput,
   TrialBalanceInput,
+  VerifyMigrationClearingInput,
 } from "./general-ledger-contract.ts"
 import {
   type GeneralLedgerStore,
@@ -43,9 +51,15 @@ import {
   FinancialEngineActivated,
   InvalidJournalLine,
   JournalIdempotencyConflict,
+  MigrationClearingNotZero,
+  OpeningJournalControlAccount,
+  OpeningJournalNotPosted,
   PostingRuleNotFound,
   UnbalancedJournal,
 } from "./errors.ts"
+
+/** Their owners load AR, AP, and stock against migration clearing, so the opening journal cannot (ADR-0117). */
+const OPENING_CONTROL_ROLES: ReadonlyArray<PostingRole> = ["receivable", "payable", "inventory"]
 
 const minor = (value: string) => requireExactMajorToMinor(value, 2)
 const signed = (value: bigint) => formatSignedMinor(value, 2)
@@ -92,7 +106,7 @@ export const makeGeneralLedgerServiceFromStore = <R>(
     ) =>
       authorization.authorize({ principal: input.principal, tenantId: input.tenantId, capability })
 
-    const post = Effect.fn("GeneralLedgerService.post")(function* (command: PostEntryCommand) {
+    const record = Effect.fn("GeneralLedgerService.post")(function* (command: PostEntryCommand) {
       const invalid = validateLines(command.lines)
 
       if (invalid !== undefined) return yield* Effect.fail(invalid)
@@ -101,6 +115,8 @@ export const makeGeneralLedgerServiceFromStore = <R>(
 
       return yield* PostEntryOutcome.$match(outcome, {
         Posted: ({ entry }) => Effect.succeed(entry),
+        ControlAccountLine: ({ role, accountId }) =>
+          Effect.fail(new OpeningJournalControlAccount({ ...scope, role, accountId })),
         NotConfigured: () => Effect.fail(new AccountingLegalEntityNotFound(scope)),
         EngineActivated: () => Effect.fail(new FinancialEngineActivated(scope)),
         PeriodNotOpen: () => Effect.fail(new AccountingPeriodNotOpen(scope)),
@@ -115,6 +131,10 @@ export const makeGeneralLedgerServiceFromStore = <R>(
           ),
       })
     })
+
+    /** Only the opening journal names control roles, so no other posting can be refused for one. */
+    const post = (command: PostEntryCommand) =>
+      record(command).pipe(Effect.catchTag("OpeningJournalControlAccount", Effect.die))
 
     const createAccount = Effect.fn("GeneralLedgerService.createAccount")(function* (
       input: Schema.Codec.Encoded<typeof CreateLedgerAccountInput>,
@@ -392,6 +412,112 @@ export const makeGeneralLedgerServiceFromStore = <R>(
       }
     })
 
+    const postOpeningJournal = Effect.fn("GeneralLedgerService.postOpeningJournal")(function* (
+      input: Schema.Codec.Encoded<typeof PostOpeningJournalInput>,
+    ) {
+      const decoded = yield* authorized(
+        PostOpeningJournalInput,
+        AccountingCapabilities.openingBalancePost,
+      )(input)
+
+      return yield* record({
+        tenantId: decoded.tenantId,
+        legalEntityId: decoded.legalEntityId,
+        postingDate: decoded.postingDate,
+        // One opening journal per legal entity, so the legal entity is the idempotency key.
+        reference: `${OPENING_BALANCE_SOURCE}/${decoded.legalEntityId}`,
+        description: decoded.description ?? null,
+        source: { type: OPENING_BALANCE_SOURCE, id: decoded.legalEntityId },
+        lines: decoded.lines,
+        controlRoles: OPENING_CONTROL_ROLES,
+      })
+    })
+
+    const verifyMigrationClearing = Effect.fn("GeneralLedgerService.verifyMigrationClearing")(
+      function* (input: Schema.Codec.Encoded<typeof VerifyMigrationClearingInput>) {
+        const decoded = yield* authorized(
+          VerifyMigrationClearingInput,
+          AccountingCapabilities.ledgerRead,
+        )(input)
+
+        const clearing = yield* roleBalance({ ...decoded, role: "migration_clearing" })
+        const scope = { tenantId: decoded.tenantId, legalEntityId: decoded.legalEntityId }
+
+        const openingEntryId = yield* store.openingEntryId({
+          ...scope,
+          asOf: decoded.asOf,
+        })
+
+        // A zero balance with no opening journal means nothing was loaded, not that it reconciles.
+        if (openingEntryId === undefined) {
+          return yield* Effect.fail(new OpeningJournalNotPosted(scope))
+        }
+
+        if (requireSignedMajorToMinor(clearing.balance, 2) !== 0n) {
+          return yield* Effect.fail(
+            new MigrationClearingNotZero({
+              ...scope,
+              asOf: decoded.asOf,
+              balance: clearing.balance,
+            }),
+          )
+        }
+
+        return {
+          legalEntityId: decoded.legalEntityId,
+          accountId: clearing.accountId,
+          asOf: decoded.asOf,
+          openingEntryId,
+        }
+      },
+    )
+
+    const chartById = (tenantId: string) =>
+      store
+        .listChart(tenantId)
+        .pipe(Effect.map((chart) => new Map(chart.map((account) => [account.id, account]))))
+
+    const profitAndLoss = Effect.fn("GeneralLedgerService.profitAndLoss")(function* (
+      input: Schema.Codec.Encoded<typeof ProfitAndLossInput>,
+    ) {
+      const decoded = yield* authorized(
+        ProfitAndLossInput,
+        AccountingCapabilities.ledgerRead,
+      )(input)
+
+      const activity = yield* store.accountActivity({
+        tenantId: decoded.tenantId,
+        legalEntityId: decoded.legalEntityId,
+        from: decoded.from,
+        to: decoded.to,
+      })
+
+      return buildProfitAndLoss(
+        { legalEntityId: decoded.legalEntityId, from: decoded.from, to: decoded.to },
+        activity,
+        yield* chartById(decoded.tenantId),
+      )
+    })
+
+    const balanceSheet = Effect.fn("GeneralLedgerService.balanceSheet")(function* (
+      input: Schema.Codec.Encoded<typeof BalanceSheetInput>,
+    ) {
+      const decoded = yield* authorized(BalanceSheetInput, AccountingCapabilities.ledgerRead)(input)
+
+      const activity = yield* store.accountActivity({
+        tenantId: decoded.tenantId,
+        legalEntityId: decoded.legalEntityId,
+        from: null,
+        to: decoded.asOf,
+      })
+
+      return buildBalanceSheet(
+        { legalEntityId: decoded.legalEntityId, asOf: decoded.asOf },
+        activity,
+        yield* chartById(decoded.tenantId),
+      )
+    })
+
     return {
       createAccount,
       listChart,
@@ -400,6 +526,10 @@ export const makeGeneralLedgerServiceFromStore = <R>(
       listPostingRules,
       postManualEntry,
       postDocumentEntry,
+      postOpeningJournal,
+      verifyMigrationClearing,
+      profitAndLoss,
+      balanceSheet,
       trialBalance,
       generalLedger,
       roleBalance,

@@ -140,6 +140,7 @@ current system; ADRs preserve decision history.
 | [`0114`](./0114-adopt-solid-2-stable-with-bounded-kobalte-risk.md) | Adopt Solid 2 stable with a bounded Kobalte peer risk | Accepted   |
 | [`0115`](./0115-stage-and-apply-csv-imports-in-an-onboarding-module.md) | Stage and apply CSV imports in an onboarding module | Proposed   |
 | [`0116`](./0116-import-bank-statements-and-record-receipt-withholding.md) | Import bank statements and record receipt withholding in Settlement | Proposed   |
+| [`0117`](./0117-load-opening-positions-against-migration-clearing.md) | Load opening positions against a migration clearing account | Proposed   |
 
 Accepted ADRs must not be rewritten to alter history. Create a new ADR and use `Supersedes`.
 

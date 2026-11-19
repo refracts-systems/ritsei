@@ -25,6 +25,7 @@ const neutralTrading: ChartTemplate = {
     { code: "1200", name: "Accounts receivable", type: "asset", parentCode: "1000" },
     { code: "1300", name: "Inventory", type: "asset", parentCode: "1000" },
     { code: "1400", name: "Input tax receivable", type: "asset", parentCode: "1000" },
+    { code: "1900", name: "Migration clearing", type: "asset", parentCode: "1000" },
     { code: "2000", name: "Liabilities", type: "liability" },
     { code: "2100", name: "Accounts payable", type: "liability", parentCode: "2000" },
     { code: "2200", name: "Output tax payable", type: "liability", parentCode: "2000" },
@@ -41,6 +42,7 @@ const neutralTrading: ChartTemplate = {
   ],
   postingRules: {
     cash: "1100",
+    migration_clearing: "1900",
     receivable: "1200",
     inventory: "1300",
     input_tax: "1400",

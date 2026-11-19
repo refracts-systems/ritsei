@@ -51,7 +51,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           const first = yield* localization.setup({ ...scope, legalEntityId })
 
           assert.strictEqual(first.chart.template, "indonesia_trading")
-          assert.strictEqual(first.chart.accounts, 18)
+          assert.strictEqual(first.chart.accounts, 19)
           assert.deepStrictEqual(first.taxCodes, [
             { code: "PPN_KELUARAN_11", created: true },
             { code: "PPN_MASUKAN_11", created: true },
@@ -88,12 +88,12 @@ it.effect.skipIf(databaseUrl === undefined)(
           // Running it again changes nothing that exists.
           const again = yield* localization.setup({ ...scope, legalEntityId })
 
-          assert.strictEqual(again.chart.accounts, 18)
+          assert.strictEqual(again.chart.accounts, 19)
           assert.deepStrictEqual(
             again.taxCodes.map((code) => code.created),
             [false, false],
           )
-          assert.strictEqual((yield* ledger.listChart(scope)).length, 18)
+          assert.strictEqual((yield* ledger.listChart(scope)).length, 19)
 
           assert.instanceOf(
             yield* Effect.flip(ledger.applyChartTemplate({ ...scope, template: "no_such_chart" })),
