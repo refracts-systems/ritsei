@@ -1,4 +1,4 @@
-import { createSignal, Show, useContext } from "solid-js"
+import { createSignal, Show, untrack, useContext } from "solid-js"
 import { CommandFeedback, QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
 import { ApiRuntime } from "../../shared/runtime.ts"
 import { formatDecimal } from "../../ui/foundations/format.ts"
@@ -49,7 +49,7 @@ function SetLimitDialog(props: { customerId: string; current: string | null }) {
               name="creditLimit"
               inputmode="decimal"
               autocomplete="off"
-              value={props.current ?? ""}
+              defaultValue={untrack(() => props.current) ?? ""}
               disabled={mutation.isPending}
             />
           )}

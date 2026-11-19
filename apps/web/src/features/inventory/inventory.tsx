@@ -322,7 +322,7 @@ function CreateItemDialog(props: { reload: () => Promise<void> }) {
             <Input
               {...fieldProps}
               name="unitOfMeasure"
-              value="EA"
+              defaultValue="EA"
               required
               disabled={mutation.isPending}
             />
@@ -582,7 +582,7 @@ function AdjustStockDialog(props: {
             <Input
               {...fieldProps}
               name="unitOfMeasure"
-              value="EA"
+              defaultValue="EA"
               required
               disabled={mutation.isPending}
             />
@@ -602,7 +602,7 @@ function AdjustStockDialog(props: {
             <Input
               {...fieldProps}
               name="idempotencyKey"
-              value={key()}
+              defaultValue={key()}
               required
               disabled={mutation.isPending}
             />
@@ -613,7 +613,7 @@ function AdjustStockDialog(props: {
             <Input
               {...fieldProps}
               name="commandId"
-              value={`${key()}:command`}
+              defaultValue={`${key()}:command`}
               required
               disabled={mutation.isPending}
             />
@@ -624,7 +624,7 @@ function AdjustStockDialog(props: {
             <Input
               {...fieldProps}
               name="correlationId"
-              value={`${key()}:correlation`}
+              defaultValue={`${key()}:correlation`}
               required
               disabled={mutation.isPending}
             />
@@ -738,7 +738,7 @@ function ReserveStockDialog(props: {
             <Input
               {...fieldProps}
               name="idempotencyKey"
-              value={key()}
+              defaultValue={key()}
               required
               disabled={mutation.isPending}
             />

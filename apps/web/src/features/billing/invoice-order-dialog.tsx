@@ -76,7 +76,7 @@ function InvoiceOrderForm(props: { onCreated: (id: string) => void; close: () =>
               {...fieldProps}
               name="invoiceDate"
               type="date"
-              value={today()}
+              defaultValue={today()}
               required
               disabled={mutation.isPending}
             />

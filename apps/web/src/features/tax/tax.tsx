@@ -129,7 +129,7 @@ function CreateTaxCodeDialog(props: { reload: () => Promise<void> }) {
               {...fieldProps}
               name="direction"
               options={directionOptions}
-              value="sales"
+              defaultValue="sales"
               required
               disabled={mutation.isPending}
             />

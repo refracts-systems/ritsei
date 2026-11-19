@@ -44,7 +44,7 @@ function OrderLine(props: {
             name={`quantity-${props.index}`}
             inputmode="numeric"
             autocomplete="off"
-            value="1"
+            defaultValue="1"
             disabled={props.disabled}
           />
         )}

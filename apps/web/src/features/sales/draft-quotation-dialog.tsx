@@ -45,7 +45,7 @@ function QuotationLine(props: {
             name={`quantity-${props.index}`}
             inputmode="numeric"
             autocomplete="off"
-            value="1"
+            defaultValue="1"
             disabled={props.disabled}
           />
         )}
@@ -121,7 +121,7 @@ function DraftQuotationForm(props: {
             {...fieldProps}
             name="validUntil"
             type="date"
-            value={inThirtyDays()}
+            defaultValue={inThirtyDays()}
             required
             disabled={mutation.isPending}
           />
