@@ -2,16 +2,10 @@ import { AxeBuilder } from "@axe-core/playwright"
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import type { Page } from "playwright"
-import { builtApp, connectToTenant } from "./browser.ts"
+import { builtApp, connectToTenant, entranceFinished } from "./browser.ts"
 
 const focusIsInsideDialog = (page: Page) =>
   page.evaluate(() => document.activeElement?.closest('[role="dialog"]') !== null)
-
-// A dialog fades in; a contrast scan taken during the fade reads the half-transparent text.
-const entranceFinished = (page: Page) =>
-  page.evaluate(() =>
-    Promise.all(document.getAnimations().map((animation) => animation.finished)).then(() => true),
-  )
 
 it.effect(
   "validates the RITSEI Kobalte dialog wrapper in the application",
