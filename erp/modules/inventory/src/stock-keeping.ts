@@ -225,6 +225,31 @@ const openingRejection = (
   return undefined
 }
 
+/**
+ * The opening journal: inventory takes the value held, migration clearing gives the source total
+ * the source's control balance ties to, and the revaluation difference goes to inventory
+ * adjustment (ADR-0117, ADR-0118). Zero amounts are left out, so all-zero stock posts nothing.
+ */
+const openingJournalFor = (rows: ReadonlyArray<OpeningRow>) => {
+  const sourceValue = rows.reduce((sum, row) => sum + row.sourceValue, 0n)
+  const value = rows.reduce((sum, row) => sum + row.value, 0n)
+  const adjustment = value - sourceValue
+
+  return [
+    { role: "inventory" as const, debit: value, credit: 0n },
+    { role: "migration_clearing" as const, debit: 0n, credit: sourceValue },
+    {
+      role: "inventory_adjustment" as const,
+      debit: adjustment < 0n ? -adjustment : 0n,
+      credit: adjustment > 0n ? adjustment : 0n,
+    },
+  ].flatMap((line) =>
+    line.debit > 0n || line.credit > 0n
+      ? [{ role: line.role, debit: major(line.debit), credit: major(line.credit) }]
+      : [],
+  )
+}
+
 /** The loaded position: the source total to clear, the revaluation difference, and the value held. */
 const toOpeningLoad = (
   legalEntityId: string,
@@ -233,6 +258,7 @@ const toOpeningLoad = (
     "openingId" | "warehouseId" | "cutoffDate"
   >,
   rows: ReadonlyArray<OpeningRow>,
+  journalEntryId: string | null,
 ): OpeningStockLoad => {
   const total = (pick: (row: OpeningRow) => bigint) =>
     rows.reduce((sum, row) => sum + pick(row), 0n)
@@ -242,6 +268,7 @@ const toOpeningLoad = (
     openingId: opening.openingId,
     warehouseId: opening.warehouseId,
     cutoffDate: opening.cutoffDate,
+    journalEntryId,
     lines: rows.map((row) => ({
       itemId: row.itemId,
       movementId: row.movementId,
@@ -743,6 +770,7 @@ export const makeStockKeepingService = Effect.gen(function* () {
             quantity: openingStockPositions.quantity,
             sourceValue: openingStockPositions.sourceValue,
             value: valuationEntries.value,
+            journalEntryId: valuationEntries.journalEntryId,
           })
           .from(valuationEntries)
           .innerJoin(
@@ -762,6 +790,30 @@ export const makeStockKeepingService = Effect.gen(function* () {
           .orderBy(asc(valuationEntries.itemId)),
       "inventory.opening_stock.recorded",
     )
+
+  /** Posts the opening journal at the cutoff; null when the stock carries no value. */
+  const postOpeningJournal = (
+    decoded: Schema.Schema.Type<typeof OpeningStockInput>,
+    legalEntityId: string,
+    rows: ReadonlyArray<OpeningRow>,
+  ) => {
+    const lines = openingJournalFor(rows)
+
+    return lines.length === 0
+      ? Effect.succeed(null)
+      : ledger
+          .postDocumentEntry({
+            principal: decoded.principal,
+            tenantId: decoded.tenantId,
+            legalEntityId,
+            postingDate: decoded.cutoffDate,
+            reference: `inventory/${OPENING_SOURCE_TYPE}/${decoded.openingId}`,
+            description: decoded.revaluation?.name ?? "opening stock",
+            source: { type: OPENING_SOURCE_TYPE, id: decoded.openingId },
+            lines,
+          })
+          .pipe(Effect.map((entry) => entry.id))
+  }
 
   const loadOpeningStock = Effect.fn("StockKeepingService.loadOpeningStock")(function* (
     input: Schema.Codec.Encoded<typeof OpeningStockInput>,
@@ -831,7 +883,7 @@ export const makeStockKeepingService = Effect.gen(function* () {
           return recorded[0]!.warehouseId === decoded.warehouseId &&
             recorded[0]!.cutoffDate === decoded.cutoffDate &&
             sameOpening(rows, requested)
-            ? toOpeningLoad(legalEntityId, decoded, rows)
+            ? toOpeningLoad(legalEntityId, decoded, rows, recorded[0]!.journalEntryId)
             : yield* Effect.fail(
                 new OpeningStockConflict({
                   tenantId: decoded.tenantId,
@@ -869,6 +921,10 @@ export const makeStockKeepingService = Effect.gen(function* () {
         const state = locked.state!
         const revaluation = decoded.revaluation
 
+        // The journal joins this transaction, so a later failure rolls back the posting too, and
+        // a retry that finds the recorded load never reaches this point to post again.
+        const journalEntryId = yield* postOpeningJournal(decoded, legalEntityId, requested)
+
         const rows = yield* database.transaction(async (tx) => {
           const written: OpeningRow[] = []
 
@@ -882,7 +938,7 @@ export const makeStockKeepingService = Effect.gen(function* () {
               legalEntityId,
               { itemId: request.itemId, quantity: request.quantity, value: request.value },
               state.units.get(request.itemId)!,
-              null,
+              journalEntryId,
             )
 
             await tx.insert(openingStockPositions).values({
@@ -903,7 +959,7 @@ export const makeStockKeepingService = Effect.gen(function* () {
           return written
         }, "inventory.opening_stock.write")
 
-        return toOpeningLoad(legalEntityId, decoded, rows)
+        return toOpeningLoad(legalEntityId, decoded, rows, journalEntryId)
       }),
       "inventory.opening_stock.load",
     )
