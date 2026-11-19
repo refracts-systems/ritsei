@@ -1,3 +1,5 @@
+export { CommunicationCapabilities } from "./src/capabilities.ts"
+
 export {
   CommunicationConfiguration,
   CommunicationPolicy,

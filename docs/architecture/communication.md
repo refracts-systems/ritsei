@@ -236,7 +236,7 @@ event or explicit manual recovery resolves the uncertainty.
 ### 6.1 Historical dispatch evidence
 
 A cutover can bring evidence that a document was emailed before RITSEI held the customer
-([ADR-0115](../decisions/0115-retain-imported-documents-and-record-historical-dispatch-outcomes.md)).
+([ADR-0120](../decisions/0120-retain-imported-documents-and-record-historical-dispatch-outcomes.md)).
 `recordHistoricalDispatch` stores that evidence as one communication with one attempt. It records an
 outcome; it never renders, resolves recipients, or calls a transport, so an import cannot email a
 customer.

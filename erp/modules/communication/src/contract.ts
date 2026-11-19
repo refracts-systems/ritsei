@@ -19,6 +19,8 @@ import {
   RecipientMailbox,
   SenderIdentity,
 } from "../../../../framework/foundation/mod.ts"
+import { Principal } from "../../../../framework/modules/auth/mod.ts"
+import type { AuthorizationDenied } from "../../../../framework/modules/authorization/mod.ts"
 import { EventEnvelope } from "../../../../framework/modules/messaging/mod.ts"
 import {
   CommunicationNotFound,
@@ -64,6 +66,7 @@ export const HistoricalDocumentRef = Schema.Struct({
 export type HistoricalDocumentRef = Schema.Schema.Type<typeof HistoricalDocumentRef>
 
 export const RecordHistoricalDispatchInput = Schema.Struct({
+  principal: Principal,
   tenantId: Uuid,
   sourceSystem: CommunicationSubject.fields.owner,
   sourceReference: NonEmptyString,
@@ -137,7 +140,10 @@ export interface CommunicationService {
   >
   readonly recordHistoricalDispatch: (
     input: Schema.Codec.Encoded<typeof RecordHistoricalDispatchInput>,
-  ) => Effect.Effect<HistoricalDispatchResult, CommunicationStateFailure | Schema.SchemaError>
+  ) => Effect.Effect<
+    HistoricalDispatchResult,
+    AuthorizationDenied | CommunicationStateFailure | DatabaseFailure | Schema.SchemaError
+  >
   readonly deliver: (
     input: Schema.Codec.Encoded<typeof RetryCommunicationInput>,
   ) => Effect.Effect<

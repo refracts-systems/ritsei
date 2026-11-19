@@ -26,6 +26,11 @@ import {
   EventEnvelope,
   MessagingService as MessagingServiceTag,
 } from "../../../../framework/modules/messaging/mod.ts"
+import {
+  AuthorizationService,
+  scopedCommand,
+} from "../../../../framework/modules/authorization/mod.ts"
+import { CommunicationCapabilities } from "./capabilities.ts"
 import { PurchaseOrderConfirmedEventPayload } from "../../procurement/mod.ts"
 import {
   CommunicationConfiguration,
@@ -144,6 +149,8 @@ const makePreparedEmail = (
 })
 
 export const makeCommunicationService = Effect.gen(function* () {
+  const authorization = yield* AuthorizationService
+  const authorized = scopedCommand(authorization)
   const messaging = yield* MessagingServiceTag
   const configuration = yield* CommunicationConfiguration
   const policy = yield* CommunicationPolicy
@@ -271,7 +278,11 @@ export const makeCommunicationService = Effect.gen(function* () {
 
   const recordHistoricalDispatch = Effect.fn("CommunicationService.recordHistoricalDispatch")(
     function* (input: Schema.Codec.Encoded<typeof RecordHistoricalDispatchInput>) {
-      const decoded = yield* Schema.decodeUnknownEffect(RecordHistoricalDispatchInput)(input)
+      const decoded = yield* authorized(
+        RecordHistoricalDispatchInput,
+        CommunicationCapabilities.historicalDispatchRecord,
+      )(input)
+
       const key = `${decoded.tenantId}:${decoded.sourceSystem}:${decoded.sourceReference}`
       const existing = historicalByKey.get(key)
 

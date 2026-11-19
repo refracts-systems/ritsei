@@ -9,6 +9,11 @@ import {
 } from "../../../../framework/modules/messaging/mod.ts"
 import { ProcurementPurchaseOrderConfirmedEvent } from "../../procurement/mod.ts"
 import {
+  AuthorizationDenied,
+  makeAuthorizationTestLayer,
+} from "../../../../framework/modules/authorization/mod.ts"
+import {
+  CommunicationCapabilities,
   CommunicationService,
   CommunicationStateFailure,
   CommunicationTestTransport,
@@ -44,6 +49,9 @@ const event: EventEnvelopeContract = {
   attempts: 0,
 }
 
+const otherTenantId = "01990000-0000-7000-8000-000000000009"
+const principal = { userAccountId: "importer", sessionId: "importer-session" }
+
 const withCommunication = <A, E>(
   program: Effect.Effect<
     A,
@@ -53,9 +61,17 @@ const withCommunication = <A, E>(
 ) => {
   const messaging = makeMessagingTestLayer()
 
+  const authorization = makeAuthorizationTestLayer(
+    [tenantId, otherTenantId].map((granted) => ({
+      userAccountId: principal.userAccountId,
+      tenantId: granted,
+      capability: CommunicationCapabilities.historicalDispatchRecord,
+    })),
+  )
+
   const communication = makeCommunicationTestLayer({
     deliveryStatuses: ["unknown", "accepted"],
-  }).pipe(Layer.provide(messaging))
+  }).pipe(Layer.provide(Layer.merge(messaging, authorization)))
 
   return Effect.provide(program, Layer.merge(messaging, communication))
 }
@@ -147,6 +163,7 @@ const invoiceId = "01990000-0000-7000-8000-000000000005"
 const documentArtifactId = "01990000-0000-7000-8000-000000000006"
 
 const historicalDispatch = {
+  principal,
   tenantId,
   sourceSystem: "legacy-erp",
   sourceReference: "mail-log-1",
@@ -230,7 +247,7 @@ it.effect("replays a historical dispatch and rejects conflicting evidence", () =
 
       const otherTenant = yield* service.recordHistoricalDispatch({
         ...historicalDispatch,
-        tenantId: "01990000-0000-7000-8000-000000000009",
+        tenantId: otherTenantId,
       })
 
       assert.strictEqual(otherTenant.duplicate, false)
@@ -287,5 +304,20 @@ it.effect("rejects a historical dispatch with an invalid hash or a sent failure 
 
       assert.strictEqual(sentWithFailure._tag, "SchemaError")
     }),
+  ),
+)
+
+it.effect("denies recording a historical dispatch without the capability", () =>
+  Effect.gen(function* () {
+    const service = yield* CommunicationService
+    const denied = yield* Effect.flip(service.recordHistoricalDispatch(historicalDispatch))
+
+    assert.instanceOf(denied, AuthorizationDenied)
+  }).pipe(
+    Effect.provide(
+      makeCommunicationTestLayer().pipe(
+        Layer.provide(Layer.merge(makeMessagingTestLayer(), makeAuthorizationTestLayer())),
+      ),
+    ),
   ),
 )

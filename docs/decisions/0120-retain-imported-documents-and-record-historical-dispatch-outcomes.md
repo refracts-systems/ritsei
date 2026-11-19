@@ -1,4 +1,4 @@
-# ADR-0115: Retain Imported Documents and Record Historical Dispatch Outcomes
+# ADR-0120: Retain Imported Documents and Record Historical Dispatch Outcomes
 
 - Status: Proposed
 - Date: 2026-11-19
@@ -46,6 +46,8 @@ without inventing the evidence.
 
 ## Consequences
 
+- `recordHistoricalDispatch` is authorized per tenant by the capability
+  `communication.historical_dispatch.record` (deny by default); the input carries the caller's principal.
 - Communication records the outcome and a reference to the bytes (artifact id and SHA-256) but does
   not verify that the bytes exist; the document owner's storage is the authority.
 - The first change implements only the Communication side, which is memory-only today. Billing's
