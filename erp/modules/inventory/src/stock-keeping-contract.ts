@@ -163,14 +163,16 @@ export const OpeningStockLine = Schema.Struct({
 })
 
 /**
- * The loaded position. `valueToClear` is the source total the accounting owner offsets against
- * the migration clearing account; `adjustment` is the approved revaluation difference.
+ * The loaded position. `valueToClear` is the source total credited to the migration clearing
+ * account; `adjustment` is the approved revaluation difference, posted to inventory adjustment;
+ * `journalEntryId` is the opening entry, or null when the stock carries no value.
  */
 export const OpeningStockLoad = Schema.Struct({
   legalEntityId: Uuid,
   openingId: Uuid,
   warehouseId: Uuid,
   cutoffDate: CalendarDate,
+  journalEntryId: Schema.NullOr(Uuid),
   lines: Schema.Array(OpeningStockLine),
   valueToClear: FinancialMajorAmount,
   adjustment: Schema.String,
@@ -236,13 +238,16 @@ export interface StockKeepingService {
     input: Schema.Codec.Encoded<typeof CountStockInput>,
   ) => Effect.Effect<ValuedStockMovement, MovementFailure>
   /**
-   * Loads the cutover position of a warehouse once (ADR-0118). It posts no journal: the accounting
-   * owner offsets `valueToClear` against the migration clearing account.
+   * Loads the cutover position of a warehouse once (ADR-0118). One journal, dated at the cutoff,
+   * debits inventory with the value held and credits the migration clearing account with the
+   * source total (ADR-0117); the revaluation difference goes to inventory adjustment. The journal
+   * and the load commit together, and a retry returns the recorded load without posting again.
    */
   readonly loadOpeningStock: (
     input: Schema.Codec.Encoded<typeof OpeningStockInput>,
   ) => Effect.Effect<
     OpeningStockLoad,
+    | PostEntryFailure
     | InventoryReferenceNotFound
     | OpeningStockAlreadyLoaded
     | OpeningStockConflict

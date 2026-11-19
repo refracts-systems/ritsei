@@ -144,6 +144,7 @@ current system; ADRs preserve decision history.
 | [`0118`](./0118-load-opening-stock-at-cutover-without-lots-or-open-positions.md) | Load opening stock at cutover without lots or open positions | Proposed   |
 | [`0119`](./0119-date-tax-rates-with-periods-on-the-tax-code.md) | Date tax rates with periods on the tax code | Proposed   |
 | [`0120`](./0120-retain-imported-documents-and-record-historical-dispatch-outcomes.md) | Retain imported documents and record historical dispatch outcomes | Proposed   |
+| [`0121`](./0121-post-opening-stock-against-migration-clearing-in-the-load.md) | Post opening stock against migration clearing in the load | Proposed   |
 
 Accepted ADRs must not be rewritten to alter history. Create a new ADR and use `Supersedes`.
 
