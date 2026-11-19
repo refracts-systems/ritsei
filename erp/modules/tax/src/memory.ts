@@ -1,13 +1,19 @@
 import * as Effect from "effect/Effect"
 
 import { uuidv7 } from "../../../../framework/foundation/mod.ts"
-import { normalizeRate, type ProductTaxDefault, type TaxCode } from "./contract.ts"
-import { TaxCodeAlreadyExists, TaxCodeNotFound } from "./errors.ts"
+import {
+  normalizeRate,
+  type ProductTaxDefault,
+  type TaxCode,
+  type TaxCodeRate,
+} from "./contract.ts"
+import { TaxCodeAlreadyExists, TaxCodeNotFound, TaxCodeRateAlreadyExists } from "./errors.ts"
 import type { TaxStore } from "./store.ts"
 
 /** Deterministic test store; product existence is not checked without the product schema. */
 export const makeTaxMemoryStore = (): TaxStore => {
   const codes: TaxCode[] = []
+  const periods: TaxCodeRate[] = []
   const defaults = new Map<string, ProductTaxDefault>()
 
   const defaultKey = (tenantId: string, productId: string, direction: string) =>
@@ -53,6 +59,41 @@ export const makeTaxMemoryStore = (): TaxStore => {
 
         return Effect.succeed(code)
       }),
+    addTaxCodeRate: (value) =>
+      Effect.suspend((): Effect.Effect<TaxCodeRate, TaxCodeNotFound | TaxCodeRateAlreadyExists> => {
+        if (
+          !codes.some((code) => code.tenantId === value.tenantId && code.id === value.taxCodeId)
+        ) {
+          return Effect.fail(
+            new TaxCodeNotFound({ tenantId: value.tenantId, taxCodeId: value.taxCodeId }),
+          )
+        }
+
+        if (
+          periods.some(
+            (period) =>
+              period.tenantId === value.tenantId &&
+              period.taxCodeId === value.taxCodeId &&
+              period.effectiveFrom === value.effectiveFrom,
+          )
+        ) {
+          return Effect.fail(new TaxCodeRateAlreadyExists(value))
+        }
+
+        const period = { ...value, rate: normalizeRate(value.rate) }
+        periods.push(period)
+
+        return Effect.succeed(period)
+      }),
+    ratePeriodsUpTo: (tenantId, taxCodeIds, date) =>
+      Effect.sync(() =>
+        periods.filter(
+          (period) =>
+            period.tenantId === tenantId &&
+            taxCodeIds.includes(period.taxCodeId) &&
+            period.effectiveFrom <= date,
+        ),
+      ),
     setProductTaxDefault: (value) =>
       Effect.suspend(() => {
         const code = codes.find(

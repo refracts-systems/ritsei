@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm"
 import {
   boolean,
   check,
+  date,
   foreignKey,
   numeric,
   pgSchema,
@@ -77,6 +78,32 @@ export const productTaxDefaults = taxSchema.table(
       columns: [table.tenantId, table.taxCodeId, table.direction],
       foreignColumns: [taxCodes.tenantId, taxCodes.id, taxCodes.direction],
       name: "product_tax_defaults_tax_code_fkey",
+    }),
+  ],
+)
+
+/**
+ * A dated rate for a tax code: from `effective_from` on, the code charges `rate` instead of its own.
+ * A rate change is a new row, never an update (ADR-0111). The code's own rate applies before the
+ * first period.
+ */
+export const taxCodeRates = taxSchema.table(
+  "tax_code_rates",
+  {
+    tenantId: uuid("tenant_id").notNull(),
+    taxCodeId: uuid("tax_code_id").notNull(),
+    effectiveFrom: date("effective_from", { mode: "string" }).notNull(),
+    /** Percent with four decimals, for example 12.0000. */
+    rate: numeric("rate", { precision: 7, scale: 4 }).notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.tenantId, table.taxCodeId, table.effectiveFrom] }),
+    check("tax_code_rates_rate_check", sql`${table.rate} >= 0 and ${table.rate} <= 100`),
+    foreignKey({
+      columns: [table.tenantId, table.taxCodeId],
+      foreignColumns: [taxCodes.tenantId, taxCodes.id],
+      name: "tax_code_rates_tax_code_fkey",
     }),
   ],
 )

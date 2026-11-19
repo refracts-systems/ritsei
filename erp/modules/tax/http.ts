@@ -6,6 +6,7 @@ import * as HttpApiGroup from "effect/http-api/HttpApiGroup"
 import * as HttpApiSchema from "effect/http-api/HttpApiSchema"
 import * as Schema from "effect/Schema"
 
+import { CalendarDate } from "../../../framework/foundation/mod.ts"
 import {
   ApiErrors,
   BaseApiErrorPolicy,
@@ -18,7 +19,14 @@ import {
   TenantHeaders,
   Uuid,
 } from "../../../framework/modules/http/mod.ts"
-import { ProductTaxDefault, TaxCode, TaxDirection, TaxRate, TaxService } from "./mod.ts"
+import {
+  ProductTaxDefault,
+  TaxCode,
+  TaxCodeRate,
+  TaxDirection,
+  TaxRate,
+  TaxService,
+} from "./mod.ts"
 
 export const TaxHttpGroup = HttpApiGroup.make("Tax").add(
   HttpApiEndpoint.get("listTaxCodes", "/tax/tax-codes", {
@@ -38,6 +46,13 @@ export const TaxHttpGroup = HttpApiGroup.make("Tax").add(
     success: TaxCode.pipe(HttpApiSchema.status(201)),
     error: ApiErrors,
   }).middleware(BearerAuth),
+  HttpApiEndpoint.post("addTaxCodeRate", "/tax/tax-codes/:id/rates", {
+    params: { id: Uuid },
+    headers: TenantHeaders,
+    payload: Schema.Struct({ effectiveFrom: CalendarDate, rate: TaxRate }),
+    success: TaxCodeRate.pipe(HttpApiSchema.status(201)),
+    error: ApiErrors,
+  }).middleware(BearerAuth),
   HttpApiEndpoint.put("setProductTaxDefault", "/tax/products/:id/defaults/:direction", {
     params: { id: Uuid, direction: TaxDirection },
     headers: TenantHeaders,
@@ -52,6 +67,7 @@ const TaxHttpApi = moduleApi(TaxHttpGroup)
 export const TaxHttpErrors = apiErrorMapping({
   ...BaseApiErrorPolicy,
   TaxCodeAlreadyExists: "conflict",
+  TaxCodeRateAlreadyExists: "conflict",
   TaxCodeNotFound: "not_found",
   TaxProductNotFound: "not_found",
 })
@@ -78,6 +94,21 @@ export const TaxHttpHandlers = HttpApiBuilder.group(TaxHttpApi, "Tax", (handlers
 
           return yield* TaxHttpErrors.apiEffect(
             service.createTaxCode({ principal, tenantId: headers["x-tenant-id"], ...payload }),
+          )
+        }),
+      )
+      .handle(
+        "addTaxCodeRate",
+        Effect.fn("Http.Tax.addTaxCodeRate")(function* ({ headers, params, payload }) {
+          const principal = yield* CurrentPrincipal
+
+          return yield* TaxHttpErrors.apiEffect(
+            service.addTaxCodeRate({
+              principal,
+              tenantId: headers["x-tenant-id"],
+              taxCodeId: params.id,
+              ...payload,
+            }),
           )
         }),
       )

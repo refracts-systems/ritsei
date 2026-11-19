@@ -161,7 +161,7 @@ export {
   sourceIdentities,
 } from "./onboarding.ts"
 
-export { productTaxDefaults, taxCodes, taxDirection, taxSchema } from "./tax.ts"
+export { productTaxDefaults, taxCodeRates, taxCodes, taxDirection, taxSchema } from "./tax.ts"
 
 export {
   billingSchema,

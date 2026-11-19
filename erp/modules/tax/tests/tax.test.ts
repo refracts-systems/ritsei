@@ -24,6 +24,7 @@ import {
   TaxCapabilities,
   TaxCodeAlreadyExists,
   TaxCodeNotFound,
+  TaxCodeRateAlreadyExists,
   TaxLive,
   TaxModule,
   taxOn,
@@ -164,12 +165,126 @@ describe("tax module", () => {
     }).pipe(Effect.provide(granted)),
   )
 
+  it.effect("resolves the rate by transaction date from dated periods", () =>
+    Effect.gen(function* () {
+      const tax = yield* TaxService
+      const scope = { principal, tenantId }
+
+      const code = yield* tax.createTaxCode({
+        ...scope,
+        code: "dated",
+        name: "Dated",
+        rate: "11",
+        direction: "sales",
+      })
+
+      // Added out of order on purpose: the latest period starting on or before the date wins.
+      yield* tax.addTaxCodeRate({
+        ...scope,
+        taxCodeId: code.id,
+        effectiveFrom: "2035-07-01",
+        rate: "13",
+      })
+
+      const period = yield* tax.addTaxCodeRate({
+        ...scope,
+        taxCodeId: code.id,
+        effectiveFrom: "2030-01-01",
+        rate: "12",
+      })
+
+      assert.strictEqual(period.rate, "12.0000")
+
+      const rateOn = (date?: string) => {
+        const input = {
+          ...scope,
+          direction: "sales" as const,
+          lines: [{ key: "a", base: "100.00", taxCodeId: code.id }],
+        }
+
+        return tax
+          .computeTax(date === undefined ? input : { ...input, date })
+          .pipe(Effect.map((computed) => [computed.lines[0]!.rate, computed.totalTax] as const))
+      }
+
+      assert.deepStrictEqual(yield* rateOn(), ["11.0000", "11.00"])
+      assert.deepStrictEqual(yield* rateOn("2029-12-31"), ["11.0000", "11.00"])
+      assert.deepStrictEqual(yield* rateOn("2030-01-01"), ["12.0000", "12.00"])
+      assert.deepStrictEqual(yield* rateOn("2035-06-30"), ["12.0000", "12.00"])
+      assert.deepStrictEqual(yield* rateOn("2035-07-01"), ["13.0000", "13.00"])
+      assert.deepStrictEqual(yield* rateOn("2040-01-01"), ["13.0000", "13.00"])
+
+      const repeated = yield* Effect.flip(
+        tax.addTaxCodeRate({
+          ...scope,
+          taxCodeId: code.id,
+          effectiveFrom: "2030-01-01",
+          rate: "9",
+        }),
+      )
+
+      assert.instanceOf(repeated, TaxCodeRateAlreadyExists)
+
+      const unknown = yield* Effect.flip(
+        tax.addTaxCodeRate({
+          ...scope,
+          taxCodeId: uuidv7(),
+          effectiveFrom: "2030-01-01",
+          rate: "9",
+        }),
+      )
+
+      assert.instanceOf(unknown, TaxCodeNotFound)
+
+      const invalid = yield* Effect.flip(
+        tax.addTaxCodeRate({
+          ...scope,
+          taxCodeId: code.id,
+          effectiveFrom: "2031-02-30",
+          rate: "9",
+        }),
+      )
+
+      assert.strictEqual(invalid._tag, "SchemaError")
+    }).pipe(Effect.provide(granted)),
+  )
+
   it.effect("denies operations without a granted capability", () =>
     Effect.gen(function* () {
       const tax = yield* TaxService
       const denied = yield* Effect.flip(tax.listTaxCodes({ principal, tenantId }))
       assert.instanceOf(denied, AuthorizationDenied)
+
+      const rateDenied = yield* Effect.flip(
+        tax.addTaxCodeRate({
+          principal,
+          tenantId,
+          taxCodeId: uuidv7(),
+          effectiveFrom: "2030-01-01",
+          rate: "12",
+        }),
+      )
+
+      assert.instanceOf(rateDenied, AuthorizationDenied)
     }).pipe(Effect.provide(ungranted)),
+  )
+
+  it.effect("denies a rate period in a tenant the principal has no grant for", () =>
+    Effect.gen(function* () {
+      const tax = yield* TaxService
+
+      const denied = yield* Effect.flip(
+        tax.addTaxCodeRate({
+          principal,
+          tenantId: "018f2000-0000-7000-8000-0000000000bb",
+          taxCodeId: uuidv7(),
+          effectiveFrom: "2030-01-01",
+          rate: "12",
+        }),
+      )
+
+      assert.instanceOf(denied, AuthorizationDenied)
+    }).pipe(Effect.provide(granted)),
   )
 })
 
@@ -199,6 +314,19 @@ it.layer(TestHttpServices)("tax HTTP endpoint", (it) => {
 
       assert.strictEqual(created.rate, "0.0000")
       assert.deepStrictEqual(yield* client.Tax.listTaxCodes({ headers, query: {} }), [created])
+
+      const period = yield* client.Tax.addTaxCodeRate({
+        headers,
+        params: { id: created.id },
+        payload: { effectiveFrom: "2030-01-01", rate: "12" },
+      })
+
+      assert.deepStrictEqual(period, {
+        tenantId,
+        taxCodeId: created.id,
+        effectiveFrom: "2030-01-01",
+        rate: "12.0000",
+      })
     }),
   )
 })
@@ -276,6 +404,48 @@ it.effect.skipIf(databaseUrl === undefined)(
           })
 
           assert.strictEqual(determined.get(product!.id), vat.id)
+
+          yield* tax.addTaxCodeRate({
+            ...scope,
+            taxCodeId: vat.id,
+            effectiveFrom: "2030-01-01",
+            rate: "12",
+          })
+
+          const repeated = yield* Effect.flip(
+            tax.addTaxCodeRate({
+              ...scope,
+              taxCodeId: vat.id,
+              effectiveFrom: "2030-01-01",
+              rate: "13",
+            }),
+          )
+
+          assert.instanceOf(repeated, TaxCodeRateAlreadyExists)
+
+          const unknownCode = yield* Effect.flip(
+            tax.addTaxCodeRate({
+              ...scope,
+              taxCodeId: uuidv7(),
+              effectiveFrom: "2030-01-01",
+              rate: "12",
+            }),
+          )
+
+          assert.instanceOf(unknownCode, TaxCodeNotFound)
+
+          const rateOn = (date: string) =>
+            tax
+              .computeTax({
+                ...scope,
+                direction: "sales",
+                date,
+                lines: [{ key: "a", base: "100.00", taxCodeId: vat.id }],
+              })
+              .pipe(Effect.map((computed) => computed.totalTax))
+
+          assert.strictEqual(yield* rateOn("2029-12-31"), "11.00")
+          assert.strictEqual(yield* rateOn("2030-01-01"), "12.00")
         }).pipe(
           Effect.provide(
             TaxLive.pipe(
