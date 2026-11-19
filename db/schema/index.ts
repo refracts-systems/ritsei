@@ -64,6 +64,7 @@ export {
   items,
   movementKind,
   movements,
+  openingStockPositions,
   reservations,
   reservationStatus,
   stockBalances,

@@ -141,6 +141,7 @@ current system; ADRs preserve decision history.
 | [`0115`](./0115-stage-and-apply-csv-imports-in-an-onboarding-module.md) | Stage and apply CSV imports in an onboarding module | Proposed   |
 | [`0116`](./0116-import-bank-statements-and-record-receipt-withholding.md) | Import bank statements and record receipt withholding in Settlement | Proposed   |
 | [`0117`](./0117-load-opening-positions-against-migration-clearing.md) | Load opening positions against a migration clearing account | Proposed   |
+| [`0118`](./0118-load-opening-stock-at-cutover-without-lots-or-open-positions.md) | Load opening stock at cutover without lots or open positions | Proposed   |
 
 Accepted ADRs must not be rewritten to alter history. Create a new ADR and use `Supersedes`.
 

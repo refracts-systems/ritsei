@@ -28,6 +28,9 @@ ADR-0114 adopts Solid 2 stable and explicitly bounds the published Kobalte peer 
 wrapper paths; ADR-0074's remaining accessibility and rollback rules continue to apply.
 ADR-0115 (proposed) places CSV import staging, the source identity map, and per-record apply through
 owner commands in the ERP `onboarding` module.
+ADR-0118 amends ADR-0100 point 4: opening stock loads through its own Inventory command at the source
+value, with an approved revaluation to moving average, and posts no journal until Accounting offers
+a migration clearing role.
 ADR-0081 is a superseded document-rendering proposal; ADR-0091 resets that direction.
 ADR-0082 is the current SAP-separated Communication Platform and Activity Timeline projection boundary.
 ADR-0084 is a superseded progressive-trust proposal, replaced by ADR-0091.
