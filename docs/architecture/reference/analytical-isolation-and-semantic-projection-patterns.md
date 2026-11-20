@@ -12,9 +12,9 @@
 >
 > **Related documents**
 >
-> - Analytics architecture: [`../analytics-architecture.md`](../analytics-architecture.md)
+> - Analytics architecture: [`../target/analytics-architecture.md`](../target/analytics-architecture.md)
 > - Canonical architecture: [`../architecture-spec-v4.md`](../architecture-spec-v4.md)
-> - Workload isolation: [`../workload-isolation.md`](../workload-isolation.md)
+> - Workload isolation: [`../target/workload-isolation.md`](../target/workload-isolation.md)
 > - State and consistency: [`../state-and-consistency.md`](../state-and-consistency.md)
 > - Hard-isolation reference: [`./hard-isolation-patterns.md`](./hard-isolation-patterns.md)
 > - Analytic Plane ADR:
@@ -33,7 +33,7 @@ The test separates three questions:
 3. What may RITSEI adopt without transferring business authority to an analytics product?
 
 The sources were reviewed on **2026-08-22**. Product behavior may change; the canonical RITSEI rules
-remain in [`../analytics-architecture.md`](../analytics-architecture.md).
+remain in [`../target/analytics-architecture.md`](../target/analytics-architecture.md).
 
 ## Result
 

@@ -499,7 +499,7 @@ Communication rendering and delivery are bounded asynchronous work. They use que
 per-provider rate limits, bounded concurrency, priority lanes, retry budgets, and worker isolation
 from HTTP, document rendering, and Process Runtime resources. Communication is never a mandatory
 synchronous dependency of source-of-truth reads or writes; provider, queue, renderer, and artifact
-failures remain local to the communication capability. See ./workload-isolation.md
+failures remain local to the communication capability. See ./target/workload-isolation.md
 and [ADR-0083](../decisions/archive/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md).
 
 Useful metrics include:

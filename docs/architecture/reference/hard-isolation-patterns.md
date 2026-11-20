@@ -11,10 +11,10 @@
 >
 > **Related documents**
 >
-> - Workload isolation: [`../workload-isolation.md`](../workload-isolation.md)
+> - Workload isolation: [`../target/workload-isolation.md`](../target/workload-isolation.md)
 > - Canonical architecture: [`../architecture-spec-v4.md`](../architecture-spec-v4.md)
 > - Search architecture: [`../search-architecture.md`](../search-architecture.md)
-> - Analytics architecture: [`../analytics-architecture.md`](../analytics-architecture.md)
+> - Analytics architecture: [`../target/analytics-architecture.md`](../target/analytics-architecture.md)
 > - Analytical isolation reference:
 >   [`./analytical-isolation-and-semantic-projection-patterns.md`](./analytical-isolation-and-semantic-projection-patterns.md)
 > - State and consistency: [`../state-and-consistency.md`](../state-and-consistency.md)
@@ -433,4 +433,4 @@ The architecture is valuable because it can make one important statement testabl
 > credentials reserved for canonical commands.
 
 The canonical wording, deployment profiles, and proof requirements are owned by
-[`../workload-isolation.md`](../workload-isolation.md).
+[`../target/workload-isolation.md`](../target/workload-isolation.md).

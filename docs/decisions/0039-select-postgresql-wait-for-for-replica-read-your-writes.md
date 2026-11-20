@@ -18,7 +18,7 @@
 > - PostgreSQL architecture:
 >   [`../architecture/postgresql-19-architecture.md`](../architecture/postgresql-19-architecture.md)
 > - Workload isolation:
->   ../architecture/workload-isolation.md
+>   ../architecture/target/workload-isolation.md
 > - PostgreSQL 19 `WAIT FOR`:
 >   [PostgreSQL documentation](https://www.postgresql.org/docs/19/sql-wait-for.html)
 

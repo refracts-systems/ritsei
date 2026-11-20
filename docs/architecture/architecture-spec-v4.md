@@ -261,7 +261,7 @@ or Class C projection capabilities. Owner commits publish facts through the tran
 derived consumers own their retry, failure, resource, persistence, and rebuild lifecycle. A synchronous
 cross-capability dependency is allowed only when an explicit business invariant documents it and names
 its semantic owner. Detailed workload and resource proof is the target design in
-[`workload-isolation.md`](./workload-isolation.md), retained by ADR-0093 (ADR-0083 is superseded by
+[`workload-isolation.md`](./target/workload-isolation.md), retained by ADR-0093 (ADR-0083 is superseded by
 ADR-0091).
 
 Extension mechanisms, plugins, workflow runtimes, and nondeterministic agents are fallible. ERP
@@ -462,20 +462,20 @@ worker connection pools with statement timeouts. **Target
 ([ADR-0093](../decisions/0093-retain-isolation-runtime-and-analytic-target-designs.md)):** workload
 planes, bounded admission, WorkloadCells, and a protected command reserve, so that reports, imports,
 integrations, and derived work never slow source-of-truth commands. The target is owned by
-[`workload-isolation.md`](./workload-isolation.md) and is not active until an activation ADR supplies
+[`workload-isolation.md`](./target/workload-isolation.md) and is not active until an activation ADR supplies
 measured evidence.
 
 ## Analytic Plane Contract
 
 **Current (ADR-0091):** module-owned SQL reports and PostgreSQL materialized views. **Target
 (ADR-0093):** domain-owned facts, versioned metrics, and rebuildable projections, owned by
-[`analytics-architecture.md`](./analytics-architecture.md) and inactive until an activation ADR.
+[`analytics-architecture.md`](./target/analytics-architecture.md) and inactive until an activation ADR.
 
 ## Stateful Entity Runtime Contract
 
 **Current (ADR-0091):** plain PostgreSQL transactions with row locks, and the job table for leased
 work. **Target (ADR-0093):** an optional vendor-neutral Stateful Entity Runtime for approved hot
-aggregates, owned by [`runtime-architecture.md`](./runtime-architecture.md) and inactive until an
+aggregates, owned by [`runtime-architecture.md`](./target/runtime-architecture.md) and inactive until an
 activation ADR.
 
 ## Composite Process Contract
