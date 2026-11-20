@@ -1,10 +1,10 @@
 # Workload Isolation and Non-Interference Architecture
 
 > **Status:** Target design, retained by
-> [ADR-0093](../decisions/0093-retain-isolation-runtime-and-analytic-target-designs.md); not current
+> [ADR-0093](../../decisions/0093-retain-isolation-runtime-and-analytic-target-designs.md); not current
 > behavior.
 >
-> **Current implementation ([ADR-0091](../decisions/0091-adopt-framework-and-flagship-erp.md)):**
+> **Current implementation ([ADR-0091](../../decisions/0091-adopt-framework-and-flagship-erp.md)):**
 > separate API and worker connection pools with statement timeouts. Workload classification and
 > command-reserve admission exist as inactive, tested code in `framework/foundation/workload/`
 > (rewritten from the `runtime/workload/` code removed in commit `c10594c`); no runtime composition
@@ -20,29 +20,29 @@
 >
 > **Related documents**
 >
-> - Canonical architecture: [`./architecture-spec-v4.md`](./architecture-spec-v4.md)
-> - PostgreSQL architecture: [`./postgresql-19-architecture.md`](./postgresql-19-architecture.md)
+> - Canonical architecture: [`./architecture-spec-v4.md`](../architecture-spec-v4.md)
+> - PostgreSQL architecture: [`./postgresql-19-architecture.md`](../postgresql-19-architecture.md)
 > - Logical database and physical placement:
->   [`../decisions/0067-separate-logical-database-and-physical-data-placement.md`](../decisions/0067-separate-logical-database-and-physical-data-placement.md)
-> - Search architecture: [`./search-architecture.md`](./search-architecture.md)
+>   [`../decisions/0067-separate-logical-database-and-physical-data-placement.md`](../../decisions/0067-separate-logical-database-and-physical-data-placement.md)
+> - Search architecture: [`./search-architecture.md`](../search-architecture.md)
 > - Analytics architecture: [`./analytics-architecture.md`](./analytics-architecture.md)
 > - Stateful runtime: [`./runtime-architecture.md`](./runtime-architecture.md)
-> - State and consistency: [`./state-and-consistency.md`](./state-and-consistency.md)
-> - Authorization: [`./authorization.md`](./authorization.md)
-> - Identity and principals: [`./identity-and-principals.md`](./identity-and-principals.md)
-> - HTTP API boundary: [`./api.md`](./api.md)
-> - Messaging: [`./pgque-messaging.md`](./pgque-messaging.md)
-> - Durable execution: [`./durable-execution.md`](./durable-execution.md)
-> - Architecture enforcement: [`./architecture-enforcement.md`](./architecture-enforcement.md)
-> - Database roles: [`../operations/database-roles.md`](../operations/database-roles.md)
-> - Testing strategy: [`../development/testing.md`](../development/testing.md)
-> - Deployment notes: [`../deployment/README.md`](../deployment/README.md)
+> - State and consistency: [`./state-and-consistency.md`](../state-and-consistency.md)
+> - Authorization: [`./authorization.md`](../authorization.md)
+> - Identity and principals: [`./identity-and-principals.md`](../identity-and-principals.md)
+> - HTTP API boundary: [`./api.md`](../api.md)
+> - Messaging: [`./pgque-messaging.md`](../pgque-messaging.md)
+> - Durable execution: [`./durable-execution.md`](../durable-execution.md)
+> - Architecture enforcement: [`./architecture-enforcement.md`](../architecture-enforcement.md)
+> - Database roles: [`../operations/database-roles.md`](../../operations/database-roles.md)
+> - Testing strategy: [`../development/testing.md`](../../development/testing.md)
+> - Deployment notes: [`../deployment/README.md`](../../deployment/README.md)
 > - Non-interference overload ADR:
->   [`../decisions/0034-adopt-non-interference-overload-isolation.md`](../decisions/archive/0034-adopt-non-interference-overload-isolation.md)
+>   [`../decisions/0034-adopt-non-interference-overload-isolation.md`](../../decisions/archive/0034-adopt-non-interference-overload-isolation.md)
 > - Source-of-truth and derived-capability non-interference ADR:
->   [`../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md`](../decisions/archive/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md)
+>   [`../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md`](../../decisions/archive/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md)
 > - Comparative reference:
->   [`./reference/hard-isolation-patterns.md`](./reference/hard-isolation-patterns.md)
+>   [`./reference/hard-isolation-patterns.md`](../reference/hard-isolation-patterns.md)
 
 ## Position
 
@@ -789,8 +789,8 @@ Rules:
 - sensitive results remain subject to current authorization requirements.
 
 Detailed authority, version, replay, and reconciliation semantics remain owned by
-[`state-and-consistency.md`](./state-and-consistency.md). Search-specific projections are owned by
-[`search-architecture.md`](./search-architecture.md); analytical fact, metric, freshness, and provider
+[`state-and-consistency.md`](../state-and-consistency.md). Search-specific projections are owned by
+[`search-architecture.md`](../search-architecture.md); analytical fact, metric, freshness, and provider
 semantics are owned by [`analytics-architecture.md`](./analytics-architecture.md).
 
 ## Database and Credential Boundaries
@@ -832,7 +832,7 @@ deployment platform supports it.
 Pool maxima must fit reviewed database limits. The command connection reserve may use PostgreSQL 19
 `reserved_connections`, but only together with command-only privilege, bounded command admission,
 and reviewed pool ceilings as specified in
-[`../operations/database-roles.md`](../operations/database-roles.md). Separate pools or reserved
+[`../operations/database-roles.md`](../../operations/database-roles.md). Separate pools or reserved
 server slots on the same PostgreSQL instance provide connection budgeting, not complete CPU, I/O,
 lock, WAL, or storage isolation. Claims must name exactly which resources are protected.
 

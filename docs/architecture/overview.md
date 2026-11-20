@@ -14,9 +14,9 @@
 > Reports     -> module-owned SQL views and materialized views
 > ```
 >
-> WorkloadCells and workload planes ([`workload-isolation.md`](./workload-isolation.md)), the
-> Stateful Entity Runtime ([`runtime-architecture.md`](./runtime-architecture.md)), the query plane
-> and OLAP providers ([`analytics-architecture.md`](./analytics-architecture.md)), and the TigerBeetle
+> WorkloadCells and workload planes ([`workload-isolation.md`](./target/workload-isolation.md)), the
+> Stateful Entity Runtime ([`runtime-architecture.md`](./target/runtime-architecture.md)), the query plane
+> and OLAP providers ([`analytics-architecture.md`](./target/analytics-architecture.md)), and the TigerBeetle
 > adapter are inactive target designs, each activated only by its own ADR.
 >
 > **Related documents**
@@ -194,7 +194,7 @@ reserved command resources.
 
 WorkloadCells and optional tenant-aware shuffle sharding narrow deployment blast radius without
 changing domain ownership, public identity, authorization, or PostgreSQL truth. See
-[`workload-isolation.md`](./workload-isolation.md) and [ADR-0093](../decisions/0093-retain-isolation-runtime-and-analytic-target-designs.md).
+[`workload-isolation.md`](./target/workload-isolation.md) and [ADR-0093](../decisions/0093-retain-isolation-runtime-and-analytic-target-designs.md).
 
 ## Analytics
 
@@ -208,7 +208,7 @@ and conformance evidence. A hard-isolated analytic route has no primary credenti
 serves declared stale data or typed unavailability when no eligible projection satisfies the
 contract.
 
-See ./analytics-architecture.md.
+See ./target/analytics-architecture.md.
 
 ## Search
 

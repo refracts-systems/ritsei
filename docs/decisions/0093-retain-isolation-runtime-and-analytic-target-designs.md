@@ -15,9 +15,9 @@
 >   [`./0091-adopt-framework-and-flagship-erp.md`](./0091-adopt-framework-and-flagship-erp.md)
 > - Same pattern for the ledger engine:
 >   [`./0092-retain-tigerbeetle-as-designated-ledger-engine.md`](./0092-retain-tigerbeetle-as-designated-ledger-engine.md)
-> - Workload isolation: [`../architecture/workload-isolation.md`](../architecture/workload-isolation.md)
-> - Stateful Entity Runtime: [`../architecture/runtime-architecture.md`](../architecture/runtime-architecture.md)
-> - Analytic plane: [`../architecture/analytics-architecture.md`](../architecture/analytics-architecture.md)
+> - Workload isolation: [`../architecture/target/workload-isolation.md`](../architecture/target/workload-isolation.md)
+> - Stateful Entity Runtime: [`../architecture/target/runtime-architecture.md`](../architecture/target/runtime-architecture.md)
+> - Analytic plane: [`../architecture/target/analytics-architecture.md`](../architecture/target/analytics-architecture.md)
 > - Earlier decisions (superseded by ADR-0091):
 >   [`./0025-introduce-stateful-entity-runtime.md`](./archive/0025-introduce-stateful-entity-runtime.md),
 >   [`./0026-evaluate-celld-runtime-adapter.md`](./archive/0026-evaluate-celld-runtime-adapter.md),
@@ -42,9 +42,9 @@ re-deriving them later; keeping them inactive costs only documentation upkeep.
 
 1. **The three are designated target designs, not current behavior.** Their architecture documents
    are restored from the commit before `c10594c` as target designs:
-   [`workload-isolation.md`](../architecture/workload-isolation.md),
-   [`runtime-architecture.md`](../architecture/runtime-architecture.md),
-   [`analytics-architecture.md`](../architecture/analytics-architecture.md), the
+   [`workload-isolation.md`](../architecture/target/workload-isolation.md),
+   [`runtime-architecture.md`](../architecture/target/runtime-architecture.md),
+   [`analytics-architecture.md`](../architecture/target/analytics-architecture.md), the
    [`workload` roadmap](../roadmap/workload.md), and two reference documents. Each carries a banner
    that states the current implementation.
 2. **The current implementation from ADR-0091 is unchanged and is the first step toward each

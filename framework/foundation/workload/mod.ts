@@ -1,5 +1,5 @@
 // Workload classification and admission for the non-interference target design
-// (docs/architecture/workload-isolation.md, ADR-0093). Inactive: no runtime composition or
+// (docs/architecture/target/workload-isolation.md, ADR-0093). Inactive: no runtime composition or
 // production path depends on it until an activation ADR supplies measured evidence, so it is
 // deliberately not re-exported from framework/foundation/mod.ts.
 import * as Effect from "effect/Effect"

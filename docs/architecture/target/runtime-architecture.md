@@ -1,10 +1,10 @@
 # Stateful Runtime Architecture
 
 > **Status:** Target design, retained by
-> [ADR-0093](../decisions/0093-retain-isolation-runtime-and-analytic-target-designs.md); not current
+> [ADR-0093](../../decisions/0093-retain-isolation-runtime-and-analytic-target-designs.md); not current
 > behavior.
 >
-> **Current implementation ([ADR-0091](../decisions/0091-adopt-framework-and-flagship-erp.md)):**
+> **Current implementation ([ADR-0091](../../decisions/0091-adopt-framework-and-flagship-erp.md)):**
 > plain PostgreSQL transactions with row locks for active state, and the job table for leased
 > single-consumer work. No Stateful Entity Runtime or `celld` adapter is in the tree; one may return
 > as inactive, tested code, and routing any aggregate through it needs its own ADR with measurement.
@@ -15,21 +15,21 @@
 >
 > **Related documents**
 >
-> - Canonical architecture: [`./architecture-spec-v4.md`](./architecture-spec-v4.md)
-> - State and consistency: [`./state-and-consistency.md`](./state-and-consistency.md)
-> - Financial ledger: [`./financial-ledger.md`](./financial-ledger.md)
-> - PostgreSQL architecture: [`./postgresql-19-architecture.md`](./postgresql-19-architecture.md)
+> - Canonical architecture: [`./architecture-spec-v4.md`](../architecture-spec-v4.md)
+> - State and consistency: [`./state-and-consistency.md`](../state-and-consistency.md)
+> - Financial ledger: [`./financial-ledger.md`](../financial-ledger.md)
+> - PostgreSQL architecture: [`./postgresql-19-architecture.md`](../postgresql-19-architecture.md)
 > - Workload isolation: [`./workload-isolation.md`](./workload-isolation.md)
-> - Identity and principals: [`./identity-and-principals.md`](./identity-and-principals.md)
-> - HTTP API boundary: [`./api.md`](./api.md)
-> - Authorization: [`./authorization.md`](./authorization.md)
-> - Messaging: [`./pgque-messaging.md`](./pgque-messaging.md)
-> - Durable execution: [`./durable-execution.md`](./durable-execution.md)
-> - Process Studio: [`./process-studio.md`](./process-studio.md)
+> - Identity and principals: [`./identity-and-principals.md`](../identity-and-principals.md)
+> - HTTP API boundary: [`./api.md`](../api.md)
+> - Authorization: [`./authorization.md`](../authorization.md)
+> - Messaging: [`./pgque-messaging.md`](../pgque-messaging.md)
+> - Durable execution: [`./durable-execution.md`](../durable-execution.md)
+> - Process Studio: [`./process-studio.md`](../process-studio.md)
 > - Stateful runtime ADR:
->   [`../decisions/0025-introduce-stateful-entity-runtime.md`](../decisions/archive/0025-introduce-stateful-entity-runtime.md)
+>   [`../decisions/0025-introduce-stateful-entity-runtime.md`](../../decisions/archive/0025-introduce-stateful-entity-runtime.md)
 > - Experimental `celld` adapter:
->   [`../decisions/0026-evaluate-celld-runtime-adapter.md`](../decisions/archive/0026-evaluate-celld-runtime-adapter.md)
+>   [`../decisions/0026-evaluate-celld-runtime-adapter.md`](../../decisions/archive/0026-evaluate-celld-runtime-adapter.md)
 
 ## Position
 
@@ -71,8 +71,8 @@ A `WorkloadCell` is governed by [`workload-isolation.md`](./workload-isolation.m
 stateful entity, aggregate boundary, or authorization grant. A `celld` cell is an adapter
 implementation term, not an AWS-style workload cell. `celld` bucket durability does not make its
 SQLite state canonical for RITSEI; runtime fields still follow the state classification and the
-canonical anchor required by [`state-and-consistency.md`](./state-and-consistency.md) and
-[`financial-ledger.md`](./financial-ledger.md) for financial operations. Runtime entity addressing,
+canonical anchor required by [`state-and-consistency.md`](../state-and-consistency.md) and
+[`financial-ledger.md`](../financial-ledger.md) for financial operations. Runtime entity addressing,
 WorkloadCell placement, and database placement remain separate concerns.
 
 ## System Shape
@@ -300,7 +300,7 @@ PostgreSQL or financial-ledger protocol.
 The owning canonical protocol establishes success: PostgreSQL commit for PostgreSQL-owned facts,
 or durable TigerBeetle acceptance plus the required PostgreSQL receipt for financial facts. The
 runtime then advances its projection or marks it for catch-up. Transactional events and outbox
-records follow the protocol in [`financial-ledger.md`](./financial-ledger.md) when applicable.
+records follow the protocol in [`financial-ledger.md`](../financial-ledger.md) when applicable.
 
 ### 6. Idle and hibernate
 
@@ -371,7 +371,7 @@ It must not silently become the only copy of canonical journal metadata, payment
 legal document, authorization, or audit facts. It must not become a second authority for accepted
 TigerBeetle transfers, balances, or transfer history.
 
-Detailed consistency rules are owned by [`state-and-consistency.md`](./state-and-consistency.md).
+Detailed consistency rules are owned by [`state-and-consistency.md`](../state-and-consistency.md).
 
 ## Recovery
 

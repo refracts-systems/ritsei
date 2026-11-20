@@ -1,10 +1,10 @@
 # Analytic Plane Architecture
 
 > **Status:** Target design, retained by
-> [ADR-0093](../decisions/0093-retain-isolation-runtime-and-analytic-target-designs.md); not current
+> [ADR-0093](../../decisions/0093-retain-isolation-runtime-and-analytic-target-designs.md); not current
 > behavior.
 >
-> **Current implementation ([ADR-0091](../decisions/0091-adopt-framework-and-flagship-erp.md)):**
+> **Current implementation ([ADR-0091](../../decisions/0091-adopt-framework-and-flagship-erp.md)):**
 > module-owned SQL reports and PostgreSQL materialized views. Business Fact Contracts, semantic
 > metrics, separate projection stores, and external analytic providers are not implemented; they may
 > return as inactive, tested code, and activation needs its own ADR with measurement. Paths such as
@@ -16,24 +16,24 @@
 >
 > **Related documents**
 >
-> - Canonical architecture: [`./architecture-spec-v4.md`](./architecture-spec-v4.md)
+> - Canonical architecture: [`./architecture-spec-v4.md`](../architecture-spec-v4.md)
 > - Workload isolation: [`./workload-isolation.md`](./workload-isolation.md)
 > - Source-of-truth and derived-capability non-interference:
->   [`../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md`](../decisions/archive/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md)
-> - State and consistency: [`./state-and-consistency.md`](./state-and-consistency.md)
-> - Authorization: [`./authorization.md`](./authorization.md)
-> - Process Studio: [`./process-studio.md`](./process-studio.md)
-> - Messaging: [`./pgque-messaging.md`](./pgque-messaging.md)
-> - PostgreSQL architecture: [`./postgresql-19-architecture.md`](./postgresql-19-architecture.md)
-> - Financial ledger: [`./financial-ledger.md`](./financial-ledger.md)
-> - Search architecture: [`./search-architecture.md`](./search-architecture.md)
-> - Deployment notes: [`../deployment/README.md`](../deployment/README.md)
+>   [`../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md`](../../decisions/archive/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md)
+> - State and consistency: [`./state-and-consistency.md`](../state-and-consistency.md)
+> - Authorization: [`./authorization.md`](../authorization.md)
+> - Process Studio: [`./process-studio.md`](../process-studio.md)
+> - Messaging: [`./pgque-messaging.md`](../pgque-messaging.md)
+> - PostgreSQL architecture: [`./postgresql-19-architecture.md`](../postgresql-19-architecture.md)
+> - Financial ledger: [`./financial-ledger.md`](../financial-ledger.md)
+> - Search architecture: [`./search-architecture.md`](../search-architecture.md)
+> - Deployment notes: [`../deployment/README.md`](../../deployment/README.md)
 > - Analytic Plane ADR:
->   [`../decisions/0043-adopt-rebuildable-analytic-plane.md`](../decisions/archive/0043-adopt-rebuildable-analytic-plane.md)
+>   [`../decisions/0043-adopt-rebuildable-analytic-plane.md`](../../decisions/archive/0043-adopt-rebuildable-analytic-plane.md)
 > - Governed AI recommendation and agent boundary:
->   [`../decisions/0063-define-governed-ai-recommendation-and-agent-boundary.md`](../decisions/0063-define-governed-ai-recommendation-and-agent-boundary.md)
+>   [`../decisions/0063-define-governed-ai-recommendation-and-agent-boundary.md`](../../decisions/0063-define-governed-ai-recommendation-and-agent-boundary.md)
 > - Comparative reference:
->   [`./reference/analytical-isolation-and-semantic-projection-patterns.md`](./reference/analytical-isolation-and-semantic-projection-patterns.md)
+>   [`./reference/analytical-isolation-and-semantic-projection-patterns.md`](../reference/analytical-isolation-and-semantic-projection-patterns.md)
 
 ## Position
 
@@ -332,7 +332,7 @@ rebuild, replacement, or compensating facts must be part of the projection desig
 ## Freshness and Consistency
 
 Every analytic route declares the weakest safe consistency class from
-[`state-and-consistency.md`](./state-and-consistency.md):
+[`state-and-consistency.md`](../state-and-consistency.md):
 
 ```text
 eventual or bounded-stale
@@ -726,7 +726,7 @@ A mandatory external provider or strategic runtime dependency requires its own A
 
 Financial analytics may consume only Accounting-approved facts and projections carrying the required
 source identities, mapping versions, and reconciliation status. It must preserve the authority split
-in [`financial-ledger.md`](./financial-ledger.md).
+in [`financial-ledger.md`](../financial-ledger.md).
 
 Forbidden:
 

@@ -208,8 +208,9 @@ extensions/    (later) modules from other developers and customers
 - PostgreSQL does everything until a named user's measured need says otherwise; delete rather than
   gate capabilities that are off the roadmap. The exceptions are decided: ADR-0092 and ADR-0093 keep
   TigerBeetle, workload isolation, the Stateful Entity Runtime, and the analytic plane as inactive
-  target designs. Their documents, and the TigerBeetle cutover code in Accounting, stay; no
-  production path may depend on them until an activation ADR.
+  target designs. Their documents (in `docs/architecture/target/`), and the TigerBeetle cutover code
+  in Accounting, stay; do not read them as current rules or implement them, and no production path
+  may depend on them until an activation ADR.
 - The process engine is deferred until Order-to-Cash and Procure-to-Pay run end to end.
 
 ## Subsystem Rules

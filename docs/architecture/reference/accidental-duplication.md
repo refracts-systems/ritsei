@@ -157,7 +157,7 @@ If an entity category declares runtime execution as required, every command cros
 serialized invariant must use the `StatefulEntityRuntime` contract. A local/direct adapter may
 replace `celld` only when it preserves the same ownership, fencing, serialization, recovery, and
 reconciliation semantics; direct database fallback must not silently bypass them. The canonical
-category rule is defined in ../runtime-architecture.md.
+category rule is defined in ../target/runtime-architecture.md.
 
 The boundaries are therefore:
 
