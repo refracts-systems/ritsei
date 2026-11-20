@@ -5,6 +5,7 @@ import type { ModuleWorkspace } from "./workspace.ts"
 import { workspace as accountingWorkspace } from "./modules/accounting.workspace.ts"
 import { workspace as billingWorkspace } from "./modules/billing.workspace.ts"
 import { workspace as inventoryWorkspace } from "./modules/inventory.workspace.ts"
+import { workspace as onboardingWorkspace } from "./modules/onboarding.workspace.ts"
 import { workspace as partyWorkspace } from "./modules/party.workspace.ts"
 import { workspace as processWorkspace } from "./modules/process.workspace.ts"
 import { workspace as procurementWorkspace } from "./modules/procurement.workspace.ts"
@@ -16,6 +17,7 @@ import { workspace as taxWorkspace } from "./modules/tax.workspace.ts"
 const AccountingPage = lazy(() => import("./modules/accounting.tsx"))
 const BillingPage = lazy(() => import("./modules/billing.tsx"))
 const InventoryPage = lazy(() => import("./modules/inventory.tsx"))
+const OnboardingPage = lazy(() => import("./modules/onboarding.tsx"))
 const PartyPage = lazy(() => import("./modules/party.tsx"))
 const ProcessPage = lazy(() => import("./modules/process.tsx"))
 const ProcurementPage = lazy(() => import("./modules/procurement.tsx"))
@@ -32,6 +34,8 @@ export const moduleRoutes = [
   { path: "/billing/:id", component: BillingPage },
   { path: "/inventory", component: InventoryPage },
   { path: "/inventory/:id", component: InventoryPage },
+  { path: "/onboarding", component: OnboardingPage },
+  { path: "/onboarding/:id", component: OnboardingPage },
   { path: "/parties", component: PartyPage },
   { path: "/parties/:id", component: PartyPage },
   { path: "/processes", component: ProcessPage },
@@ -53,6 +57,7 @@ export const moduleWorkspaces: ReadonlyArray<ModuleWorkspace & { readonly href: 
   { href: "/accounting", ...accountingWorkspace },
   { href: "/billing", ...billingWorkspace },
   { href: "/inventory", ...inventoryWorkspace },
+  { href: "/onboarding", ...onboardingWorkspace },
   { href: "/parties", ...partyWorkspace },
   { href: "/processes", ...processWorkspace },
   { href: "/procurement", ...procurementWorkspace },
