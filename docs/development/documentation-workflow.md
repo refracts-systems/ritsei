@@ -23,7 +23,8 @@ requirements while the implementation context is still available.
 
 - Update the architecture overview when system shape changes.
 - Update the relevant domain specification when a contract changes.
-- Create an ADR when a significant decision is introduced.
+- Create an ADR when a significant decision is introduced. List the owner documents it changes in
+  its `Changes:` header and update them in the same change (ADR-0123).
 - Mark earlier ADRs as superseded instead of deleting history.
 - Keep links in `docs/README.md` and all related-document notes valid.
 
