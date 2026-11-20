@@ -105,6 +105,7 @@ export const ApplyImportResult = Schema.Struct({
 
 export const ImportRow = Schema.Struct({
   rowNumber: Schema.Int,
+  /** Invalid rows are reported by row number and carry an empty source id. */
   sourceId: Schema.String,
   status: ImportRowStatus,
   errors: Schema.Array(ImportRowError),

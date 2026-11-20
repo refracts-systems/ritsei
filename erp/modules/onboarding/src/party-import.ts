@@ -24,6 +24,7 @@ export type PartyRowFields = Schema.Schema.Type<typeof PartyRowFields>
 
 export interface StagedRowDraft {
   readonly rowNumber: number
+  /** Empty for an invalid row, which is identified by row number in error reports. */
   readonly sourceId: string
   readonly contentHash: string
   /** Empty for an invalid row: unvalidated source values are never stored. */
@@ -121,7 +122,7 @@ const draftRow = Effect.fn("Onboarding.draftPartyRow")(function* (
 
   return {
     rowNumber,
-    sourceId: row.sourceId,
+    sourceId: fields === undefined ? "" : row.sourceId,
     contentHash: yield* sha256Hex(JSON.stringify(fields ?? row.cells)),
     fields: fields ?? {},
     errors,

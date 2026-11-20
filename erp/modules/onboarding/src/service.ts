@@ -51,7 +51,8 @@ const sourceRecordChanged: ImportRowError = {
 
 const toImportRow = (row: StoredImportRow): ImportRow => ({
   rowNumber: row.rowNumber,
-  sourceId: row.sourceId,
+  // Older staged batches may still contain an invalid row's source id.
+  sourceId: row.status === "invalid" ? "" : row.sourceId,
   status: row.status,
   errors: row.errors,
   nativeId: row.nativeId,

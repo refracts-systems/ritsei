@@ -232,7 +232,7 @@ describe("onboarding module", () => {
 
         const leaked = JSON.stringify(rows)
 
-        for (const value of ["Wrong Kind", "Bad Role", "boss", "Dup One"]) {
+        for (const value of ["Wrong Kind", "Bad Role", "boss", "Dup One", "C-3", "C-6", "C-8"]) {
           assert.notInclude(leaked, value)
         }
       }).pipe(Effect.provide(granted())),
