@@ -26,15 +26,7 @@
 
 Each rule has an identifier that the test enforcing it names as `[ID]`, in a comment above the test
 or in its title; `tests/architecture/modules.test.ts` fails when a rule has no such test or a test
-names an unknown rule. The sections after this one are the former Sales architecture document; they
-are not yet split into identified rules.
-
-> **Known stale:** the Aggregate model, Public API, Events, and Maturity sections below predate
-> [ADR-0099](../../../docs/decisions/0099-make-sales-customers-party-roles.md),
-> [ADR-0101](../../../docs/decisions/0101-coordinate-sales-delivery-with-inventory.md), and
-> [ADR-0102](../../../docs/decisions/0102-split-billing-and-settlement.md): customers are party roles,
-> and deliveries and invoicing exist in the code. Until those sections are rewritten, the code and
-> those ADRs win on customers, fulfillment, and invoicing.
+names an unknown rule. The sections after the rules describe the module around them.
 
 ### `SAL-ORDER-1` Orders move only draft, confirmed, cancelled
 
@@ -80,47 +72,100 @@ Why: [ADR-0108](../../../docs/decisions/0108-gate-order-confirmation-on-customer
 Confirmation locks the customer row before it reads the exposure, so of two orders that each fit the
 limit but not together, only one is confirmed.
 
+### `SAL-CUST-2` A document customer is a Party customer role with a legal entity
+
+`createPartyCustomer` (`sales.customer.create`) accepts only an active Party relationship of kind
+`customer`, otherwise `CustomerPartyRoleInvalid`; it takes the name, party, relationship, and legal
+entity from Party and returns the existing customer for a relationship that already has one. A
+legacy customer without a party role and legal entity cannot be quoted, priced, or delivered to
+(`CustomerLegalEntityRequired`).
+Why: [ADR-0099](../../../docs/decisions/0099-make-sales-customers-party-roles.md).
+
+### `SAL-PRICE-1` Prices come from tenant price lists
+
+Price lists are unique by name in a tenant (`PriceListAlreadyExists`); `setPrice` replaces the price
+of a product on a list; creating, pricing, and assigning a list to a customer need
+`sales.price_list.configure`.
+
+### `SAL-QUOT-1` A quotation is priced from the list price or the customer's price list
+
+`draftQuotation` (`sales.quotation.create`) prices each line from an explicit list price or the
+customer's price list (`ProductPriceNotFound` when neither exists), applies the discount in basis
+points rounded half up to the cent, defaults the tax code through Tax for the sales direction, and
+derives the total from the lines.
+
+### `SAL-QUOT-2` Quotations move draft, sent, then accepted or rejected, or expire
+
+Sending needs `sales.quotation.send`; accepting, rejecting, and expiring need
+`sales.quotation.decide`. Repeating the current target state returns the quotation unchanged; any
+other starting state fails with `QuotationInvalidState`. `expireQuotations` marks sent quotations
+whose `validUntil` is before the given date as expired and leaves drafts and decided quotations
+alone.
+
+### `SAL-QUOT-3` Only an accepted quotation converts, once
+
+`convertQuotation` (`sales.order.create`) copies an accepted quotation's lines and terms into a draft
+order under a lock on the quotation; converting again returns the same order, and any other state
+fails with `QuotationInvalidState`.
+
+### `SAL-DLV-1` Deliveries never exceed the confirmed order
+
+`recordDelivery` (`sales.delivery.record`) locks the order, requires it to be confirmed
+(`SalesOrderInvalidState`), rejects unknown lines (`OrderLineNotFound`) and quantities beyond what is
+still undelivered (`DeliveryExceedsOrder`), numbers the delivery `DO/` per legal entity, and returns
+the recorded delivery for a repeated delivery id. Two simultaneous deliveries of the same remainder
+cannot both succeed. Sales records the delivery only; it writes no stock or ledger entry.
+Why: [ADR-0101](../../../docs/decisions/0101-coordinate-sales-delivery-with-inventory.md).
+
+### `SAL-DLV-2` A delivery issues stockable products in the same transaction
+
+Process's `OrderToCashService.deliverOrder` records the Sales delivery and, in the same transaction,
+issues each stockable product through Inventory at moving average against `cost_of_goods_sold`, with
+the delivery as source; service products move no stock. A failed issue rolls the delivery back, and a
+retried delivery id returns the recorded result.
+Why: [ADR-0101](../../../docs/decisions/0101-coordinate-sales-delivery-with-inventory.md),
+[ADR-0100](../../../docs/decisions/0100-adopt-moving-average-inventory-valuation.md).
+
 ## Position
 
-Sales owns tenant-local customer records, quotations, and sales orders. It owns the meaning of order
-lines, derived totals, and the order lifecycle. The browser is a projection and command client; it
-does not calculate authoritative totals, decide lifecycle eligibility, reserve stock, post journals,
-or bypass authorization.
-
-The implemented bounded surface is:
+Sales owns customers in their Sales role, price lists, quotations, sales orders, and delivery
+evidence. It owns the meaning of order lines, derived totals, the quotation and order lifecycles, and
+how much of an order has been delivered. The browser is a projection and command client; it does not
+calculate authoritative totals, decide lifecycle eligibility, move stock, post journals, or bypass
+authorization.
 
 ```text
-Customer
+Party customer relationship
    |
-   +--> Quotation: draft -> [future owner-controlled quotation transitions]
-   |
-   +--> SalesOrder: draft -> confirmed -> cancelled
+   v
+Customer --(price list)--> Quotation: draft -> sent -> accepted | rejected | expired
+                                   |
+                                   v (convert accepted)
+                             SalesOrder: draft -> confirmed -> cancelled
+                                   |
+                                   v (record delivery; Process issues stock)
+                             Delivery DO/...  --> Billing invoices delivered quantity
 ```
 
-The quotation status vocabulary already reserves `sent`, `accepted`, `rejected`, and `expired`, but
-this slice exposes only draft quotation creation and read queries. No unsupported quotation
-transition is synthesized in the API or frontend.
-
-ADR-0033 defines a larger gated order-confirmation workflow involving Inventory and Accounting. The
-current Sales provider slice exposes owner-local order confirmation and the owner-published
-`SalesOrderConfirmedEvent`; it does not claim that Inventory reservation, revenue posting, or a
-cross-domain cancellation workflow is active until those public contracts and atomicity tests are
-composed.
+Two service surfaces exist. `SalesService` is the original owner-local customer, quotation, and
+order surface (create, confirm, cancel). `SalesDocumentService` carries the document flow above:
+Party customers, price lists, quotation lifecycle and conversion, credit limits, deliveries, and
+fulfillment.
 
 ## Authority matrix
 
-| Fact or responsibility                                                 | Authority                           | Current rule                                                                                   |
-| ---------------------------------------------------------------------- | ----------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Tenant and authenticated principal                                     | Identity / API composition          | Every service input includes tenant and principal context                                      |
-| Customer identity in the current slice                                 | Sales                               | Customer rows are tenant-local and email-normalized                                            |
-| Party identity or supplier relationship                                | Party                               | Sales does not mutate Party tables or import Party persistence                                 |
-| Quotation identity, customer link, status, and total                   | Sales                               | Creation starts in `draft`; reads expose the bounded status vocabulary                         |
-| Sales order identity, customer link, line snapshots, status, and total | Sales                               | PostgreSQL is the canonical source for the current provider                                    |
-| Stock, availability, reservations, warehouses, and movements           | Inventory                           | Sales item IDs are opaque references; Sales does not become stock authority                    |
-| Revenue journals, periods, accounts, and settlement                    | Accounting / financial owner        | Not invoked by this owner-local frontend/API slice                                             |
-| Confirmation event envelope and outbox delivery                        | Messaging plus Sales event contract | Sales supplies event meaning; Messaging owns delivery infrastructure                           |
-| Workflow coordination                                                  | Process                             | No Process route or direct Process table access is added here                                  |
-| Customer, quotation, and order browser state                           | TanStack Solid Query                | Cache is tenant-scoped; mutation responses are reconciled, not optimistically treated as facts |
+| Fact or responsibility | Authority | Current rule |
+| --- | --- | --- |
+| Tenant and authenticated principal | Identity / API composition | Every service input includes tenant and principal context |
+| Party identity, customer relationship, legal entity | Party | A document customer references an active Party customer relationship (`SAL-CUST-2`) |
+| Customer in its Sales role, credit limit, price list assignment | Sales | Tenant-local, email-normalized |
+| Price lists, quotations, sales orders, deliveries | Sales | PostgreSQL is the canonical source |
+| Tax code selection and rates | Tax | Sales asks Tax for default codes; it computes no rate |
+| Stock, availability, valuation, and movements | Inventory | Issued by Process on delivery (`SAL-DLV-2`); Sales item IDs are product references |
+| Invoices, credit notes, receivables | Billing | Billing invoices delivered quantity and answers credit exposure (`SAL-CREDIT-1`) |
+| Journals, accounts, periods | Accounting | Reached only through Billing and Inventory postings |
+| Confirmation event envelope and outbox delivery | Messaging plus Sales event contract | Sales supplies event meaning; Messaging owns delivery |
+| Delivery coordination across Sales and Inventory | Process (`order_to_cash`) | One transaction through public contracts |
 
 No package may mutate Sales tables except Sales. Consumers use the public Sales package contract and
 must not import `db/schema/sales.ts`, private stores, or Drizzle query types.
@@ -129,33 +174,18 @@ must not import `db/schema/sales.ts`, private stores, or Drizzle query types.
 
 ### Customer
 
-A Customer contains:
-
-- UUIDv7 identity;
-- tenant identity;
-- trimmed, nonblank name;
-- trimmed lowercase, nonblank email;
-- a tenant-scoped unique email constraint.
-
-Customer creation is ordinary owner-local creation. A customer may carry a party role and legal
-entity (ADR-0099) and a credit limit (`SAL-CREDIT-1`). There is no update, deletion, merge, contact
-history, tax profile, or Party synchronization command in the current public contract.
-A retry with an unknown response must reconcile by reading the tenant-local collection or record; it
-must not assume that no row was created.
+A Customer contains a UUIDv7 identity, tenant, trimmed nonblank name, trimmed lowercase nonblank
+email unique in the tenant, and, for a document customer, the Party, relationship, and legal entity
+(`SAL-CUST-2`), an optional price list, and an optional credit limit (`SAL-CREDIT-1`). There is no
+update, deletion, merge, contact history, or Party synchronization command. A retry with an unknown
+response must reconcile by reading the record; it must not assume that no row was created.
 
 ### Quotation
 
-A Quotation contains:
-
-- UUIDv7 identity;
-- tenant identity;
-- tenant-local Customer identity;
-- status `draft`, `sent`, `accepted`, `rejected`, or `expired`;
-- exact non-negative two-decimal total.
-
-The current public commands create only a draft quotation and read quotations. Quotation status
-transitions, line snapshots, expiry policy, approvals, taxes, discounts, currency, and external
-customer acceptance remain outside this slice.
+A Quotation contains a UUIDv7 identity, tenant, customer and legal entity, status `draft`, `sent`,
+`accepted`, `rejected`, or `expired`, a `validUntil` date, priced lines with list price, discount,
+net unit price, and tax code, and a derived total (`SAL-QUOT-1`, `SAL-QUOT-2`). Revision of a sent
+quotation and external customer acceptance are not supported.
 
 ### SalesOrder
 
@@ -244,64 +274,34 @@ reload/reconciliation path before retry. It never fabricates a local customer, q
 
 ## Public API and frontend boundary
 
-The Effect HTTP API exposes the following tenant-scoped paths through the `Sales` group:
-
-```text
-GET  /sales/customers
-GET  /sales/customers/:id
-POST /sales/customers
-GET  /sales/quotations
-GET  /sales/quotations/:id
-POST /sales/quotations
-GET  /sales/orders
-GET  /sales/orders/:id
-POST /sales/orders
-POST /sales/orders/:id/confirm
-POST /sales/orders/:id/cancel
-```
-
-Handlers decode transport input, obtain the authenticated principal and tenant context, invoke only
-the public `SalesService`, and encode tagged failures. They do not expose tables or repositories.
-
-The connected SolidJS 2 workspace uses generated browser contracts from
-`tooling/frontend/contracts.ts`. It provides bounded customer, quotation, and order projections;
-customer/quotation/order creation; order confirmation and cancellation; detail views; server-side
-filters; tenant and bearer headers; TanStack Solid Query invalidation; accessible RITSEI Dialog
-wrappers; and explicit unknown-outcome recovery. It does not provide unsupported customer updates,
-quotation transitions, order edits, fulfillment, returns, credits, stock operations, or accounting
-posting.
+The module's routes are declared in [`http.ts`](./http.ts) (ADR-0094), which is the authoritative
+list; this document does not repeat it. Handlers decode transport input, obtain the principal and
+tenant context, call only the public services, and encode tagged failures. The browser workspace uses
+generated contracts from `tooling/frontend/contracts.ts`, scopes its cache by tenant, and reports an
+unknown mutation outcome with a reload path instead of fabricating a local record.
 
 ## Events and cross-domain evolution
 
-Sales publishes the typed `SalesOrderConfirmedEvent` only after the owner confirmation transaction
-has accepted the order. The event carries the order ID and exact total plus tenant, actor, command,
-correlation, causation, and idempotency metadata through the shared envelope. Consumers must treat
-it as an at-least-once committed fact and remain idempotent.
-
-The event is not evidence that Inventory has reserved stock, Accounting has posted a journal, or a
-Process workflow has completed. A future cross-domain order-confirmation workflow must call public
-contracts, preserve each domain's authority, define accepted/unknown/reconciliation/compensation
-states, and pass its own transaction and integration gates.
+Sales publishes the typed `SalesOrderConfirmedEvent` only after the confirmation transaction has
+accepted the order. The event carries the order ID and exact total with tenant, actor, command,
+correlation, causation, and idempotency metadata. Consumers must treat it as an at-least-once
+committed fact and remain idempotent. It is not evidence of a delivery, stock issue, or invoice;
+deliveries are coordinated synchronously by Process (`SAL-DLV-2`) and Sales publishes no delivery
+event.
 
 ## Maturity and deferred scope
 
-The current Sales provider is a bounded owner-local Level 3 slice for the selected action/event
-surface, with PostgreSQL and memory implementations, authorization tests, event publication tests,
-and public HTTP/browser contract coverage. This is not a claim that the whole Sales roadmap is
-complete.
+Not supported, and not to be inferred from generic ERP expectations:
 
-Deferred or explicitly unselected scope includes:
-
-- quotation send, accept, reject, expiry, revision, and customer acceptance;
-- customer update, deletion, merge, contacts, tax, pricing, or Party synchronization;
-- order editing after creation, fulfillment, return, credit, tax, discount, currency, or payment;
-- Inventory reservation/availability as part of the current frontend/API confirmation path;
-- Accounting revenue journals, receivables, period policy, settlement, and financial cutover;
-- Process Studio action/event catalog expansion or workflow routes;
+- customer update, deletion, merge, or contacts;
+- quotation revision after sending, and external customer acceptance;
+- order editing after creation, discounts outside quotation lines, multiple currencies, or payment
+  terms on the order;
+- customer returns: a customer credit note neither returns stock nor makes delivered quantity
+  invoiceable again (Billing);
 - external customer or provider transmission.
 
-No deferred item may be inferred from generic ERP expectations. Add a contract, owner decision,
-authorization capability, invariant proof, correction/recovery rule, and documentation before
+Add a contract, owner decision, authorization capability, invariant test, and recovery rule before
 activating one.
 
 ## Implementation map
@@ -318,10 +318,11 @@ activating one.
 | Public package exports                  | `erp/modules/sales/mod.ts`                                                              |
 | Capability constants                    | `erp/modules/sales/src/capabilities.ts`                                                 |
 | Drizzle schema                          | `db/schema/sales.ts`                                                                |
-| HTTP API definition                     | `erp/runtime/api/api.ts`                                                                |
-| HTTP handlers                           | `erp/runtime/api/handlers.ts`                                                           |
+| HTTP group, handlers, error mapping | `erp/modules/sales/http.ts` |
+| Document flow service | `erp/modules/sales/src/documents.ts`, `erp/modules/sales/src/documents-contract.ts` |
+| Delivery with stock issue | `erp/modules/process/src/order-to-cash.ts` |
 | Generated browser contracts             | `tooling/frontend/contracts.ts`, `apps/web/src/shared/contracts/generated/sales.ts` |
-| Browser service/query/workspace         | `apps/web/src/features/sales/`, `apps/web/src/app/sales-route.tsx`                  |
+| Browser service/query/workspace         | `apps/web/src/features/sales/`, `apps/web/src/app/modules/sales.tsx`                  |
 | Domain contract tests                   | `erp/modules/sales/tests/sales.test.ts`                                                 |
 | PostgreSQL invariant/publication tests  | `erp/modules/sales/tests/sales.postgres.test.ts`                                        |
 | HTTP contract test                      | `erp/runtime/api/sales.integration.test.ts`                                             |

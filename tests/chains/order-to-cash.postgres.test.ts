@@ -35,7 +35,8 @@ import { withTemporaryDatabase } from "../support/postgres-database.ts"
 const databaseUrl = process.env["DATABASE_URL"]
 const principal = { userAccountId: "o2c-user", sessionId: "o2c-session" }
 
-// [SAL-CREDIT-1]
+// [SAL-CREDIT-1] [SAL-CUST-2] [SAL-PRICE-1] [SAL-QUOT-1] [SAL-QUOT-2] [SAL-QUOT-3] [SAL-DLV-1]
+// [SAL-DLV-2]
 it.effect.skipIf(databaseUrl === undefined)(
   "quotes, confirms, delivers partially, invoices with tax, collects, credits, and reconciles",
   () =>
