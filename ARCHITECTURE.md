@@ -57,7 +57,7 @@ HTTP tenant context and API authorization order are defined in
 Authorization ownership, capability evaluation, object relationships, SoD, and decision evidence are
 defined in [`docs/architecture/authorization.md`](./docs/architecture/authorization.md).
 Procurement ownership, the Purchase Order lifecycle, and receipt activation gates are defined in
-[`docs/architecture/procurement.md`](./docs/architecture/procurement.md).
+[`erp/modules/procurement/RULES.md`](./erp/modules/procurement/RULES.md).
 
 ## Repository taxonomy
 

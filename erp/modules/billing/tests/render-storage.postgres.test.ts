@@ -65,6 +65,7 @@ const failureCode = (operation: () => PromiseLike<object>) =>
     Effect.map((failure) => failure.code),
   )
 
+// [BIL-RENDER-2]
 it.effect.skipIf(databaseUrl === undefined)(
   "enforces invoice render input and artifact integrity in PostgreSQL",
   () =>

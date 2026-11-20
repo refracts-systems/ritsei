@@ -122,38 +122,47 @@ const citedRules = (source: string) =>
   [...source.matchAll(new RegExp(`\\[(${ruleId.source})\\]`, "g"))].map((match) => match[1]!)
 
 /**
- * Every rule a module's RULES.md declares is named, as "[ID]", by a test of that module unless the
- * rule is marked unenforced; every ID a module test names is declared. A match proves that a test
- * names the rule, not that it checks it.
+ * Every rule a module's RULES.md declares is named, as "[ID]", by a test (the module's own or a
+ * cross-module test under `tests/`) unless the rule is marked unenforced, and every ID a test names
+ * is declared by exactly one module. A match proves that a test names the rule, not that it checks
+ * it.
  */
 export const ruleFailures = (
   rules: ReadonlyMap<string, readonly ModuleRule[]>,
   files: ReadonlyArray<SourceFile>,
 ) => {
+  const owners = new Map<string, string[]>()
+
+  for (const [module, declared] of rules) {
+    for (const { id } of declared) owners.set(id, [...(owners.get(id) ?? []), module])
+  }
+
   const citations = files.flatMap((file) => {
     const path = file.path.replaceAll("\\", "/")
-    const module = moduleOf(path)
 
-    return module === undefined || !isTestPath(path)
-      ? []
-      : citedRules(file.source).map((id) => ({ path, module, id }))
+    return isTestPath(path)
+      ? citedRules(file.source).map((id) => ({ path, id, module: owners.get(id)?.[0] }))
+      : []
   })
 
   const unknown = citations
     .values()
-    .filter(({ module, id }) => !(rules.get(module) ?? []).some((rule) => rule.id === id))
-    .map(
-      ({ path, module, id }) =>
-        `${path} names rule ${id}, which ${moduleRoot}/${module}/RULES.md does not declare`,
-    )
+    .filter(({ module }) => module === undefined)
+    .map(({ path, id }) => `${path} names rule ${id}, which no module RULES.md declares`)
     .toArray()
 
-  return [...new Set([...unknown, ...declaredFailures(rules, citations)])]
+  const shared = owners
+    .entries()
+    .filter(([, modules]) => modules.length > 1)
+    .map(([id, modules]) => `rule ${id} is declared by more than one module: ${modules.join(", ")}`)
+    .toArray()
+
+  return [...new Set([...unknown, ...shared, ...declaredFailures(rules, citations)])]
 }
 
 const declaredFailures = (
   rules: ReadonlyMap<string, readonly ModuleRule[]>,
-  citations: ReadonlyArray<{ readonly module: string; readonly id: string }>,
+  citations: ReadonlyArray<{ readonly module: string | undefined; readonly id: string }>,
 ) =>
   [...rules].flatMap(([module, declared]) => {
     const where = `${moduleRoot}/${module}/RULES.md`
@@ -201,11 +210,14 @@ export const checkModules = async (
 ): Promise<readonly string[]> => {
   const byName: Manifests = new Map(manifests.map((manifest) => [manifest.name, manifest]))
 
-  const [directories, ownership, files, adapters] = await Promise.all([
+  const [directories, ownership, files, adapters, chainTests, frontendTests] = await Promise.all([
     moduleDirectories(),
     readFile("db/ownership.toml", "utf8").then(parseOwnership),
     collectSourceFiles(moduleRoot, [".ts", ".tsx"]),
     httpAdapters(manifests),
+    // Cross-module tests that may enforce a module rule; tests/architecture holds rule fixtures.
+    collectSourceFiles("tests/chains", [".ts"]),
+    collectSourceFiles("tests/frontend", [".ts"]),
   ])
 
   const failures = [
@@ -214,7 +226,7 @@ export const checkModules = async (
     ...schemaFailures(byName, ownership),
     ...importFailures(files, byName),
     ...surfaceFailures(byName, adapters),
-    ...ruleFailures(await moduleRules(directories), files),
+    ...ruleFailures(await moduleRules(directories), [...files, ...chainTests, ...frontendTests]),
   ]
 
   return [...new Set(failures)].toSorted()

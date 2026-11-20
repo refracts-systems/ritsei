@@ -28,6 +28,7 @@ create a second independent definition.
 | `architecture/overview.md` | Short current-system map | Detailed subsystem policy |
 | `architecture-spec-v4.md` | System-wide runtime and boundary decisions | Full subsystem detail |
 | Subsystem architecture file | Detailed rules for exactly one subsystem | Historical decision rationale |
+| Module `RULES.md` (`erp/modules/<module>/`) | Current rules whose invariant one module owns, each named by the test that enforces it | Cross-module or system-wide rules |
 | ADR | Context, alternatives, decision, and consequences | Complete current-state specification |
 | Reference document | Analysis and conceptual background | Binding implementation rules |
 | Development workflow | How documentation and implementation are maintained | Domain architecture |
@@ -52,8 +53,8 @@ create a second independent definition.
 | Authorization | [`./architecture/authorization.md`](./architecture/authorization.md) |
 | External identity, authentication, principals, sessions, and revocation | [`./architecture/identity-and-principals.md`](./architecture/identity-and-principals.md) |
 | HTTP authentication, tenant context, transport authorization, and API security boundary | [`./architecture/api.md`](./architecture/api.md) |
-| Procurement ownership, Supplier Accounts, Purchase Orders, and receipt activation gates | [`./architecture/procurement.md`](./architecture/procurement.md) |
-| Sales customers, quotations, Sales Orders, and order lifecycle | [`./architecture/sales.md`](./architecture/sales.md) |
+| Procurement ownership, Supplier Accounts, Purchase Orders, and receipt activation gates | [`erp/modules/procurement/RULES.md`](../erp/modules/procurement/RULES.md) |
+| Sales customers, quotations, Sales Orders, and order lifecycle | [`erp/modules/sales/RULES.md`](../erp/modules/sales/RULES.md) |
 | Events and messaging | [`./architecture/pgque-messaging.md`](./architecture/pgque-messaging.md) |
 | External integration surface and connector protocols | [`./architecture/integration-architecture.md`](./architecture/integration-architecture.md) |
 | Document snapshots, Document AST, renderer capabilities, template/artifact versioning, and rendering workload security | [`./architecture/document-rendering.md`](./architecture/document-rendering.md) |

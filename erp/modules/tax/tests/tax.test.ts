@@ -57,6 +57,7 @@ describe("tax module", () => {
     assert.deepStrictEqual(validateModuleRegistry([TaxModule]), [])
   })
 
+  // [TAX-CALC-1]
   it("rounds tax half up per line", () => {
     assert.strictEqual(taxOn("100.00", "11"), "11.00")
     assert.strictEqual(taxOn("0.05", "10"), "0.01")
@@ -64,6 +65,7 @@ describe("tax module", () => {
     assert.strictEqual(taxOn("33.33", "12.5"), "4.17")
   })
 
+  // [TAX-CALC-2]
   it.effect("computes tax per line and per code, and rejects codes of the other direction", () =>
     Effect.gen(function* () {
       const tax = yield* TaxService
@@ -165,6 +167,7 @@ describe("tax module", () => {
     }).pipe(Effect.provide(granted)),
   )
 
+  // [TAX-RATE-1]
   it.effect("resolves the rate by transaction date from dated periods", () =>
     Effect.gen(function* () {
       const tax = yield* TaxService
@@ -249,6 +252,7 @@ describe("tax module", () => {
     }).pipe(Effect.provide(granted)),
   )
 
+  // [TAX-AUTH-1]
   it.effect("denies operations without a granted capability", () =>
     Effect.gen(function* () {
       const tax = yield* TaxService
@@ -269,6 +273,7 @@ describe("tax module", () => {
     }).pipe(Effect.provide(ungranted)),
   )
 
+  // [TAX-AUTH-1]
   it.effect("denies a rate period in a tenant the principal has no grant for", () =>
     Effect.gen(function* () {
       const tax = yield* TaxService
@@ -333,6 +338,7 @@ it.layer(TestHttpServices)("tax HTTP endpoint", (it) => {
 
 const databaseUrl = process.env["DATABASE_URL"]
 
+// [TAX-PROD-1]
 it.effect.skipIf(databaseUrl === undefined)(
   "binds product tax defaults to products and same-direction codes in PostgreSQL",
   () =>

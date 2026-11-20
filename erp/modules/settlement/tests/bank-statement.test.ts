@@ -15,6 +15,7 @@ const rejection = (content: string) =>
   )
 
 describe("bank statement profile", () => {
+  // [SET-BANK-1]
   it.effect("parses signed exact amounts, quoted fields, and a byte order mark", () =>
     Effect.gen(function* () {
       const lines = yield* parseBankStatement(
@@ -54,6 +55,7 @@ describe("bank statement profile", () => {
     }),
   )
 
+  // [SET-BANK-1]
   it.effect("rejects the whole file at the first row that breaks the profile", () =>
     Effect.gen(function* () {
       assert.deepStrictEqual(yield* rejection("date,memo,reference,amount\n"), [

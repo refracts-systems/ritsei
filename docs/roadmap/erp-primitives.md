@@ -143,7 +143,7 @@ current posting flow is single-Legal-Entity, base-currency, fixed two-decimal mo
 AP/AR, payments, settlement, reopen, and adjusting periods remain out of scope.
 
 The bounded Procurement document follows
-[`../architecture/procurement.md`](../architecture/procurement.md) and ADR-0044/0045. Receipt
+[`erp/modules/procurement/RULES.md`](../../erp/modules/procurement/RULES.md) and ADR-0044/0045. Receipt
 ownership and its concurrency with cancellation remain separate gates.
 
 Exit criteria:

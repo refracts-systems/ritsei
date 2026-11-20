@@ -11,7 +11,7 @@
 >
 > - ADR index: [`./README.md`](./README.md)
 > - Decision map: [`./decision-map.md`](./decision-map.md)
-> - Procurement architecture: [`../architecture/procurement.md`](../architecture/procurement.md)
+> - Procurement architecture: [`erp/modules/procurement/RULES.md`](../../erp/modules/procurement/RULES.md)
 > - P1 inventory primitives: [`./0035-define-p1-inventory-primitives.md`](./0035-define-p1-inventory-primitives.md)
 > - P2 document and financial baseline: [`./0036-define-p2-document-and-financial-baseline.md`](./0036-define-p2-document-and-financial-baseline.md)
 > - Semantic invariant ownership: [`./0015-one-semantic-owner-per-invariant.md`](./0015-one-semantic-owner-per-invariant.md)

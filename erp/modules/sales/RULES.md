@@ -1,6 +1,7 @@
-# Sales Architecture
+# Sales Rules
 
-> **Status:** Canonical current-state specification
+> **Status:** Current rules owned by the Sales module (ADR-0123), moved here from
+> `docs/architecture/sales.md`. This file wins over ADR text for what the module does now.
 >
 > **Owns:** Sales customer, quotation, and sales-order authority; exact order totals; order
 > lifecycle and confirmation idempotency; Sales authorization capabilities; and the boundary to
@@ -8,18 +9,76 @@
 >
 > **Related documents**
 >
-> - Canonical architecture: [`./architecture-spec-v4.md`](./architecture-spec-v4.md)
-> - State and consistency: [`./state-and-consistency.md`](./state-and-consistency.md)
-> - Authorization: [`./authorization.md`](./authorization.md)
-> - Financial ledger: [`./financial-ledger.md`](./financial-ledger.md)
-> - Integration architecture: [`./integration-architecture.md`](./integration-architecture.md)
-> - Process Studio: [`./process-studio.md`](./process-studio.md)
+> - Canonical architecture: [`docs/architecture/architecture-spec-v4.md`](../../../docs/architecture/architecture-spec-v4.md)
+> - State and consistency: [`docs/architecture/state-and-consistency.md`](../../../docs/architecture/state-and-consistency.md)
+> - Authorization: [`docs/architecture/authorization.md`](../../../docs/architecture/authorization.md)
+> - Financial ledger: [`docs/architecture/financial-ledger.md`](../../../docs/architecture/financial-ledger.md)
+> - Integration architecture: [`docs/architecture/integration-architecture.md`](../../../docs/architecture/integration-architecture.md)
+> - Process Studio: [`docs/architecture/process-studio.md`](../../../docs/architecture/process-studio.md)
 > - Order lifecycle decision:
->   [`../decisions/0033-extend-order-lifecycle-and-gate-pgque.md`](../decisions/0033-extend-order-lifecycle-and-gate-pgque.md)
+>   [`docs/decisions/0033-extend-order-lifecycle-and-gate-pgque.md`](../../../docs/decisions/0033-extend-order-lifecycle-and-gate-pgque.md)
 > - Exact amount boundary:
->   [`../decisions/0042-exact-financial-amount-boundary.md`](../decisions/0042-exact-financial-amount-boundary.md)
+>   [`docs/decisions/0042-exact-financial-amount-boundary.md`](../../../docs/decisions/0042-exact-financial-amount-boundary.md)
 > - Owner-local business surfaces:
->   [`../decisions/0046-adopt-owner-local-business-surface-and-generated-ergonomics.md`](../decisions/0046-adopt-owner-local-business-surface-and-generated-ergonomics.md)
+>   [`docs/decisions/0046-adopt-owner-local-business-surface-and-generated-ergonomics.md`](../../../docs/decisions/0046-adopt-owner-local-business-surface-and-generated-ergonomics.md)
+
+## Identified rules
+
+Each rule has an identifier that the test enforcing it names as `[ID]`, in a comment above the test
+or in its title; `tests/architecture/modules.test.ts` fails when a rule has no such test or a test
+names an unknown rule. The sections after this one are the former Sales architecture document; they
+are not yet split into identified rules.
+
+> **Known stale:** the Aggregate model, Public API, Events, and Maturity sections below predate
+> [ADR-0099](../../../docs/decisions/0099-make-sales-customers-party-roles.md),
+> [ADR-0101](../../../docs/decisions/0101-coordinate-sales-delivery-with-inventory.md), and
+> [ADR-0102](../../../docs/decisions/0102-split-billing-and-settlement.md): customers are party roles,
+> and deliveries and invoicing exist in the code. Until those sections are rewritten, the code and
+> those ADRs win on customers, fulfillment, and invoicing.
+
+### `SAL-ORDER-1` Orders move only draft, confirmed, cancelled
+
+A confirmed or cancelled order keeps its confirmation metadata, and its header and lines are
+immutable except for the cancellation status change; no transition reopens a terminal order.
+PostgreSQL rejects orphaned confirmation metadata and changes to confirmed snapshots and totals.
+
+### `SAL-ORDER-2` Confirmation is idempotent and publishes one event
+
+Confirming with the same idempotency key returns the recorded result and one
+`SalesOrderConfirmedEvent`; a different key after confirmation fails with
+`SalesOrderConfirmationIdempotencyConflict`. The event is appended in the confirmation transaction,
+so a failed append rolls the confirmation back.
+
+### `SAL-ORDER-3` Order references stay within one tenant and one customer
+
+Customer, quotation, order, and line references are tenant-local through composite constraints, and
+an order cannot reference a quotation of another customer. Line quantities are positive integers
+within PostgreSQL `BIGINT`.
+
+### `SAL-CUST-1` A customer email is canonical and unique in its tenant
+
+Emails are trimmed and lowercased; PostgreSQL rejects other values and duplicates in a tenant.
+
+### `SAL-AUTH-1` Sales capabilities are denied by default
+
+Reads, confirmation, cancellation, and confirmed-order totals each need their capability in the
+tenant.
+
+### `SAL-CREDIT-1` A draft order past the customer's credit limit is not confirmed
+
+A customer's credit limit is a non-negative amount (null means no limit) set by `setCreditLimit`
+behind `sales.credit_limit.configure`. Confirming a draft order fails with `CreditLimitExceeded`,
+before the order changes, when the customer's open receivables plus their confirmed orders not yet
+invoiced (never below zero) plus the order total exceed the limit. Billing answers the receivables
+and invoiced amounts through the `CreditExposure` port. A retried confirmation of a confirmed order
+is not checked again, delivery and invoicing are not gated, and a customer without a party role and
+legal entity is never gated.
+Why: [ADR-0108](../../../docs/decisions/0108-gate-order-confirmation-on-customer-credit-limit.md).
+
+### `SAL-CREDIT-2` Credit checks for one customer run one at a time
+
+Confirmation locks the customer row before it reads the exposure, so of two orders that each fit the
+limit but not together, only one is confirmed.
 
 ## Position
 
@@ -78,8 +137,9 @@ A Customer contains:
 - trimmed lowercase, nonblank email;
 - a tenant-scoped unique email constraint.
 
-Customer creation is ordinary owner-local creation. There is no update, deletion, merge, contact
-history, credit limit, tax profile, or Party synchronization command in the current public contract.
+Customer creation is ordinary owner-local creation. A customer may carry a party role and legal
+entity (ADR-0099) and a credit limit (`SAL-CREDIT-1`). There is no update, deletion, merge, contact
+history, tax profile, or Party synchronization command in the current public contract.
 A retry with an unknown response must reconcile by reading the tenant-local collection or record; it
 must not assume that no row was created.
 
@@ -233,7 +293,7 @@ complete.
 Deferred or explicitly unselected scope includes:
 
 - quotation send, accept, reject, expiry, revision, and customer acceptance;
-- customer update, deletion, merge, contacts, credit, tax, pricing, or Party synchronization;
+- customer update, deletion, merge, contacts, tax, pricing, or Party synchronization;
 - order editing after creation, fulfillment, return, credit, tax, discount, currency, or payment;
 - Inventory reservation/availability as part of the current frontend/API confirmation path;
 - Accounting revenue journals, receivables, period policy, settlement, and financial cutover;
