@@ -224,6 +224,21 @@ Requirements:
 - post-use review;
 - credential rotation or revocation after use.
 
+## Domain Object Store Role
+
+The Effect Cluster host of the domain model port (ADR-0124) keeps aggregate state in
+`domain_model.alchemy_domain_objects`, created by migration and owned by the migrator. It connects
+as its own login, `ritsei_domain_host`, through `CLUSTER_DATABASE_URL`; the host names its table
+without a schema, so `ALTER ROLE ritsei_domain_host SET search_path = domain_model`.
+
+`ritsei_domain_host` receives `USAGE` and `CREATE` on the `domain_model` schema and
+`SELECT`, `INSERT`, `UPDATE`, and `DELETE` on the table, and nothing else. `CREATE` is
+required: the host runs `CREATE TABLE IF NOT EXISTS` at startup, and PostgreSQL checks the schema
+privilege before it checks whether the table exists. The schema holds only host tables so that this
+`CREATE` reaches nothing else. A trigger on the table, which the host role does not own, refuses
+`UPDATE`, `DELETE`, and `TRUNCATE` of recorded events (`event:` keys). Only the API composition
+roots that host the model read or write this table; `ritsei_reporting` has no grant.
+
 ## Ownership Model
 
 Objects should be owned by non-login owner roles, not by runtime login roles.
