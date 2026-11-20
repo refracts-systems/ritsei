@@ -17,6 +17,9 @@ permissions:
 jobs:
   static:
     runs-on: ubuntu-latest
+    # Varlock requires DATABASE_URL; the static checks never connect to it.
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/ritsei
     steps:
       - name: Checkout
         uses: actions/checkout@v4
