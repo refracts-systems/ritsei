@@ -136,8 +136,8 @@ The configured IdentityProvider answers identity and authentication for human an
 principals; ZITADEL is recommended but not required. RITSEI identity maps external subjects to
 internal `UserAccount` records, while RITSEI Authorization owns tenant membership, roles,
 capabilities, grants, scopes, SoD, and final decision evidence. The precomputed permission matrix is
-the coarse gate; the replaceable RelationshipEngine uses native PostgreSQL by default and may use
-SpiceDB as an optional high-scale adapter. Domain policy and tenant isolation remain RITSEI-owned.
+the coarse gate; the replaceable RelationshipEngine uses native PostgreSQL; the SpiceDB option was
+withdrawn by ADR-0091. Domain policy and tenant isolation remain RITSEI-owned.
 
 Every protected operation follows:
 

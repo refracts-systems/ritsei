@@ -74,10 +74,7 @@ RelationshipEngine
   -> selected relationship/object checks and bounded candidate-resource evaluation
 
 Native PostgreSQL implementation
-  -> default RelationshipEngine implementation
-
-SpiceDB adapter
-  -> optional high-scale RelationshipEngine implementation
+  -> the RelationshipEngine implementation (a memory implementation serves tests)
 ```
 
 Neither relationship implementation is authoritative for membership, roles, capabilities, grants,
@@ -187,8 +184,8 @@ A capability and scope do not authorize every object in that scope. For a reques
 `payment.approve(P1)`, the kernel must also prove that the principal may act on `P1`.
 
 The relationship/object layer is evaluated through the RITSEI `RelationshipEngine` abstraction.
-Native PostgreSQL is the default implementation; SpiceDB is an optional high-scale adapter for the
-same contract. A missing, stale, unknown, or unavailable relationship result is never interpreted as
+Native PostgreSQL is the implementation. The SpiceDB adapter option of ADR-0059 was withdrawn by
+ADR-0091; a second engine needs a new ADR. A missing, stale, unknown, or unavailable relationship result is never interpreted as
 `ALLOW` for sensitive work.
 
 Search results, projection membership, entity addresses, provider ACLs, and cached permissions are

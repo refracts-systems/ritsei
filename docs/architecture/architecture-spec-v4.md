@@ -102,7 +102,7 @@ principles.
 | Runtime            | Node.js 24 LTS                                                        |
 | Identity / IAM     | Provider-neutral OIDC/OAuth2 `IdentityProvider`; ZITADEL recommended |
 | Application AuthZ  | RITSEI Authorization module with canonical PostgreSQL policy facts |
-| Relationship AuthZ | Native PostgreSQL `RelationshipEngine`; optional SpiceDB adapter     |
+| Relationship AuthZ | Native PostgreSQL `RelationshipEngine` (SpiceDB withdrawn, ADR-0091) |
 | HTTP               | Effect v4 `HttpApi` / `HttpRouter` with native `@effect/platform-node` |
 | Database           | PostgreSQL 19+ logical transactional platform for non-ledger state    |
 | Persistent IDs     | UUIDv7 for new entity, event, and index-visible identities            |
@@ -400,8 +400,8 @@ organizations, groups, roles, and claims do not grant ERP authority.
 RITSEI Authorization is the application decision boundary. PostgreSQL/RITSEI remains canonical for
 tenant membership, roles, capabilities, grants, scopes, SoD, and policy facts. The precomputed
 permission matrix is the coarse gate. A provider-neutral `RelationshipEngine` evaluates object
-relationships; native PostgreSQL is the default implementation and SpiceDB is an optional high-scale
-adapter. Neither relationship implementation owns tenant isolation, business invariants, domain
+relationships; native PostgreSQL is the implementation (the SpiceDB option was
+withdrawn by ADR-0091). The relationship implementation does not own tenant isolation, business invariants, domain
 policy, or final authority by itself.
 
 Every protected operation follows:

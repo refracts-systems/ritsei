@@ -34,7 +34,7 @@ The authoritative architecture specification is:
 - Contracts: Effect Schema
 - Identity / IAM: provider-neutral OIDC/OAuth2 `IdentityProvider`; ZITADEL is recommended
 - Application AuthZ: RITSEI Authorization Kernel with canonical PostgreSQL policy facts
-- Relationship AuthZ: native PostgreSQL `RelationshipEngine` by default; optional SpiceDB adapter
+- Relationship AuthZ: native PostgreSQL `RelationshipEngine` (SpiceDB option withdrawn, ADR-0091)
 - Reports: SQL and materialized views in PostgreSQL (target: analytic plane, ADR-0093)
 - Search: PostgreSQL only
 - Financial ledger: PostgreSQL double-entry ledger (the only active financial authority);

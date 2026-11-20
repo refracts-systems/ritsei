@@ -24,8 +24,7 @@ SQL/PGQ
 -> multi-edge network traversal for domain analysis and projections
 
 RelationshipEngine
--> native PostgreSQL relationship authorization by default
--> optional SpiceDB adapter for high-scale relationship evaluation
+-> native PostgreSQL relationship authorization (SpiceDB withdrawn, ADR-0091)
 
 Application graph registry
 -> package dependencies, event topology, and blast-radius analysis
@@ -55,7 +54,7 @@ A property graph is a read-oriented view over relational tables. It does not
 replace the transactional model. A RelationshipEngine is not a general ERP graph
 authority; its relationship result is one input to the RITSEI Authorization
 decision and never replaces tenant isolation, business policy, or SoD. Native
-PostgreSQL is the default; SpiceDB is an optional adapter. The current Party pilot
+PostgreSQL is the implementation; the SpiceDB option was withdrawn (ADR-0091). The current Party pilot
 is a fixed two-edge, bounded related-path projection and is not an authorization
 or mutation authority. `party.related_party_paths` MUST NOT expose reflexive paths
 where `source_party_id = target_party_id`; this is a projection invariant, not a

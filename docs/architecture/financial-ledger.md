@@ -134,7 +134,7 @@ getBalanceHistory
 RITSEI Authorization owns the general capability, tenant scope, relationship, and SoD decision.
 Accounting still owns financial business validity such as fiscal-period state, amount rules,
 posting semantics, balance meaning, and correction behavior. No RelationshipEngine result can
-replace those checks, whether it comes from native PostgreSQL or the optional SpiceDB adapter.
+replace those checks.
 
 A future reservation capability may add:
 
