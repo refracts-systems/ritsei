@@ -131,7 +131,7 @@ contract, the tagged errors, and the authorization check are never optional.
 - `manifest.ts`: the module's declared dependencies, schemas, capabilities, released actions and
   events, consumed events, HTTP groups, and pages (ADR-0094). Scaffold new ERP modules with
   `pnpm run ritsei new module <name> [--entity <entity>]`, and run `pnpm run ritsei gen` after
-  changing a manifest; never edit `*.gen.ts` files by hand. `tests/architecture/modules.test.ts`
+  changing a manifest or an ADR header; never edit `*.gen.ts` files or the ADR index by hand. `tests/architecture/modules.test.ts`
   fails when the manifest and the code differ.
 - Each ERP module owns its HTTP group, handlers, and error mapping in `http.ts`, built on
   `framework/modules/http`; only `erp/runtime` composes it into `RitseiApi`. Handlers stay thin.

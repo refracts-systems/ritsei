@@ -10,6 +10,12 @@ import * as Predicate from "effect/Predicate"
 import { createJiti } from "jiti"
 
 import type { ModuleManifest } from "../framework/modules/module/mod.ts"
+import {
+  decisionFailures,
+  decisionIndexTarget,
+  discoverDecisions,
+  renderDecisionIndex,
+} from "./decision-index.ts"
 
 const moduleRoot = "erp/modules"
 export const backendTarget = "erp/runtime/modules.gen.ts"
@@ -171,9 +177,19 @@ export const generate = async (options: { readonly check: boolean }) => {
 
   if (missing.length > 0) throw new Error(`modules declare pages without ${missing.join(", ")}`)
 
+  const decisions = await discoverDecisions()
+  const invalid = await decisionFailures(decisions)
+
+  if (invalid.length > 0) throw new Error(invalid.join("\n"))
+  const readme = await readFile(decisionIndexTarget, "utf8")
+
   const outputs = [
     { path: backendTarget, source: format(backendTarget, renderBackend(modules)) },
     { path: webTarget, source: format(webTarget, renderWeb(modules)) },
+    {
+      path: decisionIndexTarget,
+      source: format(decisionIndexTarget, renderDecisionIndex(readme, decisions)),
+    },
   ]
 
   const stale: string[] = []
