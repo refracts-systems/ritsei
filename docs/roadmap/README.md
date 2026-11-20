@@ -46,6 +46,7 @@ keep their gate IDs and content; their status after those decisions is:
 | `postgres19` | Active |
 | `workload` | Dormant target design (ADR-0093); activation needs its own ADR with measurement. Until then the `frontend.shell` dependency on `workload.command-reserve` does not apply |
 | `frontend`, `production` | Active |
+| `alchemy` | Active (ADR-0124), one phase at a time after the owner accepts its review document. It does not gate framework or ERP phases or `roadmap.global-exit` |
 
 Until this index is rewritten around the reset phases, the dormant financial and workload tracks do
 not block `roadmap.global-exit`. Deferred tracks keep their gates for when
@@ -83,7 +84,7 @@ Roadmap status uses distinct evidence classes:
   [`../development/releasing.md`](../development/releasing.md); open roadmap gates do not prevent a
   source-only pre-release.
 
-`roadmap.global-exit` means every gate assigned to the current ten tracks has accepted evidence. It does not by
+`roadmap.global-exit` means every gate assigned to the current ten tracks (all but `alchemy`) has accepted evidence. It does not by
 itself publish a product release, activate an unregistered connector provider, or approve a
 particular deployment profile. Numeric labels such as `0.8` and `1.0` are historical roadmap
 milestones and gate IDs, not product SemVer.
@@ -126,8 +127,9 @@ caveats are owned by [`../development/releasing.md`](../development/releasing.md
 | `workload`    | Workload isolation    | workload classification and protected command-reserve evidence                    | `workload.*`      | [`workload.md`](./workload.md) (dormant, ADR-0093) |
 | `frontend`    | Frontend readiness    | SPA shell, application boundaries, design system, and user-workflow evidence      | `frontend.*`      | [`frontend.md`](./frontend.md)                                     |
 | `production`  | Production profile    | artifacts, install/upgrade rehearsal, and reviewed profile manifests              | `production.*`    | [`production.md`](./production.md)                                 |
+| `alchemy`     | Alchemy Domain        | phased adoption of Alchemy Domain, rule classes, and aggregate authority cutover  | `alchemy.*`       | [`alchemy-domain.md`](./alchemy-domain.md) (ADR-0124)              |
 
-There are ten subdocuments and ten measured tracks. `README.md` is the index, not an eleventh
+There are eleven subdocuments and eleven measured tracks. `README.md` is the index, not a twelfth
 track. They remain separate because primitive decisions, provider maturity, financial authority,
 process execution, external providers, pack distribution, and database activation have independent
 owners and stop conditions. A new track requires a registry entry, a measured gate, and a documented
