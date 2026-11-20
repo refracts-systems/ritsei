@@ -395,6 +395,18 @@ it.effect.skipIf(databaseUrl === undefined)(
             [[first.number, "39.20"]],
           )
 
+          const nextLines = yield* settlement.bankReconciliation({
+            ...scope,
+            legalEntityId,
+            bankAccountId: bank.id,
+            lineOffset: 1,
+            paymentOffset: 1,
+            limit: 1,
+          })
+
+          assert.strictEqual(nextLines.lines[0]?.id, before.lines[1]?.id)
+          assert.deepStrictEqual(nextLines.payments, [])
+
           const [line1, line2, line3] = before.lines
 
           const match = (lineId: string, paymentId: string, amount: string) =>
@@ -438,6 +450,17 @@ it.effect.skipIf(databaseUrl === undefined)(
 
           assert.instanceOf(noImport, AuthorizationDenied)
 
+          const noReport = yield* Effect.flip(
+            settlement.bankReconciliation({
+              principal: stranger,
+              tenantId,
+              legalEntityId,
+              bankAccountId: bank.id,
+            }),
+          )
+
+          assert.instanceOf(noReport, AuthorizationDenied)
+
           const noMatch = yield* Effect.flip(
             settlement.matchBankLine({
               principal: importer,
@@ -479,6 +502,26 @@ it.effect.skipIf(databaseUrl === undefined)(
           assert.instanceOf(nothingLeft, BankMatchExceedsAvailable)
           assert.strictEqual(nothingLeft.available, "0.00")
           assert.deepStrictEqual((yield* view()).payments, [])
+          const activeMatches = (yield* view()).matches
+          assert.strictEqual(activeMatches[0]?.id, matchId)
+          assert.strictEqual(activeMatches[0]?.paymentNumber, first.number)
+          assert.deepStrictEqual(
+            (yield* settlement.bankReconciliation({
+              ...scope,
+              legalEntityId,
+              bankAccountId: bank.id,
+              afterMatchId: matchId,
+            })).matches,
+            [],
+          )
+          assert.deepStrictEqual(
+            (yield* settlement.bankReconciliation({
+              ...scope,
+              legalEntityId,
+              bankAccountId: otherBank.id,
+            })).matches,
+            [],
+          )
 
           // A reversed match leaves the line and the cash unmatched again; reversing twice is safe.
           const reversed = yield* settlement.reverseBankMatch({ ...scope, matchId })
@@ -487,6 +530,7 @@ it.effect.skipIf(databaseUrl === undefined)(
           assert.strictEqual(reversed.reversed, true)
           assert.deepStrictEqual(reversedAgain, reversed)
           assert.strictEqual((yield* view()).lines.length, 3)
+          assert.deepStrictEqual((yield* view()).matches, [])
 
           const unknown = yield* Effect.flip(
             settlement.reverseBankMatch({ ...scope, matchId: uuidv7() }),

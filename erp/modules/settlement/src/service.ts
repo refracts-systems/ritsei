@@ -1,5 +1,5 @@
 import type { CapabilityType } from "../../../../framework/modules/authorization/mod.ts"
-import { and, asc, count, desc, eq, inArray, isNull, lte, sql } from "drizzle-orm"
+import { and, asc, count, desc, eq, gt, inArray, isNull, lte, sql } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
@@ -1157,6 +1157,7 @@ export const makeSettlementService = Effect.gen(function* () {
           .select({
             id: bankStatementLines.id,
             statementId: bankStatementLines.statementId,
+            sourceName: bankStatements.sourceName,
             lineNumber: bankStatementLines.lineNumber,
             bookingDate: bankStatementLines.bookingDate,
             description: bankStatementLines.description,
@@ -1185,7 +1186,8 @@ export const makeSettlementService = Effect.gen(function* () {
             asc(bankStatementLines.statementId),
             asc(bankStatementLines.lineNumber),
           )
-          .limit(limit),
+          .limit(limit)
+          .offset(decoded.lineOffset ?? 0),
       "settlement.bank_reconciliation.lines",
     )
 
@@ -1211,8 +1213,63 @@ export const makeSettlementService = Effect.gen(function* () {
             ),
           )
           .orderBy(asc(payments.paymentDate), asc(payments.number))
-          .limit(limit),
+          .limit(limit)
+          .offset(decoded.paymentOffset ?? 0),
       "settlement.bank_reconciliation.payments",
+    )
+
+    const matches = yield* database.query(
+      (db) =>
+        db
+          .select({
+            id: bankLineMatches.id,
+            lineId: bankLineMatches.lineId,
+            statementId: bankStatementLines.statementId,
+            paymentId: bankLineMatches.paymentId,
+            paymentNumber: payments.number,
+            bookingDate: bankStatementLines.bookingDate,
+            description: bankStatementLines.description,
+            sourceName: bankStatements.sourceName,
+            lineNumber: bankStatementLines.lineNumber,
+            reference: bankStatementLines.reference,
+            amount: bankLineMatches.amount,
+          })
+          .from(bankLineMatches)
+          .innerJoin(
+            bankStatementLines,
+            and(
+              eq(bankStatementLines.tenantId, bankLineMatches.tenantId),
+              eq(bankStatementLines.id, bankLineMatches.lineId),
+            ),
+          )
+          .innerJoin(
+            bankStatements,
+            and(
+              eq(bankStatements.tenantId, bankStatementLines.tenantId),
+              eq(bankStatements.id, bankStatementLines.statementId),
+            ),
+          )
+          .innerJoin(
+            payments,
+            and(
+              eq(payments.tenantId, bankLineMatches.tenantId),
+              eq(payments.id, bankLineMatches.paymentId),
+            ),
+          )
+          .where(
+            and(
+              eq(bankStatements.tenantId, tenantId),
+              eq(bankStatements.legalEntityId, legalEntityId),
+              eq(bankStatements.bankAccountId, bankAccountId),
+              isNull(bankLineMatches.reversedAt),
+              decoded.afterMatchId === undefined
+                ? undefined
+                : gt(bankLineMatches.id, decoded.afterMatchId),
+            ),
+          )
+          .orderBy(asc(bankLineMatches.id))
+          .limit(limit),
+      "settlement.bank_reconciliation.matches",
     )
 
     return {
@@ -1221,6 +1278,7 @@ export const makeSettlementService = Effect.gen(function* () {
       lines: lines.map((line) => ({
         id: line.id,
         statementId: line.statementId,
+        sourceName: line.sourceName,
         lineNumber: line.lineNumber,
         bookingDate: line.bookingDate,
         description: line.description,
@@ -1237,6 +1295,7 @@ export const makeSettlementService = Effect.gen(function* () {
         unmatchedCash: normalize(payment.unmatched),
         unallocatedAmount: normalize(payment.unallocatedAmount),
       })),
+      matches: matches.map((match) => ({ ...match, amount: normalize(match.amount) })),
     }
   })
 

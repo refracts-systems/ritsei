@@ -26,6 +26,7 @@ import {
   createStatementQuery,
 } from "./queries.ts"
 import type { PaymentDirection, Payment, SettlementSide } from "./service.ts"
+import { BankReconciliationSection } from "./bank-reconciliation.tsx"
 
 const directionOptions = [
   { value: "incoming", label: "Received from customers" },
@@ -620,6 +621,9 @@ function PaymentsWorkspace(props: {
       }
     >
       <PaymentRegister names={props.names} route={props.route} />
+      <Show when={props.route.legalEntityId} keyed>
+        {(legalEntityId) => <BankReconciliationSection legalEntityId={legalEntityId} />}
+      </Show>
       <AgingSection
         names={props.names}
         legalEntityId={props.route.legalEntityId}

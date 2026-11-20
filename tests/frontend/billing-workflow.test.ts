@@ -308,6 +308,8 @@ it.effect(
       const { page, url, errors } = yield* builtApp
       let document = invoice
       let paymentBody: unknown
+      const bankId = "01900000-0000-7000-8000-000000000060"
+      let attempts = 0
 
       yield* Effect.promise(async () => {
         await page.route("**/api/**", (route) => {
@@ -322,23 +324,34 @@ it.effect(
             return fulfillJson(route, 200, [configuration])
           }
 
+          if (path === "/accounting/accounts") {
+            return fulfillJson(route, 200, [
+              { id: bankId, tenantId, code: "1101", name: "Bank", type: "asset" },
+            ])
+          }
+
           if (path === "/billing/documents") return fulfillJson(route, 200, [document])
 
           if (path === `/billing/documents/${invoiceId}`) return fulfillJson(route, 200, document)
 
-          if (path === "/settlement/receipts" && route.request().method() === "POST") {
-            paymentBody = route.request().postDataJSON()
-            document = { ...document, openAmount: "0.00" }
-
-            return fulfillJson(route, 201, {
-              id: "01900000-0000-7000-8000-000000000050",
-              number: "RCV/2026/00001",
-              amount: "111.00",
-              unallocatedAmount: "0.00",
-            })
-          }
-
           return fulfillJson(route, 404, { code: "unexpected_test_request" })
+        })
+
+        await page.route("**/api/settlement/receipts", (route) => {
+          paymentBody = route.request().postDataJSON()
+          attempts += 1
+
+          if (attempts === 1)
+            return fulfillJson(route, 409, conflictBody("SettlementExceedsOpenAmount"))
+
+          document = { ...document, openAmount: "0.00" }
+
+          return fulfillJson(route, 201, {
+            id: "01900000-0000-7000-8000-000000000050",
+            number: "RCV/2026/00001",
+            amount: "111.00",
+            unallocatedAmount: "0.00",
+          })
         })
 
         await openBilling(page, url)
@@ -348,6 +361,7 @@ it.effect(
         await page.getByRole("button", { name: "Receive payment", exact: true }).click()
         const dialog = await openedDialog(page, "Receive payment")
         await dialog.waitFor()
+        await dialog.getByRole("combobox", { name: "Cash or bank account" }).selectOption(bankId)
         assert.equal(await dialog.getByRole("textbox", { name: "Amount" }).inputValue(), "111.00")
         assert.deepEqual(
           (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()).violations,
@@ -366,6 +380,10 @@ it.effect(
 
         await amount.fill("111.00")
         await dialog.getByRole("button", { name: "Receive payment", exact: true }).click()
+        await dialog
+          .getByText("The amount is more than what is still open on this document.")
+          .waitFor()
+        await dialog.getByRole("button", { name: "Receive payment", exact: true }).click()
         await dialog.waitFor({ state: "hidden" })
 
         assert.deepEqual(paymentBody, {
@@ -373,6 +391,7 @@ it.effect(
           partyId,
           paymentDate: new Date().toISOString().slice(0, 10),
           amount: "111.00",
+          cashAccountId: bankId,
           allocations: [{ invoiceId, amount: "111.00" }],
         })
         await page.getByText("Settled", { exact: true }).first().waitFor()

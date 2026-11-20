@@ -232,6 +232,7 @@ export const BankReconciliation = Schema.Struct({
     Schema.Struct({
       id: Uuid,
       statementId: Uuid,
+      sourceName: Schema.String,
       lineNumber: Schema.Int,
       bookingDate: CalendarDate,
       description: Schema.String,
@@ -252,6 +253,22 @@ export const BankReconciliation = Schema.Struct({
       unmatchedCash: FinancialMajorAmount,
       /** Cash on account: the part of the payment not allocated to documents. */
       unallocatedAmount: FinancialMajorAmount,
+    }),
+  ),
+  /** Active matches ordered by id; use the last id to retrieve the next page. */
+  matches: Schema.Array(
+    Schema.Struct({
+      id: Uuid,
+      lineId: Uuid,
+      statementId: Uuid,
+      paymentId: Uuid,
+      paymentNumber: Schema.String,
+      bookingDate: CalendarDate,
+      description: Schema.String,
+      sourceName: Schema.String,
+      lineNumber: Schema.Int,
+      reference: Schema.NullOr(Schema.String),
+      amount: FinancialMajorAmount,
     }),
   ),
 })
@@ -283,6 +300,13 @@ export const BankReconciliationInput = Schema.Struct({
   ...ScopedInput,
   legalEntityId: Uuid,
   bankAccountId: Uuid,
+  afterMatchId: Schema.optionalKey(Uuid),
+  lineOffset: Schema.optionalKey(
+    Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: 1_000_000 })),
+  ),
+  paymentOffset: Schema.optionalKey(
+    Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: 1_000_000 })),
+  ),
   limit: Schema.optionalKey(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 200 }))),
 })
 

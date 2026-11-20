@@ -254,7 +254,7 @@ it.layer(TestHttpServices)("billing and settlement API contracts", (it) => {
             ? Effect.succeed({ ...match, reversed: true })
             : Effect.fail(new BankMatchNotFound({ tenantId, matchId: input.matchId })),
         bankReconciliation: () =>
-          Effect.succeed({ legalEntityId, bankAccountId, lines: [], payments: [] }),
+          Effect.succeed({ legalEntityId, bankAccountId, lines: [], payments: [], matches: [] }),
       })
 
       const handlers = SettlementHttpHandlers.pipe(
@@ -334,9 +334,9 @@ it.layer(TestHttpServices)("billing and settlement API contracts", (it) => {
       assert.deepStrictEqual(
         yield* client.Settlement.bankReconciliation({
           headers,
-          query: { legalEntityId, bankAccountId },
+          query: { legalEntityId, bankAccountId, lineOffset: 1, paymentOffset: 1 },
         }),
-        { legalEntityId, bankAccountId, lines: [], payments: [] },
+        { legalEntityId, bankAccountId, lines: [], payments: [], matches: [] },
       )
     }),
   )
