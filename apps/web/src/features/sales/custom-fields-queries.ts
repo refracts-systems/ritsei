@@ -1,10 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/solid-query"
 import type { RequestFailure } from "../../shared/api.ts"
+import type { CustomFieldDefinition, CustomFieldValues } from "../../shared/custom-field-values.ts"
 import { type ApiScope, runRequest } from "../../shared/runtime.ts"
 import { createServerQuery, serverQueryKey } from "../../shared/server-query.ts"
 import {
-  type CustomFieldDefinition,
-  type CustomFieldValues,
   defineCustomerField,
   getCustomerFieldValues,
   listCustomerFields,

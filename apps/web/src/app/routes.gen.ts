@@ -43,6 +43,7 @@ export const moduleRoutes = [
   { path: "/procurement", component: ProcurementPage },
   { path: "/procurement/:id", component: ProcurementPage },
   { path: "/product", component: ProductPage },
+  { path: "/product/:id", component: ProductPage },
   { path: "/sales", component: SalesPage },
   { path: "/sales/customers/:id", component: SalesPage },
   { path: "/sales/quotations/:id", component: SalesPage },

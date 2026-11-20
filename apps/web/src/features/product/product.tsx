@@ -12,15 +12,9 @@ import { Form, type FormValue } from "../../ui/primitives/form.tsx"
 import { Input } from "../../ui/primitives/input.tsx"
 import { Select } from "../../ui/primitives/select.tsx"
 import { createProductMutation, createProductsQuery } from "./queries.ts"
-import type { Product } from "./service.ts"
+import { type Product, productTypeLabels } from "./service.ts"
 
-const typeLabels = {
-  stockable: "Stockable",
-  consumable: "Consumable",
-  service: "Service",
-} as const
-
-const typeOptions = Object.entries(typeLabels).map(([value, label]) => ({ value, label }))
+const typeOptions = Object.entries(productTypeLabels).map(([value, label]) => ({ value, label }))
 
 const text = (value: FormValue[string] | undefined) =>
   Predicate.isString(value) ? value.trim() : ""
@@ -56,10 +50,14 @@ function ProductTable(props: { records: readonly Product[] }) {
           id: "code",
           header: "Code",
           rowHeader: true,
-          cell: (record) => <span class={layout.rowReference}>{record.code}</span>,
+          cell: (record) => (
+            <a class={layout.rowReference} href={`/product/${encodeURIComponent(record.id)}`}>
+              {record.code}
+            </a>
+          ),
         },
         { id: "name", header: "Name", cell: (record) => record.name },
-        { id: "type", header: "Type", cell: (record) => typeLabels[record.type] },
+        { id: "type", header: "Type", cell: (record) => productTypeLabels[record.type] },
         { id: "unit", header: "Unit", cell: (record) => record.unitOfMeasure },
       ]}
     />
