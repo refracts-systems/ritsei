@@ -38,8 +38,11 @@ PostgreSQL rejects orphaned confirmation metadata and changes to confirmed snaps
 
 Confirming with the same idempotency key returns the recorded result and one
 `SalesOrderConfirmedEvent`; a different key after confirmation fails with
-`SalesOrderConfirmationIdempotencyConflict`. The event is appended in the confirmation transaction,
-so a failed append rolls the confirmation back.
+`SalesOrderConfirmationIdempotencyConflict`, and so does a key another order in the tenant already
+used. The event is appended in the confirmation transaction, so a failed append rolls the
+confirmation back. The key returns the recorded result only while the order is still confirmed: a
+retry after cancellation fails with `SalesOrderInvalidState` (`cancelled`), and a client that lost
+the first response reads the order to learn it was confirmed and then cancelled.
 
 ### `SAL-ORDER-3` Order references stay within one tenant and one customer
 

@@ -32,6 +32,12 @@ import {
   QuotationNotFound,
   SalesOrderConfirmationIdempotencyConflict,
 } from "./errors.ts"
+import {
+  CancellationDecision,
+  ConfirmationDecision,
+  decideCancellation,
+  decideConfirmation,
+} from "./order-lifecycle.ts"
 import type { CreditCheck, CreditContext, SalesStore } from "./store.ts"
 import {
   CancellationMutation,
@@ -472,15 +478,16 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
 
             const current = toSalesOrder(row, lines)
 
-            if (row.status === "confirmed") {
-              return row.confirmationIdempotencyKey === decoded.idempotencyKey
-                ? ConfirmationMutation.Existing({ order: current })
-                : ConfirmationMutation.IdempotencyConflict()
-            }
+            const decision = decideConfirmation(row, decoded.idempotencyKey)
 
-            if (row.status !== "draft") {
-              return ConfirmationMutation.InvalidState({ status: row.status })
-            }
+            const settled = ConfirmationDecision.$match(decision, {
+              Confirm: () => undefined,
+              Existing: () => ConfirmationMutation.Existing({ order: current }),
+              IdempotencyConflict: () => ConfirmationMutation.IdempotencyConflict(),
+              InvalidState: ({ status }) => ConfirmationMutation.InvalidState({ status }),
+            })
+
+            if (settled !== undefined) return settled
 
             const confirmedAt = now()
 
@@ -540,13 +547,15 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
         .from(orderLines)
         .where(and(eq(orderLines.tenantId, decoded.tenantId), eq(orderLines.orderId, row.id)))
 
-      if (row.status === "cancelled") {
-        return CancellationMutation.Cancelled({ order: toSalesOrder(row, lines) })
-      }
+      const decision = decideCancellation(row.status)
 
-      if (row.status !== "confirmed") {
-        return CancellationMutation.InvalidState({ status: row.status })
-      }
+      const settled = CancellationDecision.$match(decision, {
+        Cancel: () => undefined,
+        AlreadyCancelled: () => CancellationMutation.Cancelled({ order: toSalesOrder(row, lines) }),
+        InvalidState: ({ status }) => CancellationMutation.InvalidState({ status }),
+      })
+
+      if (settled !== undefined) return settled
 
       const [cancelled] = await tx
         .update(orders)
