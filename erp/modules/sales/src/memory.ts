@@ -24,8 +24,13 @@ import {
   CustomerNotFound,
   QuotationCustomerMismatch,
   QuotationNotFound,
-  SalesOrderConfirmationIdempotencyConflict,
 } from "./errors.ts"
+import {
+  CancellationDecision,
+  ConfirmationDecision,
+  decideCancellation,
+  decideConfirmation,
+} from "./order-lifecycle.ts"
 import type { SalesStore } from "./store.ts"
 import {
   CancellationMutation,
@@ -209,19 +214,29 @@ export const makeSalesMemoryStore = (): SalesStore => {
 
     if (order?.tenantId !== input.tenantId) return ConfirmationMutation.NotFound()
 
-    if (order.status === "confirmed") {
-      return keys.get(order.id) === input.idempotencyKey
-        ? ConfirmationMutation.Existing({ order })
-        : yield* Effect.fail(
-            new SalesOrderConfirmationIdempotencyConflict({
-              tenantId: input.tenantId,
-              orderId: input.orderId,
-              idempotencyKey: input.idempotencyKey,
-            }),
-          )
-    }
+    const decision = decideConfirmation(
+      { status: order.status, confirmationIdempotencyKey: keys.get(order.id) ?? null },
+      input.idempotencyKey,
+    )
 
-    if (order.status !== "draft") return ConfirmationMutation.InvalidState({ status: order.status })
+    // PostgreSQL holds a confirmation key unique per tenant
+    // (`orders_tenant_confirmation_idempotency_key`); reusing it for another order conflicts.
+    const keyHeldByAnotherOrder = [...keys].some(
+      ([orderId, key]) =>
+        key === input.idempotencyKey &&
+        orderId !== order.id &&
+        orders.get(orderId)?.tenantId === input.tenantId,
+    )
+
+    const settled = ConfirmationDecision.$match(decision, {
+      Confirm: () =>
+        keyHeldByAnotherOrder ? ConfirmationMutation.IdempotencyConflict() : undefined,
+      Existing: () => ConfirmationMutation.Existing({ order }),
+      IdempotencyConflict: () => ConfirmationMutation.IdempotencyConflict(),
+      InvalidState: ({ status }) => ConfirmationMutation.InvalidState({ status }),
+    })
+
+    if (settled !== undefined) return settled
 
     const confirmed = {
       ...order,
@@ -243,11 +258,15 @@ export const makeSalesMemoryStore = (): SalesStore => {
 
         if (order?.tenantId !== input.tenantId) return CancellationMutation.NotFound()
 
-        if (order.status === "cancelled") return CancellationMutation.Cancelled({ order })
+        const decision = decideCancellation(order.status)
 
-        if (order.status !== "confirmed") {
-          return CancellationMutation.InvalidState({ status: order.status })
-        }
+        const settled = CancellationDecision.$match(decision, {
+          Cancel: () => undefined,
+          AlreadyCancelled: () => CancellationMutation.Cancelled({ order }),
+          InvalidState: ({ status }) => CancellationMutation.InvalidState({ status }),
+        })
+
+        if (settled !== undefined) return settled
 
         const cancelled = { ...order, status: "cancelled" as const }
         orders.set(order.id, cancelled)

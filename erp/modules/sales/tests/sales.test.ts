@@ -578,6 +578,101 @@ describe("sales contract", () => {
     ),
   )
 
+  // [SAL-ORDER-2]
+  it.effect("rejects a confirmation key already used by another order in the tenant", () =>
+    withSales(
+      Effect.gen(function* () {
+        const sales = yield* SalesService
+
+        const customer = yield* sales.createCustomer({
+          principal,
+          tenantId,
+          name: "ACME",
+          email: "shared-key@acme.test",
+        })
+
+        const createOrder = () =>
+          sales.createOrder({
+            principal,
+            tenantId,
+            customerId: customer.id,
+            lines: [
+              {
+                itemId: "00000000-0000-4000-8000-000000000041",
+                quantity: "1",
+                unitPrice: "10.00",
+              },
+            ],
+          })
+
+        const first = yield* createOrder()
+        const second = yield* createOrder()
+
+        const confirm = (orderId: string) =>
+          sales.confirmOrder({
+            principal,
+            tenantId,
+            orderId,
+            ...confirmationMetadata,
+            idempotencyKey: "shared-key",
+          })
+
+        yield* confirm(first.id)
+        const conflict = yield* Effect.flip(confirm(second.id))
+
+        assert.instanceOf(conflict, SalesOrderConfirmationIdempotencyConflict)
+
+        const untouched = yield* sales.getOrder({ principal, tenantId, orderId: second.id })
+
+        assert.strictEqual(untouched.status, "draft")
+      }),
+    ),
+  )
+
+  // [SAL-ORDER-2]
+  it.effect("fails a retried confirmation after the order was cancelled", () =>
+    withSales(
+      Effect.gen(function* () {
+        const sales = yield* SalesService
+
+        const customer = yield* sales.createCustomer({
+          principal,
+          tenantId,
+          name: "ACME",
+          email: "confirm-after-cancel@acme.test",
+        })
+
+        const order = yield* sales.createOrder({
+          principal,
+          tenantId,
+          customerId: customer.id,
+          lines: [
+            {
+              itemId: "00000000-0000-4000-8000-000000000041",
+              quantity: "1",
+              unitPrice: "10.00",
+            },
+          ],
+        })
+
+        const confirm = sales.confirmOrder({
+          principal,
+          tenantId,
+          orderId: order.id,
+          ...confirmationMetadata,
+          idempotencyKey: "confirm-then-cancel",
+        })
+
+        yield* confirm
+        yield* sales.cancelConfirmedOrder({ principal, tenantId, orderId: order.id })
+        const retried = yield* Effect.flip(confirm)
+
+        assert.instanceOf(retried, SalesOrderInvalidState)
+        assert.strictEqual(retried.status, "cancelled")
+      }),
+    ),
+  )
+
   // [SAL-AUTH-1]
   it.effect("denies sales capability in an ungranted tenant", () =>
     withSales(

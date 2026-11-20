@@ -133,6 +133,11 @@ third-party module ([ADR-0091](./docs/decisions/0091-adopt-framework-and-flagshi
   not read them as current rules or implement them, and no production path may depend on them until
   an activation ADR. The process engine is deferred until Order-to-Cash and Procure-to-Pay run end
   to end.
+- [ADR-0124](./docs/decisions/0124-adopt-alchemy-domain-in-phases.md) adopts Alchemy Domain on
+  Effect Cluster over PostgreSQL in phases (`docs/roadmap/alchemy-domain.md`). Work on a phase only
+  after the owner accepts its review document in `docs/proposals/alchemy-domain/`. Until an
+  aggregate's cutover, its tables and current rules stay authoritative; never make one fact
+  authoritative in both a table and a stream.
 
 ## Subsystem Rules
 

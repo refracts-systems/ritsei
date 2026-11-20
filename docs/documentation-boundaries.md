@@ -34,6 +34,7 @@ create a second independent definition.
 | Development workflow | How documentation and implementation are maintained | Domain architecture |
 | Roadmap index and subroadmaps | Sequencing, dependencies, readiness, and exit gates | Detailed architecture rules or historical rationale |
 | Target design (`architecture/target/`) | An inactive design retained for a later activation ADR | Current behavior or rules |
+| Adoption phase review (`proposals/alchemy-domain/`) | One adoption phase's scope, the aggregates it may move, open questions, and the five-view review the owner accepts before the phase starts | Sequencing and gates, or current rules |
 
 ## Canonical Topic Owners
 
@@ -66,6 +67,7 @@ create a second independent definition.
 | Testing strategy | [`./development/testing.md`](./development/testing.md) |
 | Database roles and privileges | [`./operations/database-roles.md`](./operations/database-roles.md) |
 | Roadmap sequencing and release gates | [`./roadmap/README.md`](./roadmap/README.md) |
+| Alchemy Domain adoption sequencing, gates, and aggregate authority | [`./roadmap/alchemy-domain.md`](./roadmap/alchemy-domain.md) (ADR-0124) |
 
 ## Duplication Rules
 

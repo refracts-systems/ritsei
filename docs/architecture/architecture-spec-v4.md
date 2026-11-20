@@ -476,7 +476,9 @@ measured evidence.
 **Current (ADR-0091):** plain PostgreSQL transactions with row locks, and the job table for leased
 work. **Target (ADR-0093):** an optional vendor-neutral Stateful Entity Runtime for approved hot
 aggregates, owned by [`runtime-architecture.md`](./target/runtime-architecture.md) and inactive until an
-activation ADR.
+activation ADR. **Planned (ADR-0124):** Alchemy Domain on Effect Cluster over PostgreSQL, adopted
+in phases under the [`alchemy` roadmap track](../roadmap/alchemy-domain.md); no aggregate has moved,
+so the current contract above still holds.
 
 ## Composite Process Contract
 
