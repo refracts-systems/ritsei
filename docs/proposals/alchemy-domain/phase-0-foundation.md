@@ -93,12 +93,127 @@ below name the rules whose protection depends on PostgreSQL today.
 
 ## Open questions
 
+Answers marked "decided in phase 0" are pending owner confirmation.
+
 - Does the port expose Alchemy's model classes directly, or a RITSEI wrapper?
+
+  **Decided in phase 0:** neither a wrapper nor the package. A module imports
+  `framework/foundation/domain-model/mod.ts`, which re-exports exactly the declaration factories the
+  pilot uses (`Aggregate`, `Command`, `Event`, `Model`, `Policy`, `Projection`, `Query`, `Rejection`,
+  `Saga`, `verify`) and `Story`, the in-memory host. They are generic class factories whose types are
+  the model shape, so a wrapper would repeat them without hiding anything. What the port hides is the
+  host: the Effect Cluster host is `framework/platform/domain-model/mod.ts`, and a module never
+  imports `@alchemy.run/domain`. The cluster adapter takes the runner pool as a parameter, so no
+  deployment package is imported. The event schema policy is in the port's module docs: a change adds
+  optional fields only; a change of meaning is a new event.
+
 - Where do tenant scope and authorization run: Alchemy middleware, `decide`, or the port?
+
+  **Decided in phase 0:** in the RITSEI service, before it sends a command, as the services do today,
+  so the deny-by-default capability checks keep their tests and their audit. The service builds the
+  aggregate instance id from the caller's tenant, so a foreign tenant's instance is not addressable
+  and reads as not found (`PRC-PO-4`). `decide` sees only data in the command and the aggregate's own
+  state. Open for phase 1: a saga or policy acts without a caller, so the authorized command's tenant
+  and principal must travel in the saga input, and every saga step needs a story that a foreign
+  tenant's command is refused.
+
 - Which database role owns the host's table, and which roles may read it?
+
+  **Decided in phase 0:** a reviewed migration creates `domain_model.alchemy_domain_objects`; the
+  migrator owns it, and the schema is registered in `db/ownership.toml` against the port. A login
+  `ritsei_domain_host` (`CLUSTER_DATABASE_URL`) has `USAGE` and `CREATE` on the schema, DML on the
+  table, and `search_path = domain_model`; no other role reads it. The host's table creation was
+  tested on PostgreSQL 19: `CREATE TABLE IF NOT EXISTS` is refused for a role without `CREATE` on the
+  schema even when the table exists, so deliverable 4's "the runtime role cannot create tables" cannot
+  hold with the host as shipped. The schema holds host tables only, so the grant reaches nothing
+  else. Effect Cluster's own SQL storage (message, reply, and runner tables, created at runtime by the
+  runner pool and gateway) is a second set of runtime-created tables that this phase has not put under
+  migration. A trigger refuses `UPDATE`, `DELETE`, and `TRUNCATE` of `event:` keys only: the host
+  writes those once and rewrites other keys (state, receipts, outbox, backfill) all the time. Receipt
+  rows carry a copy of their events and are not protected.
 
 ## Review record
 
 | Date | Reviewer | Outcome | Notes |
 | --- | --- | --- | --- |
 | | | | |
+
+## Appendix: Database-enforced rules inventory
+
+Every rule of the seven `erp/modules/*/RULES.md` files that PostgreSQL enforces today with a
+constraint, trigger, unique index, or privilege, found by reading the rule text against
+`db/schema` and `db/migrations`. Each row names the objects, so a rule that loses its check can be
+found by searching for them. 41 of the 66 rules appear; the other 25 are enforced in application
+code, by a test, or by review.
+
+"Class" is the class in [ADR-0124](../../decisions/0124-adopt-alchemy-domain-in-phases.md#what-adoption-changes).
+"Moves to" is where the check goes when the rule's aggregate leaves the tables, decided in phase 0
+and pending owner confirmation:
+
+- **decide**: checked inside the aggregate's `decide`, from its own state or from a stable read at
+  command time. A foreign key that crossed aggregates becomes that command-time read.
+- **claim**: a claim aggregate keyed by the unique value; the command reserves the key and a
+  compensation releases it.
+- **derived id**: the aggregate id is derived from the unique value, so uniqueness holds by
+  construction.
+- **event log**: the recorded events replace an append-only table, protected by the domain object
+  store trigger (deliverable 5).
+- **projection**: a derived total is kept by a projection and a reconciliation story, with a lag.
+- **table**: the check stays on its table, because the aggregate stays table-backed in this track.
+
+| Rule | Class | PostgreSQL enforces with | Moves to |
+| --- | --- | --- | --- |
+| `ACC-OPEN-1` | C | partial unique index `journal_entries_opening_balance_key`; unique `journal_entries_reference_key` | table: the journal belongs to the ledger, which is not in this track |
+| `ACC-OPEN-4` | A | triggers `journal_entries_immutable_trigger`, `journal_lines_immutable_trigger` | table: ledger authority has its own ADR |
+| `BIL-RENDER-2` | A | triggers `invoice_render_inputs_immutable_trigger`, `invoice_artifacts_immutable_trigger`, `invoice_render_inputs_no_truncate_trigger`, `invoice_artifacts_no_truncate_trigger`; unique `invoice_render_inputs_invoice_key`, `invoice_artifacts_invoice_key`; foreign key `invoice_artifacts_render_input_fkey`; checks `invoice_artifacts_pages_check`, `invoice_artifacts_fence_scope_check`, `invoice_artifacts_lease_generation_check` | table while rendering is staged (`BIL-RENDER-1`); with the invoice aggregate, a write-once artifact event checked in `decide` (event log) |
+| `BIL-DOC-1` | E | unique `invoices_legal_entity_kind_number_key`, `invoices_tenant_id_number_kind_key`, `issued_numbers_series_value_key`, `issued_numbers_series_document_key`, `issued_numbers_tenant_series_number_key`; check `invoices_amounts_check` | table: numbering and the posting stay in one PostgreSQL transaction unless the accounting owner accepts a saga |
+| `BIL-SET-1` | A | check `invoices_amounts_check` (open amount between zero and total), `invoice_settlements_amount_check`; deferred triggers `billing_invoice_open_amount_trigger`, `billing_settlement_open_amount_trigger`; trigger `billing_invoice_settlements_immutable_trigger` | decide: the invoice holds its open amount and refuses a settlement above it |
+| `BIL-BILL-2` | A | checks `approval_requests_separation_of_duties_check`, `approval_requests_decision_check` (the approver is not the requester; the covering amount is application code) | table: Approvals stays table-backed, as for `PRC-REL-1` |
+| `BIL-CREDIT-1` | D | check `invoices_credit_reference_check`; foreign key `invoices_credited_invoice_fkey` | decide for the credited quantity; the foreign key becomes a command-time read of the credited document |
+| `INV-STOCK-1` | A | checks `stock_balances_on_hand_check`, `reservations_quantity_check`; deferred triggers `inventory_reservation_balance_consistency_trigger`, `inventory_stock_balance_reservation_consistency_trigger`, `inventory_movement_on_hand_consistency_trigger`, `inventory_stock_balance_on_hand_consistency_trigger`; trigger `inventory_reservation_state_transition_trigger` | decide: on hand and reserved quantity live in one stock item instance |
+| `INV-STOCK-2` | A | triggers `inventory_movement_immutability_trigger`, `inventory_valuation_entries_immutable_trigger`; check `movements_quantity_check` | event log: the movements are the events |
+| `INV-STOCK-3` | B | unique `movements_tenant_idempotency_key`, `reservations_tenant_idempotency_key` | decide with the host's receipt per command id; a key reused against another stock item needs a claim |
+| `INV-STOCK-5` | A | foreign keys `warehouses_tenant_legal_entity_fkey`, `warehouses_tenant_legal_entity_branch_fkey`, `stock_transfers_source_warehouse_scope_fkey`, `stock_transfers_destination_warehouse_scope_fkey`; trigger `inventory_movement_reservation_reference_trigger` | decide, with the warehouse's legal entity and branch read at command time |
+| `INV-XFER-1` | E | triggers `inventory_stock_transfer_initial_state_trigger`, `inventory_stock_transfer_state_transition_trigger`, `inventory_stock_transfer_line_immutability_trigger`; deferred trigger `inventory_completed_transfer_receipts_trigger`; check `stock_transfer_lines_quantity_check` | table: all-or-nothing deduction across lines stays in one transaction |
+| `INV-VAL-1` | D | deferred triggers `inventory_valuation_entry_consistency_trigger`, `inventory_item_valuation_consistency_trigger`; trigger `inventory_valuation_entries_immutable_trigger` | decide: each event carries `onHandAfter` and `valueAfter`, as in the pilot; projection for the equality with the inventory account |
+| `INV-VAL-2` | D | unique `valuation_entries_movement_key`, `valuation_entries_source_item_key` | decide: the stock item's state records the source documents it has moved |
+| `INV-OPEN-3` | A | check `opening_stock_positions_approval_check` | decide |
+| `INV-OPEN-4` | C | unique `opening_stock_positions_warehouse_item_key`, `opening_stock_positions_movement_key` | claim keyed by warehouse and item |
+| `PRC-PO-1` | A | triggers `purchase_order_initial_state_trigger`, `purchase_order_mutation_trigger`, `purchase_order_line_mutation_trigger`; deferred triggers `purchase_order_total_trigger`, `purchase_order_line_total_trigger` | decide: a confirmed order refuses every command that changes it |
+| `PRC-PO-2` | A | deferred triggers `purchase_order_draft_total_trigger`, `purchase_order_line_draft_total_trigger`; checks `purchase_orders_total_check`, `purchase_order_lines_quantity_check`, `purchase_order_lines_unit_price_check` | decide: the total is derived in the event |
+| `PRC-PO-3` | B | unique `purchase_orders_tenant_confirmation_idempotency_key` | decide with the host's receipt per command id; a key reused on another order needs a claim |
+| `PRC-PO-4` | A | foreign keys `purchase_orders_tenant_id_fkey`, `purchase_orders_tenant_supplier_account_fkey`, `purchase_order_lines_tenant_order_fkey` | decide: the service builds the instance id from the caller's tenant; the Supplier Account is read at command time |
+| `PRC-SUP-1` | C | unique `supplier_accounts_tenant_supplier_relationship_key`; foreign key `supplier_accounts_tenant_supplier_relationship_fkey` | derived id from the supplier relationship; the relationship is read from Party at command time |
+| `PRC-PRICE-1` | A | primary key of `supplier_prices` (tenant, supplier account, product); check `supplier_prices_unit_price_check` | decide: the instance id is the supplier account and product |
+| `PRC-REL-1` | A | checks `approval_requests_separation_of_duties_check`, `approval_requests_decision_check` | table: Approvals is a framework module that stays table-backed; the order reads the decision through its contract |
+| `PRC-RCPT-1` | D | unique `purchase_receipts_tenant_idempotency_key`; deferred triggers `purchase_receipt_line_quantity_trigger`, `purchase_order_line_receipt_quantity_trigger`; triggers `purchase_receipt_immutability_trigger`, `purchase_receipt_line_immutability_trigger` | decide on the purchase order (received at most ordered per line); the receipt's idempotency by command id |
+| `PRC-VRCPT-1` | D | deferred trigger `purchase_receipt_line_quantity_trigger` (constraint `purchase_receipt_lines_ordered_quantity_check`); unique `purchase_receipts_tenant_idempotency_key` | decide on the purchase order |
+| `PRC-RET-1` | E | checks `purchase_return_lines_quantity_check`; unique `purchase_returns_tenant_order_id_key` (the "at most what was received" cap is a row lock, not a constraint) | table |
+| `SAL-ORDER-1` | A | triggers `sales_order_initial_state_trigger`, `sales_terminal_order_mutation_trigger`, `sales_terminal_order_line_mutation_trigger`; deferred triggers `sales_terminal_order_total_trigger`, `sales_terminal_order_line_total_trigger` | decide: the pilot's order state union and `order-lifecycle.ts` |
+| `SAL-ORDER-2` | B | unique `orders_tenant_confirmation_idempotency_key` | decide with the host's receipt per command id; a key another order used needs a claim |
+| `SAL-ORDER-3` | A | foreign keys `orders_tenant_customer_fkey`, `orders_tenant_quotation_fkey`, `orders_tenant_quotation_customer_fkey`, `order_lines_tenant_order_fkey`, `orders_legal_entity_fkey`; checks `order_lines_quantity_check`, `order_lines_unit_price_check` | decide: tenant from the instance id; the quotation's customer read at command time |
+| `SAL-CUST-1` | C | check `customers_email_normalization_check`; unique `customers_tenant_email_key` | claim keyed by tenant and canonical email; the canonical form is a Schema on the command |
+| `SAL-CUST-2` | A | unique `customers_tenant_party_relationship_key`; foreign keys `customers_party_relationship_fkey`, `customers_legal_entity_fkey` | derived id from the party relationship; Party and the legal entity read at command time |
+| `SAL-PRICE-1` | C | unique `price_lists_tenant_name_key`; checks `price_lists_currency_check`, `price_list_items_unit_price_check` | claim keyed by tenant and list name |
+| `SAL-QUOT-1` | A | checks `quotations_total_check`, `quotation_lines_quantity_check` | decide |
+| `SAL-DLV-1` | D | unique `delivery_lines_delivery_order_line_key`, `deliveries_legal_entity_number_key`; check `delivery_lines_quantity_check` (the cumulative cap is a row lock, not a constraint) | decide on the sales order: delivered at most ordered, as in the pilot |
+| `SAL-CREDIT-1` | E | check `customers_credit_limit_check` (a non-negative limit only; the exposure test is application code) | table |
+| `SET-BANK-1` | A | checks `bank_statement_lines_amount_check` (non-zero), `bank_statement_lines_number_check` | decide: the rest of the profile is parsed before the command |
+| `SET-BANK-2` | C | unique `bank_statements_checksum_key`; check `bank_statements_checksum_check`; triggers `settlement_bank_statements_immutable_trigger`, `settlement_bank_statement_lines_immutable_trigger`, `settlement_bank_line_matches_immutable_trigger` | claim keyed by tenant, legal entity, bank account, and checksum (or a statement id derived from them, so a repeat is the same instance); event log for immutability |
+| `SET-BANK-3` | E | deferred trigger `settlement_bank_line_matches_match_trigger` (same legal entity and bank account, direction, at most the line, at most the payment's cash); check `bank_line_matches_amount_check` | table |
+| `SET-WHT-1` | D | deferred triggers `settlement_payment_withholding_trigger`, `settlement_payment_unallocated_trigger`, `settlement_allocation_unallocated_trigger`; check `payment_allocations_amount_check` | table until the accounting owner accepts an unapplied-cash state |
+| `TAX-RATE-1` | A | primary key of `tax_code_rates` (tenant, tax code, effective from); check `tax_code_rates_rate_check` | decide: the periods are in the tax code's state |
+| `TAX-PROD-1` | A | foreign keys `product_tax_defaults_tax_code_fkey` (tenant, code, direction), `product_tax_defaults_product_fkey` | decide: Product reads the code through the Tax contract at command time; the open gate in the roadmap stands until then |
+
+**Enforced by row locks, not constraints** (these have no database check to move and each needs a
+story for the race it closes): `BIL-INV-1`, `BIL-BILL-1`, `SAL-CREDIT-2`, `SAL-QUOT-3`, and the
+cumulative caps of `SAL-DLV-1` and `PRC-RET-1`.
+
+**Database checks no rule names.** Journal balance (`journal_entries_balanced_trigger`), period and
+journal state machines, financial operation and cutover controls, the payment allocation and
+reservation state triggers, and job and workflow initial states are outside the 66 rules. Whoever
+moves an aggregate they guard inherits the same question.
+
+**Every rule the "Five views" section names is in the table:** `ACC-OPEN-4`, `INV-STOCK-2`,
+`SET-BANK-2`, `INV-VAL-1`, `SAL-ORDER-1`, `SAL-ORDER-3`, `SAL-CUST-1`, `PRC-PO-1`, `PRC-REL-1`,
+`TAX-PROD-1`, `BIL-RENDER-2`.
