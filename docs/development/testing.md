@@ -264,6 +264,27 @@ constant equals itself, that exercises a third-party package instead of the RITS
 it, or that compares against a baseline which is regenerated to pass
 ([ADR-0113](../decisions/0113-retire-frontend-compatibility-probes-and-visual-contract-test.md)).
 
+### Browser tests
+
+Browser tests in `tests/frontend/` mock the API, so they prove what the screen does with a response,
+never a business rule. A rule such as a credit limit, a three-way match, or a posting is proven by
+the module or chain test that names its ID in the module's `RULES.md`; a browser test shows only
+that the screen reports the outcome.
+
+Write one when the risk is in the browser: input lost while saving or after an error, an unknown
+outcome shown as success, a double submit, a late response overwriting a newer choice, focus and
+keyboard paths, and the axe scan. Add one for each UI defect that reached a user. Do not add one that
+only checks that an element or text renders, or that repeats a backend rule with mocked numbers.
+
+To keep them deterministic:
+
+- Sign in with `connectToTenant`, which waits for the home page before navigating.
+- Open every dialog with `openedDialog(page, name)`, which waits for its entrance before typing;
+  the `browser-opened-dialog` ast-grep rule rejects a dialog taken from `page.getByRole("dialog")`.
+- Wait for a visible result (a heading, a row, an alert), never for a fixed time.
+- Mock only routes the backend defines, with the response shape of its contract; remove a mock when
+  its route is removed.
+
 ## Test Layers
 
 Every Effect service should provide an explicit production layer and, where

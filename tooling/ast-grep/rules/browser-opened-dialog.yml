@@ -1,0 +1,12 @@
+id: browser-opened-dialog
+language: TypeScript
+severity: error
+message: >-
+  Open a dialog with `await openedDialog(page, name)` from tests/frontend/browser.ts. A dialog used
+  before its entrance finishes receives typing while its focus trap is still moving focus.
+files:
+  - tests/frontend/**/*.test.ts
+rule:
+  any:
+    - pattern: const $DIALOG = $PAGE.getByRole("dialog")
+    - pattern: const $DIALOG = $PAGE.getByRole("dialog", $$$ARGS)
