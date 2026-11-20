@@ -148,7 +148,7 @@ current system; ADRs preserve decision history.
 | [`0120`](./0120-retain-imported-documents-and-record-historical-dispatch-outcomes.md)                 | Retain Imported Documents and Record Historical Dispatch Outcomes                                | Proposed   |
 | [`0121`](./0121-post-opening-stock-against-migration-clearing-in-the-load.md)                         | Post Opening Stock Against Migration Clearing in the Load                                        | Accepted   |
 | [`0122`](./0122-stage-invoice-rendering-before-activation.md)                                         | Stage Invoice Rendering Before Activation                                                        | Accepted   |
-| [`0123`](./0123-separate-the-decision-log-from-current-rules.md)                                      | Separate the Decision Log from Current Rules                                                     | Proposed   |
+| [`0123`](./0123-separate-the-decision-log-from-current-rules.md)                                      | Separate the Decision Log from Current Rules                                                     | Accepted   |
 
 <!-- adr-index:end -->
 
