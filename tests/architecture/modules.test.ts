@@ -39,8 +39,22 @@ describe("module rules", () => {
     ])
 
     assert.deepStrictEqual(failures, [
-      "erp/modules/stock/tests/stock.test.ts names rule STK-9, which erp/modules/stock/RULES.md does not declare",
+      "erp/modules/stock/tests/stock.test.ts names rule STK-9, which no module RULES.md declares",
       "erp/modules/stock/RULES.md: no test names [STK-1]; add one or mark it unenforced",
+    ])
+  })
+
+  it("counts a cross-module test and rejects one rule declared by two modules", () => {
+    const failures = ruleFailures(
+      new Map([
+        ["stock", rules],
+        ["sales", [{ id: "STK-2", unenforced: true }]],
+      ]),
+      [test("tests/chains/order.postgres.test.ts", "// [STK-1]")],
+    )
+
+    assert.deepStrictEqual(failures, [
+      "rule STK-2 is declared by more than one module: stock, sales",
     ])
   })
 

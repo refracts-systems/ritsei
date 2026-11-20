@@ -1,6 +1,7 @@
-# Procurement Architecture
+# Procurement Rules
 
-> **Status:** Canonical
+> **Status:** Current rules owned by the Procurement module (ADR-0123), moved here from
+> `docs/architecture/procurement.md`. This file wins over ADR text for what the module does now.
 >
 > **Owns:** Procurement domain authority, Supplier Account identity, Purchase Order contracts and
 > lifecycle, owner-local correction semantics, transaction and idempotency rules, and the gates for
@@ -8,21 +9,79 @@
 >
 > **Related documents**
 >
-> - Canonical architecture: [`./architecture-spec-v4.md`](./architecture-spec-v4.md)
-> - State and consistency: [`./state-and-consistency.md`](./state-and-consistency.md)
-> - PostgreSQL architecture: [`./postgresql-19-architecture.md`](./postgresql-19-architecture.md)
-> - Authorization: [`./authorization.md`](./authorization.md)
-> - Integration architecture: [`./integration-architecture.md`](./integration-architecture.md)
-> - Process Studio: [`./process-studio.md`](./process-studio.md)
+> - Canonical architecture: [`docs/architecture/architecture-spec-v4.md`](../../../docs/architecture/architecture-spec-v4.md)
+> - State and consistency: [`docs/architecture/state-and-consistency.md`](../../../docs/architecture/state-and-consistency.md)
+> - PostgreSQL architecture: [`docs/architecture/postgresql-19-architecture.md`](../../../docs/architecture/postgresql-19-architecture.md)
+> - Authorization: [`docs/architecture/authorization.md`](../../../docs/architecture/authorization.md)
+> - Integration architecture: [`docs/architecture/integration-architecture.md`](../../../docs/architecture/integration-architecture.md)
+> - Process Studio: [`docs/architecture/process-studio.md`](../../../docs/architecture/process-studio.md)
 > - P2 document baseline:
->   [`../decisions/0036-define-p2-document-and-financial-baseline.md`](../decisions/0036-define-p2-document-and-financial-baseline.md)
+>   [`docs/decisions/0036-define-p2-document-and-financial-baseline.md`](../../../docs/decisions/0036-define-p2-document-and-financial-baseline.md)
 > - Initial Purchase Order decision:
->   [`../decisions/0044-define-procurement-purchase-order-baseline.md`](../decisions/0044-define-procurement-purchase-order-baseline.md)
+>   [`docs/decisions/0044-define-procurement-purchase-order-baseline.md`](../../../docs/decisions/0044-define-procurement-purchase-order-baseline.md)
 > - Confirmation decision:
->   [`../decisions/0045-define-procurement-purchase-order-confirmation.md`](../decisions/0045-define-procurement-purchase-order-confirmation.md)
+>   [`docs/decisions/0045-define-procurement-purchase-order-confirmation.md`](../../../docs/decisions/0045-define-procurement-purchase-order-confirmation.md)
 > - Goods Receipt decision:
->   [`../decisions/0047-define-procurement-goods-receipt-boundary.md`](../decisions/0047-define-procurement-goods-receipt-boundary.md)
-> - Domain maturity roadmap: [`../roadmap/domain-maturity.md`](../roadmap/domain-maturity.md)
+>   [`docs/decisions/0047-define-procurement-goods-receipt-boundary.md`](../../../docs/decisions/0047-define-procurement-goods-receipt-boundary.md)
+> - Domain maturity roadmap: [`../roadmap/domain-maturity.md`](../../../docs/roadmap/domain-maturity.md)
+
+## Identified rules
+
+Each rule has an identifier that the test enforcing it names as `[ID]`, in a comment above the test
+or in its title; `tests/architecture/modules.test.ts` fails when a rule has no such test or a test
+names an unknown rule. The sections after this one are the former Procurement architecture document;
+they are not yet split into identified rules.
+
+> **Known stale:** the Position, Authority Matrix, Invoice Matching and Payables Gate, and Maturity
+> sections below predate [ADR-0103](../../../docs/decisions/0103-adopt-threshold-approvals-with-separation-of-duties.md)
+> and [ADR-0104](../../../docs/decisions/0104-adopt-valued-procure-to-pay-documents.md): approvals
+> and valued procure-to-pay documents exist in the code. Until those sections are rewritten, the
+> code and those ADRs win on approvals, supplier invoices, and matching.
+
+### `PRC-PO-1` A confirmed purchase order is a frozen snapshot
+
+A draft has no confirmation key or time; a confirmed order has both; a cancelled order keeps them.
+After confirmation the order, its Supplier Account, confirmation identity, lines, total, and creation
+time cannot change, and cancellation (`confirmed -> cancelled`, idempotent) preserves them.
+PostgreSQL enforces these invariants.
+
+### `PRC-PO-2` The total is derived exactly from the lines
+
+Quantities are positive integers within `BIGINT`, prices use the exact major-amount boundary, and the
+total is `sum(quantity * unit price)` in integer minor units; callers never supply it.
+
+### `PRC-PO-3` Confirmation is idempotent and publishes one event
+
+The same confirmation key returns the recorded result and one event; a different key fails.
+
+### `PRC-PO-4` A purchase order outside the tenant is not found
+
+Reads and writes are tenant scoped, and a missing or foreign-tenant order is `PurchaseOrderNotFound`.
+
+### `PRC-SUP-1` A Supplier Account needs an active supplier relationship
+
+One Supplier Account is created per active Party supplier relationship; a missing or non-supplier
+relationship is rejected, and a missing Supplier Account is reported as such.
+
+### `PRC-AUTH-1` Procurement capabilities are denied by default
+
+Creation, reads, confirmation, and cancellation each need their capability; creating an order also
+needs Party relationship-read authority.
+
+### `PRC-READ-1` Replica reads wait and never fall back to the primary
+
+A read waits for the replica to reach the caller's position and fails closed when the wait fails
+([ADR-0039](../../../docs/decisions/0039-select-postgresql-wait-for-for-replica-read-your-writes.md)).
+
+### `PRC-RCPT-1` Receiving is atomic with Inventory and idempotent
+
+A confirmed order is received in one transaction with the Inventory movement; a retry returns the
+recorded receipt, and an over-receipt cancellation is blocked.
+
+### `PRC-DOC-1` Only a confirmed purchase order is rendered
+
+The document snapshot is owner-local, its checksum is stable across capture times, and an unconfirmed
+order is not rendered.
 
 ## Position
 
@@ -291,7 +350,7 @@ The selected contract is:
     and Process Studio publication remain separate gates.
 
 The implementation and rationale are defined by
-[`ADR-0047`](../decisions/0047-define-procurement-goods-receipt-boundary.md). An Effect fiber, request
+[`ADR-0047`](../../../docs/decisions/0047-define-procurement-goods-receipt-boundary.md). An Effect fiber, request
 lifetime, or eventual event is not the durability mechanism for the synchronous stock invariant.
 
 ## Invoice Matching and Payables Gate

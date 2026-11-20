@@ -208,6 +208,7 @@ describe("sales contract", () => {
     }),
   )
 
+  // [SAL-ORDER-3]
   it.effect("bounds order-line quantities to PostgreSQL bigint", () =>
     Effect.gen(function* () {
       const error = yield* Effect.flip(
@@ -222,6 +223,7 @@ describe("sales contract", () => {
     }),
   )
 
+  // [SAL-ORDER-2]
   it.effect("publishes one confirmation event across idempotent replay", () => {
     const published: EventEnvelopeContract[] = []
 
@@ -296,6 +298,7 @@ describe("sales contract", () => {
     ),
   )
 
+  // [SAL-ORDER-3]
   it.effect("rejects a quotation belonging to another customer", () =>
     withSales(
       Effect.gen(function* () {
@@ -525,6 +528,7 @@ describe("sales contract", () => {
     ),
   )
 
+  // [SAL-ORDER-2]
   it.effect("rejects a different confirmation key after confirmation", () =>
     withSales(
       Effect.gen(function* () {
@@ -574,6 +578,7 @@ describe("sales contract", () => {
     ),
   )
 
+  // [SAL-AUTH-1]
   it.effect("denies sales capability in an ungranted tenant", () =>
     withSales(
       Effect.gen(function* () {
@@ -593,6 +598,7 @@ describe("sales contract", () => {
     ),
   )
 
+  // [SAL-AUTH-1]
   it.effect("denies sales cancellation in an ungranted tenant", () =>
     withSales(
       Effect.gen(function* () {
@@ -611,6 +617,7 @@ describe("sales contract", () => {
     ),
   )
 
+  // [SAL-AUTH-1]
   it.effect("denies sales confirmation in an ungranted tenant", () =>
     withSales(
       Effect.gen(function* () {
@@ -631,6 +638,7 @@ describe("sales contract", () => {
     ),
   )
 
+  // [SAL-AUTH-1]
   it.effect("denies confirmed-order total reads without capability", () =>
     withSales(
       Effect.gen(function* () {
@@ -649,6 +657,7 @@ describe("sales contract", () => {
     ),
   )
 
+  // [SAL-CUST-1]
   it.effect("enforces tenant email uniqueness", () =>
     withSales(
       Effect.gen(function* () {

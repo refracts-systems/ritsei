@@ -67,6 +67,7 @@ const capabilities = [
   InventoryCapabilities.stockReceive,
 ] as const
 
+// [PRC-PO-1]
 it.effect.skipIf(databaseUrl === undefined)(
   "enforces Procurement supplier and purchase order invariants in PostgreSQL",
   () =>
@@ -873,6 +874,7 @@ it.effect.skipIf(databaseUrl === undefined)(
     ),
 )
 
+// [PRC-RCPT-1]
 it.effect.skipIf(databaseUrl === undefined)(
   "receives a confirmed purchase order atomically with Inventory",
   () =>

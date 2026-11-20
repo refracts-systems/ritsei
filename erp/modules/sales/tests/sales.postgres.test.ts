@@ -43,6 +43,7 @@ const capabilities = [
   SalesCapabilities.orderCancel,
 ] as const
 
+// [SAL-ORDER-2]
 it.effect.skipIf(databaseUrl === undefined)(
   "order confirmation atomic publication preserves replay and rollback",
   () =>
@@ -431,6 +432,7 @@ it.effect.skipIf(databaseUrl === undefined)(
     ),
 )
 
+// [SAL-ORDER-1]
 it.effect.skipIf(databaseUrl === undefined)(
   "rejects orphaned order confirmation metadata in PostgreSQL",
   () =>
@@ -480,6 +482,7 @@ it.effect.skipIf(databaseUrl === undefined)(
     ),
 )
 
+// [SAL-CUST-1]
 it.effect.skipIf(databaseUrl === undefined)(
   "rejects noncanonical customer email values in PostgreSQL",
   () =>
@@ -510,6 +513,7 @@ it.effect.skipIf(databaseUrl === undefined)(
     ),
 )
 
+// [SAL-ORDER-3]
 it.effect.skipIf(databaseUrl === undefined)(
   "rejects a cross-tenant customer reference through the PostgreSQL constraint",
   () =>
@@ -576,6 +580,7 @@ it.effect.skipIf(databaseUrl === undefined)(
     ),
 )
 
+// [SAL-ORDER-1]
 it.effect.skipIf(databaseUrl === undefined)(
   "protects confirmed order snapshots and terminal totals in PostgreSQL",
   () =>

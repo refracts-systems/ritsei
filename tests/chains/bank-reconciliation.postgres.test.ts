@@ -44,6 +44,7 @@ const stranger = { userAccountId: "bank-stranger", sessionId: "stranger-session"
 const postgresFailure = <A>(effect: () => Promise<A>) =>
   Effect.tryPromise({ try: effect, catch: (cause) => cause }).pipe(Effect.flip)
 
+// [SET-BANK-2] [SET-BANK-3] [SET-WHT-1]
 it.effect.skipIf(databaseUrl === undefined)(
   "imports a bank statement once, matches lines to payment cash, and clears a receivable net of withholding",
   () =>

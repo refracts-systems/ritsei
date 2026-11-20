@@ -257,6 +257,7 @@ const createPurchaseOrder = Effect.gen(function* () {
 })
 
 describe("procurement contract", () => {
+  // [PRC-PO-3]
   it.effect("publishes one confirmation event across idempotent replay", () => {
     const published: EventEnvelopeContract[] = []
 
@@ -290,6 +291,7 @@ describe("procurement contract", () => {
     )
   })
 
+  // [PRC-SUP-1]
   it.effect("creates one supplier account for an active supplier relationship", () =>
     withProcurement(
       Effect.gen(function* () {
@@ -316,6 +318,7 @@ describe("procurement contract", () => {
     ),
   )
 
+  // [PRC-SUP-1]
   it.effect("rejects missing or non-supplier relationships", () =>
     withProcurement(
       Effect.gen(function* () {
@@ -346,6 +349,7 @@ describe("procurement contract", () => {
     ),
   )
 
+  // [PRC-PO-2]
   it.effect("creates a draft purchase order with an exact derived total", () =>
     withProcurement(
       Effect.gen(function* () {
@@ -398,6 +402,7 @@ describe("procurement contract", () => {
     ),
   )
 
+  // [PRC-READ-1]
   it.effect("waits on the replica before reading and never falls back to primary", () => {
     const primaryCalls: string[] = []
     const waitCalls: string[] = []
@@ -438,6 +443,7 @@ describe("procurement contract", () => {
     )
   })
 
+  // [PRC-READ-1]
   it.effect("fails closed on replica wait failure without reading primary", () => {
     const primaryCalls: string[] = []
 
@@ -538,6 +544,7 @@ describe("procurement contract", () => {
     ),
   )
 
+  // [PRC-PO-3]
   it.effect("replays the same confirmation key and rejects a different key", () =>
     withProcurement(
       Effect.gen(function* () {
@@ -592,6 +599,7 @@ describe("procurement contract", () => {
     ),
   )
 
+  // [PRC-PO-1]
   it.effect("cancels a confirmed purchase order idempotently and preserves its snapshot", () =>
     withProcurement(
       Effect.gen(function* () {
@@ -664,6 +672,7 @@ describe("procurement contract", () => {
     ),
   )
 
+  // [PRC-PO-4]
   it.effect("maps missing and cross-tenant purchase orders to not found", () =>
     withProcurement(
       Effect.gen(function* () {
@@ -697,6 +706,7 @@ describe("procurement contract", () => {
     ),
   )
 
+  // [PRC-AUTH-1]
   it.effect("denies purchase order confirmation and reads without their capabilities", () =>
     withProcurement(
       Effect.gen(function* () {
@@ -742,6 +752,7 @@ describe("procurement contract", () => {
     ),
   )
 
+  // [PRC-AUTH-1]
   it.effect("denies purchase order cancellation without its capability", () =>
     withProcurement(
       Effect.gen(function* () {
@@ -770,6 +781,7 @@ describe("procurement contract", () => {
     ),
   )
 
+  // [PRC-SUP-1]
   it.effect("maps a missing supplier account", () =>
     withProcurement(
       Effect.gen(function* () {
@@ -795,6 +807,7 @@ describe("procurement contract", () => {
     ),
   )
 
+  // [PRC-PO-2]
   it.effect("validates purchase order lines and derived totals", () =>
     withProcurement(
       Effect.gen(function* () {
@@ -862,6 +875,7 @@ describe("procurement contract", () => {
     ),
   )
 
+  // [PRC-AUTH-1]
   it.effect("denies purchase order creation by default", () =>
     withProcurement(
       Effect.gen(function* () {
@@ -891,6 +905,7 @@ describe("procurement contract", () => {
     ),
   )
 
+  // [PRC-AUTH-1]
   it.effect("requires both procurement creation and Party relationship-read authority", () =>
     withProcurement(
       Effect.gen(function* () {
@@ -935,6 +950,7 @@ describe("procurement contract", () => {
     ),
   )
 
+  // [PRC-RCPT-1]
   it.effect(
     "receives a confirmed purchase order idempotently and blocks over-receipt cancellation",
     () =>

@@ -41,6 +41,7 @@ const stockSource = { type: "inventory.opening_stock", id: "018f2000-0000-7000-8
 // Source trial balance: cash 500, receivable 300, inventory 400 (debit); payable 200, equity 1000
 // (credit). The opening journal carries cash and equity, and plugs migration clearing with the net
 // of the three control accounts (+500); the owners' loads then bring clearing back to zero.
+// [ACC-OPEN-1] [ACC-OPEN-2] [ACC-OPEN-3]
 it.effect.skipIf(databaseUrl === undefined)(
   "loads opening positions against migration clearing and reports them",
   () =>

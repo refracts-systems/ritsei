@@ -118,7 +118,7 @@ customer, order, receipt/fulfillment, invoice, payment, and correction facts wit
 universal document owner.
 
 Procurement currently owns the bounded SupplierAccount, PurchaseOrder, and GoodsReceipt slices
-specified by [`../architecture/procurement.md`](../architecture/procurement.md). Receipt correction,
+specified by [`erp/modules/procurement/RULES.md`](../../erp/modules/procurement/RULES.md). Receipt correction,
 returns, invoice match, payables, and settlement remain gated.
 
 **Exit:** every selected action passes the primitive readiness test and has a narrow public

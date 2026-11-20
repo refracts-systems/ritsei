@@ -25,7 +25,7 @@
 >   [`../decisions/0057-define-layered-tanstack-frontend-engine-boundaries.md`](../decisions/0057-define-layered-tanstack-frontend-engine-boundaries.md)
 > - Solid compiler boundary: [`../decisions/0049-keep-solid-compiler-at-rendering-boundary.md`](../decisions/0049-keep-solid-compiler-at-rendering-boundary.md)
 > - Authorization architecture: [`./authorization.md`](./authorization.md)
-> - Sales architecture: [`./sales.md`](./sales.md)
+> - Sales architecture: [`erp/modules/sales/RULES.md`](../../erp/modules/sales/RULES.md)
 > - Financial ledger authority: [`./financial-ledger.md`](./financial-ledger.md)
 > - Identity and principals: [`./identity-and-principals.md`](./identity-and-principals.md)
 > - HTTP API boundary: [`./api.md`](./api.md)
