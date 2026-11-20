@@ -53,7 +53,10 @@ the template. Open a document below only for what the neighbor does not show:
    every link. A control with no behavior and a link to a page that does not exist are defects:
    remove them or build them.
 6. **Test it.** Add or extend `tests/frontend/<module>-workflow.test.ts` with the happy path, one
-   typed failure, and an axe scan, using the helpers in `tests/frontend/browser.ts`.
+   typed failure, and an axe scan, using the helpers in `tests/frontend/browser.ts`: sign in with
+   `connectToTenant` and open dialogs with `openedDialog`. Test what the screen does with a
+   response, not the business rule behind it; follow the browser-test rules in
+   [`testing.md`](../../../docs/development/testing.md#browser-tests).
 7. **Check it.** Run `pnpm --filter @ritsei/web run check`, the new test, and
    `pnpm run check:affected`.
 

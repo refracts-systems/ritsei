@@ -1,0 +1,7 @@
+id: browser-opened-dialog
+valid:
+  - 'const dialog = await openedDialog(page, "Create product")'
+  - 'await page.getByRole("dialog", { name: "Create product" }).waitFor({ state: "hidden" })'
+invalid:
+  - 'const dialog = page.getByRole("dialog", { name: "Create product" })'
+  - 'const createDialog = page.getByRole("dialog")'
