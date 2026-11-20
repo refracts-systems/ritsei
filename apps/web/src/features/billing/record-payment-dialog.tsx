@@ -1,6 +1,6 @@
-import { createSignal, useContext } from "solid-js"
+import { createSignal, Show, useContext } from "solid-js"
 import { today } from "../../shared/form-values.ts"
-import { CommandFeedback } from "../../shared/request-feedback.tsx"
+import { CommandFeedback, QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
 import { ApiRuntime } from "../../shared/runtime.ts"
 import { formatDecimal } from "../../ui/foundations/format.ts"
 import { layout } from "../../ui/foundations/layout.ts"
@@ -10,6 +10,8 @@ import { FormField } from "../../ui/primitives/form-field.tsx"
 import { Form } from "../../ui/primitives/form.tsx"
 import { Input } from "../../ui/primitives/input.tsx"
 import { MoneyField } from "../../ui/primitives/money-field.tsx"
+import { Select } from "../../ui/primitives/select.tsx"
+import { createAccountsQuery } from "../accounting/queries.ts"
 import { paymentPayload } from "./payloads.ts"
 import { createPaymentMutation } from "./queries.ts"
 import { type BillingDocument, paymentFailureMessages } from "./service.ts"
@@ -18,6 +20,37 @@ import { type BillingDocument, paymentFailureMessages } from "./service.ts"
 export const canRecordPayment = (document: BillingDocument) =>
   (document.kind === "customer_invoice" || document.kind === "supplier_bill") &&
   Number(document.openAmount) > 0
+
+function CashAccountField(props: { disabled: boolean }) {
+  const scope = useContext(ApiRuntime)
+  const accounts = createAccountsQuery(scope, { type: "asset", limit: 200 })
+
+  return (
+    <QueryBoundary label="cash and bank accounts" retry={() => reloaded(accounts.refetch())}>
+      <FormField label="Cash or bank account">
+        {(fieldProps) => (
+          <Select
+            {...fieldProps}
+            name="cashAccountId"
+            placeholder="Use default cash posting rule"
+            options={accounts.data.map((account) => ({
+              value: account.id,
+              label: `${account.code} · ${account.name}`,
+            }))}
+            disabled={props.disabled}
+          />
+        )}
+      </FormField>
+      <Show when={accounts.data.length === 0}>
+        <p role="status">No asset accounts are available. Configure an account in Finance.</p>
+      </Show>
+      <p class={layout.muted}>
+        Choose the cash or bank account used for this payment to make it available for bank
+        reconciliation.
+      </p>
+    </QueryBoundary>
+  )
+}
 
 function RecordPaymentForm(props: {
   document: BillingDocument
@@ -63,6 +96,7 @@ function RecordPaymentForm(props: {
         disabled={mutation.isPending}
         error={invalid() ? "Enter a date and an amount such as 100.00." : undefined}
       />
+      <CashAccountField disabled={mutation.isPending} />
       <CommandFeedback
         error={mutation.error}
         messages={paymentFailureMessages}

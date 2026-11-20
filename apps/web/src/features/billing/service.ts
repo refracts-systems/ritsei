@@ -147,6 +147,7 @@ const RecordPaymentInput = Schema.Struct({
   invoiceId: Uuid,
   paymentDate: CalendarDate,
   amount: Money,
+  cashAccountId: Schema.optionalKey(Uuid),
 })
 
 const RecordedPayment = Schema.Struct({
@@ -171,6 +172,7 @@ export const recordPayment = Effect.fn("Frontend.Billing.recordPayment")(functio
       partyId: decoded.partyId,
       paymentDate: decoded.paymentDate,
       amount: decoded.amount,
+      cashAccountId: decoded.cashAccountId,
       allocations: [{ invoiceId: decoded.invoiceId, amount: decoded.amount }],
     },
   )

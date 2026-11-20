@@ -47,6 +47,14 @@ describe("billing form payloads", () => {
     assert.strictEqual(received?.invoiceId, document.id)
     assert.strictEqual(paid?.side, "payable")
     assert.strictEqual(paid?.amount, "5")
+    assert.notProperty(received, "cashAccountId")
+    assert.deepInclude(
+      paymentPayload(
+        { paymentDate: "2026-10-25", amount: "5", cashAccountId: "bank-id" },
+        document,
+      ),
+      { cashAccountId: "bank-id" },
+    )
   })
 
   it("rejects zero, negative, over-precise, and missing amounts", () => {

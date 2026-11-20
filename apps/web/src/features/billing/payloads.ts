@@ -16,17 +16,20 @@ export const invoicePayload = (value: FormValue) => {
 export const paymentPayload = (value: FormValue, document: BillingDocument) => {
   const paymentDate = formText(value.paymentDate)
   const amount = formText(value.amount)
+  const cashAccountId = formText(value.cashAccountId)
 
-  return isDate(paymentDate) && isPositiveAmount(amount)
-    ? {
-        side: document.kind === "customer_invoice" ? ("receivable" as const) : ("payable" as const),
-        legalEntityId: document.legalEntityId,
-        partyId: document.partyId,
-        invoiceId: document.id,
-        paymentDate,
-        amount,
-      }
-    : undefined
+  if (!isDate(paymentDate) || !isPositiveAmount(amount)) return undefined
+
+  const payment = {
+    side: document.kind === "customer_invoice" ? ("receivable" as const) : ("payable" as const),
+    legalEntityId: document.legalEntityId,
+    partyId: document.partyId,
+    invoiceId: document.id,
+    paymentDate,
+    amount,
+  }
+
+  return cashAccountId === "" ? payment : { ...payment, cashAccountId }
 }
 
 const positiveInteger = /^[1-9]\d*$/
