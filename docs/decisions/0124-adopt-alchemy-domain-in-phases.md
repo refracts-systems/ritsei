@@ -8,7 +8,8 @@
 - Compatible with: ADR-0015, ADR-0123
 - Supersedes: None
 - Superseded by: None
-- Changes: `AGENTS.md`, `docs/documentation-boundaries.md`, `docs/roadmap/README.md`,
+- Changes: `AGENTS.md`, `docs/architecture/architecture-spec-v4.md`,
+  `docs/decisions/decision-map.md`, `docs/documentation-boundaries.md`, `docs/roadmap/README.md`,
   `erp/modules/sales/RULES.md`
 
 > **Related documents**
@@ -73,8 +74,13 @@ The installed `@alchemy.run/domain/EffectCluster` host (`layerEntities`) was rea
 PostgreSQL:
 
 - It opens its **own connection pool** from `CLUSTER_DATABASE_URL` and runs each instance's commit
-  in a transaction on that pool. A command therefore cannot share a transaction with RITSEI's
-  tables; every class D lag in this ADR is real on this host.
+  (events, state, and outbox together) in a transaction on that pool. As read, a command cannot
+  share a transaction with RITSEI's tables, and projections write to their own stores after the
+  commit, so the class D lags in this ADR apply on this host; phase 0 confirms it on a running host.
+- It **runs on a runner pool deployed through Alchemy's infrastructure as code**:
+  `layerEntities` takes a `pool` layer (the documented example is a Docker Swarm pool with its
+  database) and requires Alchemy providers. Hosting on Effect Cluster therefore brings part of
+  Alchemy's deployment tooling with it.
 - It keeps every instance's state as **JSON text in one key-value table**,
   `alchemy_domain_objects (object, key, value)`. PostgreSQL constraints, foreign keys, row-level
   security, and typed columns do not apply to aggregate state; tenant scope and integrity become
@@ -463,7 +469,9 @@ and one model shape that can become a framework primitive.
   `Domain.Model`, so a test-only model would have to be kept in step with the production service by
   hand. Phases 1 to 3 do use stories, against the models they build.
 - **Adopt Alchemy's infrastructure as code instead of its Domain package.** Not decided here. It
-  leaves the domain untouched; it is a deployment decision that needs its own ADR.
+  leaves the domain untouched; it is a deployment decision that needs its own ADR. The Effect
+  Cluster host needs an Alchemy-deployed runner pool, so phase 0 decides how much of that tooling
+  the host requires.
 - **Host on Cloudflare or Rivet.** Rejected: each adds a stateful store beside PostgreSQL.
 - **Do nothing.** Rejected by the owner.
 

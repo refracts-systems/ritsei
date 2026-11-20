@@ -237,6 +237,9 @@ future ledger engine; PostgreSQL remains the active financial authority.
 [ADR-0093](./0093-retain-isolation-runtime-and-analytic-target-designs.md) retains workload
 isolation, the Stateful Entity Runtime, and the analytic plane as inactive target designs. Neither
 ADR activates these targets.
+[ADR-0124](./0124-adopt-alchemy-domain-in-phases.md) adopts Alchemy Domain on Effect Cluster in
+phases, amending ADR-0093 decision 4 and ADR-0091 point 6 for those phases; until a phase moves an
+aggregate, PostgreSQL tables stay authoritative.
 
 ## Current canonical rules
 

@@ -45,6 +45,10 @@ Every later phase depends on what this phase proves or refutes.
 8. **Database-enforced rules inventory.** A list of every rule PostgreSQL enforces today with a
    constraint, trigger, or privilege, and where each check moves when its aggregate leaves the
    tables.
+9. **Runner pool.** `layerEntities` takes a `pool` layer deployed through Alchemy's infrastructure as
+   code (the documented example is a Docker Swarm pool with its database) and requires Alchemy
+   providers. The phase deploys a pool for tests and records how much of Alchemy's deployment
+   tooling the host needs, and whether RITSEI's deployment profiles can carry it.
 
 ## Exit evidence
 

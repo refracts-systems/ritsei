@@ -80,7 +80,10 @@ Make the primitive exist and run on the real host, with no aggregate moved.
   full validation list in `AGENTS.md`.
 - `@alchemy.run/domain`, `alchemy`, and `foldkit` pinned exactly, with the dependency reason
   documented in the consuming manifest.
-- An engine-neutral framework port with its first ERP consumer; `boundary:lint` passes.
+- An engine-neutral framework port, kept on the phase branch until its first ERP consumer lands
+  in class A (ADR-0091); `boundary:lint` passes.
+- A runner pool for the Effect Cluster host, deployed in a way the owner accepts, with the share of
+  Alchemy's deployment tooling it needs recorded.
 - The host's `alchemy_domain_objects` table created by a reviewed migration, owned in
   `db/ownership.toml`, with privileges that forbid updating or deleting recorded events.
 - The `SAL-DLV-2` pilot's stories pass on the Effect Cluster host against PostgreSQL 19.
@@ -99,9 +102,11 @@ deletion, or a beta upgrade breaks the port without a migration path.
 `SAL-AUTH-1`, `SAL-CUST-2`, `SAL-QUOT-1`, `SAL-QUOT-2`, `SET-BANK-1`, `TAX-CALC-1`, `TAX-CALC-2`,
 `TAX-RATE-1`, `TAX-AUTH-1`, `TAX-PROD-1`.
 
-**Exit:** each rule is a story against its module's model, naming the rule `[ID]`; tax codes and
-supplier prices are cut over with a rehearsed migration and parity tests between the table and
-stream implementations; the other aggregates stay table-backed.
+**Exit:** each rule is a story against its module's model, naming the rule `[ID]`; the framework
+port lands with these models as its first consumer; tax codes and supplier prices are cut over
+where their open gates close, each with a rehearsed migration and parity tests between the table and
+stream implementations, or recorded as staying table-backed; the other aggregates stay
+table-backed.
 
 **Stop if:** a cut-over aggregate needs a foreign key from a table that command-time validation
 cannot replace.
