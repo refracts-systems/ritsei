@@ -392,8 +392,8 @@ journal fact.
 
 - `procurement.purchase_order.confirm` is a public typed action and
   `procurement.purchase_order.confirmed` a public owner event, catalog-tested with idempotent replay.
-- Valued receipts, returns, supplier prices, and approval-gated release are covered by the
-  procure-to-pay chain test, not by Procurement module tests.
+- Valued receipts, returns, supplier prices, and approval-gated release are covered end to end by
+  the procure-to-pay chain test, and their refusals and replays by `tests/documents.postgres.test.ts`.
 - Receipt reversal, external supplier documents, and Process Studio publication are not supported.
 
 ## Runtime Composition
