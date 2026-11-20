@@ -1,7 +1,7 @@
 import { AxeBuilder } from "@axe-core/playwright"
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
-import { builtApp, connectToTenant, fulfillJson, mockRoutes } from "./browser.ts"
+import { builtApp, connectToTenant, fulfillJson, mockRoutes, openedDialog } from "./browser.ts"
 
 const tenantId = "01910000-0000-7000-8000-000000000010"
 const customerId = "01910000-0000-7000-8000-000000000011"
@@ -74,7 +74,7 @@ it.effect(
 
         // A malformed key is explained and nothing is sent.
         await section.getByRole("button", { name: "Add a field" }).click()
-        const add = page.getByRole("dialog", { name: "Add a customer field" })
+        const add = await openedDialog(page, "Add a customer field")
         await add.getByLabel("Label").fill("Tier")
         await add.getByLabel("Key").fill("Tier!")
         await add.getByRole("button", { name: "Add field", exact: true }).click()
@@ -97,7 +97,7 @@ it.effect(
         )
 
         await section.getByRole("button", { name: "Edit custom fields" }).click()
-        const edit = page.getByRole("dialog", { name: "Edit custom fields" })
+        const edit = await openedDialog(page, "Edit custom fields")
         await edit.getByLabel("Tier").selectOption("gold")
         await edit.getByRole("button", { name: "Save fields", exact: true }).click()
         await edit.waitFor({ state: "hidden" })

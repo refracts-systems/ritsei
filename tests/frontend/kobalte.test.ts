@@ -2,7 +2,7 @@ import { AxeBuilder } from "@axe-core/playwright"
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import type { Page } from "playwright"
-import { builtApp, connectToTenant, entranceFinished } from "./browser.ts"
+import { builtApp, connectToTenant, entranceFinished, openedDialog } from "./browser.ts"
 
 const focusIsInsideDialog = (page: Page) =>
   page.evaluate(() => document.activeElement?.closest('[role="dialog"]') !== null)
@@ -25,7 +25,7 @@ it.effect(
         const trigger = page.getByRole("button", { name: "Sign out", exact: true })
         await trigger.focus()
         await page.keyboard.press("Enter")
-        const dialog = page.getByRole("dialog", { name: "Sign out of RITSEI?" })
+        const dialog = await openedDialog(page, "Sign out of RITSEI?")
         await dialog.waitFor()
         assert.isTrue(await dialog.isVisible())
         assert.isNotNull(await dialog.getAttribute("aria-labelledby"))

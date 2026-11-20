@@ -2,7 +2,7 @@ import { AxeBuilder } from "@axe-core/playwright"
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import type { Page, Route } from "playwright"
-import { builtApp, connectToTenant, forbiddenBody } from "./browser.ts"
+import { builtApp, connectToTenant, forbiddenBody, openedDialog } from "./browser.ts"
 
 const tenantId = "01900000-0000-7000-8000-000000000010"
 const accountId = "01900000-0000-7000-8000-000000000001"
@@ -105,7 +105,7 @@ it.effect(
         })
 
         await createTrigger.click()
-        const createDialog = page.getByRole("dialog")
+        const createDialog = await openedDialog(page, "Create user account")
         await createDialog.getByRole("heading", { name: "Create user account" }).waitFor()
 
         const dialogAccessibility = await new AxeBuilder({ page })

@@ -2,7 +2,14 @@ import { AxeBuilder } from "@axe-core/playwright"
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import type { Page } from "playwright"
-import { builtApp, conflictBody, connectToTenant, fulfillJson, mockRoutes } from "./browser.ts"
+import {
+  builtApp,
+  conflictBody,
+  connectToTenant,
+  fulfillJson,
+  mockRoutes,
+  openedDialog,
+} from "./browser.ts"
 
 const tenantId = "01900000-0000-7000-8000-000000000010"
 const relationshipId = "01900000-0000-7000-8000-000000000020"
@@ -155,7 +162,7 @@ it.effect(
         await connectAndOpenProcurement(page, url)
 
         await page.getByRole("button", { name: "Create purchase order", exact: true }).click()
-        const draftDialog = page.getByRole("dialog", { name: "Create purchase order" })
+        const draftDialog = await openedDialog(page, "Create purchase order")
         await draftDialog.waitFor()
         await draftDialog
           .getByRole("combobox", { name: "Supplier", exact: true })
@@ -186,7 +193,7 @@ it.effect(
         assert.equal(released, 1)
 
         await page.getByRole("button", { name: "Receive goods", exact: true }).click()
-        const receiveDialog = page.getByRole("dialog", { name: "Receive goods" })
+        const receiveDialog = await openedDialog(page, "Receive goods")
         await receiveDialog.waitFor()
         await receiveDialog.getByRole("combobox", { name: "Warehouse" }).selectOption(warehouseId)
         await receiveDialog.getByRole("button", { name: "Receive goods", exact: true }).click()
@@ -205,7 +212,7 @@ it.effect(
         await page.getByText("Everything ordered has been received.").waitFor()
 
         await page.getByRole("button", { name: "Return to supplier", exact: true }).click()
-        const returnDialog = page.getByRole("dialog", { name: "Return to supplier" })
+        const returnDialog = await openedDialog(page, "Return to supplier")
         await returnDialog.waitFor()
         await returnDialog.getByRole("combobox", { name: "Warehouse" }).selectOption(warehouseId)
         await returnDialog.getByRole("textbox", { name: /Widget.*can be returned/ }).fill("1")

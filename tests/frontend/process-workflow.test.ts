@@ -9,7 +9,7 @@ import type {
   ProcessRuntimeInstance,
   ProcessWorkflowRun,
 } from "../../apps/web/src/shared/contracts/generated/process.ts"
-import { builtApp, connectToTenant, notFoundBody } from "./browser.ts"
+import { builtApp, connectToTenant, notFoundBody, openedDialog } from "./browser.ts"
 
 const tenantId = "01930000-0000-7000-8000-000000000001"
 const definitionId = "018f3f77-0c5a-7cc0-8b62-6a163d214123"
@@ -209,7 +209,7 @@ it.effect(
         await page.getByText(instanceId, { exact: true }).waitFor()
         await page.getByRole("tab", { name: "Inbox", exact: true }).click()
         await page.getByRole("button", { name: "Retry runtime", exact: true }).click()
-        const dialog = page.getByRole("dialog", { name: "Retry runtime" })
+        const dialog = await openedDialog(page, "Retry runtime")
         await dialog
           .getByRole("textbox", { name: "Idempotency key", exact: true })
           .fill("retry-process-1")

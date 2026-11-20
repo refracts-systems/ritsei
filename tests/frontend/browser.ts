@@ -109,6 +109,9 @@ export const connectToTenant = async (
   await mockLocalAuth(page, token, tenantId)
   await page.goto(url)
   await page.getByRole("button", { name: "Sign in locally", exact: true }).click()
+  // Sign-in finishes by replacing the route with the home page; a link clicked before that lands
+  // is undone by the redirect, so wait for the home page first.
+  await page.getByRole("heading", { name: "My work", exact: true }).waitFor()
 
   if (heading === "User accounts") {
     await page.getByRole("link", { name: "User accounts", exact: true }).click()
@@ -187,6 +190,18 @@ export const entranceFinished = (page: Page) =>
       () => true,
     ),
   )
+
+/**
+ * Returns the named dialog once it is open and its entrance has finished, so typing and key
+ * presses land inside it rather than where the focus trap is still moving focus from.
+ */
+export const openedDialog = async (page: Page, name: string) => {
+  const dialog = page.getByRole("dialog", { name })
+  await dialog.waitFor()
+  await entranceFinished(page)
+
+  return dialog
+}
 
 /** Opens the workspace's "More actions" menu and selects one of its commands. */
 export const chooseMoreAction = async (page: Page, name: string) => {
