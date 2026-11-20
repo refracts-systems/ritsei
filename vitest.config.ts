@@ -8,6 +8,8 @@ export default defineConfig({
     setupFiles: ["./tooling/load-env.ts"],
     testTimeout: 30_000,
     hookTimeout: 30_000,
+    // alchemy publishes TypeScript sources as its Node entry points, which Node cannot load from node_modules.
+    server: { deps: { inline: [/alchemy@/, /@alchemy.run/] } },
     exclude: ["vendor/**", "**/node_modules/**", ".auto/**"],
     projects: [
       {
