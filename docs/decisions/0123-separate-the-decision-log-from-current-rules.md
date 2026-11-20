@@ -1,6 +1,6 @@
 # ADR-0123: Separate the Decision Log from Current Rules
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-20
 - Amends: None
 - Compatible with: ADR-0015, ADR-0091, ADR-0093, ADR-0094
