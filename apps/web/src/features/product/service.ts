@@ -1,12 +1,25 @@
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
-import { decodeInput, decodeResponse, mutationRequest, requestJson } from "../../shared/api.ts"
+import {
+  decodeInput,
+  decodeResponse,
+  mutationRequest,
+  requestJson,
+  routeWithId,
+} from "../../shared/api.ts"
+import { CustomFieldDefinition, CustomFieldValues } from "../../shared/custom-field-values.ts"
+import { Uuid } from "../../shared/schemas.ts"
 
-const Uuid = Schema.String.check(Schema.isUUID())
 const Name = Schema.String.check(Schema.isPattern(/\S/), Schema.isMaxLength(256))
 
 /** Browser view of the Product transport contract served by the product module. */
 const ProductType = Schema.Literals(["stockable", "consumable", "service"])
+
+export const productTypeLabels = {
+  stockable: "Stockable",
+  consumable: "Consumable",
+  service: "Service",
+} as const
 
 export const Product = Schema.Struct({
   id: Uuid,
@@ -24,6 +37,10 @@ export type Product = Schema.Schema.Type<typeof Product>
 const ProductList = Schema.Array(Product).check(Schema.isMaxLength(200))
 const CreateProductInput = Schema.Struct({ code: Name, name: Name, type: ProductType })
 const route = "/product/products"
+const productRoute = `${route}/:id`
+const valuesRoute = `${productRoute}/custom-fields`
+const DefinitionList = Schema.Array(CustomFieldDefinition)
+const SetValuesInput = Schema.Struct({ productId: Uuid, values: CustomFieldValues })
 
 export const listProducts = Effect.fn("Frontend.Product.listProducts")(function* () {
   const body = yield* requestJson(route)
@@ -38,4 +55,35 @@ export const createProduct = Effect.fn("Frontend.Product.createProduct")(functio
   const body = yield* mutationRequest(route, "POST", decoded)
 
   return yield* decodeResponse(Product, body, "unknown-outcome")
+})
+
+export const getProduct = Effect.fn("Frontend.Product.getProduct")(function* (productId: string) {
+  const id = yield* decodeInput(Uuid, productId)
+  const body = yield* requestJson(routeWithId(productRoute, id))
+
+  return yield* decodeResponse(Product, body)
+})
+
+export const listProductFields = Effect.fn("Frontend.Product.listProductFields")(function* () {
+  const body = yield* requestJson("/product/custom-fields")
+
+  return yield* decodeResponse(DefinitionList, body)
+})
+
+export const getProductFieldValues = Effect.fn("Frontend.Product.getProductFieldValues")(function* (
+  productId: string,
+) {
+  const id = yield* decodeInput(Uuid, productId)
+  const body = yield* requestJson(routeWithId(valuesRoute, id))
+
+  return yield* decodeResponse(CustomFieldValues, body)
+})
+
+export const setProductFieldValues = Effect.fn("Frontend.Product.setProductFieldValues")(function* (
+  input: Schema.Codec.Encoded<typeof SetValuesInput>,
+) {
+  const { productId, values } = yield* decodeInput(SetValuesInput, input)
+  const body = yield* mutationRequest(routeWithId(valuesRoute, productId), { values })
+
+  return yield* decodeResponse(CustomFieldValues, body, "unknown-outcome")
 })

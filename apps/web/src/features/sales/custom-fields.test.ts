@@ -1,11 +1,11 @@
 import { assert, describe, it } from "@effect/vitest"
 import {
   type CustomFieldDefinition,
-  definitionPayload,
   displayValue,
   listOptions,
   valuesPayload,
-} from "./custom-fields.ts"
+} from "../../shared/custom-field-values.ts"
+import { definitionPayload } from "./custom-fields.ts"
 
 const definition = (
   key: string,

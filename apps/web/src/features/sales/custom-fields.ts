@@ -12,31 +12,13 @@ import { formText } from "../../shared/form-values.ts"
 import { Uuid } from "../../shared/schemas.ts"
 import type { FormValue } from "../../ui/primitives/form.tsx"
 
-/** Browser view of the custom field contract of a Sales customer (ADR-0109). */
-export const CustomFieldKind = Schema.Literals(["text", "number", "date", "boolean", "choice"])
-
-export type CustomFieldKind = Schema.Schema.Type<typeof CustomFieldKind>
-
-export const CustomFieldDefinition = Schema.Struct({
-  id: Uuid,
-  key: Schema.String,
-  label: Schema.String,
-  kind: CustomFieldKind,
-  required: Schema.Boolean,
-  choices: Schema.NullOr(Schema.Array(Schema.String)),
-  position: Schema.Int,
-})
-
-export type CustomFieldDefinition = Schema.Schema.Type<typeof CustomFieldDefinition>
+import {
+  CustomFieldDefinition,
+  CustomFieldKind,
+  CustomFieldValues,
+} from "../../shared/custom-field-values.ts"
 
 const DefinitionList = Schema.Array(CustomFieldDefinition).check(Schema.isMaxLength(200))
-
-const Values = Schema.Record(
-  Schema.String,
-  Schema.NullOr(Schema.Union([Schema.String, Schema.Boolean])),
-)
-
-export type CustomFieldValues = Schema.Schema.Type<typeof Values>
 
 const DefineInput = Schema.Struct({
   key: Schema.String.check(Schema.isPattern(/^[a-z][a-z0-9_]{0,39}$/)),
@@ -46,7 +28,7 @@ const DefineInput = Schema.Struct({
   choices: Schema.optionalKey(Schema.Array(Schema.String).check(Schema.isMinLength(1))),
 })
 
-const SetInput = Schema.Struct({ customerId: Uuid, values: Values })
+const SetInput = Schema.Struct({ customerId: Uuid, values: CustomFieldValues })
 
 export const listCustomerFields = Effect.fn("Frontend.Sales.listCustomerFields")(function* () {
   const body = yield* requestJson("/sales/custom-fields")
@@ -69,7 +51,7 @@ export const getCustomerFieldValues = Effect.fn("Frontend.Sales.getCustomerField
   const decoded = yield* decodeInput(Uuid, customerId)
   const body = yield* requestJson(routeWithId("/sales/customers/:id/custom-fields", decoded))
 
-  return yield* decodeResponse(Values, body)
+  return yield* decodeResponse(CustomFieldValues, body)
 })
 
 export const setCustomerFieldValues = Effect.fn("Frontend.Sales.setCustomerFieldValues")(function* (
@@ -82,7 +64,7 @@ export const setCustomerFieldValues = Effect.fn("Frontend.Sales.setCustomerField
     { values: decoded.values },
   )
 
-  return yield* decodeResponse(Values, body, "unknown-outcome")
+  return yield* decodeResponse(CustomFieldValues, body, "unknown-outcome")
 })
 
 /** What the user is told for the business failures custom fields can return. */
@@ -119,52 +101,3 @@ export const definitionPayload = (value: FormValue) => {
 
   return kind.value === "choice" ? { ...withRequired, choices } : withRequired
 }
-
-/** Reads one submitted field as the value its kind carries; an empty field has no value. */
-const submitted = (definition: CustomFieldDefinition, value: FormValue[string] | undefined) => {
-  const text = formText(value)
-
-  if (text === "") return null
-
-  return definition.kind === "boolean" ? text === "true" : text
-}
-
-/**
- * The values to send: only the fields whose submitted value differs from the current one, so an
- * edit never rewrites what the user did not touch. Fields are named field-<key>.
- */
-export const valuesPayload = (
-  value: FormValue,
-  definitions: readonly CustomFieldDefinition[],
-  current: CustomFieldValues,
-) =>
-  Object.fromEntries(
-    definitions.flatMap((definition) => {
-      const next = submitted(definition, value[`field-${definition.key}`])
-
-      return next === (current[definition.key] ?? null) ? [] : [[definition.key, next] as const]
-    }),
-  )
-
-const yesNo = [
-  { value: "true", label: "Yes" },
-  { value: "false", label: "No" },
-]
-
-/** The choices a list-like field offers: yes or no, or its own choices; none for typed text. */
-export const listOptions = (definition: CustomFieldDefinition) => {
-  if (definition.kind === "boolean") return yesNo
-
-  return definition.kind === "choice"
-    ? (definition.choices ?? []).map((choice) => ({ value: choice, label: choice }))
-    : undefined
-}
-
-const shownBooleans = new Map<string | boolean, string>([
-  [true, "Yes"],
-  [false, "No"],
-])
-
-/** A stored value as the user reads it. */
-export const displayValue = (value: string | boolean | null | undefined) =>
-  value === null || value === undefined ? "Not set" : (shownBooleans.get(value) ?? value)

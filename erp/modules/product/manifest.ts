@@ -12,5 +12,5 @@ export const ProductModule = defineModule({
   consumes: [],
   http: ["Product"],
   extensionPoints: [{ kind: "custom-fields", documentType: "product.product" }],
-  pages: ["/product"],
+  pages: ["/product", "/product/:id"],
 })

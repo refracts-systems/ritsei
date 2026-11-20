@@ -1,4 +1,11 @@
 import { createSignal, For, Show, useContext } from "solid-js"
+import {
+  type CustomFieldDefinition,
+  type CustomFieldValues,
+  fieldValue,
+  valuesPayload,
+} from "../../shared/custom-field-values.ts"
+import { CustomFieldInput, CustomFieldList } from "../../shared/custom-fields.tsx"
 import { formText } from "../../shared/form-values.ts"
 import { CommandFeedback, QueryBoundary, reloaded } from "../../shared/request-feedback.tsx"
 import { ApiRuntime } from "../../shared/runtime.ts"
@@ -16,15 +23,7 @@ import {
   createDefineFieldMutation,
   createSetFieldValuesMutation,
 } from "./custom-fields-queries.ts"
-import {
-  type CustomFieldDefinition,
-  type CustomFieldValues,
-  customFieldFailureMessages,
-  definitionPayload,
-  displayValue,
-  listOptions,
-  valuesPayload,
-} from "./custom-fields.ts"
+import { customFieldFailureMessages, definitionPayload } from "./custom-fields.ts"
 
 const kindOptions = [
   { value: "text", label: "Text" },
@@ -33,45 +32,6 @@ const kindOptions = [
   { value: "boolean", label: "Yes or no" },
   { value: "choice", label: "One of a list" },
 ]
-
-function ValueInput(props: { definition: CustomFieldDefinition; value: string }) {
-  const name = () => `field-${props.definition.key}`
-  const options = () => listOptions(props.definition)
-
-  return (
-    <FormField
-      label={props.definition.label}
-      required={props.definition.required}
-      helperText={props.definition.kind === "number" ? "A number such as 12.5" : undefined}
-    >
-      {(fieldProps) => (
-        <Show
-          when={options()}
-          fallback={
-            <Input
-              {...fieldProps}
-              name={name()}
-              type={props.definition.kind === "date" ? "date" : "text"}
-              inputmode={props.definition.kind === "number" ? "decimal" : undefined}
-              autocomplete="off"
-              value={props.value}
-            />
-          }
-        >
-          {(list) => (
-            <Select
-              {...fieldProps}
-              name={name()}
-              placeholder="Not set"
-              options={list()}
-              value={props.value}
-            />
-          )}
-        </Show>
-      )}
-    </FormField>
-  )
-}
 
 function EditValuesDialog(props: {
   customerId: string
@@ -107,9 +67,9 @@ function EditValuesDialog(props: {
       >
         <For each={props.definitions}>
           {(definition) => (
-            <ValueInput
+            <CustomFieldInput
               definition={definition}
-              value={String(props.values[definition.key] ?? "")}
+              value={String(fieldValue(props.values, definition.key) ?? "")}
             />
           )}
         </For>
@@ -230,16 +190,7 @@ export function CustomerFields(props: { customerId: string }) {
           when={definitions.data.length > 0}
           fallback={<p role="status">No custom fields are defined for customers yet.</p>}
         >
-          <dl class={layout.detailList}>
-            <For each={definitions.data}>
-              {(definition) => (
-                <div class={layout.detailItem}>
-                  <dt class={layout.detailTerm}>{definition.label}</dt>
-                  <dd class={layout.detailValue}>{displayValue(values.data[definition.key])}</dd>
-                </div>
-              )}
-            </For>
-          </dl>
+          <CustomFieldList definitions={definitions.data} values={values.data} />
         </Show>
         <div class={layout.actionRow}>
           <Show when={definitions.data.length > 0}>
