@@ -431,6 +431,28 @@ const journalLinesAreInverse = (source: JournalEntry, reversal: JournalEntry) =>
   )
 }
 
+const leaseHeldBy = <
+  Row extends {
+    readonly status: string
+    readonly leaseUntil: Date | null
+    readonly leaseOwner: string | null
+    readonly leaseToken: string | null
+    readonly leaseGeneration: string
+  },
+>(
+  current: Row,
+  held: {
+    readonly workerId: string
+    readonly leaseToken: string
+    readonly leaseGeneration: string
+  },
+): current is Row & { readonly leaseUntil: Date } =>
+  current.status === "leased" &&
+  current.leaseUntil !== null &&
+  current.leaseOwner === held.workerId &&
+  current.leaseToken === held.leaseToken &&
+  current.leaseGeneration === held.leaseGeneration
+
 const confirmationResultMatches = (
   result: OrderConfirmationResult,
   input: ConfirmationIdentity,
@@ -1915,14 +1937,7 @@ export const makeProcessService = Effect.gen(function* () {
 
         if (current === undefined) return CompleteJobOutcome.NotFound()
 
-        if (
-          current.status !== "leased" ||
-          current.leaseUntil === null ||
-          current.leaseOwner !== decoded.workerId ||
-          current.leaseToken !== decoded.leaseToken ||
-          current.leaseGeneration !== decoded.leaseGeneration
-        )
-          return CompleteJobOutcome.LeaseLost()
+        if (!leaseHeldBy(current, decoded)) return CompleteJobOutcome.LeaseLost()
 
         if (fenced) {
           const [scope] = await tx
