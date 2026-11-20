@@ -26,15 +26,17 @@ Every later phase depends on what this phase proves or refutes.
    `@effect/platform-node-shared`, `@effect/sql-pg`, `@effect/vitest`) move from `4.0.0` to the
    4.1 line in their own change. `vendor/effect` is refreshed to the same version, because
    `AGENTS.md` makes it the reference for Effect code.
-2. **Dependencies.** `@alchemy.run/domain`, `alchemy`, and `foldkit` pinned exactly in the root
-   `package.json`, with the reason recorded beside them. `foldkit` and `alchemy` are required peers,
-   not choices.
+2. **Dependencies.** `@alchemy.run/domain`, `@alchemy.run/effect-cluster`, and `alchemy` pinned
+   exactly in the root `package.json`, with the reason recorded beside them. `alchemy` is a
+   required peer; `foldkit` is an optional peer (`peerDependenciesMeta`) and is not installed.
 3. **Framework port.** An engine-neutral port in `framework/` that hides the host, with the
    in-memory host for tests and the Effect Cluster host for runtime. It lands together with its
    first ERP consumer (phase 1), per ADR-0091; until then it lives on the phase branch.
 4. **Host table under migration control.** The host creates `alchemy_domain_objects` with
    `CREATE TABLE IF NOT EXISTS` at runtime. A reviewed migration creates it instead, an entry in
-   `db/ownership.toml` names its owner, and the runtime role cannot create tables.
+   `db/ownership.toml` names its owner, and the host's role can create tables only in a schema
+   that holds host tables (the host's `CREATE TABLE IF NOT EXISTS` needs `CREATE` even when the
+   table exists).
 5. **Event protection.** The host's storage API updates and deletes keys. Whether recorded events
    are ever rewritten was not verified; this phase finds out and, if events and state share the
    table, protects event rows from update and deletion with privileges or a trigger.
@@ -131,6 +133,27 @@ Answers marked "decided in phase 0" are pending owner confirmation.
   migration. A trigger refuses `UPDATE`, `DELETE`, and `TRUNCATE` of `event:` keys only: the host
   writes those once and rewrites other keys (state, receipts, outbox, backfill) all the time. Receipt
   rows carry a copy of their events and are not protected.
+
+## Findings that correct ADR-0124
+
+ADR-0124 is accepted and is not rewritten (ADR-0123); these phase 0 findings correct it:
+
+- **`foldkit` is an optional peer**, not a required one (`peerDependenciesMeta` of
+  `@alchemy.run/domain` 2.0.0-beta.87). It is not installed.
+- **The host's role needs `CREATE`.** PostgreSQL 19 refuses `CREATE TABLE IF NOT EXISTS` without
+  `CREATE` on the schema even when the table exists, and the host runs it at startup. The table
+  lives in a schema that holds host tables only (`domain_model`), and the host's role may create
+  there; its login must resolve to that schema through `search_path`, or it creates an unprotected
+  table in `public`.
+- **The host uses more than one table.** Besides `alchemy_domain_objects`, the runner pool and
+  gateway run Effect Cluster with SQL storage, which creates message, reply, and runner tables at
+  runtime (read in source, not yet run). The Swarm step lists them and their owner.
+- **Recorded events are never rewritten.** The host writes an aggregate's events once under
+  `event:<sequence>` keys; state, receipts, outbox, backfill, and view rows are rewritten or
+  deleted. A trigger refuses `UPDATE`, `DELETE`, and `TRUNCATE` of `event:` keys, so the stop
+  condition "events cannot be protected" does not apply.
+- **Vitest inlines Alchemy packages.** `alchemy` publishes TypeScript sources as Node entry points,
+  so `vitest.config.ts` inlines `alchemy` and `@alchemy.run/*` for tests that load the host adapter.
 
 ## Review record
 

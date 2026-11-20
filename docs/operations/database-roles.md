@@ -226,9 +226,12 @@ Requirements:
 
 ## Domain Object Store Role
 
+> **Status:** Proposed in Alchemy Domain phase 0 (ADR-0124). No `ritsei_domain_host` role exists
+> yet and no production path uses the host; this section describes the role the phase proposes.
+
 The Effect Cluster host of the domain model port (ADR-0124) keeps aggregate state in
-`domain_model.alchemy_domain_objects`, created by migration and owned by the migrator. It connects
-as its own login, `ritsei_domain_host`, through `CLUSTER_DATABASE_URL`; the host names its table
+`domain_model.alchemy_domain_objects`, created by migration and owned by the migrator. It is to
+connect as its own login, `ritsei_domain_host`, through `CLUSTER_DATABASE_URL`; the host names its table
 without a schema, so `ALTER ROLE ritsei_domain_host SET search_path = domain_model`.
 
 `ritsei_domain_host` receives `USAGE` and `CREATE` on the `domain_model` schema and
