@@ -1,29 +1,23 @@
 name: CI
 
+# Pull requests run once on the pull_request event; branch pushes other than main are covered by it.
 on:
   push:
+    branches: [main]
   pull_request:
+
+# A newer commit on the same pull request cancels the run it replaces; main runs are never cancelled.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
 
 jobs:
-  validate:
+  static:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:19rc1-bookworm
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: ritsei
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres -d ritsei"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
+    # Varlock requires DATABASE_URL; the static checks never connect to it.
     env:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/ritsei
     steps:
@@ -45,9 +39,6 @@ jobs:
 
       - name: Validate Varlock environment
         run: pnpm exec varlock load --agent
-
-      - name: Install Playwright Chromium
-        run: pnpm exec playwright install --with-deps chromium
 
       - name: Commit and PR message validation
         env:
@@ -89,11 +80,79 @@ jobs:
       - name: Boundary lint
         run: pnpm run boundary:lint
 
-      - name: Tests
-        run: pnpm run test
-
       - name: Fallow audit
         run: pnpm run fallow:audit
+
+  # The suite is split into two repository shards and the browser project, which alone needs
+  # Chromium and the shared web build.
+  test:
+    name: test (${{ matrix.name }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: repository 1/2
+            args: --project repository --shard=1/2
+            browser: false
+          - name: repository 2/2
+            args: --project repository --shard=2/2
+            browser: false
+          - name: frontend
+            args: --project frontend
+            browser: true
+    services:
+      postgres:
+        image: postgres:19rc1-bookworm
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ritsei
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ritsei"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/ritsei
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Cache Playwright browsers
+        if: matrix.browser
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install Playwright Chromium
+        if: matrix.browser && steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Install Playwright system dependencies
+        if: matrix.browser && steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install-deps chromium
+
+      - name: Generate contracts and styles
+        run: pnpm run contracts && pnpm run styles
+
+      - name: Tests
+        run: pnpm exec varlock run -- vitest run ${{ matrix.args }}
 
   nix:
     runs-on: ubuntu-latest
