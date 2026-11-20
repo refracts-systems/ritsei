@@ -4,7 +4,7 @@
 > for what the module does now; the ADRs named under each rule record why.
 >
 > **Does not own:** Posting rules and ledger roles ([`financial-ledger.md`](../../../docs/architecture/financial-ledger.md)),
-> item identity (Product), or cross-module consistency
+> item identity (Product, [ADR-0097](../../../docs/decisions/0097-move-product-identity-to-a-product-module.md)), or cross-module consistency
 > ([`state-and-consistency.md`](../../../docs/architecture/state-and-consistency.md)).
 
 Each rule has an identifier that the test enforcing it names as `[ID]`, in a comment above the test

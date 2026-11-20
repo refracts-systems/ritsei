@@ -50,9 +50,9 @@ PostgreSQL remains canonical unless a later ADR explicitly changes ownership. AD
 financial-ledger scope: TigerBeetle is authoritative for accepted transfers, balances, and transfer
 history in an activated profile; PostgreSQL remains authoritative for the surrounding control plane.
 RITSEI authorization facts remain canonical in PostgreSQL, including membership, roles, capabilities,
-grants, scopes, SoD policy, and authorization versions. Native PostgreSQL is the default
-RelationshipEngine implementation. An optional evaluator such as SpiceDB is a rebuildable,
-replaceable projection/evaluation dependency and cannot become a second authority.
+grants, scopes, SoD policy, and authorization versions. Native PostgreSQL is the
+RelationshipEngine implementation (the SpiceDB option was withdrawn by ADR-0091); any later evaluator
+would be a rebuildable projection and cannot become a second authority.
 
 ## State Classes
 

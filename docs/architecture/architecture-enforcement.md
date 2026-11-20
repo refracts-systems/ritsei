@@ -248,8 +248,8 @@ Public DTOs must be separate from persistence models.
 ## External Identity and Authorization Provider Boundary
 
 Configured identity and relationship providers are infrastructure adapters, not RITSEI domains or
-sources of truth. ZITADEL is the recommended IdentityProvider adapter; SpiceDB is an optional
-RelationshipEngine adapter. Provider-specific SDKs, tokens, claims, tuple formats, revisions,
+sources of truth. ZITADEL is the recommended IdentityProvider adapter; the SpiceDB
+RelationshipEngine option was withdrawn (ADR-0091). Provider-specific SDKs, tokens, claims, tuple formats, revisions,
 credentials, and topology remain inside designated adapters or composition roots. Public contracts
 expose only provider-neutral RITSEI principals and authorization results.
 

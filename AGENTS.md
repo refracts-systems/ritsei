@@ -13,16 +13,21 @@ named once, with its check. Folder rules live in `apps/web/AGENTS.md`, `db/AGENT
 
 ## Source-of-Truth Order
 
-When documents conflict, use this order:
+Learn a current rule from its owner document, not by replaying ADRs (ADR-0123). When documents
+conflict, use this order:
 
-1. Accepted ADRs that explicitly supersede earlier decisions.
-2. `docs/architecture/architecture-spec-v4.md`.
-3. Other canonical architecture documents.
+1. The owner document: a module's `erp/modules/<module>/RULES.md`, or the subsystem document that
+   [`documentation-boundaries.md`](./docs/documentation-boundaries.md) names for the topic.
+2. `docs/architecture/architecture-spec-v4.md` for system-wide rules.
+3. Accepted ADRs: read them for why a rule exists, before reopening a rejected option, and for a
+   topic no owner document covers yet.
 4. Reference and exploration documents.
 
-`ARCHITECTURE.md` is a summary. Do not silently resolve contradictions: report them and update the
-source of truth. Create an ADR for a significant decision; supersede accepted ADRs instead of
-rewriting them. Superseded ADRs are in `docs/decisions/archive/`; search current ADRs with
+An ADR that disagrees with its owner document, or code that disagrees with either, is a defect:
+report it instead of silently resolving it, and fix the source of truth. `ARCHITECTURE.md` is a
+summary. Create an ADR for a significant decision, list the owner documents it changes in its
+`Changes:` header, and update them in the same change; supersede accepted ADRs instead of rewriting
+them. Superseded ADRs are in `docs/decisions/archive/`; search current ADRs with
 `rg -g '!docs/decisions/archive/**' <pattern> docs/decisions`.
 
 ## Working Rules

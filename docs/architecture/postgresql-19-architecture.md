@@ -135,9 +135,8 @@ records do not become a competing financial authority.
 
 RITSEI authorization authority follows the same rule: PostgreSQL stores canonical membership,
 roles, capabilities, grants, scopes, SoD policy, and authorization versions. Native PostgreSQL is the
-default RelationshipEngine implementation. SpiceDB, when selected, is an optional replaceable
-relationship/object evaluator or projection; its tuples, revisions, and caches are not a second RITSEI
-authority. Tenant isolation remains enforced independently through tenant-aware keys, validated
+RelationshipEngine implementation; the SpiceDB option was withdrawn by ADR-0091, and any later
+evaluator would need a new ADR and could not become a second RITSEI authority. Tenant isolation remains enforced independently through tenant-aware keys, validated
 application context, and PostgreSQL RLS.
 
 Redis, ClickHouse, search indexes, external authorization evaluators, and caches are not authoritative.
