@@ -11,5 +11,5 @@ export const OnboardingModule = defineModule({
   events: [],
   consumes: [],
   http: ["Onboarding"],
-  pages: [],
+  pages: ["/onboarding", "/onboarding/:id"],
 })

@@ -120,6 +120,59 @@ const withServices = <A, E>(
   )
 
 it.effect.skipIf(databaseUrl === undefined)(
+  "keeps rejected source ids out of staging and hides them on existing invalid rows",
+  () =>
+    withServices(({ client, tenantId, onboarding }) =>
+      Effect.gen(function* () {
+        const ref = { principal, tenantId }
+        const oversizedSourceId = "X".repeat(132_000)
+
+        const staged = yield* onboarding.stage({
+          ...ref,
+          sourceInstance: "accurate-prod",
+          objectKind: "party",
+          mappingRevision: PartyMappingRevision,
+          csv: csv(base[0]!, `${oversizedSourceId},person,Rejected Name,`),
+        })
+
+        const batchId = staged.summary.batch.id
+
+        const stored = yield* Effect.promise(
+          () =>
+            client<{ source_id: string }[]>`
+              select source_id from onboarding.import_rows
+              where tenant_id = ${tenantId} and batch_id = ${batchId} order by row_number
+            `,
+        )
+
+        assert.deepStrictEqual(
+          stored.map((row) => row.source_id),
+          ["C-1", ""],
+        )
+
+        // Simulate a rejected row staged by the previous parser.
+        yield* Effect.promise(
+          () => client`
+            update onboarding.import_rows set source_id = ${oversizedSourceId}
+            where tenant_id = ${tenantId} and batch_id = ${batchId} and status = 'invalid'
+          `,
+        )
+
+        const rows = yield* onboarding.listRows({ ...ref, batchId })
+
+        assert.deepStrictEqual(
+          rows.map((row) => row.sourceId),
+          ["C-1", ""],
+        )
+        assert.deepStrictEqual(
+          rows[1]?.errors.map((error) => error.code),
+          ["source_id_too_long"],
+        )
+      }),
+    ),
+)
+
+it.effect.skipIf(databaseUrl === undefined)(
   "rolls back an interrupted record with its owner write and resumes without duplicates",
   () => {
     let roleAssignments = 0
