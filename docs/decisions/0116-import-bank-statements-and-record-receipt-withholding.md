@@ -1,6 +1,6 @@
 # ADR-0116: Import Bank Statements and Record Withholding on Receipts in Settlement
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-19
 - Amends: ADR-0102 (bank statements no longer stay out of Settlement)
 - Compatible with: ADR-0016, ADR-0042, ADR-0051, ADR-0098, ADR-0111

@@ -1,6 +1,6 @@
 # ADR-0119: Date Tax Rates With Periods on the Tax Code
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-19
 - Amends: None
 - Compatible with: ADR-0016, ADR-0098, ADR-0111
