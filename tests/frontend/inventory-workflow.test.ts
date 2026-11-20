@@ -8,7 +8,13 @@ import type {
   StockReservation,
   StockTransfer,
 } from "../../apps/web/src/shared/contracts/generated/inventory.ts"
-import { builtApp, connectToTenant, chooseMoreAction, notFoundBody } from "./browser.ts"
+import {
+  builtApp,
+  chooseMoreAction,
+  connectToTenant,
+  notFoundBody,
+  openedDialog,
+} from "./browser.ts"
 
 const tenantId = "01900000-0000-7000-8000-000000000010"
 const legalEntityId = "01900000-0000-7000-8000-000000000011"
@@ -337,7 +343,7 @@ it.effect(
         assert.deepEqual(initialA11y.violations, [])
 
         await chooseMoreAction(page, "Create warehouse")
-        const warehouseDialog = page.getByRole("dialog", { name: "Create warehouse" })
+        const warehouseDialog = await openedDialog(page, "Create warehouse")
         await warehouseDialog
           .getByRole("textbox", { name: "Legal entity ID", exact: true })
           .fill(legalEntityId)
@@ -352,7 +358,7 @@ it.effect(
         )
 
         await chooseMoreAction(page, "Create item")
-        const itemDialog = page.getByRole("dialog", { name: "Create item" })
+        const itemDialog = await openedDialog(page, "Create item")
         await itemDialog.getByRole("textbox", { name: "SKU", exact: true }).fill("widget-3")
         await itemDialog
           .getByRole("textbox", { name: "Item name", exact: true })
@@ -361,7 +367,7 @@ it.effect(
         await itemDialog.waitFor({ state: "hidden" })
 
         await page.getByRole("button", { name: "Receive stock", exact: true }).click()
-        const receiveDialog = page.getByRole("dialog", { name: "Receive stock" })
+        const receiveDialog = await openedDialog(page, "Receive stock")
         await receiveDialog
           .getByRole("combobox", { name: "Warehouse", exact: true })
           .selectOption(warehouseId)
@@ -373,7 +379,7 @@ it.effect(
         await receiveDialog.waitFor({ state: "hidden" })
 
         await chooseMoreAction(page, "Adjust stock")
-        const adjustDialog = page.getByRole("dialog", { name: "Adjust stock" })
+        const adjustDialog = await openedDialog(page, "Adjust stock")
         await adjustDialog
           .getByRole("combobox", { name: "Warehouse", exact: true })
           .selectOption(warehouseId)
@@ -388,7 +394,7 @@ it.effect(
         await adjustDialog.waitFor({ state: "hidden" })
 
         await chooseMoreAction(page, "Reserve stock")
-        const reserveDialog = page.getByRole("dialog", { name: "Reserve stock" })
+        const reserveDialog = await openedDialog(page, "Reserve stock")
         await reserveDialog
           .getByRole("combobox", { name: "Warehouse", exact: true })
           .selectOption(warehouseId)
@@ -400,7 +406,7 @@ it.effect(
         await reserveDialog.waitFor({ state: "hidden" })
 
         await page.getByRole("button", { name: "Create transfer", exact: true }).click()
-        const transferDialog = page.getByRole("dialog", { name: "Create stock transfer" })
+        const transferDialog = await openedDialog(page, "Create stock transfer")
         await transferDialog
           .getByRole("combobox", { name: "Source warehouse", exact: true })
           .selectOption(warehouseId)
@@ -415,26 +421,26 @@ it.effect(
         await transferDialog.waitFor({ state: "hidden" })
 
         await page.getByRole("button", { name: "Confirm transfer", exact: true }).first().click()
-        const confirmDialog = page.getByRole("dialog", { name: "Confirm transfer" })
+        const confirmDialog = await openedDialog(page, "Confirm transfer")
         await confirmDialog.getByRole("button", { name: "Confirm transfer", exact: true }).click()
         await confirmDialog.waitFor({ state: "hidden" })
         await page.getByText("confirmed", { exact: true }).first().waitFor()
 
         await page.getByRole("button", { name: "Complete transfer", exact: true }).first().click()
-        const completeDialog = page.getByRole("dialog", { name: "Complete transfer" })
+        const completeDialog = await openedDialog(page, "Complete transfer")
         await completeDialog.getByRole("button", { name: "Complete transfer", exact: true }).click()
         await completeDialog.waitFor({ state: "hidden" })
         await page.getByText("completed", { exact: true }).first().waitFor()
 
         await page.getByRole("button", { name: "Release reservation", exact: true }).first().click()
-        const releaseDialog = page.getByRole("dialog", { name: "Release reservation" })
+        const releaseDialog = await openedDialog(page, "Release reservation")
         await releaseDialog
           .getByRole("button", { name: "Release reservation", exact: true })
           .click()
         await releaseDialog.waitFor({ state: "hidden" })
 
         await page.getByRole("button", { name: "Fulfill reservation", exact: true }).first().click()
-        const fulfillDialog = page.getByRole("dialog", { name: "Fulfill reservation" })
+        const fulfillDialog = await openedDialog(page, "Fulfill reservation")
         await fulfillDialog
           .getByRole("button", { name: "Fulfill reservation", exact: true })
           .click()

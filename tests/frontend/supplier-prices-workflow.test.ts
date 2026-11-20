@@ -1,7 +1,7 @@
 import { AxeBuilder } from "@axe-core/playwright"
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
-import { builtApp, connectToTenant, fulfillJson, mockRoutes } from "./browser.ts"
+import { builtApp, connectToTenant, fulfillJson, mockRoutes, openedDialog } from "./browser.ts"
 
 const tenantId = "01900000-0000-7000-8000-000000000010"
 const supplierAccountId = "01900000-0000-7000-8000-000000000021"
@@ -65,7 +65,7 @@ it.effect(
         await page.getByRole("link", { name: "Supply", exact: true }).click()
         await page.getByRole("button", { name: "Prices", exact: true }).click()
 
-        const dialog = page.getByRole("dialog", { name: "Supplier prices" })
+        const dialog = await openedDialog(page, "Supplier prices")
         await dialog.getByRole("cell", { name: "6.00", exact: true }).waitFor()
         assert.deepEqual(listed, [supplierAccountId])
         assert.deepEqual(

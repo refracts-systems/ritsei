@@ -9,6 +9,7 @@ import {
   forbiddenBody,
   fulfillJson,
   mockRoutes,
+  openedDialog,
 } from "./browser.ts"
 
 const tenantId = "01900000-0000-7000-8000-000000000010"
@@ -272,7 +273,7 @@ it.effect(
         await page.getByText("No invoices or credit notes in this legal entity yet.").waitFor()
 
         await page.getByRole("button", { name: "Create invoice", exact: true }).click()
-        const dialog = page.getByRole("dialog", { name: "Create invoice" })
+        const dialog = await openedDialog(page, "Create invoice")
         await dialog.waitFor()
         assert.deepEqual(
           (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()).violations,
@@ -345,7 +346,7 @@ it.effect(
         await page.getByRole("heading", { name: "Invoice INV-0001", exact: true }).waitFor()
 
         await page.getByRole("button", { name: "Receive payment", exact: true }).click()
-        const dialog = page.getByRole("dialog", { name: "Receive payment" })
+        const dialog = await openedDialog(page, "Receive payment")
         await dialog.waitFor()
         assert.equal(await dialog.getByRole("textbox", { name: "Amount" }).inputValue(), "111.00")
         assert.deepEqual(
@@ -465,7 +466,7 @@ it.effect(
         await page.getByText("No supplier bills in this legal entity yet.").waitFor()
 
         await page.getByRole("button", { name: "Create supplier bill", exact: true }).click()
-        const dialog = page.getByRole("dialog", { name: "Create supplier bill" })
+        const dialog = await openedDialog(page, "Create supplier bill")
         await dialog.waitFor()
         await dialog
           .getByRole("combobox", { name: "Purchase order", exact: true })

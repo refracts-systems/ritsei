@@ -8,6 +8,7 @@ import {
   connectToTenant,
   fulfillJson,
   mockRoutes,
+  openedDialog,
   type RouteHandler,
 } from "./browser.ts"
 
@@ -206,7 +207,7 @@ it.effect(
         await page.getByRole("rowheader", { name: "Widget", exact: true }).waitFor()
 
         await page.getByRole("button", { name: "Record delivery", exact: true }).click()
-        const dialog = page.getByRole("dialog", { name: "Record delivery" })
+        const dialog = await openedDialog(page, "Record delivery")
         await dialog.waitFor()
         assert.equal(
           await dialog.getByRole("textbox", { name: /Widget.*2 left/ }).inputValue(),

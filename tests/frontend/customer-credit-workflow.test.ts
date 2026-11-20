@@ -2,7 +2,14 @@ import { AxeBuilder } from "@axe-core/playwright"
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import type { Page } from "playwright"
-import { builtApp, connectToTenant, entranceFinished, fulfillJson, mockRoutes } from "./browser.ts"
+import {
+  builtApp,
+  connectToTenant,
+  entranceFinished,
+  fulfillJson,
+  mockRoutes,
+  openedDialog,
+} from "./browser.ts"
 import type { RouteHandler } from "./browser.ts"
 
 const tenantId = "01910000-0000-7000-8000-000000000010"
@@ -62,7 +69,7 @@ it.effect(
 
         // A malformed amount is explained and nothing is sent.
         await credit.getByRole("button", { name: "Set credit limit" }).click()
-        const dialog = page.getByRole("dialog", { name: "Set credit limit" })
+        const dialog = await openedDialog(page, "Set credit limit")
         await dialog.waitFor()
         assert.isTrue(await entranceFinished(page))
         await dialog.getByLabel("Credit limit").fill("5000.555")
@@ -120,7 +127,7 @@ const openLimitDialog = async (page: Page, url: string, save: RouteHandler) => {
   const credit = page.getByRole("region", { name: "Credit" })
   await credit.getByText("No limit").waitFor()
   await credit.getByRole("button", { name: "Set credit limit" }).click()
-  const dialog = page.getByRole("dialog", { name: "Set credit limit" })
+  const dialog = await openedDialog(page, "Set credit limit")
 
   return {
     dialog,

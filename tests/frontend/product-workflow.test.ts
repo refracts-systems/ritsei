@@ -1,6 +1,6 @@
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
-import { builtApp, connectToTenant, fulfillJson, mockRoutes } from "./browser.ts"
+import { builtApp, connectToTenant, fulfillJson, mockRoutes, openedDialog } from "./browser.ts"
 
 const tenantId = "01910000-0000-7000-8000-000000000010"
 
@@ -39,7 +39,7 @@ it.effect(
           await connectToTenant(page, url, "product-session", tenantId, "User accounts")
           await page.getByRole("link", { name: "Products", exact: true }).click()
           await page.getByRole("button", { name: "Create product", exact: true }).click()
-          const dialog = page.getByRole("dialog", { name: "Create product" })
+          const dialog = await openedDialog(page, "Create product")
           await dialog.getByLabel("Code").fill("A1")
           await dialog.getByLabel("Name").fill("Svc")
           await dialog.getByLabel("Type").selectOption("service")

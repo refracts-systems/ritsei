@@ -8,6 +8,7 @@ import {
   entranceFinished,
   forbiddenBody,
   notFoundBody,
+  openedDialog,
 } from "./browser.ts"
 
 const tenantId = "01900000-0000-7000-8000-000000000010"
@@ -218,7 +219,7 @@ it.effect(
 
         const addTrigger = page.getByRole("button", { name: "Add membership", exact: true })
         await addTrigger.click()
-        const addDialog = page.getByRole("dialog", { name: "Add tenant membership" })
+        const addDialog = await openedDialog(page, "Add tenant membership")
         await addDialog.waitFor()
         await addDialog.press("Escape")
         await addDialog.waitFor({ state: "hidden" })
@@ -233,7 +234,7 @@ it.effect(
         assert.deepEqual(addBody, { userAccountId: addedMemberId })
 
         await page.getByRole("button", { name: "Grant capability", exact: true }).click()
-        const grantDialog = page.getByRole("dialog", { name: "Grant tenant capability" })
+        const grantDialog = await openedDialog(page, "Grant tenant capability")
         await grantDialog
           .getByRole("combobox", { name: "Capability", exact: true })
           .selectOption("party.read")
@@ -256,7 +257,7 @@ it.effect(
         await page.getByText(/individual grant revocation/).waitFor()
 
         await page.getByRole("button", { name: "Suspend membership", exact: true }).click()
-        const suspendDialog = page.getByRole("dialog", { name: "Suspend tenant membership" })
+        const suspendDialog = await openedDialog(page, "Suspend tenant membership")
         assert.isTrue(await entranceFinished(page))
         assert.deepEqual(
           (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()).violations,
@@ -279,7 +280,7 @@ it.effect(
           .waitFor()
 
         await page.getByRole("button", { name: "Activate membership", exact: true }).click()
-        const activateDialog = page.getByRole("dialog", { name: "Activate tenant membership" })
+        const activateDialog = await openedDialog(page, "Activate tenant membership")
         await activateDialog.getByRole("checkbox").check()
         await activateDialog
           .getByRole("button", {
@@ -290,7 +291,7 @@ it.effect(
         await page.locator("aside").getByText("Active", { exact: true }).waitFor()
 
         await page.getByRole("button", { name: "Remove membership", exact: true }).click()
-        const removeDialog = page.getByRole("dialog", { name: "Remove tenant membership" })
+        const removeDialog = await openedDialog(page, "Remove tenant membership")
         await removeDialog.getByText(/global account and memberships in other tenants/).waitFor()
         await removeDialog.getByRole("checkbox").check()
         await removeDialog.getByRole("button", { name: "Remove membership", exact: true }).click()
@@ -380,7 +381,7 @@ it.effect(
 
         mode = "unknown-grant"
         await page.getByRole("button", { name: "Grant capability", exact: true }).click()
-        const dialog = page.getByRole("dialog", { name: "Grant tenant capability" })
+        const dialog = await openedDialog(page, "Grant tenant capability")
         await dialog
           .getByRole("combobox", { name: "Capability", exact: true })
           .selectOption("party.read")

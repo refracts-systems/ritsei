@@ -1,6 +1,12 @@
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
-import { builtApp, connectToTenant, mockLocalAuth, unauthorizedBody } from "./browser.ts"
+import {
+  builtApp,
+  connectToTenant,
+  mockLocalAuth,
+  openedDialog,
+  unauthorizedBody,
+} from "./browser.ts"
 
 it.effect(
   "builds the SPA, signs in, navigates, and changes theme",
@@ -148,7 +154,7 @@ it.effect(
         )
 
         await page.getByRole("button", { name: "Sign out", exact: true }).click()
-        const dialog = page.getByRole("dialog", { name: "Sign out of RITSEI?" })
+        const dialog = await openedDialog(page, "Sign out of RITSEI?")
         await dialog.getByRole("button", { name: "Sign out", exact: true }).click()
         await logoutResponse
         assert.equal(logoutAuthorization, "Bearer switch-session")

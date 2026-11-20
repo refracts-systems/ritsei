@@ -3,7 +3,7 @@ import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import type { Page, Route } from "playwright"
 import type { SalesOrder } from "../../apps/web/src/shared/contracts/generated/sales.ts"
-import { builtApp, connectToTenant, entranceFinished, notFoundBody } from "./browser.ts"
+import { builtApp, connectToTenant, notFoundBody, openedDialog } from "./browser.ts"
 
 const tenantId = "01910000-0000-7000-8000-000000000010"
 const customerId = "01910000-0000-7000-8000-000000000011"
@@ -135,12 +135,6 @@ it.effect(
             return fulfillJson(route, 200, quotations)
           }
 
-          if (path === "/sales/quotations" && method === "POST") {
-            quotations = [{ ...quotation, customerId: body.customerId, total: body.total }]
-
-            return fulfillJson(route, 201, quotations[0])
-          }
-
           if (path === "/product/products") {
             return fulfillJson(route, 200, [
               { id: productId, tenantId, code: "WIDGET", name: "Widget", type: "stockable" },
@@ -208,9 +202,7 @@ it.effect(
         assert.deepEqual(initialA11y.violations, [])
 
         await page.getByRole("button", { name: "Create customer", exact: true }).click()
-        const customerDialog = page.getByRole("dialog", { name: "Create customer" })
-        await customerDialog.waitFor()
-        assert.isTrue(await entranceFinished(page))
+        const customerDialog = await openedDialog(page, "Create customer")
         await customerDialog
           .getByRole("textbox", { name: "Customer name", exact: true })
           .fill("Northwind Customer")
@@ -225,9 +217,7 @@ it.effect(
         await page.getByRole("heading", { name: "Sales", exact: true }).waitFor()
 
         await page.getByRole("button", { name: "Create quotation", exact: true }).click()
-        const quotationDialog = page.getByRole("dialog", { name: "Create quotation" })
-        await quotationDialog.waitFor()
-        assert.isTrue(await entranceFinished(page))
+        const quotationDialog = await openedDialog(page, "Create quotation")
         await quotationDialog
           .getByRole("combobox", { name: "Customer", exact: true })
           .selectOption(customerId)
@@ -242,9 +232,7 @@ it.effect(
         await page.getByRole("heading", { name: "Sales", exact: true }).waitFor()
 
         await page.getByRole("button", { name: "Create sales order", exact: true }).click()
-        const orderDialog = page.getByRole("dialog", { name: "Create sales order" })
-        await orderDialog.waitFor()
-        assert.isTrue(await entranceFinished(page))
+        const orderDialog = await openedDialog(page, "Create sales order")
         await orderDialog
           .getByRole("combobox", { name: "Customer", exact: true })
           .selectOption(customerId)
@@ -259,17 +247,13 @@ it.effect(
         await page.getByRole("heading", { name: "Sales order detail", exact: true }).waitFor()
 
         await page.getByRole("button", { name: "Confirm order", exact: true }).first().click()
-        const confirmDialog = page.getByRole("dialog", { name: "Confirm sales order" })
-        await confirmDialog.waitFor()
-        assert.isTrue(await entranceFinished(page))
+        const confirmDialog = await openedDialog(page, "Confirm sales order")
         await confirmDialog.getByRole("button", { name: "Confirm order", exact: true }).click()
         await confirmDialog.waitFor({ state: "hidden" })
         await page.getByText("confirmed", { exact: true }).first().waitFor()
 
         await page.getByRole("button", { name: "Cancel order", exact: true }).first().click()
-        const cancelDialog = page.getByRole("dialog", { name: "Cancel confirmed sales order" })
-        await cancelDialog.waitFor()
-        assert.isTrue(await entranceFinished(page))
+        const cancelDialog = await openedDialog(page, "Cancel confirmed sales order")
         await cancelDialog.getByRole("button", { name: "Cancel order", exact: true }).click()
         await cancelDialog.waitFor({ state: "hidden" })
         await page.getByText("cancelled", { exact: true }).first().waitFor()

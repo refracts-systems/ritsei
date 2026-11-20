@@ -3,7 +3,7 @@ import { AxeBuilder } from "@axe-core/playwright"
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import type { Page, Route } from "playwright"
-import { builtApp, connectToTenant, forbiddenBody, notFoundBody } from "./browser.ts"
+import { builtApp, connectToTenant, forbiddenBody, notFoundBody, openedDialog } from "./browser.ts"
 
 const tenantId = "01900000-0000-7000-8000-000000000010"
 const northwindId = "01900000-0000-7000-8000-000000000020"
@@ -249,7 +249,7 @@ it.effect(
 
         const createTrigger = page.getByRole("button", { name: "Create Party", exact: true })
         await createTrigger.click()
-        const dialog = page.getByRole("dialog", { name: "Create Party" })
+        const dialog = await openedDialog(page, "Create Party")
         await dialog.waitFor()
         assert.deepEqual(
           (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()).violations,
@@ -416,7 +416,7 @@ it.effect(
 
         mode = "unknown-create"
         await page.getByRole("button", { name: "Create Party", exact: true }).click()
-        const dialog = page.getByRole("dialog", { name: "Create Party" })
+        const dialog = await openedDialog(page, "Create Party")
         await dialog.getByRole("combobox", { name: "Kind", exact: true }).selectOption("person")
         await dialog.getByRole("textbox", { name: "Name", exact: true }).fill("Unknown Person")
         await dialog.getByRole("button", { name: "Create Party", exact: true }).click()
