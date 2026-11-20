@@ -29,14 +29,7 @@
 
 Each rule has an identifier that the test enforcing it names as `[ID]`, in a comment above the test
 or in its title; `tests/architecture/modules.test.ts` fails when a rule has no such test or a test
-names an unknown rule. The sections after this one are the former Procurement architecture document;
-they are not yet split into identified rules.
-
-> **Known stale:** the Position, Authority Matrix, Invoice Matching and Payables Gate, and Maturity
-> sections below predate [ADR-0103](../../../docs/decisions/0103-adopt-threshold-approvals-with-separation-of-duties.md)
-> and [ADR-0104](../../../docs/decisions/0104-adopt-valued-procure-to-pay-documents.md): approvals
-> and valued procure-to-pay documents exist in the code. Until those sections are rewritten, the
-> code and those ADRs win on approvals, supplier invoices, and matching.
+names an unknown rule. The sections after the rules describe the module around them.
 
 ### `PRC-PO-1` A confirmed purchase order is a frozen snapshot
 
@@ -83,31 +76,71 @@ recorded receipt, and an over-receipt cancellation is blocked.
 The document snapshot is owner-local, its checksum is stable across capture times, and an unconfirmed
 order is not rendered.
 
+### `PRC-PRICE-1` One supplier price per supplier account and product
+
+`setSupplierPrice` (`procurement.supplier_price.configure`) replaces the price of a product for a
+supplier account; reading needs `procurement.supplier_price.read`.
+
+### `PRC-DRAFT-1` A document purchase order is priced and checked for approval when drafted
+
+`draftPurchaseOrder` (`procurement.purchase_order.create`) accepts only stockable products
+(`PurchaseLineNotStockable`), prices each line from an explicit price or the supplier price
+(`SupplierPriceNotFound`), defaults the tax code through Tax for the purchase direction, and derives
+the total. In the same transaction it submits an approval request when the policy requires one for
+that total (strictly above the threshold) and returns it with the order.
+Why: [ADR-0103](../../../docs/decisions/0103-adopt-threshold-approvals-with-separation-of-duties.md),
+[ADR-0104](../../../docs/decisions/0104-adopt-valued-procure-to-pay-documents.md).
+
+### `PRC-REL-1` Releasing needs an approval that covers the total, decided by someone else
+
+`releasePurchaseOrder` (`procurement.purchase_order.confirm`) recomputes the total and, when approval
+is required, needs an approved request whose amount is at least that total; otherwise it fails with
+`PurchaseOrderApprovalRequired` and the request status (or `missing`). The older
+`confirmPurchaseOrder` is gated the same way. The requester cannot decide their own request
+(`SelfApprovalForbidden`, also enforced by the database), and decisions are final.
+Why: [ADR-0103](../../../docs/decisions/0103-adopt-threshold-approvals-with-separation-of-duties.md).
+
+### `PRC-VRCPT-1` A valued receipt brings stock in at the purchase price against GRNI
+
+`receiveValued` (`procurement.purchase_receipt.receive`) locks the confirmed order, rejects
+quantities above what is still unreceived (`PurchaseReceiptQuantityExceeded`), numbers the receipt
+`GR/`, and receives the stock through Inventory at the order line's price against
+`goods_received_not_invoiced`. A repeated receipt id returns the recorded receipt.
+Why: [ADR-0104](../../../docs/decisions/0104-adopt-valued-procure-to-pay-documents.md).
+
+### `PRC-RET-1` A return sends back at most what was received, at the purchase price
+
+`returnToSupplier` (`procurement.purchase_return.create`) locks the order, rejects quantities above
+received less already returned (`PurchaseReturnExceedsReceipt`), numbers the return `RET/`, and
+issues the stock through Inventory at the order line's price against `goods_received_not_invoiced`,
+not at moving average. A repeated return id returns the recorded return.
+Why: [ADR-0104](../../../docs/decisions/0104-adopt-valued-procure-to-pay-documents.md).
+
 ## Position
 
-Procurement owns purchase intent and its internal business documents. It does not acquire authority
-merely because a Purchase Order contains references used by another domain.
-
-The implemented bounded scope is:
+Procurement owns purchase intent and its business documents: Supplier Accounts, supplier prices,
+purchase orders, receipts, and returns. It does not acquire authority merely because a document
+contains references used by another domain.
 
 ```text
 Party supplier relationship
         |
         v
-Procurement SupplierAccount
-        |
-        v
-PurchaseOrder: draft -> confirmed -> cancelled
+Procurement SupplierAccount --(supplier price)--> PurchaseOrder: draft -> confirmed -> cancelled
+                                                        |   (approval above threshold, PRC-REL-1)
+                                                        v
+                                     Receipt GR/... (stock in at PO price vs GRNI)
+                                     Return RET/... (stock out at PO price vs GRNI)
+                                                        |
+                                                        v
+                                     Billing supplier bill: three-way match (BIL-BILL-1)
 ```
 
-This lifecycle is internal. Confirmation is not supplier acceptance or delivery. Cancellation is not
-supplier acknowledgement, stock release, receipt reversal, invoice voiding, or financial reversal.
-
-The current scope deliberately excludes sourcing, requisitions, approvals, blanket agreements,
-price catalogs, tax, multi-currency, supplier communication, return, invoice matching, payables,
-settlement, API expansion, and Process Studio publication. Purchase-order confirmation now has a
-bounded PUBLIC action/event catalog slice; Goods Receipt remains the bounded synchronous Level 2
-receipt boundary described below.
+Confirmation is not supplier acceptance or delivery, and cancellation is not supplier
+acknowledgement or financial reversal. Two service surfaces exist: `ProcurementService`, the original
+Supplier Account, purchase order, and unvalued receipt surface, and `PurchaseDocumentService`, which
+carries the valued document flow above. Sourcing, requisitions, blanket agreements, multiple
+currencies, supplier communication, and Process Studio publication are not supported.
 
 ## Authority Matrix
 
@@ -115,16 +148,14 @@ receipt boundary described below.
 | --- | --- | --- |
 | Party identity, supplier role, Legal Entity, supplier relationship | Party | Procurement consumes the public Party relationship contract |
 | Tenant-local usable supplier identity | Procurement `SupplierAccount` | References one active Party supplier relationship |
-| Purchase Order identity, status, lines, and derived total | Procurement | PostgreSQL-backed owner state |
-| Purchase Order authorization and lifecycle policy | Procurement + Authorization | Separate create, read, confirm, and cancel capabilities |
-| Item identity on current Purchase Order lines | Opaque external identity | No Inventory foreign key or availability claim exists |
-| Physical stock, warehouse balance, reservation, and movement | Inventory | Purchase Order state never changes stock |
-| Receipt business evidence | Procurement | Immutable Goods Receipt evidence with cumulative line allocation |
-| Supplier invoice and matching authority | Undecided | Remains gated |
-| Payable, journal, balance, and settlement authority | Accounting/financial owner | Procurement creates no financial fact |
+| Supplier prices, purchase orders, receipts, returns | Procurement | PostgreSQL-backed owner state |
+| Approval policy, requests, and decisions | Approvals (framework) | Procurement asks and enforces the result (`PRC-REL-1`) |
+| Tax code selection and rates | Tax | Procurement asks Tax for default codes; it computes no rate |
+| Physical stock, valuation, and movement | Inventory | Receipts and returns move stock through the public Inventory contract |
+| Supplier bills, supplier credit notes, three-way match, payables | Billing | Billing matches against Procurement's receipt and return quantities (`BIL-BILL-1`) |
+| Payments to suppliers | Settlement | Not a Procurement fact |
+| Journals, accounts, periods | Accounting | Reached through Inventory and Billing postings; Procurement posts none |
 | External supplier transmission and acknowledgement | Integrations plus Procurement contract | Not implemented |
-| Goods Receipt physical movement | Inventory | Procurement invokes public Inventory receipt contract; no cross-table write |
-| Process-visible action/event metadata | Owning domain catalog | Procurement publishes none today |
 
 No package may mutate Procurement tables except Procurement. Procurement must not mutate Party,
 Inventory, Billing, Accounting, Messaging, Process, or integration tables directly.
@@ -283,15 +314,9 @@ the public DTO contract.
 
 ## Authorization
 
-Procurement uses narrow business capabilities:
-
-```text
-procurement.supplier_account.create
-procurement.purchase_order.create
-procurement.purchase_order.read
-procurement.purchase_order.confirm
-procurement.purchase_order.cancel
-```
+Procurement uses narrow business capabilities, one per business action; the authoritative list is
+[`src/capabilities.ts`](./src/capabilities.ts). Approval decisions use the policy's approver
+capability in the Approvals module.
 
 Authorization occurs before protected reads or writes. Authentication does not grant Procurement
 authority. The service denies by default and tests allow, deny, and Tenant-scope mismatch behavior.
@@ -346,42 +371,37 @@ The selected contract is:
    one PostgreSQL transaction. Inventory records the receipt ID as movement provenance.
 9. A lost response is retried with the same idempotency key. No external unknown-outcome protocol is
    introduced because the bounded operation is PostgreSQL-local.
-10. Receipt reversal, Purchase Return, invoice matching, events, API exposure, external documents,
-    and Process Studio publication remain separate gates.
+10. Purchase returns (`PRC-RET-1`) and valued receipts (`PRC-VRCPT-1`) exist; receipt reversal,
+    external documents, and Process Studio publication remain separate gates.
 
 The implementation and rationale are defined by
 [`ADR-0047`](../../../docs/decisions/0047-define-procurement-goods-receipt-boundary.md). An Effect fiber, request
 lifetime, or eventual event is not the durability mechanism for the synchronous stock invariant.
 
-## Invoice Matching and Payables Gate
+## Invoice Matching and Payables
 
-Three-way matching, supplier invoice ownership, payable creation, tax, currency, payment, and
-settlement are not selected. They require explicit Procurement, Billing, Accounting, and financial
-ledger boundaries. A Purchase Order total is not by itself a payable or journal fact.
+Billing owns supplier bills, supplier credit notes, the three-way match, and payables
+([ADR-0102](../../../docs/decisions/0102-split-billing-and-settlement.md),
+[ADR-0104](../../../docs/decisions/0104-adopt-valued-procure-to-pay-documents.md)); its rules are
+`BIL-BILL-1` to `BIL-BILL-3` and `BIL-CREDIT-1` in [`../billing/RULES.md`](../billing/RULES.md).
+Procurement supplies the matching view (`getMatching`): per order line the ordered, received, and
+returned quantities, price, and tax code. A purchase order total is not by itself a payable or
+journal fact.
 
 ## Maturity
 
-The bounded Procurement capability is Level 3 for purchase-order confirmation and Level 2 for
-Goods Receipt:
+- `procurement.purchase_order.confirm` is a public typed action and
+  `procurement.purchase_order.confirmed` a public owner event, catalog-tested with idempotent replay.
+- Valued receipts, returns, supplier prices, and approval-gated release are covered by the
+  procure-to-pay chain test, not by Procurement module tests.
+- Receipt reversal, external supplier documents, and Process Studio publication are not supported.
 
-- `procurement.purchase_order.confirm` is a PUBLIC typed action;
-- `procurement.purchase_order.confirmed` is a PUBLIC owner event;
-- action/event schemas, capability identity, tenant scope, correlation, and at-least-once metadata
-  are catalog-tested;
-- confirmation uses atomic persistence plus Messaging publication and idempotent replay;
-- Supplier Account, Purchase Order, and Goods Receipt retain their existing Level 2 invariant
-  proofs and explicit owner-local correction/return gates.
+## Runtime Composition
 
-Procurement must not advertise receipt, invoice matching, payables, or external supplier delivery as
-Level 3 until each receives its own action/event and recovery contract.
-
-## Runtime Composition Status
-
-`ProcurementLive` is installed in the `erp/runtime/layers.ts` `ApplicationLive` composition with Database,
-Authorization, Party, and Inventory dependencies. The Effect HTTP API exposes the bounded
-SupplierAccount, PurchaseOrder, and GoodsReceipt operations; no worker or Process Studio route
-consumes Procurement. Keep API handlers on the public package contract rather than importing
-persistence internals.
+`ProcurementLive` is composed in `erp/runtime` with Database, Authorization, Approvals, Accounting,
+Party, Tax, Product, and Inventory dependencies. The module's routes are declared in [`http.ts`](./http.ts)
+(ADR-0094). Keep handlers on the public package contract rather than importing persistence
+internals.
 
 ## Implementation Map
 

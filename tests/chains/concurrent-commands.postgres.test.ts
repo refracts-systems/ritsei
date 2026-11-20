@@ -48,7 +48,7 @@ const outcomes = <A, E>(results: ReadonlyArray<Result.Result<A, E>>) => ({
   failed: results.flatMap((result) => (Result.isFailure(result) ? [result.failure] : [])),
 })
 
-// [SAL-CREDIT-2]
+// [SAL-CREDIT-2] [SAL-DLV-1]
 it.effect.skipIf(databaseUrl === undefined)(
   "lets only one of two simultaneous commands win a stock, billing, payment, or approval race",
   () =>
