@@ -18,6 +18,7 @@ import {
 const databaseUrl = process.env["DATABASE_URL"]
 const principal = { userAccountId: "opening-user", sessionId: "opening-session" }
 
+// [INV-OPEN-4] [INV-OPEN-5]
 it.effect.skipIf(databaseUrl === undefined)(
   "loads the opening position once, revalues it with approval, and posts it against clearing",
   () =>
@@ -217,6 +218,7 @@ it.effect.skipIf(databaseUrl === undefined)(
   { timeout: 120_000 },
 )
 
+// [INV-OPEN-5]
 it.effect.skipIf(databaseUrl === undefined)(
   "rolls the opening journal back with the load when a later write fails, then posts once",
   () =>

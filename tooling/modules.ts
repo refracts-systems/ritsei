@@ -106,7 +106,96 @@ const httpAdapters = async (manifests: ReadonlyArray<ModuleManifest>) =>
     ),
   )
 
-/** Checks installed ERP module manifests against the repository (ADR-0094). */
+export type ModuleRule = { readonly id: string; readonly unenforced: boolean }
+
+const ruleId = /[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*-\d+/
+
+/** Rules declared in a module's RULES.md as "### `ID` Title" headings (ADR-0123). */
+export const parseRules = (text: string): readonly ModuleRule[] =>
+  text.split(/^(?=### )/m).flatMap((section) => {
+    const id = section.match(new RegExp(`^### \`(${ruleId.source})\``))?.[1]
+
+    return id === undefined ? [] : [{ id, unenforced: /\bunenforced\b/i.test(section) }]
+  })
+
+const citedRules = (source: string) =>
+  [...source.matchAll(new RegExp(`\\[(${ruleId.source})\\]`, "g"))].map((match) => match[1]!)
+
+/**
+ * Every rule a module's RULES.md declares is named, as "[ID]", by a test of that module unless the
+ * rule is marked unenforced; every ID a module test names is declared. A match proves that a test
+ * names the rule, not that it checks it.
+ */
+export const ruleFailures = (
+  rules: ReadonlyMap<string, readonly ModuleRule[]>,
+  files: ReadonlyArray<SourceFile>,
+) => {
+  const citations = files.flatMap((file) => {
+    const path = file.path.replaceAll("\\", "/")
+    const module = moduleOf(path)
+
+    return module === undefined || !isTestPath(path)
+      ? []
+      : citedRules(file.source).map((id) => ({ path, module, id }))
+  })
+
+  const unknown = citations
+    .values()
+    .filter(({ module, id }) => !(rules.get(module) ?? []).some((rule) => rule.id === id))
+    .map(
+      ({ path, module, id }) =>
+        `${path} names rule ${id}, which ${moduleRoot}/${module}/RULES.md does not declare`,
+    )
+    .toArray()
+
+  return [...new Set([...unknown, ...declaredFailures(rules, citations)])]
+}
+
+const declaredFailures = (
+  rules: ReadonlyMap<string, readonly ModuleRule[]>,
+  citations: ReadonlyArray<{ readonly module: string; readonly id: string }>,
+) =>
+  [...rules].flatMap(([module, declared]) => {
+    const where = `${moduleRoot}/${module}/RULES.md`
+
+    const named = new Set(
+      citations
+        .values()
+        .filter((c) => c.module === module)
+        .map(({ id }) => id),
+    )
+
+    return declared.flatMap(({ id, unenforced }, index) => [
+      ...(declared.findIndex((rule) => rule.id === id) < index
+        ? [`${where} declares ${id} twice`]
+        : []),
+      ...(!named.has(id) && !unenforced
+        ? [`${where}: no test names [${id}]; add one or mark it unenforced`]
+        : []),
+      ...(named.has(id) && unenforced
+        ? [`${where}: ${id} is marked unenforced but a test names it`]
+        : []),
+    ])
+  })
+
+const moduleRules = async (directories: readonly string[]) => {
+  const rules = new Map<string, readonly ModuleRule[]>()
+
+  for (const name of directories) {
+    const text = await readFile(`${moduleRoot}/${name}/RULES.md`, "utf8").catch(
+      (cause: unknown) => {
+        if (hasErrnoCode(cause, "ENOENT")) return undefined
+        throw cause
+      },
+    )
+
+    if (text !== undefined) rules.set(name, parseRules(text))
+  }
+
+  return rules
+}
+
+/** Checks installed ERP module manifests and rules against the repository (ADR-0094, ADR-0123). */
 export const checkModules = async (
   manifests: ReadonlyArray<ModuleManifest>,
 ): Promise<readonly string[]> => {
@@ -125,6 +214,7 @@ export const checkModules = async (
     ...schemaFailures(byName, ownership),
     ...importFailures(files, byName),
     ...surfaceFailures(byName, adapters),
+    ...ruleFailures(await moduleRules(directories), files),
   ]
 
   return [...new Set(failures)].toSorted()

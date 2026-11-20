@@ -19,6 +19,7 @@ import {
 const databaseUrl = process.env["DATABASE_URL"]
 const principal = { userAccountId: "stock-user", sessionId: "stock-session" }
 
+// [INV-VAL-1] [INV-VAL-2] [INV-VAL-3]
 it.effect.skipIf(databaseUrl === undefined)(
   "values receipts, issues, and counts at moving average and keeps the inventory account equal",
   () =>
