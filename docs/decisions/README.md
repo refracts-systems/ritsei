@@ -146,6 +146,7 @@ current system; ADRs preserve decision history.
 | [`0120`](./0120-retain-imported-documents-and-record-historical-dispatch-outcomes.md) | Retain imported documents and record historical dispatch outcomes | Proposed   |
 | [`0121`](./0121-post-opening-stock-against-migration-clearing-in-the-load.md) | Post opening stock against migration clearing in the load | Accepted   |
 | [`0122`](./0122-stage-invoice-rendering-before-activation.md) | Stage invoice rendering before activation | Accepted   |
+| [`0123`](./0123-separate-the-decision-log-from-current-rules.md) | Separate the decision log from current rules | Proposed   |
 
 Accepted ADRs must not be rewritten to alter history. Create a new ADR and use `Supersedes`.
 
