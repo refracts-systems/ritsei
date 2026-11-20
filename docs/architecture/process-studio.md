@@ -241,7 +241,8 @@ provider is scoped to the designer surface rather than the whole ERP. dnd-kit ma
 source, target, collision, ordering, and transform state; it must not persist coordinates or decide
 whether a process mutation is authorized.
 
-The current repository targets Solid 2 release candidates. When it was last checked,
+The repository uses Solid 2 stable (ADR-0114). When it was last checked, against a Solid 2 release
+candidate,
 `@dnd-kit/solid@0.5.0` failed a real Vite build because its published bundle imports the removed
 `solid-js/web` package path. Activation is therefore blocked by ADR-0079, and the package is not
 installed (ADR-0113). Do not add a legacy React package, a
