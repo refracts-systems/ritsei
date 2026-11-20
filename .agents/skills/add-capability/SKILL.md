@@ -28,9 +28,27 @@ neighbor and implementing only the delta. Covers contract, errors, service, auth
 
 # 2. Contract and errors (`erp/modules/<domain>` or `framework/modules/<domain>`)
 
-- Follow the feature shape in [`AGENTS.md`](../../../AGENTS.md#default-effect-feature-shape).
-  Public surface is Effect Schema DTOs, an Effect service, commands/queries, tagged errors, layers.
-  Export only what callers need from `mod.ts`; never tables, repositories, or Drizzle types.
+- Follow the default feature shape:
+
+  ```text
+  contract.ts -> errors.ts -> service.ts -> store.ts -> postgres.ts/memory.ts -> layers.ts -> handler
+  ```
+
+  The shape is a default, not a quota. A capability that owns a mutable fact (a table, a balance, a
+  document, a state transition) uses all of it. One that only reads or calculates may need no store,
+  memory implementation, or layer of its own; do not create empty files to fill the shape. The
+  contract, the tagged errors, and the authorization check are never optional. Apply the shape to
+  the new capability; do not refactor existing packages first.
+- Copy the nearest module for what each file holds. `store.ts` is a private semantic persistence
+  port, `postgres.ts` its Drizzle implementation, and `memory.ts` exists only when a deterministic
+  test implementation can preserve the same invariants. `mod.ts` exports only contract, errors,
+  operations, layers, and the module manifest; never tables, repositories, or Drizzle types.
+- `service.ts` operations are named `Effect.fn("Domain.operation")`. They take the encoded type of
+  their input schema (`Schema.Codec.Encoded<typeof XInput>`), never `unknown`, and still decode it
+  (ADR-0105).
+- `manifest.ts` declares the module's dependencies, schemas, capabilities, released actions and
+  events, consumed events, HTTP groups, and pages (ADR-0094); run `pnpm run ritsei gen` after
+  changing it.
 - Add an error only if a domain caller can act on it; map known constraints to owning-domain errors
   and unknown persistence failures once to `DatabaseFailure`.
 - If the feature has states, write the transition table first: precondition, effect, capability,

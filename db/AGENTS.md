@@ -9,6 +9,9 @@ Related: [`state-and-consistency.md`](../docs/architecture/state-and-consistency
 - PostgreSQL 19+ is the minimum; `framework/platform/postgres` rejects `server_version_num` below `190000`.
 - Critical invariants need transactions and database constraints; application validation improves
   errors but does not replace constraints.
+- Runtime `drizzle-orm` is pinned in the root `package.json`; Drizzle Kit is pinned independently to
+  `1.0.0-rc.4`, and `vendor/drizzle-orm` is a `v1.0.0-rc.4` reference only. Revalidate the
+  migration graph, typecheck, and integration tests before changing either pin.
 - Generate every migration with pinned Drizzle Kit `1.0.0-rc.4`. Use `drizzle-kit generate --custom`
   for RLS, locking, deferred constraints, partitioning, `ltree`, SQL/PGQ, triggers, and unsupported
   features. Generated SQL is review-required.
