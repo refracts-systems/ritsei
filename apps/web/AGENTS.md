@@ -5,6 +5,11 @@ Architecture: [`frontend.md`](../../docs/architecture/frontend.md),
 [`design-system.md`](../../docs/architecture/design-system.md),
 [ADR-0010](../../docs/decisions/0010-use-vite-solidjs-spa.md).
 
+- Before implementing or reworking Solid UI, consult the local Solid source at `vendor/solidjs`; for
+  routing changes, also `vendor/solid-router`. These ignored clones are references, not dependency
+  sources. If missing, clone `https://github.com/solidjs/solid.git` and
+  `https://github.com/solidjs/solid-router.git` there and check out the tags matching the versions in
+  `apps/web/package.json` before relying on their behavior.
 - `apps/web/` is a Vite-based SolidJS 2.0 SPA. No SolidStart or SSR without an approved ADR.
 - Use Solid Router by default and keep router-specific types behind frontend routing abstractions.
 - Remote server state uses TanStack Solid Query; use TanStack Solid Table, Virtual, and Form for

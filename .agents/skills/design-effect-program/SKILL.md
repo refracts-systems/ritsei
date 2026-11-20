@@ -41,7 +41,14 @@ under [`../../../vendor/effect`](../../../vendor/effect).
 - Decode untrusted external input with Effect Schema at each public trust boundary. After successful
   decoding, downstream code within that boundary relies on the decoded type.
 - Translate failures at the layer that owns and can act on them. Domain callers must not receive
-  Drizzle, PostgreSQL, driver, or transport failures.
+  Drizzle, PostgreSQL, driver, or transport failures. Adding an infrastructure failure must not
+  widen every domain failure union:
+
+  ```text
+  UserAccountAlreadyExists | DatabaseFailure | SchemaError       allowed
+  UserAccountAlreadyExists | UnsupportedPostgresVersion          forbidden
+  UserAccountAlreadyExists | PostgresError | DrizzleQueryError    forbidden
+  ```
 - Retry only transient, idempotent work. Use fallback only when the contract defines a valid
   alternative. Keep anticipated validation, authorization, conflict, not-found, and known constraint
   failures in `E`; reserve defects for programmer bugs and genuinely impossible states.
