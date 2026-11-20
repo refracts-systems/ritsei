@@ -3,7 +3,7 @@ import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import type { Page, Route } from "playwright"
 import type { SalesOrder } from "../../apps/web/src/shared/contracts/generated/sales.ts"
-import { builtApp, connectToTenant, notFoundBody } from "./browser.ts"
+import { builtApp, connectToTenant, entranceFinished, notFoundBody } from "./browser.ts"
 
 const tenantId = "01910000-0000-7000-8000-000000000010"
 const customerId = "01910000-0000-7000-8000-000000000011"
@@ -209,6 +209,8 @@ it.effect(
 
         await page.getByRole("button", { name: "Create customer", exact: true }).click()
         const customerDialog = page.getByRole("dialog", { name: "Create customer" })
+        await customerDialog.waitFor()
+        assert.isTrue(await entranceFinished(page))
         await customerDialog
           .getByRole("textbox", { name: "Customer name", exact: true })
           .fill("Northwind Customer")
@@ -224,6 +226,8 @@ it.effect(
 
         await page.getByRole("button", { name: "Create quotation", exact: true }).click()
         const quotationDialog = page.getByRole("dialog", { name: "Create quotation" })
+        await quotationDialog.waitFor()
+        assert.isTrue(await entranceFinished(page))
         await quotationDialog
           .getByRole("combobox", { name: "Customer", exact: true })
           .selectOption(customerId)
@@ -239,6 +243,8 @@ it.effect(
 
         await page.getByRole("button", { name: "Create sales order", exact: true }).click()
         const orderDialog = page.getByRole("dialog", { name: "Create sales order" })
+        await orderDialog.waitFor()
+        assert.isTrue(await entranceFinished(page))
         await orderDialog
           .getByRole("combobox", { name: "Customer", exact: true })
           .selectOption(customerId)
@@ -254,12 +260,16 @@ it.effect(
 
         await page.getByRole("button", { name: "Confirm order", exact: true }).first().click()
         const confirmDialog = page.getByRole("dialog", { name: "Confirm sales order" })
+        await confirmDialog.waitFor()
+        assert.isTrue(await entranceFinished(page))
         await confirmDialog.getByRole("button", { name: "Confirm order", exact: true }).click()
         await confirmDialog.waitFor({ state: "hidden" })
         await page.getByText("confirmed", { exact: true }).first().waitFor()
 
         await page.getByRole("button", { name: "Cancel order", exact: true }).first().click()
         const cancelDialog = page.getByRole("dialog", { name: "Cancel confirmed sales order" })
+        await cancelDialog.waitFor()
+        assert.isTrue(await entranceFinished(page))
         await cancelDialog.getByRole("button", { name: "Cancel order", exact: true }).click()
         await cancelDialog.waitFor({ state: "hidden" })
         await page.getByText("cancelled", { exact: true }).first().waitFor()
