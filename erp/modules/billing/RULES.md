@@ -1,8 +1,8 @@
 # Billing Rules
 
 > **Status:** Current rules owned by the Billing module (ADR-0123). This file wins over ADR text for
-> what the module does now. It covers supplier bills, credit notes, and invoice rendering staging;
-> customer invoicing and open items are not yet listed here, and rendering architecture is owned by
+> what the module does now. It covers customer invoices, supplier bills, credit notes, settlement of
+> open amounts, and invoice rendering staging; rendering architecture is owned by
 > [`document-rendering.md`](../../../docs/architecture/document-rendering.md).
 
 Each rule has an identifier that the test enforcing it names as `[ID]`, in a comment above the test
@@ -24,6 +24,41 @@ This is unenforced by a test; review of runtime composition is the check.
 PostgreSQL enforces the render input and artifact integrity: the artifact binds the invoice, snapshot
 checksum, render fingerprint, versioned assets, renderer version, and output checksum, and staging
 needs its capability.
+
+## Documents, customer invoices, and open amounts
+
+Why: [ADR-0095](../../../docs/decisions/0095-adopt-gapless-document-numbering.md),
+[ADR-0102](../../../docs/decisions/0102-split-billing-and-settlement.md),
+[ADR-0119](../../../docs/decisions/0119-date-tax-rates-with-periods-on-the-tax-code.md).
+
+### `BIL-DOC-1` Every billing document is numbered, taxed, and posted in one transaction
+
+A document gets a gapless number per legal entity and kind (`INV/`, `CN/`, `BILL/`, `DN/`), tax from
+Tax at its tax date (the document date, or the credited document's date for a credit note), and one
+journal posted at the document date; its open amount starts at its total. A repeated document id
+returns the posted document.
+
+### `BIL-INV-1` A customer invoice bills what was delivered and not yet invoiced
+
+`invoiceSalesOrder` (`billing.customer_invoice.create`) locks the order, requires it to be confirmed
+(`SalesOrderInvalidState`), and invoices each line's delivered quantity less quantity already on
+customer invoices, at the order line's price and tax code; with nothing left it fails with
+`NothingToInvoice`, so of two simultaneous invoices for the same deliveries only one posts. The
+journal debits `receivable` with the total and credits `revenue` with the subtotal and `output_tax`
+with the tax.
+
+### `BIL-SET-1` A settlement never takes more than the open amount
+
+`applySettlement` (`billing.settlement.apply`) lowers a document's open amount by the settled amount
+and records the source (a Settlement payment or a credit note). More than the open amount fails with
+`SettlementExceedsOpenAmount`; the same source again returns the document when the amount is the
+same and fails with `SettlementConflict` otherwise.
+
+### `BIL-OPEN-1` Open items are as of a date
+
+`listOpenItems` reports each document's total less the settlements dated on or before the as-of
+date, which is what Settlement's aging uses, so aging at a date equals the control account at that
+date.
 
 ## Supplier bills and credit notes
 
