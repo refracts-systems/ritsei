@@ -25,6 +25,16 @@ const tableRows = (count: number) =>
     `${((index % 17) + 1) * 2}.00`,
   ])
 
+const paginationNodes: ReadonlyArray<DocumentNode> = [
+  DocumentTextNode.make({ value: "MULTI-PAGE STATEMENT" }),
+  DocumentTableNode.make({
+    headers: ["Reference", "Quantity", "Amount"],
+    rows: tableRows(250),
+  }),
+  DocumentPageBreakNode.make({}),
+  DocumentTextNode.make({ value: "REPEATED PAGE SECTION" }),
+]
+
 export const documentBenchmarkCorpus: ReadonlyArray<DocumentBenchmarkFixture> = [
   {
     name: "purchase-order-small",
@@ -59,19 +69,29 @@ export const documentBenchmarkCorpus: ReadonlyArray<DocumentBenchmarkFixture> = 
     assetBytes: 0,
   },
   {
+    name: "transactional-pagination",
+    nodes: paginationNodes,
+    capabilities: [],
+    pageCount: 12,
+    assetBytes: 0,
+  },
+  {
     name: "pagination-table",
-    nodes: [
-      DocumentTextNode.make({ value: "MULTI-PAGE STATEMENT" }),
-      DocumentTableNode.make({
-        headers: ["Reference", "Quantity", "Amount"],
-        rows: tableRows(250),
-      }),
-      DocumentPageBreakNode.make({}),
-      DocumentTextNode.make({ value: "REPEATED PAGE SECTION" }),
-    ],
+    nodes: paginationNodes,
     capabilities: ["paged-media"],
     pageCount: 12,
     assetBytes: 0,
+  },
+  {
+    name: "asset-and-barcode",
+    nodes: [
+      DocumentImageNode.make({ assetId: "logo-v1", alt: "Company logo" }),
+      DocumentBarcodeNode.make({ value: "PO-2026-0001" }),
+      DocumentSignatureNode.make({ assetId: "signature-v1", label: "Approved by" }),
+    ],
+    capabilities: ["svg"],
+    pageCount: 1,
+    assetBytes: 128_000,
   },
   {
     name: "asset-and-code-heavy",

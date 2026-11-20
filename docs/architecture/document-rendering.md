@@ -26,6 +26,8 @@
 >   [`../decisions/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md`](../decisions/archive/0083-enforce-non-interference-between-source-of-truth-and-derived-capabilities.md)
 > - Framework and flagship ERP:
 >   [`../decisions/0091-adopt-framework-and-flagship-erp.md`](../decisions/0091-adopt-framework-and-flagship-erp.md)
+> - Staged invoice rendering:
+>   [`../decisions/0122-stage-invoice-rendering-before-activation.md`](../decisions/0122-stage-invoice-rendering-before-activation.md)
 > - State and consistency: [`./state-and-consistency.md`](./state-and-consistency.md)
 > - External integration surface: [`./integration-architecture.md`](./integration-architecture.md)
 > - Financial ledger: [`./financial-ledger.md`](./financial-ledger.md)
@@ -315,6 +317,17 @@ upload → validate → normalize → hash → store → render cache
 Logo, signature, icon, image, and font assets must be tenant-scoped, size-limited, versioned, and
 available without an uncontrolled remote fetch during rendering.
 
+The evaluation render contract binds each referenced image or signature asset to a unique asset ID,
+version, and SHA-256 content hash in its fingerprint. A resolver receives the tenant, asset ID,
+and version; the adapter checks the returned bytes against the manifest before rendering. The
+manifest must come from a trusted owner and the resolver must enforce tenant access: a matching
+hash alone does not establish authorization. The current evaluation fingerprint and job payload
+formats are version 2; version 1 evaluation inputs must be recreated.
+The evaluation adapter uses a fixed layout; renderer-specific options are rejected until their
+effects can be represented and versioned in the render input. Its renderer version identifies the
+adapter and all byte-affecting rendering packages, and the adapter rejects requests for another version. Changes
+that can affect PDF bytes require a new adapter version.
+
 ## 7. Determinism and issued artifacts
 
 The target reproducibility equation is:
@@ -493,6 +506,22 @@ max_output_size
 max_browser_memory
 ```
 
+The native evaluation adapter checks the total table rows, encoded asset bytes, and each image's
+pixel count before rendering, and rejects output beyond its byte limit after generation. These checks
+do not prove that image contents are safe or cap the renderer's memory use: input is decoded and
+output is allocated before their respective checks. Trusted asset normalization and isolated
+resource limits remain required.
+
+The evaluation adapter uses the pinned, dependency-free `qr` 0.7.2 encoder to produce QR matrices:
+independent decoding found `pdfnative` 1.7.0's QR output unreadable even with a quiet zone. This
+additional encoder is necessary to represent QR nodes safely; its license, security, distribution
+and upgrade ownership remain part of the dependency gate. The encoder does not emit a UTF-8 ECI
+declaration, so the adapter accepts only printable ASCII QR data up to 1,024 bytes; it rejects other
+text instead of relying on scanner-specific charset guessing. It uses four quiet-zone modules and a
+minimum module size of 1.2 points, limits a document to 25 QR nodes and 4,096 total QR bytes, and
+binds the encoder version into the renderer identity. Scan evidence does not by itself pass the
+conformance gate.
+
 The capability resolver must reject a template whose declared requirements exceed the selected
 renderer or tenant policy. A compatibility escape hatch must not become an authorization escape
 hatch.
@@ -604,10 +633,60 @@ This architecture does not:
 ## 15. Current implementation boundary
 
 The current implementation slice is intentionally production-gated. It may add typed snapshot, AST,
-capability, fingerprint, job-payload, benchmark, conformance, and test-artifact contracts, plus one
-owner-local Purchase Order pilot and an evaluation-only adapter for the selected native candidate. It
-must not add a production PDF route, browser worker, template persistence model, production
-artifact-retention promise, or a new Process job type/migration.
+capability, fingerprint, job-payload, benchmark, conformance, and test-artifact contracts, plus the
+owner-local Purchase Order pilot and an evaluation-only adapter for the selected native candidate.
+ADR-0122 also permits a candidate invoice-render job, migration, Billing-owned artifact store and
+isolated worker for evaluation against disposable nonproduction databases. It does not authorize
+applying an evaluation migration to production, production invoice enqueueing or worker composition,
+a production PDF route, browser worker, template persistence model, or a production artifact-retention
+promise before the gates pass.
+
+Billing's evaluation invoice snapshot captures its issued number, names, date, lines and totals;
+it excludes the mutable open amount. The evaluation builder accepts names as input. Production
+issuance must resolve those names through the owning contracts in the posting transaction before
+persisting the snapshot; the evaluation builder alone is not authorization or evidence of origin.
+Evaluation staging locks the Billing invoice first, then Party's authorized document-party contract
+locks the legal entity and both Party records in ID order while their names are checked and the input
+is written in the same transaction. A replay uses the already stored snapshot even if a Party name
+later changes. The
+production posting transaction is still unimplemented and needs separate evidence before activation.
+Its AST builder takes an explicit UUIDv7 identity so a retry can reuse the stored identity and
+produce the same render request. Billing validates the snapshot checksum, reconstructs the AST
+from that snapshot, and verifies the request's identities and fingerprint before staged persistence.
+The staged Billing schema binds one immutable render input and one immutable PDF to each customer
+invoice, verifies the PDF checksum in PostgreSQL, and rejects update, delete, and truncate.
+Artifact rows record the fence scope and positive lease generation, but those columns alone do not
+prove an active lease or atomic job completion; the candidate worker and owner service must enforce
+those guarantees before activation. Evaluation databases containing artifacts must be recreated
+before applying the fencing migration; production migration is not authorized.
+An evaluation-only Billing layer stages and reads render inputs under the existing invoice-create
+and document-read capabilities, respectively; artifact reads also require document-read. It validates
+the input and compares the snapshot's Billing-owned facts with the stored invoice and lines within
+the insertion transaction. It returns the existing input on an
+identical replay, and reports a conflict for a different input. This layer is not composed into the
+production runtime.
+
+An evaluation-only queue service stages the input and enqueues the Process job in one transaction.
+Its Billing-specific job payload adds the invoice ID to the generic render payload; a replay returns
+the existing job only if its scope and payload match. Earlier evaluation jobs without the invoice ID
+must be recreated in a disposable database. Production posting does not call this service.
+
+The evaluation-only completion service validates the PDF signature and size, checks the current
+Process lease and scope generation, matches the completed job to the stored input and render
+fingerprint, and stores the artifact in the same transaction as job completion. A failed insertion
+or mismatch rolls back completion. A retry after a committed completion receives a lease-lost error;
+an authorized artifact read can reconcile the outcome. This service is not a production worker,
+and does not establish renderer isolation, trusted names, or the activation gates.
+
+The candidate evaluation worker claims the invoice job, verifies its payload against the staged
+input, renders it and invokes atomic completion. It requires document-read permission before claim.
+Ordinary failures are rescheduled with Process's attempt limit; after an uncertain completion the
+worker checks the authorized artifact read for the same ID, fingerprint and content hash. Unresolved
+database failures and lost leases are left for reconciliation or lease expiry. The worker attempts
+to renew its lease while rendering; synchronous renderer work can block its event loop and delay
+renewal. Fenced completion rejects a superseded lease. The candidate is not part of the production
+worker composition and has no hard process timeout; it does not by itself satisfy the isolation or
+operational gates.
 
 `pdfnative` and its RITSEI adapter are evaluation dependencies only until the activation gates pass.
 The adapter is used for conformance and benchmark evidence; it does not activate a production

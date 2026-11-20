@@ -1,6 +1,16 @@
 export { BillingCapabilities } from "./src/capabilities.ts"
 
 export {
+  CustomerInvoiceDocument,
+  InvoiceDocumentAstInput,
+  InvoiceDocumentPayload,
+  InvoiceDocumentSnapshot,
+  InvoiceDocumentSnapshotInput,
+  makeInvoiceDocumentAst,
+  makeInvoiceDocumentSnapshot,
+} from "./src/document.ts"
+
+export {
   ApplySettlementInput,
   BillingDocument,
   BillingDocumentLine,
@@ -42,6 +52,42 @@ export {
 } from "./src/errors.ts"
 
 export { BillingCreditExposureLive } from "./src/credit-exposure.ts"
+
+export {
+  InvoiceRenderInput,
+  InvoiceRenderInputInvalid,
+  validateInvoiceRenderInput,
+} from "./src/render-input.ts"
+
+export {
+  GetInvoiceRenderInput,
+  InvoiceRenderEvaluationService,
+  InvoiceRenderArtifact,
+  InvoiceRenderInputConflict,
+  StageInvoiceRenderInput,
+} from "./src/render-contract.ts"
+
+export {
+  InvoiceRenderEvaluationLive,
+  makeInvoiceRenderEvaluationService,
+} from "./src/render-service.ts"
+
+export {
+  CompleteInvoiceRender,
+  InvoiceRenderCompletionConflict,
+  InvoiceRenderCompletionLive,
+  InvoiceRenderCompletionService,
+  makeInvoiceRenderCompletionService,
+} from "./src/render-completion.ts"
+
+export { InvoiceRenderJobPayload } from "./src/render-job.ts"
+
+export {
+  InvoiceRenderQueueConflict,
+  InvoiceRenderQueueEvaluationLive,
+  InvoiceRenderQueueEvaluationService,
+  makeInvoiceRenderQueueEvaluationService,
+} from "./src/render-queue.ts"
 
 export { BillingLive } from "./src/service.ts"
 

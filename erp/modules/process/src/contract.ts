@@ -96,12 +96,17 @@ export const ProcessFinancialJobType = Schema.Literals([
   ProcessFinancialJobTypes.reconcile,
 ])
 
+export const ProcessDocumentJobTypes = {
+  invoiceRender: "billing.invoice.render",
+} as const
+
 export const ProcessJobType = Schema.Literals([
   ProcessPostCommitJobTypes.confirmation,
   ProcessPostCommitJobTypes.cancellation,
   ProcessPostCommitJobTypes.fulfillment,
   ProcessFinancialJobTypes.submit,
   ProcessFinancialJobTypes.reconcile,
+  ProcessDocumentJobTypes.invoiceRender,
 ])
 
 export const OrderConfirmationPayload = Schema.Struct({
@@ -380,6 +385,8 @@ export interface ProcessService {
     | ProcessJobNotFound
     | ProcessJobLeaseLost
   >
+  /** For a fenced write, call inside the same Database transaction as the resource mutation. */
+  readonly completeFencedJob: ProcessService["completeJob"]
   readonly failJob: (
     input: Schema.Codec.Encoded<typeof ProcessJobFailInput>,
   ) => Effect.Effect<

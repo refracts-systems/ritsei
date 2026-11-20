@@ -4,12 +4,18 @@ import { isMain } from "../entrypoint.ts"
 
 import {
   documentContextFromSnapshot,
+  type DocumentContext,
   type DocumentRenderPolicy,
+  type DocumentSnapshot,
   createDocumentAst,
   createDocumentRenderRequest,
   createDocumentSnapshot,
+  sha256Hex,
 } from "../../framework/foundation/mod.ts"
-import { makePdfNativeDocumentRenderer } from "../../framework/platform/mod.ts"
+import {
+  makePdfNativeDocumentRenderer,
+  pdfNativeRendererVersion,
+} from "../../framework/platform/mod.ts"
 import { documentBenchmarkCorpus } from "./corpus.ts"
 
 const tenantId = "018f0000-0000-7000-8000-000000000001"
@@ -36,17 +42,70 @@ const policy: DocumentRenderPolicy = {
   allowJavaScript: false,
   allowNetwork: false,
   maxAstNodes: 100_000,
+  maxTableRows: 100_000,
   maxPages: 100,
   maxAssetBytes: 50_000_000,
+  maxImagePixels: 20_000_000,
+  maxOutputBytes: 50_000_000,
 }
 
 const renderer = makePdfNativeDocumentRenderer({
   policy,
-  resolveAsset: (assetId) =>
-    Effect.succeed(assetId === "logo-v1" || assetId === "signature-v1" ? samplePng : undefined),
+  resolveAsset: ({ assetId, version }) =>
+    Effect.succeed(
+      version === "1" && (assetId === "logo-v1" || assetId === "signature-v1")
+        ? samplePng
+        : undefined,
+    ),
 })
 
 type BenchmarkFixture = (typeof documentBenchmarkCorpus)[number]
+
+const renderFixture = (
+  fixture: BenchmarkFixture,
+  snapshot: DocumentSnapshot,
+  context: DocumentContext,
+  assetHash: string,
+  index: number,
+) =>
+  Effect.gen(function* () {
+    const ast = yield* createDocumentAst({
+      astId,
+      snapshotId,
+      documentType: fixture.name,
+      astVersion: 1,
+      nodes: fixture.nodes,
+    })
+
+    const request = yield* createDocumentRenderRequest({
+      tenantId,
+      fingerprintVersion: 2,
+      snapshotId,
+      snapshotChecksum: snapshot.checksum,
+      astId: ast.astId,
+      astChecksum: ast.checksum,
+      templateId: "benchmark-default",
+      templateVersion: 1,
+      documentSchemaVersion: 1,
+      rendererFamily: "native-transactional",
+      rendererVersion: pdfNativeRendererVersion,
+      assetVersions:
+        fixture.assetBytes > 0
+          ? ["logo-v1", "signature-v1"].map((assetId) => ({
+              assetId,
+              version: "1",
+              contentHash: assetHash,
+            }))
+          : [],
+      capabilities: fixture.capabilities,
+      astNodeCount: ast.nodes.length,
+      pageCount: fixture.pageCount,
+      assetBytes: fixture.assetBytes,
+      correlationId: `document-benchmark:${fixture.name}:${index}`,
+    })
+
+    return yield* renderer.render({ context, ast, request })
+  })
 
 const benchmarkFixture = (fixture: BenchmarkFixture) =>
   fixture.capabilities.includes("paged-media")
@@ -66,55 +125,47 @@ const benchmarkFixture = (fixture: BenchmarkFixture) =>
         })
 
         const context = documentContextFromSnapshot(snapshot)
+        const assetHash = yield* sha256Hex(samplePng)
         const startedAt = performance.now()
+        const startedCpu = process.cpuUsage()
+        let firstIterationMs = 0
         let lastBytes = 0
         let lastPages = 0
         let lastFingerprint = ""
+        let lastContentHash = ""
 
         for (let index = 0; index < iterations; index += 1) {
-          const ast = yield* createDocumentAst({
-            astId,
-            snapshotId,
-            documentType: fixture.name,
-            astVersion: 1,
-            nodes: fixture.nodes,
-          })
+          const iterationStartedAt = performance.now()
 
-          const request = yield* createDocumentRenderRequest({
-            tenantId,
-            snapshotId,
-            snapshotChecksum: snapshot.checksum,
-            astId: ast.astId,
-            astChecksum: ast.checksum,
-            templateId: "benchmark-default",
-            templateVersion: 1,
-            documentSchemaVersion: 1,
-            rendererFamily: "native-transactional",
-            rendererVersion: "pdfnative@1.7.0",
-            assetVersions: fixture.assetBytes > 0 ? ["sample-assets@1"] : [],
-            capabilities: fixture.capabilities,
-            astNodeCount: ast.nodes.length,
-            pageCount: fixture.pageCount,
-            assetBytes: fixture.assetBytes,
-            correlationId: `document-benchmark:${fixture.name}:${index}`,
-          })
+          const output = yield* renderFixture(fixture, snapshot, context, assetHash, index)
 
-          const output = yield* renderer.render({ context, ast, request })
+          if (index === 0) firstIterationMs = performance.now() - iterationStartedAt
+
           lastBytes = output.bytes.byteLength
           lastPages = output.metadata.pageCount
           lastFingerprint = output.metadata.renderFingerprint
+          lastContentHash = output.metadata.contentHash
         }
 
         const elapsedMs = Number((performance.now() - startedAt).toFixed(3))
+        const cpu = process.cpuUsage(startedCpu)
 
         return {
           name: fixture.name,
           iterations,
           elapsedMs,
           averageMs: Number((elapsedMs / iterations).toFixed(3)),
+          firstIterationMs: Number(firstIterationMs.toFixed(3)),
+          warmAverageMs:
+            iterations > 1
+              ? Number(((elapsedMs - firstIterationMs) / (iterations - 1)).toFixed(3))
+              : null,
+          documentsPerSecond: Number(((iterations * 1_000) / elapsedMs).toFixed(3)),
+          cpuMs: Number(((cpu.user + cpu.system) / 1_000).toFixed(3)),
           outputBytes: lastBytes,
           pages: lastPages,
           renderFingerprint: lastFingerprint,
+          contentHash: lastContentHash,
         }
       })
 
@@ -125,10 +176,11 @@ if (isMain(import.meta.url)) {
   console.log(
     JSON.stringify({
       benchmark: "pdfnative-document-render",
-      renderer: "pdfnative@1.7.0",
+      renderer: pdfNativeRendererVersion,
       activation: "evaluation-only",
       fixtures: results,
-      note: "This measures the RITSEI native adapter; publishing and browser profiles remain separate.",
+      processPeakRssKiB: process.resourceUsage().maxRSS,
+      note: "Sequential in-process measurements include AST and request construction. The first iteration is not a cold-process measurement; peak RSS is for the entire process. Publishing and browser profiles remain separate.",
     }),
   )
 }

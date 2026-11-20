@@ -1,5 +1,9 @@
 import { assert, it } from "@effect/vitest"
+import * as Deferred from "effect/Deferred"
 import * as Effect from "effect/Effect"
+import * as Fiber from "effect/Fiber"
+import * as TestClock from "effect/testing/TestClock"
+import type { Sql } from "postgres"
 
 import { Database, uuidv7 } from "../../../../framework/foundation/mod.ts"
 import {
@@ -22,6 +26,7 @@ import {
   BranchAlreadyExists,
   ExternalIdentifierAlreadyAssigned,
   LegalEntityAlreadyExists,
+  LegalEntityNotFound,
   makePartyService,
   OrganizationRequired,
   PartyCapabilities,
@@ -39,6 +44,25 @@ const databaseUrl = process.env["DATABASE_URL"]
 
 const postgresFailure = <A>(effect: () => Promise<A>) =>
   Effect.tryPromise({ try: effect, catch: (cause) => cause }).pipe(Effect.flip)
+
+const waitForDocumentPartyLocks = (client: Sql) =>
+  Effect.gen(function* () {
+    for (let attempt = 0; attempt < 40; attempt += 1) {
+      const [activity] = yield* Effect.promise(
+        () => client<{ waiting: string }[]>`
+          select count(*)::text as waiting from pg_stat_activity
+          where datname = current_database() and pid <> pg_backend_pid()
+            and query like '%document_party_lock_probe%' and wait_event_type = 'Lock'
+        `,
+      )
+
+      if (activity?.waiting === "2") return true
+
+      yield* TestClock.withLive(Effect.sleep("25 millis"))
+    }
+
+    return false
+  })
 
 it.effect.skipIf(databaseUrl === undefined)(
   "enforces scoped external identifier uniqueness in PostgreSQL",
@@ -321,6 +345,86 @@ it.effect.skipIf(databaseUrl === undefined)(
             tenantId: tenant.id,
             organizationId: organization.id,
           })
+
+          assert.deepStrictEqual(
+            yield* party.getLegalEntity({
+              principal,
+              tenantId: tenant.id,
+              legalEntityId: legalEntity.id,
+            }),
+            legalEntity,
+          )
+          assert.instanceOf(
+            yield* Effect.flip(
+              party.getLegalEntity({
+                principal,
+                tenantId: otherTenant.id,
+                legalEntityId: legalEntity.id,
+              }),
+            ),
+            LegalEntityNotFound,
+          )
+
+          const locked = yield* Deferred.make<void>()
+          const release = yield* Deferred.make<void>()
+
+          const lockFiber = yield* database
+            .withTransaction(
+              Effect.gen(function* () {
+                const names = yield* party.lockDocumentParties({
+                  principal,
+                  tenantId: tenant.id,
+                  legalEntityId: legalEntity.id,
+                  counterpartyId: person.id,
+                })
+
+                yield* Deferred.succeed(locked, undefined)
+                yield* Deferred.await(release)
+
+                return names
+              }),
+            )
+            .pipe(Effect.forkChild)
+
+          yield* Deferred.await(locked)
+          let updateStarted = false
+          let updateFinished = false
+
+          const updateFiber = yield* Effect.sync(() => {
+            updateStarted = true
+          }).pipe(
+            Effect.andThen(
+              Effect.promise(
+                () =>
+                  client`update party.parties /* document_party_lock_probe */ set name = 'Changed Person' where id = ${person.id}`,
+              ),
+            ),
+            Effect.tap(() =>
+              Effect.sync(() => {
+                updateFinished = true
+              }),
+            ),
+            Effect.forkChild,
+          )
+
+          const issuerUpdateFiber = yield* Effect.promise(
+            () =>
+              client`update party.parties /* document_party_lock_probe */ set name = 'Scope Issuer Updated' where id = ${organization.id}`,
+          ).pipe(Effect.forkChild)
+
+          const waitingForLock = yield* waitForDocumentPartyLocks(client)
+
+          assert.isTrue(updateStarted)
+          assert.isTrue(waitingForLock)
+          assert.isFalse(updateFinished)
+          yield* Deferred.succeed(release, undefined)
+
+          const names = yield* Fiber.join(lockFiber)
+          yield* Fiber.join(updateFiber)
+          yield* Fiber.join(issuerUpdateFiber)
+          assert.strictEqual(names.issuer.name, "Scope Organization")
+          assert.strictEqual(names.counterparty.name, "Scope Person")
+          assert.isTrue(updateFinished)
 
           const secondLegalEntity = yield* party.createLegalEntity({
             principal,

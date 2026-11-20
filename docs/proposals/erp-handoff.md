@@ -86,7 +86,7 @@ Each item gets its own branch from `main`. Items marked **needs owner** wait for
 | # | Item | Why / scope | Start from |
 | --- | --- | --- | --- |
 | B1 | Accept or revise ADR-0107 (documents module) | Code exists, ADR is still Proposed | **needs owner** |
-| B2 | Invoice artifacts and email (F2) | Stored immutable PDF via `pdfnative`, then manual "Send" over SMTP; automatic send later as a per-tenant setting, off by default. Rendering stays a job. `pdfnative` is added in its own change only after the eight activation gates pass | ADR-0110, [`document-rendering.md`](../architecture/document-rendering.md) section 12 |
+| B2 | Invoice artifacts and email (F2) | Stored immutable PDF via `pdfnative`, then manual "Send" over SMTP; automatic send later as a per-tenant setting, off by default. Rendering stays a job. The existing `pdfnative` adapter is for evaluation only; production activation requires all eight gates | ADR-0110, [`document-rendering.md`](../architecture/document-rendering.md) section 12 |
 | B3 | `localization_id` Stage B | PPh 23 and PPh 4(2) withholding on supplier bills (needs a Billing extension point for withheld amounts); Coretax e-Faktur export as a versioned adapter run by a job; dated tax rates are done (Tax periods, [ADR-0119](../decisions/0119-date-tax-rates-with-periods-on-the-tax-code.md)); a record linking a nota retur or replacement faktur to the original faktur of an issued invoice is not defined by ADR-0111 and needs an owner decision first | ADR-0111 |
 | B4 | Custom fields leftovers | Retire a field and purge values; embed values in the base DTO under a `custom` key (owner's choice); a Product screen | ADR-0109 |
 | B5 | Pilot readiness | Spreadsheet import of parties is built (ADR-0115), bank statement import with manual reconciliation (ADR-0116), and Accounting's opening journal, clearing verifier, profit and loss and balance sheet (ADR-0117). Opening stock now posts against migration clearing in the load's transaction (ADR-0121). Open: products and other masters, the Billing and Settlement loads against migration clearing, an import screen | Parity plan Phase 8, ADR-0115, ADR-0116, ADR-0117, ADR-0121 |
@@ -98,6 +98,131 @@ Each item gets its own branch from `main`. Items marked **needs owner** wait for
 Deliberately **not** planned: model inheritance and view patching, arbitrary fields on other modules'
 tables, SAP condition technique, payroll in the flagship, a BI platform. Reasons are in parity plan
 section 9.2.
+
+### B2: next execution steps
+
+The rendering foundation already has snapshot, AST, request, and artifact contracts, an in-memory
+artifact store, a Purchase Order pilot, and an evaluation-only `pdfnative` adapter. The existing
+tests and `pnpm run document:benchmark` provide partial evidence, not production activation. The
+benchmark measures a transactional table and explicit page break, but skips the separate
+`pagination-table` fixture because it requests the broader `paged-media` capability.
+
+Gate evidence reviewed on 2026-11-04 on `codex/invoice-rendering-readiness` (not yet merged):
+
+| Gate | Evidence and remaining work |
+| --- | --- |
+| Contract | Versioned evaluation snapshots and a staged Billing schema bind invoice number, render input and one checksummed PDF. Evaluation services atomically enqueue inputs, authorize artifact reads and accept artifacts with a current Process lease. A candidate worker exercises the path; trusted names at posting and production activation remain open. |
+| Ownership | ADR-0102 and ADR-0110 assign invoices to Billing; the evaluation pilot is owned by Procurement. |
+| Security | Evaluation checks input and asset integrity, locks and verifies issuer/customer names against Party when first staged, rejects unversioned layout options, limits rows, pixels, asset bytes and generated output, and tests tenant-scoped reads and lease checks. Trusted names during production posting, asset normalization, sandboxing and execution-time memory limits still need evidence. |
+| Determinism | The evaluation corpus produces identical PDF hashes in separate UTC and Asia/Bangkok processes on the same local runtime. Fingerprints bind asset hashes and the adapter version; version 1 evaluation inputs must be recreated. Other platforms, dependency versions and runtime environments still need evidence. |
+| Conformance | Tests cover repeated table headers, row identifiers, an explicit page break, multilingual text and font resources. The independently decoded ASCII QR and Code 128 cases below pass with adapter version 3. Unicode QR, other codes, fonts, assets, scanner conditions and pagination cases still need evidence. |
+| Workload | Disposable PostgreSQL tests exercise the actual candidate queue and worker, atomic completion, stale leases, retries and uncertain completion. The benchmark records sequential renderer timing, CPU and process peak RSS. Worker concurrency, hard timeout, command reserve and production workload behavior remain unmeasured. |
+| Operations | A Billing-owned PostgreSQL artifact store and candidate recovery path exist for disposable evaluation databases. Production storage sizing, retention, cleanup, monitoring, alerts, backups and manual recovery still need an operational design and evidence. |
+| Dependency | `pdfnative` 1.7.0 and the QR encoder `qr` 0.7.2 are pinned for evaluation. Their production distribution, security review and upgrade ownership still need evidence. |
+
+On 2026-11-04, a Windows evaluation rasterized a generated PDF with PDFium (`pypdfium2` 5.14.0)
+and decoded it with ZXing-C++ 3.1.1. Code 128 `INV-2026-0001` decoded at 150, 300 and 600 dpi.
+An adjacent QR containing an example invoice URL did not; the QR alone also did not decode. A
+separate `pdfnative` matrix for `HELLO`, rendered with a four-module quiet zone, likewise failed
+decoding; a ZXing-generated `HELLO` QR decoded successfully as a control. Adapter version 2 rejected
+QR nodes rather than returning unreadable output.
+
+On 2026-11-05, adapter version 3 used `qr` 0.7.2 to generate QR vectors while retaining `pdfnative`
+for the PDF. PDFium and ZXing-C++ decoded five actual adapter outputs, each with an adjacent Code 128
+barcode, at 150, 300 and 600 dpi. Inputs covered a short value, URL, invoice number, 1,024-byte value
+and exploratory Unicode text. Because the encoder does not declare UTF-8 ECI, the adapter accepts only
+printable ASCII; a scanner guessing Unicode correctly is insufficient. This is limited local evidence,
+not proof for all payloads, printers or scanners.
+The decoder was installed only in a temporary directory and is not a project dependency. Recreate
+evaluation inputs and jobs tied to earlier renderer versions.
+
+The 2026-11-03 dependency inspection found the following, without approving production use:
+
+- `package.json` and `pnpm-lock.yaml` pin `pdfnative` 1.7.0; its package declares MIT, Node >=22
+  and no runtime dependencies. RITSEI requires Node >=24.22 and the local evaluation tests and
+  benchmark ran on Node 24.22. These are not deployment-wide compatibility evidence.
+- The installed package includes its MIT `LICENSE`, `fonts/LICENSE` (SIL Open Font License 1.1 for
+  the bundled Noto font data), and `THIRD-PARTY-NOTICES.md` (also identifying Unicode License v3
+  data). RITSEI itself is Apache-2.0. Inspect these files again for the exact pinned package and
+  any version change; do not infer license terms from the package name alone.
+- Before distributing an artifact that includes the renderer or its font data, review the included
+  notices and make the applicable license texts and copyright notices available with that
+  distribution. `tooling/production/artifacts.ts` currently bundles Node entry points and copies
+  migrations and the web build, but has no explicit third-party-notice copy step. Verify the actual
+  release artifact and embedding/subsetting treatment, rather than assuming the package's local
+  files are present in the distributed bundle.
+
+- `pnpm audit --prod --json` on that date reported no `pdfnative` advisory; it failed on existing
+  `seroval` advisories in the web dependency graph. An advisory scan is not a security review.
+  Inspect renderer input handling, font and image processing, release provenance and supported
+  deployment runtimes, then assign an upgrade and vulnerability-response owner before activation.
+
+The 2026-11-05 evaluation adds the exact root dependency `qr` 0.7.2 because the selected PDF
+backend emitted unreadable QR matrices. Its package declares MIT or Apache-2.0, Node >=20.19 and
+no runtime dependencies. `pnpm audit --prod` reported no advisory for `qr`; it reported one critical,
+four high and one moderate advisory for the inherited `seroval` dependency, including
+[GHSA-p6vx-979v-rg4c](https://github.com/advisories/GHSA-p6vx-979v-rg4c). Audit output is a point
+in time, not a production security approval; review both dependencies and distribution notices before
+activation. The listed fixes require `seroval` >=1.6.10, while the pinned `solid-js` and
+`@solidjs/web` 2.0.0-rc.6 packages declare `~1.5.4`; an override would cross the upstream
+compatibility range and needs its own compatibility and security review.
+
+1. Build and measure the staged job, Billing-owned artifact implementation and worker under
+   [ADR-0122](../decisions/0122-stage-invoice-rendering-before-activation.md), using disposable
+   nonproduction databases. Complete and review evidence for all eight rendering gates, including
+   pagination, fidelity, isolation, determinism, workload behavior, retention and recovery, and
+   dependency ownership. Do not infer a gate passes from one test or benchmark.
+2. Only after the gates pass, activate the renderer in a separate change and connect Billing's
+   immutable issued snapshot and render job to posting under ADR-0110. Preserve authorization,
+   idempotency, fencing and recovery; downloads must return the stored artifact.
+3. Add manual sending through Communication and the SMTP integration, including durable delivery
+   attempts and retries. Automatic sending is a later tenant setting, off by default.
+
+Until activation, the browser print sheet remains available. The permitted evaluation scope and
+the gate definitions belong to [`document-rendering.md`](../architecture/document-rendering.md),
+not this working note.
+
+### B2: candidate operational approach
+
+This is a proposal for reviewing production gate evidence, not a production retention promise or
+an exception to the rendering architecture's current implementation
+boundary. The governing rules remain in [`document-rendering.md`](../architecture/document-rendering.md),
+[`durable-execution.md`](../architecture/durable-execution.md), and
+[`state-and-consistency.md`](../architecture/state-and-consistency.md).
+
+- **Storage and commit:** The first candidate is bounded PDF bytes and metadata in PostgreSQL,
+  subject to measured size and capacity. Use the Billing-owned invoice identity and snapshot and
+  public job contract. Design the artifact write and job completion so a crash cannot publish two
+  artifacts or acknowledge work with no artifact; the accepting mutation must enforce the active
+  fence generation. If the worker loses the commit response, inspect the committed job and artifact
+  and compare the expected identity and hash before retrying. A conflict goes to manual recovery,
+  not an overwrite or a new rendering of an issued artifact.
+- **Alternative storage:** An external object store is not selected. Consider it only for a measured
+  need; a candidate must specify immutable object identity, digest verification, authorization,
+  staged uploads, unknown-outcome reconciliation and orphan cleanup without treating two writes as
+  one transaction. Recovery and retention must be proven before activation.
+- **Cleanup and retention:** Clean temporary render files and failed staging data with bounded,
+  observable cleanup after the associated work is resolved. Do not delete an issued artifact as
+  routine retry cleanup. Retention duration, backup and restore, legal holds, deletion authority,
+  and storage limits still need a deployment decision and recovery evidence.
+- **Worker capacity:** Evaluate a separate bounded render worker and database pool, with configured
+  CPU, memory, concurrency and timeout budgets. Measure normal commands while the render workload
+  saturates those budgets; process separation alone does not establish command reserve. A renderer
+  timeout also needs a way to stop or recycle the actual work, not merely abandon a waiting fiber.
+- **Operations:** Record bounded queue wait, duration, failure, retry, resource and artifact-size
+  measurements; keep document and tenant identities out of metric labels. Alert on sustained queue
+  delay, exhausted retries, failures and storage pressure using thresholds chosen from deployment
+  measurements. For manual recovery, an authorized operator inspects job status, lease generation,
+  artifact identity and hash, and the last failure; reconcile an unknown commit before retrying,
+  and escalate conflicts instead of deleting issued evidence. Correlation records should not expose
+  invoice content or credentials.
+
+The 2026-11-03 Process, financial worker and memory-store tests cover generic job and fencing
+behavior. The newer disposable-database Billing and worker tests additionally exercise renderer
+jobs, atomic storage, lease loss, retries and uncertain completion; they do not establish resource
+limits or satisfy the workload or operational gate. The renderer benchmark measures the evaluation
+adapter, not a protected production worker. Production storage sizing, timeout/retry values,
+operational owners, alert thresholds and retention policy remain unselected.
 
 Open owner questions that still affect scope (parity plan section 11): whether supplier bills should
 live in Billing or Procurement (the code puts them in Billing, per D2); whether the first pilots need

@@ -162,7 +162,25 @@ export const DocumentAst = Schema.Struct({
 
 export type DocumentAst = Schema.Schema.Type<typeof DocumentAst>
 
+export const DocumentAssetVersion = Schema.Struct({
+  assetId: NonEmptyString,
+  version: NonEmptyString,
+  contentHash: Sha256,
+})
+
+export type DocumentAssetVersion = Schema.Schema.Type<typeof DocumentAssetVersion>
+
+export const DocumentAssetVersions = Schema.Array(DocumentAssetVersion).check(
+  Schema.makeFilter(
+    (assets) => new Set(assets.map((asset) => asset.assetId)).size === assets.length,
+    {
+      expected: "document asset IDs must be unique within a render",
+    },
+  ),
+)
+
 export const DocumentRenderRequestInput = Schema.Struct({
+  fingerprintVersion: Schema.Literal(2),
   tenantId: Uuid,
   snapshotId: Uuid,
   snapshotChecksum: Sha256,
@@ -173,7 +191,7 @@ export const DocumentRenderRequestInput = Schema.Struct({
   documentSchemaVersion: PositiveInteger,
   rendererFamily: DocumentRendererFamily,
   rendererVersion: NonEmptyString,
-  assetVersions: Schema.Array(NonEmptyString),
+  assetVersions: DocumentAssetVersions,
   capabilities: Schema.Array(DocumentCapability),
   astNodeCount: NonNegativeInteger,
   pageCount: NonNegativeInteger,
@@ -192,7 +210,8 @@ export const DocumentRenderRequest = Schema.Struct({
 export type DocumentRenderRequest = Schema.Schema.Type<typeof DocumentRenderRequest>
 
 export const DocumentRenderJobPayload = Schema.Struct({
-  jobVersion: PositiveInteger,
+  jobVersion: Schema.Literal(2),
+  fingerprintVersion: Schema.Literal(2),
   tenantId: Uuid,
   snapshotId: Uuid,
   astId: Uuid,
@@ -201,7 +220,7 @@ export const DocumentRenderJobPayload = Schema.Struct({
   documentSchemaVersion: PositiveInteger,
   rendererFamily: DocumentRendererFamily,
   rendererVersion: NonEmptyString,
-  assetVersions: Schema.Array(NonEmptyString),
+  assetVersions: DocumentAssetVersions,
   capabilities: Schema.Array(DocumentCapability),
   astNodeCount: NonNegativeInteger,
   pageCount: NonNegativeInteger,
@@ -222,6 +241,7 @@ export type DocumentArtifactStatus = Schema.Schema.Type<typeof DocumentArtifactS
 
 export const DocumentArtifact = Schema.Struct({
   artifactId: Uuid,
+  fingerprintVersion: Schema.Literal(2),
   tenantId: Uuid,
   snapshotId: Uuid,
   astId: Uuid,
@@ -230,7 +250,7 @@ export const DocumentArtifact = Schema.Struct({
   documentSchemaVersion: PositiveInteger,
   rendererFamily: DocumentRendererFamily,
   rendererVersion: NonEmptyString,
-  assetVersions: Schema.Array(NonEmptyString),
+  assetVersions: DocumentAssetVersions,
   renderFingerprint: Sha256,
   contentHash: Sha256,
   mediaType: NonEmptyString,
@@ -252,6 +272,7 @@ export type DocumentArtifactLookup = Schema.Schema.Type<typeof DocumentArtifactL
 export type DocumentArtifactWrite = {
   readonly metadata: DocumentArtifact
   readonly bytes: Uint8Array
+  /** The active lease generation and the render request's tenant-scoped fenceScope. */
   readonly fencing: Schema.Schema.Type<typeof FencingContext>
 }
 
@@ -332,7 +353,16 @@ export class DocumentRenderPolicyViolation extends Schema.TaggedError<DocumentRe
 export class DocumentRenderLimitExceeded extends Schema.TaggedError<DocumentRenderLimitExceeded>()(
   "DocumentRenderLimitExceeded",
   {
-    limit: Schema.Literals(["ast_nodes", "pages", "asset_bytes"]),
+    limit: Schema.Literals([
+      "ast_nodes",
+      "table_rows",
+      "qr_nodes",
+      "qr_bytes",
+      "pages",
+      "asset_bytes",
+      "image_pixels",
+      "output_bytes",
+    ]),
     actual: NonNegativeInteger,
     maximum: NonNegativeInteger,
   },
@@ -370,8 +400,11 @@ export const DocumentRenderPolicy = Schema.Struct({
   allowJavaScript: Schema.Boolean,
   allowNetwork: Schema.Boolean,
   maxAstNodes: PositiveInteger,
+  maxTableRows: NonNegativeInteger,
   maxPages: PositiveInteger,
   maxAssetBytes: NonNegativeInteger,
+  maxImagePixels: PositiveInteger,
+  maxOutputBytes: PositiveInteger,
 })
 
 export type DocumentRenderPolicy = Schema.Schema.Type<typeof DocumentRenderPolicy>
@@ -390,7 +423,10 @@ export const canonicalizeJson = (value: Schema.Schema.Type<typeof Schema.Json>):
     return encoded === undefined ? "null" : encoded
   }
 
-  const entries = Object.entries(value).sort(([left], [right]) => left.localeCompare(right))
+  // JavaScript string comparisons use UTF-16 code units, independent of the host locale.
+  const entries = Object.entries(value).sort(([left], [right]) =>
+    left < right ? -1 : left > right ? 1 : 0,
+  )
 
   return `{${entries
     .map(([key, entry]) => `${JSON.stringify(key)}:${canonicalizeJson(entry)}`)
@@ -463,6 +499,10 @@ export const createDocumentAst = (input: Schema.Codec.Encoded<typeof DocumentAst
     } satisfies DocumentAst
   })
 
+export const documentRenderFenceScope = (
+  request: Pick<DocumentRenderRequestInput, "tenantId"> & { readonly renderFingerprint: string },
+) => `document-render:${request.tenantId}:${request.renderFingerprint}`
+
 export const createDocumentRenderRequest = (
   input: Schema.Codec.Encoded<typeof DocumentRenderRequestInput>,
 ) =>
@@ -470,6 +510,7 @@ export const createDocumentRenderRequest = (
     const decoded = yield* Schema.decodeUnknownEffect(DocumentRenderRequestInput)(input)
 
     const renderFingerprint = yield* hashJson({
+      fingerprintVersion: decoded.fingerprintVersion,
       tenantId: decoded.tenantId,
       snapshotId: decoded.snapshotId,
       snapshotChecksum: decoded.snapshotChecksum,
@@ -490,7 +531,7 @@ export const createDocumentRenderRequest = (
     return {
       ...decoded,
       renderFingerprint,
-      fenceScope: `document-render:${decoded.tenantId}:${renderFingerprint}`,
+      fenceScope: documentRenderFenceScope({ tenantId: decoded.tenantId, renderFingerprint }),
     } satisfies DocumentRenderRequest
   })
 
@@ -505,7 +546,8 @@ export const makeDocumentRenderJobPayload = (
     const request = yield* Schema.decodeUnknownEffect(DocumentRenderRequest)(input)
 
     return {
-      jobVersion: 1,
+      jobVersion: 2,
+      fingerprintVersion: request.fingerprintVersion,
       tenantId: request.tenantId,
       snapshotId: request.snapshotId,
       astId: request.astId,

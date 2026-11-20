@@ -168,7 +168,9 @@ export {
   billingSources,
   importedArtifacts,
   invoiceKind,
+  invoiceArtifacts,
   invoiceLines,
+  invoiceRenderInputs,
   invoices,
   invoiceSettlements,
 } from "./billing.ts"

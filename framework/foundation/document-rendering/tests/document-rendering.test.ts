@@ -1,15 +1,20 @@
 import { assert, describe, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
+import * as Schema from "effect/Schema"
 
 import {
   canonicalizeJson,
   DocumentArtifactConflict,
+  DocumentArtifactInvalidContent,
   DocumentArtifactStaleWriter,
+  DocumentRenderJobPayload,
+  DocumentRenderRequest,
   DocumentRenderLimitExceeded,
   DocumentRenderPolicyViolation,
   makeDocumentRenderJobPayload,
   createDocumentRenderRequest,
   createDocumentSnapshot,
+  documentRenderFenceScope,
   makeMemoryDocumentArtifactStore,
   sha256Hex,
   validateDocumentRenderPolicy,
@@ -25,6 +30,7 @@ const hashA = "a".repeat(64)
 const hashB = "b".repeat(64)
 
 const requestInput = (correlationId = "document-correlation") => ({
+  fingerprintVersion: 2 as const,
   tenantId,
   snapshotId,
   snapshotChecksum: hashA,
@@ -48,6 +54,13 @@ describe("document rendering contracts", () => {
     assert.strictEqual(
       canonicalizeJson({ z: 1, a: { d: 2, c: [true, null] } }),
       canonicalizeJson({ a: { c: [true, null], d: 2 }, z: 1 }),
+    )
+  })
+
+  it("orders object keys by UTF-16 code units independently of locale", () => {
+    assert.strictEqual(
+      canonicalizeJson({ é: 1, z: 2, a: 3, A: 4, "😀": 5, "\uE000": 6, _: 7 }),
+      '{"A":4,"_":7,"a":3,"z":2,"é":1,"😀":5,"\uE000":6}',
     )
   })
 
@@ -84,7 +97,77 @@ describe("document rendering contracts", () => {
         `document-render:${tenantId}:${request.renderFingerprint}`,
       )
       assert.strictEqual(job.fenceScope, request.fenceScope)
-      assert.strictEqual(job.jobVersion, 1)
+      assert.strictEqual(job.jobVersion, 2)
+      assert.strictEqual(job.fingerprintVersion, 2)
+    }),
+  )
+
+  it.effect("binds asset identities, versions and bytes to the versioned fingerprint", () =>
+    Effect.gen(function* () {
+      const asset = { assetId: "logo", version: "1", contentHash: hashA }
+
+      const variants = [
+        asset,
+        { ...asset, assetId: "logo-other" },
+        { ...asset, version: "2" },
+        { ...asset, contentHash: hashB },
+      ]
+
+      const requests = yield* Effect.all(
+        variants.map((entry) =>
+          createDocumentRenderRequest({ ...requestInput(), assetVersions: [entry] }),
+        ),
+      )
+
+      assert.strictEqual(new Set(requests.map((entry) => entry.renderFingerprint)).size, 4)
+
+      const original = requests[0]!
+
+      const otherTenant = yield* createDocumentRenderRequest({
+        ...requestInput(),
+        tenantId: "018f0000-0000-7000-8000-000000000007",
+        assetVersions: [asset],
+      })
+
+      assert.notStrictEqual(otherTenant.renderFingerprint, original.renderFingerprint)
+
+      const job = yield* makeDocumentRenderJobPayload(original)
+      assert.deepStrictEqual(job.assetVersions, [asset])
+      yield* Schema.decodeUnknownEffect(DocumentRenderJobPayload)(job)
+
+      const oldJob = yield* Effect.flip(
+        Schema.decodeUnknownEffect(DocumentRenderJobPayload)({ ...job, jobVersion: 1 }),
+      )
+
+      const oldRequest = yield* Effect.flip(
+        Schema.decodeUnknownEffect(DocumentRenderRequest)({ ...original, fingerprintVersion: 1 }),
+      )
+
+      const oldManifest = yield* Effect.flip(
+        Schema.decodeUnknownEffect(DocumentRenderJobPayload)({
+          ...job,
+          assetVersions: ["logo-v1"],
+        }),
+      )
+
+      assert.instanceOf(oldJob, Schema.SchemaError)
+      assert.instanceOf(oldRequest, Schema.SchemaError)
+      assert.instanceOf(oldManifest, Schema.SchemaError)
+    }),
+  )
+
+  it.effect("rejects duplicate asset identities in the same render", () =>
+    Effect.gen(function* () {
+      const asset = { assetId: "logo", version: "1", contentHash: hashA }
+
+      const error = yield* Effect.flip(
+        createDocumentRenderRequest({
+          ...requestInput(),
+          assetVersions: [asset, { ...asset, version: "2" }],
+        }),
+      )
+
+      assert.instanceOf(error, Schema.SchemaError)
     }),
   )
 
@@ -101,8 +184,11 @@ describe("document rendering contracts", () => {
         allowJavaScript: false,
         allowNetwork: false,
         maxAstNodes: 10,
+        maxTableRows: 1_000,
         maxPages: 2,
         maxAssetBytes: 1_024,
+        maxImagePixels: 1_000_000,
+        maxOutputBytes: 1_000_000,
       }
 
       const error = yield* Effect.flip(validateDocumentRenderPolicy(requirements, policy))
@@ -120,8 +206,11 @@ describe("document rendering contracts", () => {
           allowJavaScript: false,
           allowNetwork: false,
           maxAstNodes: 5,
+          maxTableRows: 1_000,
           maxPages: 1,
           maxAssetBytes: 0,
+          maxImagePixels: 1_000_000,
+          maxOutputBytes: 1_000_000,
         }),
       )
 
@@ -139,6 +228,7 @@ describe("document rendering contracts", () => {
 
       const metadata = {
         artifactId,
+        fingerprintVersion: 2 as const,
         tenantId,
         snapshotId,
         astId,
@@ -147,7 +237,7 @@ describe("document rendering contracts", () => {
         documentSchemaVersion: 1,
         rendererFamily: "native-transactional" as const,
         rendererVersion: "contract-test",
-        assetVersions: [],
+        assetVersions: [{ assetId: "logo", version: "1", contentHash: hashB }],
         renderFingerprint: hashA,
         contentHash,
         mediaType: "application/json",
@@ -157,16 +247,18 @@ describe("document rendering contracts", () => {
         createdAt: timestamp,
       }
 
+      const scope = documentRenderFenceScope(metadata)
+
       const first = yield* store.put({
         metadata,
         bytes,
-        fencing: { scope: "document-render:scope", generation: "1" },
+        fencing: { scope, generation: "1" },
       })
 
       const replay = yield* store.put({
         metadata: { ...metadata, artifactId: "018f0000-0000-7000-8000-000000000006" },
         bytes,
-        fencing: { scope: "document-render:scope", generation: "1" },
+        fencing: { scope, generation: "1" },
       })
 
       assert.strictEqual(replay.artifactId, first.artifactId)
@@ -175,11 +267,53 @@ describe("document rendering contracts", () => {
         store.put({
           metadata,
           bytes,
-          fencing: { scope: "document-render:scope", generation: "0" },
+          fencing: { scope, generation: "0" },
         }),
       )
 
       assert.instanceOf(stale, DocumentArtifactStaleWriter)
+
+      const wrongScope = yield* Effect.flip(
+        store.put({
+          metadata,
+          bytes,
+          fencing: { scope: "document-render:other-scope", generation: "0" },
+        }),
+      )
+
+      assert.instanceOf(wrongScope, DocumentArtifactInvalidContent)
+
+      const otherTenantId = "018f0000-0000-7000-8000-000000000007"
+      const otherTenantMetadata = { ...metadata, tenantId: otherTenantId }
+
+      const crossTenant = yield* Effect.flip(
+        store.put({
+          metadata: otherTenantMetadata,
+          bytes,
+          fencing: { scope: documentRenderFenceScope(otherTenantMetadata), generation: "1" },
+        }),
+      )
+
+      assert.instanceOf(crossTenant, DocumentArtifactConflict)
+      assert.isUndefined(yield* store.get({ tenantId: otherTenantId, renderFingerprint: hashA }))
+
+      const distinctArtifact = {
+        ...otherTenantMetadata,
+        artifactId: "018f0000-0000-7000-8000-000000000008",
+      }
+
+      yield* store.put({
+        metadata: distinctArtifact,
+        bytes,
+        fencing: { scope: documentRenderFenceScope(distinctArtifact), generation: "1" },
+      })
+
+      const otherTenantArtifact = yield* store.get({
+        tenantId: otherTenantId,
+        renderFingerprint: hashA,
+      })
+
+      assert.strictEqual(otherTenantArtifact!.metadata.artifactId, distinctArtifact.artifactId)
 
       const conflictBytes = new Uint8Array([1, 2, 3, 4])
 
@@ -191,7 +325,7 @@ describe("document rendering contracts", () => {
             byteLength: conflictBytes.byteLength,
           },
           bytes: conflictBytes,
-          fencing: { scope: "document-render:scope", generation: "2" },
+          fencing: { scope, generation: "2" },
         }),
       )
 
@@ -200,6 +334,20 @@ describe("document rendering contracts", () => {
       const stored = yield* store.get({ tenantId, renderFingerprint: hashA })
       assert.isDefined(stored)
       assert.deepStrictEqual([...stored!.bytes], [1, 2, 3])
+
+      Reflect.set(first, "pageCount", 9)
+      Reflect.set(first.assetVersions[0]!, "version", "changed")
+      Reflect.set(stored!.metadata, "pageCount", 10)
+      Reflect.set(stored!.metadata.assetVersions[0]!, "version", "changed-again")
+      stored!.bytes[0] = 9
+      bytes[1] = 9
+
+      const reread = yield* store.get({ tenantId, renderFingerprint: hashA })
+      assert.strictEqual(reread!.metadata.pageCount, 1)
+      assert.deepStrictEqual(reread!.metadata.assetVersions, [
+        { assetId: "logo", version: "1", contentHash: hashB },
+      ])
+      assert.deepStrictEqual([...reread!.bytes], [1, 2, 3])
     }),
   )
 })

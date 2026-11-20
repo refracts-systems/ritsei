@@ -12,9 +12,11 @@ import {
   type FontLoader,
   inspectDocumentLayout,
   loadFontData,
+  parseImage,
   type PdfLayoutOptions,
   registerFonts,
 } from "pdfnative"
+import { encodeQR } from "qr"
 
 import { uuidv7 } from "../../foundation/ids/mod.ts"
 import {
@@ -30,6 +32,9 @@ import {
   DocumentRenderLimitExceeded,
   DocumentRenderPolicy,
   DocumentRenderRequest,
+  createDocumentAst,
+  createDocumentRenderRequest,
+  createDocumentSnapshot,
   sha256Hex,
   validateDocumentRenderPolicy,
 } from "../../foundation/mod.ts"
@@ -57,7 +62,45 @@ registerFonts({
   zh: fontLoader(() => import("pdfnative/fonts/noto-sc-data.js")),
 })
 
-const deterministicCreationDate = new Date("2000-01-01T00:00:00.000Z")
+// pdfnative 1.7.0 formats its supplied Date with local-time getters. Keep its PDF and XMP
+// metadata in UTC without changing the process timezone shared by other requests.
+class UtcMetadataDate extends Date {
+  override getFullYear() {
+    return this.getUTCFullYear()
+  }
+
+  override getMonth() {
+    return this.getUTCMonth()
+  }
+
+  override getDate() {
+    return this.getUTCDate()
+  }
+
+  override getHours() {
+    return this.getUTCHours()
+  }
+
+  override getMinutes() {
+    return this.getUTCMinutes()
+  }
+
+  override getSeconds() {
+    return this.getUTCSeconds()
+  }
+
+  override getTimezoneOffset() {
+    return 0
+  }
+}
+
+const deterministicCreationDate = new UtcMetadataDate("2000-01-01T00:00:00.000Z")
+const maxQrBytesPerCode = 1_024
+const maxQrBytesPerDocument = 4_096
+const maxQrNodesPerDocument = 25
+
+// Increment the adapter version when a change can affect the PDF bytes.
+export const pdfNativeRendererVersion = "ritsei-pdfnative@3+pdfnative@1.7.0+qr@0.7.2"
 
 const defaultPolicy: DocumentRenderPolicy = {
   rendererFamily: "native-transactional",
@@ -65,18 +108,23 @@ const defaultPolicy: DocumentRenderPolicy = {
   allowJavaScript: false,
   allowNetwork: false,
   maxAstNodes: 100_000,
+  maxTableRows: 100_000,
   maxPages: 10_000,
   maxAssetBytes: 50_000_000,
+  maxImagePixels: 20_000_000,
+  maxOutputBytes: 50_000_000,
 }
 
-export type PdfNativeAssetResolver = (
-  assetId: string,
-) => Effect.Effect<Uint8Array | undefined, DocumentAssetUnavailable | DocumentRendererFailure>
+/** Resolve only assets that the specified tenant is authorized to use. */
+export type PdfNativeAssetResolver = (input: {
+  readonly tenantId: string
+  readonly assetId: string
+  readonly version: string
+}) => Effect.Effect<Uint8Array | undefined, DocumentAssetUnavailable | DocumentRendererFailure>
 
 export type PdfNativeRendererOptions = {
   readonly policy?: DocumentRenderPolicy
   readonly resolveAsset?: PdfNativeAssetResolver
-  readonly layout?: Partial<PdfLayoutOptions>
 }
 
 const rendererFailure = (operation: string, reason: string, cause: unknown) =>
@@ -89,7 +137,7 @@ const rendererFailure = (operation: string, reason: string, cause: unknown) =>
 
 const textValues = (nodes: ReadonlyArray<DocumentNode>) =>
   nodes.flatMap((node) => {
-    if ("value" in node) return [node.value]
+    if (Predicate.isTagged(node, "text")) return [node.value]
 
     if ("headers" in node) return [...node.headers, ...node.rows.flat()]
 
@@ -115,18 +163,71 @@ const loadFontEntries = (texts: ReadonlyArray<string>) =>
         .filter((entry): entry is { fontData: FontData; lang: string } => entry !== undefined)
         .map(({ fontData, lang }, index) => ({
           fontData,
-          fontRef: `/F${index + 1}`,
+          fontRef: `/RitseiFont${index + 1}`,
           lang,
         }))
     },
     catch: (cause) => rendererFailure("font-loading", "unable to load registered fonts", cause),
   })
 
-const loadAsset = (assetId: string, resolveAsset: PdfNativeAssetResolver | undefined) =>
-  Effect.gen(function* () {
-    const bytes = resolveAsset === undefined ? undefined : yield* resolveAsset(assetId)
+type AssetBudget = { readonly usedBytes: number; readonly policy: DocumentRenderPolicy }
 
-    if (bytes === undefined) {
+const validateImage = (bytes: Uint8Array, assetId: string, policy: DocumentRenderPolicy) =>
+  Effect.gen(function* () {
+    if (detectImageFormat(bytes) === null) {
+      return yield* Effect.fail(
+        rendererFailure("asset-loading", "asset is not a supported PNG or JPEG image", { assetId }),
+      )
+    }
+
+    const dimensions = yield* Effect.try({
+      try: () => parseImage(bytes),
+      catch: (cause) => rendererFailure("asset-loading", "unable to parse image", cause),
+    })
+
+    const pixels = dimensions.width * dimensions.height
+
+    if (dimensions.width < 1 || dimensions.height < 1 || pixels > 2_147_483_647) {
+      return yield* Effect.fail(
+        rendererFailure("asset-loading", "image dimensions are invalid or unsupported", undefined),
+      )
+    }
+
+    if (pixels > policy.maxImagePixels) {
+      return yield* Effect.fail(
+        new DocumentRenderLimitExceeded({
+          limit: "image_pixels",
+          actual: pixels,
+          maximum: policy.maxImagePixels,
+        }),
+      )
+    }
+  })
+
+const loadAsset = (
+  request: DocumentRenderRequest,
+  assetId: string,
+  resolveAsset: PdfNativeAssetResolver | undefined,
+  budget: AssetBudget,
+) =>
+  Effect.gen(function* () {
+    const asset = request.assetVersions.find((entry) => entry.assetId === assetId)
+
+    if (asset === undefined) {
+      return yield* Effect.fail(
+        new DocumentAssetUnavailable({
+          assetId,
+          reason: "asset is absent from the render manifest",
+        }),
+      )
+    }
+
+    const resolved =
+      resolveAsset === undefined
+        ? undefined
+        : yield* resolveAsset({ tenantId: request.tenantId, assetId, version: asset.version })
+
+    if (resolved === undefined) {
       return yield* Effect.fail(
         new DocumentAssetUnavailable({
           assetId,
@@ -135,16 +236,27 @@ const loadAsset = (assetId: string, resolveAsset: PdfNativeAssetResolver | undef
       )
     }
 
-    if (detectImageFormat(bytes) === null) {
+    yield* validateAssetBytes(budget.usedBytes + resolved.byteLength, budget.policy)
+
+    // Keep the verified image stable even if the resolver later mutates its buffer.
+    const bytes = Uint8Array.from(resolved)
+    const contentHash = yield* sha256Hex(bytes)
+
+    if (contentHash !== asset.contentHash) {
       return yield* Effect.fail(
-        rendererFailure("asset-loading", "asset is not a supported PNG or JPEG image", { assetId }),
+        new DocumentAssetUnavailable({
+          assetId,
+          reason: "asset content does not match its version",
+        }),
       )
     }
+
+    yield* validateImage(bytes, assetId, budget.policy)
 
     return bytes
   })
 
-type StaticDocumentNode = Exclude<DocumentNode, { _tag: "image" | "signature" }>
+type StaticDocumentNode = Exclude<DocumentNode, { _tag: "image" | "signature" | "qr_code" }>
 
 const toStaticPdfBlock = (node: StaticDocumentNode): PdfDocumentBlock =>
   Match.valueTags(node, {
@@ -174,20 +286,97 @@ const toStaticPdfBlock = (node: StaticDocumentNode): PdfDocumentBlock =>
       data: node.value,
       align: "center",
     }),
-    qr_code: (node): PdfDocumentBlock => ({
-      type: "barcode",
-      format: "qr",
-      data: node.value,
-      align: "center",
-    }),
+  })
+
+const qrDataSize = (value: string) =>
+  Effect.gen(function* () {
+    // The encoder does not emit UTF-8 ECI; ASCII avoids scanner-dependent decoding.
+    if (value.length > maxQrBytesPerCode || !/^[\x20-\x7E]+$/.test(value)) {
+      return yield* Effect.fail(
+        rendererFailure(
+          "input-validation",
+          "QR data must be printable ASCII and at most 1024 bytes",
+          undefined,
+        ),
+      )
+    }
+
+    return value.length
+  })
+
+const validateQrBudget = (nodes: ReadonlyArray<DocumentNode>) =>
+  Effect.gen(function* () {
+    let count = 0
+    let totalBytes = 0
+
+    for (const node of nodes) {
+      if (!Predicate.isTagged(node, "qr_code")) continue
+
+      count += 1
+
+      if (count > maxQrNodesPerDocument) {
+        return yield* Effect.fail(
+          new DocumentRenderLimitExceeded({
+            limit: "qr_nodes",
+            actual: count,
+            maximum: maxQrNodesPerDocument,
+          }),
+        )
+      }
+
+      totalBytes += yield* qrDataSize(node.value)
+
+      if (totalBytes > maxQrBytesPerDocument) {
+        return yield* Effect.fail(
+          new DocumentRenderLimitExceeded({
+            limit: "qr_bytes",
+            actual: totalBytes,
+            maximum: maxQrBytesPerDocument,
+          }),
+        )
+      }
+    }
+  })
+
+const toQrBlock = (value: string) =>
+  Effect.gen(function* () {
+    yield* qrDataSize(value)
+
+    return yield* Effect.try({
+      try: () => {
+        const matrix = encodeQR(value, "raw", { ecc: "medium", encoding: "byte", border: 4 })
+
+        const data = matrix
+          .flatMap((row, y) => row.flatMap((dark, x) => (dark ? [`M${x} ${y}h1v1h-1z`] : [])))
+          .join("")
+
+        const size = Math.max(100, matrix.length * 1.2)
+
+        const block: PdfDocumentBlock = {
+          type: "svg",
+          data,
+          width: size,
+          height: size,
+          viewBox: [0, 0, matrix.length, matrix.length],
+          fill: "#000000",
+          align: "center",
+          alt: "QR code",
+        }
+
+        return { blocks: [block], assetBytes: 0 }
+      },
+      catch: (cause) => rendererFailure("qr-encoding", "QR encoding failed", cause),
+    })
   })
 
 const toImageBlocks = (
   node: Extract<DocumentNode, { _tag: "image" }>,
+  request: DocumentRenderRequest,
   resolveAsset: PdfNativeAssetResolver | undefined,
+  budget: AssetBudget,
 ) =>
   Effect.gen(function* () {
-    const bytes = yield* loadAsset(node.assetId, resolveAsset)
+    const bytes = yield* loadAsset(request, node.assetId, resolveAsset, budget)
 
     const blocks: PdfDocumentBlock[] = [
       {
@@ -203,10 +392,12 @@ const toImageBlocks = (
 
 const toSignatureBlocks = (
   node: Extract<DocumentNode, { _tag: "signature" }>,
+  request: DocumentRenderRequest,
   resolveAsset: PdfNativeAssetResolver | undefined,
+  budget: AssetBudget,
 ) =>
   Effect.gen(function* () {
-    const bytes = yield* loadAsset(node.assetId, resolveAsset)
+    const bytes = yield* loadAsset(request, node.assetId, resolveAsset, budget)
 
     const blocks: PdfDocumentBlock[] = [
       { type: "paragraph", text: node.label },
@@ -218,26 +409,28 @@ const toSignatureBlocks = (
 
 const toPdfBlocks = (
   nodes: ReadonlyArray<DocumentNode>,
+  request: DocumentRenderRequest,
   resolveAsset: PdfNativeAssetResolver | undefined,
+  policy: DocumentRenderPolicy,
 ) =>
   Effect.gen(function* () {
-    const blockResults = yield* Effect.all(
-      nodes.map((node) =>
-        Match.value(node).pipe(
-          Match.tag("image", (image) => toImageBlocks(image, resolveAsset)),
-          Match.tag("signature", (signature) => toSignatureBlocks(signature, resolveAsset)),
-          Match.orElse((rest) =>
-            Effect.succeed({ blocks: [toStaticPdfBlock(rest)], assetBytes: 0 }),
-          ),
-        ),
-      ),
-    )
-
     const result = { blocks: new Array<PdfDocumentBlock>(), assetBytes: 0 }
 
-    for (const blockResult of blockResults) {
-      result.blocks.push(...blockResult.blocks)
+    for (const node of nodes) {
+      const budget = { usedBytes: result.assetBytes, policy }
+
+      const blockResult = yield* Match.value(node).pipe(
+        Match.tag("image", (image) => toImageBlocks(image, request, resolveAsset, budget)),
+        Match.tag("signature", (signature) =>
+          toSignatureBlocks(signature, request, resolveAsset, budget),
+        ),
+        Match.tag("qr_code", (qr) => toQrBlock(qr.value)),
+        Match.orElse((rest) => Effect.succeed({ blocks: [toStaticPdfBlock(rest)], assetBytes: 0 })),
+      )
+
       result.assetBytes += blockResult.assetBytes
+      yield* validateAssetBytes(result.assetBytes, policy)
+      result.blocks.push(...blockResult.blocks)
     }
 
     return result
@@ -271,7 +464,11 @@ const validateInputReferences = (
     )
   }
 
-  if (ast.snapshotId !== request.snapshotId || ast.checksum !== request.astChecksum) {
+  if (
+    ast.astId !== request.astId ||
+    ast.snapshotId !== request.snapshotId ||
+    ast.checksum !== request.astChecksum
+  ) {
     return Effect.fail(
       rendererFailure(
         "input-validation",
@@ -283,6 +480,41 @@ const validateInputReferences = (
 
   return Effect.succeed(undefined)
 }
+
+const validateInputIntegrity = (
+  context: DocumentContext,
+  ast: DocumentAst,
+  request: DocumentRenderRequest,
+) =>
+  Effect.gen(function* () {
+    const snapshot = yield* createDocumentSnapshot({
+      snapshotId: context.snapshotId,
+      tenantId: context.tenantId,
+      source: context.source,
+      capturedAt: context.capturedAt,
+      schemaVersion: context.schemaVersion,
+      payload: context.data,
+    })
+
+    const verifiedAst = yield* createDocumentAst(ast)
+    const verifiedRequest = yield* createDocumentRenderRequest(request)
+
+    if (
+      snapshot.checksum !== context.snapshotChecksum ||
+      verifiedAst.checksum !== ast.checksum ||
+      verifiedRequest.renderFingerprint !== request.renderFingerprint ||
+      verifiedRequest.fenceScope !== request.fenceScope ||
+      ast.nodes.length !== request.astNodeCount
+    ) {
+      return yield* Effect.fail(
+        rendererFailure(
+          "input-validation",
+          "document render input failed integrity validation",
+          undefined,
+        ),
+      )
+    }
+  })
 
 const validateAssetBytes = (assetBytes: number, policy: DocumentRenderPolicy) =>
   assetBytes > policy.maxAssetBytes
@@ -306,26 +538,14 @@ const validatePageCount = (pageCount: number, policy: DocumentRenderPolicy) =>
       )
     : Effect.succeed(undefined)
 
-const valueOr = <T>(value: T | undefined, fallback: T): T =>
-  value === undefined ? fallback : value
-
-const makePdfLayout = (
-  options: PdfNativeRendererOptions,
-  policy: DocumentRenderPolicy,
-): Partial<PdfLayoutOptions> => {
-  const provided = options.layout ?? {}
-
-  return {
-    ...provided,
-    // PDF metadata must not introduce wall-clock or snapshot-capture variance into artifact bytes.
-    creationDate: deterministicCreationDate,
-    maxBlocks: Math.min(valueOr(provided.maxBlocks, policy.maxAstNodes), policy.maxAstNodes),
-    tagged: valueOr(provided.tagged, "pdfa2u"),
-    strict: valueOr(provided.strict, true),
-    compress: valueOr(provided.compress, false),
-    onDiagnostic: valueOr(provided.onDiagnostic, () => undefined),
-  }
-}
+const makePdfLayout = (policy: DocumentRenderPolicy): Partial<PdfLayoutOptions> => ({
+  creationDate: deterministicCreationDate,
+  maxBlocks: policy.maxAstNodes,
+  tagged: "pdfa2u",
+  strict: true,
+  compress: false,
+  onDiagnostic: () => undefined,
+})
 
 const inspectPdfLayout = (params: PdfDocumentParams, layout: Partial<PdfLayoutOptions>) =>
   Effect.tryPromise({
@@ -350,6 +570,7 @@ const makeDocumentArtifact = (
 
     const metadata = yield* Schema.decodeUnknownEffect(DocumentArtifact)({
       artifactId: uuidv7(),
+      fingerprintVersion: request.fingerprintVersion,
       tenantId: request.tenantId,
       snapshotId: request.snapshotId,
       astId: request.astId,
@@ -377,12 +598,56 @@ const renderPdfNativeDocument = (
   policy: DocumentRenderPolicy,
 ) =>
   Effect.gen(function* () {
+    if ("layout" in options) {
+      return yield* Effect.fail(
+        rendererFailure("input-validation", "renderer layout options are not supported", undefined),
+      )
+    }
+
     const { context, ast, request } = yield* decodeInput(input)
-    yield* validateInputReferences(context, ast, request)
+
+    if (request.rendererVersion !== pdfNativeRendererVersion) {
+      return yield* Effect.fail(
+        rendererFailure(
+          "input-validation",
+          "renderer version does not match the adapter",
+          undefined,
+        ),
+      )
+    }
+
     yield* validateDocumentRenderPolicy(request, policy)
 
-    const { blocks, assetBytes } = yield* toPdfBlocks(ast.nodes, options.resolveAsset)
-    yield* validateAssetBytes(assetBytes, policy)
+    if (ast.nodes.length > policy.maxAstNodes) {
+      return yield* Effect.fail(
+        new DocumentRenderLimitExceeded({
+          limit: "ast_nodes",
+          actual: ast.nodes.length,
+          maximum: policy.maxAstNodes,
+        }),
+      )
+    }
+
+    const tableRows = ast.nodes.reduce(
+      (total, node) => total + ("rows" in node ? node.rows.length : 0),
+      0,
+    )
+
+    if (tableRows > policy.maxTableRows) {
+      return yield* Effect.fail(
+        new DocumentRenderLimitExceeded({
+          limit: "table_rows",
+          actual: tableRows,
+          maximum: policy.maxTableRows,
+        }),
+      )
+    }
+
+    yield* validateInputReferences(context, ast, request)
+    yield* validateInputIntegrity(context, ast, request)
+    yield* validateQrBudget(ast.nodes)
+
+    const { blocks } = yield* toPdfBlocks(ast.nodes, request, options.resolveAsset, policy)
     const fontEntries = yield* loadFontEntries(textValues(ast.nodes))
 
     const params: PdfDocumentParams = {
@@ -392,10 +657,20 @@ const renderPdfNativeDocument = (
       metadata: { author: "RITSEI" },
     }
 
-    const layout = makePdfLayout(options, policy)
+    const layout = makePdfLayout(policy)
     const inspection = yield* inspectPdfLayout(params, layout)
     yield* validatePageCount(inspection.totalPages, policy)
     const bytes = yield* generatePdfBytes(params, layout)
+
+    if (bytes.byteLength > policy.maxOutputBytes) {
+      return yield* Effect.fail(
+        new DocumentRenderLimitExceeded({
+          limit: "output_bytes",
+          actual: bytes.byteLength,
+          maximum: policy.maxOutputBytes,
+        }),
+      )
+    }
 
     return yield* makeDocumentArtifact(request, bytes, inspection.totalPages)
   })
