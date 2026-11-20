@@ -30,6 +30,9 @@ never above what is unmatched on the line or on the payment's cash (amount less 
 client-chosen match id makes a retry return the recorded match. A match never changes a payment, an
 allocation, or the ledger; `reverseBankMatch` marks it reversed, and reversing twice is safe. The
 service locks the line, then the payment, and is the only supported writer.
+The reconciliation report lists active matches for the selected legal entity and bank account, with
+id-based pagination, so an authorized user can find a match to reverse. It includes each statement's
+source name, line number, and reference, and supports paging the unmatched lines and payments.
 
 ### `SET-WHT-1` A receipt may record withholding, allocated in the same command
 

@@ -2,7 +2,7 @@ import { AxeBuilder } from "@axe-core/playwright"
 import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import type { Page, Route } from "playwright"
-import { builtApp, connectToTenant, forbiddenBody } from "./browser.ts"
+import { builtApp, connectToTenant, forbiddenBody, conflictBody } from "./browser.ts"
 
 const tenantId = "01900000-0000-7000-8000-000000000010"
 const legalEntityId = "01900000-0000-7000-8000-000000000020"
@@ -102,11 +102,11 @@ const openPayments = async (page: Page, url: string) => {
   await page.getByRole("heading", { name: "Payments", exact: true }).waitFor({ timeout: 5_000 })
 }
 
-const mockSettlement = (
+const mockSettlement = async (
   page: Page,
   options: { readonly payments: unknown[]; readonly denied?: boolean },
-) =>
-  page.route("**/api/**", (route) => {
+) => {
+  await page.route("**/api/**", (route) => {
     const requestUrl = new URL(route.request().url())
     const path = requestUrl.pathname.replace(/^\/api/, "")
 
@@ -132,6 +132,8 @@ const mockSettlement = (
 
     return fulfillJson(route, 404, { code: "unexpected_test_request" })
   })
+  await page.route("**/api/accounting/accounts**", (route) => fulfillJson(route, 200, []))
+}
 
 it.effect(
   "shows the payment register, its allocations, aging, and a customer statement",
@@ -202,4 +204,146 @@ it.effect(
       })
     }),
   { timeout: 180_000 },
+)
+
+it.effect(
+  "imports a statement, matches payment cash, and reverses the match",
+  () =>
+    Effect.gen(function* () {
+      const { page, url, errors } = yield* builtApp
+      const bankId = "01900000-0000-7000-8000-000000000081"
+      const lineId = "01900000-0000-7000-8000-000000000082"
+      const matchId = "01900000-0000-7000-8000-000000000083"
+      let imported = false
+      let matched = false
+      let attempts = 0
+      let matchBody: unknown
+
+      const line = {
+        id: lineId,
+        statementId: matchId,
+        sourceName: "bank.csv",
+        lineNumber: 1,
+        reference: null,
+        bookingDate: "2026-10-25",
+        description: "Customer transfer",
+        amount: "100.00",
+        unmatchedAmount: "100.00",
+      }
+
+      const unmatched = {
+        id: paymentId,
+        number: payment.number,
+        direction: "incoming",
+        paymentDate: payment.paymentDate,
+        unmatchedCash: "100.00",
+      }
+
+      yield* Effect.promise(async () => {
+        await mockSettlement(page, { payments: [payment] })
+        await page.route("**/api/accounting/accounts**", (route) =>
+          fulfillJson(route, 200, [
+            { id: bankId, tenantId, code: "1101", name: "Bank", type: "asset" },
+          ]),
+        )
+        await page.route("**/api/settlement/bank-reconciliation**", (route) =>
+          fulfillJson(route, 200, {
+            legalEntityId,
+            bankAccountId: bankId,
+            lines: imported && !matched ? [line] : [],
+            payments: matched ? [] : [unmatched],
+            matches: matched
+              ? [
+                  {
+                    id: matchId,
+                    lineId,
+                    statementId: matchId,
+                    paymentId,
+                    paymentNumber: payment.number,
+                    bookingDate: line.bookingDate,
+                    description: line.description,
+                    sourceName: line.sourceName,
+                    lineNumber: line.lineNumber,
+                    reference: line.reference,
+                    amount: "100.00",
+                  },
+                ]
+              : [],
+          }),
+        )
+        await page.route("**/api/settlement/bank-statements", (route) => {
+          attempts += 1
+
+          if (attempts === 1) return fulfillJson(route, 409, conflictBody("invalid_request"))
+          imported = true
+
+          return fulfillJson(route, 201, {
+            id: matchId,
+            legalEntityId,
+            bankAccountId: bankId,
+            lineCount: 1,
+          })
+        })
+        await page.route("**/api/settlement/bank-matches", (route) => {
+          matchBody = route.request().postDataJSON()
+          matched = true
+
+          return fulfillJson(route, 201, {
+            id: matchId,
+            lineId,
+            paymentId,
+            amount: "100.00",
+            reversed: false,
+          })
+        })
+        await page.route(`**/api/settlement/bank-matches/${matchId}/reversal`, (route) => {
+          matched = false
+
+          return fulfillJson(route, 200, {
+            id: matchId,
+            lineId,
+            paymentId,
+            amount: "100.00",
+            reversed: true,
+          })
+        })
+        await openPayments(page, url)
+        await page.setViewportSize({ width: 640, height: 720 })
+        const account = page.getByRole("combobox", { name: "Reconciliation account" })
+        await account.focus()
+        await page.keyboard.press("ArrowDown")
+        await page.keyboard.press("Enter")
+        assert.equal(await account.inputValue(), bankId)
+        await page.getByText("No unmatched statement lines.").waitFor()
+        await page.getByLabel("Bank statement CSV").setInputFiles({
+          name: "bank.csv",
+          mimeType: "text/csv",
+          buffer: Buffer.from(
+            "date,description,reference,amount\n2026-10-25,Customer transfer,,100.00",
+          ),
+        })
+        await page.getByRole("button", { name: "Import statement" }).click()
+        await page
+          .getByText(
+            "The change conflicts with existing data or invalid input. Review the fields and try again.",
+          )
+          .waitFor()
+        await page.getByRole("button", { name: "Import statement" }).click()
+        await page.getByText(/Customer transfer · No reference · 100.00 · Remaining/).waitFor()
+        await page.getByRole("combobox", { name: "Statement line" }).selectOption(lineId)
+        await page.getByRole("combobox", { name: "Payment", exact: true }).selectOption(paymentId)
+        await page.getByRole("textbox", { name: "Match amount" }).fill("100.00")
+        assert.deepEqual(
+          (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()).violations,
+          [],
+        )
+        await page.getByRole("button", { name: "Match", exact: true }).click()
+        await page.getByRole("button", { name: "Reverse match" }).waitFor()
+        assert.deepEqual(matchBody, { lineId, paymentId, amount: "100.00" })
+        await page.getByRole("button", { name: "Reverse match" }).click()
+        await page.getByText(/Customer transfer · No reference · 100.00 · Remaining/).waitFor()
+      })
+      assert.deepEqual(errors, [])
+    }),
+  { timeout: 120_000 },
 )

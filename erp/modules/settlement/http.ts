@@ -125,7 +125,24 @@ export const SettlementHttpGroup = HttpApiGroup.make("Settlement").add(
   }).middleware(BearerAuth),
   HttpApiEndpoint.get("bankReconciliation", "/settlement/bank-reconciliation", {
     headers: TenantHeaders,
-    query: { legalEntityId: Uuid, bankAccountId: Uuid, limit: ReadLimit },
+    query: {
+      legalEntityId: Uuid,
+      bankAccountId: Uuid,
+      afterMatchId: Schema.optionalKey(Uuid),
+      lineOffset: Schema.optionalKey(
+        Schema.NumberFromString.pipe(
+          Schema.check(Schema.isInt()),
+          Schema.check(Schema.isBetween({ minimum: 0, maximum: 1_000_000 })),
+        ),
+      ),
+      paymentOffset: Schema.optionalKey(
+        Schema.NumberFromString.pipe(
+          Schema.check(Schema.isInt()),
+          Schema.check(Schema.isBetween({ minimum: 0, maximum: 1_000_000 })),
+        ),
+      ),
+      limit: ReadLimit,
+    },
     success: BankReconciliation,
     error: ApiErrors,
   }).middleware(BearerAuth),
