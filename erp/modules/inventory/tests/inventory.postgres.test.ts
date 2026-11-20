@@ -109,6 +109,7 @@ const createLegalEntityScope = (tenantId: string, name: string) =>
     return { legalEntity, branch }
   })
 
+// [INV-STOCK-3]
 it.effect.skipIf(databaseUrl === undefined)(
   "stock corrected atomic publication stays idempotent and rolls back messaging failures",
   () =>
@@ -860,6 +861,7 @@ it.effect.skipIf(databaseUrl === undefined)(
     ),
 )
 
+// [INV-XFER-1]
 it.effect.skipIf(databaseUrl === undefined)(
   "moves transfer lines only at confirmation and completion",
   () =>
@@ -1213,6 +1215,7 @@ it.effect.skipIf(databaseUrl === undefined)(
     ),
 )
 
+// [INV-XFER-1]
 it.effect.skipIf(databaseUrl === undefined)(
   "rolls back every source deduction when one transfer line is unavailable",
   () =>
@@ -1349,6 +1352,7 @@ it.effect.skipIf(databaseUrl === undefined)(
     ),
 )
 
+// [INV-STOCK-5]
 it.effect.skipIf(databaseUrl === undefined)(
   "enforces warehouse legal entity and branch scope",
   () =>

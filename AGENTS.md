@@ -75,6 +75,9 @@ bypass it with an undocumented allowlist. `tests/architecture/modules.test.ts` a
 fail when a manifest, the code, or a generated file disagree; run `pnpm run ritsei gen` after
 changing a manifest or an ADR header, and never edit `*.gen.ts` files or the ADR index by hand.
 
+- A module with `erp/modules/<module>/RULES.md` keeps its current business rules there (ADR-0123).
+  Read it before changing the module, and change a rule together with the test that names its
+  `[ID]`; the modules test fails on a rule no test names unless it is marked `unenforced`.
 - Never mutate another module's tables. Cross-module work uses a typed service contract, even inside
   a shared PostgreSQL transaction. Modules extend each other only through public contracts, events,
   and released extension points.

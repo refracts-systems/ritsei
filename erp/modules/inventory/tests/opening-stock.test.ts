@@ -71,6 +71,7 @@ const opening = {
 } as const
 
 describe("StockKeepingService.loadOpeningStock", () => {
+  // [INV-OPEN-1]
   it.effect("denies a caller without the capability, or with it in another tenant", () =>
     Effect.gen(function* () {
       for (const grantedTenantId of [undefined, uuidv7()]) {
@@ -87,6 +88,7 @@ describe("StockKeepingService.loadOpeningStock", () => {
     }),
   )
 
+  // [INV-OPEN-2]
   it.effect("keeps lot and expiry tracked stock under source authority", () =>
     Effect.gen(function* () {
       const stock = yield* StockKeepingService
@@ -103,6 +105,7 @@ describe("StockKeepingService.loadOpeningStock", () => {
     }).pipe(Effect.provide(layer(tenantId))),
   )
 
+  // [INV-OPEN-2]
   it.effect("rejects declared reservations and goods in transit instead of dropping them", () =>
     Effect.gen(function* () {
       const stock = yield* StockKeepingService
@@ -137,6 +140,7 @@ describe("OpeningStockInput", () => {
   const decode = (value: Schema.Codec.Encoded<typeof OpeningStockInput>) =>
     Effect.result(Schema.decodeEffect(OpeningStockInput)(value))
 
+  // [INV-OPEN-3]
   it.effect("requires the approval exactly when a line states a moving-average value", () =>
     Effect.gen(function* () {
       const unapproved = yield* decode({ ...opening, lines: [revalued] })

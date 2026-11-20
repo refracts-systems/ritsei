@@ -359,6 +359,7 @@ describe("inventory contract", () => {
     }),
   )
 
+  // [INV-AUTH-1]
   it.effect("denies inventory capability in an ungranted tenant", () =>
     withInventory(
       Effect.gen(function* () {
@@ -378,6 +379,7 @@ describe("inventory contract", () => {
     ),
   )
 
+  // [INV-STOCK-1]
   it.effect("receives and atomically reserves available stock", () =>
     withInventory(
       Effect.gen(function* () {
@@ -489,6 +491,7 @@ describe("inventory contract", () => {
     ),
   )
 
+  // [INV-STOCK-2]
   it.effect("lists tenant-scoped inventory projections and append-only movement history", () =>
     withInventory(
       Effect.gen(function* () {
@@ -561,6 +564,7 @@ describe("inventory contract", () => {
     ),
   )
 
+  // [INV-STOCK-5]
   it.effect("validates receive warehouse legal entity when supplied", () =>
     withInventory(
       Effect.gen(function* () {
@@ -609,6 +613,7 @@ describe("inventory contract", () => {
     ),
   )
 
+  // [INV-STOCK-4]
   it.effect("applies normalized UOM corrections once and preserves reserved stock", () =>
     withInventory(
       Effect.gen(function* () {
@@ -761,6 +766,7 @@ describe("inventory contract", () => {
     ),
   )
 
+  // [INV-STOCK-3]
   it.effect("stock corrected atomic publication preserves metadata and one event on retry", () => {
     const events: EventEnvelope[] = []
 
@@ -835,6 +841,7 @@ describe("inventory contract", () => {
     )
   })
 
+  // [INV-STOCK-3]
   it.effect("stock corrected atomic publication rolls back when messaging append fails", () =>
     withInventory(
       Effect.gen(function* () {
@@ -893,6 +900,7 @@ describe("inventory contract", () => {
     ),
   )
 
+  // [INV-AUTH-1]
   it.effect("requires the stock adjustment capability", () =>
     withInventory(
       Effect.gen(function* () {
@@ -918,6 +926,7 @@ describe("inventory contract", () => {
     ),
   )
 
+  // [INV-STOCK-1]
   it.effect("releases and fulfills active reservations exactly once", () =>
     withInventory(
       Effect.gen(function* () {
@@ -1044,6 +1053,7 @@ describe("inventory contract", () => {
     ),
   )
 
+  // [INV-STOCK-3]
   it.effect("rejects an idempotency key reused for different stock", () =>
     withInventory(
       Effect.gen(function* () {
@@ -1096,6 +1106,7 @@ describe("inventory contract", () => {
     ),
   )
 
+  // [INV-STOCK-1]
   it.effect("rejects reservations above available stock", () =>
     withInventory(
       Effect.gen(function* () {
@@ -1130,6 +1141,7 @@ describe("inventory contract", () => {
     ),
   )
 
+  // [INV-XFER-1]
   it.effect("moves multiple items only across the confirmed and completed states", () =>
     withInventory(
       Effect.gen(function* () {
@@ -1305,6 +1317,7 @@ describe("inventory contract", () => {
     ),
   )
 
+  // [INV-STOCK-5]
   it.effect("rejects transfers across legal entities", () =>
     withInventory(
       Effect.gen(function* () {
@@ -1344,6 +1357,7 @@ describe("inventory contract", () => {
     ),
   )
 
+  // [INV-XFER-1]
   it.effect("requires a capability to confirm a transfer", () =>
     withInventory(
       Effect.gen(function* () {
@@ -1394,6 +1408,7 @@ describe("inventory contract", () => {
     ),
   )
 
+  // [INV-XFER-1]
   it.effect("requires a separate capability to complete a transfer", () =>
     withInventory(
       Effect.gen(function* () {
