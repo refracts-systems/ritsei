@@ -90,9 +90,9 @@ of a product on a list; creating, pricing, and assigning a list to a customer ne
 ### `SAL-QUOT-1` A quotation is priced from the list price or the customer's price list
 
 `draftQuotation` (`sales.quotation.create`) prices each line from an explicit list price or the
-customer's price list (`ProductPriceNotFound` when neither exists), applies the discount in basis
-points rounded half up to the cent, defaults the tax code through Tax for the sales direction, and
-derives the total from the lines.
+customer's price list (`ProductPriceNotFound` when neither exists), applies the discount percent (at
+most two decimals) rounded half up to the cent, defaults the tax code through Tax for the sales
+direction, and derives the total from the lines.
 
 ### `SAL-QUOT-2` Quotations move draft, sent, then accepted or rejected, or expire
 
