@@ -1,4 +1,5 @@
 /**
+ * @stability unstable
  * @since 4.0.0
  */
 
@@ -11,11 +12,13 @@
 export * as AnthropicClient from "./AnthropicClient.ts"
 
 /**
+ * @stability unstable
  * @since 4.0.0
  */
 export * as AnthropicConfig from "./AnthropicConfig.ts"
 
 /**
+ * @stability unstable
  * @since 4.0.0
  */
 export * as AnthropicError from "./AnthropicError.ts"
@@ -27,6 +30,7 @@ export * as AnthropicError from "./AnthropicError.ts"
 export * as AnthropicLanguageModel from "./AnthropicLanguageModel.ts"
 
 /**
+ * @stability unstable
  * @since 4.0.0
  */
 export * as AnthropicTelemetry from "./AnthropicTelemetry.ts"
@@ -36,6 +40,12 @@ export * as AnthropicTelemetry from "./AnthropicTelemetry.ts"
  * @since 4.0.0
  */
 export * as AnthropicTool from "./AnthropicTool.ts"
+
+/**
+ * @stability unstable
+ * @since 4.1.3
+ */
+export * as AnthropicWorkloadIdentity from "./AnthropicWorkloadIdentity.ts"
 
 /**
  * @stability unstable
