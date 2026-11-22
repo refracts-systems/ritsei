@@ -150,6 +150,7 @@ current system; ADRs preserve decision history.
 | [`0122`](./0122-stage-invoice-rendering-before-activation.md)                                         | Stage Invoice Rendering Before Activation                                                        | Accepted   |
 | [`0123`](./0123-separate-the-decision-log-from-current-rules.md)                                      | Separate the Decision Log from Current Rules                                                     | Accepted   |
 | [`0124`](./0124-adopt-alchemy-domain-in-phases.md)                                                    | Adopt Alchemy Domain as a Framework Primitive in Phases                                          | Accepted   |
+| [`0126`](./0126-decide-job-timing-with-the-database-clock.md)                                         | Decide Job Timing with the Database Clock                                                        | Accepted   |
 
 <!-- adr-index:end -->
 

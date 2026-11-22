@@ -85,6 +85,7 @@ computes, so a host whose clock is off retries earlier or later by that offset; 
 retry runs. Audit timestamps (`updated_at`, workflow `completed_at`, event `occurred_at`) are not scheduling inputs.
 Rule tests: `erp/modules/process/tests/jobs.postgres.test.ts` (a host ten minutes ahead cannot take a held
 lease; a host an hour behind still sees a due job).
+Decision: [ADR-0126](../decisions/0126-decide-job-timing-with-the-database-clock.md).
 
 `ProcessService.completeFencedJob` additionally locks the scope counter and rejects a generation
 superseded by another job in that scope. To protect a PostgreSQL mutation, the resource owner must
