@@ -1,0 +1,14 @@
+id: untagged-todo
+valid:
+  - "// TODO(financial-prod): replace the signer"
+  - "/** FIXME(ledger-cutover) remove after the cutover */"
+  - "// The todos table is owned by Tasks."
+  - "// Fix the rounding here"
+invalid:
+  - "// TODO: fix later"
+  - "// HACK works around the driver"
+  - "/* FIXME */"
+  - |
+    /**
+     * XXX remove
+     */
