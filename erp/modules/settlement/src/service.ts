@@ -122,11 +122,13 @@ const matchMismatch = (
 
 type ReceiptInput = Schema.Schema.Type<typeof ReceivePaymentInput>
 
-const withheldOf = (input: ReceiptInput) =>
+const withheldOf = (input: Pick<ReceiptInput, "withholding">) =>
   input.withholding === undefined ? 0n : minor(input.withholding.amount)
 
 /** Withheld tax settles documents with the cash, so it must leave cash and be allocated. */
-const checkWithholding = (input: ReceiptInput) => {
+export const checkWithholding = (
+  input: Pick<ReceiptInput, "tenantId" | "amount" | "withholding" | "allocations">,
+) => {
   const withheld = withheldOf(input)
 
   const allocated = input.allocations.reduce(
@@ -147,7 +149,10 @@ const checkWithholding = (input: ReceiptInput) => {
 }
 
 /** The journal lines of a payment: cash against the control account, withholding as a claim. */
-const paymentLines = (direction: PaymentDirection, input: ReceiptInput) => {
+export const paymentLines = (
+  direction: PaymentDirection,
+  input: Pick<ReceiptInput, "cashAccountId" | "amount" | "withholding">,
+) => {
   const cash =
     input.cashAccountId === undefined
       ? { role: "cash" as const }
