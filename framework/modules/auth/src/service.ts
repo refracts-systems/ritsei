@@ -1,10 +1,10 @@
 import * as Clock from "effect/Clock"
-import * as Crypto from "effect/Crypto"
+import * as Digest from "effect/crypto/Digest"
+import * as SecureRandom from "effect/crypto/SecureRandom"
 import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 
-import { DatabaseFailure } from "../../../foundation/mod.ts"
 import {
   ExternalSubjectNotFound,
   UserAccountNotFound,
@@ -32,19 +32,11 @@ const encodeToken = (bytes: Uint8Array) =>
     .replaceAll("/", "_")
     .replace(/=+$/, "")
 
-const makeToken = (crypto: Crypto.Crypto) =>
-  crypto.randomBytes(32).pipe(
-    Effect.map(encodeToken),
-    Effect.mapError((cause) => new DatabaseFailure({ operation: "session-token-generate", cause })),
-  )
+const makeToken = (random: SecureRandom.SecureRandom["Service"]) =>
+  random.randomBytes(32).pipe(Effect.map(encodeToken))
 
-const hashToken = (crypto: Crypto.Crypto, token: string) =>
-  crypto.digest("SHA-256", new TextEncoder().encode(token)).pipe(
-    Effect.map((digest) =>
-      Array.from(digest, (byte) => byte.toString(16).padStart(2, "0")).join(""),
-    ),
-    Effect.mapError((cause) => new DatabaseFailure({ operation: "session-token-hash", cause })),
-  )
+const hashToken = (digest: Digest.Digest["Service"], token: string) =>
+  digest.digestHex(Digest.sha256, new TextEncoder().encode(token))
 
 const normalizeTenant = (input: Schema.Schema.Type<typeof CreateTenantInput>) => ({
   slug: input.slug.trim().toLowerCase(),
@@ -54,7 +46,8 @@ const normalizeTenant = (input: Schema.Schema.Type<typeof CreateTenantInput>) =>
 export const makeAuthService = Effect.gen(function* () {
   const store = yield* makePostgresAuthStore
   const userAccounts = yield* UserAccountService
-  const crypto = yield* Crypto.Crypto
+  const random = yield* SecureRandom.SecureRandom
+  const digest = yield* Digest.Digest
   const clock = yield* Clock.Clock
   const identityProvider = yield* Effect.serviceOption(IdentityProvider)
   const now = () => new Date(clock.currentTimeMillisUnsafe())
@@ -103,8 +96,8 @@ export const makeAuthService = Effect.gen(function* () {
       )
     }
 
-    const token = yield* makeToken(crypto)
-    const tokenHash = yield* hashToken(crypto, token)
+    const token = yield* makeToken(random)
+    const tokenHash = yield* hashToken(digest, token)
 
     const row = yield* store.createSession(
       decoded.userAccountId,
@@ -124,7 +117,7 @@ export const makeAuthService = Effect.gen(function* () {
 
   const authenticate = Effect.fn("auth.authenticate")(function* (token: string) {
     if (Option.isNone(identityProvider)) {
-      const tokenHash = yield* hashToken(crypto, token)
+      const tokenHash = yield* hashToken(digest, token)
       const row = yield* store.findActiveSession(tokenHash, now())
 
       if (row === undefined) return yield* Effect.fail(new InvalidSessionToken({}))
@@ -185,7 +178,7 @@ export const makeAuthService = Effect.gen(function* () {
     )
       return yield* Effect.fail(new InvalidSessionToken({}))
 
-    const sessionId = yield* hashToken(crypto, `${external.issuer}\u0000${external.subject}`).pipe(
+    const sessionId = yield* hashToken(digest, `${external.issuer}\u0000${external.subject}`).pipe(
       Effect.map((hash) => `external:${hash}`),
     )
 

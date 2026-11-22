@@ -46,11 +46,11 @@
     "check": "varlock run -- pnpm run contracts && varlock run -- pnpm run styles && varlock run -- tsc --noEmit -p tsconfig.json && varlock run -- pnpm --filter @ritsei/web run check"
   },
   "dependencies": {
-    "@effect/platform-node": "4.0.0",
-    "@effect/platform-node-shared": "4.0.0",
-    "@effect/sql-pg": "4.0.0",
+    "@effect/platform-node": "4.1.4",
+    "@effect/platform-node-shared": "4.1.4",
+    "@effect/sql-pg": "4.1.4",
     "drizzle-orm": "1.0.0-rc.5-169397b",
-    "effect": "4.0.0",
+    "effect": "4.1.4",
     "pdfnative": "1.7.0",
     "postgres": "3.4.7",
     "qr": "0.7.2",
@@ -60,7 +60,7 @@
   "devDependencies": {
     "@ast-grep/cli": "0.51.0",
     "@axe-core/playwright": "4.13.0",
-    "@effect/vitest": "4.0.0",
+    "@effect/vitest": "4.1.4",
     "@oxlint/plugins": "1.88.0",
     "@types/node": "^24.19.2",
     "@vitest/coverage-v8": "5.0.2",

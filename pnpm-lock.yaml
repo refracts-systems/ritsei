@@ -172,20 +172,20 @@ importers:
   .:
     dependencies:
       '@effect/platform-node':
-        specifier: 4.0.0
-        version: 4.0.0(effect@4.0.0)(redis@6.3.0)
+        specifier: 4.1.4
+        version: 4.1.4(effect@4.1.4)(redis@6.3.0)
       '@effect/platform-node-shared':
-        specifier: 4.0.0
-        version: 4.0.0(effect@4.0.0)
+        specifier: 4.1.4
+        version: 4.1.4(effect@4.1.4)
       '@effect/sql-pg':
-        specifier: 4.0.0
-        version: 4.0.0(effect@4.0.0)
+        specifier: 4.1.4
+        version: 4.1.4(effect@4.1.4)
       drizzle-orm:
         specifier: 1.0.0-rc.5-169397b
-        version: 1.0.0-rc.5-169397b(@effect/sql-pg@4.0.0(effect@4.0.0))(effect@4.0.0)(postgres@3.4.7)
+        version: 1.0.0-rc.5-169397b(@effect/sql-pg@4.1.4(effect@4.1.4))(effect@4.1.4)(postgres@3.4.7)
       effect:
-        specifier: 4.0.0
-        version: 4.0.0
+        specifier: 4.1.4
+        version: 4.1.4
       pdfnative:
         specifier: 1.7.0
         version: 1.7.0
@@ -209,8 +209,8 @@ importers:
         specifier: 4.13.0
         version: 4.13.0(playwright-core@1.63.0)
       '@effect/vitest':
-        specifier: 4.0.0
-        version: 4.0.0(effect@4.0.0)(vitest@5.0.2)
+        specifier: 4.1.4
+        version: 4.1.4(effect@4.1.4)(vitest@5.0.2)
       '@oxlint/plugins':
         specifier: 1.88.0
         version: 1.88.0
@@ -487,28 +487,28 @@ packages:
   '@drizzle-team/brocli@0.12.1':
     resolution: {integrity: sha512-yHwomvolVafvUXhy5TdiJVkuNCxXn+bKOs2aWiWEQh/5YaV97Oa/abJz3dmx7lxgIUsUlS1Jl4mEfvJPo3YsVw==}
 
-  '@effect/platform-node-shared@4.0.0':
-    resolution: {integrity: sha512-VBXHJU9UXVZPdQGGDRjGXpo+TpOzRwZuMrdKAtIxi1qwcRftmacZ1zTgIrzBa0Z2RA2KVkoOecQUsTlt/nJZhw==}
-    engines: {node: '>=18.0.0'}
+  '@effect/platform-node-shared@4.1.4':
+    resolution: {integrity: sha512-DWdfphHGOFJNj/mYadgpT3jIm8aRXDcPrQiGXFBH4p2H4XmA7iYMrPsI8NxVgZ7kNX0q1+FGJZJama0tINHRAg==}
+    engines: {node: '>=22.19.0'}
     peerDependencies:
-      effect: ^4.0.0
+      effect: ^4.1.4
 
-  '@effect/platform-node@4.0.0':
-    resolution: {integrity: sha512-/L+4MUbl8FejPKLHLROYSOebvHnfixkP8KiblSD/DE5uH5xENZBHaux4nH6XMnRP+lr8ajpEJFS8sUrmmxFJeQ==}
-    engines: {node: '>=18.0.0'}
+  '@effect/platform-node@4.1.4':
+    resolution: {integrity: sha512-h7QExTPq/RfYtHP/8tMlgfBvqYsuJKhxfkU6w0+NaF/ihqQ8Y3GH9t28ltupQjoqMM7P6W5gy8rOji7F0qVrmg==}
+    engines: {node: '>=22.19.0'}
     peerDependencies:
-      effect: ^4.0.0
-      redis: '>=5.0.0 <7.0.0'
+      effect: ^4.1.4
+      redis: '>=5.1.0 <7.0.0'
 
-  '@effect/sql-pg@4.0.0':
-    resolution: {integrity: sha512-w0sRMA08Tgz73aReYpFSxD+nz2LUKYhH/4zaRpo4G5b5YG+eqiAL7XYhqIjvGZ8MZacazbG71Jhprv6ccz9HDg==}
+  '@effect/sql-pg@4.1.4':
+    resolution: {integrity: sha512-DHsmpIfJeCYiJVk3JwMQFAWaQAmKV/elUbBCjHFP7qeZtJ8dViUV/y/AHdUaZ+OmMwtr8J7ZXA7AlsKZ9hPiQA==}
     peerDependencies:
-      effect: ^4.0.0
+      effect: ^4.1.4
 
-  '@effect/vitest@4.0.0':
-    resolution: {integrity: sha512-kGElCPFGtP+CgMCwV/HjJWqtE3zYo6I1+8MSA54l+EI24lPU9p2Efa+TBp1jfkg9j711KKzEqgSAy3VzTsb76Q==}
+  '@effect/vitest@4.1.4':
+    resolution: {integrity: sha512-AKpZ6zKihCRhY7hDbiQ2yp/krw+afIkxDRjFMwwzMiyhd0iYk0WaHa9J6GGC7TUF/C7HP2dZyMVq5xC0Qm/2/g==}
     peerDependencies:
-      effect: ^4.0.0
+      effect: ^4.1.4
       vitest: '>=5.0.0 <6.0.0'
 
   '@emnapi/core@1.11.0':
@@ -2670,8 +2670,8 @@ packages:
       zod:
         optional: true
 
-  effect@4.0.0:
-    resolution: {integrity: sha512-ooc1TG5t+FfzgYnFz2ff6BBKyZ7EwBRVXC7c4RhQUAD6/TZ2gTXXMeb4WX7a19ozQo4J73/QW+S00YAIresoMQ==}
+  effect@4.1.4:
+    resolution: {integrity: sha512-Tgrv/9FN+TZYyOn8XSli+fVqAfwDrDAkiX5Uu9vztINb675VTQdhD0gWI5Kzvhlh9QqzjZvw72iugqw5pwoghQ==}
 
   electron-to-chromium@1.5.458:
     resolution: {integrity: sha512-/hIH2gRSmxrf4/X4Nw/t/Wc8PVS22l8/3HnWjWTWsTOM5dsnMUPZF/+u+yr3LqweNuTBJE1rq6qAQzKkZVwMfA==}
@@ -3563,8 +3563,8 @@ packages:
   undici-types@7.24.6:
     resolution: {integrity: sha512-WRNW+sJgj5OBN4/0JpHFqtqzhpbnV0GuB+OozA9gCL7a993SmU+1JBZCzLNxYsbMfIeDL+lTsphD5jN5N+n0zg==}
 
-  undici@8.12.2:
-    resolution: {integrity: sha512-XtuDWVdqTLr3NAxm2ly9/hU6kUsJOgGh1RASzMBbsw6aWCOaQzHdW+QQDfdERjfJ2V5vL5pRPa4RetO9UfivDg==}
+  undici@8.12.4:
+    resolution: {integrity: sha512-8Mx+uNKKER2bA4AdtedkqRbwUCIJFr2nJckXRe5yrDqzePqwLP7VNcctN8/XdmDSbF7mS+jJKIszlL+vbam1VA==}
     engines: {node: '>=22.19.0'}
 
   universalify@2.0.1:
@@ -3710,6 +3710,18 @@ packages:
 
   ws@8.22.0:
     resolution: {integrity: sha512-Ydggc987+RO0AnWtZ/7Wq9FtNvcrL1b/RO0ud9mWjUPgDrsAAwQSF51sm2hm1XofbU/4jkpGEsLFsZZxU+1DOg==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
+
+  ws@8.23.0:
+    resolution: {integrity: sha512-wCkmX8QMOrKjgO8HW2WyDbTSGeqkocxgDzS9iR79rEAexty6/2qzilx3Ag8Tqf9ykop3irLKle0MtVn5qjVnoQ==}
     engines: {node: '>=10.0.0'}
     peerDependencies:
       bufferutil: ^4.0.1
@@ -3917,32 +3929,32 @@ snapshots:
 
   '@drizzle-team/brocli@0.12.1': {}
 
-  '@effect/platform-node-shared@4.0.0(effect@4.0.0)':
+  '@effect/platform-node-shared@4.1.4(effect@4.1.4)':
     dependencies:
       '@types/ws': 8.18.2
-      effect: 4.0.0
-      ws: 8.22.0
+      effect: 4.1.4
+      ws: 8.23.0
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
 
-  '@effect/platform-node@4.0.0(effect@4.0.0)(redis@6.3.0)':
+  '@effect/platform-node@4.1.4(effect@4.1.4)(redis@6.3.0)':
     dependencies:
-      '@effect/platform-node-shared': 4.0.0(effect@4.0.0)
-      effect: 4.0.0
+      '@effect/platform-node-shared': 4.1.4(effect@4.1.4)
+      effect: 4.1.4
       redis: 6.3.0
-      undici: 8.12.2
+      undici: 8.12.4
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
 
-  '@effect/sql-pg@4.0.0(effect@4.0.0)':
+  '@effect/sql-pg@4.1.4(effect@4.1.4)':
     dependencies:
-      effect: 4.0.0
+      effect: 4.1.4
 
-  '@effect/vitest@4.0.0(effect@4.0.0)(vitest@5.0.2)':
+  '@effect/vitest@4.1.4(effect@4.1.4)(vitest@5.0.2)':
     dependencies:
-      effect: 4.0.0
+      effect: 4.1.4
       vitest: 5.0.2(@types/node@24.19.2)(@vitest/coverage-v8@5.0.2)(vite@8.2.2(@types/node@24.19.2)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.23.15))
 
   '@emnapi/core@1.11.0':
@@ -5517,13 +5529,13 @@ snapshots:
       get-tsconfig: 4.14.3
       jiti: 2.7.0
 
-  drizzle-orm@1.0.0-rc.5-169397b(@effect/sql-pg@4.0.0(effect@4.0.0))(effect@4.0.0)(postgres@3.4.7):
+  drizzle-orm@1.0.0-rc.5-169397b(@effect/sql-pg@4.1.4(effect@4.1.4))(effect@4.1.4)(postgres@3.4.7):
     optionalDependencies:
-      '@effect/sql-pg': 4.0.0(effect@4.0.0)
-      effect: 4.0.0
+      '@effect/sql-pg': 4.1.4(effect@4.1.4)
+      effect: 4.1.4
       postgres: 3.4.7
 
-  effect@4.0.0: {}
+  effect@4.1.4: {}
 
   electron-to-chromium@1.5.458: {}
 
@@ -6427,7 +6439,7 @@ snapshots:
 
   undici-types@7.24.6: {}
 
-  undici@8.12.2: {}
+  undici@8.12.4: {}
 
   universalify@2.0.1: {}
 
@@ -6520,6 +6532,8 @@ snapshots:
   wordwrapjs@5.1.1: {}
 
   ws@8.22.0: {}
+
+  ws@8.23.0: {}
 
   wsl-utils@0.1.0:
     dependencies:
