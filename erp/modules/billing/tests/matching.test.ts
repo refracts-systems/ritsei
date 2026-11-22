@@ -136,39 +136,73 @@ describe("credit note share of a bill line's matched value", () => {
     matchedValue: cash(matchedValue),
   })
 
+  const returnedBySplit = (quantity: number, matched: bigint, splits: ReadonlyArray<number>) => {
+    const line = lineOf(quantity, matched)
+    const shares: Array<bigint> = []
+    let credited = 0n
+    let returned = 0n
+
+    for (const split of [...splits.map(BigInt), BigInt(quantity)]) {
+      const left = BigInt(quantity) - credited
+      const units = split < left ? split : left
+
+      if (units === 0n) break
+
+      const share = creditShare(
+        line,
+        units,
+        new Map([[lineId, credited]]),
+        new Map([[lineId, returned]]),
+      )
+
+      shares.push(share)
+      credited += units
+      returned += share
+    }
+
+    return { shares, credited, returned }
+  }
+
+  const splitsOf = Schema.Array(positive).check(Schema.isMinLength(1), Schema.isMaxLength(30))
+
   // [BIL-CREDIT-1]
   it.prop(
     "credits that use up a line in any split return exactly its matched value, none negative",
     {
       quantity: positive,
       matched: Schema.BigInt.check(Schema.isBetweenBigInt({ minimum: 0n, maximum: 10_000_000n })),
-      splits: Schema.Array(positive).check(Schema.isMinLength(1), Schema.isMaxLength(30)),
+      splits: splitsOf,
     },
     ({ quantity, matched, splits }) => {
-      const line = lineOf(quantity, matched)
-      let credited = 0n
-      let returned = 0n
+      const { shares, credited, returned } = returnedBySplit(quantity, matched, splits)
 
-      for (const split of [...splits.map(BigInt), BigInt(quantity)]) {
-        const left = BigInt(quantity) - credited
-        const units = split < left ? split : left
-
-        if (units === 0n) break
-
-        const share = creditShare(
-          line,
-          units,
-          new Map([[lineId, credited]]),
-          new Map([[lineId, returned]]),
-        )
-
-        assert.isTrue(share >= 0n, `a credit of ${units} returned ${share}`)
-        credited += units
-        returned += share
-      }
-
+      assert.isTrue(shares.every((share) => share >= 0n))
       assert.strictEqual(credited, BigInt(quantity))
       assert.strictEqual(returned, matched)
     },
   )
+
+  // [BIL-CREDIT-1]
+  it.prop(
+    "the same holds for a few cents over a few units credited in small steps, where rounding matters most",
+    {
+      quantity: Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 12 })),
+      matchedCents: Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: 12 })),
+      splits: Schema.Array(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 3 }))).check(
+        Schema.isMinLength(1),
+        Schema.isMaxLength(12),
+      ),
+    },
+    ({ quantity, matchedCents, splits }) => {
+      const { shares, returned } = returnedBySplit(quantity, BigInt(matchedCents), splits)
+
+      assert.isTrue(shares.every((share) => share >= 0n))
+      assert.strictEqual(returned, BigInt(matchedCents))
+    },
+  )
+
+  // [BIL-CREDIT-1]
+  it("credits 0.02 over four units one at a time as 0.01, 0.00, 0.01, 0.00, never negative", () => {
+    assert.deepStrictEqual(returnedBySplit(4, 2n, [1, 1, 1, 1]).shares, [1n, 0n, 1n, 0n])
+  })
 })

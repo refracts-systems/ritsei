@@ -71,9 +71,15 @@ export const matchBill = (
   return match
 }
 
+/** The matched value of `units` of a line's `total` units, rounded half up to the cent. */
+const cumulativeShare = (matched: bigint, units: bigint, total: bigint) =>
+  (matched * units * 2n + total) / (total * 2n)
+
 /**
- * The part of a bill line's matched value a credit of `quantity` units returns: proportional, and
- * the last units take what is left so credits never over- or under-return it.
+ * The part of a bill line's matched value a credit of `quantity` units returns. The value returned
+ * after k credited units is the line's matched value for those k units rounded once, so the shares
+ * of any split sum to the value of the units credited, none is negative, and the last units take
+ * what is left. Rounding each share on its own could make the last one negative.
  */
 export const creditShare = (
   line: BillingDocument["lines"][number],
@@ -86,7 +92,10 @@ export const creditShare = (
   const done = credited.get(line.id) ?? 0n
   const returned = creditedMatched.get(line.id) ?? 0n
 
-  return done + quantity === total
-    ? matched - returned
-    : (matched * quantity * 2n + total) / (total * 2n)
+  if (done + quantity === total) return matched - returned
+
+  // A line credited before this rule may already have returned more than the cumulative value.
+  const share = cumulativeShare(matched, done + quantity, total) - returned
+
+  return share > 0n ? share : 0n
 }
