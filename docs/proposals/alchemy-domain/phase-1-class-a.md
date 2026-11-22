@@ -1,6 +1,6 @@
 # Phase 1: Class A, Rules That Fit One Aggregate
 
-> **Status:** Awaiting review
+> **Status:** Accepted by the owner on 2026-11-22, with decisions (review record)
 >
 > **Roadmap gate:** `alchemy.class-a`
 >
@@ -24,33 +24,42 @@ state machine inside one instance.
 
 ## Aggregates
 
-- **May move:** tax codes with rate periods (Tax) and supplier prices (Procurement), the only
-  aggregates whose every rule is class A.
-- **Stay table-backed:** every other aggregate these rules touch carries a higher-class rule. This
-  phase models them with `decide` and `evolve` and states their class A rules as stories in memory;
-  production keeps the tables.
+No aggregate moves in this phase. Every aggregate these rules touch stays table-backed, tax codes
+and supplier prices included. The phase models them with `decide` and `evolve` through the phase 0
+port and states their class A rules as stories in memory; production keeps the tables and keeps its
+behavior.
 
 ## Deliverables
 
-1. A model per module for the aggregates above, through the phase 0 port.
-2. A story for each of the 34 rules, naming its `[ID]`, so the modules test links each rule.
-3. For tax codes and supplier prices: parity tests that run the same cases against the table and
-   stream implementations, a rehearsed cutover of existing rows, and updated `RULES.md` and
-   `state-and-consistency.md`.
-4. A replacement for the foreign key from products to tax codes (`TAX-PROD-1`): command-time
-   validation in Product plus a reference view, or keeping tax codes table-backed.
+1. A model per module for the aggregates above, through the phase 0 port, run on the in-memory host.
+2. One pure `decide` function per rule, called by the production service and by the Alchemy
+   aggregate's `decide`, so no two models of the same rule can disagree (the shape of
+   `erp/modules/sales/src/order-lifecycle.ts` and `erp/modules/procurement/src/order-lifecycle.ts`).
+   A rule that is a read or an authorization check is shared as the same pure function or, where
+   none exists, stated as a story against the production function.
+3. A story for each of the 34 rules, naming its `[ID]`, so the modules test links each rule.
+4. Tax codes stay table-backed because of the foreign key from products (`TAX-PROD-1`); they gain
+   stories only. Supplier prices are read outside the purchase order transaction (`PRC-DRAFT-1`),
+   because the price is copied onto the order line.
 
 ## Exit evidence
 
-Stories for all 34 rules pass; the two cut-over aggregates pass parity tests and a rehearsed
-migration; owner documents describe the new authority.
+Stories for all 34 rules pass, and each aggregate's `decide` is the same function the production
+service calls. There is no cutover, no parity rehearsal, and no change to `RULES.md` authority.
 
 ## Stop conditions
 
-- A cut-over aggregate needs a foreign key from a table that command-time validation cannot replace.
-- Parity tests find a tax calculation that differs between implementations.
+- Sharing a `decide` changes the result of an existing production test.
+- A story needs behavior that production does not have, or production has a behavior the story
+  cannot state.
+- A rule turns out to need two aggregates, which makes it class B or higher: stop and report it
+  instead of widening the model.
 
 ## Five views
+
+The views below were written for a phase that cut two aggregates over. The review removed the
+cutovers, so their risks (the two cutovers, parity tests, rollback to the tables) do not apply
+in this phase and return with the gates `alchemy.rebuild` and `alchemy.host-role`.
 
 - **Auditor.** `TAX-RATE-1` offers no command that changes or deletes a rate period; a rate change
   is a later period. An event history keeps that by construction and adds who scheduled each period
@@ -88,12 +97,22 @@ migration; owner documents describe the new authority.
 
 ## Open questions
 
-- Should tax codes move at all, given how many tables reference them, or only gain stories?
-- Do supplier prices need to be readable in the same transaction that drafts a purchase order
-  (`PRC-DRAFT-1`)?
+Both questions were answered in the review (decisions 3 and 4 below).
 
 ## Review record
 
 | Date | Reviewer | Outcome | Notes |
 | --- | --- | --- | --- |
-| | | | |
+| 2026-11-22 | Owner | Accepted | Five decisions below |
+
+Decisions taken in this review:
+
+1. **One `decide` per class A rule**, called by the production service and by the Alchemy
+   aggregate's `decide`, so there are not two models that can drift apart.
+2. **No cutover in phase 1.** The gates `alchemy.rebuild` and `alchemy.host-role` are not met.
+   Exit is 34 stories passing with the shared `decide` in use.
+3. **Tax codes stay table-backed** (many foreign keys, `TAX-PROD-1`) and gain stories only.
+4. **Supplier prices are read outside the purchase order transaction** (`PRC-DRAFT-1`): accepted,
+   because the price is copied onto the order line.
+5. **PR #90 merges together with phase 1**, after phase 1 is accepted. The new port enters `main`
+   with its first ERP consumer (ADR-0091).
