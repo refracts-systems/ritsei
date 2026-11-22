@@ -374,7 +374,6 @@ tooling/
 ├── fallow/
 ├── architecture.ts
 ├── schema-ownership.ts
-├── financial-gate.ts
 └── focused operational scripts
 
 tests/
