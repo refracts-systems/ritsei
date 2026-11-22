@@ -47,6 +47,53 @@ behavior.
 Stories for all 34 rules pass, and each aggregate's `decide` is the same function the production
 service calls. There is no cutover, no parity rehearsal, and no change to `RULES.md` authority.
 
+## Exit evidence (recorded 2026-11-22)
+
+Observed on branch `alchemy/phase-1-class-a` with PostgreSQL 19: `vitest run --project repository` passes
+(845 tests, 1 skipped: the opt-in Swarm pool test); `fmt:check`, `lint`, `tsc`, `boundary:test`,
+`boundary:lint`, `skills:check`, and `fallow:audit` (no finding introduced) pass. All 34 rule IDs are
+named by a story or authorization test in the new files. No aggregate moved, and no module's
+`mod.ts` exports a model, so production loads no Alchemy code.
+
+| Module | Rules | Shared `decide` with production | Stated without a shared `decide` |
+| --- | --- | --- | --- |
+| Tax | 5 | TAX-CALC-1/2, TAX-RATE-1 (`tax-decisions.ts`, `taxOn`) | TAX-AUTH-1 (service); TAX-PROD-1 (a foreign key owns it; a Product aggregate would be class B) |
+| Sales | 6 | SAL-ORDER-1, SAL-ORDER-3 (quotation owner check), SAL-CUST-2, SAL-QUOT-1, SAL-QUOT-2 transitions | SAL-AUTH-1 (service); SAL-ORDER-3 tenant-local references (composite keys); the `expireQuotations` sweep (one set-based UPDATE) |
+| Procurement | 7 | PRC-PO-1, PRC-PO-2 (`deriveTotal`), PRC-REL-1 (`decideApprovalCover`) | PRC-AUTH-1 (service); PRC-PO-4, PRC-DOC-1, PRC-PRICE-1 (constraints and the render function) |
+| Inventory | 9 | INV-STOCK-1/2/4/5 (partly), INV-VAL-3, INV-OPEN-2/3 (`stock-rules.ts`, `valuation.ts`, `opening-stock-rules.ts`) | INV-AUTH-1, INV-OPEN-1 (service); PostgreSQL `reserveStock` keeps its guarded UPDATE; the branch bound of INV-STOCK-5 (a foreign key) |
+| Billing | 4 | BIL-SET-1 (`decideSettlement`), BIL-BILL-2 (`firstUncoveredExcess`) | BIL-RENDER-1/2 (staging and constraints) |
+| Settlement | 1 | SET-BANK-1 (`parseBankStatement`) | none |
+| Accounting | 2 | ACC-OPEN-2 (`firstControlAccountLine`) | ACC-OPEN-4 (ledger triggers) |
+
+So 22 of 34 rules share a `decide` with production or already had one, and 12 are stated against the
+production service or against constraints. The exit evidence asked that each aggregate's `decide` be
+the function production calls; that holds for the 22, and the 12 are listed above with the reason.
+
+### Findings to decide or follow up (none changed here)
+
+- **`BIL-RENDER-1` and `ACC-OPEN-4` stay `unenforced`.** Their stories are weak (one cannot state that
+  no runtime composes the worker; the other checks a declaration), and `tooling/modules.ts` fails a
+  test that brackets an `unenforced` ID, so these two IDs are named unbracketed in comments.
+- **Memory and PostgreSQL can still diverge in three places:** the duplicate rate-period start in Tax
+  (primary key in PostgreSQL, a shared pure check in memory), the `expireQuotations` sweep (a story
+  mirrors the SQL predicate), and PostgreSQL `reserveStock` (a guarded UPDATE). Each has no
+  differential test.
+- **`INV-STOCK-2` as written is not how production works:** balances are SQL updates beside the
+  movement insert, not folded from the movements. Only the aggregate states the rule literally.
+- **Approval gate:** the shared `decideApprovalCover` compares amounts as numbers in minor units where
+  the PostgreSQL gate compared strings. Approvals normalizes the stored amount, so the results are
+  equal, and `approval-cover.postgres.test.ts` passes unchanged. A malformed amount would now throw
+  instead of refuse; no command can produce one.
+- **Two small production deviations:** `settle` in Billing converts the open amount before the
+  replay check; `createPartyCustomer` in Sales looks up an existing customer before the role check,
+  so an invalid-role call reads once more before failing. Outcomes are identical.
+- **A defect found, not fixed:** `draftPurchaseOrder` derives its total with its own `major(sum)`, not
+  `deriveTotal`, so a total beyond 2^128 minor units throws a `RangeError` defect where other paths
+  fail with a `SchemaError`. Reasoned from the code, not run.
+- **Not covered by memory layers:** the `SalesDocumentService` and `PurchaseDocumentService`
+  capabilities have no memory layer, so only the PostgreSQL tests exercise them.
+- **`alchemy` is a test-only dependency** (inherited from phase 0, reported by `fallow:audit`).
+
 ## Stop conditions
 
 - Sharing a `decide` changes the result of an existing production test.
