@@ -54,6 +54,8 @@ total is `sum(quantity * unit price)` in integer minor units; callers never supp
 The same confirmation key returns the recorded result and one event; a different key fails, and a
 key another order already used fails too (a map in the memory store, the
 `purchase_orders_tenant_confirmation_idempotency_key` constraint in PostgreSQL).
+The key returns the recorded result only while the order is still confirmed: a retry after
+cancellation fails with `PurchaseOrderInvalidState` (`cancelled`) for any key, as in `SAL-ORDER-2`.
 The memory store (`makeProcurementTestLayer`) does not apply the approval policy of `PRC-REL-1`:
 Approvals has no memory implementation, so approval gating is verified against PostgreSQL only.
 Enforced by: `src/order-lifecycle.ts`; `tests/order-lifecycle.test.ts`;
