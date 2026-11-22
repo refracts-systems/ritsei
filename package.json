@@ -61,6 +61,7 @@
     "varlock": "1.23.0"
   },
   "devDependencies": {
+    "@alchemy.run/docker": "2.0.0-beta.87",
     "@ast-grep/cli": "0.51.0",
     "@axe-core/playwright": "4.13.0",
     "@effect/vitest": "4.1.4",
@@ -88,6 +89,7 @@
   "//dependencies": {
     "@alchemy.run/domain": "ADR-0124: the domain model primitive (decide, evolve, stories) that the framework port hides; hosted on Effect Cluster over PostgreSQL. Beta, pinned exactly.",
     "@alchemy.run/effect-cluster": "ADR-0124: the Effect Cluster host (layerEntities) the port uses at runtime; the only host adopted. Same beta as the domain package.",
+    "@alchemy.run/docker": "ADR-0124: the Docker provider ClusterDocker (the Swarm pool and its database) needs, used only by the phase 0 pool test; same beta as the other Alchemy packages.",
     "alchemy": "ADR-0124: required peer of @alchemy.run/domain and @alchemy.run/effect-cluster (host runner pool and providers), not a choice."
   }
 }
