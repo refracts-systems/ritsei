@@ -711,7 +711,10 @@ export const makeBillingService = Effect.gen(function* () {
           : minor(creditNote.total)
 
       if (applied === 0n) return creditNote
-      // The applied amount never exceeds either open amount, so settlement cannot fail here.
+      // Settlement cannot fail here, so a failure is a defect, not a typed error: both documents are
+      // locked in this transaction, the credit note is new (a replay returned earlier), and the
+      // applied amount is the smaller of the invoice's open amount and the credit note's total (its
+      // open amount), so it exceeds neither and no settlement of these sources exists yet.
       const impossible = (error: Parameters<typeof Effect.die>[0]) => Effect.die(error)
 
       const guarded = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
