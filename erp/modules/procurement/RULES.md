@@ -36,7 +36,13 @@ names an unknown rule. The sections after the rules describe the module around t
 A draft has no confirmation key or time; a confirmed order has both; a cancelled order keeps them.
 After confirmation the order, its Supplier Account, confirmation identity, lines, total, and creation
 time cannot change, and cancellation (`confirmed -> cancelled`, idempotent) preserves them.
-PostgreSQL enforces these invariants.
+PostgreSQL enforces these invariants. A cancelled order never reconfirms, and cancelling an order
+that has a receipt fails with `PurchaseOrderHasReceipts`.
+Enforced by: `src/order-lifecycle.ts`, the one place that decides confirmation and cancellation for
+both stores; `tests/order-lifecycle.test.ts` (state-machine properties);
+`tests/order-lifecycle.differential.postgres.test.ts` (memory and PostgreSQL answer one scenario
+alike); the PostgreSQL triggers `purchase_order_mutation_trigger`,
+`purchase_order_line_mutation_trigger`, and `purchase_order_total_trigger`.
 
 ### `PRC-PO-2` The total is derived exactly from the lines
 
@@ -45,7 +51,13 @@ total is `sum(quantity * unit price)` in integer minor units; callers never supp
 
 ### `PRC-PO-3` Confirmation is idempotent and publishes one event
 
-The same confirmation key returns the recorded result and one event; a different key fails.
+The same confirmation key returns the recorded result and one event; a different key fails, and a
+key another order already used fails too (a map in the memory store, the
+`purchase_orders_tenant_confirmation_idempotency_key` constraint in PostgreSQL).
+The memory store (`makeProcurementTestLayer`) does not apply the approval policy of `PRC-REL-1`:
+Approvals has no memory implementation, so approval gating is verified against PostgreSQL only.
+Enforced by: `src/order-lifecycle.ts`; `tests/order-lifecycle.test.ts`;
+`tests/order-lifecycle.differential.postgres.test.ts`; the unique constraint above.
 
 ### `PRC-PO-4` A purchase order outside the tenant is not found
 
