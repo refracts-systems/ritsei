@@ -431,6 +431,16 @@ const journalLinesAreInverse = (source: JournalEntry, reversal: JournalEntry) =>
   )
 }
 
+/**
+ * The one clock every host shares. Whether a job is due and whether a lease has run out are decided
+ * in SQL with the database's own `now()`, never with a host's clock, so hosts whose clocks differ
+ * cannot take a lease another host still holds or fail to see a job that is due.
+ */
+const databaseNow = sql`now()`
+
+/** True when the lease has run out by the database's clock; a job with no lease counts as expired. */
+const leaseExpired = sql<boolean>`coalesce(${processJobs.leaseUntil} <= now(), true)`
+
 const leaseHeldBy = <
   Row extends {
     readonly status: string
@@ -1767,24 +1777,23 @@ export const makeProcessService = Effect.gen(function* () {
     )
 
   const leaseDurationMs = 5 * 60_000
+  const leaseExpiry = sql`now() + make_interval(secs => ${leaseDurationMs / 1000})`
 
   const claimJob = (input: Schema.Codec.Encoded<typeof ProcessJobClaimInput>) =>
     Effect.gen(function* () {
       const decoded = yield* Schema.decodeUnknownEffect(ProcessJobClaimInput)(input)
 
       const claimed = yield* database.transaction(async (tx) => {
-        const nowDate = now()
-
         const rows = await tx
           .select(processJobSelection)
           .from(processJobs)
           .where(
             and(
               eq(processJobs.tenantId, decoded.tenantId),
-              lte(processJobs.scheduledAt, nowDate),
+              lte(processJobs.scheduledAt, databaseNow),
               or(
                 eq(processJobs.status, "pending"),
-                and(eq(processJobs.status, "leased"), lte(processJobs.leaseUntil, nowDate)),
+                and(eq(processJobs.status, "leased"), lte(processJobs.leaseUntil, databaseNow)),
               ),
               decoded.jobType === null || decoded.jobType === undefined
                 ? undefined
@@ -1810,7 +1819,7 @@ export const makeProcessService = Effect.gen(function* () {
           .update(jobFenceScopes)
           .set({
             generation: sql`${jobFenceScopes.generation} + 1`,
-            updatedAt: nowDate,
+            updatedAt: databaseNow,
           })
           .where(
             and(
@@ -1828,12 +1837,12 @@ export const makeProcessService = Effect.gen(function* () {
           .update(processJobs)
           .set({
             status: "leased",
-            leaseUntil: new Date(nowDate.getTime() + leaseDurationMs),
+            leaseUntil: leaseExpiry,
             leaseOwner: decoded.workerId,
             leaseToken,
             leaseGeneration: generation.generation,
             attempts: row.attempts + 1,
-            updatedAt: nowDate,
+            updatedAt: databaseNow,
           })
           .where(eq(processJobs.id, row.id))
           .returning(processJobSelection)
@@ -1856,6 +1865,7 @@ export const makeProcessService = Effect.gen(function* () {
             id: processJobs.id,
             status: processJobs.status,
             leaseUntil: processJobs.leaseUntil,
+            leaseExpired,
             leaseOwner: processJobs.leaseOwner,
             leaseToken: processJobs.leaseToken,
             leaseGeneration: processJobs.leaseGeneration,
@@ -1865,12 +1875,11 @@ export const makeProcessService = Effect.gen(function* () {
           .for("update")
 
         if (current === undefined) return RenewJobOutcome.NotFound()
-        const nowDate = now()
 
         if (
           current.status !== "leased" ||
           current.leaseUntil === null ||
-          current.leaseUntil <= nowDate ||
+          current.leaseExpired ||
           current.leaseOwner !== decoded.workerId ||
           current.leaseToken !== decoded.leaseToken ||
           current.leaseGeneration !== decoded.leaseGeneration
@@ -1880,15 +1889,15 @@ export const makeProcessService = Effect.gen(function* () {
         const [updated] = await tx
           .update(processJobs)
           .set({
-            leaseUntil: new Date(nowDate.getTime() + leaseDurationMs),
-            updatedAt: nowDate,
+            leaseUntil: leaseExpiry,
+            updatedAt: databaseNow,
           })
           .where(
             and(
               eq(processJobs.id, decoded.jobId),
               eq(processJobs.tenantId, decoded.tenantId),
               eq(processJobs.status, "leased"),
-              gt(processJobs.leaseUntil, nowDate),
+              gt(processJobs.leaseUntil, databaseNow),
               eq(processJobs.leaseOwner, decoded.workerId),
               eq(processJobs.leaseToken, decoded.leaseToken),
               eq(processJobs.leaseGeneration, decoded.leaseGeneration),
@@ -1926,6 +1935,7 @@ export const makeProcessService = Effect.gen(function* () {
             id: processJobs.id,
             status: processJobs.status,
             leaseUntil: processJobs.leaseUntil,
+            leaseExpired,
             leaseOwner: processJobs.leaseOwner,
             leaseToken: processJobs.leaseToken,
             leaseGeneration: processJobs.leaseGeneration,
@@ -1956,9 +1966,7 @@ export const makeProcessService = Effect.gen(function* () {
           }
         }
 
-        const completedAt = now()
-
-        if (current.leaseUntil <= completedAt) return CompleteJobOutcome.LeaseLost()
+        if (current.leaseExpired) return CompleteJobOutcome.LeaseLost()
 
         const [completed] = await tx
           .update(processJobs)
@@ -1967,15 +1975,15 @@ export const makeProcessService = Effect.gen(function* () {
             leaseUntil: null,
             leaseOwner: null,
             leaseToken: null,
-            completedAt,
-            updatedAt: completedAt,
+            completedAt: databaseNow,
+            updatedAt: databaseNow,
           })
           .where(
             and(
               eq(processJobs.id, decoded.jobId),
               eq(processJobs.tenantId, decoded.tenantId),
               eq(processJobs.status, "leased"),
-              gt(processJobs.leaseUntil, completedAt),
+              gt(processJobs.leaseUntil, databaseNow),
               eq(processJobs.leaseOwner, decoded.workerId),
               eq(processJobs.leaseToken, decoded.leaseToken),
               eq(processJobs.leaseGeneration, decoded.leaseGeneration),
@@ -2013,6 +2021,7 @@ export const makeProcessService = Effect.gen(function* () {
             id: processJobs.id,
             status: processJobs.status,
             leaseUntil: processJobs.leaseUntil,
+            leaseExpired,
             leaseOwner: processJobs.leaseOwner,
             leaseToken: processJobs.leaseToken,
             leaseGeneration: processJobs.leaseGeneration,
@@ -2023,12 +2032,11 @@ export const makeProcessService = Effect.gen(function* () {
           .for("update")
 
         if (current === undefined) return FailJobOutcome.NotFound()
-        const nowDate = now()
 
         if (
           current.status !== "leased" ||
           current.leaseUntil === null ||
-          current.leaseUntil <= nowDate ||
+          current.leaseExpired ||
           current.leaseOwner !== decoded.workerId ||
           current.leaseToken !== decoded.leaseToken ||
           current.leaseGeneration !== decoded.leaseGeneration
@@ -2047,14 +2055,14 @@ export const makeProcessService = Effect.gen(function* () {
             scheduledAt: retry ? new Date(decoded.retryAt!) : undefined,
             lastError: decoded.error,
             completedAt: null,
-            updatedAt: nowDate,
+            updatedAt: databaseNow,
           })
           .where(
             and(
               eq(processJobs.id, decoded.jobId),
               eq(processJobs.tenantId, decoded.tenantId),
               eq(processJobs.status, "leased"),
-              gt(processJobs.leaseUntil, nowDate),
+              gt(processJobs.leaseUntil, databaseNow),
               eq(processJobs.leaseOwner, decoded.workerId),
               eq(processJobs.leaseToken, decoded.leaseToken),
               eq(processJobs.leaseGeneration, decoded.leaseGeneration),
