@@ -56,6 +56,142 @@ Every later phase depends on what this phase proves or refutes.
 
 The deliverables above, and the full validation list in `AGENTS.md` passing after the upgrade.
 
+## Exit evidence (recorded)
+
+Recorded by an agent run on 2026-11-22; the owner has not reviewed it and the phase is not accepted.
+Numbers come from one machine: WSL2 (Ubuntu 26.04) with 4 CPUs, 8 GB RAM and an ext4 virtual disk,
+Docker 29.1.3 with a one-node Swarm, Node 24.22.0 run from a copy of the worktree on the WSL
+filesystem. They show order of magnitude, not capacity.
+
+### What ran
+
+`framework/platform/domain-model/tests/pool/` deploys the pilot to a local Docker Swarm with the
+Alchemy CLI and drives it over HTTP. It runs only with `RITSEI_ALCHEMY_POOL=1` and an active Swarm; the
+normal suite skips it with that reason (checked on Windows, where it skips).
+
+- **Database:** the `postgres:19` image, `PostgreSQL 19.0 (Debian 19.0-1.pgdg13+1)`, one replica on an
+  overlay network. The repository's two `domain_model` migrations were applied to it before any
+  runner started, and the login's `search_path` was set to `domain_model`.
+- **Pool:** `ClusterDocker.SwarmPool` with one runner replica (`gatewayPort` published), plus a
+  `Docker.Service` that serves the model's `Domain.Api` and calls the gateway. The runner image
+  is built by Alchemy from the model module (`FROM node:26-slim`); the Api image from `oven/bun:1`.
+- **Model:** variant B of the pilot (`DeliverOrderIssueFirst`), from `delivery-model.ts`, with views added to
+  read outcomes. Variant A and the in-memory `Story` runner were not run on the host.
+
+### Scenarios (variant B, on the host, both N=100 and N=1,000 runs)
+
+| Outcome | Result |
+| --- | --- |
+| A delivery completes and issues stock; a service line moves none | `Delivery` completed, stock 10 to 7 (value 1000 to 700), order shows L1:3, L2:1 delivered |
+| Over-delivery refused | Delivery failed (`rejected`); stock issued then returned (3 events on the item), order has only its confirmation event |
+| A failed second-line issue is compensated | First line's stock returned (3 events), second item untouched (1 event), delivery failed, order untouched |
+| A retried request records nothing new | A resend with a new command id and with the first id left the event row count and the stock unchanged |
+
+Views are eventually consistent, so the test waits until a view shows the expected state. Not
+checked on the host: the ledger journal (`JournalForSource`). The projection's store in this test is
+`MemoryLedgerStore`, per runner process, so it says nothing about a durable ledger.
+
+### Runtime-created tables (deliverable 9, item b)
+
+After the runner started, every table in the database outside the system catalogs was:
+
+```text
+domain_model.alchemy_domain_objects        (created by migration)
+domain_model.cluster_locks
+domain_model.cluster_messages
+domain_model.cluster_migrations
+domain_model.cluster_replies
+domain_model.cluster_runner_migrations
+domain_model.cluster_runners
+```
+
+The six `cluster_*` tables are created by Effect Cluster's SQL storage in the runner at startup,
+through the same connection, so they land in whatever schema the login's `search_path` names:
+`domain_model`. The list was the same after the second and third deploys. **Proposed owner:** the
+domain model port, in the `domain_model` schema (the schema then holds host tables only, as the
+decision above requires). They are versioned by Effect Cluster itself (`cluster_migrations`,
+`cluster_runner_migrations`), so they are not RITSEI migrations; `db/ownership.toml` can name them,
+and the host's login keeps `CREATE` on `domain_model` for them. Pinning them in reviewed migrations
+would mean copying the library's DDL and following each release.
+
+### Does the host rewrite an event key? (deliverable 4/5, item a)
+
+No case was found. The PostgreSQL service log held zero lines of the trigger's refusal (`recorded
+domain events cannot be changed or deleted`), checked after the scenarios, after the bulk load with a
+forced runner restart in the middle (`docker service update --force`, sagas in flight; every
+delivery still reached a terminal state), after the second deploy, and after the third. A refused
+`ON CONFLICT DO UPDATE` would be a logged error, so none occurred. The test fails if the count is not
+zero. Limits: one runner replica, a graceful restart only (no kill, no shard handover between
+runners), and a login that is the database superuser, so `ritsei_domain_host`'s privileges were not
+exercised.
+
+### Event schema change and rebuild (deliverable 7)
+
+- **Decoding.** Three `ProbeNoted` events were recorded with `{ text }`. The second model adds
+  `tag: Schema.optional(Schema.String)` to the event and a view over it. After a new event with a
+  `tag`, the view held `{ notes: 4, tagged: 1 }`, so the host decoded the three old events with the
+  new class, and the test decodes the four stored rows with the second schema directly (old ones have
+  no `tag`).
+- **A view added after history exists is not rebuilt by itself.** With 1,000 deliveries recorded, a new
+  warehouse-keyed view stayed empty (`null`) for the 120 seconds the test waited, and the backfill
+  progress row read `phase: complete, instances: 0, subtrees: 0` even though the directory listed the
+  24 stock items. A second, aggregate-keyed view behaved the same until its source received a new
+  command, when it picked up the old events with it. Bumping the view's `version` (third deploy) did
+  not rebuild it in 180 seconds either (10 minutes at N=100). The deploy-time rebuild that the
+  package documents did not happen on this host in `2.0.0-beta.87`.
+- **Rebuild by touching the sources.** Sending one more command to each of the 20 stock items
+  rebuilt the warehouse view from the whole history: 1,000 issues folded into one tenant key in
+  13.9 seconds including the 20 writes (N=1,000, one runner). Not measured at N=100 (the step was added after) or 10,000.
+
+### Measurements
+
+| N deliveries | Bulk time (runner restarted mid-run) | Event rows | Database | Runner memory (end) |
+| --- | --- | --- | --- | --- |
+| 100 | 62 s (1.6 per s) | 543 | 13 MB | 201 MiB |
+| 1,000 | 138 s (7.3 per s) | 5,043 | 46 MB | 668 MiB |
+
+Each delivery is two commands (confirm the order, request the delivery) plus the saga, about five
+events. The run used 8 concurrent clients; a deploy of the model took 23 to 33 seconds. Peak memory
+used in the VM during the 1,000 run was 3.4 GB (runner 668 MiB, PostgreSQL 452 MiB, Api 90 MiB at
+the end of the bulk load). **Not run:** N=10,000 (the runner already used 668 MiB at 1,000, and the
+disk and memory guards for this run said to skip it), a second runner replica, and variant A.
+
+### What the host needs from Alchemy's deployment tooling (deliverable 9)
+
+- **Packages:** `alchemy` (CLI and bundler), `@alchemy.run/effect-cluster`, `@alchemy.run/domain`, and
+  `@alchemy.run/docker` for `ClusterDocker`, a new dev dependency here. The runner itself needs
+  none of the CLI: it runs `node /app/runner.mjs`, a bundle that Alchemy builds from the model
+  module and the entity runtime.
+- **CLI:** the deploy ran as `tsx node_modules/alchemy/bin/alchemy.js deploy <stack> --stage pilot`.
+  Plain `alchemy deploy` under Node 24 failed to import the model: the package's `alchemy/Runtime/Bootstrap`
+  export points at TypeScript source, which Node refuses to load from `node_modules`. `vitest.config.ts`
+  already inlines it for tests; the CLI needed `tsx` as its loader.
+- **State:** `Alchemy.localState()` writes `.alchemy/` (state, bundles, logs, the generated random
+  database password) under the working directory. It is gitignored here. A shared state store would be
+  needed for more than one operator.
+- **Docker:** a Swarm manager (overlay network, named volume, services) and image builds on that daemon.
+  Base images come from a registry (`node:26-slim`, `oven/bun:1`, and the database image). Each deployed program is a
+  new image tagged by its hash, 358 MB each for the runner, and old tags are not removed.
+- **Findings from deploying it:**
+  - `ClusterDocker.Database` mounts its volume at `/var/lib/postgresql/data`. The PostgreSQL 19 image
+    refuses to start with a mount there (exit 1, restarted in a loop). `PGDATA` cannot be set through the resource.
+    The test uses a copy of that layer with the mount at `/var/lib/postgresql`, built from its
+    `@internal` `clusterShardGroups` export.
+  - The Api service must join the cluster's overlay network by name, or it cannot resolve the
+    gateway (`http://<pool-service>:34500`). The package's README example does not show this.
+  - The database URL ClusterDocker builds uses the `postgres` superuser, so a host role without
+    `CREATE` on anything but `domain_model` was not tried end to end.
+
+**Can RITSEI's deployment profiles carry it?** Not as they stand. `deploy/entry/compose.yaml` is the only
+executable profile (PostgreSQL 19, migrations, API, worker) and the deployment notes name no runner pool,
+Swarm, or Alchemy state. The runtime part fits a Compose service: a container from the bundled runner image
+and the environment `SwarmPool` sets (`CLUSTER_DATABASE_URL`, `CLUSTER_GATEWAY_TOKEN`, `CLUSTER_POOL`,
+the shard group variables, and `CLUSTER_PEERS`, which here is Swarm's `tasks.<service>` DNS name). The build
+part is the problem: the runner image is produced by Alchemy's bundler, so a release pipeline would depend
+on `alchemy` and `tsx` at build time, and standard and larger profiles would need an equivalent of
+Swarm's per-task DNS. None of this was exercised outside Swarm, and it needs an owner decision (and
+a deployment-profile update) before a phase 1 consumer relies on it.
+
 ## Stop conditions
 
 - The host does not run on PostgreSQL 19.
@@ -147,7 +283,8 @@ ADR-0124 is accepted and is not rewritten (ADR-0123); these phase 0 findings cor
   table in `public`.
 - **The host uses more than one table.** Besides `alchemy_domain_objects`, the runner pool and
   gateway run Effect Cluster with SQL storage, which creates message, reply, and runner tables at
-  runtime (read in source, not yet run). The Swarm step lists them and their owner.
+  runtime. The Swarm run found six `cluster_*` tables, listed with a proposed owner in the recorded exit
+  evidence.
 - **Recorded events are never rewritten.** The host writes an aggregate's events once under
   `event:<sequence>` keys; state, receipts, outbox, backfill, and view rows are rewritten or
   deleted. A trigger refuses `UPDATE`, `DELETE`, and `TRUNCATE` of `event:` keys, so the stop
