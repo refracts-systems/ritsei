@@ -62,6 +62,7 @@ to the descriptions without waiting for the user to name a skill.
 | Cross-domain consumption, or stock/balance/journal/idempotent/multi-write invariants | [`cross-domain-and-transactions`](.agents/skills/cross-domain-and-transactions/SKILL.md) |
 | Design or explain an Effect success/error/requirements flow | [`design-effect-program`](.agents/skills/design-effect-program/SKILL.md) |
 | Deliver a web screen, route, or UI component change in `apps/web` | [`ui-delivery-gate`](.agents/skills/ui-delivery-gate/SKILL.md) |
+| Audit or clean up comments in a file, directory, or module | [`delete-comment`](.agents/skills/delete-comment/SKILL.md) |
 
 ## Reference Sources
 
