@@ -58,6 +58,59 @@ written; the event map exists. The owner accepts the contracts. Nothing moves, s
 `RULES.md` as authoritative until its aggregate moves, except the `PRC-PO-3` sentence, which
 describes today's behavior.
 
+## Exit evidence (recorded 2026-11-22)
+
+Stories in `erp/modules/{sales,procurement,inventory}/tests/*class-b.story.test.ts` name `[SAL-ORDER-2]`,
+`[PRC-PO-3]`, and `[INV-STOCK-3]`; 13 tests pass on the in-memory host. Each decider mutation I tried
+(a cancelled order answering as confirmed, a different key accepted, a changed correction accepted)
+made at least one story fail. Nothing moved and no production code changed.
+
+### Retry contract per rule
+
+| Rule | Contract on Alchemy | Expressible? |
+| --- | --- | --- |
+| `SAL-ORDER-2` | The key is kept in the aggregate state and `decideConfirmation` answers: same key while confirmed records nothing; another key conflicts; after cancellation any key fails with `InvalidState`. | Yes, if the service does **not** map the key to an Alchemy command id |
+| `PRC-PO-3` | Same as `SAL-ORDER-2`, through the Procurement decider. | Yes, same condition |
+| `INV-STOCK-3` | Corrections are kept by key in the state: same key and content is a no-op even after later commands; same key with other content is refused. | Yes; the receipt of a repeated command id gives the same answer here |
+
+**Finding.** The in-memory host returns the stored receipt for a repeated command id before it runs
+`decide` (`InMemory.ts`, `commit`). A confirmation retried with the same command id after a
+cancellation is therefore **accepted**, where today's contract (and `decide` alone) refuses it. The
+owner's decision to keep today's contract is met by keeping the key in the state and giving
+confirmations no command id of their own (the story host gives each step a fresh one by default).
+Receipts are also stored only for accepted commands, so a refused retry is decided again each time.
+This is a constraint on the future service, not a blocker; it is recorded here so it is not
+rediscovered in phase 5.
+
+### Gap: the tenant-wide key (described, not built)
+
+Three "gap" stories show that a key already used by another order, purchase order, or stock item is
+**accepted** by a second aggregate instance, where production refuses it (`SAL-ORDER-2` and
+`PRC-PO-3`, the unique constraint; `INV-STOCK-3`, the tenant-wide movement key). Closing it needs
+a claim kept outside the aggregate and atomic with it, which Alchemy does not provide across
+instances. Options, none built: a claim aggregate with a saga and compensation (a later phase), or
+keeping the unique constraint and the aggregate on tables. Until one is chosen, these three rules
+cannot be cut over without losing the cross-instance conflict.
+
+### Event map
+
+Each RITSEI event is a public catalog entry (version 1, `PUBLIC`) checked by
+`erp/runtime/catalog-compatibility.test.ts`; an Alchemy event replacing it must produce the same
+payload, so a translation step sits at the outbox boundary. The model events differ today:
+
+| RITSEI event (payload) | Alchemy event in the model | Missing in the model event |
+| --- | --- | --- |
+| `sales.order.confirmed` (`orderId`, `total`) | `OrderConfirmed` (`idempotencyKey`) | `orderId` (the instance id) and `total` (in state from `OrderCreated`) |
+| `procurement.purchase_order.confirmed` (`purchaseOrderId`, `supplierAccountId`, `total`) | `PurchaseOrderConfirmed` (`idempotencyKey`, `confirmedAt`) | the three payload fields (in state or the instance id) |
+| `inventory.stock.corrected` (`correctionId`, `warehouseId`, `itemId`) | `StockCorrected` (`idempotencyKey`, `adjustment`, `unitOfMeasure`, `reason`) | `correctionId` (production has a movement id; the aggregate has none) and the warehouse and item (the instance id) |
+
+`SAL-CREDIT-1` needs the total on the confirmed event; the aggregate has it in state, so the
+translation reads state, not the event. The phase 0 policy applies: a field is only added, as an
+optional one. Known readers: the Communication module consumes
+`procurement.purchase_order.confirmed`; the Process Studio designer tests use
+`sales.order.confirmed`. I did not enumerate subscriptions beyond these, so other readers are
+unverified.
+
 ## Stop conditions
 
 - A retry contract cannot be stated without breaking an existing client.
