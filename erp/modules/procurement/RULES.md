@@ -116,7 +116,8 @@ The requester cannot decide their own request (`SelfApprovalForbidden`, also enf
 database), and decisions are final.
 Why: [ADR-0125](../../../docs/decisions/0125-require-an-approval-for-exactly-the-amount-it-releases.md)
 (an approval is valid only for the amount it was requested for; it amends ADR-0103).
-Enforced by: `src/documents.ts` (release check) and `src/postgres.ts` (`pendingApproval`);
+Enforced by: `src/order-lifecycle.ts` (`decideApprovalCover`, called by the release check in
+`src/documents.ts` and by `pendingApproval` in `src/postgres.ts`);
 `tests/approval-cover.postgres.test.ts` (below, equal, and above the total, on both paths); the
 `approval_requests_separation_of_duties_check` constraint; the procure-to-pay chain test.
 

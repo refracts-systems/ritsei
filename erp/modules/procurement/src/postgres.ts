@@ -67,7 +67,6 @@ import {
 } from "./events.ts"
 import {
   canonicalReceiptLines,
-  deriveTotal,
   loadSupplierRelationship,
   purchaseOrderLineListSelection,
   purchaseOrderLineSelection,
@@ -83,10 +82,13 @@ import {
   withProcurementOperationNames,
 } from "./store.ts"
 import {
+  ApprovalCover,
   CancellationDecision,
   ConfirmationDecision,
+  decideApprovalCover,
   decideCancellation,
   decideConfirmation,
+  deriveTotal,
 } from "./order-lifecycle.ts"
 
 type Principal = Schema.Schema.Type<typeof PrincipalSchema>
@@ -196,7 +198,7 @@ export const makeProcurementService = Effect.gen(function* () {
 
       const granted = yield* approvals.getForSubject({ ...scope, ...subject })
 
-      if (granted?.status === "approved" && granted.amount === total) return undefined
+      if (ApprovalCover.$is("Covered")(decideApprovalCover(granted, total))) return undefined
 
       // Leave a pending request so an approver can act on it.
       const request =

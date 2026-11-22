@@ -45,7 +45,6 @@ import {
 } from "./events.ts"
 import {
   canonicalReceiptLines,
-  deriveTotal,
   loadSupplierRelationship,
   sameReceiptLines,
   withProcurementOperationNames,
@@ -55,6 +54,7 @@ import {
   ConfirmationDecision,
   decideCancellation,
   decideConfirmation,
+  deriveTotal,
 } from "./order-lifecycle.ts"
 
 export const makeProcurementTestLayer = () =>
