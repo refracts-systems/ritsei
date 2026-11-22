@@ -32,7 +32,8 @@ import { PurchaseDocumentService, PurchaseOrderInvalidState } from "../../procur
 import { SalesDocumentService, SalesOrderInvalidState } from "../../sales/mod.ts"
 import { TaxService } from "../../tax/mod.ts"
 import { BillingCapabilities } from "./capabilities.ts"
-import { type BillMatch, creditShare, matchBill } from "./matching.ts"
+import { type BillMatch, creditShare, firstUncoveredExcess, matchBill } from "./matching.ts"
+import { decideSettlement, SettlementDecision } from "./settlement-decision.ts"
 import {
   ApplySettlementInput,
   BillPurchaseOrderInput,
@@ -405,15 +406,21 @@ export const makeBillingService = Effect.gen(function* () {
         "billing.settlement.lookup",
       ))[0]
 
-      if (prior !== undefined) {
-        if (minor(prior.amount) === amount) return document
+      const decision = decideSettlement({
+        open: minor(document.openAmount),
+        amount,
+        prior: prior === undefined ? undefined : minor(prior.amount),
+      })
 
+      if (SettlementDecision.$is("Replay")(decision)) return document
+
+      if (SettlementDecision.$is("Conflict")(decision)) {
         return yield* Effect.fail(
           new SettlementConflict({ tenantId, invoiceId, sourceId: source.id }),
         )
       }
 
-      if (amount > minor(document.openAmount)) {
+      if (SettlementDecision.$is("ExceedsOpenAmount")(decision)) {
         return yield* Effect.fail(
           new SettlementExceedsOpenAmount({
             tenantId,
@@ -424,7 +431,7 @@ export const makeBillingService = Effect.gen(function* () {
         )
       }
 
-      const openAmount = major(minor(document.openAmount) - amount)
+      const openAmount = major(decision.openAfter)
       yield* database.transaction(async (tx) => {
         await tx.insert(invoiceSettlements).values({
           tenantId,
@@ -597,8 +604,9 @@ export const makeBillingService = Effect.gen(function* () {
         subjectId: billId,
       })
 
-      if (approval?.status === "approved" && minor(approval.amount) >= match.excessValue) return
-      const first = match.excess[0]!
+      const first = firstUncoveredExcess(match, approval)
+
+      if (first === undefined) return
 
       return yield* Effect.fail(
         new BillExceedsReceipt({

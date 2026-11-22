@@ -18,9 +18,9 @@
 
 | Phase | Document | Rules | Status |
 | --- | --- | --- | --- |
-| 0 | [Foundation](./phase-0-foundation.md) | none | Awaiting review |
-| 1 | [Class A](./phase-1-class-a.md) | 34 | Waits for phase 0 exit |
-| 2 | [Class B](./phase-2-class-b.md) | 3 | Waits for phase 1 exit |
+| 0 | [Foundation](./phase-0-foundation.md) | none | Accepted with conditions (2026-11-22) |
+| 1 | [Class A](./phase-1-class-a.md) | 34 | Exit accepted (2026-11-22) |
+| 2 | [Class B](./phase-2-class-b.md) | 3 | Awaiting review |
 | 3 | [Class C](./phase-3-class-c.md) | 9 | Waits for phase 2 exit |
 | 4 | [Class D](./phase-4-class-d.md) | 11 | Waits for phase 3 exit |
 | 5 | [Class E](./phase-5-class-e.md) | 9 | Waits for phase 4 exit |

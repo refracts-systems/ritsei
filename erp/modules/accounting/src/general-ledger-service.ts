@@ -18,6 +18,7 @@ import {
 import { AccountingCapabilities } from "./capabilities.ts"
 import { ChartTemplateRegistry, templateById } from "./chart-templates.ts"
 import { buildBalanceSheet, buildProfitAndLoss } from "./financial-statements.ts"
+import { OPENING_CONTROL_ROLES } from "./opening-journal.ts"
 import {
   ApplyChartTemplateInput,
   BalanceSheetInput,
@@ -32,7 +33,6 @@ import {
   PostDocumentEntryInput,
   PostManualEntryInput,
   PostOpeningJournalInput,
-  type PostingRole,
   ProfitAndLossInput,
   RoleBalanceInput,
   TrialBalanceInput,
@@ -57,9 +57,6 @@ import {
   PostingRuleNotFound,
   UnbalancedJournal,
 } from "./errors.ts"
-
-/** Their owners load AR, AP, and stock against migration clearing, so the opening journal cannot (ADR-0117). */
-const OPENING_CONTROL_ROLES: ReadonlyArray<PostingRole> = ["receivable", "payable", "inventory"]
 
 const minor = (value: string) => requireExactMajorToMinor(value, 2)
 const signed = (value: bigint) => formatSignedMinor(value, 2)

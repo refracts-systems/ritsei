@@ -68,6 +68,15 @@ import {
   WarehouseLegalEntityNotFound,
 } from "./errors.ts"
 import { InventoryStockCorrectedEvent, StockCorrectedEventPayload } from "./events.ts"
+import {
+  correctionKeepsReservations,
+  decideReservationClose,
+  hasAvailableStock,
+  ReservationCloseDecision,
+  transferWithinLegalEntity,
+  unitOfMeasureMatches,
+  warehouseInLegalEntity,
+} from "./stock-rules.ts"
 
 const referenceFailure = (tenantId: string, warehouseId: string, itemId: string) =>
   new InventoryReferenceNotFound({ tenantId, warehouseId, itemId })
@@ -732,10 +741,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
 
             if (warehouse === undefined || item === undefined) return ReceiveStockOutcome.NotFound()
 
-            if (
-              decoded.legalEntityId !== undefined &&
-              warehouse.legalEntityId !== decoded.legalEntityId
-            ) {
+            if (!warehouseInLegalEntity(warehouse.legalEntityId, decoded.legalEntityId)) {
               return ReceiveStockOutcome.LegalEntityMismatch()
             }
 
@@ -865,7 +871,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
                   return AdjustStockOutcome.NotFound()
                 }
 
-                if (item.unitOfMeasure !== unitOfMeasure) {
+                if (!unitOfMeasureMatches(item.unitOfMeasure, unitOfMeasure)) {
                   return AdjustStockOutcome.UomMismatch({
                     expected: item.unitOfMeasure,
                     actual: unitOfMeasure,
@@ -920,8 +926,12 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
 
                 if (adjustment < 0n) {
                   if (
-                    balance === undefined ||
-                    BigInt(balance.onHand) + adjustment < BigInt(balance.reserved)
+                    !correctionKeepsReservations(
+                      balance === undefined
+                        ? undefined
+                        : { onHand: BigInt(balance.onHand), reserved: BigInt(balance.reserved) },
+                      adjustment,
+                    )
                   )
                     return AdjustStockOutcome.Unavailable()
                   await tx
@@ -1104,7 +1114,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
                 )
                 .for("update")
 
-              if (warehouse?.legalEntityId !== decoded.legalEntityId) {
+              if (!warehouseInLegalEntity(warehouse?.legalEntityId, decoded.legalEntityId)) {
                 return ReserveStockOutcome.LegalEntityMismatch()
               }
             }
@@ -1288,12 +1298,14 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
 
           if (reservation === undefined) return ReleaseReservationOutcome.NotFound()
 
-          if (reservation.status === "released") {
+          const closing = decideReservationClose(reservation.status, "release")
+
+          if (ReservationCloseDecision.$is("Existing")(closing)) {
             return ReleaseReservationOutcome.Existing({ reservation })
           }
 
-          if (reservation.status !== "active") {
-            return ReleaseReservationOutcome.InvalidState({ status: reservation.status })
+          if (ReservationCloseDecision.$is("InvalidState")(closing)) {
+            return ReleaseReservationOutcome.InvalidState({ status: closing.status })
           }
 
           const timestamp = now()
@@ -1396,12 +1408,14 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
 
           if (reservation === undefined) return FulfillReservationOutcome.NotFound()
 
-          if (reservation.status === "fulfilled") {
+          const closing = decideReservationClose(reservation.status, "fulfill")
+
+          if (ReservationCloseDecision.$is("Existing")(closing)) {
             return FulfillReservationOutcome.Existing({ reservation })
           }
 
-          if (reservation.status !== "active") {
-            return FulfillReservationOutcome.InvalidState({ status: reservation.status })
+          if (ReservationCloseDecision.$is("InvalidState")(closing)) {
+            return FulfillReservationOutcome.InvalidState({ status: closing.status })
           }
 
           const timestamp = now()
@@ -1547,7 +1561,12 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
               return CreateTransferOutcome.WarehouseNotFound({ warehouseId: missingWarehouseId })
             }
 
-            if (sourceWarehouse!.legalEntityId !== destinationWarehouse!.legalEntityId) {
+            if (
+              !transferWithinLegalEntity(
+                sourceWarehouse!.legalEntityId,
+                destinationWarehouse!.legalEntityId,
+              )
+            ) {
               return CreateTransferOutcome.DifferentLegalEntity({
                 sourceWarehouseId: decoded.sourceWarehouseId,
                 destinationWarehouseId: decoded.destinationWarehouseId,
@@ -1687,8 +1706,12 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
             const balance = balancesByItem.get(line.itemId)
 
             if (
-              balance === undefined ||
-              BigInt(balance.onHand) - BigInt(balance.reserved) < BigInt(line.quantity)
+              !hasAvailableStock(
+                balance === undefined
+                  ? undefined
+                  : { onHand: BigInt(balance.onHand), reserved: BigInt(balance.reserved) },
+                BigInt(line.quantity),
+              )
             ) {
               return ConfirmTransferOutcome.Unavailable({
                 warehouseId: row.sourceWarehouseId,

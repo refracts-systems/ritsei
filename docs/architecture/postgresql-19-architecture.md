@@ -105,6 +105,7 @@ process.*        -> process
 billing.*        -> billing
 integration.*    -> integrations
 messaging.*      -> messaging
+domain_model.*   -> domain-model (framework/foundation/domain-model)
 ```
 
 `framework/modules/module` is contract-only and owns no PostgreSQL schema. Planned domains do not receive a

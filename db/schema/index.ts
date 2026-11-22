@@ -80,6 +80,8 @@ export {
   messagingSchema,
 } from "./messaging.ts"
 
+export { alchemyDomainObjects, domainModelSchema } from "./domain-model.ts"
+
 export { issuedNumbers, numberingSchema, numberSeries } from "./numbering.ts"
 
 export {

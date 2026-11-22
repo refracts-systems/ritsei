@@ -78,20 +78,35 @@ Make the primitive exist and run on the real host, with no aggregate moved.
 
 - `effect` and every `@effect/*` package upgraded to the 4.1 line in its own change, passing the
   full validation list in `AGENTS.md`.
-- `@alchemy.run/domain`, `alchemy`, and `foldkit` pinned exactly, with the dependency reason
-  documented in the consuming manifest.
+- `@alchemy.run/domain`, `@alchemy.run/effect-cluster`, and `alchemy` pinned exactly, with the
+  dependency reason documented in the consuming manifest.
 - An engine-neutral framework port, kept on the phase branch until its first ERP consumer lands
   in class A (ADR-0091); `boundary:lint` passes.
 - A runner pool for the Effect Cluster host, deployed in a way the owner accepts, with the share of
   Alchemy's deployment tooling it needs recorded.
 - The host's `alchemy_domain_objects` table created by a reviewed migration, owned in
-  `db/ownership.toml`, with privileges that forbid updating or deleting recorded events.
+  `db/ownership.toml`, with a trigger or privileges that forbid updating or deleting recorded
+  events. Every other table the host or its runner pool creates at runtime is listed, with its
+  owner.
 - The `SAL-DLV-2` pilot's stories pass on the Effect Cluster host against PostgreSQL 19.
 - An event recorded before a schema change still decodes after it; rebuild time per tenant is
   measured on a realistic volume.
 
 **Stop if:** the host cannot run on PostgreSQL 19, events cannot be protected from update and
 deletion, or a beta upgrade breaks the port without a migration path.
+
+### Cutover gates (`alchemy.rebuild`, `alchemy.host-role`)
+
+Added by the phase 0 review on 2026-11-22. They gate every aggregate cutover in any class, not the
+start of a phase:
+
+- `alchemy.rebuild`: a view or projection added after events exist is built from them on the
+  host, either by the library's backfill or by a documented, tested rebuild procedure. Beta.87's
+  deploy-time backfill did not run in phase 0.
+- `alchemy.host-role`: the host connects as `ritsei_domain_host` with least privilege
+  (`docs/operations/database-roles.md`), proven by a test on the host.
+
+Production also needs a deployment ADR for the runner image, which needs Alchemy at build time.
 
 ### Class A (`alchemy.class-a`)
 

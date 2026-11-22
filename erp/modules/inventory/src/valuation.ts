@@ -2,6 +2,10 @@
 // value of one item. The service locks and writes; these functions only decide amounts.
 import * as Data from "effect/Data"
 
+import { type Balance, hasAvailableStock } from "./stock-rules.ts"
+
+export type { Balance }
+
 /** Round `numerator / denominator` half up; both are non-negative. */
 export const divideHalfUp = (numerator: bigint, denominator: bigint) =>
   (numerator * 2n + denominator) / (denominator * 2n)
@@ -24,8 +28,6 @@ export type ValuedLine = {
   readonly value: bigint
 }
 
-export type Balance = { readonly onHand: bigint; readonly reserved: bigint }
-
 export type Valuation = { readonly quantity: bigint; readonly value: bigint }
 
 export type LineValue = Data.TaggedEnum<{
@@ -36,15 +38,13 @@ export type LineValue = Data.TaggedEnum<{
 
 export const LineValue = Data.taggedEnum<LineValue>()
 
-/** An issue removes the moving-average cost, or its stated cost, from valued stock. */
-export const valueIssue = (
-  line: PlannedLine,
-  balance: Balance,
-  valuation: Valuation,
-): LineValue => {
+/**
+ * What an issue takes out of valued stock (INV-VAL-3): the moving-average cost, or its stated
+ * cost. It needs no warehouse balance, only the valuation of the legal entity and item, and it is
+ * `Unvalued` rather than an invented cost when the valuation holds fewer units than the issue.
+ */
+export const costIssue = (line: PlannedLine, valuation: Valuation): LineValue => {
   const quantity = -line.quantity
-
-  if (balance.onHand - balance.reserved < quantity) return LineValue.Unavailable()
 
   if (valuation.quantity < quantity) return LineValue.Unvalued()
 
@@ -58,6 +58,10 @@ export const valueIssue = (
 
   return LineValue.Valued({ line: { itemId: line.itemId, quantity: line.quantity, value: -cost } })
 }
+
+/** An issue needs available stock in the warehouse and then valued stock to take its cost from. */
+export const valueIssue = (line: PlannedLine, balance: Balance, valuation: Valuation): LineValue =>
+  hasAvailableStock(balance, -line.quantity) ? costIssue(line, valuation) : LineValue.Unavailable()
 
 /** A receipt adds its value; a gain without one takes the average or the fallback cost. */
 export const valueReceipt = (line: PlannedLine, valuation: Valuation): LineValue => {

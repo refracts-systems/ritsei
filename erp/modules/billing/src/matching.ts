@@ -71,6 +71,24 @@ export const matchBill = (
   return match
 }
 
+/**
+ * The first excess line a bill cannot post with (BIL-BILL-2): excess needs an approved variance
+ * request for the bill whose amount is at least the excess valued at the bill's price. Undefined
+ * when nothing is in excess or the approval covers it. Who may approve is the approval service's.
+ */
+export const firstUncoveredExcess = (
+  match: BillMatch,
+  approval: { readonly status: string; readonly amount: string } | null,
+) => {
+  const first = match.excess[0]
+
+  if (first === undefined) return undefined
+
+  return approval?.status === "approved" && minor(approval.amount) >= match.excessValue
+    ? undefined
+    : first
+}
+
 /** The matched value of `units` of a line's `total` units, rounded half up to the cent. */
 const cumulativeShare = (matched: bigint, units: bigint, total: bigint) =>
   (matched * units * 2n + total) / (total * 2n)

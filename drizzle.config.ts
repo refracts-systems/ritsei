@@ -39,6 +39,7 @@ export default defineConfig({
     "product",
     "tax",
     "onboarding",
+    "domain_model",
   ],
   breakpoints: true,
   strict: true,

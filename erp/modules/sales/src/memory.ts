@@ -30,6 +30,7 @@ import {
   ConfirmationDecision,
   decideCancellation,
   decideConfirmation,
+  quotationBelongsToCustomer,
 } from "./order-lifecycle.ts"
 import type { SalesStore } from "./store.ts"
 import {
@@ -174,7 +175,7 @@ export const makeSalesMemoryStore = (): SalesStore => {
         )
       }
 
-      if (quotation.customerId !== input.customerId) {
+      if (!quotationBelongsToCustomer(quotation, input.customerId)) {
         return yield* Effect.fail(
           new QuotationCustomerMismatch({
             tenantId: input.tenantId,
