@@ -1,6 +1,6 @@
 # Phase 2: Class B, Rules That Commit an Event with Its State
 
-> **Status:** Awaiting review (revised 2026-11-22 after a review; phase 1 exit accepted)
+> **Status:** Accepted by the owner on 2026-11-22 (review record)
 >
 > **Roadmap gate:** `alchemy.class-b`
 >
@@ -107,4 +107,14 @@ describes today's behavior.
 | Date | Reviewer | Outcome | Notes |
 | --- | --- | --- | --- |
 | 2026-11-22 | Review before owner acceptance | Revised | Corrected the PRC-PO-3 claim and wrote its after-cancellation sentence in `RULES.md`; narrowed deliverable 4 to a description because it needs atomicity across two aggregates; stated what phase 1 already covers; added the event map; named the acceptor |
-| | Owner | | Pending |
+| 2026-11-22 | Owner | Accepted | Three decisions below |
+
+Decisions taken in this review:
+
+1. **Retry after cancellation:** keep today's contract (the retry fails with `InvalidState`) for both
+   `SAL-ORDER-2` and `PRC-PO-3`. If Alchemy cannot express it, that is recorded as a blocker for
+   moving the sales order and purchase order, not a reason to change the contract.
+2. **Tenant-wide key claim:** accepted as a description only in this phase; building it is a saga
+   and belongs to a later phase.
+3. **Retry contracts:** accepted as the exit evidence, to be written in this phase and recorded in
+   `RULES.md` only when the aggregate moves (the `PRC-PO-3` sentence already describes today).
