@@ -23,6 +23,7 @@ import {
   OPENING_BALANCE_SOURCE,
   type PostingRole,
 } from "./general-ledger-contract.ts"
+import { firstControlAccountLine } from "./opening-journal.ts"
 import {
   type GeneralLedgerStore,
   type PostEntryCommand,
@@ -403,15 +404,9 @@ export const makeGeneralLedgerPostgresStore = Effect.fn("GeneralLedger.makePostg
       lines: ReadonlyArray<AccountLine>,
       rules: ReadonlyMap<PostingRole, string>,
     ) => {
-      for (const role of command.controlRoles ?? []) {
-        const accountId = rules.get(role)
+      const control = firstControlAccountLine(command.controlRoles ?? [], lines, rules)
 
-        if (accountId !== undefined && lines.some((line) => line.accountId === accountId)) {
-          return PostEntryOutcome.ControlAccountLine({ role, accountId })
-        }
-      }
-
-      return undefined
+      return control === undefined ? undefined : PostEntryOutcome.ControlAccountLine(control)
     }
 
     /** A retried posting must repeat the entry it posted before. */
