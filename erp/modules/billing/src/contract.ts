@@ -260,7 +260,10 @@ export type InvoiceFailure =
   | PostEntryFailure
   | CommonFailure
 
-/** Posted invoices, credit notes, and supplier bills with their open amounts (ADR-0102). */
+/**
+ * Posted invoices, credit notes, and supplier bills with their open amounts (ADR-0102), and the
+ * retained bytes of documents an incumbent system issued (ADR-0120).
+ */
 export interface BillingService {
   /** Invoices the delivered, not yet invoiced quantities of a confirmed sales order. */
   readonly invoiceSalesOrder: (
