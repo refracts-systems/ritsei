@@ -28,6 +28,7 @@ import {
 import { GeneralLedgerService, type PostingRoleType } from "../../accounting/mod.ts"
 import { ProductService } from "../../product/mod.ts"
 import { InventoryCapabilities } from "./capabilities.ts"
+import { firstUncarried, OpeningRejection } from "./opening-stock-rules.ts"
 import {
   InventoryReferenceNotFound,
   OpeningStockAlreadyLoaded,
@@ -141,28 +142,23 @@ type OpeningRow = {
 /** Distinct from the source type earlier opening receipts used, which carry no position. */
 const OPENING_SOURCE_TYPE = "inventory.opening_stock_load"
 
-/** The first source position the load does not carry: tracked batches, reservations, transit. */
+/** The first source position the load does not carry, as the error the caller receives. */
 const openingRejection = (
   tenantId: string,
   lines: Schema.Schema.Type<typeof OpeningStockInput>["lines"],
 ) => {
-  for (const line of lines) {
-    const scope = { tenantId, itemId: line.itemId }
+  const uncarried = firstUncarried(lines)
 
-    if (line.tracking !== "none") {
-      return new OpeningStockLotTrackingUnsupported({ ...scope, tracking: line.tracking })
-    }
-
-    if (line.reservedQuantity !== "0") {
-      return new OpeningStockReservationsNotCarried({ ...scope, reserved: line.reservedQuantity })
-    }
-
-    if (line.inTransitQuantity !== "0") {
-      return new OpeningStockInTransitNotCarried({ ...scope, inTransit: line.inTransitQuantity })
-    }
-  }
-
-  return undefined
+  return uncarried === undefined
+    ? undefined
+    : OpeningRejection.$match(uncarried, {
+        LotTrackingUnsupported: ({ itemId, tracking }) =>
+          new OpeningStockLotTrackingUnsupported({ tenantId, itemId, tracking }),
+        ReservationsNotCarried: ({ itemId, reserved }) =>
+          new OpeningStockReservationsNotCarried({ tenantId, itemId, reserved }),
+        InTransitNotCarried: ({ itemId, inTransit }) =>
+          new OpeningStockInTransitNotCarried({ tenantId, itemId, inTransit }),
+      })
 }
 
 /**

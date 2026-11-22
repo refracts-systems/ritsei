@@ -18,6 +18,7 @@ import type { AuthorizationDenied } from "../../../../framework/modules/authoriz
 import type { PostEntryFailure } from "../../accounting/mod.ts"
 import type { ProductNotFound } from "../../product/mod.ts"
 import type { Item } from "./contract.ts"
+import { revaluationApproved } from "./opening-stock-rules.ts"
 import type {
   InventoryReferenceNotFound,
   OpeningStockAlreadyLoaded,
@@ -143,12 +144,9 @@ export const OpeningStockInput = Schema.Struct({
     }),
   ),
 }).check(
-  Schema.makeFilter(
-    (input) =>
-      (input.revaluation !== undefined) ===
-      input.lines.some((line) => line.movingAverageValue !== undefined),
-    { expected: "a revaluation approval exactly when a line states a moving-average value" },
-  ),
+  Schema.makeFilter((input) => revaluationApproved(input.revaluation !== undefined, input.lines), {
+    expected: "a revaluation approval exactly when a line states a moving-average value",
+  }),
 )
 
 export const OpeningStockLine = Schema.Struct({
