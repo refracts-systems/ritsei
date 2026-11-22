@@ -37,6 +37,7 @@ import {
   ConfirmationDecision,
   decideCancellation,
   decideConfirmation,
+  quotationBelongsToCustomer,
 } from "./order-lifecycle.ts"
 import type { CreditCheck, CreditContext, SalesStore } from "./store.ts"
 import {
@@ -334,7 +335,10 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
             )
             .for("update")
 
-          if (quotation !== undefined && quotation.customerId !== decoded.customerId) {
+          if (
+            quotation !== undefined &&
+            !quotationBelongsToCustomer(quotation, decoded.customerId)
+          ) {
             return OrderCreation.QuotationCustomerMismatch()
           }
         }

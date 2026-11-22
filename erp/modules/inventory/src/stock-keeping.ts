@@ -1,5 +1,4 @@
 import { and, asc, eq, inArray, or, gt, sql } from "drizzle-orm"
-import * as Data from "effect/Data"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
@@ -29,6 +28,7 @@ import {
 import { GeneralLedgerService, type PostingRoleType } from "../../accounting/mod.ts"
 import { ProductService } from "../../product/mod.ts"
 import { InventoryCapabilities } from "./capabilities.ts"
+import { firstUncarried, OpeningRejection } from "./opening-stock-rules.ts"
 import {
   InventoryReferenceNotFound,
   OpeningStockAlreadyLoaded,
@@ -52,27 +52,19 @@ import {
   type ValuedStockMovement,
   ValuationReportInput,
 } from "./stock-keeping-contract.ts"
+import {
+  type Balance,
+  LineValue,
+  type PlannedLine,
+  type Valuation,
+  type ValuedLine,
+  valueLine,
+} from "./valuation.ts"
 
 const minor = (value: string) => requireExactMajorToMinor(value, 2)
 const major = (value: bigint) => formatSignedMinor(value, 2)
 
-/** Round `numerator / denominator` half up; both are non-negative. */
-const divideHalfUp = (numerator: bigint, denominator: bigint) =>
-  (numerator * 2n + denominator) / (denominator * 2n)
-
 type Principal = Schema.Schema.Type<typeof PrincipalSchema>
-
-/** A planned stock change: signed quantity, and for gains the value it adds. */
-type PlannedLine = {
-  readonly itemId: string
-  readonly quantity: bigint
-  /** Receipts carry their value; issues and losses take the moving-average cost. */
-  readonly receiptValue?: bigint
-  /** An issue at a stated cost instead of the moving average. */
-  readonly issueValue?: bigint
-  /** Gains without a receipt value use the average cost, or this cost when nothing is valued. */
-  readonly fallbackUnitCost?: bigint
-}
 
 /** What locking and writing stock need of a move. */
 type Movement = {
@@ -92,62 +84,11 @@ type Plan = Movement & {
   readonly lossRole: PostingRoleType
 }
 
-type ValuedLine = { readonly itemId: string; readonly quantity: bigint; readonly value: bigint }
-
-type Balance = { readonly onHand: bigint; readonly reserved: bigint }
-
-type Valuation = { readonly quantity: bigint; readonly value: bigint }
-
 type LockedStock = {
   readonly units: Map<string, string>
   readonly balances: Map<string, Balance>
   readonly valuations: Map<string, Valuation>
 }
-
-type LineValue = Data.TaggedEnum<{
-  Valued: { readonly line: ValuedLine }
-  Unavailable: {}
-  Unvalued: {}
-}>
-
-const LineValue = Data.taggedEnum<LineValue>()
-
-/** An issue removes the moving-average cost, or its stated cost, from valued stock. */
-const valueIssue = (line: PlannedLine, balance: Balance, valuation: Valuation): LineValue => {
-  const quantity = -line.quantity
-
-  if (balance.onHand - balance.reserved < quantity) return LineValue.Unavailable()
-
-  if (valuation.quantity < quantity) return LineValue.Unvalued()
-
-  // The last units take the remaining value, so rounding or a stated cost never strands value.
-  const cost =
-    quantity === valuation.quantity
-      ? valuation.value
-      : (line.issueValue ?? divideHalfUp(valuation.value * quantity, valuation.quantity))
-
-  if (cost > valuation.value) return LineValue.Unvalued()
-
-  return LineValue.Valued({ line: { itemId: line.itemId, quantity: line.quantity, value: -cost } })
-}
-
-/** A receipt adds its value; a gain without one takes the average or the fallback cost. */
-const valueReceipt = (line: PlannedLine, valuation: Valuation): LineValue => {
-  const value =
-    line.receiptValue ??
-    (valuation.quantity > 0n
-      ? divideHalfUp(valuation.value * line.quantity, valuation.quantity)
-      : line.fallbackUnitCost === undefined
-        ? undefined
-        : line.fallbackUnitCost * line.quantity)
-
-  return value === undefined
-    ? LineValue.Unvalued()
-    : LineValue.Valued({ line: { itemId: line.itemId, quantity: line.quantity, value } })
-}
-
-const valueLine = (line: PlannedLine, balance: Balance, valuation: Valuation) =>
-  line.quantity < 0n ? valueIssue(line, balance, valuation) : valueReceipt(line, valuation)
 
 /** One journal per document: gains against the gain role, losses against the loss role. */
 const journalFor = (
@@ -201,28 +142,23 @@ type OpeningRow = {
 /** Distinct from the source type earlier opening receipts used, which carry no position. */
 const OPENING_SOURCE_TYPE = "inventory.opening_stock_load"
 
-/** The first source position the load does not carry: tracked batches, reservations, transit. */
+/** The first source position the load does not carry, as the error the caller receives. */
 const openingRejection = (
   tenantId: string,
   lines: Schema.Schema.Type<typeof OpeningStockInput>["lines"],
 ) => {
-  for (const line of lines) {
-    const scope = { tenantId, itemId: line.itemId }
+  const uncarried = firstUncarried(lines)
 
-    if (line.tracking !== "none") {
-      return new OpeningStockLotTrackingUnsupported({ ...scope, tracking: line.tracking })
-    }
-
-    if (line.reservedQuantity !== "0") {
-      return new OpeningStockReservationsNotCarried({ ...scope, reserved: line.reservedQuantity })
-    }
-
-    if (line.inTransitQuantity !== "0") {
-      return new OpeningStockInTransitNotCarried({ ...scope, inTransit: line.inTransitQuantity })
-    }
-  }
-
-  return undefined
+  return uncarried === undefined
+    ? undefined
+    : OpeningRejection.$match(uncarried, {
+        LotTrackingUnsupported: ({ itemId, tracking }) =>
+          new OpeningStockLotTrackingUnsupported({ tenantId, itemId, tracking }),
+        ReservationsNotCarried: ({ itemId, reserved }) =>
+          new OpeningStockReservationsNotCarried({ tenantId, itemId, reserved }),
+        InTransitNotCarried: ({ itemId, inTransit }) =>
+          new OpeningStockInTransitNotCarried({ tenantId, itemId, inTransit }),
+      })
 }
 
 /**

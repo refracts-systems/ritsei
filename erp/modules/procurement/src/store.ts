@@ -8,14 +8,12 @@ import {
   purchaseReceipts,
   supplierAccounts,
 } from "../../../../db/schema/procurement.ts"
-import { requireExactMajorToMinor } from "../../../../framework/foundation/mod.ts"
 import { PartyService } from "../../party/mod.ts"
 import type {
   CreateSupplierAccountInput,
   GoodsReceipt,
   GoodsReceiptLine,
   PurchaseOrder,
-  PurchaseOrderLine,
   PurchaseOrderLineSnapshot,
   PurchaseReceiptLineInput,
 } from "./contract.ts"
@@ -183,15 +181,6 @@ export const toPurchaseOrder = (
   total: row.total,
   lines,
 })
-
-export const deriveTotal = (lines: ReadonlyArray<PurchaseOrderLine>): string => {
-  const minor = lines.reduce(
-    (total, line) => total + BigInt(line.quantity) * requireExactMajorToMinor(line.unitPrice, 2),
-    0n,
-  )
-
-  return `${minor / 100n}.${(minor % 100n).toString().padStart(2, "0")}`
-}
 
 export const withProcurementOperationNames = (service: ProcurementStore): ProcurementStore => ({
   createSupplierAccount: Effect.fn("ProcurementService.createSupplierAccount")(

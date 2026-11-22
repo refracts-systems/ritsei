@@ -210,7 +210,7 @@ particular connector provider, approve a deployment profile, or publish a produc
 The mechanical `roadmap:measure` aggregator was retired by
 [ADR-0089](../decisions/0089-retire-roadmap-completion-evaluator.md). Gate IDs in this folder are
 stable labels. A gate is complete when the checks it names (tests, `pnpm run check`, `boundary:lint`,
-`financial:gate`, PostgreSQL 19 rehearsal, and similar) pass and any required operational evidence is
+PostgreSQL 19 rehearsal, and similar) pass and any required operational evidence is
 reviewed and accepted.
 
 ## Change control

@@ -9,12 +9,8 @@ import {
 import { InvalidBankStatement } from "./errors.ts"
 
 /**
- * The one bank statement profile settlement imports (ADR-0116): UTF-8 CSV with a header row of
- * exactly `date,description,reference,amount`. Fields follow RFC 4180 quoting. `date` is an ISO
- * calendar date. `amount` is a signed decimal with a dot and at most two decimals, no thousands
- * separators: positive is money in, negative is money out, zero is rejected. `description` is
- * required; `reference` may be empty. Blank lines are ignored. Any other deviation rejects the
- * whole file with the row that broke the profile; rows count records, the header being row 1.
+ * The one bank statement profile settlement imports. The profile is SET-BANK-1 in `RULES.md`; this
+ * file enforces it. Rows count records, the header being row 1.
  */
 export const bankStatementHeader = ["date", "description", "reference", "amount"] as const
 

@@ -14,9 +14,10 @@ Why: [ADR-0102](../../../docs/decisions/0102-split-billing-and-settlement.md),
 ### `SET-BANK-1` A bank statement has one CSV profile and is rejected whole
 
 UTF-8 CSV with the header `date,description,reference,amount`, RFC 4180 quoting, `YYYY-MM-DD` dates,
-signed amounts with at most two decimals (zero rejected), a required description, blank lines
-ignored, at most 5000 lines. A file that breaks the profile is rejected at its first failing row and
-nothing is stored.
+signed amounts with a dot and at most two decimals, no thousands separators (positive is money in,
+negative is money out, zero rejected), a required description, blank
+lines ignored, at most 5000 lines. A file that breaks the profile is rejected at its first failing
+row and nothing is stored.
 
 ### `SET-BANK-2` A statement is imported once and never changes
 

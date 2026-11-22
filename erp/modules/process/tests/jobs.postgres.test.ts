@@ -1,4 +1,5 @@
 import { assert, it } from "@effect/vitest"
+import * as Clock from "effect/Clock"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as TestClock from "effect/testing/TestClock"
@@ -100,6 +101,176 @@ it.effect.skipIf(databaseUrl === undefined)(
         }),
       ),
     ),
+)
+
+// A job is due when its scheduled time is not after the service clock, so the enqueue and the claim
+// must read the same clock. A job stamped by the database clock is invisible to a service whose clock
+// is behind it, which made a claim right after an enqueue return null whenever the database ran
+// ahead by even a millisecond. A virtual clock an hour behind the database makes that gap exact, so
+// the claim needs no sleep and no retry.
+it.effect.skipIf(databaseUrl === undefined)(
+  "a job is claimable right after it is enqueued, whatever the database clock says",
+  () =>
+    withTemporaryDatabase(databaseUrl!, (client) =>
+      Effect.gen(function* () {
+        yield* runMigrations(client)
+
+        const [tenant] = yield* Effect.promise(
+          () =>
+            client<
+              { id: string }[]
+            >`insert into auth.tenants (slug) values (${uuidv7()}) returning id`,
+        )
+
+        const database = makePostgresDatabase(client)
+
+        yield* TestClock.setTime(Date.now() - 3_600_000)
+
+        const enqueuer = yield* makeProcessJobEnqueuer.pipe(
+          Effect.provideService(Database, database),
+        )
+
+        const process = yield* makeProcess(client).pipe(
+          Effect.provide(makeAuthorizationTestLayer([])),
+        )
+
+        const queued = yield* enqueuer.enqueue({
+          tenantId: tenant!.id,
+          jobType: ProcessDocumentJobTypes.invoiceRender,
+          idempotencyKey: uuidv7(),
+          priority: 0,
+          payload: { probe: true },
+          correlationId: "job-clock",
+        })
+
+        const claimed = yield* process.claimJob({
+          tenantId: tenant!.id,
+          workerId: "job-clock-worker",
+          jobType: ProcessDocumentJobTypes.invoiceRender,
+        })
+
+        assert.isNotNull(claimed)
+        assert.strictEqual(claimed!.jobId, queued.jobId)
+      }),
+    ),
+  { timeout: 120_000 },
+)
+
+/** A service clock that runs ahead of (or behind) the real one, as another host's clock might. */
+const skewedClock = (base: Clock.Clock, offsetMs: number): Clock.Clock => ({
+  // Only the wall clock is shifted; monotonic time and sleeping stay real.
+  monotonicTimeNanosUnsafe: () => base.monotonicTimeNanosUnsafe(),
+  monotonicTimeNanos: base.monotonicTimeNanos,
+  sleep: (duration) => base.sleep(duration),
+  currentTimeMillisUnsafe: () => base.currentTimeMillisUnsafe() + offsetMs,
+  currentTimeMillis: Effect.sync(() => base.currentTimeMillisUnsafe() + offsetMs),
+  currentTimeNanosUnsafe: () => base.currentTimeNanosUnsafe() + BigInt(offsetMs) * 1_000_000n,
+  currentTimeNanos: Effect.sync(
+    () => base.currentTimeNanosUnsafe() + BigInt(offsetMs) * 1_000_000n,
+  ),
+})
+
+const hostAt = (client: Sql, base: Clock.Clock, offsetMs: number) =>
+  makeProcess(client).pipe(
+    Effect.provideService(Clock.Clock, skewedClock(base, offsetMs)),
+    Effect.provide(makeAuthorizationTestLayer([])),
+  )
+
+const tenantOf = (client: Sql) =>
+  Effect.promise(
+    () =>
+      client<{ id: string }[]>`insert into auth.tenants (slug) values (${uuidv7()}) returning id`,
+  ).pipe(Effect.map(([tenant]) => tenant!.id))
+
+const renderJob = (tenantId: string) => ({
+  tenantId,
+  jobType: ProcessDocumentJobTypes.invoiceRender,
+  idempotencyKey: uuidv7(),
+  priority: 0,
+  payload: { probe: true },
+  correlationId: "clock-skew",
+})
+
+// Hosts do not share a clock, so when a job is due and when a lease has run out must be decided by
+// one clock they all share: the database's. A host whose clock runs ahead must not take a lease
+// another host still holds, and a host whose clock runs behind must still see a job that is due.
+it.effect.skipIf(databaseUrl === undefined)(
+  "a host with a fast clock cannot take a lease another host still holds",
+  () =>
+    withTemporaryDatabase(databaseUrl!, (client) =>
+      TestClock.withLive(
+        Effect.gen(function* () {
+          yield* runMigrations(client)
+          const tenantId = yield* tenantOf(client)
+          const base = yield* Clock.Clock
+
+          const enqueuer = yield* makeProcessJobEnqueuer.pipe(
+            Effect.provideService(Database, makePostgresDatabase(client)),
+          )
+
+          const hostA = yield* hostAt(client, base, 0)
+          const hostB = yield* hostAt(client, base, 10 * 60_000)
+
+          yield* enqueuer.enqueue(renderJob(tenantId))
+
+          const held = yield* hostA.claimJob({ tenantId, workerId: "worker-a" })
+
+          assert.isNotNull(held)
+
+          // The lease is five minutes long by the database clock.
+          const [remaining] = yield* Effect.promise(
+            () =>
+              client<{ seconds: number }[]>`
+                select extract(epoch from (lease_until - now()))::float8 as seconds
+                from process.jobs where id = ${held!.jobId}
+              `,
+          )
+
+          assert.isTrue(remaining!.seconds > 295 && remaining!.seconds <= 300)
+
+          // The lease lasts five minutes; host B's clock says ten minutes have passed.
+          assert.isNull(yield* hostB.claimJob({ tenantId, workerId: "worker-b" }))
+
+          const completed = yield* hostA.completeJob({
+            tenantId,
+            workerId: "worker-a",
+            jobId: held!.jobId,
+            leaseToken: held!.leaseToken!,
+            leaseGeneration: held!.leaseGeneration!,
+          })
+
+          assert.strictEqual(completed.status, "completed")
+        }),
+      ),
+    ),
+  { timeout: 120_000 },
+)
+
+it.effect.skipIf(databaseUrl === undefined)(
+  "a host with a slow clock still sees a job another host enqueued",
+  () =>
+    withTemporaryDatabase(databaseUrl!, (client) =>
+      TestClock.withLive(
+        Effect.gen(function* () {
+          yield* runMigrations(client)
+          const tenantId = yield* tenantOf(client)
+          const base = yield* Clock.Clock
+
+          const enqueuer = yield* makeProcessJobEnqueuer.pipe(
+            Effect.provideService(Database, makePostgresDatabase(client)),
+          )
+
+          const slowHost = yield* hostAt(client, base, -60 * 60_000)
+          const queued = yield* enqueuer.enqueue(renderJob(tenantId))
+
+          const claimed = yield* slowHost.claimJob({ tenantId, workerId: "worker-slow" })
+
+          assert.isNotNull(claimed)
+          assert.strictEqual(claimed!.jobId, queued.jobId)
+        }),
+      ),
+    ),
+  { timeout: 120_000 },
 )
 
 const makeProcess = (client: Sql) =>

@@ -76,6 +76,17 @@ is owned by [ADR-0052](../decisions/0052-separate-lease-capability-and-fencing-g
 invariants by [ADR-0053](../decisions/0053-clarify-per-job-lease-generation-invariants.md), and the
 identity separation by [ADR-0054](../decisions/0054-keep-fencing-and-idempotency-identities-orthogonal.md).
 
+Job timing uses one clock, the database's. Whether a job is due (`scheduled_at`) and whether a lease has
+run out (`lease_until`) are decided in SQL with `now()`, and a lease is extended from `now()`, never from a
+host's clock. Hosts do not share a clock: with a host clock, one running ahead could take a lease another
+host still holds, and one running behind could miss a job that is due. Fencing keeps such a duplicate
+run from corrupting data, but not from happening. A retry time (`retryAt`) is still an instant the caller
+computes, so a host whose clock is off retries earlier or later by that offset; this affects only when the
+retry runs. Audit timestamps (`updated_at`, workflow `completed_at`, event `occurred_at`) are not scheduling inputs.
+Rule tests: `erp/modules/process/tests/jobs.postgres.test.ts` (a host ten minutes ahead cannot take a held
+lease; a host an hour behind still sees a due job).
+Decision: [ADR-0126](../decisions/0126-decide-job-timing-with-the-database-clock.md).
+
 `ProcessService.completeFencedJob` additionally locks the scope counter and rejects a generation
 superseded by another job in that scope. To protect a PostgreSQL mutation, the resource owner must
 call it inside the same database transaction, validate the returned job's identity and scope, and

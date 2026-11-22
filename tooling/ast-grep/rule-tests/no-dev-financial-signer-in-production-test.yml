@@ -1,0 +1,6 @@
+id: no-dev-financial-signer-in-production
+valid:
+  - import { FinancialVerificationSigner } from "../modules/accounting/mod.ts"
+invalid:
+  - import { generateEd25519FinancialVerificationSigner } from "./adapters/financial-verification-signer.ts"
+  - export { makeFinancialVerificationKeyring } from "./financial-verification-signer.ts"

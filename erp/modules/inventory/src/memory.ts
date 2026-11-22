@@ -54,6 +54,17 @@ import {
   WarehouseAlreadyExists,
 } from "./errors.ts"
 import { InventoryStockCorrectedEvent } from "./events.ts"
+import {
+  applyBalanceMovement,
+  BalanceMovement,
+  decideCorrection,
+  decideReservationClose,
+  CorrectionDecision,
+  hasAvailableStock,
+  ReservationCloseDecision,
+  transferWithinLegalEntity,
+  warehouseInLegalEntity,
+} from "./stock-rules.ts"
 import type { Principal } from "../../../../framework/modules/auth/mod.ts"
 
 const referenceFailure = (tenantId: string, warehouseId: string, itemId: string) =>
@@ -288,22 +299,23 @@ export const makeInventoryMemoryLayer = () =>
               )
             }
 
-            if (
-              decoded.legalEntityId !== undefined &&
-              warehouse.legalEntityId !== decoded.legalEntityId
-            ) {
+            if (!warehouseInLegalEntity(warehouse.legalEntityId, decoded.legalEntityId)) {
               return yield* Effect.fail(
                 new InventoryWarehouseLegalEntityMismatch({
                   tenantId: decoded.tenantId,
                   warehouseId: decoded.warehouseId,
-                  legalEntityId: decoded.legalEntityId,
+                  legalEntityId: decoded.legalEntityId!,
                 }),
               )
             }
 
             const key = `${decoded.tenantId}:${decoded.warehouseId}:${decoded.itemId}`
-            const balance = balances.get(key) ?? { onHand: 0n, reserved: 0n }
-            balance.onHand += BigInt(decoded.quantity)
+
+            const balance = applyBalanceMovement(
+              balances.get(key) ?? { onHand: 0n, reserved: 0n },
+              BalanceMovement.Receipt({ quantity: BigInt(decoded.quantity) }),
+            )
+
             balances.set(key, balance)
             recordMovement({
               tenantId: decoded.tenantId,
@@ -369,22 +381,28 @@ export const makeInventoryMemoryLayer = () =>
               )
             }
 
-            if (item.unitOfMeasure !== unitOfMeasure) {
+            const balanceKey = `${decoded.tenantId}:${decoded.warehouseId}:${decoded.itemId}`
+            const adjustment = BigInt(decoded.adjustment)
+
+            const decision = decideCorrection(
+              item,
+              unitOfMeasure,
+              balances.get(balanceKey),
+              adjustment,
+            )
+
+            if (CorrectionDecision.$is("UnitOfMeasureMismatch")(decision)) {
               return yield* Effect.fail(
                 new InventoryUnitOfMeasureMismatch({
                   tenantId: decoded.tenantId,
                   itemId: decoded.itemId,
-                  expected: item.unitOfMeasure,
-                  actual: unitOfMeasure,
+                  expected: decision.expected,
+                  actual: decision.actual,
                 }),
               )
             }
 
-            const balanceKey = `${decoded.tenantId}:${decoded.warehouseId}:${decoded.itemId}`
-            const balance = balances.get(balanceKey) ?? { onHand: 0n, reserved: 0n }
-            const adjustment = BigInt(decoded.adjustment)
-
-            if (balance.onHand + adjustment < balance.reserved) {
+            if (CorrectionDecision.$is("BelowReserved")(decision)) {
               return yield* Effect.fail(
                 new StockUnavailable({
                   tenantId: decoded.tenantId,
@@ -425,8 +443,13 @@ export const makeInventoryMemoryLayer = () =>
                 itemId: correction.itemId,
               },
             })
-            balance.onHand += adjustment
-            balances.set(balanceKey, balance)
+            balances.set(
+              balanceKey,
+              applyBalanceMovement(
+                balances.get(balanceKey) ?? { onHand: 0n, reserved: 0n },
+                BalanceMovement.Correction({ quantity: adjustment }),
+              ),
+            )
             recordMovement({
               id: correction.id,
               tenantId: correction.tenantId,
@@ -457,7 +480,7 @@ export const makeInventoryMemoryLayer = () =>
 
               if (
                 warehouse?.tenantId !== decoded.tenantId ||
-                warehouse?.legalEntityId !== decoded.legalEntityId
+                !warehouseInLegalEntity(warehouse.legalEntityId, decoded.legalEntityId)
               ) {
                 return yield* Effect.fail(
                   new StockReservationLegalEntityMismatch({
@@ -502,7 +525,7 @@ export const makeInventoryMemoryLayer = () =>
             const balance = balances.get(key)
             const quantity = BigInt(decoded.quantity)
 
-            if (balance === undefined || balance.onHand - balance.reserved < quantity) {
+            if (balance === undefined || !hasAvailableStock(balance, quantity)) {
               return yield* Effect.fail(
                 new StockUnavailable({
                   tenantId: decoded.tenantId,
@@ -513,7 +536,7 @@ export const makeInventoryMemoryLayer = () =>
               )
             }
 
-            balance.reserved += quantity
+            balances.set(key, applyBalanceMovement(balance, BalanceMovement.Reserve({ quantity })))
 
             const reservation: StockReservation = {
               id: nextId(),
@@ -564,24 +587,30 @@ export const makeInventoryMemoryLayer = () =>
               )
             }
 
-            if (reservation.status === "released") return reservation
+            const closing = decideReservationClose(reservation.status, "release")
 
-            if (reservation.status !== "active") {
+            if (ReservationCloseDecision.$is("Existing")(closing)) return reservation
+
+            if (ReservationCloseDecision.$is("InvalidState")(closing)) {
               return yield* Effect.fail(
                 new StockReservationInvalidState({
                   tenantId: decoded.tenantId,
                   reservationId: decoded.reservationId,
                   operation: "release",
-                  status: reservation.status,
+                  status: closing.status,
                 }),
               )
             }
 
-            const balance = balances.get(
-              `${decoded.tenantId}:${reservation.warehouseId}:${reservation.itemId}`,
-            )!
+            const balanceKey = `${decoded.tenantId}:${reservation.warehouseId}:${reservation.itemId}`
 
-            balance.reserved -= BigInt(reservation.quantity)
+            balances.set(
+              balanceKey,
+              applyBalanceMovement(
+                balances.get(balanceKey)!,
+                BalanceMovement.Release({ quantity: BigInt(reservation.quantity) }),
+              ),
+            )
             const released = { ...reservation, status: "released" as const }
             storedReservations.set(released.id, released)
             recordMovement({
@@ -617,26 +646,30 @@ export const makeInventoryMemoryLayer = () =>
               )
             }
 
-            if (reservation.status === "fulfilled") return reservation
+            const closing = decideReservationClose(reservation.status, "fulfill")
 
-            if (reservation.status !== "active") {
+            if (ReservationCloseDecision.$is("Existing")(closing)) return reservation
+
+            if (ReservationCloseDecision.$is("InvalidState")(closing)) {
               return yield* Effect.fail(
                 new StockReservationInvalidState({
                   tenantId: decoded.tenantId,
                   reservationId: decoded.reservationId,
                   operation: "fulfill",
-                  status: reservation.status,
+                  status: closing.status,
                 }),
               )
             }
 
-            const balance = balances.get(
-              `${decoded.tenantId}:${reservation.warehouseId}:${reservation.itemId}`,
-            )!
+            const balanceKey = `${decoded.tenantId}:${reservation.warehouseId}:${reservation.itemId}`
 
-            const quantity = BigInt(reservation.quantity)
-            balance.onHand -= quantity
-            balance.reserved -= quantity
+            balances.set(
+              balanceKey,
+              applyBalanceMovement(
+                balances.get(balanceKey)!,
+                BalanceMovement.Fulfill({ quantity: BigInt(reservation.quantity) }),
+              ),
+            )
             const fulfilled = { ...reservation, status: "fulfilled" as const }
             storedReservations.set(fulfilled.id, fulfilled)
             recordMovement({
@@ -709,7 +742,12 @@ export const makeInventoryMemoryLayer = () =>
             const sourceWarehouse = storedWarehouses.get(decoded.sourceWarehouseId)!
             const destinationWarehouse = storedWarehouses.get(decoded.destinationWarehouseId)!
 
-            if (destinationWarehouse.legalEntityId !== sourceWarehouse.legalEntityId) {
+            if (
+              !transferWithinLegalEntity(
+                sourceWarehouse.legalEntityId,
+                destinationWarehouse.legalEntityId,
+              )
+            ) {
               return yield* Effect.fail(
                 new StockTransferDifferentLegalEntity({
                   tenantId: decoded.tenantId,
@@ -774,10 +812,7 @@ export const makeInventoryMemoryLayer = () =>
                 `${decoded.tenantId}:${transfer.sourceWarehouseId}:${line.itemId}`,
               )
 
-              if (
-                balance === undefined ||
-                balance.onHand - balance.reserved < BigInt(line.quantity)
-              ) {
+              if (!hasAvailableStock(balance, BigInt(line.quantity))) {
                 return yield* Effect.fail(
                   new StockUnavailable({
                     tenantId: decoded.tenantId,

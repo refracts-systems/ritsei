@@ -57,7 +57,6 @@ const PositiveAmount = FinancialMajorAmount.check(
  */
 export const Withholding = Schema.Struct({
   amount: PositiveAmount,
-  /** The payer's withholding certificate number. */
   certificateReference: Text,
   accountId: Uuid,
 })
@@ -331,7 +330,10 @@ export type PaymentFailure =
   | PostEntryFailure
   | CommonFailure
 
-/** Payments, allocations to billing documents, payment terms, aging, and statements (ADR-0102). */
+/**
+ * Payments, allocations to billing documents, payment terms, aging, customer statements, and bank
+ * statement import and matching (ADR-0102, ADR-0116).
+ */
 export interface SettlementService {
   readonly createPaymentTerm: (
     input: Schema.Codec.Encoded<typeof CreatePaymentTermInput>,

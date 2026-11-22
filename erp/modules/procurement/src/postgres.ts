@@ -67,7 +67,6 @@ import {
 } from "./events.ts"
 import {
   canonicalReceiptLines,
-  deriveTotal,
   loadSupplierRelationship,
   purchaseOrderLineListSelection,
   purchaseOrderLineSelection,
@@ -82,6 +81,15 @@ import {
   toPurchaseOrder,
   withProcurementOperationNames,
 } from "./store.ts"
+import {
+  ApprovalCover,
+  CancellationDecision,
+  ConfirmationDecision,
+  decideApprovalCover,
+  decideCancellation,
+  decideConfirmation,
+  deriveTotal,
+} from "./order-lifecycle.ts"
 
 type Principal = Schema.Schema.Type<typeof PrincipalSchema>
 
@@ -190,7 +198,7 @@ export const makeProcurementService = Effect.gen(function* () {
 
       const granted = yield* approvals.getForSubject({ ...scope, ...subject })
 
-      if (granted?.status === "approved" && granted.amount === total) return undefined
+      if (ApprovalCover.$is("Covered")(decideApprovalCover(granted, total))) return undefined
 
       // Leave a pending request so an approver can act on it.
       const request =
@@ -562,14 +570,18 @@ export const makeProcurementService = Effect.gen(function* () {
 
               const current = toPurchaseOrder(row, lines)
 
-              if (row.status === "confirmed") {
-                return row.confirmationIdempotencyKey === normalizedIdempotencyKey
-                  ? ConfirmPurchaseOrderOutcome.Existing({ order: current })
-                  : ConfirmPurchaseOrderOutcome.IdempotencyConflict()
+              const decision = decideConfirmation(row, normalizedIdempotencyKey)
+
+              if (ConfirmationDecision.$is("Existing")(decision)) {
+                return ConfirmPurchaseOrderOutcome.Existing({ order: current })
               }
 
-              if (row.status !== "draft") {
-                return ConfirmPurchaseOrderOutcome.InvalidState({ status: row.status })
+              if (ConfirmationDecision.$is("IdempotencyConflict")(decision)) {
+                return ConfirmPurchaseOrderOutcome.IdempotencyConflict()
+              }
+
+              if (ConfirmationDecision.$is("InvalidState")(decision)) {
+                return ConfirmPurchaseOrderOutcome.InvalidState({ status: decision.status })
               }
 
               const pending = yield* pendingApproval(
@@ -724,12 +736,14 @@ export const makeProcurementService = Effect.gen(function* () {
 
           const current = toPurchaseOrder(row, lines)
 
-          if (row.status === "cancelled") {
+          const decision = decideCancellation(row.status)
+
+          if (CancellationDecision.$is("AlreadyCancelled")(decision)) {
             return CancelPurchaseOrderOutcome.Existing({ order: current })
           }
 
-          if (row.status !== "confirmed") {
-            return CancelPurchaseOrderOutcome.InvalidState({ status: row.status })
+          if (CancellationDecision.$is("InvalidState")(decision)) {
+            return CancelPurchaseOrderOutcome.InvalidState({ status: decision.status })
           }
 
           const [receipt] = await tx

@@ -56,6 +56,7 @@ import {
   SupplierAccountNotFound,
   SupplierPriceNotFound,
 } from "./errors.ts"
+import { ApprovalCover, decideApprovalCover } from "./order-lifecycle.ts"
 
 type Principal = Schema.Schema.Type<typeof PrincipalSchema>
 
@@ -490,8 +491,15 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
         subjectId: decoded.purchaseOrderId,
       })
 
-      // An approval covers the amount it was granted for; a larger order needs a new approval.
-      if (approval?.status !== "approved" || minor(approval.amount) < minor(total)) {
+      // Release checks that the approval is at least the total; confirmPurchaseOrder, which runs
+      // next, refuses one for more (ADR-0125).
+      const passes = ApprovalCover.$match(decideApprovalCover(approval, total), {
+        Covered: () => true,
+        Missing: () => false,
+        NotCovered: ({ excess }) => excess,
+      })
+
+      if (!passes) {
         return yield* Effect.fail(
           new PurchaseOrderApprovalRequired({
             tenantId: decoded.tenantId,

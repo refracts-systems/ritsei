@@ -60,6 +60,10 @@ A receipt adds its quantity at the document's unit cost. An issue removes the mo
 rounded half up to the cent, and the last units take the remaining value, so rounding never strands
 value. A deferred database trigger keeps each valuation equal to the sum of its immutable valuation
 entries, and the inventory account equals the valuation report.
+Enforced by: `src/valuation.ts` (amounts); the deferred constraint triggers
+`inventory_valuation_entry_consistency_trigger` and `inventory_item_valuation_consistency_trigger`
+and the immutable-entry trigger `inventory_valuation_entries_immutable_trigger`; property tests in
+`tests/valuation.test.ts`; `tests/stock-keeping.postgres.test.ts`.
 
 ### `INV-VAL-2` Valued moves are document commands
 
@@ -73,6 +77,8 @@ most once, so a retry returns the recorded movement.
 
 A valued issue that needs more than the valued quantity fails with `StockValuationUnavailable`
 instead of inventing a cost.
+Enforced by: `src/valuation.ts`; property test in `tests/valuation.test.ts`;
+`tests/stock-keeping.postgres.test.ts`.
 
 ## Opening stock
 

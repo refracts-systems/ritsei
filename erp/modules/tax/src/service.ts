@@ -1,10 +1,6 @@
 import * as Effect from "effect/Effect"
 
 import {
-  formatSignedMinor,
-  requireExactMajorToMinor,
-} from "../../../../framework/foundation/mod.ts"
-import {
   AuthorizationService,
   scopedCommand,
 } from "../../../../framework/modules/authorization/mod.ts"
@@ -16,16 +12,12 @@ import {
   DetermineTaxCodesInput,
   ListTaxCodesInput,
   SetProductTaxDefaultInput,
-  taxOn,
-  type TaxCodeRate,
   type TaxService,
 } from "./contract.ts"
 import { TaxCodeNotFound } from "./errors.ts"
 import type { TaxStore } from "./store.ts"
+import { computeTaxLines, firstUnusableCode } from "./tax-decisions.ts"
 import type * as Schema from "effect/Schema"
-
-const minor = (value: string) => requireExactMajorToMinor(value, 2)
-const major = (value: bigint) => formatSignedMinor(value, 2)
 
 export const makeTaxServiceFromStore = <R>(storeEffect: Effect.Effect<TaxStore, never, R>) =>
   Effect.gen(function* () {
@@ -103,65 +95,27 @@ export const makeTaxServiceFromStore = <R>(storeEffect: Effect.Effect<TaxStore, 
         ),
       ]
 
-      const codes = new Map(
-        (yield* store.getTaxCodes(decoded.tenantId, ids)).map((code) => [code.id, code]),
-      )
+      const stored = yield* store.getTaxCodes(decoded.tenantId, ids)
+      const unusable = firstUnusableCode(stored, decoded.direction, decoded.lines)
 
-      for (const id of ids) {
-        const code = codes.get(id)
-
-        if (code === undefined || !code.active || code.direction !== decoded.direction) {
-          return yield* Effect.fail(
-            new TaxCodeNotFound({ tenantId: decoded.tenantId, taxCodeId: id }),
-          )
-        }
+      if (unusable !== undefined) {
+        return yield* Effect.fail(
+          new TaxCodeNotFound({ tenantId: decoded.tenantId, taxCodeId: unusable }),
+        )
       }
 
-      // The rate in force on the transaction date is the latest period starting on or before it;
-      // before the first period, or without a date, the code charges its own rate.
-      const periodRates = new Map<string, TaxCodeRate>()
+      // The rate in force depends on the transaction date, so periods are read only with one.
+      const periods =
+        decoded.date === undefined
+          ? []
+          : yield* store.ratePeriodsUpTo(decoded.tenantId, ids, decoded.date)
 
-      if (decoded.date !== undefined) {
-        for (const period of yield* store.ratePeriodsUpTo(decoded.tenantId, ids, decoded.date)) {
-          const latest = periodRates.get(period.taxCodeId)
-
-          if (latest === undefined || latest.effectiveFrom < period.effectiveFrom) {
-            periodRates.set(period.taxCodeId, period)
-          }
-        }
-      }
-
-      const summary = new Map<string, { base: bigint; tax: bigint }>()
-      let totalTax = 0n
-
-      const lines = decoded.lines.map((line) => {
-        if (line.taxCodeId === null) {
-          return { key: line.key, taxCodeId: null, rate: "0.0000", base: line.base, tax: "0.00" }
-        }
-
-        const code = codes.get(line.taxCodeId)!
-        // Tax is computed per line and rounded half up, so document totals equal line sums.
-        const rate = periodRates.get(code.id)?.rate ?? code.rate
-        const tax = taxOn(line.base, rate)
-        const current = summary.get(code.id) ?? { base: 0n, tax: 0n }
-        summary.set(code.id, {
-          base: current.base + minor(line.base),
-          tax: current.tax + minor(tax),
-        })
-        totalTax += minor(tax)
-
-        return { key: line.key, taxCodeId: code.id, rate, base: line.base, tax }
+      return computeTaxLines({
+        date: decoded.date,
+        codes: stored,
+        periods,
+        lines: decoded.lines,
       })
-
-      return {
-        lines,
-        summary: [...summary].map(([taxCodeId, amounts]) => ({
-          taxCodeId,
-          base: major(amounts.base),
-          tax: major(amounts.tax),
-        })),
-        totalTax: major(totalTax),
-      }
     })
 
     return {
