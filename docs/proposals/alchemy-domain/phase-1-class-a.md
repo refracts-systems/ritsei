@@ -1,6 +1,6 @@
 # Phase 1: Class A, Rules That Fit One Aggregate
 
-> **Status:** Waits for phase 0 exit
+> **Status:** Awaiting review
 >
 > **Roadmap gate:** `alchemy.class-a`
 >

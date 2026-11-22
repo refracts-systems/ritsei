@@ -95,6 +95,19 @@ Make the primitive exist and run on the real host, with no aggregate moved.
 **Stop if:** the host cannot run on PostgreSQL 19, events cannot be protected from update and
 deletion, or a beta upgrade breaks the port without a migration path.
 
+### Cutover gates (`alchemy.rebuild`, `alchemy.host-role`)
+
+Added by the phase 0 review on 2026-11-22. They gate every aggregate cutover in any class, not the
+start of a phase:
+
+- `alchemy.rebuild`: a view or projection added after events exist is built from them on the
+  host, either by the library's backfill or by a documented, tested rebuild procedure. Beta.87's
+  deploy-time backfill did not run in phase 0.
+- `alchemy.host-role`: the host connects as `ritsei_domain_host` with least privilege
+  (`docs/operations/database-roles.md`), proven by a test on the host.
+
+Production also needs a deployment ADR for the runner image, which needs Alchemy at build time.
+
 ### Class A (`alchemy.class-a`)
 
 34 rules that fit one aggregate: `ACC-OPEN-2`, `ACC-OPEN-4`, `BIL-RENDER-1`, `BIL-RENDER-2`,

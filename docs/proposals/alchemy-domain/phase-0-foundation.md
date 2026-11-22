@@ -1,6 +1,6 @@
 # Phase 0: Foundation
 
-> **Status:** Awaiting review
+> **Status:** Accepted by the owner on 2026-11-22, with conditions (review record)
 >
 > **Roadmap gate:** `alchemy.foundation`
 >
@@ -296,7 +296,25 @@ ADR-0124 is accepted and is not rewritten (ADR-0123); these phase 0 findings cor
 
 | Date | Reviewer | Outcome | Notes |
 | --- | --- | --- | --- |
-| | | | |
+| 2026-11-22 | Owner | Accepted with conditions | See the decisions below |
+
+Decisions taken in this review:
+
+1. **Backfill.** Deploy-time backfill did not run on beta.87. Phase 1 may start, because it mostly
+   builds models and stories, but no aggregate is cut over until backfill works on the host or a
+   documented and tested rebuild procedure exists (roadmap gate `alchemy.rebuild`).
+2. **Database resource.** `ClusterDocker.Database` crash-loops with PostgreSQL 19. Production uses
+   an existing PostgreSQL through `Database.fromUrl`; the copied `@internal` layer stays in tests.
+3. **Host role.** The host ran as the `postgres` superuser. No aggregate is cut over until the host
+   runs as `ritsei_domain_host` with least privilege, covered by a test (roadmap gate
+   `alchemy.host-role`).
+4. **Deployment.** The runner image needs Alchemy at build time. A deployment ADR is required
+   before anything reaches production; it does not block phase 1.
+5. **Open questions.** The four phase 0 answers are accepted as decisions: the port re-exports
+   Alchemy Domain, tenant scope and authorization run in the RITSEI service, recorded events change
+   by optional fields only, and the host gets its own least-privilege role.
+6. **Not covered.** N=10,000, variant A, a second runner, and a non-graceful kill move to phases 4
+   and 5, where sagas and transactional aggregates move.
 
 ## Appendix: Database-enforced rules inventory
 
