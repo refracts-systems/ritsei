@@ -50,6 +50,12 @@ import {
   sameReceiptLines,
   withProcurementOperationNames,
 } from "./store.ts"
+import {
+  CancellationDecision,
+  ConfirmationDecision,
+  decideCancellation,
+  decideConfirmation,
+} from "./order-lifecycle.ts"
 
 export const makeProcurementTestLayer = () =>
   Layer.effect(
@@ -240,26 +246,32 @@ export const makeProcurementTestLayer = () =>
               )
             }
 
-            if (order.status === "confirmed") {
-              if (confirmationKeys.get(order.id) !== normalizedIdempotencyKey) {
-                return yield* Effect.fail(
-                  new PurchaseOrderConfirmationIdempotencyConflict({
-                    tenantId: decoded.tenantId,
-                    purchaseOrderId: decoded.purchaseOrderId,
-                    idempotencyKey: normalizedIdempotencyKey,
-                  }),
-                )
-              }
+            const decision = decideConfirmation(
+              {
+                status: order.status,
+                confirmationIdempotencyKey: confirmationKeys.get(order.id) ?? null,
+              },
+              normalizedIdempotencyKey,
+            )
 
-              return order
+            if (ConfirmationDecision.$is("Existing")(decision)) return order
+
+            if (ConfirmationDecision.$is("IdempotencyConflict")(decision)) {
+              return yield* Effect.fail(
+                new PurchaseOrderConfirmationIdempotencyConflict({
+                  tenantId: decoded.tenantId,
+                  purchaseOrderId: decoded.purchaseOrderId,
+                  idempotencyKey: normalizedIdempotencyKey,
+                }),
+              )
             }
 
-            if (order.status !== "draft") {
+            if (ConfirmationDecision.$is("InvalidState")(decision)) {
               return yield* Effect.fail(
                 new PurchaseOrderInvalidState({
                   tenantId: decoded.tenantId,
                   purchaseOrderId: decoded.purchaseOrderId,
-                  status: order.status,
+                  status: decision.status,
                 }),
               )
             }
@@ -329,14 +341,16 @@ export const makeProcurementTestLayer = () =>
               )
             }
 
-            if (order.status === "cancelled") return order
+            const decision = decideCancellation(order.status)
 
-            if (order.status !== "confirmed") {
+            if (CancellationDecision.$is("AlreadyCancelled")(decision)) return order
+
+            if (CancellationDecision.$is("InvalidState")(decision)) {
               return yield* Effect.fail(
                 new PurchaseOrderInvalidState({
                   tenantId: decoded.tenantId,
                   purchaseOrderId: decoded.purchaseOrderId,
-                  status: order.status,
+                  status: decision.status,
                 }),
               )
             }

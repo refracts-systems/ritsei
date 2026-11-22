@@ -1,0 +1,18 @@
+id: untagged-todo
+language: TypeScript
+severity: error
+message: A TODO, FIXME, HACK, or XXX needs a tag naming what must happen, like TODO(financial-prod). Fix it now, or tag it and track it.
+files:
+  - apps/**/*.ts
+  - apps/**/*.tsx
+  - framework/**/*.ts
+  - framework/**/*.tsx
+  - erp/**/*.ts
+  - erp/**/*.tsx
+  - extensions/**/*.ts
+  - extensions/**/*.tsx
+  - tooling/**/*.ts
+  - tooling/**/*.tsx
+rule:
+  kind: comment
+  regex: \b(TODO|FIXME|HACK|XXX)\b([^(]|$)

@@ -28,14 +28,11 @@ import {
 import { NumberingService } from "../../../../framework/modules/numbering/mod.ts"
 import { GeneralLedgerService, type LedgerLineInput } from "../../accounting/mod.ts"
 import { ProductService } from "../../product/mod.ts"
-import {
-  PurchaseDocumentService,
-  PurchaseOrderInvalidState,
-  type PurchaseMatchingType,
-} from "../../procurement/mod.ts"
+import { PurchaseDocumentService, PurchaseOrderInvalidState } from "../../procurement/mod.ts"
 import { SalesDocumentService, SalesOrderInvalidState } from "../../sales/mod.ts"
 import { TaxService } from "../../tax/mod.ts"
 import { BillingCapabilities } from "./capabilities.ts"
+import { type BillMatch, creditShare, matchBill } from "./matching.ts"
 import {
   ApplySettlementInput,
   BillPurchaseOrderInput,
@@ -121,71 +118,6 @@ export type DraftDocument = {
   }) => ReadonlyArray<LedgerLine>
 }
 
-type MatchingLine = PurchaseMatchingType["lines"][number]
-
-type RequestedBillLine = {
-  readonly purchaseOrderLineId: string
-  readonly quantity: string
-  readonly unitPrice: string
-}
-
-type BillMatch = {
-  readonly matched: ReadonlyArray<{
-    readonly line: MatchingLine
-    readonly requested: RequestedBillLine
-    /** Received value this line clears from goods received not invoiced, at the purchase price. */
-    readonly matchedValue: bigint
-  }>
-  /** Billed value beyond what was received, which needs an approved variance. */
-  readonly excessValue: bigint
-  readonly excess: ReadonlyArray<{
-    readonly lineId: string
-    readonly billable: bigint
-    readonly requested: bigint
-  }>
-}
-
-/**
- * Three-way match: each line may bill what was received, net of returns, minus what was billed
- * net of supplier credits. Returns the unknown line id when a line is not on the order.
- */
-const matchBill = (
-  requestedLines: ReadonlyArray<RequestedBillLine>,
-  orderLines: ReadonlyArray<MatchingLine>,
-  billed: ReadonlyMap<string, bigint>,
-  credited: ReadonlyMap<string, bigint>,
-): BillMatch | { readonly unknownLineId: string } => {
-  const byLine = new Map(orderLines.map((line) => [line.purchaseOrderLineId, line]))
-
-  const match = {
-    matched: new Array<BillMatch["matched"][number]>(),
-    excessValue: 0n,
-    excess: new Array<BillMatch["excess"][number]>(),
-  }
-
-  for (const requested of requestedLines) {
-    const line = byLine.get(requested.purchaseOrderLineId)
-
-    if (line === undefined) return { unknownLineId: requested.purchaseOrderLineId }
-
-    const netBilled =
-      (billed.get(line.purchaseOrderLineId) ?? 0n) - (credited.get(line.purchaseOrderLineId) ?? 0n)
-
-    const billable = BigInt(line.received) - BigInt(line.returned) - netBilled
-    const quantity = BigInt(requested.quantity)
-    const matched = quantity < billable ? quantity : billable > 0n ? billable : 0n
-
-    if (quantity > matched) {
-      match.excess.push({ lineId: line.purchaseOrderLineId, billable, requested: quantity })
-      match.excessValue += (quantity - matched) * minor(requested.unitPrice)
-    }
-
-    match.matched.push({ line, requested, matchedValue: matched * minor(line.unitPrice) })
-  }
-
-  return match
-}
-
 /** Goods received not invoiced clears at the purchase price; the rest posts as price variance. */
 const supplierBillJournal: DraftDocument["journal"] = ({ subtotal, taxTotal, total, matched }) => {
   const variance = minor(subtotal) - minor(matched)
@@ -225,26 +157,6 @@ const creditJournal =
       { role: "input_tax", debit: "0", credit: taxTotal },
     ]
   }
-
-/**
- * The part of a bill line's matched value a credit of `quantity` units returns: proportional, and
- * the last units take what is left so credits never over- or under-return it.
- */
-const creditShare = (
-  line: BillingDocument["lines"][number],
-  quantity: bigint,
-  credited: ReadonlyMap<string, bigint>,
-  creditedMatched: ReadonlyMap<string, bigint>,
-) => {
-  const matched = minor(line.matchedValue)
-  const total = BigInt(line.quantity)
-  const done = credited.get(line.id) ?? 0n
-  const returned = creditedMatched.get(line.id) ?? 0n
-
-  return done + quantity === total
-    ? matched - returned
-    : (matched * quantity * 2n + total) / (total * 2n)
-}
 
 /** Credit lines copy the credited lines' prices and taxes; quantities stay within what is left. */
 const creditLinesFor = (
@@ -799,7 +711,10 @@ export const makeBillingService = Effect.gen(function* () {
           : minor(creditNote.total)
 
       if (applied === 0n) return creditNote
-      // The applied amount never exceeds either open amount, so settlement cannot fail here.
+      // Settlement cannot fail here, so a failure is a defect, not a typed error: both documents are
+      // locked in this transaction, the credit note is new (a replay returned earlier), and the
+      // applied amount is the smaller of the invoice's open amount and the credit note's total (its
+      // open amount), so it exceeds neither and no settlement of these sources exists yet.
       const impossible = (error: Parameters<typeof Effect.die>[0]) => Effect.die(error)
 
       const guarded = <A, E, R>(effect: Effect.Effect<A, E, R>) =>

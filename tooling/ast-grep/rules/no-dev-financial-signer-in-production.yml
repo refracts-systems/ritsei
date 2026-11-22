@@ -1,0 +1,22 @@
+id: no-dev-financial-signer-in-production
+language: TypeScript
+severity: error
+message: The Ed25519 financial verification signer is a development and test adapter. Production composition must use the selected custody adapter, so only tests may import it.
+files:
+  - apps/**/*.ts
+  - apps/**/*.tsx
+  - framework/**/*.ts
+  - erp/**/*.ts
+  - extensions/**/*.ts
+  - tooling/**/*.ts
+ignores:
+  - "**/*.test.ts"
+  - "**/tests/**"
+  - erp/runtime/adapters/financial-verification-signer.ts
+rule:
+  any:
+    - pattern: import { $$$ITEMS } from "$SOURCE"
+    - pattern: export { $$$ITEMS } from "$SOURCE"
+constraints:
+  SOURCE:
+    regex: (^|/)financial-verification-signer(\.ts)?$

@@ -73,6 +73,8 @@ line, treats as billable the received quantity less returned less net billed (bi
 bills less credited on supplier credit notes), from Procurement's matching view. A line not on the
 order, or more than billable without a covering variance approval, fails with
 `BillExceedsReceipt`. A repeated bill id returns the posted bill.
+Enforced by: `src/matching.ts` (`matchBill`); property tests in `tests/matching.test.ts`; the
+procure-to-pay chain test.
 
 ### `BIL-BILL-2` Billing beyond receipt needs an approved variance for that bill
 
@@ -95,3 +97,6 @@ the matched value, the price variance, and input tax), is applied to the documen
 amount with any remainder left open, and is idempotent by credit note id. Credited supplier
 quantity becomes billable again; a customer credit note returns no stock and does not make
 delivered quantity invoiceable again.
+Enforced by: `src/matching.ts` (`creditShare`: the value returned after k credited units is rounded once, so no share is negative and the shares of any split sum to the matched value); the `invoice_lines_matched_value_check` constraint
+(`matched_value >= 0`); property test in `tests/matching.test.ts` (total returned); the
+procure-to-pay chain test.
