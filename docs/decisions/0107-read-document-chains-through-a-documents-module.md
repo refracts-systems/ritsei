@@ -1,6 +1,6 @@
 # ADR-0107: Read Document Chains Through a Documents Module
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-24
 - Amends: None
 - Compatible with: ADR-0091, ADR-0094, ADR-0101, ADR-0102, ADR-0104
