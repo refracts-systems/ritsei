@@ -71,7 +71,7 @@ the function production calls; that holds for the 22, and the 12 are listed abov
 
 ### Findings to decide or follow up (none changed here)
 
-- **`BIL-RENDER-1` and `ACC-OPEN-4` stay `unenforced`.** Their stories are weak (one cannot state that
+- **`BIL-RENDER-1` and `ACC-OPEN-4` stay `unenforced` (owner decision, 2026-11-22).** Their stories are weak (one cannot state that
   no runtime composes the worker; the other checks a declaration), and `tooling/modules.ts` fails a
   test that brackets an `unenforced` ID, so these two IDs are named unbracketed in comments.
 - **Memory and PostgreSQL can still diverge in three places:** the duplicate rate-period start in Tax
