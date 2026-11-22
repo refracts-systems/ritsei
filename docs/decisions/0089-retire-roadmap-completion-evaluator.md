@@ -5,7 +5,7 @@
 - Amends: None
 - Compatible with: ADR-0061 (executable evidence principle)
 - Supersedes: ADR-0061's mechanical aggregator (`roadmap:measure`) only
-- Superseded by: None
+- Superseded by: ADR-0091 for `tooling/financial-gate.ts` only (deleted by the reset in c10594c9, not restored)
 
 > **Related documents**
 >

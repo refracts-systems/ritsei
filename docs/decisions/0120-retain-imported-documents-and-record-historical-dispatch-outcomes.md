@@ -1,6 +1,6 @@
 # ADR-0120: Retain Imported Documents and Record Historical Dispatch Outcomes
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-19
 - Amends: None
 - Compatible with: ADR-0082, ADR-0091, ADR-0102, ADR-0110
