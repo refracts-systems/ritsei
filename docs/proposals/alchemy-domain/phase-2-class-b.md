@@ -1,6 +1,6 @@
 # Phase 2: Class B, Rules That Commit an Event with Its State
 
-> **Status:** Accepted by the owner on 2026-11-22 (review record)
+> **Status:** Accepted by the owner on 2026-11-22; exit evidence accepted the same day (review record)
 >
 > **Roadmap gate:** `alchemy.class-b`
 >
@@ -161,6 +161,7 @@ unverified.
 | --- | --- | --- | --- |
 | 2026-11-22 | Review before owner acceptance | Revised | Corrected the PRC-PO-3 claim and wrote its after-cancellation sentence in `RULES.md`; narrowed deliverable 4 to a description because it needs atomicity across two aggregates; stated what phase 1 already covers; added the event map; named the acceptor |
 | 2026-11-22 | Owner | Accepted | Three decisions below |
+| 2026-11-22 | Owner | Exit evidence accepted | The retry contracts, the gap stories, and the event map are accepted. Phase 3 now awaits review |
 
 Decisions taken in this review:
 
