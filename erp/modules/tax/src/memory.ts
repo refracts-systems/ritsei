@@ -1,4 +1,5 @@
 import * as Effect from "effect/Effect"
+import * as Predicate from "effect/Predicate"
 
 import { uuidv7 } from "../../../../framework/foundation/mod.ts"
 import {
@@ -9,6 +10,7 @@ import {
 } from "./contract.ts"
 import { TaxCodeAlreadyExists, TaxCodeNotFound, TaxCodeRateAlreadyExists } from "./errors.ts"
 import type { TaxStore } from "./store.ts"
+import { decideRatePeriod } from "./tax-decisions.ts"
 
 /** Deterministic test store; product existence is not checked without the product schema. */
 export const makeTaxMemoryStore = (): TaxStore => {
@@ -69,14 +71,13 @@ export const makeTaxMemoryStore = (): TaxStore => {
           )
         }
 
-        if (
-          periods.some(
-            (period) =>
-              period.tenantId === value.tenantId &&
-              period.taxCodeId === value.taxCodeId &&
-              period.effectiveFrom === value.effectiveFrom,
-          )
-        ) {
+        const starts = periods.flatMap((period) =>
+          period.tenantId === value.tenantId && period.taxCodeId === value.taxCodeId
+            ? [period.effectiveFrom]
+            : [],
+        )
+
+        if (Predicate.isTagged(decideRatePeriod(starts, value.effectiveFrom), "AlreadyExists")) {
           return Effect.fail(new TaxCodeRateAlreadyExists(value))
         }
 
