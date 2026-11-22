@@ -192,6 +192,7 @@ const defaultFenceScope = (tenantId: string, jobType: string, idempotencyKey: st
 
 export const makeProcessJobEnqueuer = Effect.gen(function* () {
   const database = yield* Database
+  const clock = yield* Clock.Clock
 
   return {
     enqueue: (input) =>
@@ -260,6 +261,7 @@ export const makeProcessJobEnqueuer = Effect.gen(function* () {
               .insert(processJobs)
               .values({
                 tenantId: decoded.tenantId,
+                scheduledAt: new Date(clock.currentTimeMillisUnsafe()),
                 fenceScope,
                 jobType,
                 idempotencyKey: decoded.idempotencyKey,
@@ -1200,6 +1202,7 @@ export const makeProcessService = Effect.gen(function* () {
                   .insert(processJobs)
                   .values({
                     tenantId: decoded.tenantId,
+                    scheduledAt: now(),
                     fenceScope: `process.order.confirmation:${decoded.tenantId}:${run[0]!.id}`,
                     jobType: ProcessPostCommitJobTypes.confirmation,
                     idempotencyKey: decoded.idempotencyKey,
@@ -1438,6 +1441,7 @@ export const makeProcessService = Effect.gen(function* () {
                   .insert(processJobs)
                   .values({
                     tenantId: decoded.tenantId,
+                    scheduledAt: now(),
                     fenceScope: `process.order.cancellation:${decoded.tenantId}:${run!.id}`,
                     jobType: ProcessPostCommitJobTypes.cancellation,
                     idempotencyKey: decoded.idempotencyKey,
@@ -1644,6 +1648,7 @@ export const makeProcessService = Effect.gen(function* () {
                   .insert(processJobs)
                   .values({
                     tenantId: decoded.tenantId,
+                    scheduledAt: now(),
                     fenceScope: `process.order.fulfillment:${decoded.tenantId}:${run!.id}`,
                     jobType: ProcessPostCommitJobTypes.fulfillment,
                     idempotencyKey: decoded.idempotencyKey,

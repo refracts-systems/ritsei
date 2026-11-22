@@ -102,6 +102,59 @@ it.effect.skipIf(databaseUrl === undefined)(
     ),
 )
 
+// A job is due when its scheduled time is not after the service clock, so the enqueue and the claim
+// must read the same clock. A job stamped by the database clock is invisible to a service whose clock
+// is behind it, which made a claim right after an enqueue return null whenever the database ran
+// ahead by even a millisecond. A virtual clock an hour behind the database makes that gap exact, so
+// the claim needs no sleep and no retry.
+it.effect.skipIf(databaseUrl === undefined)(
+  "a job is claimable right after it is enqueued, whatever the database clock says",
+  () =>
+    withTemporaryDatabase(databaseUrl!, (client) =>
+      Effect.gen(function* () {
+        yield* runMigrations(client)
+
+        const [tenant] = yield* Effect.promise(
+          () =>
+            client<
+              { id: string }[]
+            >`insert into auth.tenants (slug) values (${uuidv7()}) returning id`,
+        )
+
+        const database = makePostgresDatabase(client)
+
+        yield* TestClock.setTime(Date.now() - 3_600_000)
+
+        const enqueuer = yield* makeProcessJobEnqueuer.pipe(
+          Effect.provideService(Database, database),
+        )
+
+        const process = yield* makeProcess(client).pipe(
+          Effect.provide(makeAuthorizationTestLayer([])),
+        )
+
+        const queued = yield* enqueuer.enqueue({
+          tenantId: tenant!.id,
+          jobType: ProcessDocumentJobTypes.invoiceRender,
+          idempotencyKey: uuidv7(),
+          priority: 0,
+          payload: { probe: true },
+          correlationId: "job-clock",
+        })
+
+        const claimed = yield* process.claimJob({
+          tenantId: tenant!.id,
+          workerId: "job-clock-worker",
+          jobType: ProcessDocumentJobTypes.invoiceRender,
+        })
+
+        assert.isNotNull(claimed)
+        assert.strictEqual(claimed!.jobId, queued.jobId)
+      }),
+    ),
+  { timeout: 120_000 },
+)
+
 const makeProcess = (client: Sql) =>
   Effect.gen(function* () {
     const database = makePostgresDatabase(client)
