@@ -278,7 +278,7 @@ pnpm run test                                            # full suite, as CI run
   `pnpm run lint` before pushing; it is faster than a CI round trip.
 - **Do not import a framework service constructor directly;** wrap it through the module's layer
   helpers (for example `ownerCustomFieldsLayer`). A lint rule enforces this.
-- **Service inputs take the encoded type of their schema and still decode** (ADR-0105, ADR-0106).
+- **Service inputs take the encoded type of their schema and still decode** (ADR-0105).
 - **Never use `crypto.randomUUID()` for persistent ids or fixtures;** use UUIDv7 helpers.
 - **Effect is v4.** `Effect.catch`, `Effect.catchCause`, `Effect.mapError`; never the v3 names. Check
   `vendor/effect`.

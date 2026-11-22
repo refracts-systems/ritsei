@@ -1,6 +1,6 @@
 # ADR-0106: Validate Service Inputs Once with Schema Classes
 
-- Status: Proposed
+- Status: Rejected
 - Date: 2026-10-24
 - Amends: None
 - Compatible with: ADR-0024, ADR-0048, ADR-0094, ADR-0105
@@ -66,3 +66,11 @@ Pilot stage B in one module before adopting it anywhere else.
   structure.
 - **Migrate all modules at once:** rejected; it repeats the 668-site rewrite of ADR-0105 without
   evidence that the result is better.
+
+## Outcome
+
+Rejected on 2026-11-22. The decision required a pilot in `tax` with measurements before acceptance.
+No pilot was run in the four weeks since it was proposed, no `Schema.Class` service input exists in
+the repository, and stage A of ADR-0105 (service inputs take the encoded type of their schema and
+still decode) is what every module uses and what the handoff lists as the rule. Nothing depends on
+this decision. A fresh proposal that names an owner and a measured problem can reopen the question.
