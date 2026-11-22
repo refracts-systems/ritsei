@@ -14,13 +14,7 @@ import {
   quotationLines,
   quotations,
 } from "../../../../db/schema/sales.ts"
-import {
-  Database,
-  formatSignedMinor,
-  isDatabaseConstraint,
-  requireExactMajorToMinor,
-  uuidv7,
-} from "../../../../framework/foundation/mod.ts"
+import { Database, isDatabaseConstraint, uuidv7 } from "../../../../framework/foundation/mod.ts"
 import {
   AuthorizationService,
   type CapabilityType,
@@ -31,6 +25,7 @@ import { PartyService } from "../../party/mod.ts"
 import { TaxService } from "../../tax/mod.ts"
 import { SalesCapabilities } from "./capabilities.ts"
 import { committedAmount, CreditExposure, standingOf } from "./credit.ts"
+import { decidePartyCustomer, PartyCustomerDecision } from "./customer.ts"
 import {
   AssignCustomerPriceListInput,
   CreatePartyCustomerInput,
@@ -64,28 +59,21 @@ import {
   SalesOrderInvalidState,
   SalesOrderNotFound,
 } from "./errors.ts"
+import {
+  basisPoints,
+  decideLinePricing,
+  decideQuotationTransition,
+  discountedPrice,
+  formatPercent,
+  lineTotal,
+  LinePricing,
+  normalizeMoney,
+  QuotationTransition,
+  sumLineTotals,
+} from "./quotation.ts"
 import type * as Schema from "effect/Schema"
 
-const minor = (value: string) => requireExactMajorToMinor(value, 2)
-const major = (value: bigint) => formatSignedMinor(value, 2)
-const normalizeMoney = (value: string) => major(minor(value))
-
-/** Discount `12.5` percent → 1250 basis points. */
-const basisPoints = (percent: string) => {
-  const [whole = "0", fraction = ""] = percent.split(".")
-
-  return BigInt(whole) * 100n + BigInt(fraction.padEnd(2, "0").slice(0, 2))
-}
-
-const formatPercent = (points: bigint) =>
-  `${points / 100n}.${(points % 100n).toString().padStart(2, "0")}`
-
-/** Net unit price after a discount, rounded half up to the cent. */
-export const discountedPrice = (listPrice: string, discountPercent: string) => {
-  const numerator = minor(listPrice) * (10_000n - basisPoints(discountPercent))
-
-  return major((numerator * 2n + 10_000n) / 20_000n)
-}
+export { discountedPrice }
 
 const customerSelection = {
   id: customers.id,
@@ -198,7 +186,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
           discountPercent: formatPercent(basisPoints(line.discountPercent)),
           unitPrice: normalizeMoney(line.unitPrice),
           taxCodeId: line.taxCodeId,
-          lineTotal: major(minor(line.unitPrice) * BigInt(line.quantity)),
+          lineTotal: lineTotal(line.unitPrice, line.quantity),
         })),
       } satisfies SalesQuotation
     })
@@ -216,14 +204,16 @@ export const makeSalesDocumentService = Effect.gen(function* () {
         Effect.gen(function* () {
           const quotation = yield* loadQuotation(decoded.tenantId, decoded.quotationId, true)
 
-          if (quotation.status === to) return quotation
+          const decision = decideQuotationTransition(quotation.status, from, to)
 
-          if (quotation.status !== from) {
+          if (QuotationTransition.$is("Unchanged")(decision)) return quotation
+
+          if (QuotationTransition.$is("InvalidState")(decision)) {
             return yield* Effect.fail(
               new QuotationInvalidState({
                 tenantId: decoded.tenantId,
                 quotationId: decoded.quotationId,
-                status: quotation.status,
+                status: decision.status,
               }),
             )
           }
@@ -368,15 +358,6 @@ export const makeSalesDocumentService = Effect.gen(function* () {
       relationshipId: decoded.partyRelationshipId,
     })
 
-    if (relationship.kind !== "customer" || !relationship.active) {
-      return yield* Effect.fail(
-        new CustomerPartyRoleInvalid({
-          tenantId: decoded.tenantId,
-          partyRelationshipId: decoded.partyRelationshipId,
-        }),
-      )
-    }
-
     const existing = (yield* database.query(
       (db) =>
         db
@@ -391,7 +372,18 @@ export const makeSalesDocumentService = Effect.gen(function* () {
       "sales.customer.by_relationship",
     ))[0]
 
-    if (existing !== undefined) return toPartyCustomer(existing)!
+    const decision = decidePartyCustomer(relationship, existing !== undefined)
+
+    if (PartyCustomerDecision.$is("InvalidRole")(decision)) {
+      return yield* Effect.fail(
+        new CustomerPartyRoleInvalid({
+          tenantId: decoded.tenantId,
+          partyRelationshipId: decoded.partyRelationshipId,
+        }),
+      )
+    }
+
+    if (PartyCustomerDecision.$is("Existing")(decision)) return toPartyCustomer(existing!)!
 
     const detail = yield* party.getDetail({
       principal: decoded.principal,
@@ -603,33 +595,35 @@ export const makeSalesDocumentService = Effect.gen(function* () {
     const lines = []
 
     for (const line of decoded.lines) {
-      const listPrice = line.listPrice ?? prices.get(line.productId)
+      const pricing = decideLinePricing(
+        line,
+        prices.get(line.productId),
+        defaults.get(line.productId),
+      )
 
-      if (listPrice === undefined) {
+      if (LinePricing.$is("PriceNotFound")(pricing)) {
         return yield* Effect.fail(
           new ProductPriceNotFound({ tenantId: decoded.tenantId, productId: line.productId }),
         )
       }
 
-      const discountPercent = line.discountPercent ?? "0"
       lines.push({
         id: uuidv7(),
         productId: line.productId,
         quantity: line.quantity,
-        listPrice: normalizeMoney(listPrice),
-        discountPercent: formatPercent(basisPoints(discountPercent)),
-        unitPrice: discountedPrice(listPrice, discountPercent),
-        taxCodeId:
-          line.taxCodeId === undefined ? (defaults.get(line.productId) ?? null) : line.taxCodeId,
+        listPrice: pricing.listPrice,
+        discountPercent: pricing.discountPercent,
+        unitPrice: pricing.unitPrice,
+        taxCodeId: pricing.taxCodeId,
       })
     }
 
     const priced = lines.map((line) => ({
       ...line,
-      lineTotal: major(minor(line.unitPrice) * BigInt(line.quantity)),
+      lineTotal: lineTotal(line.unitPrice, line.quantity),
     }))
 
-    const total = major(priced.reduce((sum, line) => sum + minor(line.lineTotal), 0n))
+    const total = sumLineTotals(priced.map((line) => line.lineTotal))
     const quotationId = uuidv7()
     yield* database.transaction(async (tx) => {
       await tx.insert(quotations).values({

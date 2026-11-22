@@ -59,3 +59,12 @@ export const decideCancellation = (status: SalesOrderStatus): CancellationDecisi
       return CancellationDecision.InvalidState({ status })
   }
 }
+
+/**
+ * An order created from a quotation must belong to the quotation's customer (SAL-ORDER-3). The
+ * tenant side of the reference is the composite foreign keys' job and stays in PostgreSQL.
+ */
+export const quotationBelongsToCustomer = (
+  quotation: { readonly customerId: string },
+  customerId: string,
+): boolean => quotation.customerId === customerId
