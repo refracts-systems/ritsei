@@ -1,6 +1,6 @@
 # Phase 1: Class A, Rules That Fit One Aggregate
 
-> **Status:** Accepted by the owner on 2026-11-22, with decisions (review record)
+> **Status:** Accepted by the owner on 2026-11-22; exit evidence accepted the same day (review record)
 >
 > **Roadmap gate:** `alchemy.class-a`
 >
@@ -151,6 +151,7 @@ Both questions were answered in the review (decisions 3 and 4 below).
 | Date | Reviewer | Outcome | Notes |
 | --- | --- | --- | --- |
 | 2026-11-22 | Owner | Accepted | Five decisions below |
+| 2026-11-22 | Owner | Exit evidence accepted | Phase 1 accepted; PR #90 merges together with it. `BIL-RENDER-1` and `ACC-OPEN-4` stay `unenforced`. The findings above stay open as follow-ups |
 
 Decisions taken in this review:
 
