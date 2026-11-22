@@ -132,7 +132,7 @@ current system; ADRs preserve decision history.
 | [`0104`](./0104-adopt-valued-procure-to-pay-documents.md)                                             | Adopt Valued Procure-to-Pay Documents                                                            | Accepted   |
 | [`0105`](./0105-type-service-inputs-at-the-contract.md)                                               | Type Service Inputs at the Contract                                                              | Accepted   |
 | [`0106`](./0106-validate-service-inputs-once-with-schema-classes.md)                                  | Validate Service Inputs Once with Schema Classes                                                 | Proposed   |
-| [`0107`](./0107-read-document-chains-through-a-documents-module.md)                                   | Read Document Chains Through a Documents Module                                                  | Proposed   |
+| [`0107`](./0107-read-document-chains-through-a-documents-module.md)                                   | Read Document Chains Through a Documents Module                                                  | Accepted   |
 | [`0108`](./0108-gate-order-confirmation-on-customer-credit-limit.md)                                  | Gate Order Confirmation on a Customer Credit Limit                                               | Accepted   |
 | [`0109`](./0109-release-custom-fields-as-an-extension-point.md)                                       | Release Custom Fields as an Owner Extension Point                                                | Accepted   |
 | [`0110`](./0110-issue-invoices-as-immutable-numbered-artifacts-and-send-by-communication.md)          | Issue Invoices as Immutable Numbered Artifacts and Send Them Through Communication               | Accepted   |
@@ -145,11 +145,12 @@ current system; ADRs preserve decision history.
 | [`0117`](./0117-load-opening-positions-against-migration-clearing.md)                                 | Load Opening Positions Against a Migration Clearing Account                                      | Accepted   |
 | [`0118`](./0118-load-opening-stock-at-cutover-without-lots-or-open-positions.md)                      | Load Opening Stock at Cutover Without Lots or Open Positions                                     | Accepted   |
 | [`0119`](./0119-date-tax-rates-with-periods-on-the-tax-code.md)                                       | Date Tax Rates With Periods on the Tax Code                                                      | Accepted   |
-| [`0120`](./0120-retain-imported-documents-and-record-historical-dispatch-outcomes.md)                 | Retain Imported Documents and Record Historical Dispatch Outcomes                                | Proposed   |
+| [`0120`](./0120-retain-imported-documents-and-record-historical-dispatch-outcomes.md)                 | Retain Imported Documents and Record Historical Dispatch Outcomes                                | Accepted   |
 | [`0121`](./0121-post-opening-stock-against-migration-clearing-in-the-load.md)                         | Post Opening Stock Against Migration Clearing in the Load                                        | Accepted   |
 | [`0122`](./0122-stage-invoice-rendering-before-activation.md)                                         | Stage Invoice Rendering Before Activation                                                        | Accepted   |
 | [`0123`](./0123-separate-the-decision-log-from-current-rules.md)                                      | Separate the Decision Log from Current Rules                                                     | Accepted   |
 | [`0124`](./0124-adopt-alchemy-domain-in-phases.md)                                                    | Adopt Alchemy Domain as a Framework Primitive in Phases                                          | Accepted   |
+| [`0125`](./0125-require-an-approval-for-exactly-the-amount-it-releases.md)                            | Require an Approval for Exactly the Amount It Releases                                           | Accepted   |
 | [`0126`](./0126-decide-job-timing-with-the-database-clock.md)                                         | Decide Job Timing with the Database Clock                                                        | Accepted   |
 
 <!-- adr-index:end -->

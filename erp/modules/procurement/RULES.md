@@ -114,11 +114,8 @@ also refused (with the request status `approved`). The refusal carries the reque
 `missing` when no request exists; the older command also leaves a pending request for an approver.
 The requester cannot decide their own request (`SelfApprovalForbidden`, also enforced by the
 database), and decisions are final.
-Open question: [ADR-0103](../../../docs/decisions/0103-adopt-threshold-approvals-with-separation-of-duties.md)
-says an approval covers the amount it was granted for, which reads as "at least the total". The
-equality check in `confirmPurchaseOrder` is stricter. It cannot be reached through the commands
-today, because they submit the order total and a draft order cannot change, so the behavior above is
-recorded as it is and not changed.
+Why: [ADR-0125](../../../docs/decisions/0125-require-an-approval-for-exactly-the-amount-it-releases.md)
+(an approval is valid only for the amount it was requested for; it amends ADR-0103).
 Enforced by: `src/documents.ts` (release check) and `src/postgres.ts` (`pendingApproval`);
 `tests/approval-cover.postgres.test.ts` (below, equal, and above the total, on both paths); the
 `approval_requests_separation_of_duties_check` constraint; the procure-to-pay chain test.
