@@ -1,6 +1,6 @@
 # Phase 4: Class D, Staged Flows with the Same Facts
 
-> **Status:** Revised after review on 2026-11-23; awaiting owner acceptance
+> **Status:** Accepted by the owner on 2026-11-23; exit evidence accepted the same day for the stories (review record), with the open items below
 >
 > **Roadmap gate:** `alchemy.class-d`
 >
@@ -147,3 +147,19 @@ accepted by its owner. A cutover is not exit evidence.
 | Date | Reviewer | Outcome | Notes |
 | --- | --- | --- | --- |
 | 2026-11-23 | Review before owner acceptance | Revised | Removed the opening stock cutover (unmet gates; two commits against `INV-OPEN-5`); stated that four rule texts change only at cutover; required a parked-failure state for refused later steps; moved the barrier and lag measurement to the cluster host with an owner-set budget; listed what phases 1 to 3 already model; made the workflow engine ADR gate only cluster sagas; corrected the status |
+| 2026-11-23 | Owner | Accepted | The document and its revisions |
+| 2026-11-23 | Owner | Exit evidence accepted | The stories for the eleven rules (`INV-OPEN-5`, `PRC-RCPT-1`, `PRC-VRCPT-1`, `INV-VAL-1`, `INV-VAL-2`, `BIL-BILL-3`, `BIL-CREDIT-1`, `SET-WHT-1`, `SAL-DLV-1`, `BIL-OPEN-1`, `ACC-OPEN-3`). Model only: no cutover. The open items stay open; see below |
+
+Exit evidence accepted on 2026-11-23 for the stories only. This acceptance does **not** supply or
+decide any of these, which the exit evidence above names and which stay open:
+
+1. The lag budget per projection, and its measurement on the cluster host (no budget has a number).
+2. The barrier at a period close, and the `ConsistencyTimeout`, proven on the cluster host.
+3. The accounting owner's written acceptance of the lagging subledger and the unapplied-cash state.
+4. The rule text of the four rules that change only at cutover (`PRC-RCPT-1`, `INV-OPEN-5`,
+   `SET-WHT-1`, `INV-VAL-2`), and the cancel answer of a draft order (`ReceivingNotOpen`, not
+   `InvalidState`).
+5. The `DO/` and `GR/` gap policy: ADR-0095 makes every series gapless, and the models keep it so.
+6. Whether the ledger stays table-backed, and the workflow-engine ADR (needed before a cluster saga).
+7. The cutover gates `alchemy.host-role` and `alchemy.rebuild`, and the event fields production
+   events lack (`SupplierBillPosted` carries no subtotal or tax).
