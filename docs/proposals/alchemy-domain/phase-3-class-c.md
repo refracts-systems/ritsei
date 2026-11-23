@@ -90,6 +90,39 @@ model; the claim protocol written and exercised by a story for each failure poin
 reversed command, crash between the steps) and by the concurrency proof; the `PRC-DRAFT-1` contract
 change recorded for the owner. No cutover is part of the exit, and no `RULES.md` changes authority.
 
+## Claim protocol (recorded 2026-11-23, deliverable 2)
+
+Modelled on the sales confirmation key (`SAL-ORDER-2`) in
+`erp/modules/sales/src/confirmation-claim-model.ts`, with 10 stories in
+`erp/modules/sales/tests/confirmation-claim.story.test.ts`. It is the pattern for `PRC-PO-3`,
+`INV-STOCK-3`, and `INV-OPEN-4`'s per-item claim; those copy it when their derivations land, so the
+shape is kept in one module until a second consumer exists. Nothing moves and no production code
+changes.
+
+- **Aggregates.** `ConfirmationKeyClaim`, keyed `<tenant>/<key>`, with `ClaimKey` and `ReleaseKey`.
+  A free claim is taken; the holder claiming again is a no-op; another holder is refused with
+  `ClaimHeld`; only the holder releases. A `ConfirmationRequest` aggregate records the request and a
+  policy starts the saga `ConfirmWithClaim`: claim, then confirm on the order, then complete.
+- **Order of steps: claim first, then record.** The failure it can leave is a *false conflict*, a
+  key held by an order that never carried it, which a sweep repairs. Recording first can leave two
+  orders confirmed under one key, which nothing repairs, so it was rejected.
+- **Release path.** The claim step returns whether *this run* took the claim. Its compensation
+  releases only then. A holder's retry takes nothing, so a failing confirmation releases nothing: a
+  cancelled order keeps the key it was confirmed with (the retry contract of phase 2 holds, and its
+  claim stays).
+- **Crash between the two steps.** The claim stays held by an order that does not carry the key. The
+  holder's own retry takes nothing and confirms; another order sees a false `ClaimHeld` until a
+  sweep reads the holder (another aggregate), asks the pure `staleClaim`, and releases. The sweep is
+  described and its decision is shared; the scheduled sweeper itself is not built.
+- **Who releases.** Only the holder, through the saga compensation or the sweep.
+
+Mutation checks (compensation that always releases, no compensation, a held claim granted to
+another holder, release by anyone) each fail at least one story.
+
+**Still open in this deliverable.** The sweep's schedule and reading of the holder are not built, and
+the concurrency proof (deliverable 5) has not run: the story host is serial, so two simultaneous
+claims on the same key are not exercised yet.
+
 ## Stop conditions
 
 - A claim can be left held by a failed command or a crash with no release path.
