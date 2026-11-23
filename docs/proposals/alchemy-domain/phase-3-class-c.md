@@ -161,6 +161,39 @@ production changes are pure moves that make production call the shared function.
   `openingJournalKey`, `openingLoadKey`) are not called by production, which gets the same
   guarantee from table constraints. They protect nothing until an aggregate moves.
 
+## Concurrency proof on the Effect Cluster host (recorded 2026-11-23, deliverable 5)
+
+`framework/platform/domain-model/tests/pool/claim-pool.test.ts` (opt-in: `RITSEI_ALCHEMY_POOL=1` and
+an active Docker Swarm, otherwise skipped) with a self-contained claim model (`claim-proof-model.ts`,
+`pilot-host.v4.ts`, a `v4` entry in `stack.ts`). It deploys the pool and PostgreSQL 19 with the Alchemy CLI
+as the phase 0 pool test does, then fires **20 keys x 25 holders = 500 overlapping `ClaimKey`
+commands** and checks, for each key: exactly one claim accepted, the other 24 refused with
+`ClaimHeld` naming the winner, and exactly one `KeyClaimed` event recorded in PostgreSQL. It then
+checks that the winner claiming again records nothing, that a release by a non-holder records
+nothing, that the holder's release is recorded once, and that another holder can then claim.
+
+**Observed:** it passed (1 test, 124 s) on a pool of one runner. With the claim decision deliberately
+broken (a held claim granted to another holder, in a copy) it failed in the first assertion: 25
+accepted where 1 was expected. So the proof can fail.
+
+**What it proves, and what it does not.**
+
+- It proves that the host runs the commands of one aggregate instance one at a time, under overlap:
+  500 commands over 20 instances produced no double claim and no lost event.
+- It does not prove the saga. It claims through the aggregate alone; the compensation, the release,
+  and the crash window are proven by the in-memory stories, which are serial.
+- One runner only (8 GB RAM), so it says nothing about two runners racing, a runner being killed, or
+  N = 10,000 (phase 0 moved those to phases 4 and 5).
+- The host ran as the `postgres` superuser, so this does not close `alchemy.host-role`.
+- `PRC-READ-1`'s fail-closed half is **still not proven**: this proof does not make a projection lag,
+  so it says nothing about `ConsistencyTimeout`.
+
+**How it was run** (for the next person): the repository copied to ext4 in WSL without
+`node_modules`, `.git`, and `vendor`; `pnpm install --frozen-lockfile --ignore-scripts` there (after
+removing the copied `.agents/skills/pnpm-*` symlinks, which pnpm refuses); `docker swarm init
+--advertise-addr <eth0 address>` (a bare init fails with two interfaces); a disk watchdog that kills
+the run under 1.5 GB free. Free disk went from 5.4 GB to 4.9 GB net (new image layers and build cache stay); the Swarm was left inactive and the copy was removed.
+
 ## Stop conditions
 
 - A claim can be left held by a failed command or a crash with no release path.
