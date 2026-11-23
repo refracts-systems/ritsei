@@ -18,8 +18,8 @@ import {
   type JournalRow,
   MemoryLedgerStore,
   OrderConfirmed,
-  type OrderLineNotFound,
-  type OrderNotConfirmed,
+  OrderLineNotFound,
+  OrderNotConfirmed,
   OrderToCash,
   OrderToCashHandlers,
   OrderToCashIssueFirst,
@@ -206,6 +206,92 @@ describe("SAL-DLV-2 on Alchemy, variant A: record the delivery, then issue stock
       Story.then(itemA),
     ),
   )
+
+  // The delivery id of a failed run is spent: production rolled the delivery back, so a retry with
+  // the same id ran again; here the failed delivery stays recorded and the caller needs a new id.
+  it.effect("[SAL-DLV-2] a failed delivery id is spent, and a new id delivers the same stock", () =>
+    recordFirst(
+      Story.given(order, confirmed),
+      Story.given(itemA, tenOfA),
+      Story.given(itemB, oneOfB),
+      Story.when(d1, request([lineA(3), lineB(2)])),
+      Story.then(d1, requested([lineA(3), lineB(2)]), new DeliveryFailed({ reason: "rejected" })),
+      Story.then(
+        order,
+        new DeliveryRecorded({ deliveryId: "d-1", lines: moved(["L1", 3], ["L3", 2]) }),
+        new DeliveryReversed({ deliveryId: "d-1", lines: moved(["L1", 3], ["L3", 2]) }),
+      ),
+      Story.then(
+        itemA,
+        issued(3, 300, 7, 700),
+        new StockReturned({
+          sourceId: "d-1",
+          quantity: 3,
+          cost: 300,
+          onHandAfter: 10,
+          valueAfter: 1000,
+        }),
+      ),
+      Story.saga(
+        DeliverOrder,
+        d1,
+        Outcome.Rejected({ rejection: new StockUnavailable({ available: 1, requested: 2 }) }),
+      ),
+      // The same id again records nothing and moves nothing.
+      Story.when(d1, request([lineA(1)])),
+      Story.then(d1),
+      Story.then(order),
+      Story.then(itemA),
+      // A new id for what could be delivered succeeds, and the reversed quantity is free again.
+      Story.when(d2, request([lineA(5)])),
+      Story.then(d2, requested([lineA(5)]), new DeliveryCompleted()),
+      Story.then(order, new DeliveryRecorded({ deliveryId: "d-2", lines: moved(["L1", 5]) })),
+      Story.then(
+        itemA,
+        new StockIssued({
+          sourceId: "d-2",
+          quantity: 5,
+          cost: 500,
+          onHandAfter: 5,
+          valueAfter: 500,
+        }),
+      ),
+      Story.saga(DeliverOrder, d2, Outcome.Completed({ result: undefined })),
+    ),
+  )
+
+  it.effect(
+    "[SAL-DLV-2] an order that is not confirmed refuses the delivery and moves no stock",
+    () =>
+      recordFirst(
+        Story.given(itemA, tenOfA),
+        Story.when(d1, request([lineA(1)])),
+        Story.then(d1, requested([lineA(1)]), new DeliveryFailed({ reason: "rejected" })),
+        Story.then(order),
+        Story.then(itemA),
+        Story.saga(DeliverOrder, d1, Outcome.Rejected({ rejection: new OrderNotConfirmed() })),
+      ),
+  )
+
+  it.effect("[SAL-DLV-2] a line that is not on the order refuses the delivery", () =>
+    recordFirst(
+      Story.given(order, confirmed),
+      Story.given(itemA, tenOfA),
+      Story.when(d1, request([{ ...lineA(1), orderLineId: "L9" }])),
+      Story.then(
+        d1,
+        requested([{ ...lineA(1), orderLineId: "L9" }]),
+        new DeliveryFailed({ reason: "rejected" }),
+      ),
+      Story.then(order),
+      Story.then(itemA),
+      Story.saga(
+        DeliverOrder,
+        d1,
+        Outcome.Rejected({ rejection: new OrderLineNotFound({ orderLineId: "L9" }) }),
+      ),
+    ),
+  )
 })
 
 describe("SAL-DLV-2 on Alchemy, variant B: issue stock, then record the delivery", () => {
@@ -269,5 +355,113 @@ describe("SAL-DLV-2 on Alchemy, variant B: issue stock, then record the delivery
       ),
       Story.query(JournalForSource, { sourceId: "d-1" }, journal(cogs(600), reversal(600))),
     ),
+  )
+
+  // The delivery id of a failed run is spent: production rolled the delivery back, so a retry with
+  // the same id ran again; here the failed delivery stays recorded and the caller needs a new id.
+  it.effect("[SAL-DLV-2] a failed delivery id is spent, and a new id delivers the same stock", () =>
+    issueFirst(
+      Story.given(order, confirmed),
+      Story.given(itemA, tenOfA),
+      Story.given(itemB, oneOfB),
+      Story.when(d1, request([lineA(3), lineB(2)])),
+      Story.then(d1, requested([lineA(3), lineB(2)]), new DeliveryFailed({ reason: "rejected" })),
+      Story.then(order),
+      Story.then(
+        itemA,
+        issued(3, 300, 7, 700),
+        new StockReturned({
+          sourceId: "d-1",
+          quantity: 3,
+          cost: 300,
+          onHandAfter: 10,
+          valueAfter: 1000,
+        }),
+      ),
+      Story.saga(
+        DeliverOrderIssueFirst,
+        d1,
+        Outcome.Rejected({ rejection: new StockUnavailable({ available: 1, requested: 2 }) }),
+      ),
+      // The same id again records nothing and moves nothing.
+      Story.when(d1, request([lineA(1)])),
+      Story.then(d1),
+      Story.then(order),
+      Story.then(itemA),
+      // A new id for what could be delivered succeeds, and the reversed quantity is free again.
+      Story.when(d2, request([lineA(5)])),
+      Story.then(d2, requested([lineA(5)]), new DeliveryCompleted()),
+      Story.then(order, new DeliveryRecorded({ deliveryId: "d-2", lines: moved(["L1", 5]) })),
+      Story.then(
+        itemA,
+        new StockIssued({
+          sourceId: "d-2",
+          quantity: 5,
+          cost: 500,
+          onHandAfter: 5,
+          valueAfter: 500,
+        }),
+      ),
+      Story.saga(DeliverOrderIssueFirst, d2, Outcome.Completed({ result: undefined })),
+    ),
+  )
+
+  it.effect(
+    "[SAL-DLV-2] an order that is not confirmed refuses the delivery and moves no stock",
+    () =>
+      issueFirst(
+        Story.given(itemA, tenOfA),
+        Story.when(d1, request([lineA(1)])),
+        Story.then(d1, requested([lineA(1)]), new DeliveryFailed({ reason: "rejected" })),
+        Story.then(order),
+        Story.then(
+          itemA,
+          issued(1, 100, 9, 900),
+          new StockReturned({
+            sourceId: "d-1",
+            quantity: 1,
+            cost: 100,
+            onHandAfter: 10,
+            valueAfter: 1000,
+          }),
+        ),
+        Story.saga(
+          DeliverOrderIssueFirst,
+          d1,
+          Outcome.Rejected({ rejection: new OrderNotConfirmed() }),
+        ),
+      ),
+  )
+
+  it.effect(
+    "[SAL-DLV-2] a line that is not on the order is refused after stock is issued and returned",
+    () =>
+      issueFirst(
+        Story.given(order, confirmed),
+        Story.given(itemA, tenOfA),
+        Story.when(d1, request([{ ...lineA(1), orderLineId: "L9" }])),
+        Story.then(
+          d1,
+          requested([{ ...lineA(1), orderLineId: "L9" }]),
+          new DeliveryFailed({ reason: "rejected" }),
+        ),
+        Story.then(order),
+        Story.then(
+          itemA,
+          issued(1, 100, 9, 900),
+          new StockReturned({
+            sourceId: "d-1",
+            quantity: 1,
+            cost: 100,
+            onHandAfter: 10,
+            valueAfter: 1000,
+          }),
+        ),
+        Story.saga(
+          DeliverOrderIssueFirst,
+          d1,
+          Outcome.Rejected({ rejection: new OrderLineNotFound({ orderLineId: "L9" }) }),
+        ),
+      ),
   )
 })
