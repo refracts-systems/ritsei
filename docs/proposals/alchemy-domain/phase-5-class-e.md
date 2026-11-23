@@ -190,6 +190,7 @@ before that rule's exit:
 | Rule | Stories | Outcome |
 | --- | --- | --- |
 | `INV-XFER-1` | Done (2026-11-23), model only: `erp/modules/inventory/tests/transfer-saga.story.test.ts` | Not decided: staged on Alchemy or kept on its PostgreSQL transaction is the owner's call |
+| `SAL-DLV-2` | Done (2026-11-23), model only: `framework/foundation/domain-model/tests/delivery.story.test.ts`, both step orders | Not decided: step order and staged-or-kept are the owner's call |
 
 What the `INV-XFER-1` stories show, for that decision: confirmation is a saga with a compensation per
 deducted line, so a refused line leaves a deduction and its restoration on the stock (production
@@ -199,3 +200,18 @@ saga run is keyed and the first key is spent, so the model keys each confirmatio
 attempt (without it the retried transfer stays confirming for good). Not modelled: reservations,
 costs, the two capabilities, and who is told of a refusal. The sign-off of the warehouse owner on the
 half-applied state is not given.
+
+What the `SAL-DLV-2` stories add to the pilot's, for that decision (both step orders, 15 stories):
+
+- **A failed delivery id is spent.** Production rolled a failed delivery back, so a retry with the
+  same id ran again; staged, the failed delivery stays recorded and a retry with the same id records
+  nothing, so the caller needs a new delivery id. The rule text "a retried delivery id returns the
+  recorded result" now returns a failed record. The reversed quantity is free again for the new id.
+- **Variant B refuses every rejection after stock moved**, not only an over-delivery: an order that
+  is not confirmed and a line not on the order also issue stock and return it before the refusal
+  (the pilot's table named only the over-delivery). Variant A refuses those before any stock moves.
+  This sharpens the step-order decision: B keeps the order free of reversals but turns every
+  business refusal into stock movement and a journal pair.
+- Not modelled: `DO/` numbering (see the phase 4 model), valued cost per line, and the held-stock
+  display. The business owner's sign-off and the accounting owner's acceptance of the reversal trail
+  are not given.
