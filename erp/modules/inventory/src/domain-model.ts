@@ -496,7 +496,8 @@ export class InTransitNotCarried extends Domain.Rejection("InTransitNotCarried",
   inTransit: Schema.String,
 }) {}
 
-const OpeningLine = Schema.Struct({
+/** A line of an opening load bundle, as `AcceptOpening` takes it. */
+export const OpeningLine = Schema.Struct({
   itemId: Schema.String,
   quantity: Schema.String,
   sourceValue: Schema.String,
