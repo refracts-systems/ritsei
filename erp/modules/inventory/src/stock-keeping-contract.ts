@@ -93,7 +93,6 @@ export const CountStockInput = Schema.Struct({
   ...ScopedInput,
   warehouseId: Uuid,
   postingDate: CalendarDate,
-  /** The stock count document id. */
   countId: Uuid,
   lines: DocumentLines(
     Schema.Struct({
