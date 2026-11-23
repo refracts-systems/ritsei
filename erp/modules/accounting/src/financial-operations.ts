@@ -46,6 +46,7 @@ import {
 } from "../../../../framework/modules/messaging/mod.ts"
 import { SalesOrderInvalidState, SalesOrderNotFound, SalesService } from "../../sales/mod.ts"
 import { AccountingCapabilities } from "./capabilities.ts"
+import { journalBalances } from "./journal-balance.ts"
 import { AccountingFinancialOperationReconciledEvent } from "./events.ts"
 import {
   ExecutionAccountOutcome,
@@ -980,7 +981,7 @@ const validateLines = (
       }
     }
 
-    if (debit !== credit) {
+    if (!journalBalances(lines.length, debit, credit)) {
       return yield* Effect.fail(
         new UnbalancedJournal({
           debit: debit.toString(),

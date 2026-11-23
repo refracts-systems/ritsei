@@ -16,6 +16,7 @@ import {
   scopedCommand,
 } from "../../../../framework/modules/authorization/mod.ts"
 import { AccountingCapabilities } from "./capabilities.ts"
+import { journalBalances } from "./journal-balance.ts"
 import { ChartTemplateRegistry, templateById } from "./chart-templates.ts"
 import { buildBalanceSheet, buildProfitAndLoss } from "./financial-statements.ts"
 import { OPENING_CONTROL_ROLES, openingJournalReference } from "./opening-journal.ts"
@@ -75,7 +76,7 @@ const validateLines = (lines: ReadonlyArray<LedgerLineInput>) => {
     credit += lineCredit
   }
 
-  return debit === credit
+  return journalBalances(lines.length, debit, credit)
     ? undefined
     : new UnbalancedJournal({ debit: signed(debit), credit: signed(credit) })
 }

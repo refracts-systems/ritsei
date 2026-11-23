@@ -3,6 +3,7 @@ import * as Clock from "effect/Clock"
 import { requireExactMajorToMinor } from "../../../../framework/foundation/mod.ts"
 import { JournalLine } from "./contract.ts"
 import { InvalidJournalLine, UnbalancedJournal } from "./errors.ts"
+import { journalBalances } from "./journal-balance.ts"
 
 const toMinor = (value: string) => requireExactMajorToMinor(value, 2)
 
@@ -32,7 +33,7 @@ export const validateLines = (lines: readonly JournalLine[]) => {
     credit += lineCredit
   }
 
-  return debit === credit
+  return journalBalances(lines.length, debit, credit)
     ? undefined
     : new UnbalancedJournal({ debit: String(debit), credit: String(credit) })
 }

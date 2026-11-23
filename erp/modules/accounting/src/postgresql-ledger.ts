@@ -35,6 +35,7 @@ import {
   GetFinancialBalanceInput,
   PostFinancialJournalInput,
 } from "./financial-ledger.ts"
+import { journalBalances } from "./journal-balance.ts"
 
 type AccountType = "asset" | "liability" | "equity" | "revenue" | "expense"
 
@@ -167,7 +168,7 @@ const validateJournal = (
     }
   }
 
-  return debit === credit
+  return journalBalances(input.lines.length, debit, credit)
     ? undefined
     : FinancialExecutionRejected.make({ operationId: input.operationId, reason: "unbalanced" })
 }
