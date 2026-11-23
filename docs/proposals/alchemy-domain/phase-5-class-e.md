@@ -191,6 +191,7 @@ before that rule's exit:
 | --- | --- | --- |
 | `INV-XFER-1` | Done (2026-11-23), model only: `erp/modules/inventory/tests/transfer-saga.story.test.ts` | Not decided: staged on Alchemy or kept on its PostgreSQL transaction is the owner's call |
 | `SAL-DLV-2` | Done (2026-11-23), model only: `framework/foundation/domain-model/tests/delivery.story.test.ts`, both step orders | Not decided: step order and staged-or-kept are the owner's call |
+| `PRC-RET-1` | Done (2026-11-23), model only: `erp/modules/procurement/tests/return-staging.story.test.ts` | Not decided: staged on Alchemy or kept on its PostgreSQL transaction is the owner's call |
 
 What the `INV-XFER-1` stories show, for that decision: confirmation is a saga with a compensation per
 deducted line, so a refused line leaves a deduction and its restoration on the stock (production
@@ -215,3 +216,16 @@ What the `SAL-DLV-2` stories add to the pilot's, for that decision (both step or
 - Not modelled: `DO/` numbering (see the phase 4 model), valued cost per line, and the held-stock
   display. The business owner's sign-off and the accounting owner's acceptance of the reversal trail
   are not given.
+
+What the `PRC-RET-1` stories show, for that decision: a return is **recorded first and cancelled when
+a later step is refused**. The order aggregate holds received and returned quantity, so the cap and
+the record are one commit and two returns cannot take the same remainder. A saga issues each line at
+the order price (not moving average; the last units take what is left; stock worth less than the
+price is refused) and posts one journal against GRNI. If a line is refused (the stock was consumed),
+the earlier lines are restored, the order cancels the return and frees its quantity, and the status
+shows it failed: the warehouse and the supplier-facing record see a return that existed for a moment.
+**The id of a cancelled return is spent** (production rolled back, so a retry re-ran); the caller
+returns again under a new id. Not modelled: the `RET/` number (the `DO/` pattern of phase 4
+applies), receipt and matching reads, the return date, and the journal's period check. The
+purchasing owner's sign-off and the accounting owner's acceptance of the reversal trail are not
+given.
