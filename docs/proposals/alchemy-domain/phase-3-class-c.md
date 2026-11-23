@@ -1,6 +1,6 @@
 # Phase 3: Class C, Cross-Aggregate Rules That Stay Simple
 
-> **Status:** Waits for phase 2 exit
+> **Status:** Awaiting review (revised 2026-11-23 after a review; phase 2 exit accepted)
 >
 > **Roadmap gate:** `alchemy.class-c`
 >
@@ -14,37 +14,92 @@
 
 The 9 class C rules: `ACC-OPEN-1`, `INV-OPEN-4`, `PRC-SUP-1`, `PRC-READ-1`, `PRC-DRAFT-1`,
 `SAL-CUST-1`, `SAL-PRICE-1`, `SAL-QUOT-3`, `SET-BANK-2`. Each touches more than one aggregate but
-becomes a derived id, a uniqueness claim, or a policy whose delay harms nothing.
+becomes a derived id, a uniqueness claim, or a policy. A derived id is the common case: most of the
+unique values here never change, so they can be the instance id and need no claim.
 
 ## Aggregates
 
-- **May move:** price lists, quotations, and Supplier Accounts, where their open gates close
-  (references from table-backed aggregates; quotation conversion into a table-backed order).
-- **New:** claim aggregates for customer email per tenant (`SAL-CUST-1`), price list name per tenant
-  (`SAL-PRICE-1`), and one Supplier Account per Party relationship (`PRC-SUP-1`).
-- **Modelled only:** the opening journal (`ACC-OPEN-1`), because the ledger is not in this track;
-  the opening stock load (`INV-OPEN-4`, class D aggregate); bank statements (`SET-BANK-2`, class E
-  aggregate).
+No aggregate moves in this phase. The gates `alchemy.rebuild` and `alchemy.host-role` are not met, and
+phases 1 and 2 moved nothing. Price lists, quotations, and Supplier Accounts are candidates for a
+later cutover only after both gates close; each needs its own review then.
+
+- **Already modelled by phase 1, reused here:** `PartyCustomer` (keyed by the Party relationship),
+  `Quotation`, `OpeningLoad` (accepts or refuses a bundle), and the bank statement import.
+- **New models:** price lists, Supplier Accounts, customers by email, and the opening journal's
+  derived key (`ACC-OPEN-1`; accounting's `postingKey` in the phase 1 model is a local copy of the
+  replay logic and is replaced by the shared function below).
+- **Modelled only:** the opening journal (the ledger is not in this track), the opening stock load
+  (a class D aggregate), and bank statements (a class E aggregate).
+
+## Why most of the "claims" are derived ids
+
+A uniqueness claim is needed only when the unique value is not the aggregate's own id and it can
+change, or when one claim spans several aggregates. Checked in the Sales source, a customer is
+updated only for `creditLimit` and `priceListId`, never for email, and a price list is only
+inserted, never renamed (no update of its name; read from `documents.ts` and `postgres.ts`, so
+other code paths are unverified). So:
+
+| Rule | Unique value | Mechanism |
+| --- | --- | --- |
+| `SAL-CUST-1` | canonical email per tenant | derived instance id from tenant and canonical email |
+| `SAL-PRICE-1` | price list name per tenant | derived instance id from tenant and name |
+| `PRC-SUP-1` | one Supplier Account per Party relationship | derived instance id from the relationship (same shape as `PartyCustomer`) |
+| `SET-BANK-2` | checksum per tenant, legal entity, bank account | derived instance id from all four |
+| `SAL-QUOT-3` | one order per accepted quotation | derived instance key for the order, read from the quotation |
+| `ACC-OPEN-1` | one opening journal per legal entity | derived key `accounting.opening_balance/<legal entity id>` |
+| `INV-OPEN-4` | one load per `openingId` | derived from `openingId` |
+| `SAL-ORDER-2`, `PRC-PO-3` | a confirmation key unused by any other order | **claim** (phase 2 gap) |
+| `INV-STOCK-3` | a correction key unused for other stock | **claim** (phase 2 gap) |
+| `INV-OPEN-4` | an item not already opened in the warehouse | **claim** per warehouse and item (the bundle spans many items) |
+
+A derived id here is an Alchemy instance key, not a table row id. Row ids keep the UUIDv7 policy
+of `AGENTS.md`.
 
 ## Deliverables
 
-1. Derived ids for conversion (`SAL-QUOT-3`), opening loads (`INV-OPEN-4`), opening journals
-   (`ACC-OPEN-1`), and statements (`SET-BANK-2`), with stories showing a repeat returns the record.
-2. Claim aggregates with a release path for a failed or reversed command.
-3. A policy that submits the approval request after a purchase order is drafted (`PRC-DRAFT-1`); release
-   still requires the approval (`PRC-REL-1`), so the delay changes nothing a user can do.
-4. Replica read-your-writes (`PRC-READ-1`) restated as a receipt wait (`atLeast`), with the same
-   fail-closed behavior.
-5. Rehearsed cutovers for the aggregates that move, with updated `RULES.md` files.
+1. One pure derivation function per derived id, shared by the production service and the model (the
+   owner's rule: one shared `decide`). Stories show that a repeat returns the record and a different
+   content fails with the error production already names: `CustomerAlreadyExists`,
+   `PriceListAlreadyExists`, `SupplierAccountAlreadyExists`, `JournalIdempotencyConflict`, and
+   `OpeningStockConflict`.
+2. **One claim protocol, designed once**, for the four claims in the table: the three phase 2 gaps and
+   `INV-OPEN-4`'s per-item claim. It states the order of steps (claim first, or record first, and
+   why the other was rejected), the release path when the command fails or is reversed, what a
+   crash between the two steps leaves behind and how it is recovered, and who may release a claim.
+   A released claim stays in the history.
+3. `PRC-DRAFT-1` is **modelled** as a policy that submits the approval request after the purchase
+   order is drafted, in memory only. It is not built into production: today the rule submits the
+   request in the same transaction and returns it with the order, so the policy changes the API
+   response, the screen that shows it, and when an approver sees the request. That contract change
+   is recorded as a decision for the owner before anything is built. `PRC-REL-1` still requires the
+   approval.
+4. `PRC-READ-1` as a story: a read of a view with `atLeast` that cannot be satisfied fails with
+   `View.ConsistencyTimeout` and never falls back to another source. Whether the in-memory story
+   host simulates `atLeast` is **unverified**; if it does not, this is stated on the cluster host
+   (deliverable 5) or recorded as cluster-only.
+5. A concurrency proof for the claim protocol on the Effect Cluster host: the opt-in pool test
+   (`RITSEI_ALCHEMY_POOL=1`, Docker in WSL). Guardrails from the handoff: one runner replica (8 GB
+   RAM), check `df -h /` before each heavy step and stop under 1.5 GB free (the WSL disk is about
+   5.5 GB, mounted `errors=remount-ro`), never prune the owner's containers and volumes. The host
+   runs as a superuser until `alchemy.host-role` closes, so this proves the protocol, not the role.
 
 ## Exit evidence
 
-Stories for the nine rules; claims proven under concurrent attempts; cutovers rehearsed.
+Stories for the nine rules naming their IDs; the derivation functions used by production and by the
+model; the claim protocol written and exercised by a story for each failure point (failed command,
+reversed command, crash between the steps) and by the concurrency proof; the `PRC-DRAFT-1` contract
+change recorded for the owner. No cutover is part of the exit, and no `RULES.md` changes authority.
 
 ## Stop conditions
 
-- A claim can be left held by a failed command with no release path.
+- A claim can be left held by a failed command or a crash with no release path.
 - A quotation conversion cannot create its order without two authorities in one command.
+- A derived key would need a value that can change after creation: stop and use a claim, or report
+  it.
+- The claim protocol needs atomicity across two aggregates that the host does not give and a
+  compensation cannot cover.
+- The concurrency proof cannot run within the disk and RAM guardrails: record it as pending
+  instead of loosening them.
 
 ## Five views
 
@@ -70,8 +125,8 @@ Stories for the nine rules; claims proven under concurrent attempts; cutovers re
   returns the same order on repeat; a derived order id keeps the "once", but the conversion writes a
   table-backed order while the quotation may be stream-backed, which is the open gate. `PRC-SUP-1`
   accepts only an active supplier relationship from Party at creation; master-data uniqueness in
-  mature engines is a database constraint, and claims must make duplicates impossible under
-  concurrent clicks.
+  mature engines is a database constraint, and a derived id (or a claim) must make duplicates
+  impossible under concurrent clicks.
 - **Warehouse operations.** `INV-OPEN-4` makes an opening stock load idempotent and refuses loading
   an item twice; people loading opening stock see no difference.
 
@@ -79,8 +134,14 @@ Stories for the nine rules; claims proven under concurrent attempts; cutovers re
 
 - Should quotations move before sales orders, given that conversion creates an order?
 
+  **Recommendation from the review:** no, not in this phase. Conversion writes an order that stays
+  table-backed, and moving the quotation first creates the two-authority boundary the stop conditions
+  forbid. State the conversion as a derived order key with a story, and postpone moving the quotation
+  until the owner decides the authority of the order.
+
 ## Review record
 
 | Date | Reviewer | Outcome | Notes |
 | --- | --- | --- | --- |
-| | | | |
+| 2026-11-23 | Review before owner acceptance | Revised | Removed the cutover deliverable (gates unmet); replaced claim aggregates with derived ids where the value never changes; made the phase own one claim protocol for the phase 2 key gaps and the per-item claim; recorded the `PRC-DRAFT-1` contract change as an owner decision; added where the concurrency proof runs and its limits; stated what phase 1 already models; corrected the status |
+| | Owner | | Pending |
