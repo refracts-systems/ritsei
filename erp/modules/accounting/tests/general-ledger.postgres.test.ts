@@ -150,7 +150,7 @@ it.effect.skipIf(databaseUrl === undefined)(
 
           assert.instanceOf(unbalanced, UnbalancedJournal)
 
-          // The boundary: one cent out of balance is as unbalanced as one hundred.
+          // [ACC-JNL-1] The boundary: one cent out of balance is as unbalanced as one hundred.
           const oneCentOut = yield* Effect.flip(
             ledger.postManualEntry({
               ...scope,

@@ -17,7 +17,7 @@ import { SalesService } from "../../sales/mod.ts"
 const databaseUrl = process.env["DATABASE_URL"]
 const principal = { userAccountId: "balance-boundary", sessionId: "session" }
 
-// RULES.md has no ID for the balanced-journal rule yet; this pins it at the one-cent boundary.
+// [ACC-JNL-1]
 it.effect.skipIf(databaseUrl === undefined)(
   "rejects a journal that is one cent out of balance with the typed error and records nothing",
   () =>
