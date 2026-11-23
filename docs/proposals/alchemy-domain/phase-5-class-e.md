@@ -192,6 +192,7 @@ before that rule's exit:
 | `INV-XFER-1` | Done (2026-11-23), model only: `erp/modules/inventory/tests/transfer-saga.story.test.ts` | Not decided: staged on Alchemy or kept on its PostgreSQL transaction is the owner's call |
 | `SAL-DLV-2` | Done (2026-11-23), model only: `framework/foundation/domain-model/tests/delivery.story.test.ts`, both step orders | Not decided: step order and staged-or-kept are the owner's call |
 | `PRC-RET-1` | Done (2026-11-23), model only: `erp/modules/procurement/tests/return-staging.story.test.ts` | Not decided: staged on Alchemy or kept on its PostgreSQL transaction is the owner's call |
+| `SET-BANK-3` | Done (2026-11-23), model only: `erp/modules/settlement/tests/bank-match.story.test.ts` | Not decided: staged on Alchemy or kept on its PostgreSQL transaction is the owner's call |
 
 What the `INV-XFER-1` stories show, for that decision: confirmation is a saga with a compensation per
 deducted line, so a refused line leaves a deduction and its restoration on the stock (production
@@ -229,3 +230,17 @@ returns again under a new id. Not modelled: the `RET/` number (the `DO/` pattern
 applies), receipt and matching reads, the return date, and the journal's period check. The
 purchasing owner's sign-off and the accounting owner's acceptance of the reversal trail are not
 given.
+
+What the `SET-BANK-3` stories show, for that decision: the rule needs two capacities, and **no single
+aggregate can own both** (a line takes many payments and a payment many lines), so the design is a
+**hold on each capacity**, decided by the line and the payment aggregate, and a match saga that holds
+the line, holds the payment, and records. Each capacity then serializes its own matches and the sums
+never exceed either. The price: a payment that refuses leaves the line held for a match that fails,
+so another match of the same line can be refused for capacity that comes back a moment later; the
+failed match stays recorded and its id is spent; the refusal names the capacity that refused (the
+line first), where production reports the smaller of the two as `available`. Reversal releases both
+holds and keeps the match. True concurrency (two people matching at once) is not stateable in the
+story host and is proven on the cluster host, as the PostgreSQL test in
+`tests/chains/bank-reconciliation.postgres.test.ts` proves it today. Not modelled: the legal entity,
+bank account and direction check (`BankMatchMismatch`), the capability, who matched, and the report.
+The treasury owner's sign-off on a compensated match is not given.
