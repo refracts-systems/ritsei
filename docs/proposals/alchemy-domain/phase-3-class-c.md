@@ -1,6 +1,6 @@
 # Phase 3: Class C, Cross-Aggregate Rules That Stay Simple
 
-> **Status:** Accepted by the owner on 2026-11-23 (review record)
+> **Status:** Accepted by the owner on 2026-11-23; exit evidence accepted the same day (review record)
 >
 > **Roadmap gate:** `alchemy.class-c`
 >
@@ -289,7 +289,7 @@ the run under 1.5 GB free. Free disk went from 5.4 GB to 4.9 GB net (new image l
 built (its schedule and its read of the holder); two-runner and kill tests; `alchemy.host-role` and
 `alchemy.rebuild` (the gates for any cutover); the `PRC-DRAFT-1` API contract decision;
 model-only key functions that protect nothing until an aggregate moves. Owner acceptance of the exit
-evidence is pending.
+evidence: accepted on 2026-11-23 (review record).
 
 ## Stop conditions
 
@@ -346,6 +346,7 @@ evidence is pending.
 | --- | --- | --- | --- |
 | 2026-11-23 | Review before owner acceptance | Revised | Removed the cutover deliverable (gates unmet); replaced claim aggregates with derived ids where the value never changes; made the phase own one claim protocol for the phase 2 key gaps and the per-item claim; recorded the `PRC-DRAFT-1` contract change as an owner decision; added where the concurrency proof runs and its limits; stated what phase 1 already models; corrected the status |
 | 2026-11-23 | Owner | Accepted | Decisions below |
+| 2026-11-23 | Owner | Exit evidence accepted | The derived ids, the claim protocol and its copies, the `PRC-DRAFT-1` policy model, and the cluster proofs (concurrent claims, fail-closed read). The open items stay open; see below |
 
 Decisions taken in this review:
 
@@ -358,3 +359,11 @@ Decisions taken in this review:
 4. **`PRC-DRAFT-1` stays modelled only.** The API contract change (the drafted order no longer
    returns the approval request, and the approver sees it later) is **not decided** by this
    acceptance. It needs its own owner decision before anything is built.
+
+Exit evidence accepted on 2026-11-23. This acceptance does **not** decide any of these, which stay
+open and need their own owner decision or evidence:
+
+1. The `PRC-DRAFT-1` API contract change.
+2. The sweep that frees stale claims (described, not built).
+3. Tests with two runners and with a runner killed; the host running as `ritsei_domain_host` (`alchemy.host-role`) and a tested rebuild (`alchemy.rebuild`), which gate any cutover.
+4. The model-only key functions, which protect nothing until an aggregate moves.
