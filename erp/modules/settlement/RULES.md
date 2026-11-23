@@ -41,3 +41,9 @@ The payment amount is the cash plus the withheld part. The journal debits the ba
 the named claim account with the withheld amount, and credits receivables with the whole amount. The
 withheld amount is less than the amount and is allocated to documents in the same command; only
 receipts carry withholding, and Settlement computes no rate.
+
+### `SET-ALLOC-1` Allocations never exceed the unallocated payment
+
+The allocations of one command sum to at most the payment's unallocated amount. One cent more fails
+with `AllocationExceedsPayment` and changes nothing; allocating exactly the unallocated amount
+succeeds.

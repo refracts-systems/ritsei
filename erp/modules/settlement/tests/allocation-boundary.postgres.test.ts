@@ -19,8 +19,7 @@ import { withTemporaryDatabase } from "../../../../tests/support/postgres-databa
 const databaseUrl = process.env["DATABASE_URL"]
 const principal = { userAccountId: "alloc-user", sessionId: "alloc-session" }
 
-// The rule has no RULES.md identifier (RULES.md does not cover allocation), so no [ID] tag: the
-// modules test rejects an unknown one.
+// [SET-ALLOC-1]
 it.effect.skipIf(databaseUrl === undefined)(
   "refuses an allocation one cent above the unallocated amount and accepts exactly that amount",
   () =>

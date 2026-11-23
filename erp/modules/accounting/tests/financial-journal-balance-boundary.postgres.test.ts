@@ -23,7 +23,7 @@ import {
 
 const databaseUrl = process.env["DATABASE_URL"]
 
-// RULES.md has no ID for the balanced financial-journal rule yet; this pins it at the one-cent boundary.
+// [ACC-JNL-1]
 it.effect.skipIf(databaseUrl === undefined)(
   "rejects a financial journal intent that is one cent out of balance and records no intent",
   () =>

@@ -1,8 +1,8 @@
 # Accounting Rules
 
 > **Status:** Current rules owned by the Accounting module (ADR-0123). This file wins over ADR text
-> for what the module does now. It covers opening balances and migration clearing; ledger authority,
-> posting rules, and journal invariants are owned by
+> for what the module does now. It covers opening balances, migration clearing, and the exact balance of a journal; ledger authority
+> and posting rules are owned by
 > [`financial-ledger.md`](../../../docs/architecture/financial-ledger.md).
 
 Each rule has an identifier that the test enforcing it names as `[ID]`, in a comment above the test
@@ -35,3 +35,11 @@ the balance) or `OpeningJournalNotPosted`.
 A wrong opening journal is corrected by a new, traceable entry, and the clearing check applies to
 the result. This is unenforced by a dedicated test; the ledger's general immutability is owned by
 `financial-ledger.md`.
+
+### `ACC-JNL-1` A journal balances exactly
+
+Total debits equal total credits in minor units, with no tolerance, and a journal has at least two
+lines. This holds for a posted entry, a manual entry, and a financial journal intent: one that does
+not balance fails with `UnbalancedJournal` and records nothing. A deferred database constraint
+(`journal_entries_balanced_check`) enforces it for posted entries as well, but the typed error is
+the contract.
