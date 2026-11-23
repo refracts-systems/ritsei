@@ -161,6 +161,38 @@ production changes are pure moves that make production call the shared function.
   `openingJournalKey`, `openingLoadKey`) are not called by production, which gets the same
   guarantee from table constraints. They protect nothing until an aggregate moves.
 
+## `PRC-DRAFT-1` and `PRC-READ-1` (recorded 2026-11-23, deliverables 3 and 4)
+
+### `PRC-DRAFT-1` as a policy (modelled, not built)
+
+`erp/modules/procurement/src/draft-approval-model.ts` and
+`tests/procurement-draft-approval.story.test.ts` (4 tests). A policy reacts to
+`PurchaseOrderDrafted` and, when the total needs approval, sends `SubmitApproval` to a
+`PurchaseApprovalRequest` aggregate keyed by the same instance id as the order.
+
+- A draft strictly above the threshold submits a request for its total, with production's reason.
+  A draft at the threshold submits none. A repeated submission records nothing (production's
+  `onConflictDoNothing`).
+- The drafted order's own events carry no request: that is the **API contract change** the owner has
+  **not decided**. Production is unchanged and nothing uses this model. `PRC-REL-1` is untouched.
+- Whether a total needs approval is read through an `ApprovalPolicy` service; production asks the
+  framework Approvals service, so this decision is **not shared** with it.
+- Mutation checks (inclusive threshold, always submit, repeat records again) each fail a story.
+
+### `PRC-READ-1` (the fail-closed half cannot be stated in the story host)
+
+In the port, a read waits for a caller's write through a **query with `waitsFor`** and an `atLeast`
+receipt; if the projection does not catch up the query fails with `ConsistencyTimeout`, typed, with
+no fallback. (View reads have the same `atLeast`, but views are not in the port.)
+
+**Observed:** in the in-memory story host a query whose projection never catches up does not fail
+with `ConsistencyTimeout`; it hangs until the test times out (20 s in a probe, then removed). So the
+host cannot state "fails closed". The positive half, a query sees the caller's write after it waits
+for the projection, is already covered by the pilot's `JournalForSource` story. The fail-closed half
+is left to the cluster host (the concurrency proof, deliverable 5) or recorded as pending until
+that proof can run. No story was added, because one that cannot fail closed would claim more than it
+shows.
+
 ## Stop conditions
 
 - A claim can be left held by a failed command or a crash with no release path.
