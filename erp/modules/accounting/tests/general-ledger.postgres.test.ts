@@ -150,6 +150,21 @@ it.effect.skipIf(databaseUrl === undefined)(
 
           assert.instanceOf(unbalanced, UnbalancedJournal)
 
+          // The boundary: one cent out of balance is as unbalanced as one hundred.
+          const oneCentOut = yield* Effect.flip(
+            ledger.postManualEntry({
+              ...scope,
+              postingDate: "2026-10-21",
+              reference: "manual/one-cent-unbalanced",
+              lines: [
+                { accountId: byCode.get("1100")!.id, debit: "10.00", credit: "0" },
+                { accountId: byCode.get("3100")!.id, debit: "0", credit: "9.99" },
+              ],
+            }),
+          )
+
+          assert.instanceOf(oneCentOut, UnbalancedJournal)
+
           const twoSided = yield* Effect.flip(
             ledger.postManualEntry({
               ...scope,
