@@ -78,6 +78,17 @@ prove protected transitions, authorization, idempotency, correction, and consequ
 future generator must add its own rule tests before generated artifacts are accepted as a supported
 public path.
 
+## Service Input Typing
+
+A service or port operation does not take `unknown`. Its parameter is the encoded type of the schema
+that decodes it (`Schema.Codec.Encoded<typeof CreateTaxCodeInput>`), in the interface and in the
+implementation, and the service still decodes the input at runtime, so refinements the type cannot
+express stay enforced. A pass-through wrapper reuses the contract type with
+`Parameters<typeof service.op>[0]`. A test that sends invalid input on purpose builds it with
+`partial<T>()` (`tests/support/partial.ts`). `anti-slop/no-unknown-parameters` enforces this in
+oxlint. Validated `Schema.Class` inputs that remove the second decode (stage B) were proposed in
+ADR-0106 and rejected, so every module stays on this rule. Why: ADR-0105.
+
 ## Allowed Dependency Direction
 
 ```text
