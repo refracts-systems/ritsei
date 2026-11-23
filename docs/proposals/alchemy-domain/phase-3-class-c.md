@@ -1,6 +1,6 @@
 # Phase 3: Class C, Cross-Aggregate Rules That Stay Simple
 
-> **Status:** Awaiting review (revised 2026-11-23 after a review; phase 2 exit accepted)
+> **Status:** Accepted by the owner on 2026-11-23 (review record)
 >
 > **Roadmap gate:** `alchemy.class-c`
 >
@@ -144,4 +144,16 @@ change recorded for the owner. No cutover is part of the exit, and no `RULES.md`
 | Date | Reviewer | Outcome | Notes |
 | --- | --- | --- | --- |
 | 2026-11-23 | Review before owner acceptance | Revised | Removed the cutover deliverable (gates unmet); replaced claim aggregates with derived ids where the value never changes; made the phase own one claim protocol for the phase 2 key gaps and the per-item claim; recorded the `PRC-DRAFT-1` contract change as an owner decision; added where the concurrency proof runs and its limits; stated what phase 1 already models; corrected the status |
-| | Owner | | Pending |
+| 2026-11-23 | Owner | Accepted | Decisions below |
+
+Decisions taken in this review:
+
+1. **No cutover in phase 3.** Candidates stay candidates until `alchemy.rebuild` and
+   `alchemy.host-role` close.
+2. **Derived ids where the value never changes; one claim protocol for the rest** (the phase 2 key
+   gaps and `INV-OPEN-4`'s per-item claim), designed once.
+3. **Quotations do not move in this phase.** Conversion is stated as a derived order key with a
+   story; moving the quotation waits for a decision on the order's authority.
+4. **`PRC-DRAFT-1` stays modelled only.** The API contract change (the drafted order no longer
+   returns the approval request, and the approver sees it later) is **not decided** by this
+   acceptance. It needs its own owner decision before anything is built.
