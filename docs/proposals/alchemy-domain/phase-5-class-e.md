@@ -1,6 +1,6 @@
 # Phase 5: Class E, Rules Whose Business Meaning Changes
 
-> **Status:** Waits for phase 4 exit
+> **Status:** Awaiting review
 >
 > **Roadmap gate:** `alchemy.class-e`
 >
