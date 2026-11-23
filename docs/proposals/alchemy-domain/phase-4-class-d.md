@@ -86,6 +86,11 @@ accepted by its owner. A cutover is not exit evidence.
 4. **The period-close barrier is not statable in the story host.** It reads how far the host has
    applied events, which only the cluster host has (`ConsistencyTimeout`, 10 seconds). It is proven
    there, and the close command itself stays table-backed in Accounting.
+   What the story host does state is the read side: a query that `waitsFor` its projection answers
+   only after the projection applied the events before it, so `BIL-OPEN-1` (open items equal the
+   control account at a date) and `ACC-OPEN-3` (clearing at the cutoff) are stories
+   (`open-items-view.story.test.ts`, `clearing-signoff.story.test.ts`). The timeout and a period
+   close that waits for every projection are not.
 5. **The lag budget has no number.** The two open questions below are owner inputs; measuring
    without a budget proves nothing. The owner sets the budget before the measurement.
 6. **`DO/` and `GR/` gaps are a business decision.** The rule texts do not say gapless, but
