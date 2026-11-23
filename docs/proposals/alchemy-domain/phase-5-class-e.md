@@ -1,6 +1,6 @@
 # Phase 5: Class E, Rules Whose Business Meaning Changes
 
-> **Status:** Awaiting review
+> **Status:** Revised after review on 2026-11-23; awaiting owner acceptance
 >
 > **Roadmap gate:** `alchemy.class-e`
 >
@@ -21,6 +21,22 @@ Each rule is reviewed and decided on its own. A rule that cannot meet its exit s
 transaction, and so do the aggregates it touches; that is a stop condition for the rule, not a
 failure of the track.
 
+## Prerequisites
+
+- **Phase 4 is accepted for its stories only.** Its seven open items bind this phase where a rule
+  posts or reads a lagging view: the lag budget and the barrier on the cluster host, the accounting
+  owner's acceptance of lagging subledgers, the `DO/`/`GR/` gap policy (ADR-0095 is gapless), the
+  ledger decision, and the workflow-engine ADR. The ADR gates a saga on the cluster host, not a
+  story in memory.
+- **The cutover gates are unmet** (`alchemy.host-role`, `alchemy.rebuild`), and the host commits on
+  its own connection pool, so it cannot share a transaction with RITSEI's tables or its ledger.
+  Phases 3 and 4 removed their cutover for this; this phase does too (finding 1).
+- **Already modelled.** `SAL-DLV-2` has both step orders as stories
+  (`framework/foundation/domain-model/tests/delivery.story.test.ts`); phase 4 modelled the staged
+  patterns these rules reuse (a saga with compensation and a parked failure, a policy that sends a
+  command, a sequence aggregate that allocates after a recorded fact, a projection with a waiting
+  query). This phase applies them; it does not build a second set.
+
 ## Aggregates
 
 All remaining aggregates of Sales, Procurement, Inventory, Billing, and Settlement, each moving only
@@ -31,10 +47,10 @@ when every rule it carries has passed. The ledger stays outside this track.
 | Rule | Design on Alchemy | Question for the owner |
 | --- | --- | --- |
 | `SAL-DLV-2` | Saga over delivery and stock items; the pilot measured both step orders | Accept issue-and-return trails for failed deliveries? Which step order? |
-| `SAL-CREDIT-1`, `SAL-CREDIT-2` | A credit exposure aggregate per customer that reserves for confirmed orders and receives receivables from Billing as events | Accept a lag between an invoice and its exposure, or reserve exposure at confirmation? |
-| `BIL-DOC-1` | A number sequence per legal entity and kind, then tax and journal | Accept voided numbers when a step fails after allocation? |
-| `BIL-INV-1` | Billing owns an invoiced-quantity tracker per sales order, fed by delivery events | Accept that a just-recorded delivery is not invoiceable until the tracker catches up? |
-| `BIL-BILL-1` | Billing owns a billed-quantity tracker per purchase order, fed by receipt and return events | Same lag for supplier bills |
+| `SAL-CREDIT-1`, `SAL-CREDIT-2` | A credit exposure aggregate per customer that decides the limit check and holds the reservation for a confirmed order, committed before the order is confirmed so a refusal still leaves the order unchanged; it receives receivables from Billing as events | Accept a lag between an invoice and its exposure, or reserve exposure at confirmation? What releases a reservation whose confirmation fails? |
+| `BIL-DOC-1` | The document records first; a number sequence allocates only for a recorded document (the `DO/` model of phase 4), then tax and journal follow, each idempotent | Accept a document that is recorded but briefly unnumbered and unposted? |
+| `BIL-INV-1` | Billing owns an invoiced-quantity tracker per sales order, an **aggregate** (not a projection) fed by delivery events through a policy; the invoice decision reads it | Accept that a just-recorded delivery is not invoiceable until the tracker catches up? |
+| `BIL-BILL-1` | Billing owns a billed-quantity tracker per purchase order, an **aggregate** fed by receipt and return events; the bill decision reads it | Same lag for supplier bills |
 | `SET-BANK-3` | Match capacity as one aggregate per line and payment pair, or a reservation saga | Accept a compensated match when two people match at once? |
 | `PRC-RET-1` | Return recorded, then stock issued; issue can fail if stock was consumed | Accept a recorded return that is later cancelled? |
 | `INV-XFER-1` | Saga over every source and destination stock item | Accept a transfer that is visible half applied, then compensated? |
@@ -45,12 +61,54 @@ when every rule it carries has passed. The ledger stays outside this track.
 2. The rule's business owner's written sign-off on its new meaning, recorded in its `RULES.md`.
 3. For rules that post: the accounting owner's written acceptance of the reversal trail and a
    period-close rule for a step and its compensation in different periods.
-4. A rehearsed cutover for each aggregate that moves, with no fact held by two authorities.
+4. For each rule, a recorded outcome: staged on Alchemy with deliverables 1 to 3 met, or kept on its
+   PostgreSQL transaction. **No cutover** (removed by review, see below): whether a rule moves is
+   decided later, when the gates are met and the aggregate's whole rule set has passed.
 
 ## Exit evidence
 
-For each rule, either deliverables 1 to 4, or a recorded decision that it stays on a PostgreSQL
-transaction.
+For each rule, either deliverables 1 to 3 with its outcome recorded, or a recorded decision that it
+stays on a PostgreSQL transaction. The decision is written in the rule's `RULES.md` and in this
+document's review record. A concurrency proof (`SAL-CREDIT-2`, `BIL-INV-1`, `SET-BANK-3`) states
+the invariant inside one aggregate in a story; true concurrency is proven on the cluster host, as
+the PostgreSQL tests in `tests/chains/` prove it today. A cutover is not exit evidence.
+
+## Review findings (2026-11-23)
+
+1. **The cutover deliverable cannot be met.** A rehearsed cutover needs a command that commits with
+   RITSEI's tables, and the host commits on its own pool; `BIL-DOC-1`, `BIL-INV-1`, `SAL-DLV-2`
+   and `PRC-RET-1` also post to the table-backed ledger, and the gates are unmet. Replaced by a
+   recorded outcome per rule; no cutover.
+2. **The `BIL-DOC-1` question is partly moot.** The document and ADR-0124 say gapless numbering
+   "becomes gapless with voided numbers when a step fails after allocation". That follows from
+   allocating first. Phase 4's `DO/` model allocates only for a recorded fact, which keeps the
+   series gapless (ADR-0095) with no void. The question narrows to a recorded document that is
+   briefly unnumbered and unposted, which a fiscal reviewer and the accounting owner must accept for
+   legal documents (`INV/`, `CN/`, `BILL/`, `DN/`). The rule text "in one transaction" changes only
+   at cutover.
+3. **The trackers must be aggregates.** ADR-0124 says checks taken at decision time (credit, stock,
+   billable quantity) read aggregate state, not a projection. The table rows said "tracker fed by
+   events"; they now say aggregate.
+4. **Phase 4 already stages two of these rules' neighbours.** `BIL-BILL-3` and `BIL-CREDIT-1`
+   record the bill and post its journal later, which is already a change to `BIL-DOC-1`'s "one
+   transaction". The two rules are stated together here so the document is not both recorded and
+   unposted by one rule and atomic by another.
+5. **Three rules' concurrency proofs are PostgreSQL tests today**
+   (`tests/chains/concurrent-commands.postgres.test.ts`, `order-to-cash.postgres.test.ts`,
+   `bank-reconciliation.postgres.test.ts`). The stories prove the invariant, not the race; the exit
+   evidence now says where each is proven.
+6. **`SAL-CREDIT-1` refuses before the order changes.** The reservation must commit first, then the
+   order confirms, or a refusal would leave a reservation with no order; the design question now
+   asks what releases it.
+7. **`SAL-DLV-2` step order has a measured trade-off, not a free choice.** Variant A records the
+   delivery first and lets Billing see a delivery that is reversed; variant B issues stock first and
+   refuses an over-delivery after stock was issued and returned (ADR-0124 pilot table). Both leave
+   2 journal rows for a failed delivery. The owner decides with that table; the exit already names
+   "Billing invoices only completed deliveries" as the condition for variant A.
+8. **The open question has an inferred answer, which is not a decision.** Rules that post to the
+   ledger and have no external step (`BIL-DOC-1`, `SAL-DLV-2`) are the likeliest to stay on a
+   PostgreSQL transaction, because ADR-0124 says the five views answer no for single-database
+   flows. Inferred, not measured; the owner decides each rule.
 
 ## Stop conditions
 
@@ -109,4 +167,4 @@ phase turns each objection into an exit criterion.
 
 | Date | Reviewer | Outcome | Notes |
 | --- | --- | --- | --- |
-| | | | |
+| 2026-11-23 | Review before owner acceptance | Revised | Removed the rehearsed cutover (unmet gates; the host cannot share a transaction with the ledger); added prerequisites and what phases 1 to 4 already model; narrowed the `BIL-DOC-1` question (allocate only after a recorded fact); made the trackers aggregates; ordered the credit reservation before the confirmation; stated where each concurrency proof runs; corrected the status |
