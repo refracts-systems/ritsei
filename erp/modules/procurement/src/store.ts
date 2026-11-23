@@ -18,6 +18,7 @@ import type {
   PurchaseReceiptLineInput,
 } from "./contract.ts"
 import { SupplierRelationshipNotEligible } from "./errors.ts"
+import { isEligibleSupplierRelationship } from "./supplier-account.ts"
 
 export type ProcurementStore = import("./contract.ts").ProcurementService
 
@@ -40,7 +41,7 @@ export const loadSupplierRelationship = (party: PartyService, input: CreateSuppl
         ),
       ),
       Effect.flatMap((relationship) =>
-        relationship.kind === "supplier" && relationship.active
+        isEligibleSupplierRelationship(relationship)
           ? Effect.succeed(relationship)
           : Effect.fail(
               new SupplierRelationshipNotEligible({
