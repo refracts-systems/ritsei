@@ -85,7 +85,13 @@ const leaseTokenOf = (job: { readonly leaseToken: string | null }) =>
     ? Effect.die(new Error("claimed job has no lease token"))
     : Effect.succeed(job.leaseToken)
 
-const retryAfter = (milliseconds: number) => new Date(Date.now() + milliseconds).toISOString()
+/**
+ * The wait until an instant that Accounting stored for the next reconciliation attempt. That
+ * instant is computed by Accounting from its host clock, so this still reads the host clock; only
+ * the job itself is rescheduled with the database clock.
+ */
+const delayUntil = (instant: string) =>
+  Math.min(2_147_483_647, Math.max(0, Date.parse(instant) - Date.now()))
 
 export const runFinancialOperationOnce = (
   input: Schema.Codec.Encoded<typeof FinancialWorkerInput>,
@@ -161,7 +167,7 @@ export const runFinancialOperationOnce = (
           leaseToken,
           leaseGeneration: job.leaseGeneration,
           error: "financial_operation_unknown",
-          retryAt: value.scheduledAt,
+          retryAfterMs: delayUntil(value.scheduledAt),
         })
 
         return {
@@ -201,7 +207,7 @@ export const runFinancialOperationOnce = (
         leaseToken,
         leaseGeneration: job.leaseGeneration,
         error: `financial_operation_${value.status}`,
-        retryAt: value.scheduledAt,
+        retryAfterMs: delayUntil(value.scheduledAt),
       })
 
       return {
@@ -221,7 +227,7 @@ export const runFinancialOperationOnce = (
       leaseToken,
       leaseGeneration: job.leaseGeneration,
       error: `financial_operation_${error._tag}`,
-      retryAt: permanent ? null : retryAfter(5_000),
+      retryAfterMs: permanent ? null : 5_000,
     })
 
     return {

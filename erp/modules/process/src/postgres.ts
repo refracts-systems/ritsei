@@ -2043,7 +2043,7 @@ export const makeProcessService = Effect.gen(function* () {
         )
           return FailJobOutcome.LeaseLost()
         const exhausted = current.attempts >= ProcessJobMaxAttempts
-        const retry = !exhausted && decoded.retryAt !== null
+        const retry = !exhausted && decoded.retryAfterMs !== null
 
         const [failed] = await tx
           .update(processJobs)
@@ -2052,7 +2052,9 @@ export const makeProcessService = Effect.gen(function* () {
             leaseUntil: null,
             leaseOwner: null,
             leaseToken: null,
-            scheduledAt: retry ? new Date(decoded.retryAt!) : undefined,
+            scheduledAt: retry
+              ? sql`now() + (${decoded.retryAfterMs!}::integer * interval '1 millisecond')`
+              : undefined,
             lastError: decoded.error,
             completedAt: null,
             updatedAt: databaseNow,

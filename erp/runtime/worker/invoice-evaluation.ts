@@ -1,4 +1,3 @@
-import * as Clock from "effect/Clock"
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Predicate from "effect/Predicate"
@@ -49,7 +48,6 @@ export const runInvoiceEvaluationOnce = Effect.fn("InvoiceEvaluationWorker.runOn
   const billing = yield* InvoiceRenderEvaluationService
   const completion = yield* InvoiceRenderCompletionService
   const renderer = yield* InvoiceEvaluationRenderer
-  const clock = yield* Clock.Clock
 
   yield* authorization.authorize({
     principal: decoded.principal,
@@ -175,7 +173,7 @@ export const runInvoiceEvaluationOnce = Effect.fn("InvoiceEvaluationWorker.runOn
     yield* process.failJob({
       ...lease,
       error: "invoice_render_evaluation_failed",
-      retryAt: new Date(clock.currentTimeMillisUnsafe() + 60_000).toISOString(),
+      retryAfterMs: 60_000,
     })
   }
 
