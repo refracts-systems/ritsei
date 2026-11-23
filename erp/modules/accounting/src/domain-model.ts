@@ -11,14 +11,15 @@ import * as Predicate from "effect/Predicate"
 import * as Schema from "effect/Schema"
 
 import * as Domain from "../../../../framework/foundation/domain-model/mod.ts"
-import {
-  FinancialMajorAmount,
-  requireExactMajorToMinor,
-} from "../../../../framework/foundation/mod.ts"
-import { PostingRole } from "./general-ledger-contract.ts"
+import { FinancialMajorAmount } from "../../../../framework/foundation/mod.ts"
+import { OPENING_BALANCE_SOURCE, PostingRole } from "./general-ledger-contract.ts"
 import { firstControlAccountLine, OPENING_CONTROL_ROLES } from "./opening-journal.ts"
+import { postingKey } from "./posting-key.ts"
 
-/** A journal by reference: the opening journal is `accounting.opening_balance/<legal entity id>`. */
+/**
+ * A journal instance key: the tenant and the reference (`openingJournalKey`). The opening journal's
+ * reference is `accounting.opening_balance/<legal entity id>`.
+ */
 export const JournalRef = Schema.String.pipe(Schema.brand("JournalRef"))
 
 export class OpeningJournalControlAccount extends Domain.Rejection("OpeningJournalControlAccount", {
@@ -36,6 +37,7 @@ const Line = Schema.Struct({
 })
 
 export class OpeningJournalPosted extends Domain.Event("OpeningJournalPosted", {
+  legalEntityId: Schema.String,
   postingDate: Schema.String,
   lines: Schema.Array(Line),
 }) {}
@@ -43,6 +45,7 @@ export class OpeningJournalPosted extends Domain.Event("OpeningJournalPosted", {
 export class PostOpeningJournal extends Domain.Command("PostOpeningJournal", {
   target: JournalRef,
   input: {
+    legalEntityId: Schema.String,
     postingDate: Schema.String,
     lines: Schema.Array(Line),
     /** The legal entity's posting rules: the account each role resolves to. */
@@ -55,6 +58,7 @@ export class PostOpeningJournal extends Domain.Command("PostOpeningJournal", {
 const Unposted = Schema.TaggedStruct("Unposted", {})
 
 const Posted = Schema.TaggedStruct("Posted", {
+  legalEntityId: Schema.String,
   postingDate: Schema.String,
   lines: Schema.Array(Line),
 })
@@ -63,14 +67,13 @@ const JournalState = Schema.Union([Unposted, Posted])
 
 type JournalState = typeof JournalState.Type
 
-const minor = (value: string) => requireExactMajorToMinor(value, 2)
-
-/** What a retried posting must repeat: the date and the lines, in any order. */
-const postingKey = (postingDate: string, lines: ReadonlyArray<typeof Line.Type>) =>
-  JSON.stringify([
-    postingDate,
-    lines.map((line) => `${line.accountId}:${minor(line.debit)}:${minor(line.credit)}`).toSorted(),
-  ])
+/** The posting the journal records: the opening journal's source is its legal entity. */
+const openingPosting = (legalEntityId: string, postingDate: string) => ({
+  legalEntityId,
+  postingDate,
+  sourceType: OPENING_BALANCE_SOURCE,
+  sourceId: legalEntityId,
+})
 
 /**
  * A journal. It has one command, `PostOpeningJournal`: nothing changes or deletes a posted journal
@@ -86,8 +89,10 @@ export class Journal extends Domain.Aggregate("Journal", {
     PostOpeningJournal: (journal, cmd) => {
       // A retried posting repeats the posted entry; it is judged before control accounts, as the store does.
       if (Predicate.isTagged(journal, "Posted")) {
-        return postingKey(journal.postingDate, journal.lines) ===
-          postingKey(cmd.postingDate, cmd.lines)
+        return postingKey(
+          openingPosting(journal.legalEntityId, journal.postingDate),
+          journal.lines,
+        ) === postingKey(openingPosting(cmd.legalEntityId, cmd.postingDate), cmd.lines)
           ? []
           : new JournalIdempotencyConflict()
       }
@@ -99,13 +104,19 @@ export class Journal extends Domain.Aggregate("Journal", {
       )
 
       return control === undefined
-        ? [new OpeningJournalPosted({ postingDate: cmd.postingDate, lines: cmd.lines })]
+        ? [
+            new OpeningJournalPosted({
+              legalEntityId: cmd.legalEntityId,
+              postingDate: cmd.postingDate,
+              lines: cmd.lines,
+            }),
+          ]
         : new OpeningJournalControlAccount(control)
     },
   },
   evolve: {
     OpeningJournalPosted: (_, e): JournalState =>
-      Posted.make({ postingDate: e.postingDate, lines: e.lines }),
+      Posted.make({ legalEntityId: e.legalEntityId, postingDate: e.postingDate, lines: e.lines }),
   },
 }) {}
 

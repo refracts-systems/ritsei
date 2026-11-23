@@ -9,6 +9,7 @@ import { InventoryService } from "../../inventory/mod.ts"
 import { MessagingService } from "../../../../framework/modules/messaging/mod.ts"
 import { PartyService } from "../../party/mod.ts"
 import { ProcurementCapabilities } from "./capabilities.ts"
+import { supplierAccountInstanceKey } from "./supplier-account.ts"
 import {
   CancelPurchaseOrderInput,
   ConfirmPurchaseOrderInput,
@@ -87,8 +88,8 @@ export const makeProcurementTestLayer = () =>
             if (
               [...storedSupplierAccounts.values()].some(
                 (account) =>
-                  account.tenantId === decoded.tenantId &&
-                  account.supplierRelationshipId === decoded.supplierRelationshipId,
+                  supplierAccountInstanceKey(account.tenantId, account.supplierRelationshipId) ===
+                  supplierAccountInstanceKey(decoded.tenantId, decoded.supplierRelationshipId),
               )
             ) {
               return yield* Effect.fail(

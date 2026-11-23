@@ -445,6 +445,7 @@ describe("Inventory class A on Alchemy", () => {
   const line = (overrides: Partial<(typeof AcceptOpening.Type)["lines"][number]> = {}) => ({
     itemId: "A",
     quantity: "10",
+    sourceValue: "100.00",
     tracking: "none" as const,
     reservedQuantity: "0",
     inTransitQuantity: "0",

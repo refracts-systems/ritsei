@@ -33,11 +33,17 @@ const cashAndEquity = [line("acc-cash", "500.00", "0"), line("acc-equity", "0", 
 // Cash and equity from the owners' trial balance, plus the plug to migration clearing.
 const balanced = [...cashAndEquity, line("acc-clearing", "500.00", "0")]
 
-const post = (lines: ReadonlyArray<ReturnType<typeof line>>, postingDate = "2026-10-31") =>
-  new PostOpeningJournal({ postingDate, lines, rules })
+const post = (
+  lines: ReadonlyArray<ReturnType<typeof line>>,
+  postingDate = "2026-10-31",
+  legalEntityId = "le-1",
+) => new PostOpeningJournal({ legalEntityId, postingDate, lines, rules })
 
-const posted = (lines: ReadonlyArray<ReturnType<typeof line>>, postingDate = "2026-10-31") =>
-  new OpeningJournalPosted({ postingDate, lines })
+const posted = (
+  lines: ReadonlyArray<ReturnType<typeof line>>,
+  postingDate = "2026-10-31",
+  legalEntityId = "le-1",
+) => new OpeningJournalPosted({ legalEntityId, postingDate, lines })
 
 // The journal as first posted.
 const stillPosted = (state: typeof Journal.definition.state.Type) => {
@@ -113,6 +119,7 @@ describe("Accounting on Alchemy", () => {
       Story.when(
         opening,
         new PostOpeningJournal({
+          legalEntityId: "le-1",
           postingDate: "2026-10-31",
           lines: [line("acc-receivable", "1.00", "0"), line("acc-equity", "0", "1.00")],
           rules: [{ role: "cash", accountId: "acc-cash" }],
@@ -155,8 +162,14 @@ describe("Accounting on Alchemy", () => {
   it.effect("leaves a posted journal untouched when another journal is posted", () =>
     story(
       Story.given(opening, posted(balanced)),
-      Story.when(Journal.ref("accounting.opening_balance/le-2"), post(balanced)),
-      Story.then(Journal.ref("accounting.opening_balance/le-2"), posted(balanced)),
+      Story.when(
+        Journal.ref("accounting.opening_balance/le-2"),
+        post(balanced, "2026-10-31", "le-2"),
+      ),
+      Story.then(
+        Journal.ref("accounting.opening_balance/le-2"),
+        posted(balanced, "2026-10-31", "le-2"),
+      ),
       Story.then(opening),
       Story.state(opening, stillPosted),
     ),

@@ -39,6 +39,7 @@ import {
   decideConfirmation,
   quotationBelongsToCustomer,
 } from "./order-lifecycle.ts"
+import { canonicalEmail } from "./derived-ids.ts"
 import type { CreditCheck, CreditContext, SalesStore } from "./store.ts"
 import {
   CancellationMutation,
@@ -267,7 +268,7 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
   const createCustomer = Effect.fn("SalesStore.createCustomer")(function* (
     decoded: CreateCustomerCommand,
   ) {
-    const email = decoded.email.trim().toLowerCase()
+    const email = canonicalEmail(decoded.email)
 
     const rows = yield* database
       .query(

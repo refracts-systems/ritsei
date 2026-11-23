@@ -5,6 +5,7 @@ import {
   CalendarDate,
   formatSignedMinor,
   requireSignedMajorToMinor,
+  sha256Hex,
 } from "../../../../framework/foundation/mod.ts"
 import { InvalidBankStatement } from "./errors.ts"
 
@@ -129,3 +130,19 @@ export const parseBankStatement = (content: string) =>
 
     return yield* Effect.forEach(rows, (fields, index) => parseRow(fields, index + 1))
   })
+
+/** The SHA-256 checksum of the statement text: the identity SET-BANK-2 imports a statement by. */
+export const bankStatementChecksum = (content: string) =>
+  sha256Hex(content).pipe(Effect.catchTag("DocumentHashFailure", Effect.die))
+
+/**
+ * The Alchemy instance key of a statement: the four values that make an import unique (SET-BANK-2).
+ * None changes after the import. It is not the row id, which stays a UUIDv7.
+ */
+export const bankStatementInstanceKey = (identity: {
+  readonly tenantId: string
+  readonly legalEntityId: string
+  readonly bankAccountId: string
+  readonly checksum: string
+}) =>
+  [identity.tenantId, identity.legalEntityId, identity.bankAccountId, identity.checksum].join("/")

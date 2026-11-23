@@ -32,6 +32,7 @@ import {
   decideConfirmation,
   quotationBelongsToCustomer,
 } from "./order-lifecycle.ts"
+import { canonicalEmail } from "./derived-ids.ts"
 import type { SalesStore } from "./store.ts"
 import {
   CancellationMutation,
@@ -123,7 +124,7 @@ export const makeSalesMemoryStore = (): SalesStore => {
   const createCustomer = Effect.fn("SalesStore.memory.createCustomer")(function* (
     input: CreateCustomerCommand,
   ) {
-    const email = input.email.trim().toLowerCase()
+    const email = canonicalEmail(input.email)
 
     if ([...customers.values()].some((x) => x.tenantId === input.tenantId && x.email === email)) {
       return yield* Effect.fail(new CustomerAlreadyExists({ tenantId: input.tenantId, email }))

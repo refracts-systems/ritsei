@@ -26,6 +26,7 @@ import { TaxService } from "../../tax/mod.ts"
 import { SalesCapabilities } from "./capabilities.ts"
 import { committedAmount, CreditExposure, standingOf } from "./credit.ts"
 import { decidePartyCustomer, PartyCustomerDecision } from "./customer.ts"
+import { canonicalEmail, decideQuotationConversion, QuotationConversion } from "./derived-ids.ts"
 import {
   AssignCustomerPriceListInput,
   CreatePartyCustomerInput,
@@ -391,7 +392,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
       partyId: relationship.partyId,
     })
 
-    const email = decoded.email.trim().toLowerCase()
+    const email = canonicalEmail(decoded.email)
 
     const rows = yield* database
       .query(
@@ -718,14 +719,16 @@ export const makeSalesDocumentService = Effect.gen(function* () {
           "sales.order.by_quotation",
         )
 
-        if (existing[0] !== undefined) return { orderId: existing[0].id }
+        const conversion = decideQuotationConversion(existing[0] !== undefined, quotation.status)
 
-        if (quotation.status !== "accepted") {
+        if (QuotationConversion.$is("Existing")(conversion)) return { orderId: existing[0]!.id }
+
+        if (QuotationConversion.$is("InvalidState")(conversion)) {
           return yield* Effect.fail(
             new QuotationInvalidState({
               tenantId: decoded.tenantId,
               quotationId: quotation.id,
-              status: quotation.status,
+              status: conversion.status,
             }),
           )
         }

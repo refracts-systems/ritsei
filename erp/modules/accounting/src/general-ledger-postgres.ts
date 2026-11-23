@@ -10,12 +10,7 @@ import {
   legalEntityAccountingConfigurations,
   postingRules,
 } from "../../../../db/schema/accounting.ts"
-import {
-  Database,
-  isDatabaseConstraint,
-  requireExactMajorToMinor,
-  uuidv7,
-} from "../../../../framework/foundation/mod.ts"
+import { Database, isDatabaseConstraint, uuidv7 } from "../../../../framework/foundation/mod.ts"
 import { NumberingService } from "../../../../framework/modules/numbering/mod.ts"
 import {
   type LedgerAccount,
@@ -24,6 +19,7 @@ import {
   type PostingRole,
 } from "./general-ledger-contract.ts"
 import { firstControlAccountLine } from "./opening-journal.ts"
+import { type Posting, postingKey } from "./posting-key.ts"
 import {
   type GeneralLedgerStore,
   type PostEntryCommand,
@@ -52,26 +48,6 @@ const normalize = (value: string) => {
 
   return `${negative ? "-" : ""}${whole}.${fraction.padEnd(2, "0").slice(0, 2)}`
 }
-
-const lineKey = (line: { accountId: string; debit: string; credit: string }) =>
-  `${line.accountId}:${requireExactMajorToMinor(line.debit, 2)}:${requireExactMajorToMinor(line.credit, 2)}`
-
-type Posting = {
-  readonly legalEntityId: string
-  readonly postingDate: string
-  readonly sourceType: string | null
-  readonly sourceId: string | null
-}
-
-/** What a retried posting must repeat: legal entity, date, source, and lines. */
-const postingKey = (posting: Posting, lines: ReadonlyArray<AccountLine>) =>
-  JSON.stringify([
-    posting.legalEntityId,
-    posting.postingDate,
-    posting.sourceType,
-    posting.sourceId,
-    lines.map(lineKey).toSorted(),
-  ])
 
 const NO_SOURCE = { type: null, id: null } as const
 

@@ -6,6 +6,7 @@
  * Not exported from `mod.ts`: production must not load Alchemy.
  */
 import * as DateTime from "effect/DateTime"
+import * as Predicate from "effect/Predicate"
 import * as Schema from "effect/Schema"
 
 import * as Domain from "../../../../framework/foundation/domain-model/mod.ts"
@@ -20,6 +21,7 @@ import {
   decideConfirmation,
   deriveTotal,
 } from "./order-lifecycle.ts"
+import { isEligibleSupplierRelationship, supplierAccountInstanceKey } from "./supplier-account.ts"
 
 // ---------------------------------------------------------------- ids
 
@@ -40,6 +42,71 @@ export const supplierPriceInstanceId = (
   supplierAccountId: string,
   productId: string,
 ) => SupplierPriceId.make(`${tenantId}/${supplierAccountId}/${productId}`)
+
+// ---------------------------------------------------------------- SupplierAccount (PRC-SUP-1)
+
+/** The instance key built by `supplierAccountInstanceKey`, the function the services also call. */
+export const SupplierAccountId = Schema.String.pipe(Schema.brand("SupplierAccountId"))
+
+export const supplierAccountId = (tenantId: string, supplierRelationshipId: string) =>
+  SupplierAccountId.make(supplierAccountInstanceKey(tenantId, supplierRelationshipId))
+
+/** The relationship is missing, not a supplier, or not active. */
+export class SupplierRelationshipNotEligible extends Domain.Rejection(
+  "SupplierRelationshipNotEligible",
+) {}
+
+export class SupplierAccountAlreadyExists extends Domain.Rejection(
+  "SupplierAccountAlreadyExists",
+) {}
+
+export class SupplierAccountCreated extends Domain.Event("SupplierAccountCreated", {
+  partyId: Schema.String,
+  legalEntityId: Schema.String,
+}) {}
+
+export class CreateSupplierAccount extends Domain.Command("CreateSupplierAccount", {
+  target: SupplierAccountId,
+  input: {
+    /** The Party relationship the service read, or null when Party has none. */
+    relationship: Schema.NullOr(Schema.Struct({ kind: Schema.String, active: Schema.Boolean })),
+    partyId: Schema.String,
+    legalEntityId: Schema.String,
+  },
+  events: [SupplierAccountCreated],
+  rejects: [SupplierRelationshipNotEligible, SupplierAccountAlreadyExists],
+}) {}
+
+const NoSupplierAccount = Schema.TaggedStruct("None", {})
+
+const SupplierAccountOfRelationship = Schema.TaggedStruct("Account", {
+  partyId: Schema.String,
+  legalEntityId: Schema.String,
+})
+
+export class SupplierAccount extends Domain.Aggregate("SupplierAccount", {
+  id: SupplierAccountId,
+  state: Schema.Union([NoSupplierAccount, SupplierAccountOfRelationship]),
+  initial: NoSupplierAccount.make({}),
+  commands: [CreateSupplierAccount],
+  decide: {
+    CreateSupplierAccount: (account, cmd) => {
+      // The role check comes first, as in `createSupplierAccount`; the key never changes, so a
+      // second creation for the relationship is refused, as the unique constraint refuses it.
+      if (cmd.relationship === null || !isEligibleSupplierRelationship(cmd.relationship)) {
+        return new SupplierRelationshipNotEligible()
+      }
+
+      return Predicate.isTagged(account, "None")
+        ? [new SupplierAccountCreated({ partyId: cmd.partyId, legalEntityId: cmd.legalEntityId })]
+        : new SupplierAccountAlreadyExists()
+    },
+  },
+  evolve: {
+    SupplierAccountCreated: (_, e) =>
+      SupplierAccountOfRelationship.make({ partyId: e.partyId, legalEntityId: e.legalEntityId }),
+  },
+}) {}
 
 // ---------------------------------------------------------------- PurchaseOrder
 
@@ -310,5 +377,5 @@ export class SupplierPrice extends Domain.Aggregate("SupplierPrice", {
 // ---------------------------------------------------------------- Model
 
 export class Procurement extends Domain.Model("Procurement", {
-  aggregates: [PurchaseOrder, SupplierPrice],
+  aggregates: [PurchaseOrder, SupplierPrice, SupplierAccount],
 }) {}

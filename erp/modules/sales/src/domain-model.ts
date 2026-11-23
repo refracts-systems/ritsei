@@ -17,6 +17,14 @@ import * as Domain from "../../../../framework/foundation/domain-model/mod.ts"
 import { FinancialMajorAmount, PositiveQuantity } from "../../../../framework/foundation/mod.ts"
 import { SalesOrderLine, SalesOrderStatus } from "./contract.ts"
 import { decidePartyCustomer, PartyCustomerDecision } from "./customer.ts"
+import {
+  canonicalEmail,
+  customerKey,
+  decideQuotationConversion,
+  priceListKey,
+  QuotationConversion,
+  quotationOrderKey,
+} from "./derived-ids.ts"
 import { DiscountPercent } from "./documents-contract.ts"
 import {
   ConfirmationDecision,
@@ -479,7 +487,7 @@ export class PartyCustomer extends Domain.Aggregate("PartyCustomer", {
               partyId: cmd.partyId,
               legalEntityId: cmd.legalEntityId,
               name: cmd.name,
-              email: cmd.email.trim().toLowerCase(),
+              email: canonicalEmail(cmd.email),
             }),
           ],
           Existing: () => [],
@@ -498,8 +506,166 @@ export class PartyCustomer extends Domain.Aggregate("PartyCustomer", {
   },
 }) {}
 
+// ------------------------------------------------- Derived ids (phase 3 class C)
+
+// Each instance id is built by `derived-ids.ts` from the caller's tenant and the value the rule
+// keeps unique, so a second creation addresses the same instance instead of needing a claim. Tests
+// build the id with the same functions, so a model that dropped the tenant would fail a story.
+
+export const CustomerKey = Schema.String.pipe(Schema.brand("CustomerKey"))
+export const PriceListKey = Schema.String.pipe(Schema.brand("PriceListKey"))
+export const QuotationOrderKey = Schema.String.pipe(Schema.brand("QuotationOrderKey"))
+
+export const customerRef = (tenantId: string, email: string) =>
+  Customer.ref(CustomerKey.make(customerKey(tenantId, email)))
+
+export const priceListRef = (tenantId: string, name: string) =>
+  PriceList.ref(PriceListKey.make(priceListKey(tenantId, name)))
+
+export const quotationOrderRef = (tenantId: string, quotationId: string) =>
+  QuotationOrder.ref(QuotationOrderKey.make(quotationOrderKey(tenantId, quotationId)))
+
+// SAL-CUST-1: a customer email is unique in its tenant. Production refuses a duplicate rather than
+// returning the existing customer, so a repeat is rejected whatever the name.
+
+export class CustomerAlreadyExists extends Domain.Rejection("CustomerAlreadyExists", {
+  email: Schema.String,
+}) {}
+
+export class CustomerCreated extends Domain.Event("CustomerCreated", {
+  name: Schema.String,
+  email: Schema.String,
+}) {}
+
+export class CreateCustomer extends Domain.Command("CreateCustomer", {
+  target: CustomerKey,
+  input: { name: Schema.String, email: Schema.String },
+  events: [CustomerCreated],
+  rejects: [CustomerAlreadyExists],
+}) {}
+
+export const NoLegacyCustomer = Schema.TaggedStruct("None", {})
+
+export const LegacyCustomer = Schema.TaggedStruct("Customer", {
+  name: Schema.String,
+  email: Schema.String,
+})
+
+const CustomerState = Schema.Union([NoLegacyCustomer, LegacyCustomer])
+
+export class Customer extends Domain.Aggregate("Customer", {
+  id: CustomerKey,
+  state: CustomerState,
+  initial: NoLegacyCustomer.make({}),
+  commands: [CreateCustomer],
+  decide: {
+    CreateCustomer: (customer, cmd) =>
+      Predicate.isTagged(customer, "None")
+        ? [new CustomerCreated({ name: cmd.name.trim(), email: canonicalEmail(cmd.email) })]
+        : new CustomerAlreadyExists({ email: canonicalEmail(cmd.email) }),
+  },
+  evolve: {
+    CustomerCreated: (_, e) => LegacyCustomer.make({ name: e.name, email: e.email }),
+  },
+}) {}
+
+// SAL-PRICE-1: a price list name is unique in its tenant. No command renames a list, so the name
+// in the key never changes.
+
+export class PriceListAlreadyExists extends Domain.Rejection("PriceListAlreadyExists", {
+  name: Schema.String,
+}) {}
+
+export class PriceListCreated extends Domain.Event("PriceListCreated", {
+  name: Schema.String,
+  currency: Schema.String,
+}) {}
+
+export class CreatePriceList extends Domain.Command("CreatePriceList", {
+  target: PriceListKey,
+  input: { name: Schema.String, currency: Schema.String },
+  events: [PriceListCreated],
+  rejects: [PriceListAlreadyExists],
+}) {}
+
+export const NoPriceList = Schema.TaggedStruct("None", {})
+
+export const NamedPriceList = Schema.TaggedStruct("PriceList", {
+  name: Schema.String,
+  currency: Schema.String,
+})
+
+const PriceListState = Schema.Union([NoPriceList, NamedPriceList])
+
+export class PriceList extends Domain.Aggregate("PriceList", {
+  id: PriceListKey,
+  state: PriceListState,
+  initial: NoPriceList.make({}),
+  commands: [CreatePriceList],
+  decide: {
+    CreatePriceList: (list, cmd) =>
+      Predicate.isTagged(list, "None")
+        ? [new PriceListCreated({ name: cmd.name, currency: cmd.currency })]
+        : new PriceListAlreadyExists({ name: cmd.name }),
+  },
+  evolve: {
+    PriceListCreated: (_, e) => NamedPriceList.make({ name: e.name, currency: e.currency }),
+  },
+}) {}
+
+// SAL-QUOT-3: one order per quotation. The quotation's state arrives as a fact the service read
+// under its lock; the quotation and the order are not two authorities in one command, because only
+// the order instance is written.
+
+export const OrderOfQuotationId = Schema.String
+
+export class OrderConvertedFromQuotation extends Domain.Event("OrderConvertedFromQuotation", {
+  orderId: OrderOfQuotationId,
+}) {}
+
+export class ConvertQuotation extends Domain.Command("ConvertQuotation", {
+  target: QuotationOrderKey,
+  input: {
+    /** The state the service read from the quotation. */
+    quotationStatus: QuotationStatus,
+    /** The row id the service generated for the order. */
+    orderId: OrderOfQuotationId,
+  },
+  events: [OrderConvertedFromQuotation],
+  rejects: [QuotationInvalidState],
+}) {}
+
+export const NoConversion = Schema.TaggedStruct("None", {})
+
+export const ConvertedQuotation = Schema.TaggedStruct("Converted", {
+  orderId: OrderOfQuotationId,
+})
+
+const QuotationOrderState = Schema.Union([NoConversion, ConvertedQuotation])
+
+export class QuotationOrder extends Domain.Aggregate("QuotationOrder", {
+  id: QuotationOrderKey,
+  state: QuotationOrderState,
+  initial: NoConversion.make({}),
+  commands: [ConvertQuotation],
+  decide: {
+    ConvertQuotation: (conversion, cmd) =>
+      QuotationConversion.$match(
+        decideQuotationConversion(!Predicate.isTagged(conversion, "None"), cmd.quotationStatus),
+        {
+          Convert: () => [new OrderConvertedFromQuotation({ orderId: cmd.orderId })],
+          Existing: () => [],
+          InvalidState: ({ status }) => new QuotationInvalidState({ status }),
+        },
+      ),
+  },
+  evolve: {
+    OrderConvertedFromQuotation: (_, e) => ConvertedQuotation.make({ orderId: e.orderId }),
+  },
+}) {}
+
 // ---------------------------------------------------------------- Model
 
 export class Sales extends Domain.Model("Sales", {
-  aggregates: [SalesOrder, Quotation, PartyCustomer],
+  aggregates: [SalesOrder, Quotation, PartyCustomer, Customer, PriceList, QuotationOrder],
 }) {}
