@@ -170,9 +170,9 @@ it.effect("releases an unknown reconciliation for a bounded retry", () => {
     claimJob: () => Effect.succeed(job),
     completeJob: () => Effect.die("reconciliation must be retried"),
     renewJob: () => Effect.die("not used"),
-    failJob: (input: { retryAt: string | null; leaseToken: string }) => {
+    failJob: (input: { retryAfterMs: number | null; leaseToken: string }) => {
       assert.strictEqual(input.leaseToken, job.leaseToken)
-      assert.isNotNull(input.retryAt)
+      assert.isNotNull(input.retryAfterMs)
       failed = true
 
       return Effect.succeed({ ...job, status: "pending" as const })

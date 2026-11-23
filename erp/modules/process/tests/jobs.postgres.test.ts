@@ -432,13 +432,11 @@ it.effect.skipIf(databaseUrl === undefined)(
                 leaseToken: first!.leaseToken!,
                 leaseGeneration: first!.leaseGeneration!,
                 error: "stale worker",
-                retryAt: null,
+                retryAfterMs: null,
               }),
             ),
             ProcessJobLeaseLost,
           )
-
-          const retryAt = new Date(Date.now() - 1_000).toISOString()
 
           const pending = yield* process.failJob({
             tenantId: tenant!.id,
@@ -447,10 +445,35 @@ it.effect.skipIf(databaseUrl === undefined)(
             leaseToken: second!.leaseToken!,
             leaseGeneration: second!.leaseGeneration!,
             error: "retryable worker failure",
-            retryAt,
+            retryAfterMs: 3_600_000,
           })
 
           assert.strictEqual(pending.status, "pending")
+
+          // The retry time is the database clock plus the delay, whatever this host thinks the time is.
+          const [timing] = yield* Effect.promise(
+            () =>
+              client<{ offset_seconds: number }[]>`
+              select extract(epoch from (scheduled_at - now()))::float8 as offset_seconds
+              from process.jobs where id = ${job!.id}
+            `,
+          )
+
+          assert.isAbove(timing!.offset_seconds, 3_590)
+          assert.isBelow(timing!.offset_seconds, 3_601)
+
+          assert.isNull(
+            yield* process.claimJob({ tenantId: tenant!.id, workerId: "worker-c" }),
+            "a job retried in an hour is not due yet",
+          )
+
+          yield* Effect.promise(
+            () =>
+              client`
+              update process.jobs set scheduled_at = now() - interval '1 second'
+              where id = ${job!.id}
+            `,
+          )
           assert.isNull(pending.leaseOwner)
           assert.isNull(pending.leaseToken)
 
@@ -470,7 +493,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             leaseToken: third!.leaseToken!,
             leaseGeneration: third!.leaseGeneration!,
             error: "retry exhausted",
-            retryAt,
+            retryAfterMs: 0,
           })
 
           assert.strictEqual(recovered.status, "manual_recovery")

@@ -233,7 +233,10 @@ export const ProcessJobFailInput = Schema.Struct({
   leaseToken: Uuid,
   leaseGeneration: LeaseGeneration,
   error: NonEmptyString,
-  retryAt: Schema.NullOr(InstantString).pipe(Schema.withDecodingDefaultKey(Effect.succeed(null))),
+  /** Milliseconds from now, by the database clock, until the job may run again; null does not retry. */
+  retryAfterMs: Schema.NullOr(NonNegativeInt).pipe(
+    Schema.withDecodingDefaultKey(Effect.succeed(null)),
+  ),
 })
 
 export const WorkflowRun = Schema.Struct({
