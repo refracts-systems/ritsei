@@ -5,6 +5,7 @@
 - Amends: ADR-0100 (point 4, how opening stock is received)
 - Compatible with: ADR-0015, ADR-0096, ADR-0101
 - Supersedes: None
+- Amended by: ADR-0121 (point 2, the load posts a journal against migration clearing)
 - Superseded by: None
 
 > **Related documents**
