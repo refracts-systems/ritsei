@@ -62,12 +62,6 @@ const Free = Schema.TaggedStruct("Free", {})
 const Held = Schema.TaggedStruct("Held", { holder: Schema.String })
 const ClaimState = Schema.Union([Free, Held])
 
-/**
- * Whether a claim is stale: held by an order that does not carry the key. The sweep reads the order
- * (another aggregate), then asks this pure function; it releases only on `true`.
- */
-export const staleClaim = (heldBy: string, carriedBy: string | undefined) => carriedBy !== heldBy
-
 export class ConfirmationKeyClaim extends Domain.Aggregate("ConfirmationKeyClaim", {
   id: ClaimId,
   state: ClaimState,

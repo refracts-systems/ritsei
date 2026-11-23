@@ -35,3 +35,5 @@ export {
 } from "@alchemy.run/domain"
 
 export { Story } from "@alchemy.run/domain/Story"
+
+export { staleClaim } from "./claim.ts"

@@ -2,6 +2,7 @@ import { assert, describe, it } from "@effect/vitest"
 import * as Data from "effect/Data"
 
 import * as Domain from "../../../../framework/foundation/domain-model/mod.ts"
+import { staleClaim } from "../../../../framework/foundation/domain-model/mod.ts"
 import {
   ClaimId,
   ClaimKey,
@@ -17,7 +18,6 @@ import {
   RequestConfirmation,
   SalesConfirmationClaims,
   SalesConfirmationClaimsHandlers,
-  staleClaim,
   ClaimHeld,
 } from "../src/confirmation-claim-model.ts"
 import {

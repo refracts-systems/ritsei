@@ -94,10 +94,8 @@ change recorded for the owner. No cutover is part of the exit, and no `RULES.md`
 
 Modelled on the sales confirmation key (`SAL-ORDER-2`) in
 `erp/modules/sales/src/confirmation-claim-model.ts`, with 10 stories in
-`erp/modules/sales/tests/confirmation-claim.story.test.ts`. It is the pattern for `PRC-PO-3`,
-`INV-STOCK-3`, and `INV-OPEN-4`'s per-item claim; those copy it when their derivations land, so the
-shape is kept in one module until a second consumer exists. Nothing moves and no production code
-changes.
+`erp/modules/sales/tests/confirmation-claim.story.test.ts`. The same protocol is copied for `PRC-PO-3`, `INV-STOCK-3`, and `INV-OPEN-4`'s per-item claim (see
+"Copies of the protocol" below). Nothing moves and no production code changes.
 
 - **Aggregates.** `ConfirmationKeyClaim`, keyed `<tenant>/<key>`, with `ClaimKey` and `ReleaseKey`.
   A free claim is taken; the holder claiming again is a no-op; another holder is refused with
@@ -118,6 +116,31 @@ changes.
 
 Mutation checks (compensation that always releases, no compensation, a held claim granted to
 another holder, release by anyone) each fail at least one story.
+
+### Copies of the protocol
+
+Each copy is a typed claim aggregate, a request aggregate, a policy, and a saga with the same ten
+stories (plus one where the rule adds a case). A generic factory was tried and rejected: building
+the aggregate from a name needs computed command and event maps, which erodes the typing of
+`decide` and `evolve` (`as never`), and AGENTS.md forbids weakening typing. Only the pure
+`staleClaim` is shared, through the port.
+
+| Rule | Files | Holder | A key held elsewhere maps to |
+| --- | --- | --- | --- |
+| `PRC-PO-3` | `procurement/src/po-confirmation-claim-model.ts` | the purchase order | `PurchaseOrderConfirmationIdempotencyConflict` |
+| `INV-STOCK-3` | `inventory/src/correction-claim-model.ts` | the stock item | `CorrectionKeyReused` (the model's analog of production's `StockCorrectionIdempotencyConflict`) |
+| `INV-OPEN-4` per-item clause | `inventory/src/opening-item-claim-model.ts` | the opening load, one claim per `<tenant>/<warehouse>/<item>` | `OpeningStockAlreadyLoaded`, defined in the model (phase 1 had none) |
+
+Differences worth knowing: the procurement saga also carries the approval facts and releases a
+claim when approval is missing; the opening saga claims one item per activity, each with its own
+compensation, then accepts the load; and a content mismatch on the same stock item keeps its claim,
+because the holder's retry took nothing. **Order differs from production** for openings: production
+validates the bundle (approval, uncarried lines, a recorded load) before it looks for opened items,
+while the model claims first, so a bundle that is both invalid and overlapping reports the overlap.
+Nothing is left claimed either way. The correction model carries the tenant only in the claim id.
+Mutation checks (always release, never release, a held claim granted to another holder, release by
+anyone) each fail at least one story in every copy. With these, the claim for the last of the
+phase 2 key gaps and `OpeningStockAlreadyLoaded` are stated; nothing is cut over.
 
 **Still open in this deliverable.** The sweep's schedule and reading of the holder are not built, and
 the concurrency proof (deliverable 5) has not run: the story host is serial, so two simultaneous
@@ -160,6 +183,38 @@ production changes are pure moves that make production call the shared function.
 - Model-only key functions (`customerKey`, `priceListKey`, the order key, the statement key,
   `openingJournalKey`, `openingLoadKey`) are not called by production, which gets the same
   guarantee from table constraints. They protect nothing until an aggregate moves.
+
+## `PRC-DRAFT-1` and `PRC-READ-1` (recorded 2026-11-23, deliverables 3 and 4)
+
+### `PRC-DRAFT-1` as a policy (modelled, not built)
+
+`erp/modules/procurement/src/draft-approval-model.ts` and
+`tests/procurement-draft-approval.story.test.ts` (4 tests). A policy reacts to
+`PurchaseOrderDrafted` and, when the total needs approval, sends `SubmitApproval` to a
+`PurchaseApprovalRequest` aggregate keyed by the same instance id as the order.
+
+- A draft strictly above the threshold submits a request for its total, with production's reason.
+  A draft at the threshold submits none. A repeated submission records nothing (production's
+  `onConflictDoNothing`).
+- The drafted order's own events carry no request: that is the **API contract change** the owner has
+  **not decided**. Production is unchanged and nothing uses this model. `PRC-REL-1` is untouched.
+- Whether a total needs approval is read through an `ApprovalPolicy` service; production asks the
+  framework Approvals service, so this decision is **not shared** with it.
+- Mutation checks (inclusive threshold, always submit, repeat records again) each fail a story.
+
+### `PRC-READ-1` (the fail-closed half cannot be stated in the story host)
+
+In the port, a read waits for a caller's write through a **query with `waitsFor`** and an `atLeast`
+receipt; if the projection does not catch up the query fails with `ConsistencyTimeout`, typed, with
+no fallback. (View reads have the same `atLeast`, but views are not in the port.)
+
+**Observed:** in the in-memory story host a query whose projection never catches up does not fail
+with `ConsistencyTimeout`; it hangs until the test times out (20 s in a probe, then removed). So the
+host cannot state "fails closed". The positive half, a query sees the caller's write after it waits
+for the projection, is already covered by the pilot's `JournalForSource` story. The fail-closed half
+is left to the cluster host (the concurrency proof, deliverable 5) or recorded as pending until
+that proof can run. No story was added, because one that cannot fail closed would claim more than it
+shows.
 
 ## Concurrency proof on the Effect Cluster host (recorded 2026-11-23, deliverable 5)
 
