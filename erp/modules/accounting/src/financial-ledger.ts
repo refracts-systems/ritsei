@@ -3,6 +3,8 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
 
+import { journalBalances } from "./journal-balance.ts"
+
 const NonEmptyString = Schema.String.check(Schema.isPattern(/\S/))
 const PositiveInteger = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 0x7fffffff }))
 const CurrencyCode = Schema.String.check(Schema.isPattern(/^[A-Z]{3}$/))
@@ -300,7 +302,7 @@ const validateJournal = (
     }
   }
 
-  return debit === credit
+  return journalBalances(input.lines.length, debit, credit)
     ? undefined
     : FinancialExecutionRejected.make({ operationId: input.operationId, reason: "unbalanced" })
 }

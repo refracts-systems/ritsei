@@ -12,6 +12,7 @@ import { withTemporaryDatabase } from "../../../../tests/support/postgres-databa
 import {
   makePostgresqlFinancialLedger,
   FinancialExecutionManualRecovery,
+  FinancialExecutionRejected,
   FinancialBalanceAvailable,
   FinancialBalanceNotFound,
   FinancialExecutionOutcome,
@@ -139,6 +140,18 @@ it.effect.skipIf(databaseUrl === undefined)(
             { accountId: revenue!.id, debitMinor: "0", creditMinor: LARGE_FINANCIAL_MINOR },
           ],
         }
+
+        // [ACC-JNL-1] One minor unit out of balance is refused before anything is recorded.
+        assert.deepStrictEqual(
+          yield* ledger.postJournal({
+            ...input,
+            lines: [
+              { accountId: cash!.id, debitMinor: "10000", creditMinor: "0" },
+              { accountId: revenue!.id, debitMinor: "0", creditMinor: "9999" },
+            ],
+          }),
+          FinancialExecutionRejected.make({ operationId, reason: "unbalanced" }),
+        )
 
         yield* assertFinancialLedgerConformance(ledger, input, "postgresql")
 

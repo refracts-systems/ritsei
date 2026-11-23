@@ -145,6 +145,20 @@ describe("financial ledger contract", () => {
           FinancialExecutionRejected.make({ operationId: "unbalanced", reason: "unbalanced" }),
         )
 
+        // [ACC-JNL-1] One minor unit out of balance is as unbalanced as five hundred.
+        const oneUnitOut = yield* ledger.postJournal({
+          ...journal("one-unit-out"),
+          lines: [
+            { accountId: "cash", debitMinor: "12500", creditMinor: "0" },
+            { accountId: "revenue", debitMinor: "0", creditMinor: "12499" },
+          ],
+        })
+
+        assert.deepStrictEqual(
+          oneUnitOut,
+          FinancialExecutionRejected.make({ operationId: "one-unit-out", reason: "unbalanced" }),
+        )
+
         const missingAccount = yield* ledger.postJournal(journal("missing-account"))
         assert.deepStrictEqual(
           missingAccount,
