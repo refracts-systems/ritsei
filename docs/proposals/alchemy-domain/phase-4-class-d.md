@@ -52,8 +52,9 @@ several commits that record the same business facts, plus a lag or a new legitim
    events, and migration sign-off (`ACC-OPEN-3`) waits the same way.
 4. The unapplied-cash state for `SET-WHT-1`: a receipt whose allocation fails stays recorded and
    unallocated, shown as such, and is allocated later.
-5. `SAL-DLV-1`'s `DO/` numbering from a sequence aggregate, with a written gap policy: the rule does
-   not require gapless numbers today.
+5. `SAL-DLV-1`'s `DO/` numbering from a sequence aggregate, with a written gap policy: the rule
+   text does not say gapless, but ADR-0095 makes every series gapless, so a gap is a change to that
+   ADR and the owner's decision. The model keeps the series gapless (`delivery-numbering-model.ts`).
 6. The opening stock load as a saga in memory: the load commits, then a policy posts the journal
    against migration clearing under the same reference, and a reversal journal marked as a failed
    load follows when a later step fails. **No cutover** (removed by review, see below).
@@ -87,8 +88,10 @@ accepted by its owner. A cutover is not exit evidence.
    there, and the close command itself stays table-backed in Accounting.
 5. **The lag budget has no number.** The two open questions below are owner inputs; measuring
    without a budget proves nothing. The owner sets the budget before the measurement.
-6. **`DO/` and `GR/` gaps are a business decision.** The rules do not require gapless numbers, but
-   a gap policy is the owner's call, not a modelling detail; a written policy is exit evidence.
+6. **`DO/` and `GR/` gaps are a business decision.** The rule texts do not say gapless, but
+   ADR-0095 makes every series gapless and names a gap-tolerant series only as a later option for
+   non-legal documents. Allowing a gap is the owner's call and changes that ADR; a written policy
+   is exit evidence.
 
 ## Stop conditions
 
@@ -99,8 +102,8 @@ accepted by its owner. A cutover is not exit evidence.
 
 - **Auditor.** `INV-VAL-2` writes one valuation entry per item carrying the journal id, so a
   reviewer can follow a movement to its journal; staged commits must keep that link. `PRC-VRCPT-1`
-  numbers each receipt `GR/` and `SAL-DLV-1` each delivery `DO/`; neither rule requires gapless
-  numbers, so a gap policy is written rather than inherited. `INV-OPEN-5` rolls the load's journal
+  numbers each receipt `GR/` and `SAL-DLV-1` each delivery `DO/`; neither rule text says gapless,
+  but ADR-0095 does for every series, so staging must keep it gapless or the owner changes the ADR. `INV-OPEN-5` rolls the load's journal
   back with a failed load today; staged, a failed load leaves the journal and a reversal, which must
   be marked as a failed load, not two business events. `PRC-RCPT-1` blocks cancelling an order
   after an over-receipt; that block must hold while the receipt is still being applied.
