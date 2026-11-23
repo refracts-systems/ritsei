@@ -123,6 +123,44 @@ another holder, release by anyone) each fail at least one story.
 the concurrency proof (deliverable 5) has not run: the story host is serial, so two simultaneous
 claims on the same key are not exercised yet.
 
+## Derived ids (recorded 2026-11-23, deliverable 1)
+
+Stories tagged with each rule ID are in `erp/modules/<module>/tests/*-derived-ids.story.test.ts`
+(sales, procurement, settlement, accounting, inventory). The full repository test project passes with
+PostgreSQL 19 (893 passed, 1 skipped); `lint`, `tsc`, `boundary:lint`, and `fallow:audit` introduce
+nothing. Each key function was mutation-checked (dropping the tenant from a key, an accepted changed
+repeat, a removed eligibility check): at least one story failed each time. Nothing moves; the
+production changes are pure moves that make production call the shared function.
+
+| Rule | Shared function | Production calls it? | Note |
+| --- | --- | --- | --- |
+| `SAL-CUST-1` | `canonicalEmail` (`derived-ids.ts`) | Yes, replacing three inline `trim().toLowerCase()` | `customerKey` is model-only; the table's unique constraint does the job |
+| `SAL-PRICE-1` | `priceListKey` | **No** | Production relies on `price_lists_tenant_name_key` and builds or compares no name; names are exact and case-sensitive; `setPrice` is not modelled (it addresses a list by row id) |
+| `SAL-QUOT-3` | `decideQuotationConversion` | Yes, in `convertQuotation` (existing-order check still first) | The order key is model-only; the accepted state arrives as a fact the service read |
+| `PRC-SUP-1` | `isEligibleSupplierRelationship`, `supplierAccountInstanceKey` | Yes (store eligibility; memory duplicate check) | PostgreSQL builds no key; the unique constraint does |
+| `SET-BANK-2` | `bankStatementChecksum`, `bankStatementInstanceKey` | The checksum, yes | The four-part key is model-only |
+| `ACC-OPEN-1` | `postingKey` (moved verbatim), `openingJournalReference` | Yes | Replaces the model's local copy of the replay logic; the model's events now carry the legal entity |
+| `INV-OPEN-4` | `sameOpeningBundle`, `requestedOpeningRows` | Yes | `OpeningStockAlreadyLoaded` (an item already opened in the warehouse) is **not** built: it needs the claim protocol |
+
+### Corrections to what this document assumed
+
+- **A repeat is rejected, not returned,** for `SAL-CUST-1`, `SAL-PRICE-1`, and `PRC-SUP-1`: production fails
+  with `CustomerAlreadyExists`, `PriceListAlreadyExists`, and `SupplierAccountAlreadyExists`, and the
+  models match it. Only `SAL-QUOT-3`, `SET-BANK-2`, `ACC-OPEN-1`, and `INV-OPEN-4` return the record on a repeat.
+- **`SET-BANK-2` has no conflict for different content:** another file has another checksum, so it is
+  another instance.
+- **Customer email never changes** (re-checked: the only customer updates are `creditLimit` and
+  `priceListId`, and a database check enforces the canonical form).
+
+### Gaps (not closed here)
+
+- The `SET-BANK-2` command carries only the file content, so nothing in the model checks that the
+  target key matches the content's checksum; the service builds the key. A misaddressed command
+  would import under the wrong key. Production has no such rejection, so none was added.
+- Model-only key functions (`customerKey`, `priceListKey`, the order key, the statement key,
+  `openingJournalKey`, `openingLoadKey`) are not called by production, which gets the same
+  guarantee from table constraints. They protect nothing until an aggregate moves.
+
 ## Stop conditions
 
 - A claim can be left held by a failed command or a crash with no release path.
