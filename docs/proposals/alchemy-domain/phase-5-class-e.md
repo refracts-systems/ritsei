@@ -1,6 +1,6 @@
 # Phase 5: Class E, Rules Whose Business Meaning Changes
 
-> **Status:** Revised after review on 2026-11-23; awaiting owner acceptance
+> **Status:** Accepted by the owner on 2026-11-23; exit evidence is not yet accepted
 >
 > **Roadmap gate:** `alchemy.class-e`
 >
@@ -168,3 +168,19 @@ phase turns each objection into an exit criterion.
 | Date | Reviewer | Outcome | Notes |
 | --- | --- | --- | --- |
 | 2026-11-23 | Review before owner acceptance | Revised | Removed the rehearsed cutover (unmet gates; the host cannot share a transaction with the ledger); added prerequisites and what phases 1 to 4 already model; narrowed the `BIL-DOC-1` question (allocate only after a recorded fact); made the trackers aggregates; ordered the credit reservation before the confirmation; stated where each concurrency proof runs; corrected the status |
+| 2026-11-23 | Owner | Accepted | The document and its revisions, including the removal of the cutover |
+
+This acceptance accepts the document as the plan. It decides **none** of the per-rule questions, and
+no rule has an outcome yet. Each of these needs its own owner decision or evidence, rule by rule,
+before that rule's exit:
+
+1. For each of the 9 rules: staged on Alchemy (stories, the business owner's sign-off, the accounting
+   owner's acceptance where it posts) or kept on its PostgreSQL transaction.
+2. The step order of `SAL-DLV-2` (variant A or B), and whether Billing invoices only completed
+   deliveries.
+3. Whether a legal billing document may be recorded and briefly unnumbered and unposted
+   (`BIL-DOC-1`), and what releases a credit reservation whose confirmation fails
+   (`SAL-CREDIT-1`).
+4. The phase 4 open items that bind the posting rules, and the workflow-engine ADR before any saga
+   on the cluster host.
+5. The cutover gates `alchemy.host-role` and `alchemy.rebuild`; no cutover is in this phase.

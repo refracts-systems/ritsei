@@ -23,7 +23,7 @@
 | 2 | [Class B](./phase-2-class-b.md) | 3 | Exit accepted (2026-11-22) |
 | 3 | [Class C](./phase-3-class-c.md) | 9 | Exit accepted (2026-11-23) |
 | 4 | [Class D](./phase-4-class-d.md) | 11 | Exit accepted (2026-11-23) |
-| 5 | [Class E](./phase-5-class-e.md) | 9 | Revised, awaiting owner acceptance (2026-11-23) |
+| 5 | [Class E](./phase-5-class-e.md) | 9 | Accepted (2026-11-23) |
 
 A document is reviewed only after the previous phase's exit evidence is accepted, because each phase
 can change what the next one must answer. A reviewer records the outcome in the document's review
