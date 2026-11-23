@@ -13,7 +13,13 @@ import * as Domain from "../../../../framework/foundation/domain-model/mod.ts"
 import * as Predicate from "effect/Predicate"
 import * as Schema from "effect/Schema"
 
-import { firstUncarried, OpeningRejection, revaluationApproved } from "./opening-stock-rules.ts"
+import {
+  firstUncarried,
+  OpeningRejection,
+  requestedOpeningRows,
+  revaluationApproved,
+  sameOpeningBundle,
+} from "./opening-stock-rules.ts"
 import {
   CorrectionDecision,
   decideCorrection,
@@ -472,6 +478,9 @@ export class StockTransfer extends Domain.Aggregate("StockTransfer", {
 
 export class RevaluationApprovalMismatch extends Domain.Rejection("RevaluationApprovalMismatch") {}
 
+/** The opening was loaded before with another warehouse, cutoff date, or lines. */
+export class OpeningStockConflict extends Domain.Rejection("OpeningStockConflict") {}
+
 export class LotTrackingUnsupported extends Domain.Rejection("LotTrackingUnsupported", {
   itemId: Schema.String,
   tracking: Schema.Literals(["lot", "expiry"]),
@@ -490,6 +499,7 @@ export class InTransitNotCarried extends Domain.Rejection("InTransitNotCarried",
 const OpeningLine = Schema.Struct({
   itemId: Schema.String,
   quantity: Schema.String,
+  sourceValue: Schema.String,
   movingAverageValue: Schema.optionalKey(Schema.String),
   tracking: Schema.Literals(["none", "lot", "expiry"]),
   reservedQuantity: Schema.String,
@@ -522,48 +532,79 @@ export class AcceptOpening extends Domain.Command("AcceptOpening", {
     LotTrackingUnsupported,
     ReservationsNotCarried,
     InTransitNotCarried,
+    OpeningStockConflict,
   ],
 }) {}
 
 const Unaccepted = Schema.TaggedStruct("Unaccepted", {})
-const Accepted = Schema.TaggedStruct("Accepted", {})
+
+const Accepted = Schema.TaggedStruct("Accepted", {
+  warehouseId: Schema.String,
+  cutoffDate: Schema.String,
+  lines: Schema.Array(OpeningLine),
+})
+
+const OpeningState = Schema.Union([Unaccepted, Accepted])
+
+type OpeningState = typeof OpeningState.Type
 
 export class OpeningLoad extends Domain.Aggregate("OpeningLoad", {
   id: OpeningLoadId,
-  state: Schema.Union([Unaccepted, Accepted]),
+  state: OpeningState,
   initial: Unaccepted.make({}),
   commands: [AcceptOpening],
   decide: {
     AcceptOpening: (s, cmd) => {
-      // A repeat of an accepted opening commits nothing; INV-OPEN-4 owns a repeat that differs.
-      if (Predicate.isTagged(s, "Accepted")) return []
-
-      // The input schema checks the approval before the service looks at the lines.
+      // The input schema checks the approval before the service looks at the lines, and both
+      // come before the service looks for a recorded load.
       if (!revaluationApproved(cmd.revaluationApprovedBy !== undefined, cmd.lines)) {
         return new RevaluationApprovalMismatch()
       }
 
       const uncarried = firstUncarried(cmd.lines)
 
-      return uncarried === undefined
-        ? [
-            new OpeningAccepted({
-              warehouseId: cmd.warehouseId,
-              cutoffDate: cmd.cutoffDate,
-              lines: cmd.lines,
-            }),
-          ]
-        : OpeningRejection.$match(uncarried, {
-            LotTrackingUnsupported: ({ itemId, tracking }) =>
-              new LotTrackingUnsupported({ itemId, tracking }),
-            ReservationsNotCarried: ({ itemId, reserved }) =>
-              new ReservationsNotCarried({ itemId, reserved }),
-            InTransitNotCarried: ({ itemId, inTransit }) =>
-              new InTransitNotCarried({ itemId, inTransit }),
-          })
+      if (uncarried !== undefined) {
+        return OpeningRejection.$match(uncarried, {
+          LotTrackingUnsupported: ({ itemId, tracking }) =>
+            new LotTrackingUnsupported({ itemId, tracking }),
+          ReservationsNotCarried: ({ itemId, reserved }) =>
+            new ReservationsNotCarried({ itemId, reserved }),
+          InTransitNotCarried: ({ itemId, inTransit }) =>
+            new InTransitNotCarried({ itemId, inTransit }),
+        })
+      }
+
+      // INV-OPEN-4: a repeat of the same bundle commits nothing; a changed one is a conflict.
+      if (Predicate.isTagged(s, "Accepted")) {
+        return sameOpeningBundle(
+          {
+            warehouseId: s.warehouseId,
+            cutoffDate: s.cutoffDate,
+            rows: requestedOpeningRows(s.lines),
+          },
+          {
+            warehouseId: cmd.warehouseId,
+            cutoffDate: cmd.cutoffDate,
+            rows: requestedOpeningRows(cmd.lines),
+          },
+        )
+          ? []
+          : new OpeningStockConflict()
+      }
+
+      return [
+        new OpeningAccepted({
+          warehouseId: cmd.warehouseId,
+          cutoffDate: cmd.cutoffDate,
+          lines: cmd.lines,
+        }),
+      ]
     },
   },
-  evolve: { OpeningAccepted: () => Accepted.make({}) },
+  evolve: {
+    OpeningAccepted: (_, e): OpeningState =>
+      Accepted.make({ warehouseId: e.warehouseId, cutoffDate: e.cutoffDate, lines: e.lines }),
+  },
 }) {}
 
 // ---------------------------------------------------------------- Model

@@ -1,5 +1,7 @@
 import * as Data from "effect/Data"
 
+import { requireExactMajorToMinor } from "../../../../framework/foundation/mod.ts"
+
 /**
  * Pure opening stock decisions (INV-OPEN-2, INV-OPEN-3). The service asks here whether a load
  * bundle may be loaded, and maps the answer to its tagged errors, so the Alchemy `OpeningLoad`
@@ -61,3 +63,77 @@ export const revaluationApproved = (
   hasApproval: boolean,
   lines: ReadonlyArray<{ readonly movingAverageValue?: unknown }>,
 ) => hasApproval === lines.some((line) => line.movingAverageValue !== undefined)
+
+/**
+ * The instance key of an opening load (INV-OPEN-4): one approved bundle per tenant and `openingId`.
+ * An Alchemy instance key only; table rows keep their UUIDv7 ids. The service finds a recorded load
+ * by the same pair (`tenantId`, `openingId`), so the key never needs a value that changes.
+ */
+export const openingLoadKey = (tenantId: string, openingId: string) => `${tenantId}/${openingId}`
+
+/** An item's quantity and values in minor units, as a load carries them. */
+export type OpeningValues = {
+  readonly itemId: string
+  readonly quantity: bigint
+  readonly sourceValue: bigint
+  readonly value: bigint
+}
+
+/** A load as the bundle compares it: where, as of when, and what. */
+export type OpeningBundle = {
+  readonly warehouseId: string
+  readonly cutoffDate: string
+  readonly rows: ReadonlyArray<OpeningValues>
+}
+
+/**
+ * The rows a request loads, in item order. The value held is the moving-average value when the
+ * line states one, else the source value.
+ */
+export const requestedOpeningRows = (
+  lines: ReadonlyArray<{
+    readonly itemId: string
+    readonly quantity: string
+    readonly sourceValue: string
+    readonly movingAverageValue?: string
+  }>,
+): ReadonlyArray<OpeningValues> =>
+  lines
+    .map((line) => {
+      const sourceValue = requireExactMajorToMinor(line.sourceValue, 2)
+
+      return {
+        itemId: line.itemId,
+        quantity: BigInt(line.quantity),
+        sourceValue,
+        value:
+          line.movingAverageValue === undefined
+            ? sourceValue
+            : requireExactMajorToMinor(line.movingAverageValue, 2),
+      }
+    })
+    .toSorted((left, right) => left.itemId.localeCompare(right.itemId))
+
+/**
+ * A recorded load repeats the request when the warehouse, the cutoff date, and every item,
+ * quantity, and value agree (INV-OPEN-4). Anything else is `OpeningStockConflict`.
+ */
+export const sameOpeningBundle = (recorded: OpeningBundle, requested: OpeningBundle) => {
+  const byItem = new Map(recorded.rows.map((row) => [row.itemId.toLowerCase(), row]))
+
+  return (
+    recorded.warehouseId === requested.warehouseId &&
+    recorded.cutoffDate === requested.cutoffDate &&
+    recorded.rows.length === requested.rows.length &&
+    requested.rows.every((row) => {
+      const found = byItem.get(row.itemId.toLowerCase())
+
+      return (
+        found !== undefined &&
+        found.quantity === row.quantity &&
+        found.sourceValue === row.sourceValue &&
+        found.value === row.value
+      )
+    })
+  )
+}

@@ -28,7 +28,12 @@ import {
 import { GeneralLedgerService, type PostingRoleType } from "../../accounting/mod.ts"
 import { ProductService } from "../../product/mod.ts"
 import { InventoryCapabilities } from "./capabilities.ts"
-import { firstUncarried, OpeningRejection } from "./opening-stock-rules.ts"
+import {
+  firstUncarried,
+  OpeningRejection,
+  requestedOpeningRows,
+  sameOpeningBundle,
+} from "./opening-stock-rules.ts"
 import {
   InventoryReferenceNotFound,
   OpeningStockAlreadyLoaded,
@@ -228,25 +233,6 @@ const approvalColumns = (
   approvedAt: revaluation === undefined ? null : new Date(revaluation.approvedAt),
   approvalReference: revaluation?.reference ?? null,
 })
-
-/** A recorded load repeats the request when every item, quantity, and value agree. */
-const sameOpening = (recorded: ReadonlyArray<OpeningRow>, requested: ReadonlyArray<OpeningRow>) => {
-  const byItem = new Map(recorded.map((row) => [row.itemId.toLowerCase(), row]))
-
-  return (
-    recorded.length === requested.length &&
-    requested.every((row) => {
-      const found = byItem.get(row.itemId.toLowerCase())
-
-      return (
-        found !== undefined &&
-        found.quantity === row.quantity &&
-        found.sourceValue === row.sourceValue &&
-        found.value === row.value
-      )
-    })
-  )
-}
 
 export const makeStockKeepingService = Effect.gen(function* () {
   const database = yield* Database
@@ -763,20 +749,10 @@ export const makeStockKeepingService = Effect.gen(function* () {
 
     if (rejection !== undefined) return yield* Effect.fail(rejection)
 
-    const requested = decoded.lines
-      .map((line) => {
-        const sourceValue = minor(line.sourceValue)
-
-        return {
-          itemId: line.itemId,
-          movementId: "",
-          quantity: BigInt(line.quantity),
-          sourceValue,
-          value:
-            line.movingAverageValue === undefined ? sourceValue : minor(line.movingAverageValue),
-        }
-      })
-      .toSorted((left, right) => left.itemId.localeCompare(right.itemId))
+    const requested = requestedOpeningRows(decoded.lines).map((row) => ({
+      ...row,
+      movementId: "",
+    }))
 
     const movement: Movement = {
       tenantId: decoded.tenantId,
@@ -816,9 +792,10 @@ export const makeStockKeepingService = Effect.gen(function* () {
           }))
 
           // A document is one approved bundle: a retry repeats it, and a changed one is a conflict.
-          return recorded[0]!.warehouseId === decoded.warehouseId &&
-            recorded[0]!.cutoffDate === decoded.cutoffDate &&
-            sameOpening(rows, requested)
+          return sameOpeningBundle(
+            { warehouseId: recorded[0]!.warehouseId, cutoffDate: recorded[0]!.cutoffDate, rows },
+            { warehouseId: decoded.warehouseId, cutoffDate: decoded.cutoffDate, rows: requested },
+          )
             ? toOpeningLoad(legalEntityId, decoded, rows, recorded[0]!.journalEntryId)
             : yield* Effect.fail(
                 new OpeningStockConflict({
