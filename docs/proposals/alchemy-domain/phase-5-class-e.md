@@ -184,3 +184,18 @@ before that rule's exit:
 4. The phase 4 open items that bind the posting rules, and the workflow-engine ADR before any saga
    on the cluster host.
 5. The cutover gates `alchemy.host-role` and `alchemy.rebuild`; no cutover is in this phase.
+
+## Rule progress
+
+| Rule | Stories | Outcome |
+| --- | --- | --- |
+| `INV-XFER-1` | Done (2026-11-23), model only: `erp/modules/inventory/tests/transfer-saga.story.test.ts` | Not decided: staged on Alchemy or kept on its PostgreSQL transaction is the owner's call |
+
+What the `INV-XFER-1` stories show, for that decision: confirmation is a saga with a compensation per
+deducted line, so a refused line leaves a deduction and its restoration on the stock (production
+leaves nothing) and the transfer is visible as confirming while some lines are deducted; completion
+has no refusal and no compensation; **a retry after a refusal needs its own saga run**, because a
+saga run is keyed and the first key is spent, so the model keys each confirmation by transfer and
+attempt (without it the retried transfer stays confirming for good). Not modelled: reservations,
+costs, the two capabilities, and who is told of a refusal. The sign-off of the warehouse owner on the
+half-applied state is not given.
