@@ -202,7 +202,7 @@ production changes are pure moves that make production call the shared function.
   framework Approvals service, so this decision is **not shared** with it.
 - Mutation checks (inclusive threshold, always submit, repeat records again) each fail a story.
 
-### `PRC-READ-1` (the fail-closed half cannot be stated in the story host)
+### `PRC-READ-1` (not statable in the story host; proven on the cluster host below)
 
 In the port, a read waits for a caller's write through a **query with `waitsFor`** and an `atLeast`
 receipt; if the projection does not catch up the query fails with `ConsistencyTimeout`, typed, with
@@ -215,6 +215,31 @@ for the projection, is already covered by the pilot's `JournalForSource` story. 
 is left to the cluster host (the concurrency proof, deliverable 5) or recorded as pending until
 that proof can run. No story was added, because one that cannot fail closed would claim more than it
 shows.
+
+## Fail-closed read on the Effect Cluster host (recorded 2026-11-23, deliverable 4)
+
+`framework/platform/domain-model/tests/pool/read-pool.test.ts` (opt-in like the claim proof) with
+`read-proof-model.ts` and `pilot-host.v5.ts`: a query that `waitsFor` a projection, and a projection that
+lags 40 s on keys starting with `slow-` (longer than the query's 10 s wait) and is prompt otherwise.
+
+**Observed (one runner, PostgreSQL 19):** the proof passed (1 test, 127 s):
+
+1. Prompt projection: the read `atLeast` the write is answered without a long wait.
+2. Lagging projection: the read `atLeast` the write fails with `ConsistencyTimeout` after waiting between 8
+   and 30 s and returns no value.
+3. The same read without `atLeast` is answered at once: the wait is what the receipt buys.
+4. After the projection catches up, the same read succeeds.
+
+With `waitsFor` removed from the query (a copy), the proof failed at step 2 (the read answered where
+it had to fail), so it can fail.
+
+**What it proves, and what it does not.** It proves the wait and the typed failure with no
+fallback, by timing and by `ConsistencyTimeout`. It does not prove a *value*: the query answers with a
+fixed marker, because the query handler runs in the API service and the projection in a runner, so an
+in-memory store is not shared (my first attempt used one and failed at its first assertion; I did not
+verify that cause, I removed the dependence). It says nothing about a replica of PostgreSQL itself,
+which is what production `PRC-READ-1` is about today; it shows the port's replacement mechanism
+behaves as the rule requires. One runner only, and the host ran as the `postgres` superuser.
 
 ## Concurrency proof on the Effect Cluster host (recorded 2026-11-23, deliverable 5)
 
@@ -240,14 +265,31 @@ accepted where 1 was expected. So the proof can fail.
 - One runner only (8 GB RAM), so it says nothing about two runners racing, a runner being killed, or
   N = 10,000 (phase 0 moved those to phases 4 and 5).
 - The host ran as the `postgres` superuser, so this does not close `alchemy.host-role`.
-- `PRC-READ-1`'s fail-closed half is **still not proven**: this proof does not make a projection lag,
-  so it says nothing about `ConsistencyTimeout`.
+- `PRC-READ-1`'s fail-closed half is proven by a separate test (see "Fail-closed read" above); this
+  proof does not make a projection lag.
 
 **How it was run** (for the next person): the repository copied to ext4 in WSL without
 `node_modules`, `.git`, and `vendor`; `pnpm install --frozen-lockfile --ignore-scripts` there (after
 removing the copied `.agents/skills/pnpm-*` symlinks, which pnpm refuses); `docker swarm init
 --advertise-addr <eth0 address>` (a bare init fails with two interfaces); a disk watchdog that kills
 the run under 1.5 GB free. Free disk went from 5.4 GB to 4.9 GB net (new image layers and build cache stay); the Swarm was left inactive and the copy was removed.
+
+## Exit evidence status (recorded 2026-11-23)
+
+| Exit requirement | Status | Where |
+| --- | --- | --- |
+| Stories for the nine rules naming their IDs | Done (`SAL-CUST-1`, `SAL-PRICE-1`, `SAL-QUOT-3`, `PRC-SUP-1`, `SET-BANK-2`, `ACC-OPEN-1`, `INV-OPEN-4`, `PRC-DRAFT-1`; `PRC-READ-1` on the cluster host, not a story) | Derived ids; policy model; fail-closed read |
+| Derivation functions used by production and by the model | Done where production builds the value; model-only key functions are listed as a gap | Derived ids |
+| Claim protocol written and exercised at each failure point | Done: failed command, reversed command, crash between the steps, in three module copies | Claim protocol |
+| Concurrency proof | Done on one runner (500 overlapping claims); two runners and a killed runner not run | Concurrency proof |
+| `PRC-DRAFT-1` contract change recorded for the owner | Recorded; **not decided** | `PRC-DRAFT-1` |
+| No cutover, no `RULES.md` authority change | Held | Whole phase |
+
+**Open, none blocking the exit as written:** the sweep that frees stale claims is described, not
+built (its schedule and its read of the holder); two-runner and kill tests; `alchemy.host-role` and
+`alchemy.rebuild` (the gates for any cutover); the `PRC-DRAFT-1` API contract decision;
+model-only key functions that protect nothing until an aggregate moves. Owner acceptance of the exit
+evidence is pending.
 
 ## Stop conditions
 

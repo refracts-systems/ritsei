@@ -19,6 +19,7 @@ const modules = {
   v2: () => import("./pilot-host.v2.ts"),
   v3: () => import("./pilot-host.v3.ts"),
   v4: () => import("./pilot-host.v4.ts"),
+  v5: () => import("./pilot-host.v5.ts"),
 }
 
 const version = process.env["PILOT_STACK"] ?? "db"
@@ -34,7 +35,7 @@ const served = (
   })
 
 const program =
-  version === "v1" || version === "v2" || version === "v3" || version === "v4"
+  version === "v1" || version === "v2" || version === "v3" || version === "v4" || version === "v5"
     ? served(modules[version])
     : Effect.asVoid(Effect.provide(ClusterDatabase, Database)).pipe(Effect.as({ service: "none" }))
 
