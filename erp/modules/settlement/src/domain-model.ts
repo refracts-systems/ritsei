@@ -9,9 +9,16 @@ import * as Predicate from "effect/Predicate"
 import * as Schema from "effect/Schema"
 
 import * as Domain from "../../../../framework/foundation/domain-model/mod.ts"
-import { parseBankStatement } from "./bank-statement.ts"
+import { bankStatementInstanceKey, parseBankStatement } from "./bank-statement.ts"
 
+/**
+ * The instance key is `bankStatementInstanceKey` of tenant, legal entity, bank account, and the
+ * checksum of the file, so the same file for the same account is one instance (SET-BANK-2).
+ */
 export const StatementId = Schema.String.pipe(Schema.brand("StatementId"))
+
+export const statementId = (identity: Parameters<typeof bankStatementInstanceKey>[0]) =>
+  StatementId.make(bankStatementInstanceKey(identity))
 
 /** The file breaks the profile at `row` (the header is row 1); nothing is imported. */
 export class InvalidBankStatement extends Domain.Rejection("InvalidBankStatement", {

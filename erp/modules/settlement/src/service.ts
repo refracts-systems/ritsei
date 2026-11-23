@@ -20,7 +20,6 @@ import {
   formatSignedMinor,
   isDatabaseConstraint,
   requireExactMajorToMinor,
-  sha256Hex,
   uuidv7,
   typedKeys,
 } from "../../../../framework/foundation/mod.ts"
@@ -36,7 +35,7 @@ import {
   GeneralLedgerService,
 } from "../../accounting/mod.ts"
 import { BillingService } from "../../billing/mod.ts"
-import { parseBankStatement } from "./bank-statement.ts"
+import { bankStatementChecksum, parseBankStatement } from "./bank-statement.ts"
 import { SettlementCapabilities } from "./capabilities.ts"
 import {
   AgingInput,
@@ -842,9 +841,7 @@ export const makeSettlementService = Effect.gen(function* () {
 
     const lines = yield* parseBankStatement(decoded.content)
 
-    const checksum = yield* sha256Hex(decoded.content).pipe(
-      Effect.catchTag("DocumentHashFailure", Effect.die),
-    )
+    const checksum = yield* bankStatementChecksum(decoded.content)
 
     const { tenantId, legalEntityId, bankAccountId } = decoded
 
