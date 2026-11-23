@@ -18,7 +18,7 @@ import {
 import { AccountingCapabilities } from "./capabilities.ts"
 import { ChartTemplateRegistry, templateById } from "./chart-templates.ts"
 import { buildBalanceSheet, buildProfitAndLoss } from "./financial-statements.ts"
-import { OPENING_CONTROL_ROLES } from "./opening-journal.ts"
+import { OPENING_CONTROL_ROLES, openingJournalReference } from "./opening-journal.ts"
 import {
   ApplyChartTemplateInput,
   BalanceSheetInput,
@@ -422,7 +422,7 @@ export const makeGeneralLedgerServiceFromStore = <R>(
         legalEntityId: decoded.legalEntityId,
         postingDate: decoded.postingDate,
         // One opening journal per legal entity, so the legal entity is the idempotency key.
-        reference: `${OPENING_BALANCE_SOURCE}/${decoded.legalEntityId}`,
+        reference: openingJournalReference(decoded.legalEntityId),
         description: decoded.description ?? null,
         source: { type: OPENING_BALANCE_SOURCE, id: decoded.legalEntityId },
         lines: decoded.lines,
