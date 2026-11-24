@@ -1,8 +1,7 @@
 # RITSEI Design System: Operational Clarity
 
 > **Status:** Canonical. Every rule below is either **Tested** (a named test fails when it breaks) or
-> **Reviewed** (a pull-request reviewer checks it). Anything that is neither is listed in Section 12
-> as not built, so nobody mistakes it for a rule.
+> **Reviewed** (a pull-request reviewer checks it). Anything that is neither is not a rule.
 >
 > **Source of values:** token values, sizes, and radii live in `apps/web/panda.config.ts`, recipes in
 > `apps/web/src/ui/recipes/`, layouts in `apps/web/src/ui/foundations/layout.ts`, and the shell in
@@ -150,12 +149,3 @@ can be stated gets a test that states it, and a token or recipe change is review
 ([ADR-0113](../decisions/0113-retire-frontend-compatibility-probes-and-visual-contract-test.md)).
 Feature teams compose existing patterns and preserve backend authority; they MUST NOT build
 industry-specific dashboard families or bypass the shell.
-
-## 12. Not built
-
-These appear in older documents but have no code, so they are not rules today: operational state
-tokens beyond the five badge tones; density profiles (`comfortable`, `compact`, `dense`); Flexible
-Workspace modes other than `MasterDetail` (`DetailInspector`, `MasterDetailInspector`); a Visual
-Grammar layer, chart renderers, and WebGPU; drag and drop (dnd-kit is not installed); a shell context
-header. The interaction intent types in `apps/web/src/ui/interaction/contract.ts` exist but no feature
-uses them. Building one of these starts with a decision record and a test, then an edit here.
