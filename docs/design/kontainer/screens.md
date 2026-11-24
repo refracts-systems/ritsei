@@ -30,4 +30,5 @@
 Screens whose data is already served come first and need no backend change: the E1 type tag and
 frame (done), then E2 (the chain is done; the header, timeline, and sizes wait for data). E5 as a navigation palette needs no data but is a product choice, because the
 mockup promised object search. E3 and E6 wait for backend decisions; nothing here adds a placeholder
-for them.
+for them. What each of them needs, and what the owner decides, is in
+[`kontainer-backend.md`](../../proposals/kontainer-backend.md).
