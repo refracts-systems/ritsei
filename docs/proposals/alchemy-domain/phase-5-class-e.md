@@ -195,6 +195,7 @@ before that rule's exit:
 | `SET-BANK-3` | Done (2026-11-23), model only: `erp/modules/settlement/tests/bank-match.story.test.ts` | Not decided: staged on Alchemy or kept on its PostgreSQL transaction is the owner's call |
 | `BIL-INV-1` | Done (2026-11-24), model only: `erp/modules/billing/tests/invoiced-quantity.story.test.ts` | Not decided: staged on Alchemy or kept on its PostgreSQL transaction is the owner's call |
 | `BIL-BILL-1` | Done (2026-11-24), model only: `erp/modules/billing/tests/billed-quantity.story.test.ts` | Not decided: staged on Alchemy or kept on its PostgreSQL transaction is the owner's call |
+| `SAL-CREDIT-1`, `SAL-CREDIT-2` | Done (2026-11-24), model only: `erp/modules/sales/tests/credit-exposure.story.test.ts` | Not decided: staged on Alchemy or kept on its PostgreSQL transaction is the owner's call |
 
 What the `INV-XFER-1` stories show, for that decision: confirmation is a saga with a compensation per
 deducted line, so a refused line leaves a deduction and its restoration on the stock (production
@@ -301,3 +302,34 @@ a return after a bill can leave it negative.
 
 Not modelled: tax, the bill date and period, the gapless `BILL/` number (`BIL-DOC-1`), the capability,
 and product descriptions. The business owner's sign-off on the lag is not given.
+
+What the `SAL-CREDIT-1` and `SAL-CREDIT-2` stories show, for that decision (14 stories, 16 mutants
+killed): one exposure aggregate per customer holds the limit, the receivable balance, and a
+reservation per confirmed order, so the limit check and the reservation are one commit and two
+orders for the same customer serialize on it. Confirmation is a saga: reserve credit, claim the
+confirmation key (`SAL-ORDER-2`), mark the order confirmed.
+
+- **The reservation comes first, as the review required.** A credit refusal leaves the order a
+  draft with nothing reserved and nothing claimed, the production answer. A refusal at the key claim
+  releases the reservation, so the exposure records a reservation and its release where production
+  leaves nothing; this answers "what releases a reservation whose confirmation fails".
+- **A retry after a refusal is its own saga run,** as for `INV-XFER-1`: the order carries an attempt
+  number and the saga key is the order and attempt.
+- **A retried confirmation is not checked again,** even after the limit is lowered, as the rule says.
+  No limit never refuses but still reserves, so a limit set later counts those orders.
+- **Committed is reserved totals less invoiced net over those orders, never below zero.** An invoice
+  moves an amount from committed to receivable in one event, so Billing's lag on an invoice never
+  lets an order past the limit.
+- **Receivable lag is safe in one direction only.** A settlement or credit note that arrives late
+  keeps the balance too high: an order may be refused that production would allow. A receivable
+  increase with no reservation behind it (an invoice for no sales order) that arrives late lets an
+  order past the limit, and when it arrives the exposure is over the limit with no rule that
+  unconfirms an order. The accounting owner's written acceptance of that lag is not given; the
+  alternative is to keep the check on PostgreSQL.
+- **True concurrency is not shown.** Commands run one after another; that two simultaneous
+  confirmations cannot both pass is a property of the exposure being one aggregate, proved on the
+  cluster host.
+
+Not modelled: the non-negative limit check, the capability, a customer without a party role or legal
+entity (never gated), cancellation of a confirmed order (and so the release of its reservation), and
+who is told of a refusal.
