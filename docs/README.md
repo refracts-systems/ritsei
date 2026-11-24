@@ -90,7 +90,6 @@
 - [`./deployment/README.md`](./deployment/README.md)
 - [`./operations/authentication.md`](./operations/authentication.md)
 - [`./operations/frontend-capability-coverage.md`](./operations/frontend-capability-coverage.md)
-- [`./operations/frontend-implementation.md`](./operations/frontend-implementation.md)
 
 ## Documentation Governance
 

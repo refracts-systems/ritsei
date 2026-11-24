@@ -7,7 +7,6 @@
 >
 > **Related documents**
 >
-> - Frontend implementation evidence: [`./frontend-implementation.md`](./frontend-implementation.md)
 > - Frontend roadmap: [`../roadmap/frontend.md`](../roadmap/frontend.md)
 > - Authorization architecture:
 >   [`../architecture/authorization.md`](../architecture/authorization.md)
@@ -36,8 +35,7 @@ facts.
 
 ## Evidence
 
-Focused domain/API/browser coverage is recorded in
-[`frontend-implementation.md`](./frontend-implementation.md). The representative browser suite is
+Focused domain/API/browser coverage lives in `tests/frontend/`. The representative browser suite is
 `tests/frontend/process-workflow.test.ts` plus the corresponding workspace workflow tests. The
 current build and response-contract evidence is recorded in
 [`frontend-readiness-evidence.json`](./frontend-readiness-evidence.json).

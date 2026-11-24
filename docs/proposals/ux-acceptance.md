@@ -65,9 +65,8 @@ measurement, not a survey.
 
 ## 4. Proposed `DocumentFlow` pattern
 
-This section is the named semantic problem and usage contract that [Design System
-§11](../architecture/design-system.md#11-governance) asks for. It is a
-proposal until a design-system change adds it to §2.
+This section names the problem and the usage of the proposed pattern. It is a
+proposal until a design-system change adds it to [§2](../architecture/design-system.md#2-product-patterns).
 
 - **Semantic problem.** A business object is one step in a chain of documents. The user needs to see
   the chain and move along it without finding each document through a separate list.
