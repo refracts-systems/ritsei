@@ -38,6 +38,9 @@ Tax at its tax date (the document date, or the credited document's date for a cr
 journal posted at the document date; its open amount starts at its total. A repeated document id
 returns the posted document.
 
+Phase 5 outcome (2026-11-24): this rule stays on its PostgreSQL transaction (ADR-0124). The staged
+Alchemy model is test-only evidence, not a plan to move it.
+
 ### `BIL-INV-1` A customer invoice bills what was delivered and not yet invoiced
 
 `invoiceSalesOrder` (`billing.customer_invoice.create`) locks the order, requires it to be confirmed
