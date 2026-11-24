@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>RITSEI Kontainer, Manifest</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F4F1EA;color:#1B2638;font-family:'IBM Plex Sans',Arial,sans-serif}
+.minc{font-family:'Shippori Mincho',Georgia,serif}
+.mono{font-family:'IBM Plex Mono','Courier New',monospace}
+.bar{background:#1B2638;display:flex;flex-wrap:wrap;align-items:center;gap:20px;padding:12px 28px}
+.brand{font:700 22px 'Shippori Mincho',Georgia,serif;letter-spacing:6px;color:#F4F1EA}
+a[href],button,label[for],summary,select{cursor:pointer}
+button:disabled{cursor:not-allowed}
+.cmd{flex:1 1 320px;min-height:44px;box-sizing:border-box;background:#2A3548;color:#F4F1EA;font:500 15px 'IBM Plex Mono',monospace;padding:0 16px;display:flex;align-items:center;border-radius:4px;text-decoration:none}
+.cmd:hover{background:#34425A}
+.cmd:focus-visible{outline:3px solid #E06A4E;outline-offset:2px}
+.b:active{transform:translateY(1px)}
+.nv{color:#B4BDC9;text-decoration:none;font:500 14px 'IBM Plex Mono',monospace;min-height:44px;display:inline-flex;align-items:center}
+.nv:hover{color:#F4F1EA}
+.node{font:inherit;text-align:left;cursor:pointer;color:#1B2638;background:#FBFAF6;border:1px solid #1B2638;padding:12px 18px;min-height:64px;min-width:140px;transition:transform .12s ease-out}
+.node:hover{transform:translateY(-3px)}
+.node.done{background:#1B2638;color:#F4F1EA}
+.node.now{border:2px solid #B5402B}
+.node.sel{box-shadow:0 0 0 3px #E06A4E}
+.node:focus-visible,.b:focus-visible,.seg:focus-visible,.nv:focus-visible{outline:3px solid #E06A4E;outline-offset:3px}
+.b{font:600 15px 'IBM Plex Sans',sans-serif;min-height:44px;padding:0 20px;border-radius:4px;cursor:pointer;background:#1B2638;color:#F4F1EA;border:1px solid #1B2638}
+.b:hover{background:#B5402B;border-color:#B5402B}
+.seg{font:600 14px 'IBM Plex Mono',monospace;min-height:44px;padding:0 14px;background:#FBFAF6;color:#1B2638;border:1px solid #1B2638;margin-left:-1px;cursor:pointer}
+.seg.on{background:#1B2638;color:#F4F1EA}
+@keyframes land{0%{transform:translateY(-12px);opacity:0}100%{transform:none;opacity:1}}
+.land{animation:land .3s cubic-bezier(.2,.8,.2,1) both}
+@media (prefers-reduced-motion:reduce){.land{animation:none}.node{transition:none}}
+</style>
+</helmet>
+<div style="min-height:1000px">
+<header class="bar"><span class="brand">RITSEI</span><a class="cmd" href="KDermaga.dc.html">Ctrl K · cari objek di Dermaga</a><span style="color:#F4F1EA;font-size:15px">PT Maju Jaya · Jakarta</span><nav aria-label="Layar" style="display:flex;gap:16px"><a class="nv" href="KCari.dc.html">Cari</a><a class="nv" href="KTutup.dc.html">Tutup hari</a><a class="nv" href="KDermaga.dc.html">Dermaga</a><a class="nv" href="KYard.dc.html">Yard</a><a class="nv" href="KStudio.dc.html">Studio</a></nav></header>
+
+<main style="max-width:1280px;margin:0 auto;padding:32px 28px 56px">
+<div style="font-size:16px;font-weight:600;color:#A33925">02 · Manifest</div>
+<h1 class="minc" style="margin:8px 0 22px;font-size:40px;font-weight:600;line-height:1.15">Setiap objek punya manifest yang sama bentuknya</h1>
+
+<div style="display:flex;flex-wrap:wrap;gap:36px;align-items:flex-start">
+<section style="flex:2 1 720px;min-width:0;background:#FBFAF6;border:1px solid #1B2638" aria-label="Manifest SO-JKT-0412">
+<div style="display:flex;flex-wrap:wrap;align-items:stretch;border-bottom:1px solid #1B2638">
+<div style="border-left:10px solid #AE522C;border-right:1px solid #D9D3C5;padding:18px 26px"><div class="mono" style="font-size:14px;font-weight:700;color:#AE522C">SAL · Penjualan</div><div class="mono" style="font-size:38px;font-weight:700;line-height:1.1">SO·JKT·0412</div></div>
+<div style="flex:1 1 320px;display:grid;grid-template-columns:1fr 1fr;gap:12px 28px;padding:18px 26px">
+<div><div class="mono" style="font-size:12px;color:#5C636E">Pemilik</div><div style="font-size:17px;font-weight:600">Rina A. · Sales</div></div>
+<div><div class="mono" style="font-size:12px;color:#5C636E">Status</div><div style="font-size:17px;font-weight:600">{{status}}</div></div>
+<div><div class="mono" style="font-size:12px;color:#5C636E">Nilai</div><div class="mono" style="font-size:17px;font-weight:700">Rp 412.000.000</div></div>
+<div><div class="mono" style="font-size:12px;color:#5C636E">Customer</div><div style="font-size:17px;font-weight:600">PT Abadi Sentosa</div></div>
+</div>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:0;padding:22px 26px;border-bottom:1px solid #D9D3C5" role="group" aria-label="Rantai relasi">
+<sc-for list="{{chain}}" as="c" hint-placeholder-count="4">
+<button class="node {{c.cls}}" type="button" onClick="{{ c.pick }}" aria-pressed="{{ c.sel }}"><span class="mono" style="display:block;font-size:14px;font-weight:700">{{c.code}}</span><span style="display:block;font-size:14px;color:{{c.sub}}">{{c.state}}</span></button>
+<span style="flex:0 0 28px;height:1px;background:#1B2638"></span>
+</sc-for>
+</div>
+<div class="land" style="padding:16px 26px;background:#F4F1EA;border-bottom:1px solid #D9D3C5;font-size:16px;line-height:1.5"><b class="mono" style="font-size:14px">{{pick.code}}</b> · {{pick.text}}</div>
+<sc-if value="{{ canInvoice }}" hint-placeholder-val="{{ true }}"><div style="padding:16px 26px;border-bottom:1px solid #D9D3C5"><button class="b" type="button" onClick="{{ makeInvoice }}">Buat faktur dari DO-0981</button><span style="font-size:14px;color:#4A5260;margin-left:14px">Dua dari tiga barang yang sudah dikirim</span></div></sc-if>
+
+<div style="padding:18px 26px">
+<div class="mono" style="font-size:12px;color:#5C636E;margin-bottom:8px">Timeline terpadu</div>
+<sc-for list="{{timeline}}" as="t" hint-placeholder-count="3">
+<div class="land" style="display:flex;gap:20px;padding:6px 0;font-size:16px"><span class="mono" style="flex:0 0 150px;font-size:14px;color:#5C636E">{{t.time}}</span><span style="flex:1">{{t.what}}</span></div>
+</sc-for>
+</div>
+</section>
+
+<aside style="flex:1 1 320px;min-width:280px" aria-label="Satu objek, empat ukuran">
+<div class="mono" style="font-size:13px;color:#A33925;margin-bottom:10px;font-weight:600">Satu objek, empat ukuran</div>
+<div role="group" aria-label="Ukuran" style="display:flex;flex-wrap:wrap">
+<sc-for list="{{sizes}}" as="s" hint-placeholder-count="4"><button class="seg {{s.cls}}" type="button" aria-pressed="{{ s.on }}" onClick="{{ s.pick }}">{{s.label}}</button></sc-for>
+</div>
+<div style="min-height:220px;display:flex;align-items:center;justify-content:center;background:#E7E2D6;border:1px solid #D9D3C5;margin-top:12px;padding:20px">
+<sc-if value="{{ lod.titik }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;align-items:center;gap:10px"><span style="width:28px;height:28px;border-radius:14px;background:#B5402B;display:inline-block"></span><span style="font-size:14px;color:#4A5260">Di yard, ribuan sekaligus</span></div></sc-if>
+<sc-if value="{{ lod.strip }}" hint-placeholder-val="{{ false }}"><div style="width:100%;background:#FBFAF6;border:1px solid #1B2638;border-left:10px solid #AE522C;padding:10px 14px;display:flex;justify-content:space-between;gap:10px"><b class="mono" style="font-size:14px">SO·JKT·0412</b><span style="font-size:14px">Rp 412 jt</span></div></sc-if>
+<sc-if value="{{ lod.kartu }}" hint-placeholder-val="{{ false }}"><div style="width:100%;background:#FBFAF6;border:1px solid #1B2638;border-top:10px solid #AE522C;padding:14px 16px"><b class="mono" style="font-size:16px">SO·JKT·0412</b><div style="font-size:15px;margin-top:6px">PT Abadi Sentosa</div><div style="font-size:14px;color:#4A5260;margin-top:2px">Terkirim sebagian · Rp 412.000.000</div></div></sc-if>
+<sc-if value="{{ lod.manifest }}" hint-placeholder-val="{{ false }}"><div style="width:100%;background:#FBFAF6;border:1px solid #1B2638;border-left:10px solid #AE522C;padding:14px 16px;font-size:14px;line-height:1.6"><b class="mono" style="font-size:16px">SO·JKT·0412</b><br>Pemilik Rina A. · Customer PT Abadi Sentosa<br>Rantai SO, DO, FKT, BAYAR · timeline 3 kejadian</div></sc-if>
+</div>
+<div style="font-size:14px;line-height:1.5;color:#4A5260;margin-top:12px">{{lod.note}}</div>
+</aside>
+</div>
+</main>
+<footer style="max-width:1280px;margin:0 auto;padding:0 28px 40px"><div class="mono" style="font-size:13px;color:#4A5260">[DATA CONTOH] objek, orang, dan nominal di layar ini dari paparan Kontainer atau karangan, bukan data nyata.</div></footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { sel: 1, invoiced: false, size: 3 };
+  }
+  renderVals() {
+    const { sel, invoiced, size } = this.state;
+    const nodes = [
+      { code: 'SO-0412', text: 'Disetujui. Dibuat dari penawaran QT-0377 pada 21 Nov, diskon 12% disetujui Budi H.', done: true },
+      { code: 'DO-0981', text: 'Dikirim dari Gudang Cikarang: 2 dari 3 barang sudah berangkat, sisanya menunggu stok.', now: !invoiced },
+      { code: 'FKT-1120', text: invoiced ? 'Faktur dibuat dari DO-0981: hanya barang yang sudah dikirim, harga dan pajak dari order.' : 'Masih draf. Akan dibuat dari barang yang sudah dikirim.', done: invoiced, now: invoiced },
+      { code: 'BAYAR', text: 'Belum ada pembayaran. Muncul di sini begitu mutasi bank cocok dengan faktur.' }
+    ];
+    const states = ['Disetujui', invoiced ? '2 dari 3 dikirim' : '2 dari 3 dikirim', invoiced ? 'Terbit' : 'Draf', 'Belum'];
+    const chain = nodes.map((n, i) => ({
+      code: n.code, state: states[i],
+      cls: (n.done ? 'done ' : '') + (n.now ? 'now ' : '') + (sel === i ? 'sel' : ''),
+      sub: n.done ? '#B4BDC9' : n.now ? '#A33925' : '#4A5260',
+      sel: sel === i,
+      pick: () => this.setState({ sel: i })
+    }));
+    const timeline = [
+      ...(invoiced ? [{ time: '24 Nov 10:30', what: 'Faktur FKT-1120 dibuat dari DO-0981 oleh Rina A.' }] : []),
+      { time: '24 Nov 09:12', what: 'Surat jalan DO-0981 dikirim dari Gudang Cikarang' },
+      { time: '22 Nov 15:40', what: 'Diskon 12% disetujui oleh Budi H. (Manajer Sales)' },
+      { time: '21 Nov 10:05', what: 'SO dibuat dari penawaran QT-0377' }
+    ];
+    const labels = ['Titik', 'Strip', 'Kartu', 'Manifest'];
+    const notes = ['Titik: ukuran paling kecil, untuk yard dengan ribuan objek.', 'Strip: satu baris, untuk dermaga.', 'Kartu: pratinjau di panel samping.', 'Manifest: halaman objek lengkap seperti di kiri.'];
+    return {
+      chain, timeline,
+      pick: { code: nodes[sel].code, text: nodes[sel].text },
+      status: invoiced ? 'Terkirim sebagian, difaktur' : 'Terkirim sebagian',
+      canInvoice: !invoiced,
+      makeInvoice: () => this.setState({ invoiced: true, sel: 2 }),
+      sizes: labels.map((l, i) => ({ label: l, on: size === i, cls: size === i ? 'on' : '', pick: () => this.setState({ size: i }) })),
+      lod: { titik: size === 0, strip: size === 1, kartu: size === 2, manifest: size === 3, note: notes[size] }
+    };
+  }
+}
+</script>
+</body>
+</html>
