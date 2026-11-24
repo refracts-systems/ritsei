@@ -169,42 +169,41 @@ phase turns each objection into an exit criterion.
 | --- | --- | --- | --- |
 | 2026-11-23 | Review before owner acceptance | Revised | Removed the rehearsed cutover (unmet gates; the host cannot share a transaction with the ledger); added prerequisites and what phases 1 to 4 already model; narrowed the `BIL-DOC-1` question (allocate only after a recorded fact); made the trackers aggregates; ordered the credit reservation before the confirmation; stated where each concurrency proof runs; corrected the status |
 | 2026-11-23 | Owner | Accepted | The document and its revisions, including the removal of the cutover |
-| 2026-11-24 | Owner | Exit evidence accepted | The stories for the nine rules (`INV-XFER-1`, `SAL-DLV-2`, `PRC-RET-1`, `SET-BANK-3`, `BIL-INV-1`, `BIL-BILL-1`, `SAL-CREDIT-1`, `SAL-CREDIT-2`, `BIL-DOC-1`). Model only: no cutover. No rule has an outcome; the open items stay open |
+| 2026-11-24 | Owner | Exit evidence accepted | The stories for the nine rules (`INV-XFER-1`, `SAL-DLV-2`, `PRC-RET-1`, `SET-BANK-3`, `BIL-INV-1`, `BIL-BILL-1`, `SAL-CREDIT-1`, `SAL-CREDIT-2`, `BIL-DOC-1`). Model only: no cutover |
+| 2026-11-24 | Owner | Outcome decided | All nine rules (`INV-XFER-1`, `SAL-DLV-2`, `PRC-RET-1`, `SET-BANK-3`, `BIL-INV-1`, `BIL-BILL-1`, `SAL-CREDIT-1`, `SAL-CREDIT-2`, `BIL-DOC-1`) stay on their PostgreSQL transactions. No move, no cutover; the staged models stay as test-only evidence. Each rule's `RULES.md` records it |
 
-Two acceptances are recorded above. The document was accepted on 2026-11-23 as the plan, and the
-stories for the nine rules on 2026-11-24. Neither decides a per-rule question, and no rule has an
-outcome yet. Each of these needs its own owner decision or evidence, rule by rule, before that
-rule's exit:
+The document was accepted on 2026-11-23 as the plan, the stories for the nine rules on 2026-11-24,
+and the same day the owner decided the outcome of every rule: **Keep**, each stays on its
+PostgreSQL transaction, following the default in `AGENTS.md` that PostgreSQL does everything until a
+named user's measured need says otherwise. Nothing moves and no cutover is planned. The per-rule
+choices and their prices are in [`phase-5-decision-sheet.md`](./phase-5-decision-sheet.md).
 
-The per-rule choices and their prices are laid out in [`phase-5-decision-sheet.md`](./phase-5-decision-sheet.md).
+What stays open, because it matters only if a rule is later reopened by a named, measured need:
 
-1. For each of the 9 rules: staged on Alchemy (stories, the business owner's sign-off, the accounting
-   owner's acceptance where it posts) or kept on its PostgreSQL transaction. Every outcome column
-   reads "Not decided".
-2. The step order of `SAL-DLV-2` (variant A or B), and whether Billing invoices only completed
+1. The step order of `SAL-DLV-2` (variant A or B), and whether Billing invoices only completed
    deliveries.
-3. Whether a legal billing document may be recorded and briefly unnumbered and unposted
+2. Whether a legal billing document may be recorded and briefly unnumbered and unposted
    (`BIL-DOC-1`), and the gap policy of the series.
-4. The lag a tracker or exposure may have (`BIL-INV-1`, `BIL-BILL-1` including its return-lag
+3. The lag a tracker or exposure may have (`BIL-INV-1`, `BIL-BILL-1` including its return-lag
    window, and `SAL-CREDIT-1`), the accounting owner's written acceptance of receivable lag for
    credit exposure, and whether releasing a reservation by compensation is acceptable.
-5. The phase 4 open items that bind the posting rules, the workflow-engine ADR before any saga on the
+4. The phase 4 open items that bind the posting rules, the workflow-engine ADR before any saga on the
    cluster host, and issue #122.
-6. The cutover gates `alchemy.host-role` and `alchemy.rebuild`; no cutover is in this phase, and
-   true concurrency is proved on the cluster host, not by stories.
+5. The cutover gates `alchemy.host-role` and `alchemy.rebuild`; true concurrency is proved on the
+   cluster host, not by stories.
 
 ## Rule progress
 
 | Rule | Stories | Outcome |
 | --- | --- | --- |
-| `INV-XFER-1` | Done (2026-11-23), model only: `erp/modules/inventory/tests/transfer-saga.story.test.ts` | Not decided: staged on Alchemy or kept on its PostgreSQL transaction is the owner's call |
-| `SAL-DLV-2` | Done (2026-11-23), model only: `framework/foundation/domain-model/tests/delivery.story.test.ts`, both step orders | Not decided: step order and staged-or-kept are the owner's call |
-| `PRC-RET-1` | Done (2026-11-23), model only: `erp/modules/procurement/tests/return-staging.story.test.ts` | Not decided: staged on Alchemy or kept on its PostgreSQL transaction is the owner's call |
-| `SET-BANK-3` | Done (2026-11-23), model only: `erp/modules/settlement/tests/bank-match.story.test.ts` | Not decided: staged on Alchemy or kept on its PostgreSQL transaction is the owner's call |
-| `BIL-INV-1` | Done (2026-11-24), model only: `erp/modules/billing/tests/invoiced-quantity.story.test.ts` | Not decided: staged on Alchemy or kept on its PostgreSQL transaction is the owner's call |
-| `BIL-BILL-1` | Done (2026-11-24), model only: `erp/modules/billing/tests/billed-quantity.story.test.ts` | Not decided: staged on Alchemy or kept on its PostgreSQL transaction is the owner's call |
-| `SAL-CREDIT-1`, `SAL-CREDIT-2` | Done (2026-11-24), model only: `erp/modules/sales/tests/credit-exposure.story.test.ts` | Not decided: staged on Alchemy or kept on its PostgreSQL transaction is the owner's call |
-| `BIL-DOC-1` | Done (2026-11-24), model only: `erp/modules/billing/tests/document-numbering.story.test.ts` | Not decided: staged on Alchemy or kept on its PostgreSQL transaction is the owner's call |
+| `INV-XFER-1` | Done (2026-11-23), model only: `erp/modules/inventory/tests/transfer-saga.story.test.ts` | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
+| `SAL-DLV-2` | Done (2026-11-23), model only: `framework/foundation/domain-model/tests/delivery.story.test.ts`, both step orders | Kept on its PostgreSQL transaction (owner, 2026-11-24); the step order is moot while kept |
+| `PRC-RET-1` | Done (2026-11-23), model only: `erp/modules/procurement/tests/return-staging.story.test.ts` | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
+| `SET-BANK-3` | Done (2026-11-23), model only: `erp/modules/settlement/tests/bank-match.story.test.ts` | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
+| `BIL-INV-1` | Done (2026-11-24), model only: `erp/modules/billing/tests/invoiced-quantity.story.test.ts` | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
+| `BIL-BILL-1` | Done (2026-11-24), model only: `erp/modules/billing/tests/billed-quantity.story.test.ts` | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
+| `SAL-CREDIT-1`, `SAL-CREDIT-2` | Done (2026-11-24), model only: `erp/modules/sales/tests/credit-exposure.story.test.ts` | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
+| `BIL-DOC-1` | Done (2026-11-24), model only: `erp/modules/billing/tests/document-numbering.story.test.ts` | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
 
 What the `INV-XFER-1` stories show, for that decision: confirmation is a saga with a compensation per
 deducted line, so a refused line leaves a deduction and its restoration on the stock (production
