@@ -154,7 +154,7 @@ power evidence.
 - Canvas or WebGPU becomes the only semantic or interactive representation;
 - accessibility is postponed until after feature completion;
 - a permanent rendering loop is used for static scenes; or
-- SolidStart/SSR is introduced without its separately approved requirement.
+- a server-side frontend feature (server functions, SSR) is introduced without a concrete requirement and an ADR.
 
 ## Registered Track 3: Production Profile Readiness
 
