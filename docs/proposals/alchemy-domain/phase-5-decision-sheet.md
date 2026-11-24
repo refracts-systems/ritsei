@@ -1,6 +1,6 @@
 # Phase 5 Decision Sheet: Class E Outcomes
 
-> **Status:** For the owner's decision; nothing here is decided
+> **Status:** Being decided one rule at a time; the decision record shows what is decided
 >
 > **Owner document:** [`phase-5-class-e.md`](./phase-5-class-e.md) holds the designs, stories, and
 > findings. This sheet only lists what the owner must decide per rule and what each choice costs.
@@ -47,7 +47,7 @@ change per rule.
 
 | Rule | Decision (Keep or Stage) | Decided by | Date | Condition |
 | --- | --- | --- | --- | --- |
-| `BIL-INV-1` |  |  |  |  |
+| `BIL-INV-1` | Keep | Owner | 2026-11-24 | A named measured need reopens it |
 | `BIL-BILL-1` |  |  |  |  |
 | `SAL-CREDIT-1`, `SAL-CREDIT-2` |  |  |  |  |
 | `BIL-DOC-1` |  |  |  |  |

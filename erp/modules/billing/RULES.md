@@ -47,6 +47,9 @@ customer invoices, at the order line's price and tax code; with nothing left it 
 journal debits `receivable` with the total and credits `revenue` with the subtotal and `output_tax`
 with the tax.
 
+Phase 5 outcome (2026-11-24): this rule stays on its PostgreSQL transaction (ADR-0124). The staged
+Alchemy model is test-only evidence, not a plan to move it.
+
 ### `BIL-SET-1` A settlement never takes more than the open amount
 
 `applySettlement` (`billing.settlement.apply`) lowers a document's open amount by the settled amount
