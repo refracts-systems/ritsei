@@ -10,7 +10,7 @@ is the machine-readable list of what they use.
 
 ## What is here
 
-- `mockups/*.dc.html` are the source of each screen in the canvas format. They are not plain HTML:
+- `mockups/*.dc.html.txt` are the source of each screen in the canvas format, with a `.txt` extension so code analysis does not treat their `support.js` script as an unresolved import. Remove the `.txt` to use one. They are not plain HTML:
   `{{ }}` holes and `<x-dc>` need the canvas runtime (`support.js`), so they do not open in a
   browser by themselves. Read them for markup and values, or open the canvas.
 - `tokens.json` records colors, fonts, sizes, and radii observed in those files, the dark values the
