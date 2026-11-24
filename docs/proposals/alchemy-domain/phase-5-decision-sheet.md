@@ -1,6 +1,6 @@
 # Phase 5 Decision Sheet: Class E Outcomes
 
-> **Status:** Being decided one rule at a time; the decision record shows what is decided
+> **Status:** Decided on 2026-11-24: Keep for all nine rules, recorded one rule per change (see the decision record)
 >
 > **Owner document:** [`phase-5-class-e.md`](./phase-5-class-e.md) holds the designs, stories, and
 > findings. This sheet only lists what the owner must decide per rule and what each choice costs.
@@ -54,4 +54,4 @@ change per rule.
 | `SAL-DLV-2` | Keep | Owner | 2026-11-24 | A named measured need reopens it |
 | `PRC-RET-1` | Keep | Owner | 2026-11-24 | A named measured need reopens it |
 | `INV-XFER-1` | Keep | Owner | 2026-11-24 | A named measured need reopens it |
-| `SET-BANK-3` |  |  |  |  |
+| `SET-BANK-3` | Keep | Owner | 2026-11-24 | A named measured need reopens it |
