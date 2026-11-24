@@ -34,14 +34,14 @@ The look avoids gradients, glass, glow, texture, nested cards, and decorative ma
 Patterns are shared compositions for recurring jobs, in `apps/web/src/ui/patterns/`. Pick the closest
 one, or compose something else when none fits.
 
-| User job | Pattern | Typical shape |
-|---|---|---|
-| Scan or compare records beside a selection | `MasterDetail` | Collection and selection stay in view; not for deep editing |
-| Inspect, create, or deeply edit one object | `EntityWorkspace` | Identity, lifecycle, evidence, and a focused working area |
-| Understand and advance a situation | `OperationalWorkspace` | State, impact, evidence, and history legible; not a dashboard per route |
-| Investigate a blocked or anomalous state | `ExceptionInvestigation` | What happened, why, scope, and safe next actions |
-| Act on many records | `BulkOperation` | Explicit selected set, preview, confirmation, per-result outcome |
-| Offer actions in context | `CommandSurface` | Named, context-bound commands; not navigation or authorization |
+| User job                                   | Pattern                  | Typical shape                                                           |
+| ------------------------------------------ | ------------------------ | ----------------------------------------------------------------------- |
+| Scan or compare records beside a selection | `MasterDetail`           | Collection and selection stay in view; not for deep editing             |
+| Inspect, create, or deeply edit one object | `EntityWorkspace`        | Identity, lifecycle, evidence, and a focused working area               |
+| Understand and advance a situation         | `OperationalWorkspace`   | State, impact, evidence, and history legible; not a dashboard per route |
+| Investigate a blocked or anomalous state   | `ExceptionInvestigation` | What happened, why, scope, and safe next actions                        |
+| Act on many records                        | `BulkOperation`          | Explicit selected set, preview, confirmation, per-result outcome        |
+| Offer actions in context                   | `CommandSurface`         | Named, context-bound commands; not navigation or authorization          |
 
 `Settings` and `Approval` are also patterns. A good screen lets the user tell where they are, what
 needs attention, what they can do, and what changed. On narrow viewports, drop columns and keep
@@ -69,11 +69,14 @@ the `contentActive` fill and a filled icon rather than the accent.
 Components consume semantic tokens from `apps/web/panda.config.ts` rather than primitive palettes or
 raw colors: surfaces (`canvas`, `content`, `contentSubtle`, `contentHover`, `contentActive`), text (`text`,
 `muted`), borders (`boundary`, `boundaryControl`, `boundaryStrong`), commands (`action`, `actionHover`,
-`onAction`, `danger`), and the accent (`accent`, `accentSubtle`, `link`, `focusRing`, `focusHalo`).
+`onAction`, `danger`), the surface line (`frame`), the object types (`type.sal`, `type.prc`,
+`type.inv`, `type.fin`, `type.hrd`, with `onType` for the letters), and the accent (`accent`, `accentSubtle`, `link`, `focusRing`, `focusHalo`).
 Every token has a light and a dark value; dark mode is defined, not inverted.
 
 - The accent is for links, focus, and selection only: not buttons, headings, the current navigation
   destination, or large fills.
+- An object type is shown with `TypeTag`: three letters on a solid fill, so the letters, not the
+  color, name the type. A tag appears only where the record carries a type that the application knows.
 - Status uses `Badge` with five tones (`neutral`, `success`, `warning`, `danger`, `info`); the label
   text is the status and the tint and dot are a second channel. Color alone should not carry status.
 - `disabled` means unavailable, not unauthorized; the backend denies unauthorized actions.
@@ -89,7 +92,7 @@ Use the named text styles in `apps/web/src/ui/foundations/typography.ts` (`pageT
 Shippori Mincho sets titles and display figures, and IBM Plex Mono is for identifiers only; numeric columns are right-aligned with tabular numerals;
 labels and headings are sentence case. Spacing, radii, and sizes come from the Panda scale. Surfaces and panels are square and controls are 4px, as in the Kontainer
 mockups ([ADR-0127](../decisions/0127-adopt-the-kontainer-visual-language.md)). Depth comes from
-tone and a 1px hairline; only menus and dialogs carry a shadow; the `surface` recipe has tones `default`,
+tone and a 1px line (`frame`, the ink line, on the default and flush tones; `boundary`, the hairline, on the subtle tone); only menus and dialogs carry a shadow; the `surface` recipe has tones `default`,
 `subtle`, and `flush`.
 
 The Kontainer screens that guide new work, and which of them exist, are mapped in

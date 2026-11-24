@@ -29,7 +29,7 @@ export interface DataTableProps<Row> {
 }
 
 const styles = {
-  end: css({ textAlign: "end" }),
+  end: css({ textAlign: "end", whiteSpace: "nowrap" }),
 }
 
 const cellClass = (align: DataColumn<unknown>["align"]) =>

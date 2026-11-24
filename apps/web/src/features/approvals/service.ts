@@ -10,6 +10,7 @@ import {
 } from "../../shared/api.ts"
 import { UserAccount, userAccountRoutes } from "../../shared/contracts/generated/identity.ts"
 import { Amount, Uuid } from "../../shared/schemas.ts"
+import type { ObjectType } from "../../ui/primitives/type-tag.tsx"
 
 /** Browser view of the Approvals transport contract served by the runtime API. */
 export const ApprovalStatus = Schema.Literals(["pending", "approved", "rejected"])
@@ -84,6 +85,17 @@ const subjectLabels = new Map([
 
 export const subjectLabel = (subjectType: string): string =>
   subjectLabels.get(subjectType) ?? subjectType
+
+/** The object type shown beside a subject, by the module that owns it. */
+const subjectTags = new Map<string, ObjectType>([
+  ["procurement", "PRC"],
+  ["billing", "FIN"],
+  ["sales", "SAL"],
+  ["inventory", "INV"],
+])
+
+export const subjectTag = (subjectType: string): ObjectType | undefined =>
+  subjectTags.get(subjectType.split(".")[0] ?? "")
 
 /** The workspace page of a subject, when one exists for its type. */
 export const subjectHref = (subjectType: string, subjectId: string): string | undefined =>

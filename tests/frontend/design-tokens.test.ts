@@ -100,6 +100,20 @@ describe("design tokens", () => {
         }
       })
 
+      it("keeps the surface frame, and the light text on every object type, above their minimums", () => {
+        for (const surface of ["canvas", "content"]) {
+          const frame = contrast(color("frame"), color(surface))
+
+          assert.isAtLeast(frame, 3, `frame on ${surface} is ${frame.toFixed(2)}`)
+        }
+
+        for (const type of ["sal", "prc", "inv", "fin", "hrd"]) {
+          const ratio = contrast(color("onType"), color(`type.${type}`))
+
+          assert.isAtLeast(ratio, 4.5, `onType on type.${type} is ${ratio.toFixed(2)}`)
+        }
+      })
+
       it("keeps input borders, commands, and status text above their minimums", () => {
         for (const surface of ["canvas", "content"]) {
           const border = contrast(color("boundaryStrong"), color(surface))

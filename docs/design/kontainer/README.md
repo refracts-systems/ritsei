@@ -33,6 +33,9 @@ work page with the Kontainer palette, taken by a throwaway Playwright script aga
 with sample approval data. They are evidence of what the palette change produced, not a baseline:
 nothing compares against them.
 
+`app/approvals-light.png` and `app/approvals-dark.png` show the Approvals queue with the type tags (PRC,
+FIN) and the ink frame, taken the same way with two sample requests.
+
 ## The adopted tokens are guarded
 
 `tokens.json` has an `adopted` section holding the semantic colors the application ships, as
