@@ -50,7 +50,7 @@ when every rule it carries has passed. The ledger stays outside this track.
 | `SAL-CREDIT-1`, `SAL-CREDIT-2` | A credit exposure aggregate per customer that decides the limit check and holds the reservation for a confirmed order, committed before the order is confirmed so a refusal still leaves the order unchanged; it receives receivables from Billing as events | Accept a lag between an invoice and its exposure, or reserve exposure at confirmation? What releases a reservation whose confirmation fails? |
 | `BIL-DOC-1` | The document records first; a number sequence allocates only for a recorded document (the `DO/` model of phase 4), then tax and journal follow, each idempotent | Accept a document that is recorded but briefly unnumbered and unposted? |
 | `BIL-INV-1` | Billing owns an invoiced-quantity tracker per sales order, an **aggregate** (not a projection) fed by delivery events through a policy; the invoice decision reads it | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
-| `BIL-BILL-1` | Billing owns a billed-quantity tracker per purchase order, an **aggregate** fed by receipt and return events; the bill decision reads it | Same lag for supplier bills |
+| `BIL-BILL-1` | Billing owns a billed-quantity tracker per purchase order, an **aggregate** fed by receipt and return events; the bill decision reads it | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
 | `SET-BANK-3` | Match capacity as one aggregate per line and payment pair, or a reservation saga | Accept a compensated match when two people match at once? |
 | `PRC-RET-1` | Return recorded, then stock issued; issue can fail if stock was consumed | Accept a recorded return that is later cancelled? |
 | `INV-XFER-1` | Saga over every source and destination stock item | Accept a transfer that is visible half applied, then compensated? |
@@ -171,6 +171,7 @@ phase turns each objection into an exit criterion.
 | 2026-11-23 | Owner | Accepted | The document and its revisions, including the removal of the cutover |
 | 2026-11-24 | Owner | Exit evidence accepted | The stories for the nine rules (`INV-XFER-1`, `SAL-DLV-2`, `PRC-RET-1`, `SET-BANK-3`, `BIL-INV-1`, `BIL-BILL-1`, `SAL-CREDIT-1`, `SAL-CREDIT-2`, `BIL-DOC-1`). Model only: no cutover. No rule has an outcome; the open items stay open |
 | 2026-11-24 | Owner | Outcome decided | `BIL-INV-1` stays on its PostgreSQL transaction (Keep). No move, no cutover; the staged model stays as test-only evidence. The `RULES.md` records it |
+| 2026-11-24 | Owner | Outcome decided | `BIL-BILL-1` stays on its PostgreSQL transaction (Keep). No move, no cutover; the staged model stays as test-only evidence. The `RULES.md` records it |
 
 Two acceptances are recorded above. The document was accepted on 2026-11-23 as the plan, and the
 stories for the nine rules on 2026-11-24. Neither decides a per-rule question, and no rule has an

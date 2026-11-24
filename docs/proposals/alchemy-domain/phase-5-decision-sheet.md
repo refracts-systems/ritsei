@@ -48,7 +48,7 @@ change per rule.
 | Rule | Decision (Keep or Stage) | Decided by | Date | Condition |
 | --- | --- | --- | --- | --- |
 | `BIL-INV-1` | Keep | Owner | 2026-11-24 | A named measured need reopens it |
-| `BIL-BILL-1` |  |  |  |  |
+| `BIL-BILL-1` | Keep | Owner | 2026-11-24 | A named measured need reopens it |
 | `SAL-CREDIT-1`, `SAL-CREDIT-2` |  |  |  |  |
 | `BIL-DOC-1` |  |  |  |  |
 | `SAL-DLV-2` |  |  |  |  |
