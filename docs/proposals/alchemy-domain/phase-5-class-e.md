@@ -46,14 +46,14 @@ when every rule it carries has passed. The ledger stays outside this track.
 
 | Rule | Design on Alchemy | Question for the owner |
 | --- | --- | --- |
-| `SAL-DLV-2` | Saga over delivery and stock items; the pilot measured both step orders | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
-| `SAL-CREDIT-1`, `SAL-CREDIT-2` | A credit exposure aggregate per customer that decides the limit check and holds the reservation for a confirmed order, committed before the order is confirmed so a refusal still leaves the order unchanged; it receives receivables from Billing as events | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
-| `BIL-DOC-1` | The document records first; a number sequence allocates only for a recorded document (the `DO/` model of phase 4), then tax and journal follow, each idempotent | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
-| `BIL-INV-1` | Billing owns an invoiced-quantity tracker per sales order, an **aggregate** (not a projection) fed by delivery events through a policy; the invoice decision reads it | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
-| `BIL-BILL-1` | Billing owns a billed-quantity tracker per purchase order, an **aggregate** fed by receipt and return events; the bill decision reads it | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
-| `SET-BANK-3` | Match capacity as one aggregate per line and payment pair, or a reservation saga | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
-| `PRC-RET-1` | Return recorded, then stock issued; issue can fail if stock was consumed | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
-| `INV-XFER-1` | Saga over every source and destination stock item | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
+| `SAL-DLV-2` | Saga over delivery and stock items; the pilot measured both step orders | Accept issue-and-return trails for failed deliveries? Which step order? |
+| `SAL-CREDIT-1`, `SAL-CREDIT-2` | A credit exposure aggregate per customer that decides the limit check and holds the reservation for a confirmed order, committed before the order is confirmed so a refusal still leaves the order unchanged; it receives receivables from Billing as events | Accept a lag between an invoice and its exposure, or reserve exposure at confirmation? What releases a reservation whose confirmation fails? |
+| `BIL-DOC-1` | The document records first; a number sequence allocates only for a recorded document (the `DO/` model of phase 4), then tax and journal follow, each idempotent | Accept a document that is recorded but briefly unnumbered and unposted? |
+| `BIL-INV-1` | Billing owns an invoiced-quantity tracker per sales order, an **aggregate** (not a projection) fed by delivery events through a policy; the invoice decision reads it | Accept that a just-recorded delivery is not invoiceable until the tracker catches up? |
+| `BIL-BILL-1` | Billing owns a billed-quantity tracker per purchase order, an **aggregate** fed by receipt and return events; the bill decision reads it | Same lag for supplier bills |
+| `SET-BANK-3` | Match capacity as one aggregate per line and payment pair, or a reservation saga | Accept a compensated match when two people match at once? |
+| `PRC-RET-1` | Return recorded, then stock issued; issue can fail if stock was consumed | Accept a recorded return that is later cancelled? |
+| `INV-XFER-1` | Saga over every source and destination stock item | Accept a transfer that is visible half applied, then compensated? |
 
 ## Deliverables, per rule
 
@@ -204,14 +204,14 @@ What stays open, because it matters only if a rule is later reopened by a named,
 
 | Rule | Stories | Outcome |
 | --- | --- | --- |
-| `INV-XFER-1` | Done (2026-11-23), model only: `erp/modules/inventory/tests/transfer-saga.story.test.ts` | Not decided: staged on Alchemy or kept on its PostgreSQL transaction is the owner's call |
-| `SAL-DLV-2` | Done (2026-11-23), model only: `framework/foundation/domain-model/tests/delivery.story.test.ts`, both step orders | Not decided: step order and staged-or-kept are the owner's call |
-| `PRC-RET-1` | Done (2026-11-23), model only: `erp/modules/procurement/tests/return-staging.story.test.ts` | Not decided: staged on Alchemy or kept on its PostgreSQL transaction is the owner's call |
-| `SET-BANK-3` | Done (2026-11-23), model only: `erp/modules/settlement/tests/bank-match.story.test.ts` | Not decided: staged on Alchemy or kept on its PostgreSQL transaction is the owner's call |
-| `BIL-INV-1` | Done (2026-11-24), model only: `erp/modules/billing/tests/invoiced-quantity.story.test.ts` | Not decided: staged on Alchemy or kept on its PostgreSQL transaction is the owner's call |
-| `BIL-BILL-1` | Done (2026-11-24), model only: `erp/modules/billing/tests/billed-quantity.story.test.ts` | Not decided: staged on Alchemy or kept on its PostgreSQL transaction is the owner's call |
-| `SAL-CREDIT-1`, `SAL-CREDIT-2` | Done (2026-11-24), model only: `erp/modules/sales/tests/credit-exposure.story.test.ts` | Not decided: staged on Alchemy or kept on its PostgreSQL transaction is the owner's call |
-| `BIL-DOC-1` | Done (2026-11-24), model only: `erp/modules/billing/tests/document-numbering.story.test.ts` | Not decided: staged on Alchemy or kept on its PostgreSQL transaction is the owner's call |
+| `INV-XFER-1` | Done (2026-11-23), model only: `erp/modules/inventory/tests/transfer-saga.story.test.ts` | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
+| `SAL-DLV-2` | Done (2026-11-23), model only: `framework/foundation/domain-model/tests/delivery.story.test.ts`, both step orders | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
+| `PRC-RET-1` | Done (2026-11-23), model only: `erp/modules/procurement/tests/return-staging.story.test.ts` | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
+| `SET-BANK-3` | Done (2026-11-23), model only: `erp/modules/settlement/tests/bank-match.story.test.ts` | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
+| `BIL-INV-1` | Done (2026-11-24), model only: `erp/modules/billing/tests/invoiced-quantity.story.test.ts` | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
+| `BIL-BILL-1` | Done (2026-11-24), model only: `erp/modules/billing/tests/billed-quantity.story.test.ts` | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
+| `SAL-CREDIT-1`, `SAL-CREDIT-2` | Done (2026-11-24), model only: `erp/modules/sales/tests/credit-exposure.story.test.ts` | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
+| `BIL-DOC-1` | Done (2026-11-24), model only: `erp/modules/billing/tests/document-numbering.story.test.ts` | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
 
 What the `INV-XFER-1` stories show, for that decision: confirmation is a saga with a compensation per
 deducted line, so a refused line leaves a deduction and its restoration on the stock (production
