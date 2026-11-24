@@ -49,7 +49,7 @@ change per rule.
 | --- | --- | --- | --- | --- |
 | `BIL-INV-1` | Keep | Owner | 2026-11-24 | A named measured need reopens it |
 | `BIL-BILL-1` | Keep | Owner | 2026-11-24 | A named measured need reopens it |
-| `SAL-CREDIT-1`, `SAL-CREDIT-2` |  |  |  |  |
+| `SAL-CREDIT-1`, `SAL-CREDIT-2` | Keep | Owner | 2026-11-24 | A named measured need reopens it |
 | `BIL-DOC-1` |  |  |  |  |
 | `SAL-DLV-2` |  |  |  |  |
 | `PRC-RET-1` |  |  |  |  |
