@@ -223,6 +223,9 @@ it.effect(
         await addDialog.waitFor()
         await addDialog.press("Escape")
         await addDialog.waitFor({ state: "hidden" })
+        await page.waitForFunction(
+          () => document.activeElement?.textContent?.trim() === "Add membership",
+        )
         assert.isTrue(await addTrigger.evaluate((node) => document.activeElement === node))
         await addTrigger.click()
         await addDialog
