@@ -1,6 +1,6 @@
 # Phase 5: Class E, Rules Whose Business Meaning Changes
 
-> **Status:** Accepted by the owner on 2026-11-23; exit evidence is not yet accepted
+> **Status:** Accepted by the owner on 2026-11-23; exit evidence accepted on 2026-11-24 for the stories (review record), with the open items below
 >
 > **Roadmap gate:** `alchemy.class-e`
 >
@@ -169,6 +169,23 @@ phase turns each objection into an exit criterion.
 | --- | --- | --- | --- |
 | 2026-11-23 | Review before owner acceptance | Revised | Removed the rehearsed cutover (unmet gates; the host cannot share a transaction with the ledger); added prerequisites and what phases 1 to 4 already model; narrowed the `BIL-DOC-1` question (allocate only after a recorded fact); made the trackers aggregates; ordered the credit reservation before the confirmation; stated where each concurrency proof runs; corrected the status |
 | 2026-11-23 | Owner | Accepted | The document and its revisions, including the removal of the cutover |
+| 2026-11-24 | Owner | Exit evidence accepted | The stories for the nine rules (`INV-XFER-1`, `SAL-DLV-2`, `PRC-RET-1`, `SET-BANK-3`, `BIL-INV-1`, `BIL-BILL-1`, `SAL-CREDIT-1`, `SAL-CREDIT-2`, `BIL-DOC-1`). Model only: no cutover. No rule has an outcome; the open items stay open |
+
+Exit evidence accepted on 2026-11-24 for the stories only. This acceptance does **not** supply or
+decide any of these, which stay open:
+
+1. Per rule, whether it is staged on Alchemy or kept on its PostgreSQL transaction (every outcome
+   column reads "Not decided").
+2. The step order of `SAL-DLV-2`, and whether Billing invoices only completed deliveries.
+3. Whether a legal billing document may be recorded and briefly unnumbered and unposted
+   (`BIL-DOC-1`), and the gap policy of the series.
+4. The lag a tracker or exposure may have (`BIL-INV-1`, `BIL-BILL-1`, including the return-lag
+   window, and `SAL-CREDIT-1`), and the accounting owner's written acceptance of receivable lag for
+   credit exposure.
+5. The phase 4 open items that bind the posting rules, the workflow-engine ADR before any saga on the
+   cluster host, and issue #122.
+6. The cutover gates `alchemy.host-role` and `alchemy.rebuild`; true concurrency is proved on the
+   cluster host, not by stories.
 
 This acceptance accepts the document as the plan. It decides **none** of the per-rule questions, and
 no rule has an outcome yet. Each of these needs its own owner decision or evidence, rule by rule,
