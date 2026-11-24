@@ -1,5 +1,5 @@
 import { createRouter, useNavigate } from "@solidjs/router"
-import { createSignal, For, lazy, onSettled, Show, useContext } from "solid-js"
+import { createSignal, For, lazy, Loading, onSettled, Show, useContext } from "solid-js"
 import type { AuthSession } from "../shared/contracts/generated/auth.ts"
 import type { Session } from "../shared/session.ts"
 import { layout } from "../ui/foundations/layout.ts"
@@ -7,6 +7,7 @@ import { Icon, type IconName } from "../ui/icons/index.ts"
 import { OperationalWorkspace } from "../ui/patterns/operational-workspace.tsx"
 import { AuthCallback } from "./auth-callback.tsx"
 import { AuthClientFailure, getAuthSession } from "./auth-client.ts"
+import { ConnectedSessionRoute } from "./connected-route.tsx"
 import { Connection } from "./connection.tsx"
 import { moduleRoutes, moduleWorkspaces } from "./routes.gen.ts"
 import {
@@ -20,6 +21,7 @@ import { ApplicationShell } from "./shell.tsx"
 const AccessRoute = lazy(() => import("./access-route.tsx"))
 const AccountsRoute = lazy(() => import("./accounts-route.tsx"))
 const ApprovalsRoute = lazy(() => import("./approvals-route.tsx"))
+const Dermaga = lazy(() => import("../features/approvals/dermaga.tsx"))
 
 const workspaceDirectory: readonly Readonly<{
   href: string
@@ -57,6 +59,22 @@ function HomeRoute() {
         title="My work"
         description={<p>Connected workspaces for this tenant.</p>}
       >
+        <ConnectedSessionRoute
+          title="My work"
+          description="Connect a valid session to see what is waiting for you."
+        >
+          {() => (
+            <Loading
+              fallback={
+                <p role="status" aria-busy="true">
+                  Loading what is waiting for you…
+                </p>
+              }
+            >
+              <Dermaga />
+            </Loading>
+          )}
+        </ConnectedSessionRoute>
         <section class={layout.stack} aria-labelledby="available-workspace-heading">
           <h2 id="available-workspace-heading">Available workspaces</h2>
           <p class={layout.workspaceDescription}>

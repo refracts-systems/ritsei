@@ -94,3 +94,57 @@ it.effect(
     }),
   { timeout: 120_000 },
 )
+
+it.effect(
+  "shows what is waiting on My work, decides it in place, and recovers from a failed load",
+  () =>
+    Effect.gen(function* () {
+      const { page, url, errors } = yield* builtApp
+      const decisions: unknown[] = []
+      let decided = false
+      let failLoad = true
+
+      yield* Effect.promise(async () => {
+        await mockRoutes(page, {
+          "GET /user-accounts": (route) => fulfillJson(route, 200, [buyer]),
+          "GET /approvals/requests": (route) =>
+            failLoad
+              ? fulfillJson(route, 500, { code: "internal_error" })
+              : fulfillJson(route, 200, decided ? [] : [pending]),
+          [`POST /approvals/requests/${requestId}/decision`]: (route) => {
+            decisions.push(route.request().postDataJSON())
+            decided = true
+
+            return fulfillJson(route, 200, { ...pending, status: "approved", decidedBy: buyerId })
+          },
+        })
+
+        await connectToTenant(page, url, "dermaga-session", tenantId, "My work")
+
+        // A failed load is said plainly and can be retried without leaving the page.
+        await page.getByRole("heading", { name: "Waiting for you", exact: true }).waitFor()
+        await page.getByRole("alert").first().waitFor()
+        failLoad = false
+        await page
+          .getByRole("button", { name: "Try loading requests waiting for you again", exact: true })
+          .click()
+
+        await page.getByText("1 request needs a decision.").waitFor()
+        await page.getByRole("cell", { name: "buyer@example.test", exact: true }).waitFor()
+        assert.deepEqual(
+          (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()).violations,
+          [],
+        )
+
+        // The decision is made where the request is listed, and the queue then reads empty.
+        await page
+          .getByRole("button", { name: "Approve Purchase order for 600.00", exact: true })
+          .click()
+        await page.getByText("Nothing is waiting for your decision.").waitFor()
+        assert.deepEqual(decisions, [{ decision: "approve" }])
+      })
+
+      assert.deepEqual(errors, [])
+    }),
+  { timeout: 120_000 },
+)

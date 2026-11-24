@@ -62,7 +62,7 @@ function StatusFilter(props: { status: ApprovalStatus | undefined }) {
   )
 }
 
-function RequestTable(props: {
+export function RequestTable(props: {
   requests: readonly ApprovalRequest[]
   emailOf: (id: string) => string
   onDecide: (id: string, decision: "approve" | "reject") => void
