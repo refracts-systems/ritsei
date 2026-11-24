@@ -1,6 +1,6 @@
 # Phase 5 Decision Sheet: Class E Outcomes
 
-> **Status:** Decided on 2026-11-24: Keep for all nine rules (see the decision record)
+> **Status:** For the owner's decision; nothing here is decided
 >
 > **Owner document:** [`phase-5-class-e.md`](./phase-5-class-e.md) holds the designs, stories, and
 > findings. This sheet only lists what the owner must decide per rule and what each choice costs.
@@ -47,11 +47,11 @@ change per rule.
 
 | Rule | Decision (Keep or Stage) | Decided by | Date | Condition |
 | --- | --- | --- | --- | --- |
-| `BIL-INV-1` | Keep | Owner | 2026-11-24 | A named measured need reopens it |
-| `BIL-BILL-1` | Keep | Owner | 2026-11-24 | A named measured need reopens it |
-| `SAL-CREDIT-1`, `SAL-CREDIT-2` | Keep | Owner | 2026-11-24 | A named measured need reopens it |
-| `BIL-DOC-1` | Keep | Owner | 2026-11-24 | A named measured need reopens it |
-| `SAL-DLV-2` | Keep | Owner | 2026-11-24 | A named measured need reopens it |
-| `PRC-RET-1` | Keep | Owner | 2026-11-24 | A named measured need reopens it |
-| `INV-XFER-1` | Keep | Owner | 2026-11-24 | A named measured need reopens it |
-| `SET-BANK-3` | Keep | Owner | 2026-11-24 | A named measured need reopens it |
+| `BIL-INV-1` |  |  |  |  |
+| `BIL-BILL-1` |  |  |  |  |
+| `SAL-CREDIT-1`, `SAL-CREDIT-2` |  |  |  |  |
+| `BIL-DOC-1` |  |  |  |  |
+| `SAL-DLV-2` |  |  |  |  |
+| `PRC-RET-1` |  |  |  |  |
+| `INV-XFER-1` |  |  |  |  |
+| `SET-BANK-3` |  |  |  |  |
