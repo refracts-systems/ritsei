@@ -79,6 +79,9 @@ order, or more than billable without a covering variance approval, fails with
 Enforced by: `src/matching.ts` (`matchBill`); property tests in `tests/matching.test.ts`; the
 procure-to-pay chain test.
 
+Phase 5 outcome (2026-11-24): this rule stays on its PostgreSQL transaction (ADR-0124). The staged
+Alchemy model is test-only evidence, not a plan to move it.
+
 ### `BIL-BILL-2` Billing beyond receipt needs an approved variance for that bill
 
 Excess quantity is valued at the bill's price and needs an approved
