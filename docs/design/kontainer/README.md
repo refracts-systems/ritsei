@@ -32,3 +32,11 @@ is the machine-readable list of what they use.
 work page with the Kontainer palette, taken by a throwaway Playwright script against the built app,
 with sample approval data. They are evidence of what the palette change produced, not a baseline:
 nothing compares against them.
+
+## The adopted tokens are guarded
+
+`tokens.json` has an `adopted` section holding the semantic colors the application ships, as
+`[light, dark]`. `tests/frontend/design-tokens.test.ts` fails when `apps/web/panda.config.ts` and that
+section differ, and also computes the contrast of text, secondary text, links, the focus ring, input
+borders, commands, and status text on every surface in both themes. Change a value in both places
+together, with an ADR; never regenerate the section to make the test pass.
