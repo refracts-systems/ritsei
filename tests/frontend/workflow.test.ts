@@ -115,6 +115,10 @@ it.effect(
         assert.deepEqual(dialogAccessibility.violations, [])
         await page.keyboard.press("Escape")
         await createDialog.waitFor({ state: "hidden" })
+        await page.waitForFunction(
+          (node) => document.activeElement === node,
+          await createTrigger.elementHandle(),
+        )
         assert.isTrue(await createTrigger.evaluate((node) => document.activeElement === node))
         await createTrigger.click()
         await createDialog.getByRole("textbox", { name: "Email", exact: true }).fill(createdEmail)
@@ -144,6 +148,10 @@ it.effect(
         const edit = page.getByRole("button", { name: "Edit email", exact: true })
         await edit.click()
         await page.getByRole("button", { name: "Close editor", exact: true }).click()
+        await page.waitForFunction(
+          (node) => document.activeElement === node,
+          await edit.elementHandle(),
+        )
         assert.isTrue(await edit.evaluate((node) => document.activeElement === node))
 
         await edit.click()

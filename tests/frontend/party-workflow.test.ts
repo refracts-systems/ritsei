@@ -257,6 +257,10 @@ it.effect(
         )
         await page.keyboard.press("Escape")
         await dialog.waitFor({ state: "hidden" })
+        await page.waitForFunction(
+          (node) => document.activeElement === node,
+          await createTrigger.elementHandle(),
+        )
         assert.isTrue(await createTrigger.evaluate((node) => document.activeElement === node))
         await createTrigger.click()
         await dialog
