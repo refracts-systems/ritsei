@@ -45,6 +45,9 @@ Confirmation deducts every source line and completion adds every destination lin
 nothing: one unavailable line rolls back every deduction. Confirming and completing need separate
 capabilities.
 
+Phase 5 outcome (2026-11-24): this rule stays on its PostgreSQL transaction (ADR-0124). The staged
+Alchemy model is test-only evidence, not a plan to move it.
+
 ### `INV-AUTH-1` Inventory capabilities are denied by default
 
 A caller without the capability in the tenant is denied, and stock adjustment needs its own

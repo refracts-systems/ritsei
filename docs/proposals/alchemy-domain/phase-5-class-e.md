@@ -53,7 +53,7 @@ when every rule it carries has passed. The ledger stays outside this track.
 | `BIL-BILL-1` | Billing owns a billed-quantity tracker per purchase order, an **aggregate** fed by receipt and return events; the bill decision reads it | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
 | `SET-BANK-3` | Match capacity as one aggregate per line and payment pair, or a reservation saga | Accept a compensated match when two people match at once? |
 | `PRC-RET-1` | Return recorded, then stock issued; issue can fail if stock was consumed | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
-| `INV-XFER-1` | Saga over every source and destination stock item | Accept a transfer that is visible half applied, then compensated? |
+| `INV-XFER-1` | Saga over every source and destination stock item | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
 
 ## Deliverables, per rule
 
@@ -176,6 +176,7 @@ phase turns each objection into an exit criterion.
 | 2026-11-24 | Owner | Outcome decided | `BIL-DOC-1` stays on its PostgreSQL transaction (Keep). No move, no cutover; the staged model stays as test-only evidence. The `RULES.md` records it |
 | 2026-11-24 | Owner | Outcome decided | `SAL-DLV-2` stays on its PostgreSQL transaction (Keep). No move, no cutover; the staged model stays as test-only evidence. The `RULES.md` records it |
 | 2026-11-24 | Owner | Outcome decided | `PRC-RET-1` stays on its PostgreSQL transaction (Keep). No move, no cutover; the staged model stays as test-only evidence. The `RULES.md` records it |
+| 2026-11-24 | Owner | Outcome decided | `INV-XFER-1` stays on its PostgreSQL transaction (Keep). No move, no cutover; the staged model stays as test-only evidence. The `RULES.md` records it |
 
 Two acceptances are recorded above. The document was accepted on 2026-11-23 as the plan, and the
 stories for the nine rules on 2026-11-24. Neither decides a per-rule question, and no rule has an

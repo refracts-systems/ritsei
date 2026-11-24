@@ -53,5 +53,5 @@ change per rule.
 | `BIL-DOC-1` | Keep | Owner | 2026-11-24 | A named measured need reopens it |
 | `SAL-DLV-2` | Keep | Owner | 2026-11-24 | A named measured need reopens it |
 | `PRC-RET-1` | Keep | Owner | 2026-11-24 | A named measured need reopens it |
-| `INV-XFER-1` |  |  |  |  |
+| `INV-XFER-1` | Keep | Owner | 2026-11-24 | A named measured need reopens it |
 | `SET-BANK-3` |  |  |  |  |
