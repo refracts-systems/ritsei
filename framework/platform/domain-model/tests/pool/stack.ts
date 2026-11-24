@@ -1,9 +1,8 @@
 /**
  * The Alchemy stack the pool test deploys with the Alchemy CLI (ADR-0124, phase 0). It is run from
  * the repository root: `alchemy deploy <this file> --stage <stage> --yes`. `PILOT_STACK=db` deploys the
- * database alone, so the test can apply the migration before any runner starts; `v1`, `v2` and `v3`
- * deploy the service, the pool and the database with the first, second or third model; `v4` serves
- * the claim model of the claim proof.
+ * database alone, so the test can apply the migration before any runner starts; `v4` serves the
+ * claim model of the claim proof and `v5` the read model of the read proof.
  */
 import * as Docker from "@alchemy.run/docker"
 import * as Cluster from "@alchemy.run/effect-cluster"
@@ -15,9 +14,6 @@ import * as Layer from "effect/Layer"
 import { Database } from "./pilot-host.ts"
 
 const modules = {
-  v1: () => import("./pilot-host.v1.ts"),
-  v2: () => import("./pilot-host.v2.ts"),
-  v3: () => import("./pilot-host.v3.ts"),
   v4: () => import("./pilot-host.v4.ts"),
   v5: () => import("./pilot-host.v5.ts"),
 }
@@ -35,7 +31,7 @@ const served = (
   })
 
 const program =
-  version === "v1" || version === "v2" || version === "v3" || version === "v4" || version === "v5"
+  version === "v4" || version === "v5"
     ? served(modules[version])
     : Effect.asVoid(Effect.provide(ClusterDatabase, Database)).pipe(Effect.as({ service: "none" }))
 

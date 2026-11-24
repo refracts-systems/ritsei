@@ -5,7 +5,7 @@
  * Cluster host the delivery and the series commit separately, so the number becomes a later step:
  * the delivery records, a policy asks the series for a number, and a second policy gives it to the
  * delivery. This model states that staging and nothing else; there is no cutover. The cap on
- * delivered quantity has its own story (`framework/foundation/domain-model/tests/delivery.story.test.ts`).
+ * delivered quantity is not modelled here; its story was removed on 2026-11-24 (git history at `821d88ce`).
  *
  * - **Numbers are allocated only for recorded deliveries.** A delivery the order refuses never asks
  *   for one, so the series has no hole where a refusal was. This is how the staged series stays

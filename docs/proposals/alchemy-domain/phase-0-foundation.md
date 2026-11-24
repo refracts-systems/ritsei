@@ -65,6 +65,11 @@ filesystem. They show order of magnitude, not capacity.
 
 ### What ran
 
+> **Removed on 2026-11-24:** the pilot model (`delivery-model.ts`), its story, and the pilot pool test with
+> the files only it used (`pilot-model*.ts`, `pilot-host.v1` to `v3`, `probe*`, `warehouse-movements.ts`) are
+> deleted. They are in git history at `821d88ce`. The claim and read proofs (`claim-pool.test.ts`,
+> `read-pool.test.ts`) and the stack for them remain. The measurements below are a record, not a test.
+
 `framework/platform/domain-model/tests/pool/` deploys the pilot to a local Docker Swarm with the
 Alchemy CLI and drives it over HTTP. It runs only with `RITSEI_ALCHEMY_POOL=1` and an active Swarm; the
 normal suite skips it with that reason (checked on Windows, where it skips).
