@@ -60,6 +60,8 @@ it.effect(
         await page.getByRole("link", { name: "Purchase order", exact: true }).waitFor()
         await page.getByRole("cell", { name: "buyer@example.test", exact: true }).waitFor()
         await page.getByRole("cell", { name: "600.00", exact: true }).waitFor()
+        // A purchase order carries the procurement type tag beside its name.
+        await page.getByText("PRC", { exact: true }).waitFor()
         assert.include(statuses, "pending")
         assert.deepEqual(
           (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()).violations,

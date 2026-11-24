@@ -9,6 +9,7 @@ import { DataTable } from "../../ui/patterns/data-table.tsx"
 import { EntityWorkspace } from "../../ui/patterns/entity-workspace.tsx"
 import { Badge } from "../../ui/primitives/badge.tsx"
 import { Button } from "../../ui/primitives/button.tsx"
+import { TypeTag } from "../../ui/primitives/type-tag.tsx"
 import { FormField } from "../../ui/primitives/form-field.tsx"
 import { Form } from "../../ui/primitives/form.tsx"
 import { Select } from "../../ui/primitives/select.tsx"
@@ -20,6 +21,7 @@ import {
   decisionFailureMessages,
   subjectHref,
   subjectLabel,
+  subjectTag,
 } from "./service.ts"
 
 const statusOptions = [
@@ -83,7 +85,14 @@ export function RequestTable(props: {
             const label = subjectName(request)
             const href = subjectHref(request.subjectType, request.subjectId)
 
-            return href === undefined ? label : <a href={href}>{label}</a>
+            const tag = subjectTag(request.subjectType)
+
+            return (
+              <>
+                {tag === undefined ? null : <TypeTag type={tag} />}{" "}
+                {href === undefined ? label : <a href={href}>{label}</a>}
+              </>
+            )
           },
         },
         { id: "reason", header: "Why", cell: (request) => request.reason },

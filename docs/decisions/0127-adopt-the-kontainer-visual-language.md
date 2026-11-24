@@ -49,8 +49,9 @@ Not changed: the text size scale (14px body), the 4px spacing grid, control heig
 and the shell structure. The mockups use 15 to 17px body text on sparse screens; adopting those sizes
 would reduce the rows a table shows, which is a density decision of its own.
 
-Not adopted yet: the ink frame around surfaces, and the object-type colors. Both change recipes and
-components, so each arrives with the first screen that renders it.
+The ink frame around surfaces (`frame`; a lighter blue-gray in dark, derived to keep 3:1) and the five
+object-type colors (`type.*`, with light `onType` letters) arrive with the first screen that renders
+them, the Approvals queue, through the `TypeTag` primitive. The subtle surface tone keeps its hairline.
 
 ## Consequences
 

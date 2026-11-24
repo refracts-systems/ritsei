@@ -138,6 +138,7 @@
           "apps/web/src/ui/primitives/quantity-field.tsx",
           "apps/web/src/ui/primitives/select.tsx",
           "apps/web/src/ui/primitives/tabs.tsx",
+          "apps/web/src/ui/primitives/type-tag.tsx",
           "apps/web/src/ui/recipes/control.ts",
           "apps/web/src/ui/recipes/surface.ts",
           "apps/web/src/ui/patterns/approval-composition.tsx",

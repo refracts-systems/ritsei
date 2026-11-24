@@ -236,6 +236,17 @@ export default defineConfig({
           link: pair("#A33925", "#F6A78F"),
           focusRing: pair("#A33925", "#F6A78F"),
           focusHalo: pair("rgba(163, 57, 37, 0.28)", "rgba(246, 167, 143, 0.4)"),
+          // A surface frame (E: a 1px ink line). Dark is derived and keeps 3:1 on the canvas.
+          frame: pair("#1B2638", "#7A8AA3"),
+          // Object types (E): a solid fill with light text, the same in both themes.
+          onType: pair("#FBFAF6", "#FBFAF6"),
+          type: {
+            sal: pair("#AE522C", "#AE522C"),
+            prc: pair("#2E5A87", "#2E5A87"),
+            inv: pair("#4A6E4D", "#4A6E4D"),
+            fin: pair("#7A2E3D", "#7A2E3D"),
+            hrd: pair("#62676D", "#62676D"),
+          },
           // Status: foreground, background, border per tone. Success, warning, and danger are E's
           // ok, warn, and critical; info is E's procurement blue.
           danger: pair("#A33925", "#FF9E8A"),
@@ -535,7 +546,7 @@ export default defineConfig({
             minWidth: "0",
             bg: "content",
             borderWidth: "1px",
-            borderColor: "boundary",
+            borderColor: "frame",
             borderRadius: "surface",
             boxShadow: "raised",
             p: "[var(--surface-pad)]",
@@ -543,7 +554,12 @@ export default defineConfig({
           variants: {
             tone: {
               default: {},
-              subtle: { "--surface-pad": "{spacing.4}", bg: "contentSubtle", boxShadow: "none" },
+              subtle: {
+                "--surface-pad": "{spacing.4}",
+                bg: "contentSubtle",
+                borderColor: "boundary",
+                boxShadow: "none",
+              },
               flush: {
                 p: "0",
                 overflow: "hidden",
