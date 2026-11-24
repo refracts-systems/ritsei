@@ -32,8 +32,11 @@ Published release records:
 | -------- | --------------------------------------------------------------------------- | --------------------- |
 | `v0.1.0` | `7befeb495567e926e32ab85a926c96d20c92ec37`, August 13, 2026 01:35:28 +07:00 | Published pre-release |
 | `v0.2.0` | `72d233e006faaadee30a57b194b9752b32f79d68`, August 31, 2026                 | Published pre-release |
+| `v0.3.0` | `8053dc81080826ef56f656d819de650d57180f73`, October 18, 2026                | Published pre-release |
+| `v0.4.0` | `dc293c018eb757a468edeecc475c007235aa393b`, November 24, 2026               | Published pre-release |
 
-Both releases were published on August 31, 2026 as pre-release, source-only snapshots. They do not
+`v0.1.0` and `v0.2.0` were published on August 31, 2026, and `v0.3.0` and `v0.4.0` on November 24, 2026,
+all as pre-release, source-only snapshots. They do not
 promise a build artifact, package distribution, production deployment, or supported upgrade path.
 
 The current source tree also provides an artifact-backed build path:
@@ -110,7 +113,7 @@ data or an existing deployment:
 - retain `deploy/artifacts/manifest.json` and the generated artifact output together for an
   artifact-backed release.
 
-No automatic compatibility claim follows from `v0.1.0` or `v0.2.0`. Migration and upgrade support
+No automatic compatibility claim follows from any release so far (`v0.1.0` to `v0.4.0`). Migration and upgrade support
 must be documented explicitly when it becomes available.
 
 ## Release notes requirements
