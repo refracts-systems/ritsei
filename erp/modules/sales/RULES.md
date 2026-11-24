@@ -70,16 +70,16 @@ is not checked again, delivery and invoicing are not gated, and a customer witho
 legal entity is never gated.
 Why: [ADR-0108](../../../docs/decisions/0108-gate-order-confirmation-on-customer-credit-limit.md).
 
-Phase 5 outcome (2026-11-24): this rule stays on its PostgreSQL transaction (ADR-0124). The staged
-Alchemy model is test-only evidence, not a plan to move it.
+Phase 5 outcome (2026-11-24): this rule stays on its PostgreSQL transaction (ADR-0124). Its staged
+Alchemy model was removed on 2026-11-24; it is in git history at `f157dc5b`.
 
 ### `SAL-CREDIT-2` Credit checks for one customer run one at a time
 
 Confirmation locks the customer row before it reads the exposure, so of two orders that each fit the
 limit but not together, only one is confirmed.
 
-Phase 5 outcome (2026-11-24): this rule stays on its PostgreSQL transaction (ADR-0124). The staged
-Alchemy model is test-only evidence, not a plan to move it.
+Phase 5 outcome (2026-11-24): this rule stays on its PostgreSQL transaction (ADR-0124). Its staged
+Alchemy model was removed on 2026-11-24; it is in git history at `f157dc5b`.
 
 ### `SAL-CUST-2` A document customer is a Party customer role with a legal entity
 
@@ -135,8 +135,8 @@ retried delivery id returns the recorded result.
 Why: [ADR-0101](../../../docs/decisions/0101-coordinate-sales-delivery-with-inventory.md),
 [ADR-0100](../../../docs/decisions/0100-adopt-moving-average-inventory-valuation.md).
 
-Phase 5 outcome (2026-11-24): this rule stays on its PostgreSQL transaction (ADR-0124). The staged
-Alchemy model is test-only evidence, not a plan to move it.
+Phase 5 outcome (2026-11-24): this rule stays on its PostgreSQL transaction (ADR-0124). The delivery
+model stays: it is the phase 0 pilot and also states `SAL-DLV-1`.
 
 ## Position
 

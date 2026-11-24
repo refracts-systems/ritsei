@@ -35,8 +35,8 @@ The reconciliation report lists active matches for the selected legal entity and
 id-based pagination, so an authorized user can find a match to reverse. It includes each statement's
 source name, line number, and reference, and supports paging the unmatched lines and payments.
 
-Phase 5 outcome (2026-11-24): this rule stays on its PostgreSQL transaction (ADR-0124). The staged
-Alchemy model is test-only evidence, not a plan to move it.
+Phase 5 outcome (2026-11-24): this rule stays on its PostgreSQL transaction (ADR-0124). Its staged
+Alchemy model was removed on 2026-11-24; it is in git history at `f157dc5b`.
 
 ### `SET-WHT-1` A receipt may record withholding, allocated in the same command
 

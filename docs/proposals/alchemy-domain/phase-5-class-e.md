@@ -178,6 +178,7 @@ phase turns each objection into an exit criterion.
 | 2026-11-24 | Owner | Outcome decided | `PRC-RET-1` stays on its PostgreSQL transaction (Keep). No move, no cutover; the staged model stays as test-only evidence. The `RULES.md` records it |
 | 2026-11-24 | Owner | Outcome decided | `INV-XFER-1` stays on its PostgreSQL transaction (Keep). No move, no cutover; the staged model stays as test-only evidence. The `RULES.md` records it |
 | 2026-11-24 | Owner | Outcome decided | `SET-BANK-3` stays on its PostgreSQL transaction (Keep). No move, no cutover; the staged model stays as test-only evidence. The `RULES.md` records it |
+| 2026-11-24 | Owner | Models removed | The staged models and stories of the class E rules other than `SAL-DLV-2` are deleted (`INV-XFER-1`, `PRC-RET-1`, `SET-BANK-3`, `BIL-INV-1`, `BIL-BILL-1`, `SAL-CREDIT-1`, `SAL-CREDIT-2`, `BIL-DOC-1`). The delivery model stays: it is the phase 0 pilot and states `SAL-DLV-1`. They are in git history at `f157dc5b` |
 
 The document was accepted on 2026-11-23 as the plan, the stories for the nine rules on 2026-11-24,
 and the same day the owner decided the outcome of every rule, one change per rule: **Keep**, each
@@ -204,14 +205,17 @@ What stays open, because it matters only if a rule is later reopened by a named,
 
 | Rule | Stories | Outcome |
 | --- | --- | --- |
-| `INV-XFER-1` | Done (2026-11-23), model only: `erp/modules/inventory/tests/transfer-saga.story.test.ts` | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
-| `SAL-DLV-2` | Done (2026-11-23), model only: `framework/foundation/domain-model/tests/delivery.story.test.ts`, both step orders | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
-| `PRC-RET-1` | Done (2026-11-23), model only: `erp/modules/procurement/tests/return-staging.story.test.ts` | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
-| `SET-BANK-3` | Done (2026-11-23), model only: `erp/modules/settlement/tests/bank-match.story.test.ts` | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
-| `BIL-INV-1` | Done (2026-11-24), model only: `erp/modules/billing/tests/invoiced-quantity.story.test.ts` | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
-| `BIL-BILL-1` | Done (2026-11-24), model only: `erp/modules/billing/tests/billed-quantity.story.test.ts` | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
-| `SAL-CREDIT-1`, `SAL-CREDIT-2` | Done (2026-11-24), model only: `erp/modules/sales/tests/credit-exposure.story.test.ts` | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
-| `BIL-DOC-1` | Done (2026-11-24), model only: `erp/modules/billing/tests/document-numbering.story.test.ts` | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
+| `INV-XFER-1` | Done (2026-11-23), model only; the model was removed on 2026-11-24 | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
+| `SAL-DLV-2` | Done (2026-11-23), model only: `framework/foundation/domain-model/tests/delivery.story.test.ts`, both step orders; kept, it is the phase 0 pilot and states `SAL-DLV-1` | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
+| `PRC-RET-1` | Done (2026-11-23), model only; the model was removed on 2026-11-24 | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
+| `SET-BANK-3` | Done (2026-11-23), model only; the model was removed on 2026-11-24 | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
+| `BIL-INV-1` | Done (2026-11-24), model only; the model was removed on 2026-11-24 | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
+| `BIL-BILL-1` | Done (2026-11-24), model only; the model was removed on 2026-11-24 | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
+| `SAL-CREDIT-1`, `SAL-CREDIT-2` | Done (2026-11-24), model only; the model was removed on 2026-11-24 | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
+| `BIL-DOC-1` | Done (2026-11-24), model only; the model was removed on 2026-11-24 | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
+
+The findings below describe the stories as they were when this phase was accepted. Their files were
+removed on 2026-11-24 (review record); read them at commit `f157dc5b`. Only the delivery model remains.
 
 What the `INV-XFER-1` stories show, for that decision: confirmation is a saga with a compensation per
 deducted line, so a refused line leaves a deduction and its restoration on the stock (production
