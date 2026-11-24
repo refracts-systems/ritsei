@@ -39,8 +39,8 @@ the template. Open a document below only for what the neighbor does not show:
 # Steps
 
 1. **Name the screen.** State the owning domain, the user's job, the Product Pattern, and the
-   primary authorized command and where its result appears. If no pattern fits, name the unmet
-   problem and stop; do not invent a page-specific shell.
+   primary authorized command and where its result appears. If no pattern fits, use the
+   closest one or compose what the screen needs, and say why.
 2. **Build from the nearest neighbor.** Reuse the shell, the module's `*.workspace.ts` sidecar, and
    existing components. Decode route and API input with Effect Schema. No backend imports.
 3. **Show every state.** Empty (what is empty and the next action), loading, and one message per

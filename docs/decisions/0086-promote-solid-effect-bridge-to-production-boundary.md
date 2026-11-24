@@ -119,7 +119,6 @@ The decision is considered implemented when:
 ## Related Documents
 
 - [`../architecture/frontend.md`](../architecture/frontend.md)
-- [`../operations/frontend-implementation.md`](../operations/frontend-implementation.md)
 - [`./0072-prefer-native-solid-reactivity-for-effect-integration.md`](./0072-prefer-native-solid-reactivity-for-effect-integration.md)
 - [`./0057-define-layered-tanstack-frontend-engine-boundaries.md`](./0057-define-layered-tanstack-frontend-engine-boundaries.md)
 - [`./0085-separate-tanstack-adapters-from-semantic-ui-contracts.md`](./0085-separate-tanstack-adapters-from-semantic-ui-contracts.md)

@@ -813,7 +813,7 @@ accounts and access stay hand-written in `shell.tsx`.
 
 ### Frontend agent entry
 
-Before implementing a route or screen, agents MUST:
+Before building a route or screen, it helps to settle:
 
 1. Name the owning domain, active local capability, and user's primary work task.
 2. Select an existing Product Pattern using the matrix in [Design System §2](./design-system.md#2-product-patterns).
@@ -824,8 +824,8 @@ Before implementing a route or screen, agents MUST:
 5. Verify object/situation identity, operational state, authorized command path, responsive behavior,
    keyboard/focus behavior, and the outcome shown after an action.
 
-Agents MUST reuse the existing shell and patterns. If they cannot solve a concrete semantic problem,
-they MUST describe that mismatch before proposing a new pattern or page-specific shell.
+Reuse the existing shell and patterns where they fit; where they do not, build what the screen needs
+and say why in the change.
 
 ## Process Studio UI
 

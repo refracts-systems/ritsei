@@ -11,7 +11,6 @@
 >
 > - ADR index: [`./README.md`](./README.md)
 > - Frontend architecture: [`../architecture/frontend.md`](../architecture/frontend.md)
-> - Kobalte wrapper evidence: [`../operations/frontend-implementation.md`](../operations/frontend-implementation.md)
 > - Migration plan: [`../proposals/solidjs-2-stable-migration.md`](../proposals/solidjs-2-stable-migration.md)
 
 ## Context
