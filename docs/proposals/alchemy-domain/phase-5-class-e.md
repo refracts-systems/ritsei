@@ -51,7 +51,7 @@ when every rule it carries has passed. The ledger stays outside this track.
 | `BIL-DOC-1` | The document records first; a number sequence allocates only for a recorded document (the `DO/` model of phase 4), then tax and journal follow, each idempotent | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
 | `BIL-INV-1` | Billing owns an invoiced-quantity tracker per sales order, an **aggregate** (not a projection) fed by delivery events through a policy; the invoice decision reads it | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
 | `BIL-BILL-1` | Billing owns a billed-quantity tracker per purchase order, an **aggregate** fed by receipt and return events; the bill decision reads it | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
-| `SET-BANK-3` | Match capacity as one aggregate per line and payment pair, or a reservation saga | Accept a compensated match when two people match at once? |
+| `SET-BANK-3` | Match capacity as one aggregate per line and payment pair, or a reservation saga | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
 | `PRC-RET-1` | Return recorded, then stock issued; issue can fail if stock was consumed | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
 | `INV-XFER-1` | Saga over every source and destination stock item | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
 
@@ -177,28 +177,28 @@ phase turns each objection into an exit criterion.
 | 2026-11-24 | Owner | Outcome decided | `SAL-DLV-2` stays on its PostgreSQL transaction (Keep). No move, no cutover; the staged model stays as test-only evidence. The `RULES.md` records it |
 | 2026-11-24 | Owner | Outcome decided | `PRC-RET-1` stays on its PostgreSQL transaction (Keep). No move, no cutover; the staged model stays as test-only evidence. The `RULES.md` records it |
 | 2026-11-24 | Owner | Outcome decided | `INV-XFER-1` stays on its PostgreSQL transaction (Keep). No move, no cutover; the staged model stays as test-only evidence. The `RULES.md` records it |
+| 2026-11-24 | Owner | Outcome decided | `SET-BANK-3` stays on its PostgreSQL transaction (Keep). No move, no cutover; the staged model stays as test-only evidence. The `RULES.md` records it |
 
-Two acceptances are recorded above. The document was accepted on 2026-11-23 as the plan, and the
-stories for the nine rules on 2026-11-24. Neither decides a per-rule question, and no rule has an
-outcome yet. Each of these needs its own owner decision or evidence, rule by rule, before that
-rule's exit:
+The document was accepted on 2026-11-23 as the plan, the stories for the nine rules on 2026-11-24,
+and the same day the owner decided the outcome of every rule, one change per rule: **Keep**, each
+stays on its PostgreSQL transaction, following the default in `AGENTS.md` that PostgreSQL does
+everything until a named user's measured need says otherwise. Nothing moves and no cutover is
+planned. The per-rule choices and their prices are in
+[`phase-5-decision-sheet.md`](./phase-5-decision-sheet.md).
 
-The per-rule choices and their prices are laid out in [`phase-5-decision-sheet.md`](./phase-5-decision-sheet.md).
+What stays open, because it matters only if a rule is later reopened by a named, measured need:
 
-1. For each of the 9 rules: staged on Alchemy (stories, the business owner's sign-off, the accounting
-   owner's acceptance where it posts) or kept on its PostgreSQL transaction. Every outcome column
-   reads "Not decided".
-2. The step order of `SAL-DLV-2` (variant A or B), and whether Billing invoices only completed
+1. The step order of `SAL-DLV-2` (variant A or B), and whether Billing invoices only completed
    deliveries.
-3. Whether a legal billing document may be recorded and briefly unnumbered and unposted
+2. Whether a legal billing document may be recorded and briefly unnumbered and unposted
    (`BIL-DOC-1`), and the gap policy of the series.
-4. The lag a tracker or exposure may have (`BIL-INV-1`, `BIL-BILL-1` including its return-lag
+3. The lag a tracker or exposure may have (`BIL-INV-1`, `BIL-BILL-1` including its return-lag
    window, and `SAL-CREDIT-1`), the accounting owner's written acceptance of receivable lag for
    credit exposure, and whether releasing a reservation by compensation is acceptable.
-5. The phase 4 open items that bind the posting rules, the workflow-engine ADR before any saga on the
+4. The phase 4 open items that bind the posting rules, the workflow-engine ADR before any saga on the
    cluster host, and issue #122.
-6. The cutover gates `alchemy.host-role` and `alchemy.rebuild`; no cutover is in this phase, and
-   true concurrency is proved on the cluster host, not by stories.
+5. The cutover gates `alchemy.host-role` and `alchemy.rebuild`; true concurrency is proved on the
+   cluster host, not by stories.
 
 ## Rule progress
 
