@@ -2,6 +2,7 @@ import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import { decodeInput, decodeResponse, querySuffix, requestJson } from "../../shared/api.ts"
 import { Uuid } from "../../shared/schemas.ts"
+import type { ObjectType } from "../../ui/primitives/type-tag.tsx"
 
 /** Browser view of the Documents transport contract served by the runtime API. */
 export const FlowEntryType = Schema.Literals([
@@ -75,6 +76,10 @@ export const nodeKinds: Readonly<Record<DocumentNodeType, string>> = {
   "billing.supplier_bill": "Supplier bill",
   "billing.supplier_credit_note": "Supplier credit note",
 }
+
+/** The object type of a document, by the module that owns it. */
+export const nodeTag = (type: DocumentNodeType): ObjectType =>
+  type.startsWith("sales.") ? "SAL" : type.startsWith("procurement.") ? "PRC" : "FIN"
 
 type HrefBuilder = (id: string, legalEntityId: string | null) => string | undefined
 

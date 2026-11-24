@@ -6,7 +6,7 @@ import { layout } from "../../ui/foundations/layout.ts"
 import { DocumentFlow as DocumentFlowList } from "../../ui/patterns/document-flow.tsx"
 import { surface } from "../../ui/recipes/surface.ts"
 import { type ChainRequest, createDocumentChainQuery } from "./queries.ts"
-import { nodeHref, nodeKinds } from "./service.ts"
+import { nodeHref, nodeKinds, nodeTag } from "./service.ts"
 
 // The query is created under the boundary, so a failing or slow flow never hides its document.
 function FlowItems(props: ChainRequest & { readonly attempt: number }) {
@@ -24,6 +24,7 @@ function FlowItems(props: ChainRequest & { readonly attempt: number }) {
         date: node.date ?? undefined,
         href: nodeHref(node, query.data.legalEntityId),
         current: node.current,
+        tag: nodeTag(node.type),
       }))}
     />
   )
