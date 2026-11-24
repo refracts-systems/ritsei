@@ -25,3 +25,10 @@ is the machine-readable list of what they use.
   for a focus indicator. The light accent (`#B5402B`, 4.99:1) works on light but only 2.70:1 on the
   dark canvas, where `#E06A4E` (4.59:1) is needed.
 - All names, codes, and amounts are sample data.
+
+## The application after ADR-0127
+
+`app/my-work-light.png` and `app/my-work-dark.png` are screenshots of the built application's My
+work page with the Kontainer palette, taken by a throwaway Playwright script against the built app,
+with sample approval data. They are evidence of what the palette change produced, not a baseline:
+nothing compares against them.

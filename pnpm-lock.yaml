@@ -277,7 +277,10 @@ importers:
       '@fontsource/ibm-plex-mono':
         specifier: 5.3.0
         version: 5.3.0
-      '@fontsource/pretendard':
+      '@fontsource/ibm-plex-sans':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/shippori-mincho':
         specifier: 5.3.0
         version: 5.3.0
       '@solidjs/router':
@@ -1153,8 +1156,11 @@ packages:
   '@fontsource/ibm-plex-mono@5.3.0':
     resolution: {integrity: sha512-eTgnZjZEGk1QtD3ZstF+Vclo2HLAni8YMy34/DxllwZvyz1lR/1RF/xTiAquOBO7MvqBx8D2Ig2WCPMVfdZu7Q==}
 
-  '@fontsource/pretendard@5.3.0':
-    resolution: {integrity: sha512-IDvI+QlHSFW9AkBX8cKXFi9nRJXdj7IQSGSqgemwFqII6EptpWQmWKcs3OfTZBT2yftzqt6VF6abQpUeAmHxMA==}
+  '@fontsource/ibm-plex-sans@5.3.0':
+    resolution: {integrity: sha512-CbE4CbbEEZJX860XyUiRpsksXIQR8Rp2XDva2VO53NJox9tVNtusrysd2x5YkUEY3ErQ66W1IiiQL8/wihhw5w==}
+
+  '@fontsource/shippori-mincho@5.3.0':
+    resolution: {integrity: sha512-S41kRxQuubAaYss+LeXu0IOc02RQwsPaJbR1cWZx4VV15hXaYZViH3WAve9HpDVFqKYd/BVk86Bg7lp9ytV3KQ==}
 
   '@internationalized/number@3.6.9':
     resolution: {integrity: sha512-GgWy2caO/+hV9sT/oCTWGHvbjmJMPT9kkXzoKRLnkEq7adghhR7UprhvY9sXrKfrp3NcDfhF6QQHXR1KfQbB8g==}
@@ -2225,10 +2231,10 @@ packages:
     peerDependencies:
       solid-js: ^2.0.0
 
-  '@storybook/builder-vite@11.0.0-beta.3':
-    resolution: {integrity: sha512-TQ6f5QPYaYj90Vkq1y3k8VGwwPd2UkcwnX2CzA3jw6OlLN2SGs98d8qQD/l7BELC0OiYg9I9KzetT8Elfgw/9g==}
+  '@storybook/builder-vite@11.0.0-beta.4':
+    resolution: {integrity: sha512-nwTsnAqRiqi5gkQaC0D32j+bju3dEkfQDDsTwtvsGUL/4dFsbKWGy35w28teTo0vDLVsB9NeDAVuomrRbRXZow==}
     peerDependencies:
-      storybook: ^11.0.0-beta.3
+      storybook: ^11.0.0-beta.4
       vite: ^6.3.0 || ^7.0.0 || ^8.0.0
 
   '@storybook/global@5.0.0':
@@ -4570,7 +4576,9 @@ snapshots:
 
   '@fontsource/ibm-plex-mono@5.3.0': {}
 
-  '@fontsource/pretendard@5.3.0': {}
+  '@fontsource/ibm-plex-sans@5.3.0': {}
+
+  '@fontsource/shippori-mincho@5.3.0': {}
 
   '@internationalized/number@3.6.9':
     dependencies:
@@ -5430,7 +5438,7 @@ snapshots:
       seroval-plugins: 1.8.0(seroval@1.8.1)
       solid-js: 2.0.0
 
-  '@storybook/builder-vite@11.0.0-beta.3(storybook@11.0.0-alpha.0(prettier@3.2.5)(react@19.3.1))(vite@8.2.2(@types/node@24.19.2)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))':
+  '@storybook/builder-vite@11.0.0-beta.4(storybook@11.0.0-alpha.0(prettier@3.2.5)(react@19.3.1))(vite@8.2.2(@types/node@24.19.2)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))':
     dependencies:
       storybook: 11.0.0-alpha.0(prettier@3.2.5)(react@19.3.1)
       vite: 8.2.2(@types/node@24.19.2)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
@@ -6709,7 +6717,7 @@ snapshots:
 
   storybook-solidjs-vite@11.0.0-next-20260903183420(@solidjs/web@2.0.0(solid-js@2.0.0))(solid-js@2.0.0)(storybook@11.0.0-alpha.0(prettier@3.2.5)(react@19.3.1))(typescript@6.0.3)(vite-plugin-solid@2.11.14(@testing-library/jest-dom@6.9.1)(solid-js@2.0.0)(vite@8.2.2(@types/node@24.19.2)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.2.2(@types/node@24.19.2)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)):
     dependencies:
-      '@storybook/builder-vite': 11.0.0-beta.3(storybook@11.0.0-alpha.0(prettier@3.2.5)(react@19.3.1))(vite@8.2.2(@types/node@24.19.2)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+      '@storybook/builder-vite': 11.0.0-beta.4(storybook@11.0.0-alpha.0(prettier@3.2.5)(react@19.3.1))(vite@8.2.2(@types/node@24.19.2)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       '@storybook/global': 5.0.0
       '@typescript/typescript6': 6.0.2
       '@volar/language-core': 2.4.28

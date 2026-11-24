@@ -73,8 +73,8 @@ function FoundationsStory() {
             <h2 id="typography-heading">Typography</h2>
             <p class={typography.display}>Operational clarity</p>
             <p class={typography.body}>
-              Pretendard carries product information; IBM Plex Mono is reserved for identifiers and
-              technical values.
+              IBM Plex Sans carries product information, Shippori Mincho the headings, and IBM Plex
+              Mono is reserved for identifiers and technical values.
             </p>
             <p class={typography.metadata}>Metadata · 2026-09-05 · reviewed</p>
             <p class={typography.code}>INV-2026-001289</p>

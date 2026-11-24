@@ -127,3 +127,26 @@ it.effect(
     }),
   { timeout: 120_000 },
 )
+
+it.effect(
+  "keeps the signed-in shell free of automated axe violations in the dark theme",
+  () =>
+    Effect.gen(function* () {
+      const { page, url, errors } = yield* builtApp
+      yield* Effect.promise(async () => {
+        await page.emulateMedia({ reducedMotion: "reduce" })
+        await page.goto(url)
+        await mockLocalAuth(page)
+        await page.getByRole("button", { name: "Sign in locally", exact: true }).click()
+        await page.getByRole("heading", { name: "My work", exact: true }).waitFor()
+
+        await page.getByRole("button", { name: "Dark theme", exact: true }).click()
+        await page.locator('[data-theme="dark"]').first().waitFor()
+
+        const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()
+        assert.deepEqual(results.violations, [])
+        assert.deepEqual(errors, [])
+      })
+    }),
+  { timeout: 120_000 },
+)
