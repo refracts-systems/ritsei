@@ -92,6 +92,9 @@ mockups ([ADR-0127](../decisions/0127-adopt-the-kontainer-visual-language.md)). 
 tone and a 1px hairline; only menus and dialogs carry a shadow; the `surface` recipe has tones `default`,
 `subtle`, and `flush`.
 
+The Kontainer screens that guide new work, and which of them exist, are mapped in
+[`docs/design/kontainer/screens.md`](../design/kontainer/screens.md).
+
 ## 6. Content and formatting
 
 Format API decimals with `formatDecimal` in `apps/web/src/ui/foundations/format.ts`, never through
