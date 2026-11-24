@@ -175,6 +175,9 @@ it.effect(
         const current = flow.locator('[aria-current="true"]')
         assert.include(await current.innerText(), "INV-0001")
         assert.include(await current.innerText(), "This document")
+        // Each document carries the type of the module that owns it.
+        assert.include(await current.innerText(), "FIN")
+        assert.include(await items.nth(0).innerText(), "SAL")
         assert.equal(
           await flow.getByRole("link", { name: "Sales order", exact: true }).getAttribute("href"),
           `/sales/orders/${orderId}`,

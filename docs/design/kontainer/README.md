@@ -34,7 +34,8 @@ with sample approval data. They are evidence of what the palette change produced
 nothing compares against them.
 
 `app/approvals-light.png` and `app/approvals-dark.png` show the Approvals queue with the type tags (PRC,
-FIN) and the ink frame, taken the same way with two sample requests.
+FIN) and the ink frame, taken the same way with two sample requests. `app/manifest-light.png` and `app/manifest-dark.png`
+show the document flow of an invoice (sales and finance nodes, the current one framed).
 
 ## The adopted tokens are guarded
 
