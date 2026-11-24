@@ -8,7 +8,7 @@ import { createEffect, createSignal, onSettled, Show, untrack } from "solid-js"
 import { css } from "../generated/css/index.js"
 import { Icon } from "../icons/index.ts"
 import { type ActionMenuRegistry, useActionMenu } from "./action-menu-context.ts"
-import { Button } from "./button.tsx"
+import { Button, type ButtonProps } from "./button.tsx"
 
 export const createDialogOpenChange =
   (
@@ -33,13 +33,15 @@ export const createDialogOpenChange =
 
 export interface DialogProps {
   readonly trigger?: JSX.Element
-  readonly triggerVariant?: "primary" | "secondary" | "ghost" | "danger"
+  readonly triggerVariant?: ButtonProps["variant"]
   readonly title: string
   readonly description?: string
   readonly children?: JSX.Element
   readonly footer?: JSX.Element
   readonly open?: boolean
   readonly onOpenChange?: (open: boolean) => void
+  /** The element to focus when the dialog opens, instead of its first tabbable one. */
+  readonly initialFocus?: () => HTMLElement | undefined
 }
 
 const styles = {
@@ -106,6 +108,13 @@ function DialogBody(props: DialogProps & { menu: ActionMenuRegistry | null }) {
   return (
     <KobalteDialog.Content
       class={styles.content}
+      onOpenAutoFocus={(event: Event) => {
+        const target = props.initialFocus?.()
+
+        if (target === undefined) return
+        event.preventDefault()
+        target.focus()
+      }}
       onCloseAutoFocus={(event: Event) => {
         // A menu-launched dialog has no trigger button; return focus to the menu control.
         if (props.menu === null) return
@@ -146,13 +155,21 @@ function DialogBody(props: DialogProps & { menu: ActionMenuRegistry | null }) {
 }
 
 // Uncontrolled dialogs inside an ActionMenu still need state the menu item can open.
-const createDialogState = (props: DialogProps) => {
+const createDialogState = (props: DialogProps, menu: ActionMenuRegistry | null) => {
   const [localOpen, setLocalOpen] = createSignal(false)
+  // Whether the caller or an enclosing menu drives the dialog is decided once, when it is created.
+  const controlled = menu !== null || untrack(() => props.open) !== undefined
+
+  const open = () => props.open ?? localOpen()
+
+  const setOpen = (next: boolean) =>
+    props.open === undefined ? setLocalOpen(next) : props.onOpenChange?.(next)
 
   return {
-    open: () => props.open ?? localOpen(),
-    setOpen: (next: boolean) =>
-      props.open === undefined ? setLocalOpen(next) : props.onOpenChange?.(next),
+    setOpen,
+    // An uncontrolled dialog with its own trigger leaves both props to Kobalte.
+    kobalteOpen: () => (controlled ? open() : undefined),
+    kobalteOnOpenChange: controlled ? setOpen : undefined,
   }
 }
 
@@ -170,9 +187,7 @@ const registerMenuTrigger = (
 
 export function Dialog(props: DialogProps) {
   const menu = useActionMenu()
-  const state = createDialogState(props)
-  // Whether the caller or an enclosing menu drives the dialog is decided once, when it is created.
-  const controlled = menu !== null || untrack(() => props.open) !== undefined
+  const state = createDialogState(props, menu)
   onSettled(() =>
     registerMenuTrigger(
       menu,
@@ -184,11 +199,7 @@ export function Dialog(props: DialogProps) {
   // `open` is its own prop, not part of a computed spread: Kobalte's dialog parts read their
   // generated id once in the component body, and a computed spread is evaluated for every prop.
   return (
-    <KobalteDialog
-      modal
-      open={controlled ? state.open() : undefined}
-      onOpenChange={controlled ? state.setOpen : undefined}
-    >
+    <KobalteDialog modal open={state.kobalteOpen()} onOpenChange={state.kobalteOnOpenChange}>
       <Show when={menu === null && props.trigger}>
         <KobalteDialog.Trigger as={Button} variant={props.triggerVariant} type="button">
           {props.trigger}

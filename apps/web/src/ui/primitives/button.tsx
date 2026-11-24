@@ -4,7 +4,7 @@ import { css } from "../generated/css/index.js"
 import { control } from "../recipes/control.ts"
 
 type ButtonBaseProps = Omit<JSX.ButtonHTMLAttributes<HTMLButtonElement>, "class" | "aria-label"> & {
-  variant?: "primary" | "secondary" | "ghost" | "danger"
+  variant?: "primary" | "secondary" | "ghost" | "danger" | "bar"
   size?: "md" | "sm"
   loading?: boolean
   class?: JSX.ClassValue
@@ -21,6 +21,7 @@ const kinds = {
   secondary: "secondary",
   ghost: "ghost",
   danger: "danger",
+  bar: "bar",
 } as const
 
 const styles = {

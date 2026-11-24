@@ -40,46 +40,45 @@ it.effect(
         assert.isTrue(await page.getByRole("main").isVisible())
         assert.isTrue(await page.getByRole("link", { name: "RITSEI home" }).isVisible())
         assert.isTrue(await page.getByRole("navigation", { name: "Primary" }).isVisible())
-        assert.isTrue(await page.getByRole("navigation", { name: "Work sections" }).isVisible())
         assert.isTrue(await page.getByRole("link", { name: "Access", exact: true }).isVisible())
         assert.equal(await page.title(), "RITSEI · Operational workspace")
+        assert.equal(await page.locator("aside").count(), 0, "the shell has no sidebar")
 
-        const navigationToggle = page.locator('button[aria-controls="global-navigation"]')
-        const sidebar = page.locator("#global-navigation")
-        const expandedSidebar = await sidebar.boundingBox()
-        assert.exists(expandedSidebar)
-        assert.equal(await navigationToggle.getAttribute("aria-expanded"), "true")
+        // Ctrl+K opens a palette of workspaces: it filters, and Enter goes to the first match.
+        await page.keyboard.press("Control+k")
+        const palette = await openedDialog(page, "Go to a workspace")
+        assert.isTrue(
+          await palette
+            .getByRole("textbox", { name: "Filter workspaces" })
+            .evaluate((element) => document.activeElement === element),
+        )
+        await palette.getByRole("textbox", { name: "Filter workspaces" }).fill("zzz")
+        await palette.getByRole("status").waitFor()
+        await palette.getByRole("textbox", { name: "Filter workspaces" }).fill("approv")
+        assert.equal(await palette.getByRole("link").count(), 1)
+        await page.keyboard.press("Enter")
+        await page.getByRole("heading", { name: "Approvals", exact: true }).waitFor()
+        assert.equal(new URL(page.url()).pathname, "/approvals")
+        assert.equal(await page.getByRole("dialog").count(), 0)
 
-        await navigationToggle.click()
-        await page.waitForTimeout(220)
-        const collapsedSidebar = await sidebar.boundingBox()
-        assert.exists(collapsedSidebar)
-        assert.equal(await navigationToggle.getAttribute("aria-expanded"), "false")
-        assert.isTrue(collapsedSidebar!.width < expandedSidebar!.width)
-        assert.isTrue(await page.getByRole("link", { name: "My work" }).isVisible())
-
-        await navigationToggle.click()
+        // On a phone the links sit behind a toggle, which Escape closes and returns focus to.
+        const menuToggle = page.locator('button[aria-controls="primary-navigation"]')
         await page.setViewportSize({ width: 390, height: 844 })
         await page.waitForTimeout(50)
-        assert.equal(await navigationToggle.getAttribute("aria-expanded"), "false")
-        assert.equal(await sidebar.getAttribute("aria-hidden"), "true")
+        assert.equal(await menuToggle.getAttribute("aria-expanded"), "false")
+        assert.isFalse(
+          await page.getByRole("link", { name: "User accounts", exact: true }).isVisible(),
+        )
 
-        await navigationToggle.click()
-        await page.waitForTimeout(220)
-        assert.equal(await navigationToggle.getAttribute("aria-expanded"), "true")
-        assert.isNull(await sidebar.getAttribute("aria-hidden"))
+        await menuToggle.click()
+        assert.equal(await menuToggle.getAttribute("aria-expanded"), "true")
         assert.isTrue(
-          await page
-            .getByRole("link", { name: "My work" })
-            .evaluate((element) => document.activeElement === element),
+          await page.getByRole("link", { name: "User accounts", exact: true }).isVisible(),
         )
 
         await page.keyboard.press("Escape")
-        assert.equal(await navigationToggle.getAttribute("aria-expanded"), "false")
-        assert.equal(await sidebar.getAttribute("aria-hidden"), "true")
-        assert.isTrue(
-          await navigationToggle.evaluate((element) => document.activeElement === element),
-        )
+        assert.equal(await menuToggle.getAttribute("aria-expanded"), "false")
+        assert.isTrue(await menuToggle.evaluate((element) => document.activeElement === element))
 
         await page.setViewportSize({ width: 1280, height: 720 })
         await page.goto(`${url}/not-a-route`)

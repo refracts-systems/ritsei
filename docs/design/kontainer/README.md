@@ -37,6 +37,9 @@ nothing compares against them.
 FIN) and the ink frame, taken the same way with two sample requests. `app/manifest-light.png` and `app/manifest-dark.png`
 show the document flow of an invoice (sales and finance nodes, the current one framed).
 
+`app/shell-light.png`, `app/shell-dark.png`, `app/shell-palette-dark.png`, and `app/shell-phone.png` show
+the ink bar shell with the Ctrl+K palette and the phone layout, taken the same way.
+
 ## The adopted tokens are guarded
 
 `tokens.json` has an `adopted` section holding the semantic colors the application ships, as

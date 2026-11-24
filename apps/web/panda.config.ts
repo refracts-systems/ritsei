@@ -162,9 +162,6 @@ export default defineConfig({
           iconXl: { value: "24px" },
           iconDisplay: { value: "32px" },
           dialog: { value: "calc(100% - 2rem)" },
-          shellViewport: { value: "100dvh" },
-          sidebar: { value: "15rem" },
-          topbar: { value: "3rem" },
         },
         // Nested radii step down by the padding between them (a 10px menu with 4px padding holds
         // 6px items), so inner and outer corners stay concentric.
@@ -238,6 +235,13 @@ export default defineConfig({
           focusHalo: pair("rgba(163, 57, 37, 0.28)", "rgba(246, 167, 143, 0.4)"),
           // A surface frame (E: a 1px ink line). Dark is derived and keeps 3:1 on the canvas.
           frame: pair("#1B2638", "#7A8AA3"),
+          // The ink bar across the top of every page (E). It is ink in both themes; dark is a
+          // step darker than its canvas, and a frame line separates the two.
+          bar: pair("#1B2638", "#141C2B"),
+          barField: pair("#2A3548", "#232E42"),
+          onBar: pair("#F4F1EA", "#F4F1EA"),
+          onBarMuted: pair("#B4BDC9", "#B4BDC9"),
+          barAccent: pair("#E06A4E", "#E06A4E"),
           // Object types (E): a solid fill with light text, the same in both themes.
           onType: pair("#FBFAF6", "#FBFAF6"),
           type: {
@@ -488,6 +492,24 @@ export default defineConfig({
                   background: "ButtonFace",
                   borderColor: "ButtonText",
                 },
+              },
+              // A command on the ink bar: no fill until hovered, light text.
+              bar: {
+                textStyle: "button",
+                bgColor: "transparent",
+                borderColor: "transparent",
+                boxShadow: "none",
+                color: "onBarMuted",
+                cursor: "pointer",
+                _hover: { bgColor: "barField", color: "onBar" },
+                _focusVisible: {
+                  outline: "[3px solid]",
+                  outlineColor: "barAccent",
+                  outlineOffset: "[0px]",
+                  borderColor: "barAccent",
+                },
+                _disabled: { _hover: { bgColor: "transparent" } },
+                "@media (forced-colors: active)": { color: "ButtonText" },
               },
               ghost: {
                 textStyle: "button",

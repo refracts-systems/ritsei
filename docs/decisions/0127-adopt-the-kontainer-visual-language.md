@@ -53,6 +53,27 @@ The ink frame around surfaces (`frame`; a lighter blue-gray in dark, derived to 
 object-type colors (`type.*`, with light `onType` letters) arrive with the first screen that renders
 them, the Approvals queue, through the `TypeTag` primitive. The subtle surface tone keeps its hairline.
 
+## Amendment, 2026-11-25: the shell follows E
+
+The first version of this decision changed the look and kept the old shell, text scale, and
+density, which treated the current application as the fixed point and E as a skin over it. The owner
+reversed that: series E is the target, and the application moves toward it.
+
+- **The shell is E's.** The sidebar is gone. One ink bar runs across the top of every page, with the
+  wordmark, a Ctrl+K command field, the tenant, theme, and sign-out, and under them the links to
+  every workspace by group. The current workspace is the lit link with a shu underline. On a phone
+  the links sit behind one toggle. The page is the paper with no raised sheet around it, and its
+  content is at most 1280px wide, as in the mockups.
+- **Ctrl+K is a palette of workspaces.** It filters the same list the bar shows and jumps to a
+  workspace. It does not search records: the mockups promise object search, which needs data the API
+  does not serve ([proposal](../proposals/kontainer-backend.md)), and the field says "go to a
+  workspace" until then.
+- **Still to follow, in their own changes:** the 15 to 17px text and 44px controls of the mockups,
+  and the density that comes with them. The "Not changed" sentence above is superseded for these
+  two as well; they are scheduled, not rejected.
+- **Tokens.** `bar`, `barField`, `onBar`, `onBarMuted`, and `barAccent` are added. Text on the
+  bar reaches 4.5:1 and the accent 3:1 in both themes, which `design-tokens.test.ts` checks.
+
 ## Consequences
 
 - The `neutral` and `cobalt` primitives are gone; semantic tokens hold their values directly, so
@@ -60,5 +81,7 @@ them, the Approvals queue, through the `TypeTag` primitive. The subtle surface t
 - `@fontsource/pretendard` is removed; `@fontsource/ibm-plex-sans` and `@fontsource/shippori-mincho`
   are added at exact versions, as the dependency rule requires.
 - One dark-theme axe scan is added so the derived dark values are checked, as the light ones are.
+- The collapsible sidebar, its Ctrl+B shortcut, and the topbar's "Area / Section" links are removed;
+  the single section of each area duplicated the bar.
 - Reversing this means restoring the previous values in `apps/web/panda.config.ts`; no feature code
   depends on them.

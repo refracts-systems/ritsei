@@ -145,6 +145,7 @@
           "apps/web/src/ui/patterns/approval.tsx",
           "apps/web/src/ui/patterns/bulk-operation.tsx",
           "apps/web/src/ui/patterns/command-surface.tsx",
+          "apps/web/src/ui/patterns/command-palette.tsx",
           "apps/web/src/ui/patterns/confirm-dialog.tsx",
           "apps/web/src/ui/patterns/entity-workspace.tsx",
           "apps/web/src/ui/patterns/exception-investigation.tsx",
