@@ -34,8 +34,9 @@ several commits that record the same business facts, plus a lag or a new legitim
   ADR-0091 defers the process engine. An ADR resolves this before the first saga reaches
   production. Deliverables 1 to 5 run as stories in memory and do not wait for it; the ADR gates
   only a saga on the cluster host.
-- **Already modelled.** `SAL-DLV-1`'s over-delivery cap has a story
-  (`framework/foundation/domain-model/tests/delivery.story.test.ts`) and the opening stock load has
+- **Already modelled.** `SAL-DLV-1`'s over-delivery cap had a story
+  (`framework/foundation/domain-model/tests/delivery.story.test.ts`, removed on 2026-11-24; git history
+  at `821d88ce`) and the opening stock load has
   its item claim (`opening-item-claim.story.test.ts`); this phase adds what they lack, not a second
   model.
 

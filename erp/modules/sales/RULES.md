@@ -135,8 +135,8 @@ retried delivery id returns the recorded result.
 Why: [ADR-0101](../../../docs/decisions/0101-coordinate-sales-delivery-with-inventory.md),
 [ADR-0100](../../../docs/decisions/0100-adopt-moving-average-inventory-valuation.md).
 
-Phase 5 outcome (2026-11-24): this rule stays on its PostgreSQL transaction (ADR-0124). The delivery
-model stays: it is the phase 0 pilot and also states `SAL-DLV-1`.
+Phase 5 outcome (2026-11-24): this rule stays on its PostgreSQL transaction (ADR-0124). Its pilot
+model and story were removed on 2026-11-24; they are in git history at `821d88ce`.
 
 ## Position
 

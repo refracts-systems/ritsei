@@ -31,8 +31,8 @@ failure of the track.
 - **The cutover gates are unmet** (`alchemy.host-role`, `alchemy.rebuild`), and the host commits on
   its own connection pool, so it cannot share a transaction with RITSEI's tables or its ledger.
   Phases 3 and 4 removed their cutover for this; this phase does too (finding 1).
-- **Already modelled.** `SAL-DLV-2` has both step orders as stories
-  (`framework/foundation/domain-model/tests/delivery.story.test.ts`); phase 4 modelled the staged
+- **Already modelled.** `SAL-DLV-2` had both step orders as stories
+  (`framework/foundation/domain-model/tests/delivery.story.test.ts`, removed on 2026-11-24); phase 4 modelled the staged
   patterns these rules reuse (a saga with compensation and a parked failure, a policy that sends a
   command, a sequence aggregate that allocates after a recorded fact, a projection with a waiting
   query). This phase applies them; it does not build a second set.
@@ -178,7 +178,7 @@ phase turns each objection into an exit criterion.
 | 2026-11-24 | Owner | Outcome decided | `PRC-RET-1` stays on its PostgreSQL transaction (Keep). No move, no cutover; the staged model stays as test-only evidence. The `RULES.md` records it |
 | 2026-11-24 | Owner | Outcome decided | `INV-XFER-1` stays on its PostgreSQL transaction (Keep). No move, no cutover; the staged model stays as test-only evidence. The `RULES.md` records it |
 | 2026-11-24 | Owner | Outcome decided | `SET-BANK-3` stays on its PostgreSQL transaction (Keep). No move, no cutover; the staged model stays as test-only evidence. The `RULES.md` records it |
-| 2026-11-24 | Owner | Models removed | The staged models and stories of the class E rules other than `SAL-DLV-2` are deleted (`INV-XFER-1`, `PRC-RET-1`, `SET-BANK-3`, `BIL-INV-1`, `BIL-BILL-1`, `SAL-CREDIT-1`, `SAL-CREDIT-2`, `BIL-DOC-1`). The delivery model stays: it is the phase 0 pilot and states `SAL-DLV-1`. They are in git history at `f157dc5b` |
+| 2026-11-24 | Owner | Models removed | The staged models and stories of the class E rules other than `SAL-DLV-2` are deleted (`INV-XFER-1`, `PRC-RET-1`, `SET-BANK-3`, `BIL-INV-1`, `BIL-BILL-1`, `SAL-CREDIT-1`, `SAL-CREDIT-2`, `BIL-DOC-1`). The delivery model was removed the same day with the pilot tests that used it, in a later change. They are in git history at `f157dc5b` |
 
 The document was accepted on 2026-11-23 as the plan, the stories for the nine rules on 2026-11-24,
 and the same day the owner decided the outcome of every rule, one change per rule: **Keep**, each
@@ -206,7 +206,7 @@ What stays open, because it matters only if a rule is later reopened by a named,
 | Rule | Stories | Outcome |
 | --- | --- | --- |
 | `INV-XFER-1` | Done (2026-11-23), model only; the model was removed on 2026-11-24 | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
-| `SAL-DLV-2` | Done (2026-11-23), model only: `framework/foundation/domain-model/tests/delivery.story.test.ts`, both step orders; kept, it is the phase 0 pilot and states `SAL-DLV-1` | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
+| `SAL-DLV-2` | Done (2026-11-23), model only, both step orders; the model and story were removed on 2026-11-24 | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
 | `PRC-RET-1` | Done (2026-11-23), model only; the model was removed on 2026-11-24 | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
 | `SET-BANK-3` | Done (2026-11-23), model only; the model was removed on 2026-11-24 | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
 | `BIL-INV-1` | Done (2026-11-24), model only; the model was removed on 2026-11-24 | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
@@ -215,7 +215,7 @@ What stays open, because it matters only if a rule is later reopened by a named,
 | `BIL-DOC-1` | Done (2026-11-24), model only; the model was removed on 2026-11-24 | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
 
 The findings below describe the stories as they were when this phase was accepted. Their files were
-removed on 2026-11-24 (review record); read them at commit `f157dc5b`. Only the delivery model remains.
+removed on 2026-11-24 (review record); read them at commit `f157dc5b`. The delivery model, which this phase's `SAL-DLV-2` findings come from, was removed too.
 
 What the `INV-XFER-1` stories show, for that decision: confirmation is a saga with a compensation per
 deducted line, so a refused line leaves a deduction and its restoration on the stock (production
