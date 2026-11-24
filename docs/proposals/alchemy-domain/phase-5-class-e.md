@@ -194,6 +194,7 @@ before that rule's exit:
 | `PRC-RET-1` | Done (2026-11-23), model only: `erp/modules/procurement/tests/return-staging.story.test.ts` | Not decided: staged on Alchemy or kept on its PostgreSQL transaction is the owner's call |
 | `SET-BANK-3` | Done (2026-11-23), model only: `erp/modules/settlement/tests/bank-match.story.test.ts` | Not decided: staged on Alchemy or kept on its PostgreSQL transaction is the owner's call |
 | `BIL-INV-1` | Done (2026-11-24), model only: `erp/modules/billing/tests/invoiced-quantity.story.test.ts` | Not decided: staged on Alchemy or kept on its PostgreSQL transaction is the owner's call |
+| `BIL-BILL-1` | Done (2026-11-24), model only: `erp/modules/billing/tests/billed-quantity.story.test.ts` | Not decided: staged on Alchemy or kept on its PostgreSQL transaction is the owner's call |
 
 What the `INV-XFER-1` stories show, for that decision: confirmation is a saga with a compensation per
 deducted line, so a refused line leaves a deduction and its restoration on the stock (production
@@ -271,3 +272,32 @@ tracker (the second fails with `NothingToInvoice`, as in production, and posts n
 Not modelled: tax from the Tax module (a whole-basis-point rate rounded half up per line stands in),
 the gapless `INV/` number (`BIL-DOC-1`), the invoice date and period, credit notes, products, and the
 capability. The business owner's sign-off on the lag is not given.
+
+What the `BIL-BILL-1` stories show, for that decision (12 stories, 17 mutants killed): Billing owns
+the tracker per purchase order as an aggregate holding received, returned, billed, and credited
+quantity per line, fed by Procurement's confirmation, receipt, and return events through three
+policies, so "billable" and the record of the bill are one commit and two bills for the same receipt
+serialize on it. Billable is received less returned less billed plus credited, as in production, and
+a return after a bill can leave it negative.
+
+- **The lag has two directions, and one is worse than for `BIL-INV-1`.** A receipt the tracker has
+  not received yet makes a bill fail as exceeding the receipt: too early, harmless. A **return** the
+  tracker has not received yet lets a bill take goods that are about to be returned; when the return
+  arrives the line is negative and bills nothing more, but the bill is already recorded. Production's
+  single transaction cannot do that. The owner must accept this window or keep the rule on
+  PostgreSQL; the accounting owner must accept the bill that a later return then contradicts (a
+  credit note, not a deletion).
+- **Excess needs a covering approval and is valued at the bill's price,** as `BIL-BILL-2` says; a
+  covered excess records the bill but matches only the billable part. The approval is an input here;
+  who requested and who approved is not modelled.
+- **A line not on the order is refused even with an approval,** with billable and requested both 0,
+  as production does.
+- **The tracker accepts confirmation, receipts, and returns in any order;** a bill needs the
+  confirmation and refuses with `PurchaseOrderNotConfirmed` until it arrives.
+- **The journal and the credit note's staging are not repeated here:** `supplier-bill-staging-model.ts`
+  (phase 4) posts the journal, and its returned quantity reaches this tracker as `TrackCredit`.
+- **True concurrency is not shown.** Commands run one after another; that two simultaneous bills
+  cannot both pass is a property of the tracker being one aggregate, proved on the cluster host.
+
+Not modelled: tax, the bill date and period, the gapless `BILL/` number (`BIL-DOC-1`), the capability,
+and product descriptions. The business owner's sign-off on the lag is not given.
