@@ -104,41 +104,13 @@ export default defineConfig({
   theme: {
     extend: {
       tokens: {
-        colors: {
-          // Primitive palettes. Feature code never consumes these directly.
-          neutral: {
-            0: { value: "#FFFFFF" },
-            50: { value: "#FAFAFA" },
-            100: { value: "#F4F4F5" },
-            150: { value: "#EDEDEF" },
-            200: { value: "#E4E4E7" },
-            300: { value: "#D4D4D8" },
-            400: { value: "#A1A1AA" },
-            450: { value: "#8B8B94" },
-            500: { value: "#71717A" },
-            550: { value: "#6A6A72" },
-            600: { value: "#52525B" },
-            750: { value: "#2E2E33" },
-            800: { value: "#27272A" },
-            825: { value: "#232327" },
-            850: { value: "#1F1F23" },
-            900: { value: "#18181B" },
-            925: { value: "#131316" },
-            950: { value: "#09090B" },
-          },
-          cobalt: {
-            50: { value: "#EEF2FF" },
-            300: { value: "#A9BCFF" },
-            500: { value: "#7C9BFF" },
-            600: { value: "#2E52D6" },
-            700: { value: "#2442B0" },
-            900: { value: "#1B2440" },
-          },
-        },
         fonts: {
           body: {
             value:
-              '"Pretendard Variable", "Pretendard", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+              '"IBM Plex Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+          },
+          heading: {
+            value: '"Shippori Mincho", "Hiragino Mincho ProN", Georgia, "Times New Roman", serif',
           },
           mono: {
             value: '"IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace',
@@ -198,12 +170,12 @@ export default defineConfig({
         // 6px items), so inner and outer corners stay concentric.
         radii: {
           xs: { value: "2px" },
-          item: { value: "6px" },
-          control: { value: "8px" },
-          menu: { value: "10px" },
-          surface: { value: "12px" },
-          overlay: { value: "14px" },
-          panel: { value: "14px" },
+          item: { value: "4px" },
+          control: { value: "4px" },
+          menu: { value: "4px" },
+          surface: { value: "0px" },
+          overlay: { value: "4px" },
+          panel: { value: "0px" },
           full: { value: "9999px" },
         },
         zIndex: {
@@ -240,86 +212,77 @@ export default defineConfig({
       },
       semanticTokens: {
         colors: {
-          // Surfaces
-          backdrop: pair("rgba(9, 9, 11, 0.5)", "rgba(0, 0, 0, 0.7)"),
-          canvas: pair("{colors.neutral.50}", "{colors.neutral.950}"),
-          content: pair("{colors.neutral.0}", "{colors.neutral.925}"),
-          contentSubtle: pair("{colors.neutral.50}", "{colors.neutral.900}"),
-          contentHover: pair("{colors.neutral.100}", "{colors.neutral.850}"),
-          contentActive: pair("{colors.neutral.150}", "{colors.neutral.800}"),
-          // Text
-          text: pair("{colors.neutral.900}", "{colors.neutral.150}"),
-          muted: pair("{colors.neutral.550}", "{colors.neutral.400}"),
-          // Borders
-          boundary: pair("{colors.neutral.200}", "{colors.neutral.825}"),
-          boundaryControl: pair("{colors.neutral.300}", "{colors.neutral.750}"),
-          boundaryStrong: pair("{colors.neutral.450}", "{colors.neutral.500}"),
-          // Commands: ink, not the accent.
-          action: pair("{colors.neutral.900}", "{colors.neutral.50}"),
-          actionHover: pair("{colors.neutral.750}", "{colors.neutral.200}"),
-          onAction: pair("{colors.neutral.50}", "{colors.neutral.900}"),
-          // The one accent: links, focus, and selection.
-          accent: pair("{colors.cobalt.600}", "{colors.cobalt.500}"),
-          accentSubtle: pair("{colors.cobalt.50}", "{colors.cobalt.900}"),
-          link: pair("{colors.cobalt.700}", "{colors.cobalt.300}"),
-          focusRing: pair("{colors.cobalt.600}", "{colors.cobalt.500}"),
-          focusHalo: pair("rgba(46, 82, 214, 0.28)", "rgba(124, 155, 255, 0.4)"),
-          // Status: foreground, background, border per tone.
-          danger: pair("#C0352B", "#FF8A80"),
-          dangerHover: pair("#A12B22", "#FFA59D"),
-          onDanger: pair("{colors.neutral.0}", "{colors.neutral.950}"),
+          // Surfaces (E): canvas is the paper, content is the sheet, the others are its tints.
+          backdrop: pair("rgba(27, 38, 56, 0.5)", "rgba(0, 0, 0, 0.7)"),
+          canvas: pair("#F4F1EA", "#1B2638"),
+          content: pair("#FBFAF6", "#2A3548"),
+          contentSubtle: pair("#F4F1EA", "#232E42"),
+          contentHover: pair("#EDE8DC", "#34425A"),
+          contentActive: pair("#E7E2D6", "#3C4B66"),
+          // Text (E)
+          text: pair("#1B2638", "#F4F1EA"),
+          muted: pair("#4A5260", "#B4BDC9"),
+          // Borders: the hairline is E's line color; the control and input borders are derived.
+          boundary: pair("#D9D3C5", "#3C4B66"),
+          boundaryControl: pair("#C4BDAC", "#4A5A78"),
+          boundaryStrong: pair("#7A7F8C", "#8493AD"),
+          // Commands are ink, and turn shu on hover (E).
+          action: pair("#1B2638", "#F4F1EA"),
+          actionHover: pair("#B5402B", "#E06A4E"),
+          onAction: pair("#F4F1EA", "#1B2638"),
+          // The accent is shu (E); light text and focus use the darker shu, which passes 3:1 and 4.5:1.
+          accent: pair("#B5402B", "#E06A4E"),
+          accentSubtle: pair("#F2E4DD", "#4A3338"),
+          link: pair("#A33925", "#F6A78F"),
+          focusRing: pair("#A33925", "#F6A78F"),
+          focusHalo: pair("rgba(163, 57, 37, 0.28)", "rgba(246, 167, 143, 0.4)"),
+          // Status: foreground, background, border per tone. Success, warning, and danger are E's
+          // ok, warn, and critical; info is E's procurement blue.
+          danger: pair("#A33925", "#FF9E8A"),
+          dangerHover: pair("#8A2E1D", "#FFB5A5"),
+          onDanger: pair("#FBFAF6", "#1B2638"),
           status: {
             neutral: {
-              fg: pair("{colors.neutral.600}", "#B4B4BB"),
-              bg: pair("{colors.neutral.100}", "{colors.neutral.850}"),
-              border: pair("{colors.neutral.200}", "{colors.neutral.750}"),
+              fg: pair("#4A5260", "#B4BDC9"),
+              bg: pair("#EDE8DC", "#34425A"),
+              border: pair("#D9D3C5", "#4A5A78"),
             },
             success: {
-              fg: pair("#127A52", "#5FD3A0"),
-              bg: pair("#E8F6EF", "#10291F"),
-              border: pair("#B4E2CB", "#1F4A37"),
+              fg: pair("#2E6B4A", "#7FCB9F"),
+              bg: pair("#E4EFE8", "#1C3A2E"),
+              border: pair("#B9D4C4", "#2E5A47"),
             },
             warning: {
-              fg: pair("#9A5B00", "#F2C46B"),
-              bg: pair("#FFF5E5", "#2E2410"),
-              border: pair("#F5D49A", "#5A4519"),
+              fg: pair("#8A5A12", "#E3B866"),
+              bg: pair("#F4EBDA", "#3A2F18"),
+              border: pair("#E0C99B", "#5E4A24"),
             },
             danger: {
-              fg: pair("#C0352B", "#FF8A80"),
-              bg: pair("#FDECEA", "#331715"),
-              border: pair("#F5C2BD", "#5C2621"),
+              fg: pair("#A33925", "#FF9E8A"),
+              bg: pair("#F6E3DD", "#422525"),
+              border: pair("#E2B5A9", "#6B3A33"),
             },
             info: {
-              fg: pair("#1F64B8", "#7DB5FF"),
-              bg: pair("#EAF2FD", "#12233A"),
-              border: pair("#BBD4F5", "#23426B"),
+              fg: pair("#2E5A87", "#8FB4DD"),
+              bg: pair("#E1EBF4", "#1E3552"),
+              border: pair("#B3C9DD", "#355A85"),
             },
           },
           icon: {
-            muted: pair("{colors.neutral.550}", "{colors.neutral.400}"),
-            subtle: pair("{colors.neutral.500}", "#7C7C85"),
-            success: pair("#127A52", "#5FD3A0"),
-            warning: pair("#9A5B00", "#F2C46B"),
-            danger: pair("#C0352B", "#FF8A80"),
-            info: pair("#1F64B8", "#7DB5FF"),
-            disabled: pair("{colors.neutral.400}", "{colors.neutral.600}"),
-            inverse: pair("{colors.neutral.0}", "{colors.neutral.950}"),
+            muted: pair("#4A5260", "#B4BDC9"),
+            subtle: pair("#5C636E", "#8493AD"),
+            success: pair("#2E6B4A", "#7FCB9F"),
+            warning: pair("#8A5A12", "#E3B866"),
+            danger: pair("#A33925", "#FF9E8A"),
+            info: pair("#2E5A87", "#8FB4DD"),
+            disabled: pair("#8A8F9B", "#5C6B85"),
+            inverse: pair("#F4F1EA", "#1B2638"),
           },
         },
         // Four steps of depth. In the dark theme a hairline of light does the separating.
         shadows: {
-          control: {
-            value: {
-              base: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
-              _dark: "0 1px 2px 0 rgba(0, 0, 0, 0.4)",
-            },
-          },
-          raised: {
-            value: {
-              base: "0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.06)",
-              _dark: "0 1px 2px 0 rgba(0, 0, 0, 0.5)",
-            },
-          },
+          control: { value: "none" },
+          raised: { value: "none" },
           floating: {
             value: {
               base: "0 8px 20px -6px rgba(0, 0, 0, 0.12), 0 2px 6px -2px rgba(0, 0, 0, 0.06)",
@@ -399,26 +362,29 @@ export default defineConfig({
         },
         pageTitle: {
           value: {
+            fontFamily: "heading",
             fontSize: "3xl",
             fontWeight: "semibold",
             lineHeight: "3xl",
-            letterSpacing: "display",
+            letterSpacing: "normal",
           },
         },
         sectionTitle: {
           value: {
+            fontFamily: "heading",
             fontSize: "lg",
             fontWeight: "semibold",
             lineHeight: "lg",
-            letterSpacing: "heading",
+            letterSpacing: "normal",
           },
         },
         display: {
           value: {
+            fontFamily: "heading",
             fontSize: "4xl",
             fontWeight: "semibold",
             lineHeight: "4xl",
-            letterSpacing: "display",
+            letterSpacing: "normal",
             fontVariantNumeric: "tabular-nums",
           },
         },

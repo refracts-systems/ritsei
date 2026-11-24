@@ -20,8 +20,8 @@ exceptions.
 
 1. **Hierarchy before decoration.** Position, size, weight, and spacing say what matters; color and
    depth are reserved for meaning (selection, focus, status).
-2. **Ink for commands, one accent for meaning.** The primary button is ink; the cobalt accent marks
-   links, keyboard focus, and selection only; the rest is neutral.
+2. **Ink for commands, one accent for meaning.** The primary button is ink; the shu accent marks
+   links, keyboard focus, and selection only; the rest is paper and ink.
 3. **Density with breathing room.** Controls, rows, and padding come from the Panda scale on a 4px
    grid; `strictTokens` rejects values outside the scale at build.
 4. **Motion by frequency.** Repeated actions do not animate; the rest eases out and finishes within
@@ -85,10 +85,11 @@ Every token has a light and a dark value; dark mode is defined, not inverted.
 
 Use the named text styles in `apps/web/src/ui/foundations/typography.ts` (`pageTitle`,
 `sectionTitle`, `body`, `label`, `button`, `tableHeader`, `tableCell`, `helper`, `metadata`, `status`,
-`numeric`, `display`, `code`), rather than raw sizes; one `h1` per workspace. Pretendard is the UI face and
-IBM Plex Mono is for identifiers only; numeric columns are right-aligned with tabular numerals;
-labels and headings are sentence case. Spacing, radii, and sizes come from the Panda scale. Depth
-comes from tone, a 1px hairline, and one small shadow; the `surface` recipe has tones `default`,
+`numeric`, `display`, `code`), rather than raw sizes; one `h1` per workspace. IBM Plex Sans is the interface face,
+Shippori Mincho sets titles and display figures, and IBM Plex Mono is for identifiers only; numeric columns are right-aligned with tabular numerals;
+labels and headings are sentence case. Spacing, radii, and sizes come from the Panda scale. Surfaces and panels are square and controls are 4px, as in the Kontainer
+mockups ([ADR-0127](../decisions/0127-adopt-the-kontainer-visual-language.md)). Depth comes from
+tone and a 1px hairline; only menus and dialogs carry a shadow; the `surface` recipe has tones `default`,
 `subtle`, and `flush`.
 
 ## 6. Content and formatting
