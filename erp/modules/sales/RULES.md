@@ -135,6 +135,9 @@ retried delivery id returns the recorded result.
 Why: [ADR-0101](../../../docs/decisions/0101-coordinate-sales-delivery-with-inventory.md),
 [ADR-0100](../../../docs/decisions/0100-adopt-moving-average-inventory-valuation.md).
 
+Phase 5 outcome (2026-11-24): this rule stays on its PostgreSQL transaction (ADR-0124). The staged
+Alchemy model is test-only evidence, not a plan to move it.
+
 ## Position
 
 Sales owns customers in their Sales role, price lists, quotations, sales orders, and delivery

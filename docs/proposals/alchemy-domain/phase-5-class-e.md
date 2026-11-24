@@ -46,7 +46,7 @@ when every rule it carries has passed. The ledger stays outside this track.
 
 | Rule | Design on Alchemy | Question for the owner |
 | --- | --- | --- |
-| `SAL-DLV-2` | Saga over delivery and stock items; the pilot measured both step orders | Accept issue-and-return trails for failed deliveries? Which step order? |
+| `SAL-DLV-2` | Saga over delivery and stock items; the pilot measured both step orders | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
 | `SAL-CREDIT-1`, `SAL-CREDIT-2` | A credit exposure aggregate per customer that decides the limit check and holds the reservation for a confirmed order, committed before the order is confirmed so a refusal still leaves the order unchanged; it receives receivables from Billing as events | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
 | `BIL-DOC-1` | The document records first; a number sequence allocates only for a recorded document (the `DO/` model of phase 4), then tax and journal follow, each idempotent | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
 | `BIL-INV-1` | Billing owns an invoiced-quantity tracker per sales order, an **aggregate** (not a projection) fed by delivery events through a policy; the invoice decision reads it | Kept on its PostgreSQL transaction (owner, 2026-11-24) |
@@ -174,6 +174,7 @@ phase turns each objection into an exit criterion.
 | 2026-11-24 | Owner | Outcome decided | `BIL-BILL-1` stays on its PostgreSQL transaction (Keep). No move, no cutover; the staged model stays as test-only evidence. The `RULES.md` records it |
 | 2026-11-24 | Owner | Outcome decided | `SAL-CREDIT-1`, `SAL-CREDIT-2` stay on their PostgreSQL transaction (Keep). No move, no cutover; the staged model stays as test-only evidence. The `RULES.md` records it |
 | 2026-11-24 | Owner | Outcome decided | `BIL-DOC-1` stays on its PostgreSQL transaction (Keep). No move, no cutover; the staged model stays as test-only evidence. The `RULES.md` records it |
+| 2026-11-24 | Owner | Outcome decided | `SAL-DLV-2` stays on its PostgreSQL transaction (Keep). No move, no cutover; the staged model stays as test-only evidence. The `RULES.md` records it |
 
 Two acceptances are recorded above. The document was accepted on 2026-11-23 as the plan, and the
 stories for the nine rules on 2026-11-24. Neither decides a per-rule question, and no rule has an
