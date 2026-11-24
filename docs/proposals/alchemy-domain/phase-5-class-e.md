@@ -196,6 +196,7 @@ before that rule's exit:
 | `BIL-INV-1` | Done (2026-11-24), model only: `erp/modules/billing/tests/invoiced-quantity.story.test.ts` | Not decided: staged on Alchemy or kept on its PostgreSQL transaction is the owner's call |
 | `BIL-BILL-1` | Done (2026-11-24), model only: `erp/modules/billing/tests/billed-quantity.story.test.ts` | Not decided: staged on Alchemy or kept on its PostgreSQL transaction is the owner's call |
 | `SAL-CREDIT-1`, `SAL-CREDIT-2` | Done (2026-11-24), model only: `erp/modules/sales/tests/credit-exposure.story.test.ts` | Not decided: staged on Alchemy or kept on its PostgreSQL transaction is the owner's call |
+| `BIL-DOC-1` | Done (2026-11-24), model only: `erp/modules/billing/tests/document-numbering.story.test.ts` | Not decided: staged on Alchemy or kept on its PostgreSQL transaction is the owner's call |
 
 What the `INV-XFER-1` stories show, for that decision: confirmation is a saga with a compensation per
 deducted line, so a refused line leaves a deduction and its restoration on the stock (production
@@ -333,3 +334,31 @@ confirmation key (`SAL-ORDER-2`), mark the order confirmed.
 Not modelled: the non-negative limit check, the capability, a customer without a party role or legal
 entity (never gated), cancellation of a confirmed order (and so the release of its reservation), and
 who is told of a refusal.
+
+What the `BIL-DOC-1` stories show, for that decision: the document records first, then tax, number,
+journal, and the posted mark follow as policies, each on the event before it (`BillingDocument`,
+`BillingSeries`, `DocumentJournal`).
+
+- **Tax before number keeps the series gapless.** A number is allocated only for a taxed document,
+  so a document that never records or never taxes asks for none and the series has no hole and no
+  voided number. Production allocates after tax too, but inside one transaction that rolls the
+  number back; staged, the order is what keeps the series gapless. The document's "gapless with
+  voided numbers" text in ADR-0124 follows from allocating first, which this staging does not do.
+- **A series is per legal entity, kind, and calendar year,** restarting at 1, in the format of the
+  numbering module (`INV/2026/00001`). The series gives a document one number and remembers it, and
+  a document keeps its first number.
+- **Tax uses the tax date on the record.** A credit note takes its credited document's date, so a
+  step that runs after the 2026-07-01 stand-in rate change still taxes at its own date's rate.
+- **The journal posts at the document date, once per document,** on the receivable side for `INV/`
+  and `CN/` and the payable side for `BILL/` and `DN/`, credit notes reversed, zero lines dropped.
+- **A recorded document is briefly unnumbered and unposted.** This is the owner's question for this
+  rule: whether a fiscal reviewer and the accounting owner accept it for legal documents. Reports
+  that list documents must either hide documents without a number or show them as pending.
+- **Two documents asking at once are serialized by the series,** so numbers are consecutive in the
+  order the series receives them, which need not be the order the documents were recorded in.
+  True concurrency is proved on the cluster host, not by stories.
+
+Not modelled: the Tax module's rate lookup beyond a two-period stand-in, the matched value of a
+supplier bill (`BIL-BILL-3` states it), the open amount, the fiscal calendar (the series restarts
+each calendar year), the capability, and a tax or journal step that fails (here each step succeeds;
+no step is retried by a saga).
