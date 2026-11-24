@@ -176,6 +176,8 @@ stories for the nine rules on 2026-11-24. Neither decides a per-rule question, a
 outcome yet. Each of these needs its own owner decision or evidence, rule by rule, before that
 rule's exit:
 
+The per-rule choices and their prices are laid out in [`phase-5-decision-sheet.md`](./phase-5-decision-sheet.md).
+
 1. For each of the 9 rules: staged on Alchemy (stories, the business owner's sign-off, the accounting
    owner's acceptance where it posts) or kept on its PostgreSQL transaction. Every outcome column
    reads "Not decided".
