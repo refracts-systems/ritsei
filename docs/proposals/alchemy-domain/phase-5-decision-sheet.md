@@ -8,7 +8,7 @@
 ## How to decide
 
 Each rule has two outcomes. **Keep** means it stays on its PostgreSQL transaction: nothing changes,
-and the staged model stays as evidence. **Stage** means the rule moves to Alchemy with the price
+and the staged model is not needed (removed on 2026-11-24). **Stage** means the rule moves to Alchemy with the price
 listed, after the named people accept it in writing and the cutover gates (`alchemy.host-role`,
 `alchemy.rebuild`) are met; the move itself is a later change, not this decision.
 

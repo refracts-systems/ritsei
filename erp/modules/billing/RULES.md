@@ -38,8 +38,8 @@ Tax at its tax date (the document date, or the credited document's date for a cr
 journal posted at the document date; its open amount starts at its total. A repeated document id
 returns the posted document.
 
-Phase 5 outcome (2026-11-24): this rule stays on its PostgreSQL transaction (ADR-0124). The staged
-Alchemy model is test-only evidence, not a plan to move it.
+Phase 5 outcome (2026-11-24): this rule stays on its PostgreSQL transaction (ADR-0124). Its staged
+Alchemy model was removed on 2026-11-24; it is in git history at `f157dc5b`.
 
 ### `BIL-INV-1` A customer invoice bills what was delivered and not yet invoiced
 
@@ -50,8 +50,8 @@ customer invoices, at the order line's price and tax code; with nothing left it 
 journal debits `receivable` with the total and credits `revenue` with the subtotal and `output_tax`
 with the tax.
 
-Phase 5 outcome (2026-11-24): this rule stays on its PostgreSQL transaction (ADR-0124). The staged
-Alchemy model is test-only evidence, not a plan to move it.
+Phase 5 outcome (2026-11-24): this rule stays on its PostgreSQL transaction (ADR-0124). Its staged
+Alchemy model was removed on 2026-11-24; it is in git history at `f157dc5b`.
 
 ### `BIL-SET-1` A settlement never takes more than the open amount
 
@@ -82,8 +82,8 @@ order, or more than billable without a covering variance approval, fails with
 Enforced by: `src/matching.ts` (`matchBill`); property tests in `tests/matching.test.ts`; the
 procure-to-pay chain test.
 
-Phase 5 outcome (2026-11-24): this rule stays on its PostgreSQL transaction (ADR-0124). The staged
-Alchemy model is test-only evidence, not a plan to move it.
+Phase 5 outcome (2026-11-24): this rule stays on its PostgreSQL transaction (ADR-0124). Its staged
+Alchemy model was removed on 2026-11-24; it is in git history at `f157dc5b`.
 
 ### `BIL-BILL-2` Billing beyond receipt needs an approved variance for that bill
 
