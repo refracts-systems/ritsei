@@ -193,6 +193,7 @@ before that rule's exit:
 | `SAL-DLV-2` | Done (2026-11-23), model only: `framework/foundation/domain-model/tests/delivery.story.test.ts`, both step orders | Not decided: step order and staged-or-kept are the owner's call |
 | `PRC-RET-1` | Done (2026-11-23), model only: `erp/modules/procurement/tests/return-staging.story.test.ts` | Not decided: staged on Alchemy or kept on its PostgreSQL transaction is the owner's call |
 | `SET-BANK-3` | Done (2026-11-23), model only: `erp/modules/settlement/tests/bank-match.story.test.ts` | Not decided: staged on Alchemy or kept on its PostgreSQL transaction is the owner's call |
+| `BIL-INV-1` | Done (2026-11-24), model only: `erp/modules/billing/tests/invoiced-quantity.story.test.ts` | Not decided: staged on Alchemy or kept on its PostgreSQL transaction is the owner's call |
 
 What the `INV-XFER-1` stories show, for that decision: confirmation is a saga with a compensation per
 deducted line, so a refused line leaves a deduction and its restoration on the stock (production
@@ -244,3 +245,29 @@ story host and is proven on the cluster host, as the PostgreSQL test in
 `tests/chains/bank-reconciliation.postgres.test.ts` proves it today. Not modelled: the legal entity,
 bank account and direction check (`BankMatchMismatch`), the capability, who matched, and the report.
 The treasury owner's sign-off on a compensated match is not given.
+
+What the `BIL-INV-1` stories show, for that decision (9 stories, 9 mutants killed): Billing owns the
+tracker per sales order as an aggregate holding delivered and invoiced quantity per line, fed by
+Sales' delivery and confirmation events through two policies, so "delivered less invoiced" and the
+record of the invoice are one commit and two invoices for the same deliveries serialize on the
+tracker (the second fails with `NothingToInvoice`, as in production, and posts no journal).
+
+- **A delivery is invoiceable only once the tracker has it.** Between Sales recording a delivery and
+  the policy feeding the tracker, an invoice fails with `NothingToInvoice`, the same answer as for a
+  delivery that does not exist. Too early, never too late; the owner decides whether that lag is
+  acceptable (the open question of this rule).
+- **The tracker accepts the confirmation and the deliveries in either order,** because two policies
+  feed it independently; the invoice needs the confirmation and refuses with `OrderNotConfirmed`
+  until it arrives.
+- **Billing sees only deliveries Sales completed.** That the delivery event follows a successful
+  stock issue is a property of `SAL-DLV-2` (variant A); the stories take the event as given and do
+  not prove it.
+- **The journal is a later step:** the invoice records first and a policy posts receivable, revenue,
+  and output tax once per invoice. Production posts both in one transaction.
+- **True concurrency is not shown.** The stories run commands one after another; that two
+  simultaneous invoices cannot both pass is a property of the tracker being one aggregate, and is
+  proved on the cluster host, not here.
+
+Not modelled: tax from the Tax module (a whole-basis-point rate rounded half up per line stands in),
+the gapless `INV/` number (`BIL-DOC-1`), the invoice date and period, credit notes, products, and the
+capability. The business owner's sign-off on the lag is not given.
