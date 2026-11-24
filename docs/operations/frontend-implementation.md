@@ -61,8 +61,7 @@ The shared UI surface remains application-local under `apps/web/src/ui/`. It con
 semantic tokens, controls, layouts, and accessibility behavior demonstrated by the current slice. A
 development-only Storybook lives under `apps/web/.storybook/`; it exercises the real UI recipes with
 controlled fixtures and does not create a separate design-system package or production component
-catalog. The shared cartographic boundary now has renderer-neutral Visual Grammar contracts, a
-feature-owned User Accounts projection, and an HTML/SVG fallback; optional WebGPU remains gated.
+catalog. No chart renderer, Visual Grammar layer, or WebGPU code exists; the design system lists them as not built.
 
 ## Verified behavior
 

@@ -1,195 +1,161 @@
 # RITSEI Design System: Operational Clarity
 
-> **Status:** Canonical and active design-system specification, compacted to its outcome-bearing rules
+> **Status:** Canonical. Every rule below is either **Tested** (a named test fails when it breaks) or
+> **Reviewed** (a pull-request reviewer checks it). Anything that is neither is listed in Section 12
+> as not built, so nobody mistakes it for a rule.
 >
-> **Implementation:** `apps/web` (tokens and recipes in `apps/web/panda.config.ts`, layouts in
-> `apps/web/src/ui/foundations/layout.ts`, the shell in `apps/web/src/app/shell.tsx`, primitives and
-> Product Patterns under `apps/web/src/ui/`). **Owns:** shell and navigation, Product Patterns,
-> Interaction Grammar states, color, typography, density, surfaces, formatting, semantic tokens,
-> component and accessibility contracts, renderer boundaries, and governance.
+> **Source of values:** token values, sizes, and radii live in `apps/web/panda.config.ts`, recipes in
+> `apps/web/src/ui/recipes/`, layouts in `apps/web/src/ui/foundations/layout.ts`, and the shell in
+> `apps/web/src/app/shell.tsx`. This document states roles and rules, not copies of those values.
 >
-> **Related:** [`frontend.md`](./frontend.md) ·
-> [ADR-0090](../decisions/0090-adopt-operational-clarity-visual-language.md) ·
+> **Related:** [`frontend.md`](./frontend.md) · [ADR-0090](../decisions/0090-adopt-operational-clarity-visual-language.md) ·
 > [ADR-0112](../decisions/0112-soften-operational-clarity-and-adopt-tactile-motion.md)
 
-Section numbers are stable: removed sections are not renumbered, so links such as
-`#6-product-patterns` keep working. **MUST** is required, **SHOULD** is the default (an exception needs
-a documented product reason), **MAY** is permitted inside the contract.
+**MUST** is required, **SHOULD** is the default (an exception needs a documented product reason),
+**MAY** is permitted. A deviation MUST name the problem it solves, the states it affects, its
+accessibility behavior, and its exit path.
 
-## 2. Design thesis
+## 1. Design thesis
 
 People use RITSEI for hours to post journals, confirm orders, receive goods, and investigate
-exceptions. The interface makes that work fast, legible, and trustworthy.
+exceptions.
 
 > **The data is the interface. Chrome stays quiet so state, numbers, and the next action are
 > obvious.**
 
 1. **Hierarchy before decoration.** Position, size, weight, and spacing say what matters; color and
-   depth are reserved for meaning (selection, focus, status).
-2. **Ink for commands, one accent for meaning.** The primary command is ink, one cobalt accent marks
-   links, keyboard focus, and selection, and everything else is an untinted neutral.
-3. **Density with breathing room.** 36px controls, 40px rows, 14px text on a 4px grid; surfaces pad 24px.
-4. **Motion by frequency.** What users do hundreds of times a day does not animate; the rest eases
-   out and stays under 320ms. Reduced motion MUST be honored.
+   depth are reserved for meaning (selection, focus, status). Reviewed.
+2. **Ink for commands, one accent for meaning.** The primary button is ink; the cobalt accent marks
+   links, keyboard focus, and selection only; the rest is neutral. Reviewed.
+3. **Density with breathing room.** Controls, rows, and padding come from the Panda scale on a 4px
+   grid; feature code MUST NOT introduce arbitrary spacing. Reviewed (`strictTokens` rejects unknown
+   tokens at build).
+4. **Motion by frequency.** Repeated actions do not animate; the rest eases out and finishes within
+   320ms. Section 8 lists what is tested.
 
-An effect that harms determinism, readability, accessibility, or speed is a defect: no gradients,
-glass, glow, texture, nested cards, or decorative maps. A deviation MUST name the problem it solves,
-the affected states, its accessibility behavior, and its exit path.
+No gradients, glass, glow, texture, nested cards, or decorative maps. Reviewed.
 
-## 6. Product Patterns
+## 2. Product Patterns
 
-A Product Pattern is a recurring product decision. The user's dominant job selects it, not the route
-shape, and each semantic responsibility has one visual owner.
+The user's dominant job selects the pattern, not the route shape; each responsibility has one visual
+owner. Components live in `apps/web/src/ui/patterns/`. Reviewed.
 
 | User job | Pattern | Contract |
 |---|---|---|
-| Scan or compare records while inspecting one | `MasterDetail` | Keep collection and selection in view; not for deep editing |
-| Inspect, create, or deeply edit one object | `EntityWorkspace` | Clear identity, lifecycle, evidence, a focused working area |
+| Scan or compare records beside a selection | `MasterDetail` | Collection and selection stay in view; not for deep editing |
+| Inspect, create, or deeply edit one object | `EntityWorkspace` | Identity, lifecycle, evidence, and a focused working area |
 | Understand and advance a situation | `OperationalWorkspace` | State, impact, evidence, and history legible; not a dashboard per route |
-| Investigate a blocked or anomalous state | `ExceptionInvestigation` | What happened, why, scope, evidence, safe next actions |
+| Investigate a blocked or anomalous state | `ExceptionInvestigation` | What happened, why, scope, and safe next actions |
 | Act on many records | `BulkOperation` | Explicit selected set, preview, confirmation, per-result outcome |
-| Offer business actions in context | `CommandSurface` | Named, context-bound commands; not navigation or authorization |
+| Offer actions in context | `CommandSurface` | Named, context-bound commands; not navigation or authorization |
 
-`Settings` and `Approval` remain named patterns; a new pattern needs a named semantic problem and the
-contract in Section 23. A major workspace follows
-`ORIENT → LOCATE → RECOGNIZE → INVESTIGATE → ACT → OBSERVE`. **Flexible Workspace** sets how much
-context stays visible (`Single`, `MasterDetail`, `DetailInspector`, `MasterDetailInspector`); a pane
-MUST NOT stay merely because the previous view had it, and narrow viewports drop columns or turn the
-inspector into a drawer.
+`Settings` and `Approval` are also patterns. A screen follows `ORIENT → LOCATE → RECOGNIZE →
+INVESTIGATE → ACT → OBSERVE`: the user can tell where they are, what needs attention, what they can
+do, and what changed. A new pattern needs a named semantic problem and the checklist in Section 11.
+Keep a pane only while it helps the task; on narrow viewports drop columns and keep identity,
+selection, and focus.
 
-## 7. Interaction Grammar and semantic states
+## 3. Shell and navigation
 
-State is intent, never a raw color. Interaction (hovered, selected, dragging, disabled), placement
-(valid, invalid, constrained), operational (normal, attention, constrained, critical, blocked), and
-system (pending, completed, failed, cancelled) states are orthogonal. `disabled` is availability, not
-authorization; the backend denies unauthorized actions. Summary precedence: `blocked > critical >
-constrained > attention > informative > normal`. Every important state uses at least two channels
-(text, icon, shape, border, color).
+The shell (`apps/web/src/app/shell.tsx`) has a collapsible **global navigation** (`aside`, toggled with
+the button or ⌘B/Ctrl+B), a **topbar** holding the local section navigation, the operating context
+(tenant) and utilities (theme, sign out), and a single `main` landmark with a skip link. Page identity
+and commands belong to the workspace's pattern, not the shell. Reviewed, plus these tested facts
+(`apps/web/src/ui/accessibility.test.ts`, `tests/frontend/shell.test.ts`): the skip link targets
+`#main`, there is exactly one `main`, navigation and the theme control are reachable by keyboard and
+named, the shell fits a 390px viewport without horizontal scroll, and tenant switch and sign-out work.
 
-## 8. Color system
+Five laws (Reviewed): (1) global structure keeps a stable order and marks the current destination with
+`aria-current="page"`; (2) one semantic level has one visual representation, so a breadcrumb or tab
+only appears for a real hierarchy; (3) navigation locates and commands change, and commands go through
+the owning authorized boundary; (4) keep context until it becomes a burden; (5) the workspace outranks
+navigation chrome. The topbar carries no object-level commands. A region has at most one primary
+button, where a region is a pattern's header, toolbar, or dialog footer. The current navigation
+destination uses the `contentActive` fill and a filled icon, never the accent.
 
-Color is a semantic resource. Primitive palettes (a neutral scale and one cobalt accent) live only in
-`apps/web/panda.config.ts`; components consume semantic tokens, each with a light and a dark value.
+## 4. Color and status
 
-| Token | Light | Dark | Use |
-|---|---|---|---|
-| `canvas` | `#FAFAFA` | `#09090B` | Application background, navigation column |
-| `content` | `#FFFFFF` | `#131316` | Workspace sheet, tables, forms, dialogs |
-| `contentSubtle` | `#FAFAFA` | `#18181B` | Toolbars, inset regions, row hover |
-| `contentHover` / `contentActive` | `#F4F4F5` / `#EDEDEF` | `#1F1F23` / `#27272A` | Hover; current navigation destination |
-| `text` / `muted` | `#18181B` / `#6A6A72` | `#EDEDEF` / `#A1A1AA` | Primary and secondary text |
-| `boundary` / `boundaryControl` / `boundaryStrong` | `#E4E4E7` / `#D4D4D8` / `#8B8B94` | `#232327` / `#2E2E33` / `#71717A` | Dividers; button borders; input borders (3:1) |
-| `action` / `actionHover` / `onAction` | `#18181B` / `#2E2E33` / `#FAFAFA` | `#FAFAFA` / `#E4E4E7` / `#18181B` | Primary button (ink) |
-| `accent` / `accentSubtle` / `link` | `#2E52D6` / `#EEF2FF` / `#2442B0` | `#7C9BFF` / `#1B2440` / `#A9BCFF` | Selection edge and row; links |
-| `focusRing` | `#2E52D6` | `#7C9BFF` | Solid focus edge, with a soft 3px halo |
-| `danger` / `onDanger` | `#C0352B` / white | `#FF8A80` / `#09090B` | Destructive buttons, errors |
+Components consume semantic tokens from `apps/web/panda.config.ts`, never primitive palettes or raw
+colors: surfaces (`canvas`, `content`, `contentSubtle`, `contentHover`, `contentActive`), text (`text`,
+`muted`), borders (`boundary`, `boundaryControl`, `boundaryStrong`), commands (`action`, `actionHover`,
+`onAction`, `danger`), and the accent (`accent`, `accentSubtle`, `link`, `focusRing`, `focusHalo`).
+Every token has a light and a dark value; dark mode is defined, not inverted. Reviewed.
 
-Status triples (`status.<tone>.fg | bg | border`) exist for `neutral`, `success`, `warning`, `danger`,
-and `info`. The accent is for links, keyboard focus, and selection only, never buttons, the current
-navigation destination, headings, or large fills. A region has at most one primary button. Status
-color MUST accompany a text label. Text meets WCAG 2.2 AA (4.5:1, large text 3:1); input borders,
-focus indicators, and chart marks meet 3:1; `forced-colors` mode keeps state through borders and
-text. Dark mode is defined, not inverted; the theme comes from the stored choice, then
-`prefers-color-scheme`, and is never business state.
+- The accent is for links, focus, and selection only: not buttons, headings, the current navigation
+  destination, or large fills.
+- Status uses `Badge` with five tones (`neutral`, `success`, `warning`, `danger`, `info`); the label
+  text is the status and the tint and dot are a second channel. Color alone MUST NOT carry status.
+- `disabled` means unavailable, not unauthorized; the backend denies unauthorized actions.
+- Text meets WCAG 2.2 AA, and input borders, focus indicators, and meaningful marks meet 3:1.
+  **Tested:** axe `wcag2a` and `wcag2aa` on the shell and key workflows, in light mode.
+- The theme comes from the stored choice, then `prefers-color-scheme`, and is never business state.
 
-## 10. Typography, density, and surfaces
+## 5. Typography, spacing, and surfaces
 
-Pretendard for UI and IBM Plex Mono for identifiers only; components MUST use semantic text styles:
-`pageTitle` 24/32 (one `h1` per workspace), `sectionTitle` 16/24, `body`, `label`, `button`, and
-`tableCell` 14/20, `tableHeader` and `helper` 13, `metadata` and `status` 12, `display` 32/40 for key
-figures. Hierarchy comes from weight and color; nothing primary is below 12px; numeric columns are
-right-aligned with tabular numerals. Phosphor is the only icon source, and icon-only controls need an
-accessible name.
+Use the named text styles in `apps/web/src/ui/foundations/typography.ts` (`pageTitle`,
+`sectionTitle`, `body`, `label`, `button`, `tableHeader`, `tableCell`, `helper`, `metadata`, `status`,
+`numeric`, `display`, `code`), never raw sizes; one `h1` per workspace. Pretendard is the UI face and
+IBM Plex Mono is for identifiers only; numeric columns are right-aligned with tabular numerals;
+labels and headings are sentence case. Spacing, radii, and sizes come from the Panda scale. Depth
+comes from tone, a 1px hairline, and one small shadow; use the `surface` recipe tones (`default`,
+`subtle`, `flush`). Reviewed.
 
-The grid is 4px with 36px controls (32px in toolbars) and about 40px rows. Feature code MUST NOT use
-arbitrary spacing. Density is `comfortable`, `compact` (default), or `dense` (only with readability
-evidence), always with targets of at least 24px. Depth comes from tone, a 1px hairline, and one small
-shadow; nested cards SHOULD NOT be used.
+## 6. Content and formatting
 
-## 13. Data visualization
+Format API decimals with `formatDecimal` in `apps/web/src/ui/foundations/format.ts`, never through
+floating point. **Tested:** `format.test.ts`. Reviewed: show the currency code where several can
+appear; right-align quantities with units; identifiers are monospaced; empty states say what is empty
+and the next action; loading states keep a `role="status"` label; buttons name the outcome ("Confirm
+order").
 
-A chart answers a declared business question; prefer a table when exact values matter. Every chart has
-a text or table alternative and labels units, currency, range, and freshness. HTML owns semantics, and
-no critical value or action exists only in pixels. WebGPU is not part of the system; reintroducing it
-needs a named need, measurement, and an ADR.
+## 7. Accessibility
 
-## 15. Content and formatting
+Every interactive control MUST have visible keyboard focus, a logical tab order, an accessible name
+and role, and status announcements where state changes; icon-only controls need an accessible name.
+Reviewed, plus the **Tested** items: axe scans (Section 4), the sign-in and shell under
+`forced-colors` and reduced motion at 390px, and the heading and theme control staying visible at 200%
+zoom. Kobalte is the only headless accessibility source and is used only through RITSEI wrappers; each
+primitive is approved when it has a wrapper and a browser test (`tests/frontend/kobalte.test.ts`
+covers the dialog). Native HTML is the fallback.
 
-Format API decimals with `ui/foundations/format.ts#formatDecimal`, never through floating point, and
-show the currency code where several can appear. Quantities are right-aligned and tabular with units;
-identifiers are monospaced. Empty states say what is empty and the next action, loading states keep a
-`role="status"` label, and buttons name the outcome ("Confirm order").
+## 8. Motion
 
-## 16. Core component contracts
+Tokens live in `apps/web/src/ui/motion/tokens.ts` and are mirrored in Panda. **Tested**
+(`tests/frontend/motion.test.ts`): no ease-in curve (only `inOut`, for things that stay on screen),
+no duration over 320ms, exit faster than enter, and the Panda tokens equal the runtime tokens. Reduced
+motion is read through `apps/web/src/ui/motion/preference.ts`; feature code uses the RITSEI wrapper, not
+Motion directly. Reviewed.
 
-Every shared component has a typed contract (props, variants, slots, events, focus, keyboard,
-accessibility) and a `USE WHEN` and `DO NOT USE FOR` product contract.
+## 9. Icons
 
-### Navigation and workspace shell
+Phosphor, through the `Icon` API and registry names, is the only icon source. **Tested:** the committed
+sprite matches the registry (`tests/frontend/iconography.test.ts`).
 
-A global navigation rail, an optional domain-local navigator, and a dominant workspace sit under a
-thin global topbar. Each layer answers one question and MUST NOT take over another's job:
+## 10. Styling contract and boundaries
 
-| Layer | Answers | MUST NOT own |
-|---|---|---|
-| Global navigation | Where am I in the business? | Record actions, filters, object tabs |
-| Global topbar (about 48px) | Under which operating context? | A second domain menu, object mutations |
-| Local navigation | Which capability in this domain? | Repeated global destinations, mutations |
-| Context header | Which object or situation? | Global context, repeated labels |
-| Workspace | What is happening, and why? | Authority inferred from presentation |
-| Command surface | What authorized command can I run? | Navigation or frontend authorization |
+Tokens flow `primitive → semantic → recipe/component → state`, with Panda `strictTokens` on. Feature
+code MUST NOT use raw colors, primitive tokens, arbitrary spacing, or unapproved recipes, and Panda
+extracts styles only from `apps/web/src/ui/**`. Feature code MUST NOT import Kobalte, Panda-generated
+artifacts, or Motion directly; today no file outside `apps/web/src/ui` does. Reviewed. The design
+system is the internal library `apps/web/src/ui/`; a separate package needs measured reuse or an
+independent release need. **Tested budgets** (`accessibility.test.ts`): every stylesheet at most
+50,000 bytes, every JavaScript chunk at most 200,000 bytes, the theme control answers within 200ms.
 
-Five laws: (1) global structure stays stable and marks the current location with
-`aria-current="page"`; (2) one semantic level has one visual representation; (3) navigation locates and
-commands change, through the owning authorized boundary; (4) preserve context until it becomes a
-burden; (5) the workspace outranks navigation chrome. Global navigation is collapsible with accessible
-names when collapsed, and its active destination uses the `contentActive` fill and a filled icon,
-never the accent.
+## 11. Governance
 
-## 17. Accessibility and interaction rules
-
-Every interactive control MUST have visible keyboard focus, a logical tab order, an accessible name and
-role, status announcements, and sound behavior at 200% zoom. Kobalte is the only headless
-accessibility source, approved per exercised primitive with a RITSEI wrapper and a browser test;
-native HTML is the fallback. Drag and drop is an enhancement: pointer, keyboard, and form editing give
-equivalent results, and a drop becomes a validated command before persistence.
-
-## 21. Token and styling contract
-
-Tokens flow `primitive → semantic → recipe/component → state` with Panda `strictTokens`. Feature code
-MUST NOT use raw colors, primitive tokens, arbitrary spacing, or unapproved recipes; Panda extracts
-styles only from `apps/web/src/ui/**`, and features compose named layouts, recipes, and primitives.
-Theme, density, high-contrast, and reduced-motion variants live in semantic tokens, and the stylesheet
-stays within the 50 KB budget of `apps/web/src/ui/accessibility.test.ts`.
-
-## 22. Frontend location and dependency boundaries
-
-The design system is the internal library `apps/web/src/ui/` inside the single frontend application;
-a separate package needs measured reuse or an independent release need. Feature code MUST NOT import
-Kobalte, dnd-kit, Panda-generated artifacts, renderer libraries, or Motion directly; it uses the
-RITSEI wrappers.
-
-## 23. Activation, validation, and governance
-
-A Product Pattern, shared component, or renderer adapter is complete only with a named semantic
-problem, a `USE WHEN` and `DO NOT USE FOR` contract, typed props and events, keyboard and
-screen-reader behavior, empty, loading, error, and degraded states, contrast and reduced-motion
-evidence, and a test when behavior is non-trivial. There is no visual-regression baseline: a rule that
-can be stated has a test that states it, and a token or recipe change is reviewed as its diff
+A Product Pattern or shared component is complete only with a named semantic problem, a `USE WHEN` and
+`DO NOT USE FOR` note, typed props, keyboard and screen-reader behavior, empty, loading, and error
+states, and a test when behavior is non-trivial. There is no visual-regression baseline; a rule that
+can be stated gets a test that states it, and a token or recipe change is reviewed as its diff
 ([ADR-0113](../decisions/0113-retire-frontend-compatibility-probes-and-visual-contract-test.md)).
-Feature teams compose existing patterns and preserve backend authority; they MUST NOT create
-industry-specific dashboard families, rely on color alone for state, or bypass the renderer boundary.
+Feature teams compose existing patterns and preserve backend authority; they MUST NOT build
+industry-specific dashboard families or bypass the shell.
 
-## 25. Final formula
+## 12. Not built
 
-```text
-Neutral canvas + a white workspace sheet + soft hairline surfaces
-Ink for commands; one cobalt accent for links, focus, and selection
-Status color only with a status label
-14px text · 36px controls · 24px surface padding · 4px grid
-Motion by frequency: answer every press, ease out, stay under 320ms
-Semantic HTML first; visualization only for a declared question
-```
-
-> **RITSEI should feel like a precise instrument: quiet until something needs attention, then
-> unmistakable about what it is and what to do next.**
+These appear in older documents but have no code, so they are not rules today: operational state
+tokens beyond the five badge tones; density profiles (`comfortable`, `compact`, `dense`); Flexible
+Workspace modes other than `MasterDetail` (`DetailInspector`, `MasterDetailInspector`); a Visual
+Grammar layer, chart renderers, and WebGPU; drag and drop (dnd-kit is not installed); a shell context
+header. The interaction intent types in `apps/web/src/ui/interaction/contract.ts` exist but no feature
+uses them. Building one of these starts with a decision record and a test, then an edit here.

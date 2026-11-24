@@ -41,7 +41,7 @@
 > - Capability-oriented plugin contribution (superseded by ADR-0091):
 >   [`../decisions/0023-adopt-capability-oriented-plugin-contribution.md`](../decisions/archive/0023-adopt-capability-oriented-plugin-contribution.md)
 > - Frontend architecture: [`./frontend.md`](./frontend.md)
-> - Design system and Interaction Grammar: [`./design-system.md`](./design-system.md)
+> - Design system: [`./design-system.md`](./design-system.md)
 > - Testing strategy: [`../development/testing.md`](../development/testing.md)
 > - Process Studio decision (amended by ADR-0091):
 >   [`../decisions/0018-adopt-typed-process-studio.md`](../decisions/0018-adopt-typed-process-studio.md)
@@ -197,7 +197,7 @@ The designer, runtime, and projections keep three concerns separate:
 | Concern | Question | Owner |
 |---|---|---|
 | Process semantics | What does this node or edge mean? | Process IR and catalog contracts, with domain contracts authoritative for business meaning |
-| Process representation | How is that meaning shown and edited? | Visual Grammar, Product Patterns, and the Process Designer |
+| Process representation | How is that meaning shown and edited? | Product Patterns and the Process Designer |
 | Process execution | How is the process run, recovered, and observed? | Workflow runtime and owning domain contracts |
 
 The process vocabulary may include `Trigger`, `Activity`, `Decision`, `Approval`, `Wait`,
@@ -1163,13 +1163,13 @@ credentials, SQL, stack traces, and private provider payloads remain internal.
 ## Process Studio workspace and shell
 
 Process Studio MUST inherit the canonical RITSEI global shell; it MUST NOT introduce an unrelated
-application shell or duplicate global navigation. Product Pattern and Flexible Workspace contracts
-are owned by [Design System §6](./design-system.md#6-product-patterns); shell roles and visual rules
-are owned by [Design System Navigation](./design-system.md#navigation-and-workspace-shell). Route and
+application shell or duplicate global navigation. Product Pattern contracts
+are owned by [Design System §2](./design-system.md#2-product-patterns); shell roles and visual rules
+are owned by [Design System §3](./design-system.md#3-shell-and-navigation). Route and
 presentation-state ownership is defined in
 [`frontend.md`](./frontend.md#situation-oriented-operational-ui).
 
-Process-definition editing SHOULD use a canvas-centric Flexible Workspace. The global `Processes`
+Process-definition editing SHOULD use a canvas-centric workspace. The global `Processes`
 landmark leads to local destinations such as `Definitions`, `Runs`, `Templates`, and `Exceptions`.
 The process navigator, canvas, and contextual inspector are separate presentation responsibilities:
 

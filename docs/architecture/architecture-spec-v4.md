@@ -605,7 +605,7 @@ authorize and commit the authoritative business fact.
 SolidStart and SSR are not enabled by default. Their adoption requires an explicit requirement and a
 new or superseding ADR.
 
-See [`./frontend.md`](./frontend.md) for detailed frontend rules and [`./design-system.md`](./design-system.md) for Product Patterns, Visual Grammar, and frontend design-system boundaries.
+See [`./frontend.md`](./frontend.md) for detailed frontend rules and [`./design-system.md`](./design-system.md) for Product Patterns and frontend design-system boundaries.
 
 ## External Integration Surface Contract
 

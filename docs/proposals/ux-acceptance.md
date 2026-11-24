@@ -7,7 +7,7 @@
 > **Owns:** The measurable UX targets for the main ERP flows, the gap list found when comparing the
 > design system with what a document-heavy ERP needs, and the proposed `DocumentFlow` Product Pattern.
 >
-> **Does not own:** The shell, Product Patterns, Interaction Grammar, content rules, and accessibility
+> **Does not own:** The shell, Product Patterns, content rules, and accessibility
 > rules, which belong to [`design-system.md`](../architecture/design-system.md); route, state, form,
 > and error rules, which belong to [`frontend.md`](../architecture/frontend.md); or the delivery
 > workflow an agent follows, which belongs to the
@@ -22,9 +22,9 @@
 ## 1. Why this exists
 
 The design system already states the goal: the data is the interface, and a screen should let the
-user orient, locate, recognize, investigate, act, and observe ([Design System §2 and
-§6](../architecture/design-system.md#2-design-thesis)). It already owns empty, loading, error,
-keyboard, and accessibility rules, and it names SAP Fiori as a source it learns from without copying.
+user orient, locate, recognize, investigate, act, and observe ([Design System §1 and
+§2](../architecture/design-system.md#1-design-thesis)). It already owns the empty, loading, keyboard,
+and accessibility rules (Sections 6 and 7).
 
 What it does not yet say is how anyone would know that a screen is _better to use_ than the same task
 in SAP or Odoo. This proposal adds that: a short list of flows with numbers to meet, and one pattern
@@ -57,7 +57,7 @@ release.
 
 For every flow the test also records the number of screens visited and fails if a step leaves the
 user without a visible next action or result ([Design System
-§6](../architecture/design-system.md#6-product-patterns): ORIENT through OBSERVE).
+§2](../architecture/design-system.md#2-product-patterns): ORIENT through OBSERVE).
 
 Two checks sit outside the script. Before a release that changes a flow, five people who do this work
 run it once without help, and the time and the first point of hesitation are written down. This is a
@@ -66,8 +66,8 @@ measurement, not a survey.
 ## 4. Proposed `DocumentFlow` pattern
 
 This section is the named semantic problem and usage contract that [Design System
-§23](../architecture/design-system.md#23-activation-validation-and-governance) asks for. It is a
-proposal until a design-system change adds it to §6.
+§11](../architecture/design-system.md#11-governance) asks for. It is a
+proposal until a design-system change adds it to §2.
 
 - **Semantic problem.** A business object is one step in a chain of documents. The user needs to see
   the chain and move along it without finding each document through a separate list.

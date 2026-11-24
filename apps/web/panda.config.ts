@@ -83,7 +83,7 @@ const motionAnimationStyles = defineAnimationStyles({
   },
 })
 
-// Semantic color pair: [light, dark]. Values are owned by docs/architecture/design-system.md §8.
+// Semantic color pair: [light, dark]. This file owns the values; docs/architecture/design-system.md §4 states their roles.
 const pair = (base: string, dark: string) => ({ value: { base, _dark: dark } })
 
 export default defineConfig({
