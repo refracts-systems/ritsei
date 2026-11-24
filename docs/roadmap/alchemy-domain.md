@@ -165,9 +165,11 @@ state for `SET-WHT-1`; the opening stock load cut over.
 9 rules whose business meaning changes: `BIL-DOC-1`, `BIL-INV-1`, `BIL-BILL-1`, `INV-XFER-1`,
 `PRC-RET-1`, `SAL-CREDIT-1`, `SAL-CREDIT-2`, `SAL-DLV-2`, `SET-BANK-3`.
 
-**Exit, per rule:** the accounting owner accepts its reversal trail and period-close rule in
-writing, or the rule stays on a PostgreSQL transaction; the rule's business owner signs off its new
-meaning; a rehearsed cutover for each aggregate that moves.
+**Exit, per rule:** stories that state the staged rule, and a recorded outcome: the accounting owner
+accepts its reversal trail and period-close rule in writing and the business owner signs off its new
+meaning, or the rule stays on a PostgreSQL transaction. A cutover is not part of this exit: it waits
+for the gates `alchemy.host-role` and `alchemy.rebuild`, and only a rule that moves needs one
+([phase 5](../proposals/alchemy-domain/phase-5-class-e.md)).
 
 **Stop if:** for a rule, neither acceptance nor a PostgreSQL transaction boundary is possible. That
 rule stays table-backed, and so do the aggregates it touches.
