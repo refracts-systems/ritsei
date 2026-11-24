@@ -602,8 +602,9 @@ The router owns navigation and validated URL state. It must not own business pol
 transaction behavior. UI intent invokes a public command; only the owning backend domain can
 authorize and commit the authoritative business fact.
 
-SolidStart and SSR are not enabled by default. Their adoption requires an explicit requirement and a
-new or superseding ADR.
+The frontend is a Vite SPA today. Server functions, SSR, and reactive Server Components (SolidStart
+was retired upstream with Solid 2.0) are open options: adopting one needs a concrete requirement and a
+new or superseding ADR, and the backend remains the authority for authorization and domain state.
 
 See [`./frontend.md`](./frontend.md) for detailed frontend rules and [`./design-system.md`](./design-system.md) for Product Patterns and frontend design-system boundaries.
 

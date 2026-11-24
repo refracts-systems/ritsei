@@ -7,7 +7,8 @@
 
 The track delivers a separately deployable Vite and SolidJS SPA with typed boundaries, shared Product
 Patterns, and one accessible representative workflow, keeping business authority in the backend.
-SolidStart, SSR, and any renderer that is the only representation of a critical value are out of scope.
+Server functions and SSR are not part of this track but are not ruled out, and any renderer that is the
+only representation of a critical value is out of scope.
 
 | Stage | Outcome |
 |---|---|
@@ -19,4 +20,5 @@ SolidStart, SSR, and any renderer that is the only representation of a critical 
 Each stage is checked by the tests in `tests/frontend/`. Imports of backend implementations,
 browser-side business mutations, and critical-workflow keyboard or semantic-fallback failures stay at
 `0`. Stop when browser state becomes a shadow domain model, vendor types escape the UI boundary,
-accessibility is deferred, or SSR is introduced without an approved requirement.
+accessibility is deferred, or a server-side feature is introduced without a concrete requirement and
+an ADR.

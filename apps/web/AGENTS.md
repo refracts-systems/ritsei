@@ -10,7 +10,9 @@ Architecture: [`frontend.md`](../../docs/architecture/frontend.md),
   sources. If missing, clone `https://github.com/solidjs/solid.git` and
   `https://github.com/solidjs/solid-router.git` there and check out the tags matching the versions in
   `apps/web/package.json` before relying on their behavior.
-- `apps/web/` is a Vite-based SolidJS 2.0 SPA. No SolidStart or SSR without an approved ADR.
+- `apps/web/` is a Vite-based SolidJS 2.0 SPA. Server functions, SSR, and reactive Server Components
+  are open options: adopt one for a concrete need and record it in an ADR. The backend stays the
+  authority for authorization and domain state.
 - Use Solid Router by default and keep router-specific types behind frontend routing abstractions.
 - Remote server state uses TanStack Solid Query; use TanStack Solid Table, Virtual, and Form for
   their specific concerns. Do not mirror query results into unrelated signals or global stores.

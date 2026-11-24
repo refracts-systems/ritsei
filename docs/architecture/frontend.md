@@ -17,9 +17,13 @@
 
 The frontend is an API-first Vite and SolidJS 2.0 SPA, deployed separately from the backend, with a
 router, TanStack Solid Query for selective server-state caching, Effect Schema contracts, an Effect
-application model, and the RITSEI design system ([`design-system.md`](./design-system.md)). SolidStart
-and SSR are not part of the foundation. The DOM owns semantics and interaction; no business value or
-action exists only in pixels.
+application model, and the RITSEI design system ([`design-system.md`](./design-system.md)).
+Solid 2.0 moved server functions into the core, retired SolidStart, and has announced reactive Server
+Components. None of that is adopted here today, and none of it is ruled out: adopt a server feature
+when a concrete requirement needs it, and record it in an ADR. Whatever is adopted, the backend stays
+the authority for authorization and domain state, and a server-side frontend layer is not a second
+security boundary. The DOM owns semantics and interaction; no business value or action exists only in
+pixels.
 
 ## Application architecture
 
