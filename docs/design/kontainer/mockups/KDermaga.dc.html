@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>RITSEI Kontainer, Dermaga</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F4F1EA;color:#1B2638;font-family:'IBM Plex Sans',Arial,sans-serif}
+a[href],button,label[for],summary,select{cursor:pointer}
+button:disabled{cursor:not-allowed}
+.minc{font-family:'Shippori Mincho',Georgia,serif}
+.mono{font-family:'IBM Plex Mono','Courier New',monospace}
+.bar{background:#1B2638;display:flex;flex-wrap:wrap;align-items:center;gap:20px;padding:12px 28px}
+.brand{font:700 22px 'Shippori Mincho',Georgia,serif;letter-spacing:6px;color:#F4F1EA}
+.cmd{flex:1 1 320px;min-height:44px;box-sizing:border-box;background:#2A3548;color:#F4F1EA;font:500 15px 'IBM Plex Mono',monospace;padding:0 16px;border:2px solid transparent;border-radius:4px}
+.cmd::placeholder{color:#B4BDC9}
+.cmd:focus-visible,.tab:focus-visible,.b:focus-visible,.nv:focus-visible,.st:focus-visible{outline:3px solid #E06A4E;outline-offset:2px}
+.tab{font:600 16px 'IBM Plex Sans',sans-serif;min-height:44px;padding:0 18px;background:transparent;border:0;border-bottom:3px solid transparent;color:#4A5260}
+.tab.on{color:#1B2638;border-bottom-color:#B5402B}
+.tab:hover{color:#1B2638;background:#EDE8DC}
+.tag{font:700 15px 'IBM Plex Mono',monospace;letter-spacing:1px;width:64px;text-align:center;padding:4px 0;color:#FBFAF6;flex:0 0 auto}
+.b{font:600 15px 'IBM Plex Sans',sans-serif;min-height:44px;padding:0 20px;border-radius:4px;background:#1B2638;color:#F4F1EA;border:1px solid #1B2638;transition:background .12s ease-out}
+.b:hover{background:#B5402B;border-color:#B5402B}
+.b:active{transform:translateY(1px)}
+.b.g{background:transparent;color:#1B2638}
+.b.g:hover{background:#1B2638;color:#F4F1EA}
+.st{font:600 14px 'IBM Plex Mono',monospace;min-height:44px;padding:0 14px;background:#FBFAF6;color:#1B2638;border:1px solid #1B2638;margin-left:-1px}
+.st.on{background:#1B2638;color:#F4F1EA}
+.st:hover{background:#EDE8DC}
+.st.on:hover{background:#1B2638}
+.seal{font:700 20px 'Shippori Mincho',Georgia,serif;color:#A33925;border:2px solid #B5402B;padding:4px 14px;transform:rotate(-4deg);white-space:nowrap}
+.nv{color:#B4BDC9;text-decoration:none;font:500 14px 'IBM Plex Mono',monospace;min-height:44px;display:inline-flex;align-items:center}
+.nv:hover{color:#F4F1EA}
+.sk{height:18px;background:#E7E2D6}
+@keyframes land{0%{transform:translateY(-14px);opacity:0}100%{transform:none;opacity:1}}
+.land{animation:land .35s cubic-bezier(.2,.8,.2,1) both}
+@keyframes sealin{0%{transform:rotate(-4deg) scale(1.5);opacity:0}100%{transform:rotate(-4deg) scale(1);opacity:1}}
+.seal{animation:sealin .25s ease-out}
+@media (prefers-reduced-motion:reduce){.land,.seal{animation:none}.b{transition:none}}
+</style>
+</helmet>
+<div style="min-height:1000px;background:#F4F1EA">
+<header class="bar">
+<span class="brand">RITSEI</span>
+<label for="q" style="position:absolute;left:-9999px">Cari objek atau beri perintah</label>
+<input id="q" class="cmd" type="text" value="{{q}}" onInput="{{ onQ }}" placeholder="Ctrl K · buat PO vendor Sinar Jaya…" autocomplete="off">
+<span style="color:#F4F1EA;font-size:15px">PT Maju Jaya · Jakarta</span>
+<nav aria-label="Layar" style="display:flex;gap:16px"><a class="nv" href="KCari.dc.html">Cari</a><a class="nv" href="KTutup.dc.html">Tutup hari</a><a class="nv" href="KManifest.dc.html">Manifest</a><a class="nv" href="KYard.dc.html">Yard</a><a class="nv" href="KStudio.dc.html">Studio</a></nav>
+</header>
+
+<main style="max-width:1280px;margin:0 auto;padding:36px 28px 40px">
+<div style="font-size:16px;font-weight:600;color:#A33925">01 · Dermaga</div>
+<h1 class="minc" style="margin:10px 0 0;font-size:46px;font-weight:600;line-height:1.15">{{headline}}</h1>
+<p style="margin:12px 0 0;font-size:18px;line-height:1.5;color:#4A5260;max-width:760px">Beranda berisi kontainer yang tiba, bukan menu modul. Setiap role melihat antreannya sendiri, dan aksi bisa diambil tanpa membuka dokumen.</p>
+
+<div role="tablist" aria-label="Departemen" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:28px;border-bottom:1px solid #D9D3C5">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="4"><button class="tab {{t.cls}}" role="tab" aria-selected="{{ t.on }}" type="button" onClick="{{ t.pick }}">{{t.label}} <span class="mono" style="font-size:14px">{{t.n}}</span></button></sc-for>
+</div>
+
+<div style="background:#FBFAF6;border:1px solid #1B2638;border-top:0" aria-live="polite">
+<sc-if value="{{ v.loading }}" hint-placeholder-val="{{ false }}">
+<div role="status" style="padding:8px 24px 20px"><div class="mono" style="font-size:14px;color:#4A5260;padding:12px 0">Memuat antrean…</div>
+<div style="display:flex;gap:20px;align-items:center;padding:16px 0;border-bottom:1px solid #D9D3C5"><span class="sk" style="width:64px;height:28px"></span><span class="sk" style="width:150px"></span><span class="sk" style="flex:1"></span></div>
+<div style="display:flex;gap:20px;align-items:center;padding:16px 0;border-bottom:1px solid #D9D3C5"><span class="sk" style="width:64px;height:28px"></span><span class="sk" style="width:150px"></span><span class="sk" style="flex:1"></span></div>
+<div style="display:flex;gap:20px;align-items:center;padding:16px 0"><span class="sk" style="width:64px;height:28px"></span><span class="sk" style="width:150px"></span><span class="sk" style="flex:1"></span></div></div>
+</sc-if>
+<sc-if value="{{ v.error }}" hint-placeholder-val="{{ false }}">
+<div role="alert" style="padding:28px 24px;display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between"><div><b class="minc" style="font-size:22px;color:#A33925">Antrean gagal dimuat.</b><div style="font-size:16px;color:#4A5260;margin-top:4px">Server tidak menjawab. Belum ada yang berubah di datamu.</div></div><button class="b" type="button" onClick="{{ retry }}">Coba lagi</button></div>
+</sc-if>
+<sc-if value="{{ v.empty }}" hint-placeholder-val="{{ false }}">
+<div style="padding:36px 24px;font-size:17px;color:#4A5260">{{emptyText}}</div>
+</sc-if>
+<sc-if value="{{ v.normal }}" hint-placeholder-val="{{ true }}">
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="4">
+<div class="land" style="display:flex;flex-wrap:wrap;align-items:center;gap:20px;padding:16px 24px;border-bottom:1px solid #D9D3C5;opacity:{{r.fade}}">
+<span class="tag" style="background:{{r.color}}">{{r.type}}</span>
+<span class="mono" style="font-size:15px;font-weight:500;width:150px;flex:0 0 auto">{{r.code}}</span>
+<span style="flex:1 1 320px;min-width:0;font-size:17px;line-height:1.4">{{r.what}}</span>
+<sc-if value="{{ r.open }}" hint-placeholder-val="{{ true }}"><button class="b {{r.btnCls}}" type="button" onClick="{{ r.act }}">{{r.label}}</button></sc-if>
+<sc-if value="{{ r.done }}" hint-placeholder-val="{{ false }}"><span class="seal">{{r.seal}}</span><button class="b g" type="button" onClick="{{ r.undo }}">Urungkan</button></sc-if>
+</div>
+</sc-for>
+</sc-if>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:18px">
+<span class="mono" style="font-size:13px;color:#4A5260">Lihat keadaan:</span>
+<div role="group" aria-label="Keadaan tampilan" style="display:flex;flex-wrap:wrap">
+<sc-for list="{{views}}" as="s" hint-placeholder-count="4"><button class="st {{s.cls}}" type="button" aria-pressed="{{ s.on }}" onClick="{{ s.pick }}">{{s.label}}</button></sc-for>
+</div>
+</div>
+</main>
+<footer style="max-width:1280px;margin:0 auto;padding:0 28px 40px"><div class="mono" style="font-size:13px;color:#4A5260">[DATA CONTOH] semua nama, kode, dan nominal di layar ini bukan data nyata. Warna dan kode tiga huruf menandai tipe objek, bukan modul.</div></footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { tab: 'Keuangan', q: '', done: {}, view: 'Normal' };
+  }
+  renderVals() {
+    const { tab, q, done, view } = this.state;
+    const colors = { FIN: '#7A2E3D', PRC: '#2E5A87', INV: '#4A6E4D', SAL: '#AE522C', HRD: '#62676D' };
+    const all = [
+      { id: 'a', dept: 'Keuangan', type: 'FIN', code: 'INV-SBY-1093', what: 'Jatuh tempo besok, Rp 72 jt', label: 'Ingatkan', seal: 'TERKIRIM', g: true },
+      { id: 'b', dept: 'Keuangan', type: 'FIN', code: 'JV-JKT-0331', what: 'Jurnal penyesuaian Rp 12,4 jt menunggu approval', label: 'Setujui', seal: 'DISETUJUI', g: false },
+      { id: 'c', dept: 'Pengadaan', type: 'PRC', code: 'PO-JKT-0412', what: 'Approval PO Rp 184,5 jt, Sinar Jaya', label: 'Setujui', seal: 'DISETUJUI', g: false },
+      { id: 'd', dept: 'Pengadaan', type: 'PRC', code: 'PR-JKT-0221', what: 'Permintaan 400 sak semen belum punya PO', label: 'Buat PO', seal: 'PO DIBUAT', g: true },
+      { id: 'e', dept: 'Gudang', type: 'INV', code: 'SKU-0221', what: 'Stok 38 dari safety stock 120', label: 'Reorder', seal: 'DIPESAN', g: true },
+      { id: 'f', dept: 'Gudang', type: 'INV', code: 'MV-CKR-0914', what: 'Mutasi Cikarang ke Jakarta menunggu konfirmasi terima', label: 'Konfirmasi', seal: 'DITERIMA', g: false },
+      { id: 'g', dept: 'Penjualan', type: 'SAL', code: 'SO-BDG-0788', what: 'Diskon 18%, di atas batas 15%', label: 'Tinjau', seal: 'DITINJAU', g: true },
+      { id: 'h', dept: 'Penjualan', type: 'SAL', code: 'QT-JKT-0377', what: 'Penawaran kedaluwarsa besok', label: 'Perpanjang', seal: 'DIPERPANJANG', g: true }
+    ];
+    const depts = ['Keuangan', 'Pengadaan', 'Gudang', 'Penjualan'];
+    const needle = q.trim().toLowerCase();
+    const pool = needle === '' ? all.filter((x) => x.dept === tab) : all.filter((x) => (x.code + ' ' + x.what + ' ' + x.type).toLowerCase().includes(needle));
+    const rows = pool.map((x) => ({
+      ...x,
+      color: colors[x.type],
+      open: !done[x.id], done: !!done[x.id],
+      fade: done[x.id] ? 0.6 : 1,
+      btnCls: x.g ? 'g' : '',
+      act: () => this.setState({ done: { ...this.state.done, [x.id]: true } }),
+      undo: () => this.setState({ done: { ...this.state.done, [x.id]: false } })
+    }));
+    const left = all.filter((x) => !done[x.id]).length;
+    const forcedEmpty = view === 'Kosong';
+    const isNormal = view === 'Normal' || view === 'Kosong';
+    const shown = forcedEmpty ? [] : rows;
+    return {
+      q,
+      onQ: (e) => this.setState({ q: e.target.value, view: 'Normal' }),
+      headline: left === 0 ? 'Dermaga kosong. Semua kontainer sudah ditangani.' : left + ' kontainer menunggu di dermaga',
+      tabs: depts.map((d) => ({ label: d, n: all.filter((x) => x.dept === d && !done[x.id]).length, on: tab === d && needle === '', cls: tab === d && needle === '' ? 'on' : '', pick: () => this.setState({ tab: d, q: '', view: 'Normal' }) })),
+      rows: shown,
+      v: { loading: view === 'Memuat', error: view === 'Gagal', empty: isNormal && shown.length === 0, normal: isNormal && shown.length > 0 },
+      emptyText: forcedEmpty || left === 0 ? 'Tidak ada kontainer di antrean ini. Dermagamu bersih.' : 'Dermaga kosong untuk pencarian ini. Coba kode seperti PO-JKT, atau nama vendor.',
+      retry: () => this.setState({ view: 'Normal' }),
+      views: ['Normal', 'Memuat', 'Kosong', 'Gagal'].map((s) => ({ label: s, on: view === s, cls: view === s ? 'on' : '', pick: () => this.setState({ view: s }) }))
+    };
+  }
+}
+</script>
+</body>
+</html>

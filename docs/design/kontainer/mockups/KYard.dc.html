@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>RITSEI Kontainer, Yard</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F4F1EA;color:#1B2638;font-family:'IBM Plex Sans',Arial,sans-serif}
+a[href],button,label[for],summary,select{cursor:pointer}
+button:disabled{cursor:not-allowed}
+.minc{font-family:'Shippori Mincho',Georgia,serif}
+.mono{font-family:'IBM Plex Mono','Courier New',monospace}
+.bar{background:#1B2638;display:flex;flex-wrap:wrap;align-items:center;gap:20px;padding:12px 28px}
+.brand{font:700 22px 'Shippori Mincho',Georgia,serif;letter-spacing:6px;color:#F4F1EA}
+.cmd{flex:1 1 320px;min-height:44px;box-sizing:border-box;background:#2A3548;color:#F4F1EA;font:500 15px 'IBM Plex Mono',monospace;padding:0 16px;display:flex;align-items:center;border-radius:4px;text-decoration:none}
+.cmd:hover{background:#34425A}
+.nv{color:#B4BDC9;text-decoration:none;font:500 14px 'IBM Plex Mono',monospace;min-height:44px;display:inline-flex;align-items:center}
+.nv:hover{color:#F4F1EA}
+.crumb{font:500 15px 'IBM Plex Mono',monospace;min-height:44px;padding:0 8px;background:transparent;border:0;color:#4A5260}
+.crumb.on{color:#1B2638;font-weight:700;text-decoration:underline;text-decoration-color:#B5402B;text-underline-offset:6px}
+.crumb:hover{color:#1B2638;background:#EDE8DC}
+.stackb{font:inherit;color:inherit;background:transparent;border:2px solid transparent;flex:1 1 0;min-width:0;display:flex;flex-direction:column;justify-content:flex-end;gap:6px;padding:6px;height:340px}
+.stackb:hover{border-color:#1B2638}
+.stackb.sel{border-color:#B5402B}
+.stackb:focus-visible,.crumb:focus-visible,.nv:focus-visible,.cmd:focus-visible,.drow:focus-visible,.st:focus-visible,.b:focus-visible{outline:3px solid #E06A4E;outline-offset:2px}
+.blk{height:36px;flex:0 0 auto}
+.drow{display:flex;flex-wrap:wrap;gap:20px;align-items:center;padding:12px 24px;border-bottom:1px solid #D9D3C5;color:inherit;text-decoration:none;min-height:44px;box-sizing:border-box}
+.drow:hover{background:#EDE8DC}
+.st{font:600 14px 'IBM Plex Mono',monospace;min-height:44px;padding:0 14px;background:#FBFAF6;color:#1B2638;border:1px solid #1B2638;margin-left:-1px}
+.st.on{background:#1B2638;color:#F4F1EA}
+.st:hover{background:#EDE8DC}
+.st.on:hover{background:#1B2638}
+.b{font:600 15px 'IBM Plex Sans',sans-serif;min-height:44px;padding:0 18px;border-radius:4px;background:#1B2638;color:#F4F1EA;border:1px solid #1B2638}
+.b:hover{background:#B5402B;border-color:#B5402B}
+.b:active{transform:translateY(1px)}
+.sk{height:18px;background:#E7E2D6}
+@keyframes settle{0%{transform:translateY(-20px);opacity:0}100%{transform:none;opacity:1}}
+.blk.hot{animation:settle .45s cubic-bezier(.2,.8,.2,1) both}
+@media (prefers-reduced-motion:reduce){.blk.hot{animation:none}}
+</style>
+</helmet>
+<div style="min-height:1000px">
+<header class="bar"><span class="brand">RITSEI</span><a class="cmd" href="KDermaga.dc.html">Ctrl K · cari objek di Dermaga</a><span style="color:#F4F1EA;font-size:15px">{{entity}}</span><nav aria-label="Layar" style="display:flex;gap:16px"><a class="nv" href="KCari.dc.html">Cari</a><a class="nv" href="KTutup.dc.html">Tutup hari</a><a class="nv" href="KDermaga.dc.html">Dermaga</a><a class="nv" href="KManifest.dc.html">Manifest</a><a class="nv" href="KStudio.dc.html">Studio</a></nav></header>
+
+<main style="max-width:1280px;margin:0 auto;padding:32px 28px 28px">
+<div style="font-size:16px;font-weight:600;color:#A33925">03 · Yard</div>
+<h1 class="minc" style="margin:8px 0 18px;font-size:40px;font-weight:600;line-height:1.15">Bottleneck terlihat dari tinggi tumpukan</h1>
+
+<div style="background:#FBFAF6;border:1px solid #1B2638;border-radius:8px;overflow:hidden">
+<div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:6px 24px;border-bottom:1px solid #D9D3C5">
+<div role="group" aria-label="Level zoom" style="display:flex;align-items:center;flex-wrap:wrap">
+<sc-for list="{{levels}}" as="l" hint-placeholder-count="3"><button class="crumb {{l.cls}}" type="button" aria-pressed="{{ l.on }}" onClick="{{ l.pick }}">{{l.label}}</button><span style="color:#A33925" aria-hidden="true">›</span></sc-for>
+<span class="mono" style="font-size:15px;color:#4A5260;margin-left:6px">Order-to-Cash · November</span>
+</div>
+<span class="mono" style="font-size:13px;color:#4A5260">1 blok = {{unit}} dokumen</span>
+</div>
+
+<div style="display:flex;align-items:flex-end;gap:20px;padding:20px 28px 0">
+<sc-for list="{{stacks}}" as="s" hint-placeholder-count="5">
+<button class="stackb {{s.cls}}" type="button" onClick="{{ s.pick }}" aria-label="{{s.aria}}" aria-pressed="{{ s.sel }}">
+<sc-for list="{{s.blocks}}" as="b" hint-placeholder-count="3"><span class="blk {{b.cls}}" style="background:{{b.bg}}"></span></sc-for>
+</button>
+</sc-for>
+</div>
+<div style="display:flex;gap:20px;padding:12px 28px 18px;border-top:1px solid #1B2638">
+<sc-for list="{{stacks}}" as="s" hint-placeholder-count="5">
+<div style="flex:1 1 0;min-width:0;padding:0 6px"><div class="minc" style="font-size:22px;font-weight:700">{{s.label}}</div><div class="mono" style="font-size:14px;font-weight:{{s.fw}};color:{{s.color}}">{{s.count}}</div></div>
+</sc-for>
+</div>
+<div style="background:#1B2638;color:#F4F1EA;font-size:16px;padding:14px 24px"><b style="color:#E06A4E">Perlu perhatian:</b> {{alert}}</div>
+</div>
+
+<section style="margin-top:24px;background:#FBFAF6;border:1px solid #1B2638;border-top:3px solid {{panel.top}}" aria-live="polite" aria-label="Dokumen di tahap terpilih">
+<div style="padding:14px 24px;border-bottom:1px solid #D9D3C5;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><h2 class="minc" style="font-size:22px;margin:0">{{panel.title}}</h2><span class="mono" style="font-size:14px;color:#4A5260">{{panel.sub}}</span></div>
+<sc-if value="{{ v.loading }}" hint-placeholder-val="{{ false }}"><div role="status" style="padding:16px 24px"><div class="mono" style="font-size:14px;color:#4A5260;margin-bottom:12px">Memuat dokumen…</div><div class="sk" style="width:60%;margin-bottom:12px"></div><div class="sk" style="width:80%;margin-bottom:12px"></div><div class="sk" style="width:45%"></div></div></sc-if>
+<sc-if value="{{ v.error }}" hint-placeholder-val="{{ false }}"><div role="alert" style="padding:20px 24px;display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between"><div><b class="minc" style="font-size:20px;color:#A33925">Daftar dokumen gagal dimuat.</b><div style="font-size:15px;color:#4A5260;margin-top:4px">Tumpukan di atas tetap benar; hanya daftar ini yang gagal.</div></div><button class="b" type="button" onClick="{{ retry }}">Coba lagi</button></div></sc-if>
+<sc-if value="{{ v.empty }}" hint-placeholder-val="{{ false }}"><div style="padding:24px;font-size:16px;color:#4A5260">Tidak ada dokumen di tahap ini.</div></sc-if>
+<sc-if value="{{ v.normal }}" hint-placeholder-val="{{ true }}">
+<sc-for list="{{panel.docs}}" as="d" hint-placeholder-count="3">
+<a class="drow" href="KManifest.dc.html"><span class="mono" style="flex:0 0 160px;font-size:15px;font-weight:500">{{d.code}}</span><span style="flex:1 1 280px;font-size:16px">{{d.what}}</span><span class="mono" style="font-size:14px;color:{{d.c}}">{{d.age}}</span></a>
+</sc-for>
+<div style="padding:12px 24px;font-size:14px;color:#4A5260">{{panel.foot}}</div>
+</sc-if>
+</section>
+
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:18px">
+<span class="mono" style="font-size:13px;color:#4A5260">Lihat keadaan daftar:</span>
+<div role="group" aria-label="Keadaan daftar" style="display:flex;flex-wrap:wrap">
+<sc-for list="{{views}}" as="s" hint-placeholder-count="4"><button class="st {{s.cls}}" type="button" aria-pressed="{{ s.on }}" onClick="{{ s.pick }}">{{s.label}}</button></sc-for>
+</div>
+</div>
+</main>
+<footer style="max-width:1280px;margin:0 auto;padding:0 28px 40px"><div class="mono" style="font-size:13px;color:#4A5260">[DATA CONTOH] jumlah dokumen Jakarta mengikuti paparan; angka di level Perusahaan dan Grup adalah skala buatan (3,1 kali dan 9 kali), bukan data nyata.</div></footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { level: 2, sel: 3, view: 'Normal' };
+  }
+  renderVals() {
+    const { level, sel, view } = this.state;
+    const L = [
+      { label: 'Grup Maju', entity: 'Grup Maju · 14 entitas', mult: 9, unit: 320, money: '10,8 M', inv: 369 },
+      { label: 'PT Maju Jaya', entity: 'PT Maju Jaya', mult: 3.1, unit: 110, money: '3,7 M', inv: 127 },
+      { label: 'Jakarta', entity: 'PT Maju Jaya · Jakarta', mult: 1, unit: 35, money: '1,2 M', inv: 41 }
+    ][level];
+    const stages = [
+      { label: 'Order', base: 126 }, { label: 'Siap Kirim', base: 84 }, { label: 'Dikirim', base: 131 },
+      { label: 'Ditagih', base: 214, hot: true }, { label: 'Dibayar', base: 92 }
+    ];
+    const stacks = stages.map((s, i) => {
+      const count = Math.round(s.base * L.mult);
+      const n = Math.min(8, Math.max(1, Math.ceil(count / L.unit)));
+      return {
+        label: s.label,
+        count: s.hot ? count + ' dok · tertahan' : count + ' dok',
+        fw: s.hot ? 700 : 500,
+        color: s.hot ? '#A33925' : '#4A5260',
+        sel: sel === i, cls: sel === i ? 'sel' : '',
+        aria: s.label + ', ' + count + ' dokumen',
+        blocks: Array.from({ length: n }, () => ({ bg: s.hot ? '#B5402B' : '#CBD1D9', cls: s.hot ? 'hot' : '' })),
+        pick: () => this.setState({ sel: i, view: 'Normal' })
+      };
+    });
+    const docsByStage = [
+      [{ code: 'SO-JKT-0412', what: 'PT Abadi Sentosa · Rp 412 jt', age: '3 hari', c: '#4A5260' }, { code: 'SO-BDG-0788', what: 'Diskon 18% menunggu tinjauan', age: '5 hari', c: '#4A5260' }],
+      [{ code: 'DO-JKT-0990', what: 'Siap kirim, menunggu armada', age: '1 hari', c: '#4A5260' }, { code: 'DO-JKT-0991', what: 'Siap kirim, Cikarang', age: '1 hari', c: '#4A5260' }],
+      [{ code: 'DO-JKT-0981', what: 'Dalam perjalanan ke PT Abadi Sentosa', age: '2 hari', c: '#4A5260' }, { code: 'DO-JKT-0975', what: 'Dalam perjalanan', age: '3 hari', c: '#4A5260' }],
+      [{ code: 'INV-SBY-1093', what: 'Jatuh tempo besok, Rp 72 jt', age: '41 hari', c: '#A33925' }, { code: 'INV-JKT-1071', what: 'Pelanggan contoh A, Rp 58,4 jt', age: '37 hari', c: '#A33925' }, { code: 'INV-BDG-1044', what: 'Pelanggan contoh B, Rp 31,2 jt', age: '34 hari', c: '#A33925' }, { code: 'INV-JKT-1019', what: 'Pelanggan contoh C, Rp 90 jt', age: '33 hari', c: '#A33925' }, { code: 'INV-SMG-1002', what: 'Pelanggan contoh D, Rp 18 jt', age: '31 hari', c: '#A33925' }],
+      [{ code: 'PAY-JKT-2210', what: 'Pelunasan INV-JKT-0997, Rp 41,2 jt', age: 'hari ini', c: '#2E6B4A' }, { code: 'PAY-JKT-2209', what: 'Pelunasan INV-JKT-0991, Rp 22 jt', age: 'kemarin', c: '#2E6B4A' }]
+    ];
+    const hot = !!stages[sel].hot;
+    const docs = view === 'Kosong' ? [] : docsByStage[sel];
+    const ok = view === 'Normal' || view === 'Kosong';
+    return {
+      entity: L.entity,
+      unit: L.unit,
+      levels: ['Grup Maju', 'PT Maju Jaya', 'Jakarta'].map((l, i) => ({ label: l, on: level === i, cls: level === i ? 'on' : '', pick: () => this.setState({ level: i }) })),
+      stacks,
+      alert: 'Rp ' + L.money + ' tertahan di tahap Ditagih · ' + L.inv + ' faktur lewat 30 hari',
+      v: { loading: view === 'Memuat', error: view === 'Gagal', empty: ok && docs.length === 0, normal: ok && docs.length > 0 },
+      retry: () => this.setState({ view: 'Normal' }),
+      views: ['Normal', 'Memuat', 'Kosong', 'Gagal'].map((s) => ({ label: s, on: view === s, cls: view === s ? 'on' : '', pick: () => this.setState({ view: s }) })),
+      panel: {
+        top: hot ? '#B5402B' : '#1B2638',
+        title: stages[sel].label,
+        sub: 'contoh dokumen di tahap ini · ' + L.label,
+        docs,
+        foot: 'Klik dokumen untuk turun ke manifest. Daftar ini contoh, bukan seluruh ' + Math.round(stages[sel].base * L.mult) + ' dokumen.'
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

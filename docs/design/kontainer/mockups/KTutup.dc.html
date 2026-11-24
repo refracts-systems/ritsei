@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>RITSEI Kontainer, Tutup hari</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F4F1EA;color:#1B2638;font-family:'IBM Plex Sans',Arial,sans-serif}
+a[href],button,label[for],summary,select{cursor:pointer}
+button:disabled{cursor:not-allowed}
+.minc{font-family:'Shippori Mincho',Georgia,serif}
+.mono{font-family:'IBM Plex Mono','Courier New',monospace}
+.bar{background:#1B2638;display:flex;flex-wrap:wrap;align-items:center;gap:20px;padding:12px 28px}
+.brand{font:700 22px 'Shippori Mincho',Georgia,serif;letter-spacing:6px;color:#F4F1EA}
+.nv{color:#B4BDC9;text-decoration:none;font:500 14px 'IBM Plex Mono',monospace;min-height:44px;display:inline-flex;align-items:center}
+.nv:hover{color:#F4F1EA}
+.nv:focus-visible,.b:focus-visible{outline:3px solid #E06A4E;outline-offset:3px}
+.tag{font:700 15px 'IBM Plex Mono',monospace;letter-spacing:1px;width:64px;text-align:center;padding:4px 0;color:#FBFAF6;flex:0 0 auto}
+.b{font:600 17px 'IBM Plex Sans',sans-serif;min-height:48px;padding:0 26px;border-radius:4px;background:#B5402B;color:#FBFAF6;border:1px solid #B5402B;transition:background .12s ease-out}
+.b:hover{background:#1B2638;border-color:#1B2638}
+.b:active{transform:translateY(1px)}
+.b.g{background:transparent;color:#1B2638;border-color:#1B2638}
+.b.g:hover{background:#1B2638;color:#F4F1EA}
+.hanko{width:112px;height:112px;background:#B5402B;color:#FBFAF6;display:flex;align-items:center;justify-content:center;font:700 44px 'Shippori Mincho',Georgia,serif;transform:rotate(-6deg)}
+@keyframes thump{0%{transform:rotate(-6deg) scale(1.7);opacity:0}60%{transform:rotate(-6deg) scale(.96);opacity:1}100%{transform:rotate(-6deg) scale(1);opacity:1}}
+.hanko{animation:thump .35s ease-out}
+@media (prefers-reduced-motion:reduce){.hanko{animation:none}.b{transition:none}}
+</style>
+</helmet>
+<div style="min-height:1000px">
+<header class="bar"><span class="brand">RITSEI</span><span style="flex:1"></span><span style="color:#F4F1EA;font-size:15px">PT Maju Jaya · Jakarta</span><nav aria-label="Layar" style="display:flex;gap:16px"><a class="nv" href="KDermaga.dc.html">Dermaga</a><a class="nv" href="KManifest.dc.html">Manifest</a><a class="nv" href="KYard.dc.html">Yard</a><a class="nv" href="KStudio.dc.html">Studio</a><a class="nv" href="KCari.dc.html">Cari</a></nav></header>
+
+<main style="max-width:1100px;margin:0 auto;padding:36px 28px 32px">
+<div style="font-size:16px;font-weight:600;color:#A33925">06 · Tutup hari</div>
+<h1 class="minc" style="margin:8px 0 22px;font-size:40px;font-weight:600;line-height:1.15">Hari ini juga punya manifest, dan ditutup dengan satu cap</h1>
+
+<section style="background:#FBFAF6;border:1px solid #1B2638" aria-label="Manifest hari ini">
+<div style="display:flex;flex-wrap:wrap;align-items:stretch;border-bottom:1px solid #1B2638">
+<div style="border-left:10px solid #{{stripe}};border-right:1px solid #D9D3C5;padding:18px 26px"><div class="mono" style="font-size:14px;font-weight:700;color:#A33925">HARI · Penutupan</div><div class="mono" style="font-size:34px;font-weight:700;line-height:1.1">HR·JKT·1124</div></div>
+<div style="flex:1 1 320px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 28px;padding:18px 26px">
+<div><div class="mono" style="font-size:12px;color:#4A5260">Pemilik</div><div style="font-size:17px;font-weight:600">Rina A.</div></div>
+<div><div class="mono" style="font-size:12px;color:#4A5260">Status</div><div style="font-size:17px;font-weight:600">{{status}}</div></div>
+<div><div class="mono" style="font-size:12px;color:#4A5260">Diputuskan</div><div class="mono" style="font-size:17px;font-weight:700">8 dari 8</div></div>
+<div><div class="mono" style="font-size:12px;color:#4A5260">Menunggu besok</div><div class="mono" style="font-size:17px;font-weight:700">3</div></div>
+</div>
+<div style="padding:12px 26px;display:flex;align-items:center">
+<sc-if value="{{ closed }}" hint-placeholder-val="{{ false }}"><div class="hanko" role="img" aria-label="Cap penutupan hari">律整</div></sc-if>
+</div>
+</div>
+
+<div style="display:flex;flex-wrap:wrap">
+<div style="flex:1 1 480px;min-width:0;padding:18px 26px;border-right:1px solid #D9D3C5">
+<h2 class="minc" style="margin:0 0 8px;font-size:22px">Diputuskan hari ini</h2>
+<sc-for list="{{done}}" as="d" hint-placeholder-count="4">
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid #D9D3C5"><span class="tag" style="background:{{d.color}}">{{d.tag}}</span><span class="mono" style="font-size:14px;font-weight:500;flex:0 0 140px">{{d.code}}</span><span style="flex:1 1 200px;font-size:16px">{{d.what}}</span></div>
+</sc-for>
+</div>
+<div style="flex:1 1 360px;min-width:0;padding:18px 26px">
+<h2 class="minc" style="margin:0 0 8px;font-size:22px">Menunggu besok pagi</h2>
+<sc-for list="{{next}}" as="n" hint-placeholder-count="3">
+<div style="display:flex;gap:16px;padding:10px 0;border-bottom:1px solid #D9D3C5"><span class="mono" style="flex:0 0 60px;font-size:14px;color:#4A5260">{{n.time}}</span><span style="font-size:16px;line-height:1.4">{{n.what}}</span></div>
+</sc-for>
+</div>
+</div>
+
+<div style="padding:20px 26px;border-top:1px solid #1B2638;background:#F4F1EA;display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between" aria-live="polite">
+<div style="font-size:17px;line-height:1.5;max-width:640px">{{message}}</div>
+<sc-if value="{{ open }}" hint-placeholder-val="{{ true }}"><button class="b" type="button" onClick="{{ close }}">Tutup hari</button></sc-if>
+<sc-if value="{{ closed }}" hint-placeholder-val="{{ false }}"><button class="b g" type="button" onClick="{{ reopen }}">Buka kembali</button></sc-if>
+</div>
+</section>
+</main>
+<footer style="max-width:1100px;margin:0 auto;padding:0 28px 40px"><div class="mono" style="font-size:13px;color:#4A5260">[DATA CONTOH] nama, kode, dan jam di layar ini bukan data nyata. Cap 律整 mengikuti paparan: aturan dan susunan yang tertata.</div></footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { closed: false };
+  }
+  renderVals() {
+    const closed = this.state.closed;
+    return {
+      closed, open: !closed,
+      stripe: closed ? '2E6B4A' : 'B5402B',
+      status: closed ? 'Ditutup 17.42' : 'Terbuka',
+      message: closed
+        ? 'Hari ditutup pukul 17.42. Manifest ini tersimpan dan ikut menjadi riwayat setiap objek yang kamu sentuh. Sampai besok, Rina.'
+        : 'Delapan kontainer sudah kamu tangani. Tiga hal menunggu besok, masing-masing sudah punya pemilik dan jam.',
+      close: () => this.setState({ closed: true }),
+      reopen: () => this.setState({ closed: false }),
+      done: [
+        { tag: 'FIN', color: '#7A2E3D', code: 'INV-SBY-1093', what: 'Pengingat jatuh tempo terkirim, Rp 72 jt' },
+        { tag: 'PRC', color: '#2E5A87', code: 'PO-JKT-0412', what: 'Approval PO Rp 184,5 jt, Sinar Jaya, disetujui' },
+        { tag: 'INV', color: '#4A6E4D', code: 'SKU-0221', what: 'Reorder semen dipesan, stok 38 dari 120' },
+        { tag: 'SAL', color: '#AE522C', code: 'SO-BDG-0788', what: 'Diskon 18% ditinjau dan diteruskan ke manajer' }
+      ],
+      next: [
+        { time: '08.00', what: 'Jawaban manajer untuk diskon SO-BDG-0788' },
+        { time: '10.00', what: 'INV-SBY-1093 jatuh tempo, cek mutasi bank' },
+        { time: '14.00', what: 'Gudang mengirim sisa kabel DO-0981, faktur lanjutan siap' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

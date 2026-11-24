@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>RITSEI Kontainer, Cari dan perintah</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F4F1EA;color:#1B2638;font-family:'IBM Plex Sans',Arial,sans-serif}
+a[href],button,label[for],summary,select{cursor:pointer}
+button:disabled{cursor:not-allowed}
+.minc{font-family:'Shippori Mincho',Georgia,serif}
+.mono{font-family:'IBM Plex Mono','Courier New',monospace}
+.bar{background:#1B2638;display:flex;flex-wrap:wrap;align-items:center;gap:20px;padding:12px 28px}
+.brand{font:700 22px 'Shippori Mincho',Georgia,serif;letter-spacing:6px;color:#F4F1EA}
+.nv{color:#B4BDC9;text-decoration:none;font:500 14px 'IBM Plex Mono',monospace;min-height:44px;display:inline-flex;align-items:center}
+.nv:hover{color:#F4F1EA}
+.nv:focus-visible,.q:focus-visible,.res:focus-visible,.b:focus-visible,.st:focus-visible{outline:3px solid #E06A4E;outline-offset:2px}
+.q{font:500 22px 'IBM Plex Sans',sans-serif;width:100%;box-sizing:border-box;min-height:56px;border:1px solid #1B2638;background:#FBFAF6;color:#1B2638;padding:0 18px}
+.tag{font:700 15px 'IBM Plex Mono',monospace;letter-spacing:1px;width:64px;text-align:center;padding:4px 0;color:#FBFAF6;flex:0 0 auto}
+.res{display:flex;flex-wrap:wrap;align-items:center;gap:18px;width:100%;box-sizing:border-box;min-height:56px;padding:10px 20px;border:0;border-bottom:1px solid #D9D3C5;background:transparent;color:#1B2638;text-align:left;font:inherit;text-decoration:none}
+.res:hover,.res.first{background:#EDE8DC}
+.b{font:600 15px 'IBM Plex Sans',sans-serif;min-height:44px;padding:0 20px;border-radius:4px;background:#1B2638;color:#F4F1EA;border:1px solid #1B2638}
+.b:hover{background:#B5402B;border-color:#B5402B}
+.b:active{transform:translateY(1px)}
+.st{font:600 14px 'IBM Plex Mono',monospace;min-height:44px;padding:0 14px;background:#FBFAF6;color:#1B2638;border:1px solid #1B2638;margin-left:-1px}
+.st.on{background:#1B2638;color:#F4F1EA}
+.st:hover{background:#EDE8DC}
+.st.on:hover{background:#1B2638}
+.sk{height:18px;background:#E7E2D6}
+@keyframes land{0%{transform:translateY(-10px);opacity:0}100%{transform:none;opacity:1}}
+.land{animation:land .3s cubic-bezier(.2,.8,.2,1) both}
+@media (prefers-reduced-motion:reduce){.land{animation:none}}
+</style>
+</helmet>
+<div style="min-height:1000px">
+<header class="bar"><span class="brand">RITSEI</span><span style="flex:1"></span><span style="color:#F4F1EA;font-size:15px">PT Maju Jaya · Jakarta</span><nav aria-label="Layar" style="display:flex;gap:16px"><a class="nv" href="KDermaga.dc.html">Dermaga</a><a class="nv" href="KManifest.dc.html">Manifest</a><a class="nv" href="KYard.dc.html">Yard</a><a class="nv" href="KStudio.dc.html">Studio</a><a class="nv" href="KTutup.dc.html">Tutup hari</a></nav></header>
+
+<main style="max-width:900px;margin:0 auto;padding:40px 28px 32px">
+<div style="font-size:16px;font-weight:600;color:#A33925">05 · Cari dan perintah</div>
+<h1 class="minc" style="margin:8px 0 8px;font-size:40px;font-weight:600;line-height:1.15">Satu kotak untuk mencari objek dan memberi perintah</h1>
+<p style="margin:0 0 22px;font-size:18px;line-height:1.5;color:#4A5260">Ketik kode, nama, atau kalimat biasa. Perintah dalam bahasa biasa menggantikan T-code, dan setiap aksi tetap lewat izin yang sama.</p>
+
+<label for="q" style="position:absolute;left:-9999px">Cari objek atau beri perintah</label>
+<input id="q" class="q" type="text" value="{{q}}" onInput="{{ onQ }}" placeholder="Ketik kode, nama, atau perintah" autocomplete="off">
+
+<sc-if value="{{ cmd.show }}" hint-placeholder-val="{{ false }}">
+<div class="land" style="margin-top:14px;background:#1B2638;color:#F4F1EA;padding:16px 20px;display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between">
+<div><div style="font-size:14px;color:#B4BDC9">Perintah dikenali</div><div class="minc" style="font-size:22px;font-weight:700;margin-top:2px">{{cmd.title}}</div><div style="font-size:15px;color:#B4BDC9;margin-top:2px">{{cmd.detail}}</div></div>
+<sc-if value="{{ cmd.ready }}" hint-placeholder-val="{{ true }}"><button class="b" type="button" onClick="{{ run }}" style="background:#F4F1EA;color:#1B2638;border-color:#F4F1EA">Jalankan</button></sc-if>
+<sc-if value="{{ cmd.ran }}" hint-placeholder-val="{{ false }}"><span style="font:700 18px 'Shippori Mincho',serif;color:#E06A4E;border:2px solid #E06A4E;padding:4px 12px">PO DIBUAT</span></sc-if>
+</div>
+</sc-if>
+
+<div style="background:#FBFAF6;border:1px solid #1B2638;margin-top:18px" aria-live="polite">
+<sc-if value="{{ v.loading }}" hint-placeholder-val="{{ false }}"><div role="status" style="padding:16px 20px"><div class="mono" style="font-size:14px;color:#4A5260;margin-bottom:12px">Mencari…</div><div class="sk" style="width:55%;margin-bottom:12px"></div><div class="sk" style="width:75%;margin-bottom:12px"></div><div class="sk" style="width:40%"></div></div></sc-if>
+<sc-if value="{{ v.error }}" hint-placeholder-val="{{ false }}"><div role="alert" style="padding:22px 20px;display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between"><div><b class="minc" style="font-size:20px;color:#A33925">Pencarian gagal.</b><div style="font-size:15px;color:#4A5260;margin-top:4px">Indeks tidak menjawab. Datamu tidak berubah.</div></div><button class="b" type="button" onClick="{{ retry }}">Coba lagi</button></div></sc-if>
+<sc-if value="{{ v.empty }}" hint-placeholder-val="{{ false }}"><div style="padding:28px 20px;font-size:17px;color:#4A5260">Tidak ada yang cocok dengan "{{q}}". Coba kode seperti PO-JKT, nama vendor, atau kata kerja seperti buat dan tutup.</div></sc-if>
+<sc-if value="{{ v.normal }}" hint-placeholder-val="{{ true }}">
+<sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
+<div style="padding:12px 20px 6px;font-size:14px;font-weight:600;color:#4A5260">{{g.name}}</div>
+<sc-for list="{{g.items}}" as="it" hint-placeholder-count="3">
+<a class="res {{it.cls}}" href="{{it.href}}"><span class="tag" style="background:{{it.color}}">{{it.tag}}</span><span class="mono" style="font-size:15px;font-weight:500;flex:0 0 150px">{{it.code}}</span><span style="flex:1 1 260px;font-size:16px">{{it.what}}</span><span class="mono" style="font-size:13px;color:#4A5260">{{it.hint}}</span></a>
+</sc-for>
+</sc-for>
+</sc-if>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:18px">
+<span class="mono" style="font-size:13px;color:#4A5260">Lihat keadaan:</span>
+<div role="group" aria-label="Keadaan hasil" style="display:flex;flex-wrap:wrap">
+<sc-for list="{{views}}" as="s" hint-placeholder-count="4"><button class="st {{s.cls}}" type="button" aria-pressed="{{ s.on }}" onClick="{{ s.pick }}">{{s.label}}</button></sc-for>
+</div>
+</div>
+</main>
+<footer style="max-width:900px;margin:0 auto;padding:0 28px 40px"><div class="mono" style="font-size:13px;color:#4A5260">[DATA CONTOH] objek dan nominal di layar ini bukan data nyata. Coba ketik "buat PO vendor Sinar Jaya".</div></footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { q: 'PO', view: 'Normal', ran: false };
+  }
+  renderVals() {
+    const { q, view, ran } = this.state;
+    const colors = { FIN: '#7A2E3D', PRC: '#2E5A87', INV: '#4A6E4D', SAL: '#AE522C', Aksi: '#1B2638', Org: '#62676D' };
+    const all = [
+      { g: 'Objek', tag: 'PRC', code: 'PO-JKT-0412', what: 'Approval PO Rp 184,5 jt, Sinar Jaya', hint: 'buka manifest', href: 'KManifest.dc.html' },
+      { g: 'Objek', tag: 'PRC', code: 'PR-JKT-0221', what: 'Permintaan 400 sak semen belum punya PO', hint: 'buka manifest', href: 'KManifest.dc.html' },
+      { g: 'Objek', tag: 'FIN', code: 'INV-SBY-1093', what: 'Jatuh tempo besok, Rp 72 jt', hint: 'buka manifest', href: 'KManifest.dc.html' },
+      { g: 'Objek', tag: 'SAL', code: 'SO-JKT-0412', what: 'PT Abadi Sentosa, Rp 412 jt', hint: 'buka manifest', href: 'KManifest.dc.html' },
+      { g: 'Objek', tag: 'INV', code: 'SKU-0221', what: 'Stok 38 dari safety stock 120', hint: 'buka manifest', href: 'KManifest.dc.html' },
+      { g: 'Aksi', tag: 'Aksi', code: 'Buka Yard', what: 'Lihat tumpukan Order-to-Cash', hint: 'layar', href: 'KYard.dc.html' },
+      { g: 'Aksi', tag: 'Aksi', code: 'Rancang alur', what: 'Buka Process Studio, draf v3', hint: 'layar', href: 'KStudio.dc.html' },
+      { g: 'Aksi', tag: 'Aksi', code: 'Tutup hari', what: 'Lihat ringkasan dan apa yang menunggu besok', hint: 'layar', href: 'KTutup.dc.html' },
+      { g: 'Pihak', tag: 'Org', code: 'Sinar Jaya', what: 'Vendor, 6 PO tahun ini', hint: 'buka manifest', href: 'KManifest.dc.html' },
+      { g: 'Pihak', tag: 'Org', code: 'PT Abadi Sentosa', what: 'Pelanggan, 31 order tahun ini', hint: 'buka manifest', href: 'KManifest.dc.html' }
+    ];
+    const needle = q.trim().toLowerCase();
+    const hit = all.filter((x) => needle === '' || (x.code + ' ' + x.what + ' ' + x.tag + ' ' + x.g).toLowerCase().includes(needle));
+    let first = true;
+    const groups = ['Objek', 'Aksi', 'Pihak'].map((n) => ({
+      name: n,
+      items: hit.filter((x) => x.g === n).map((x) => {
+        const cls = first ? 'first' : '';
+        first = false;
+        return { ...x, cls, color: colors[x.tag] };
+      })
+    })).filter((g) => g.items.length > 0);
+    const isCmd = /^buat po/.test(needle);
+    const normal = (view === 'Normal') && hit.length > 0;
+    return {
+      q,
+      onQ: (e) => this.setState({ q: e.target.value, view: 'Normal', ran: false }),
+      groups,
+      cmd: {
+        show: isCmd,
+        title: 'Buat PO · vendor Sinar Jaya',
+        detail: 'Dari permintaan PR-JKT-0221, 400 sak semen. Masuk antrean approval sebelum dikirim.',
+        ready: !ran, ran
+      },
+      run: () => this.setState({ ran: true }),
+      v: { loading: view === 'Memuat', error: view === 'Gagal', empty: (view === 'Kosong') || (view === 'Normal' && hit.length === 0), normal: view === 'Normal' && hit.length > 0 },
+      retry: () => this.setState({ view: 'Normal' }),
+      views: ['Normal', 'Memuat', 'Kosong', 'Gagal'].map((s) => ({ label: s, on: view === s, cls: view === s ? 'on' : '', pick: () => this.setState({ view: s }) }))
+    };
+  }
+}
+</script>
+</body>
+</html>
