@@ -52,6 +52,6 @@ change per rule.
 | `SAL-CREDIT-1`, `SAL-CREDIT-2` | Keep | Owner | 2026-11-24 | A named measured need reopens it |
 | `BIL-DOC-1` | Keep | Owner | 2026-11-24 | A named measured need reopens it |
 | `SAL-DLV-2` | Keep | Owner | 2026-11-24 | A named measured need reopens it |
-| `PRC-RET-1` |  |  |  |  |
+| `PRC-RET-1` | Keep | Owner | 2026-11-24 | A named measured need reopens it |
 | `INV-XFER-1` |  |  |  |  |
 | `SET-BANK-3` |  |  |  |  |

@@ -139,6 +139,9 @@ issues the stock through Inventory at the order line's price against `goods_rece
 not at moving average. A repeated return id returns the recorded return.
 Why: [ADR-0104](../../../docs/decisions/0104-adopt-valued-procure-to-pay-documents.md).
 
+Phase 5 outcome (2026-11-24): this rule stays on its PostgreSQL transaction (ADR-0124). The staged
+Alchemy model is test-only evidence, not a plan to move it.
+
 ## Position
 
 Procurement owns purchase intent and its business documents: Supplier Accounts, supplier prices,
