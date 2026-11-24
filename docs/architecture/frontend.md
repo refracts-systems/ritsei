@@ -15,7 +15,7 @@
 > - Effect application architecture: [`../decisions/0048-define-effect-application-architecture-and-frontend-state-ownership.md`](../decisions/0048-define-effect-application-architecture-and-frontend-state-ownership.md)
 > - Native Solid 2 and Effect integration: [`../decisions/0072-prefer-native-solid-reactivity-for-effect-integration.md`](../decisions/0072-prefer-native-solid-reactivity-for-effect-integration.md)
 > - Production Solid 2 × Effect bridge: [`../decisions/0086-promote-solid-effect-bridge-to-production-boundary.md`](../decisions/0086-promote-solid-effect-bridge-to-production-boundary.md)
-> - Design system and Visual Grammar: [`./design-system.md`](./design-system.md)
+> - Design system: [`./design-system.md`](./design-system.md)
 > - Skeleton architecture: [`./skeleton.md`](./skeleton.md)
 > - Solid 2 accessible primitive selection: [`../decisions/0074-switch-to-kobalte-for-solid2-accessible-primitives.md`](../decisions/0074-switch-to-kobalte-for-solid2-accessible-primitives.md)
 > - Dependency ownership: [`../decisions/0075-partition-dependency-ownership-by-application-boundary.md`](../decisions/0075-partition-dependency-ownership-by-application-boundary.md)
@@ -55,8 +55,8 @@ Vite
 
 SolidStart is not the default application foundation.
 
-The RITSEI Design System owns Product Patterns, Interaction Grammar, Visual Grammar, semantic tokens,
-component contracts, density, and frontend styling boundaries. Kobalte is the single headless behavior
+The RITSEI Design System owns Product Patterns, the shell contract, semantic tokens, and frontend
+styling boundaries. Kobalte is the single headless behavior
 primitive source behind RITSEI-owned components. Panda CSS is the constrained styling substrate, and
 Motion is available only through the RITSEI-owned runtime wrapper for geometry and physics. See
 [`design-system.md`](./design-system.md).
@@ -347,7 +347,7 @@ PostgreSQL
 | Virtualization | TanStack Solid Virtual |
 | Forms | TanStack Solid Form |
 | Runtime validation | Effect Schema |
-| Design system | RITSEI Product Patterns, Interaction Grammar, and Visual Grammar |
+| Design system | RITSEI Product Patterns and semantic tokens |
 | Accessible UI primitives | Kobalte behind RITSEI-owned components |
 | Styling foundation | Constrained Panda CSS profile |
 | Runtime motion | RITSEI Motion wrapper; CSS first, runtime geometry only when required |
@@ -734,9 +734,9 @@ apps/web/src/
 ```
 
 RITSEI-owned shared UI and renderer adapters live under `apps/web/src/ui/`; feature-specific visual
-projections live under `apps/web/src/features/<domain>/projections/`. Shared-control, composite,
-domain-component, and application-shell placement, including the cross-application extraction gate,
-are owned by [Design System §22](./design-system.md#22-frontend-location-and-dependency-boundaries).
+projections live under `apps/web/src/features/<domain>/projections/`. Shared UI lives under
+`apps/web/src/ui/`; the rule for extracting it into a package is in
+[Design System §10](./design-system.md#10-styling-contract-and-boundaries).
 Avoid global directories where unrelated behavior accumulates inside generic components, hooks,
 services, stores, or utility files.
 
@@ -771,7 +771,7 @@ exception-aware work without making any one of those the complete product catego
 product vocabulary, not a claim of compliance with a single external standard. The user SHOULD be able
 to recognize what needs attention and which safe, authorized command can advance it without first
 choosing among application silos. Routes and workspaces SHOULD support the cognitive sequence
-canonically defined in [Design System §6](./design-system.md#6-product-patterns).
+canonically defined in [Design System §2](./design-system.md#2-product-patterns).
 
 An operational situation MUST remain a frontend projection/composition, not a domain entity or
 source of truth:
@@ -794,7 +794,7 @@ domain MUST authorize and commit the business fact.
 The application shell composes stable global landmarks and operating context with route-selected
 local capability and Product Pattern. This document owns how routes and frontend state select and
 preserve that composition; the visual and semantic shell contract is owned by
-[Design System — Navigation and workspace shell](./design-system.md#navigation-and-workspace-shell).
+[Design System §3](./design-system.md#3-shell-and-navigation).
 ERP module landmarks are not hand-written in the shell: each module's
 `apps/web/src/app/modules/<module>.workspace.ts` sidecar declares its label, icon, order, global
 navigation group, and local-navigation `Area / Section`, and `pnpm run ritsei gen` emits them into
@@ -816,9 +816,9 @@ accounts and access stay hand-written in `shell.tsx`.
 Before implementing a route or screen, agents MUST:
 
 1. Name the owning domain, active local capability, and user's primary work task.
-2. Select an existing Product Pattern using the matrix in [Design System §6](./design-system.md#6-product-patterns).
-3. Select a Flexible Workspace mode based on whether surrounding context helps; `MasterDetail` is
-   not universal. Follow the shared [shell contract](./design-system.md#navigation-and-workspace-shell).
+2. Select an existing Product Pattern using the matrix in [Design System §2](./design-system.md#2-product-patterns).
+3. Decide whether surrounding context helps; `MasterDetail` is not universal. Follow the shared
+   [shell contract](./design-system.md#3-shell-and-navigation).
 4. Identify which route inputs are shareable, which facts are remote query state, which interactions
    are ephemeral presentation state, and whether explicit Effect coordination is needed.
 5. Verify object/situation identity, operational state, authorized command path, responsive behavior,

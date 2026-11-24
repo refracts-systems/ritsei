@@ -28,11 +28,11 @@ Product Pattern under `apps/web/src/features/` with its test in `tests/frontend/
 the template. Open a document below only for what the neighbor does not show:
 
 - no neighbor of that pattern exists:
-  [Design System §6](../../../docs/architecture/design-system.md#6-product-patterns) (Product
+  [Design System §2](../../../docs/architecture/design-system.md#2-product-patterns) (Product
   Patterns);
 - the screen adds a failure or permission state: the Error Model and Authorization UX sections of
   [Frontend: Frontend agent entry](../../../docs/architecture/frontend.md#frontend-agent-entry);
-- the screen adds wording, number or date formats, or keyboard behavior: Design System §15 and §17;
+- the screen adds wording, number or date formats, or keyboard behavior: Design System §6 and §7;
 - the screen belongs to a key flow:
   [`docs/proposals/ux-acceptance.md`](../../../docs/proposals/ux-acceptance.md).
 

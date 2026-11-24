@@ -19,7 +19,7 @@
 > - Authorization: [`./authorization.md`](./authorization.md)
 > - Identity and principals: [`./identity-and-principals.md`](./identity-and-principals.md)
 > - HTTP API boundary: [`./api.md`](./api.md)
-> - Design system and Visual Grammar: [`./design-system.md`](./design-system.md)
+> - Design system: [`./design-system.md`](./design-system.md)
 > - Cartographic renderer selection: [`../decisions/0070-select-vgpu-and-defer-typegpu.md`](../decisions/archive/0070-select-vgpu-and-defer-typegpu.md)
 > - Universal cartographic archetypes: [`../decisions/0071-adopt-universal-cartographic-archetypes.md`](../decisions/archive/0071-adopt-universal-cartographic-archetypes.md)
 > - Governed AI recommendation and agent boundary:
