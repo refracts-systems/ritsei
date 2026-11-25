@@ -52,6 +52,16 @@ entering the stage. The first version is one legal entity: a branch exists only 
 and as an authorization scope kind, and no group or branch hierarchy over documents was found, so
 the mockup's zoom from group to entity to branch is not built.
 
+**Situations (gaps G-08 to G-10, ADR-0129).** The `situations` module lists what needs a person:
+an open situation per subject for a receivable past due (Settlement), a supplier bill that differs
+from what was received (Billing), and an approval pending past 2 working days (Approvals). `detect`
+opens, updates, and resolves them idempotently; `advanceEscalations` raises an untaken one to the
+flow owner after 2 working days (1 when high) and to the supervisor 2 later, over a per-legal-entity
+working calendar. Escalation notifies and never assigns. Following a flow or a subject is read-only
+and feeds an in-app inbox; `assign` takes up to 100 situations to one flow owner, all or nothing.
+Not built: a recurring job that calls `detect` and `advanceEscalations` (the worker loop in
+`erp/runtime/worker` is not generic), and e-mail.
+
 ## E5 Cari: search over objects
 
 **What exists.** Search is owner-local only: `ListItemsInput`, `ListPartiesInput`, and the tenant

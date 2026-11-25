@@ -37,6 +37,7 @@ import { decideSettlement, SettlementDecision } from "./settlement-decision.ts"
 import {
   ApplySettlementInput,
   BilledQuantitiesInput,
+  BillMismatchInput,
   BillPurchaseOrderInput,
   BillVarianceSubject,
   type BillingDocument,
@@ -71,6 +72,7 @@ type Principal = Schema.Schema.Type<typeof PrincipalSchema>
 type LedgerLine = Schema.Schema.Type<typeof LedgerLineInput>
 
 const minor = (value: string) => requireExactMajorToMinor(value, 2)
+const absolute = (value: bigint) => (value < 0n ? -value : value)
 const major = (value: bigint) => formatSignedMinor(value, 2)
 const normalize = (value: string) => major(minor(value))
 
@@ -926,6 +928,67 @@ export const makeBillingService = Effect.gen(function* () {
     }))
   })
 
+  const listBillMismatches = Effect.fn("BillingService.listBillMismatches")(function* (
+    input: Schema.Codec.Encoded<typeof BillMismatchInput>,
+  ) {
+    const decoded = yield* authorized(BillMismatchInput, BillingCapabilities.documentRead)(input)
+
+    const rows = yield* database.query(
+      (db) =>
+        db
+          .select({
+            invoiceId: invoices.id,
+            number: invoices.number,
+            partyId: invoices.partyId,
+            invoiceDate: invoices.invoiceDate,
+            billed: sum(invoiceLines.netAmount),
+            matched: sum(invoiceLines.matchedValue),
+          })
+          .from(invoices)
+          .innerJoin(
+            invoiceLines,
+            and(
+              eq(invoiceLines.tenantId, invoices.tenantId),
+              eq(invoiceLines.invoiceId, invoices.id),
+            ),
+          )
+          .where(
+            and(
+              eq(invoices.tenantId, decoded.tenantId),
+              eq(invoices.legalEntityId, decoded.legalEntityId),
+              eq(invoices.kind, "supplier_bill"),
+              sql`${invoices.openAmount} > 0`,
+            ),
+          )
+          .groupBy(invoices.id)
+          .having(sql`sum(${invoiceLines.netAmount}) <> sum(${invoiceLines.matchedValue})`)
+          .limit(500),
+      "billing.bill_mismatches",
+    )
+
+    return rows
+      .map((row) => {
+        const billed = minor(row.billed ?? "0")
+        const matched = minor(row.matched ?? "0")
+
+        return {
+          invoiceId: row.invoiceId,
+          number: row.number,
+          partyId: row.partyId,
+          invoiceDate: row.invoiceDate,
+          billed: major(billed),
+          matched: major(matched),
+          difference: major(billed - matched),
+        }
+      })
+      .toSorted((left, right) => {
+        const gap = (row: { billed: string; matched: string }) =>
+          minor(row.billed) - minor(row.matched)
+
+        return Number(absolute(gap(right)) - absolute(gap(left)))
+      })
+  })
+
   const getPipelineFacts = Effect.fn("BillingService.getPipelineFacts")(function* (
     input: Schema.Codec.Encoded<typeof PipelineFactsInput>,
   ) {
@@ -1174,6 +1237,7 @@ export const makeBillingService = Effect.gen(function* () {
     listDocuments,
     listOpenItems,
     getPipelineFacts,
+    listBillMismatches,
     findByNumber,
     billedQuantities: billedQuantitiesOf,
     importArtifact,

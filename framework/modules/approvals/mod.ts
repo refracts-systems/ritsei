@@ -18,6 +18,8 @@ export {
   SubjectInput,
   SubjectType,
   SubmitApprovalInput,
+  WaitingApproval,
+  WaitingInput,
 } from "./src/contract.ts"
 
 export type {

@@ -22,6 +22,8 @@ export {
   MatchBankLineInput,
   NumberCandidate,
   NumberLookupInput,
+  OverdueInput,
+  OverdueReceivable,
   Payment,
   PaymentDirection,
   PaymentTerm,

@@ -16,6 +16,8 @@ export {
   BillingDocumentLine,
   BillPurchaseOrderInput,
   BillVarianceSubject,
+  BillMismatch,
+  BillMismatchInput,
   BillingPipelineFacts,
   BillingService,
   BillingSide,
@@ -44,6 +46,7 @@ export type {
   BillingDocument as BillingDocumentType,
   BillingPipelineFacts as BillingPipelineFactsType,
   BillingService as BillingServiceContract,
+  BillMismatch as BillMismatchType,
   InvoiceFailure,
   OpenItem as OpenItemType,
 } from "./src/contract.ts"

@@ -18,6 +18,7 @@ export type { CapabilityDefinition as CapabilityDefinitionType } from "./src/cap
 
 export {
   AddTenantMembershipInput,
+  CapabilityHoldersInput,
   AuthorizationDecision,
   AuthorizationInput,
   AuthorizationService,

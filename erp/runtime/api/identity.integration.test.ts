@@ -89,6 +89,7 @@ it.layer(TestHttpServices)("identity tenant API authorization", (it) => {
         listMembers: () =>
           Effect.succeed([{ userAccountId: accountId, tenantId, status: "active" as const }]),
         listDirectGrants: unused,
+        listCapabilityHolders: unused,
         suspendMember: unused,
         activateMember: unused,
         removeMember: unused,
