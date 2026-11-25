@@ -81,8 +81,9 @@ owns a hand-entered exchange-rate table (the latest rate on or before the day). 
 for every entity at or under the unit, its figures, its rate, and the figures in the group currency,
 plus the totals, which totals leave an entity out, and a flag that intercompany balances are not
 eliminated. Each entity is read with the same owners and capabilities as a single-entity read; one
-that is denied or has no rate is marked, never counted as zero. Not built: HTTP routes to manage units
-and rates (service commands only), intercompany elimination, and a translation adjustment.
+that is denied or has no rate is marked, never counted as zero. Units are managed over `GET/POST /org-units`, `POST /org-units/:id/move`, and `POST
+/org-units/:id/legal-entities`; rates over `PUT/GET /accounting/exchange-rates` (the same capabilities as
+the service commands). Not built: intercompany elimination and a translation adjustment.
 
 **Lots and serials (gap G-18, ADR-0131).** An item is `none`, `lot`, or `serial` tracked, set when it is
 registered and locked once it has stock or a movement. Valued receipts, deliveries, and purchase
