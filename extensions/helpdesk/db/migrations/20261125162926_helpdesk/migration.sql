@@ -1,7 +1,7 @@
 -- owners: helpdesk
 -- reviewed: 2026-11-25
 -- generated-by: drizzle-kit 1.0.0-rc.4
--- rationale: ADR-0132 adds the helpdesk extension: tickets numbered per legal entity with a working-day due instant, and incidents that group tickets. A check keeps an approval from becoming a ticket subject
+-- rationale: ADR-0132 and ADR-0136: the helpdesk extension keeps its tables in its own migration chain, with no foreign key into core
 
 CREATE SCHEMA "helpdesk";
 --> statement-breakpoint
@@ -56,7 +56,4 @@ CREATE TABLE "helpdesk"."tickets" (
 CREATE INDEX "tickets_queue_idx" ON "helpdesk"."tickets" ("tenant_id","due_at") WHERE "status" in ('open', 'in_progress', 'waiting');--> statement-breakpoint
 CREATE INDEX "tickets_requester_idx" ON "helpdesk"."tickets" ("tenant_id","requester");--> statement-breakpoint
 CREATE INDEX "tickets_incident_idx" ON "helpdesk"."tickets" ("tenant_id","incident_id");--> statement-breakpoint
-ALTER TABLE "helpdesk"."incidents" ADD CONSTRAINT "incidents_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "auth"."tenants"("id") ON DELETE CASCADE;--> statement-breakpoint
-ALTER TABLE "helpdesk"."tickets" ADD CONSTRAINT "tickets_legal_entity_fkey" FOREIGN KEY ("tenant_id","legal_entity_id") REFERENCES "party"."legal_entities"("tenant_id","id");--> statement-breakpoint
-ALTER TABLE "helpdesk"."tickets" ADD CONSTRAINT "tickets_incident_fkey" FOREIGN KEY ("tenant_id","incident_id") REFERENCES "helpdesk"."incidents"("tenant_id","id");--> statement-breakpoint
-ALTER TABLE "helpdesk"."tickets" ADD CONSTRAINT "tickets_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "auth"."tenants"("id") ON DELETE CASCADE;
+ALTER TABLE "helpdesk"."tickets" ADD CONSTRAINT "tickets_incident_fkey" FOREIGN KEY ("tenant_id","incident_id") REFERENCES "helpdesk"."incidents"("tenant_id","id");

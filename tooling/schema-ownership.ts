@@ -2,6 +2,8 @@ import { readdir, readFile, stat } from "node:fs/promises"
 
 import { extractModuleSpecifiers } from "./architecture.ts"
 import { isMain } from "./entrypoint.ts"
+import { coreMigrationFailures, extensionMigrationFailures } from "./extension-migrations.ts"
+import { hasErrnoCode } from "./errno.ts"
 import { collectSourceFiles } from "./source-files.ts"
 
 const ownershipFile = "db/ownership.toml"
@@ -56,12 +58,27 @@ export const checkOwnership = async (): Promise<readonly string[]> => {
     }
   }
 
-  async function checkMigrations(directory: string): Promise<void> {
+  const extensionOf = (owner: string) => (owner.startsWith("extensions/") ? owner : undefined)
+
+  const schemasOf = (match: (owner: string) => boolean) =>
+    new Set(
+      schemas
+        .entries()
+        .filter(([, owner]) => match(owner))
+        .map(([schema]) => schema),
+    )
+
+  const extensionSchemas = schemasOf((owner) => extensionOf(owner) !== undefined)
+
+  /** Checks one chain: the core chain, or an extension chain with the schemas it owns. */
+  async function checkMigrations(directory: string, extension?: string): Promise<void> {
+    const owned = schemasOf((owner) => owner === extension)
+
     for (const entry of await readdir(directory, { withFileTypes: true })) {
       const path = `${directory}/${entry.name}`
 
       if (entry.isDirectory()) {
-        await checkMigrations(path)
+        await checkMigrations(path, extension)
         continue
       }
 
@@ -88,8 +105,16 @@ export const checkOwnership = async (): Promise<readonly string[]> => {
       for (const declaredOwner of declaredOwners) {
         if (!schemas.has(declaredOwner)) {
           failures.push(`${path}: unknown schema owner ${declaredOwner}`)
+        } else if (extension !== undefined && !owned.has(declaredOwner)) {
+          failures.push(`${path}: ${declaredOwner} is not owned by ${extension}`)
         }
       }
+
+      failures.push(
+        ...(extension === undefined
+          ? coreMigrationFailures(path, sql, extensionSchemas)
+          : extensionMigrationFailures(path, sql, { owned, registered: new Set(schemas.keys()) })),
+      )
 
       if (!/^\s*--\s*reviewed:\s*\d{4}-\d{2}-\d{2}\s*$/m.test(sql)) {
         failures.push(`${path}: SQL migrations require a -- reviewed: YYYY-MM-DD header`)
@@ -110,6 +135,12 @@ export const checkOwnership = async (): Promise<readonly string[]> => {
   }
 
   await checkMigrations("db/migrations")
+
+  for (const extension of new Set([...schemas.values()].filter((owner) => extensionOf(owner)))) {
+    await checkMigrations(`${extension}/db/migrations`, extension).catch((cause: unknown) => {
+      if (!hasErrnoCode(cause, "ENOENT")) throw cause
+    })
+  }
 
   const sourceOwner = (path: string): string | undefined => {
     return path.match(/^((?:framework\/modules|erp\/modules|extensions)\/[^/]+)\/src\//)?.[1]

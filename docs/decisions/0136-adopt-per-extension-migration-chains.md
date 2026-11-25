@@ -42,8 +42,9 @@ One chain is fine while every author is a maintainer. It does not hold for publi
 2. **The core chain runs first, then each installed extension's chain**, in the order of the
    extensions' `dependsOn` and then by name. A core migration never depends on an extension.
 3. **Each chain has its own journal.** Core keeps `system.schema_migrations`. An extension records its
-   migrations in `system.extension_migrations`, keyed by extension name and migration id, so one
-   extension's history can be read, checked, or detached without touching another's.
+   migrations in its own table `system.extension_migrations_<name>` (the shape Drizzle's migrator
+   writes), so one extension's history can be read, checked, or detached without touching
+   another's.
 4. **An extension writes only to its own schemas.** Its schemas are the ones its manifest declares and
    `db/ownership.toml` (or the extension's own ownership entry) assigns to it. A check scans every
    extension migration and fails on DDL that creates, alters, drops, grants on, or attaches a trigger
@@ -54,8 +55,9 @@ One chain is fine while every author is a maintainer. It does not hold for publi
    contract. A database foreign key into a core schema is not allowed, so core can change its tables
    without breaking extensions and an extension can be removed without blocking core.
 6. **Tenant isolation is the extension's to declare and the framework's to check.** Every table an
-   extension creates carries the tenant column and row-level security the same way core tables do;
-   the migration check fails on a table without them.
+   extension creates carries a `tenant_id` column, as core tables do; the migration check fails on a
+   table without one. Core tables use no row-level security today, so none is required of extensions
+   until core adopts it.
 7. **The first-party Helpdesk extension moves to its own chain** in a follow-up change once this ADR
    is accepted, with the migration rewritten as the first migration of its chain. Until then it stays
    in `db/`, which ADR-0132 accepted.

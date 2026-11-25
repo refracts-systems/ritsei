@@ -3,6 +3,7 @@ import * as Effect from "effect/Effect"
 
 import { uuidv7 } from "../../framework/foundation/mod.ts"
 import { runMigrations } from "../../framework/platform/mod.ts"
+import { runExtensionMigrations } from "../../erp/runtime/migrator/extensions.ts"
 import { HelpdeskCapabilities, HelpdeskService } from "../../extensions/helpdesk/mod.ts"
 import { seedErpFixture } from "../support/erp-fixture.ts"
 import { erpChainLayers } from "../support/erp-layers.ts"
@@ -23,6 +24,27 @@ it.effect.skipIf(databaseUrl === undefined)(
     withTemporaryDatabase(databaseUrl!, (client) =>
       Effect.gen(function* () {
         yield* runMigrations(client)
+
+        // The core chain alone leaves no helpdesk objects; the extension chain adds them (ADR-0136).
+        const before = yield* Effect.promise(
+          () => client`select 1 from pg_namespace where nspname = 'helpdesk'`,
+        )
+
+        assert.lengthOf(before, 0)
+        yield* runExtensionMigrations(client)
+        yield* runExtensionMigrations(client)
+
+        const journal = yield* Effect.promise(
+          () => client`select name from system.extension_migrations_helpdesk`,
+        )
+
+        assert.lengthOf(journal, 1)
+
+        const coreJournal = yield* Effect.promise(
+          () => client`select 1 from system.schema_migrations where name like '%helpdesk%'`,
+        )
+
+        assert.lengthOf(coreJournal, 0)
         const { tenantId, legalEntityId } = yield* seedErpFixture(client)
 
         const grant = (who: { userAccountId: string }, ...capabilities: ReadonlyArray<string>) =>

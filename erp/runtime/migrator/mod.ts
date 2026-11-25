@@ -3,7 +3,7 @@ import * as Effect from "effect/Effect"
 import * as Exit from "effect/Exit"
 import postgres from "postgres"
 
-import { runMigrations } from "../../../framework/platform/mod.ts"
+import { runAllMigrations } from "./extensions.ts"
 import { isMain } from "../../../tooling/entrypoint.ts"
 
 export const migrate = (url: string) => {
@@ -11,7 +11,7 @@ export const migrate = (url: string) => {
 
   return Effect.acquireUseRelease(
     Effect.succeed(client),
-    (connection) => runMigrations(connection),
+    (connection) => runAllMigrations(connection),
     (connection) => Effect.promise(() => connection.end()),
   )
 }

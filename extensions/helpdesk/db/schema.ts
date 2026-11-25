@@ -10,9 +10,15 @@ import {
   uuid,
 } from "drizzle-orm/pg-core"
 
-import { tenants } from "./auth.ts"
-import { createdAt, id, updatedAt } from "./common.ts"
-import { legalEntities } from "./party.ts"
+// An extension owns its own schema and migration chain, and never imports core tables or keeps
+// a foreign key into them: tenant and legal entity are plain identifiers (ADR-0136).
+const id = () =>
+  uuid("id")
+    .default(sql`uuidv7()`)
+    .primaryKey()
+
+const createdAt = () => timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
+const updatedAt = () => timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
 
 export const helpdeskSchema = pgSchema("helpdesk")
 
@@ -55,11 +61,6 @@ export const incidents = helpdeskSchema.table(
       sql`(${table.status} = 'open' and ${table.resolvedAt} is null) or
       (${table.status} = 'resolved' and ${table.resolvedAt} is not null)`,
     ),
-    foreignKey({
-      columns: [table.tenantId],
-      foreignColumns: [tenants.id],
-      name: "incidents_tenant_id_fkey",
-    }).onDelete("cascade"),
   ],
 )
 
@@ -113,19 +114,9 @@ export const tickets = helpdeskSchema.table(
       sql`${table.subjectType} is null or ${table.subjectType} !~ '^approvals[.]'`,
     ),
     foreignKey({
-      columns: [table.tenantId, table.legalEntityId],
-      foreignColumns: [legalEntities.tenantId, legalEntities.id],
-      name: "tickets_legal_entity_fkey",
-    }),
-    foreignKey({
       columns: [table.tenantId, table.incidentId],
       foreignColumns: [incidents.tenantId, incidents.id],
       name: "tickets_incident_fkey",
     }),
-    foreignKey({
-      columns: [table.tenantId],
-      foreignColumns: [tenants.id],
-      name: "tickets_tenant_id_fkey",
-    }).onDelete("cascade"),
   ],
 )

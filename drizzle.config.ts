@@ -36,7 +36,6 @@ export default defineConfig({
     "numbering",
     "approvals",
     "situations",
-    "helpdesk",
     "custom_fields",
     "product",
     "tax",

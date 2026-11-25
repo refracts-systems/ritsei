@@ -123,25 +123,42 @@ export const validateMigrationCatalog = (
   }
 }
 
-const readAppliedMigrations = async (client: Sql): Promise<readonly AppliedMigration[]> => {
+const journalName = /^[a-z][a-z0-9_]*$/
+
+const readAppliedMigrations = async (
+  client: Sql,
+  journal: string,
+): Promise<readonly AppliedMigration[]> => {
   const [tracker] = await client<{ tracker: string | null }[]>`
-    select to_regclass('system.schema_migrations')::text as tracker
+    select to_regclass(${`system.${journal}`})::text as tracker
   `
 
   if (tracker?.tracker === null || tracker === undefined) return []
 
   return await client<AppliedMigration[]>`
     select hash, created_at::text, name
-    from system.schema_migrations
+    from system.${client(journal)}
     order by id
   `
 }
 
+/**
+ * Applies one migration chain. The core chain uses the default journal; an extension passes its own
+ * directory and journal table in the `system` schema, so chains never share history (ADR-0136).
+ */
 export const runMigrations = (
   client: Sql,
   directory = "db/migrations",
+  journal = "schema_migrations",
 ): Effect.Effect<void, DatabaseFailure | MigrationFailure> =>
   Effect.gen(function* () {
+    if (!journalName.test(journal)) {
+      return yield* new MigrationFailure({
+        filename: directory,
+        cause: `invalid journal: ${journal}`,
+      })
+    }
+
     yield* validatePostgresVersion(asPostgresClient(client)).pipe(
       Effect.mapError((cause) =>
         cause instanceof DatabaseFailure
@@ -153,14 +170,14 @@ export const runMigrations = (
     yield* Effect.tryPromise({
       try: async () => {
         const migrations = readMigrationFiles({ migrationsFolder: directory })
-        validateMigrationCatalog(migrations, await readAppliedMigrations(client))
+        validateMigrationCatalog(migrations, await readAppliedMigrations(client, journal))
 
         const database = drizzle({ client })
 
         const result = await drizzleMigrate(database, {
           migrationsFolder: directory,
           migrationsSchema: "system",
-          migrationsTable: "schema_migrations",
+          migrationsTable: journal,
         })
 
         if (result !== undefined) {

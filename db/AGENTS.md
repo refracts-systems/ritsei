@@ -18,6 +18,8 @@ Related: [`state-and-consistency.md`](../docs/architecture/state-and-consistency
 - Each migration directory contains `migration.sql` and a sibling `snapshot.json`, and the file
   carries owner, review-date, and generator headers. The snapshot graph is authoritative for order.
 - Never rewrite an applied migration; add a new one.
+- An extension keeps its schema and migrations under `extensions/<name>/db/` in its own chain and
+  journal (ADR-0136); core migrations never name an extension schema.
 
 ## Drizzle integration
 
