@@ -282,6 +282,20 @@ Organization policy:
   amount > threshold requires designated approver
 ```
 
+### Approval steps and delegation
+
+An approval policy is an ordered list of steps ([ADR-0128](../decisions/0128-adopt-tiered-approvals-and-delegation.md)):
+each has an amount range (above, up to and including), an approver capability, and an optional scope.
+A request copies the steps that cover its amount when it is submitted and they are decided in order;
+a rejection ends the request. The requester decides no step, and one person decides only one step of
+a request, in either case also through a delegation. A step scope is stored but not enforced and is
+refused at configuration until grants can be scoped.
+
+An approver may delegate one capability they hold to one other user for a range of days (UTC). The
+delegation is created and revoked, never edited or deleted; it is not transitive; and it works only
+while the delegator still holds the capability. A decision made through it records the delegate and
+the delegator ("on behalf of"). Approvals owns this; it is not a grant.
+
 High-risk workflows must preserve actor, initiator, delegation, capability, scope, and approval
 history. Approval completion must be conditional or otherwise protected against duplicate or
 unauthorized completion.

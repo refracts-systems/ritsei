@@ -6,7 +6,12 @@ import * as HttpApiSchema from "effect/http-api/HttpApiSchema"
 import * as OpenApi from "effect/http-api/OpenApi"
 import * as Schema from "effect/Schema"
 
-import { ApprovalRequest, ApprovalStatus } from "../../../framework/modules/approvals/mod.ts"
+import {
+  ApprovalRequest,
+  ApprovalStatus,
+  CreateDelegationInput,
+  Delegation,
+} from "../../../framework/modules/approvals/mod.ts"
 import {
   Capability,
   CapabilityCatalog,
@@ -204,6 +209,12 @@ const Authorization = HttpApiGroup.make("Authorization").add(
   }).middleware(BearerAuth),
 )
 
+const {
+  principal: _principal,
+  tenantId: _tenantId,
+  ...delegationPayloadFields
+} = CreateDelegationInput.fields
+
 const Approvals = HttpApiGroup.make("Approvals").add(
   HttpApiEndpoint.get("listApprovalRequests", "/approvals/requests", {
     headers: tenantHeaders,
@@ -224,6 +235,24 @@ const Approvals = HttpApiGroup.make("Approvals").add(
     headers: tenantHeaders,
     payload: Schema.Struct({ decision: Schema.Literals(["approve", "reject"]) }),
     success: ApprovalRequest,
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.post("createApprovalDelegation", "/approvals/delegations", {
+    headers: tenantHeaders,
+    payload: Schema.Struct(delegationPayloadFields),
+    success: Delegation,
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.post("revokeApprovalDelegation", "/approvals/delegations/:id/revoke", {
+    params: { id: Uuid },
+    headers: tenantHeaders,
+    success: Delegation,
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.get("listApprovalDelegations", "/approvals/delegations", {
+    headers: tenantHeaders,
+    query: { scope: Schema.optionalKey(Schema.Literals(["mine", "all"])) },
+    success: Schema.Array(Delegation),
     error: errors,
   }).middleware(BearerAuth),
 )

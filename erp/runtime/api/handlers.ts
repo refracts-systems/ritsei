@@ -43,7 +43,12 @@ import {
 const coreApiErrorPolicy = {
   ...BaseApiErrorPolicy,
   ApprovalAlreadyDecided: "conflict",
+  ApprovalPolicyInvalid: "conflict",
   ApprovalPolicyNotFound: "conflict",
+  DelegationAlreadyRevoked: "conflict",
+  DelegationInvalid: "conflict",
+  DelegationNotFound: "not_found",
+  DistinctApproverRequired: "conflict",
   ApprovalRequestNotFound: "not_found",
   CapabilityAlreadyGranted: "conflict",
   SelfApprovalForbidden: "conflict",
@@ -554,6 +559,40 @@ export const ApprovalHandlers = HttpApiBuilder.group(RitseiApi, "Approvals", (ha
               requestId: params.id,
               decision: payload.decision,
             }),
+          )
+        }),
+      )
+      .handle(
+        "createApprovalDelegation",
+        Effect.fn("Http.Approvals.createApprovalDelegation")(function* ({ headers, payload }) {
+          const principal = yield* CurrentPrincipal
+
+          return yield* coreApiEffect(
+            approvals.createDelegation({ principal, tenantId: headers["x-tenant-id"], ...payload }),
+          )
+        }),
+      )
+      .handle(
+        "revokeApprovalDelegation",
+        Effect.fn("Http.Approvals.revokeApprovalDelegation")(function* ({ headers, params }) {
+          const principal = yield* CurrentPrincipal
+
+          return yield* coreApiEffect(
+            approvals.revokeDelegation({
+              principal,
+              tenantId: headers["x-tenant-id"],
+              delegationId: params.id,
+            }),
+          )
+        }),
+      )
+      .handle(
+        "listApprovalDelegations",
+        Effect.fn("Http.Approvals.listApprovalDelegations")(function* ({ headers, query }) {
+          const principal = yield* CurrentPrincipal
+
+          return yield* coreApiEffect(
+            approvals.listDelegations({ principal, tenantId: headers["x-tenant-id"], ...query }),
           )
         }),
       )
