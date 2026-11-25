@@ -154,6 +154,7 @@ current system; ADRs preserve decision history.
 | [`0126`](./0126-decide-job-timing-with-the-database-clock.md)                                         | Decide Job Timing with the Database Clock                                                        | Accepted   |
 | [`0127`](./0127-adopt-the-kontainer-visual-language.md)                                               | Adopt the Kontainer Visual Language                                                              | Accepted   |
 | [`0128`](./0128-adopt-tiered-approvals-and-delegation.md)                                             | Adopt Tiered Approvals and Delegation                                                            | Accepted   |
+| [`0129`](./0129-adopt-situations-escalation-and-follow.md)                                            | Adopt Situations, Working-Day Escalation, and Follow                                             | Accepted   |
 
 <!-- adr-index:end -->
 
