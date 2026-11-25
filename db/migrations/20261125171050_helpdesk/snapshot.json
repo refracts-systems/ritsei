@@ -1,9 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "8eb8ede5-1f24-4856-831c-34a78f278687",
+  "id": "df0dbaa9-1fff-497f-8779-ca8466576e1f",
   "prevIds": [
-    "7ed69dc6-d8b5-48b2-8788-dd1e602e0016"
+    "e20b78a0-448a-4ea7-9538-46bbac608649"
   ],
   "ddl": [
     {
@@ -359,6 +359,16 @@
     },
     {
       "values": [
+        "none",
+        "lot",
+        "serial"
+      ],
+      "name": "item_tracking",
+      "entityType": "enums",
+      "schema": "inventory"
+    },
+    {
+      "values": [
         "draft",
         "posted",
         "reversed"
@@ -549,6 +559,16 @@
         "fulfilled"
       ],
       "name": "reservation_status",
+      "entityType": "enums",
+      "schema": "inventory"
+    },
+    {
+      "values": [
+        "in_stock",
+        "issued",
+        "returned_to_supplier"
+      ],
+      "name": "serial_status",
       "entityType": "enums",
       "schema": "inventory"
     },
@@ -913,6 +933,24 @@
     },
     {
       "isRlsEnabled": false,
+      "name": "lot_balances",
+      "entityType": "tables",
+      "schema": "inventory"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "lot_movements",
+      "entityType": "tables",
+      "schema": "inventory"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "lots",
+      "entityType": "tables",
+      "schema": "inventory"
+    },
+    {
+      "isRlsEnabled": false,
       "name": "memberships",
       "entityType": "tables",
       "schema": "authorization"
@@ -1180,6 +1218,12 @@
       "name": "revenue_posting_profiles",
       "entityType": "tables",
       "schema": "accounting"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "serial_units",
+      "entityType": "tables",
+      "schema": "inventory"
     },
     {
       "isRlsEnabled": false,
@@ -7581,6 +7625,19 @@
       "table": "items"
     },
     {
+      "type": "item_tracking",
+      "typeSchema": "inventory",
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'none'",
+      "generated": null,
+      "identity": null,
+      "name": "tracking",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "items"
+    },
+    {
       "type": "timestamp with time zone",
       "typeSchema": null,
       "notNull": true,
@@ -8138,6 +8195,227 @@
       "entityType": "columns",
       "schema": "accounting",
       "table": "legal_entity_accounting_configurations"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "tenant_id",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "lot_balances"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "warehouse_id",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "lot_balances"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "lot_id",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "lot_balances"
+    },
+    {
+      "type": "bigint",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "0",
+      "generated": null,
+      "identity": null,
+      "name": "on_hand",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "lot_balances"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "lot_balances"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "uuidv7()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "lot_movements"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "tenant_id",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "lot_movements"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "movement_id",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "lot_movements"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "lot_id",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "lot_movements"
+    },
+    {
+      "type": "bigint",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "quantity",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "lot_movements"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "lot_movements"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "uuidv7()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "lots"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "tenant_id",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "lots"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "item_id",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "lots"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "code",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "lots"
+    },
+    {
+      "type": "date",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "expiry_date",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "lots"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "lots"
     },
     {
       "type": "uuid",
@@ -13247,6 +13525,175 @@
       "entityType": "columns",
       "schema": "accounting",
       "table": "revenue_posting_profiles"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "uuidv7()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "serial_units"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "tenant_id",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "serial_units"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "item_id",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "serial_units"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "serial",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "serial_units"
+    },
+    {
+      "type": "serial_status",
+      "typeSchema": "inventory",
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'in_stock'",
+      "generated": null,
+      "identity": null,
+      "name": "status",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "serial_units"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "warehouse_id",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "serial_units"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "received_source_type",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "serial_units"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "received_source_id",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "serial_units"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "issued_source_type",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "serial_units"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "issued_source_id",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "serial_units"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "issued_at",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "serial_units"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "serial_units"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "schema": "inventory",
+      "table": "serial_units"
     },
     {
       "type": "uuid",
@@ -18369,6 +18816,101 @@
     {
       "nameExplicit": true,
       "columns": [
+        "tenant_id",
+        "warehouse_id"
+      ],
+      "schemaTo": "inventory",
+      "tableTo": "warehouses",
+      "columnsTo": [
+        "tenant_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "lot_balances_warehouse_fkey",
+      "entityType": "fks",
+      "schema": "inventory",
+      "table": "lot_balances"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "lot_id"
+      ],
+      "schemaTo": "inventory",
+      "tableTo": "lots",
+      "columnsTo": [
+        "tenant_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "lot_balances_lot_fkey",
+      "entityType": "fks",
+      "schema": "inventory",
+      "table": "lot_balances"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "movement_id"
+      ],
+      "schemaTo": "inventory",
+      "tableTo": "movements",
+      "columnsTo": [
+        "tenant_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "lot_movements_movement_fkey",
+      "entityType": "fks",
+      "schema": "inventory",
+      "table": "lot_movements"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "lot_id"
+      ],
+      "schemaTo": "inventory",
+      "tableTo": "lots",
+      "columnsTo": [
+        "tenant_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "lot_movements_lot_fkey",
+      "entityType": "fks",
+      "schema": "inventory",
+      "table": "lot_movements"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "item_id"
+      ],
+      "schemaTo": "inventory",
+      "tableTo": "items",
+      "columnsTo": [
+        "tenant_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "lots_item_fkey",
+      "entityType": "fks",
+      "schema": "inventory",
+      "table": "lots"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
         "user_account_id"
       ],
       "schemaTo": "identity",
@@ -19981,6 +20523,25 @@
     {
       "nameExplicit": true,
       "columns": [
+        "tenant_id",
+        "item_id"
+      ],
+      "schemaTo": "inventory",
+      "tableTo": "items",
+      "columnsTo": [
+        "tenant_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "serial_units_item_fkey",
+      "entityType": "fks",
+      "schema": "inventory",
+      "table": "serial_units"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
         "user_account_id"
       ],
       "schemaTo": "identity",
@@ -20751,6 +21312,18 @@
     },
     {
       "columns": [
+        "tenant_id",
+        "warehouse_id",
+        "lot_id"
+      ],
+      "nameExplicit": false,
+      "name": "lot_balances_pkey",
+      "entityType": "pks",
+      "schema": "inventory",
+      "table": "lot_balances"
+    },
+    {
+      "columns": [
         "user_account_id",
         "tenant_id",
         "capability"
@@ -21273,6 +21846,26 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "lot_movements_pkey",
+      "schema": "inventory",
+      "table": "lot_movements",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "lots_pkey",
+      "schema": "inventory",
+      "table": "lots",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "movements_pkey",
       "schema": "inventory",
       "table": "movements",
@@ -21586,6 +22179,16 @@
       "name": "reservations_pkey",
       "schema": "inventory",
       "table": "reservations",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "serial_units_pkey",
+      "schema": "inventory",
+      "table": "serial_units",
       "entityType": "pks"
     },
     {
@@ -22491,6 +23094,31 @@
       "nameExplicit": true,
       "columns": [
         "tenant_id",
+        "id"
+      ],
+      "nullsNotDistinct": false,
+      "name": "lots_tenant_id_id_key",
+      "entityType": "uniques",
+      "schema": "inventory",
+      "table": "lots"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "item_id",
+        "code"
+      ],
+      "nullsNotDistinct": false,
+      "name": "lots_tenant_item_code_key",
+      "entityType": "uniques",
+      "schema": "inventory",
+      "table": "lots"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
         "event_type",
         "event_version",
         "idempotency_key"
@@ -23111,6 +23739,19 @@
       "entityType": "uniques",
       "schema": "inventory",
       "table": "reservations"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "item_id",
+        "serial"
+      ],
+      "nullsNotDistinct": false,
+      "name": "serial_units_tenant_item_serial_key",
+      "entityType": "uniques",
+      "schema": "inventory",
+      "table": "serial_units"
     },
     {
       "nameExplicit": true,
@@ -24432,6 +25073,27 @@
       "table": "legal_entity_accounting_configurations"
     },
     {
+      "value": "\"on_hand\" >= 0",
+      "name": "lot_balances_on_hand_check",
+      "entityType": "checks",
+      "schema": "inventory",
+      "table": "lot_balances"
+    },
+    {
+      "value": "\"quantity\" <> 0",
+      "name": "lot_movements_quantity_check",
+      "entityType": "checks",
+      "schema": "inventory",
+      "table": "lot_movements"
+    },
+    {
+      "value": "\"code\" = btrim(\"code\") and length(\"code\") between 1 and 64",
+      "name": "lots_code_check",
+      "entityType": "checks",
+      "schema": "inventory",
+      "table": "lots"
+    },
+    {
       "value": "\"event_type\" ~ '[^[:space:]]'",
       "name": "event_outbox_event_type_check",
       "entityType": "checks",
@@ -25081,6 +25743,20 @@
       "entityType": "checks",
       "schema": "accounting",
       "table": "revenue_posting_profiles"
+    },
+    {
+      "value": "\"serial\" = btrim(\"serial\") and length(\"serial\") between 1 and 64",
+      "name": "serial_units_serial_check",
+      "entityType": "checks",
+      "schema": "inventory",
+      "table": "serial_units"
+    },
+    {
+      "value": "(\"status\" = 'in_stock' and \"warehouse_id\" is not null and \"issued_source_id\" is null) or\n      (\"status\" <> 'in_stock' and \"issued_source_id\" is not null)",
+      "name": "serial_units_state_check",
+      "entityType": "checks",
+      "schema": "inventory",
+      "table": "serial_units"
     },
     {
       "value": "\"expires_at\" > \"created_at\"",
