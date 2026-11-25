@@ -215,6 +215,18 @@ export const RecordDeliveryInput = Schema.Struct({
     ),
 })
 
+export const NumberLookupInput = Schema.Struct({ ...ScopedInput, number: TrimmedText(64) })
+
+/** A document found by its number: where to open it, not proof that the caller may. */
+export const NumberCandidate = Schema.Struct({
+  type: Schema.Literals(["sales.quotation", "sales.order", "sales.delivery"]),
+  id: Uuid,
+  number: Schema.String,
+  legalEntityId: Uuid,
+})
+
+export type NumberCandidate = Schema.Schema.Type<typeof NumberCandidate>
+
 export const PipelineFactsInput = Schema.Struct({ ...ScopedInput, legalEntityId: Uuid })
 
 /** How many documents are at a stage, and the date of the oldest. */
@@ -317,6 +329,10 @@ export interface SalesDocumentService {
     OrderFulfillment,
     SalesOrderNotFound | CustomerLegalEntityRequired | CommonFailure
   >
+  /** The quotations, orders, and deliveries with exactly this number, in any legal entity. */
+  readonly findByNumber: (
+    input: Schema.Codec.Encoded<typeof NumberLookupInput>,
+  ) => Effect.Effect<ReadonlyArray<NumberCandidate>, CommonFailure>
   /** The stages of the quotations, orders, and deliveries of one legal entity. */
   readonly getPipelineFacts: (
     input: Schema.Codec.Encoded<typeof PipelineFactsInput>,

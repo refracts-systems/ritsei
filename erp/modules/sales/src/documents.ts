@@ -36,6 +36,8 @@ import {
   type Delivery,
   DraftQuotationInput,
   ExpireQuotationsInput,
+  type NumberCandidate,
+  NumberLookupInput,
   type OrderFulfillment,
   OrderQueryInput,
   type PartyCustomer,
@@ -955,6 +957,61 @@ export const makeSalesDocumentService = Effect.gen(function* () {
     return loaded.filter((delivery) => delivery !== undefined)
   })
 
+  const findByNumber = Effect.fn("SalesDocumentService.findByNumber")(function* (
+    input: Schema.Codec.Encoded<typeof NumberLookupInput>,
+  ) {
+    const decoded = yield* authorized(NumberLookupInput, SalesCapabilities.orderRead)(input)
+
+    yield* authorization.authorize({
+      principal: decoded.principal,
+      tenantId: decoded.tenantId,
+      capability: SalesCapabilities.quotationRead,
+    })
+
+    const { tenantId, number } = decoded
+
+    return yield* database.transaction(async (tx): Promise<ReadonlyArray<NumberCandidate>> => {
+      const quoted = await tx
+        .select({ id: quotations.id, legalEntityId: quotations.legalEntityId })
+        .from(quotations)
+        .where(and(eq(quotations.tenantId, tenantId), eq(quotations.number, number)))
+        .limit(20)
+
+      const ordered = await tx
+        .select({
+          id: orders.id,
+          legalEntityId: orders.legalEntityId,
+          customerLegalEntityId: customers.legalEntityId,
+        })
+        .from(orders)
+        .innerJoin(
+          customers,
+          and(eq(customers.tenantId, orders.tenantId), eq(customers.id, orders.customerId)),
+        )
+        .where(and(eq(orders.tenantId, tenantId), eq(orders.number, number)))
+        .limit(20)
+
+      const delivered = await tx
+        .select({ id: deliveries.id, legalEntityId: deliveries.legalEntityId })
+        .from(deliveries)
+        .where(and(eq(deliveries.tenantId, tenantId), eq(deliveries.number, number)))
+        .limit(20)
+
+      // A numbered document always has a legal entity: its number was issued in one.
+      return [
+        ...quoted.map((row) => ({ type: "sales.quotation" as const, ...row })),
+        ...ordered.map((row) => ({
+          type: "sales.order" as const,
+          id: row.id,
+          legalEntityId: row.legalEntityId ?? row.customerLegalEntityId,
+        })),
+        ...delivered.map((row) => ({ type: "sales.delivery" as const, ...row })),
+      ].flatMap((row) =>
+        row.legalEntityId === null ? [] : [{ ...row, number, legalEntityId: row.legalEntityId }],
+      )
+    }, "sales.number.lookup")
+  })
+
   const asDate = (value: Date | string | null): string | null =>
     value === null ? null : new Date(value).toISOString().slice(0, 10)
 
@@ -1210,6 +1267,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
     getFulfillment,
     listDeliveries,
     getPipelineFacts,
+    findByNumber,
     recordDelivery,
   } satisfies SalesDocumentService
 })

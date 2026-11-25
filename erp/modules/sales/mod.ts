@@ -74,6 +74,8 @@ export {
   FulfillmentLine,
   OrderFulfillment,
   OrderQueryInput,
+  NumberCandidate,
+  NumberLookupInput,
   PartyCustomer,
   PipelineFactsInput,
   PricedLine,

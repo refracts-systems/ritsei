@@ -77,6 +77,7 @@ export const purchaseOrders = procurementSchema.table(
   },
   (table) => [
     unique("purchase_orders_tenant_id_id_key").on(table.tenantId, table.id),
+    index("purchase_orders_tenant_number_idx").on(table.tenantId, table.number),
     foreignKey({
       columns: [table.tenantId, table.legalEntityId],
       foreignColumns: [legalEntities.tenantId, legalEntities.id],
@@ -316,6 +317,7 @@ export const purchaseReturns = procurementSchema.table(
   },
   (table) => [
     unique("purchase_returns_tenant_id_id_key").on(table.tenantId, table.id),
+    index("purchase_returns_tenant_number_idx").on(table.tenantId, table.number),
     unique("purchase_returns_tenant_order_id_key").on(
       table.tenantId,
       table.purchaseOrderId,

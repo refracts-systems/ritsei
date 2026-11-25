@@ -38,6 +38,8 @@ import {
   DraftPurchaseOrderInput,
   PurchaseApprovalSubject,
   PurchaseDocumentService,
+  type NumberCandidate,
+  NumberLookupInput,
   PipelineFactsInput,
   type PurchaseMatching,
   PurchaseOrderQueryInput,
@@ -521,6 +523,46 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
     return yield* loadMatching(decoded.principal, decoded.tenantId, decoded.purchaseOrderId)
   })
 
+  const findByNumber = Effect.fn("PurchaseDocumentService.findByNumber")(function* (
+    input: Schema.Codec.Encoded<typeof NumberLookupInput>,
+  ) {
+    const decoded = yield* authorized(
+      NumberLookupInput,
+      ProcurementCapabilities.purchaseOrderRead,
+    )(input)
+
+    const { tenantId, number } = decoded
+
+    return yield* database.transaction(async (tx): Promise<ReadonlyArray<NumberCandidate>> => {
+      const ordered = await tx
+        .select({ id: purchaseOrders.id, legalEntityId: purchaseOrders.legalEntityId })
+        .from(purchaseOrders)
+        .where(and(eq(purchaseOrders.tenantId, tenantId), eq(purchaseOrders.number, number)))
+        .limit(20)
+
+      // A return belongs to the legal entity of its purchase order.
+      const returned = await tx
+        .select({ id: purchaseReturns.id, legalEntityId: purchaseOrders.legalEntityId })
+        .from(purchaseReturns)
+        .innerJoin(
+          purchaseOrders,
+          and(
+            eq(purchaseOrders.tenantId, purchaseReturns.tenantId),
+            eq(purchaseOrders.id, purchaseReturns.purchaseOrderId),
+          ),
+        )
+        .where(and(eq(purchaseReturns.tenantId, tenantId), eq(purchaseReturns.number, number)))
+        .limit(20)
+
+      return [
+        ...ordered.map((row) => ({ type: "procurement.purchase_order" as const, ...row })),
+        ...returned.map((row) => ({ type: "procurement.return" as const, ...row })),
+      ].flatMap((row) =>
+        row.legalEntityId === null ? [] : [{ ...row, number, legalEntityId: row.legalEntityId }],
+      )
+    }, "procurement.number.lookup")
+  })
+
   const asDate = (value: Date | string | null): string | null =>
     value === null ? null : new Date(value).toISOString().slice(0, 10)
 
@@ -917,6 +959,7 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
     releasePurchaseOrder,
     getMatching,
     getPipelineFacts,
+    findByNumber,
     receiveValued,
     returnToSupplier,
   } satisfies PurchaseDocumentService

@@ -68,6 +68,7 @@ export const invoices = billingSchema.table(
     ),
     index("invoices_open_items_idx").on(table.tenantId, table.legalEntityId, table.partyId),
     index("invoices_source_idx").on(table.tenantId, table.sourceType, table.sourceId),
+    index("invoices_tenant_number_idx").on(table.tenantId, table.number),
     foreignKey({
       columns: [table.tenantId, table.legalEntityId],
       foreignColumns: [legalEntities.tenantId, legalEntities.id],

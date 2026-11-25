@@ -3,6 +3,7 @@ import {
   check,
   date,
   foreignKey,
+  index,
   integer,
   pgSchema,
   primaryKey,
@@ -101,6 +102,7 @@ export const payments = settlementSchema.table(
   },
   (table) => [
     unique("payments_tenant_id_id_key").on(table.tenantId, table.id),
+    index("payments_tenant_number_idx").on(table.tenantId, table.number),
     unique("payments_legal_entity_direction_number_key").on(
       table.tenantId,
       table.legalEntityId,

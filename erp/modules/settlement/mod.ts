@@ -20,6 +20,8 @@ export {
   ListPaymentsInput,
   MakePaymentInput,
   MatchBankLineInput,
+  NumberCandidate,
+  NumberLookupInput,
   Payment,
   PaymentDirection,
   PaymentTerm,

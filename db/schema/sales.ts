@@ -103,6 +103,7 @@ export const quotations = salesSchema.table(
   },
   (table) => [
     unique("quotations_tenant_id_id_key").on(table.tenantId, table.id),
+    index("quotations_tenant_number_idx").on(table.tenantId, table.number),
     unique("quotations_tenant_id_id_customer_id_key").on(
       table.tenantId,
       table.id,
@@ -146,6 +147,7 @@ export const orders = salesSchema.table(
   },
   (table) => [
     unique("orders_tenant_id_id_key").on(table.tenantId, table.id),
+    index("orders_tenant_number_idx").on(table.tenantId, table.number),
     foreignKey({
       columns: [table.tenantId, table.legalEntityId],
       foreignColumns: [legalEntities.tenantId, legalEntities.id],
@@ -356,6 +358,7 @@ export const deliveries = salesSchema.table(
   },
   (table) => [
     unique("deliveries_tenant_id_id_key").on(table.tenantId, table.id),
+    index("deliveries_tenant_number_idx").on(table.tenantId, table.number),
     unique("deliveries_tenant_order_id_key").on(table.tenantId, table.orderId, table.id),
     unique("deliveries_legal_entity_number_key").on(
       table.tenantId,
