@@ -22,6 +22,59 @@ type Answer<A> =
   | { readonly status: "ok"; readonly value: A }
   | { readonly status: "denied" | "unavailable"; readonly value: null }
 
+/** A figure now and a period earlier. */
+type Pair<A> = { readonly current: Answer<A>; readonly previous: Answer<A> }
+
+type Owner = "AuthorizationDenied" | "PostingRuleNotFound"
+
+/**
+ * Turns an owner's denial or missing posting rule into an answer instead of a failure, and keeps the
+ * denials so a caller denied by every owner can be told so.
+ */
+const answerer = (denials: Array<AuthorizationDenied>) => {
+  const answer = <A, E>(
+    effect: Effect.Effect<A, E>,
+  ): Effect.Effect<Answer<A>, Exclude<E, { readonly _tag: Owner }>> =>
+    // SAFETY: the `catch` below removes exactly the two tags the return type excludes.
+    effect.pipe(
+      Effect.map((value): Answer<A> => ({ status: "ok", value })),
+      Effect.catch((error) => {
+        // SAFETY: every owner failure is a tagged error; the tag is only read.
+        const tag = (error as { readonly _tag?: string })._tag
+
+        if (tag === "AuthorizationDenied") {
+          // SAFETY: the tag was just checked to be `AuthorizationDenied`.
+          denials.push(error as AuthorizationDenied)
+
+          return Effect.succeed<Answer<A>>({ status: "denied", value: null })
+        }
+
+        return tag === "PostingRuleNotFound"
+          ? Effect.succeed<Answer<A>>({ status: "unavailable", value: null })
+          : Effect.fail(error)
+      }),
+    ) as never
+
+  const pair = <A, E>(read: (current: boolean) => Effect.Effect<A, E>) =>
+    Effect.all({ current: answer(read(true)), previous: answer(read(false)) })
+
+  return pair
+}
+
+const amount = (figures: Pair<string>) => ({
+  status: figures.current.status,
+  value: figures.current.value,
+  previous: figures.previous.value,
+})
+
+const undeliveredOf = (figures: Pair<{ readonly value: string; readonly orders: number }>) => ({
+  status: figures.current.status,
+  value: figures.current.value?.value ?? null,
+  previous: figures.previous.value?.value ?? null,
+  orders: figures.current.value?.orders ?? null,
+  previousOrders: figures.previous.value?.orders ?? null,
+})
+
 export const makeInsightsService = Effect.gen(function* () {
   const ledger = yield* GeneralLedgerService
   const billing = yield* BillingService
@@ -44,32 +97,10 @@ export const makeInsightsService = Effect.gen(function* () {
     // An owner that denies the caller leaves its figure out instead of showing a zero; only a
     // caller denied by every owner is told so.
     const denials: Array<AuthorizationDenied> = []
+    const pair = answerer(denials)
 
-    const answer = <A, E>(
-      effect: Effect.Effect<A, E>,
-    ): Effect.Effect<
-      Answer<A>,
-      Exclude<E, { readonly _tag: "AuthorizationDenied" | "PostingRuleNotFound" }>
-    > =>
-      // SAFETY: the `catch` below removes exactly the two tags the return type excludes.
-      effect.pipe(
-        Effect.map((value): Answer<A> => ({ status: "ok", value })),
-        Effect.catch((error) => {
-          // SAFETY: every owner failure is a tagged error; the tag is only read.
-          const tag = (error as { readonly _tag?: string })._tag
-
-          if (tag === "AuthorizationDenied") {
-            // SAFETY: the tag was just checked to be `AuthorizationDenied`.
-            denials.push(error as AuthorizationDenied)
-
-            return Effect.succeed<Answer<A>>({ status: "denied", value: null })
-          }
-
-          return tag === "PostingRuleNotFound"
-            ? Effect.succeed<Answer<A>>({ status: "unavailable", value: null })
-            : Effect.fail(error)
-        }),
-      ) as never
+    /** The date a balance is read at: this period's last day, or the previous period's. */
+    const lastDay = (current: boolean) => (current ? dates.to : dates.previousTo)
 
     const overdue = (side: "receivable" | "payable", asOf: string) =>
       settlement
@@ -87,48 +118,38 @@ export const makeInsightsService = Effect.gen(function* () {
           ),
         )
 
-    const netSales = (from: string, to: string) =>
-      billing.netSales({ ...scope, from, to }).pipe(Effect.map((sales) => sales.netSales))
+    const netSales = (current: boolean) =>
+      billing
+        .netSales({
+          ...scope,
+          from: current ? dates.from : dates.previousFrom,
+          to: lastDay(current),
+        })
+        .pipe(Effect.map((sales) => sales.netSales))
 
-    const roleBalance = (role: "cash" | "inventory", asOf: string) =>
-      ledger.roleBalance({ ...scope, role, asOf }).pipe(Effect.map((balance) => balance.balance))
+    const roleBalance = (role: "cash" | "inventory", current: boolean) =>
+      ledger
+        .roleBalance({ ...scope, role, asOf: lastDay(current) })
+        .pipe(Effect.map((balance) => balance.balance))
 
-    const undelivered = (asOf: string) =>
+    const undelivered = (current: boolean) =>
       salesDocuments
-        .getUndeliveredOrders({ ...scope, asOf })
+        .getUndeliveredOrders({ ...scope, asOf: lastDay(current) })
         .pipe(Effect.map((result) => ({ value: result.value, orders: result.orders })))
 
-    const both = <A, E>(read: (current: boolean) => Effect.Effect<A, E>) =>
-      Effect.all({ current: answer(read(true)), previous: answer(read(false)) })
+    const sales = yield* pair(netSales)
+    const receivable = yield* pair((current) => overdue("receivable", lastDay(current)))
+    const payable = yield* pair((current) => overdue("payable", lastDay(current)))
+    const cash = yield* pair((current) => roleBalance("cash", current))
+    const stock = yield* pair((current) => roleBalance("inventory", current))
+    const toDeliver = yield* pair(undelivered)
 
-    const kpi = (figures: {
-      readonly current: Answer<string>
-      readonly previous: Answer<string>
-    }) => ({
-      status: figures.current.status,
-      value: figures.current.value,
-      previous: figures.previous.value,
-    })
+    // Settlement answers both overdue figures, so it is left out of the count of owners asked.
+    const asked = [sales, receivable, cash, toDeliver, stock]
 
-    const sales = yield* both((now) =>
-      now ? netSales(dates.from, dates.to) : netSales(dates.previousFrom, dates.previousTo),
-    )
-
-    const receivable = yield* both((now) =>
-      overdue("receivable", now ? dates.to : dates.previousTo),
-    )
-
-    const payable = yield* both((now) => overdue("payable", now ? dates.to : dates.previousTo))
-    const cash = yield* both((now) => roleBalance("cash", now ? dates.to : dates.previousTo))
-    const stock = yield* both((now) => roleBalance("inventory", now ? dates.to : dates.previousTo))
-    const undeliveredOrders = yield* both((now) => undelivered(now ? dates.to : dates.previousTo))
-
-    // Settlement answers both overdue figures, so its denial counts once.
-    const answered = [sales, receivable, cash, undeliveredOrders, stock].map(
-      (figures) => figures.current.status,
-    )
-
-    if (answered.every((status) => status === "denied")) return yield* Effect.fail(denials[0]!)
+    if (asked.every((figures) => figures.current.status === "denied")) {
+      return yield* Effect.fail(denials[0]!)
+    }
 
     return {
       legalEntityId: decoded.legalEntityId,
@@ -136,18 +157,12 @@ export const makeInsightsService = Effect.gen(function* () {
       from: dates.from,
       to: dates.to,
       previousPeriod: dates.previousPeriod,
-      netSales: kpi(sales),
-      receivableOverdue: kpi(receivable),
-      payableOverdue: kpi(payable),
-      cash: kpi(cash),
-      confirmedUndelivered: {
-        status: undeliveredOrders.current.status,
-        value: undeliveredOrders.current.value?.value ?? null,
-        previous: undeliveredOrders.previous.value?.value ?? null,
-        orders: undeliveredOrders.current.value?.orders ?? null,
-        previousOrders: undeliveredOrders.previous.value?.orders ?? null,
-      },
-      inventoryValue: kpi(stock),
+      netSales: amount(sales),
+      receivableOverdue: amount(receivable),
+      payableOverdue: amount(payable),
+      cash: amount(cash),
+      confirmedUndelivered: undeliveredOf(toDeliver),
+      inventoryValue: amount(stock),
     } satisfies Kpis
   })
 
