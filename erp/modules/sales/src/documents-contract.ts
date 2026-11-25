@@ -229,6 +229,20 @@ export type NumberCandidate = Schema.Schema.Type<typeof NumberCandidate>
 
 export const PipelineFactsInput = Schema.Struct({ ...ScopedInput, legalEntityId: Uuid })
 
+export const DeliverySummaryInput = Schema.Struct({ ...ScopedInput, deliveryId: Uuid })
+
+/** A delivery with the customer it went to: what a serial lookup needs from Sales. */
+export const DeliverySummary = Schema.Struct({
+  deliveryId: Uuid,
+  number: Schema.String,
+  deliveryDate: CalendarDate,
+  orderId: Uuid,
+  customerId: Uuid,
+  customerName: Schema.String,
+})
+
+export type DeliverySummary = Schema.Schema.Type<typeof DeliverySummary>
+
 export const UndeliveredInput = Schema.Struct({
   ...ScopedInput,
   legalEntityId: Uuid,
@@ -360,6 +374,10 @@ export interface SalesDocumentService {
   readonly getUndeliveredOrders: (
     input: Schema.Codec.Encoded<typeof UndeliveredInput>,
   ) => Effect.Effect<UndeliveredOrders, CommonFailure>
+  /** One delivery with its customer, or null when there is none in the tenant. */
+  readonly getDeliverySummary: (
+    input: Schema.Codec.Encoded<typeof DeliverySummaryInput>,
+  ) => Effect.Effect<DeliverySummary | null, CommonFailure>
   /** The order's deliveries, oldest first. */
   readonly listDeliveries: (
     input: Schema.Codec.Encoded<typeof OrderQueryInput>,

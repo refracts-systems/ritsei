@@ -69,6 +69,38 @@ export const DocumentChain = Schema.Struct({
 
 export type DocumentChain = Schema.Schema.Type<typeof DocumentChain>
 
+export const SerialLookupInput = Schema.Struct({
+  principal: Principal,
+  tenantId: Uuid,
+  serial: Schema.String.check(
+    Schema.makeFilter(
+      (value) => value === value.trim() && value.length >= 1 && value.length <= 64,
+      {
+        expected: "a trimmed serial of 1 to 64 characters",
+      },
+    ),
+  ),
+})
+
+/**
+ * Where a serial went: its item, its state, and, for a unit issued by a delivery, that delivery and
+ * its customer. `delivery` is "denied" when Sales would not show the caller the delivery.
+ */
+export const SerialTrace = Schema.Struct({
+  itemId: Uuid,
+  serial: Schema.String,
+  status: Schema.Literals(["in_stock", "issued", "returned_to_supplier"]),
+  warehouseId: Schema.NullOr(Uuid),
+  issuedBy: Schema.NullOr(Schema.Struct({ type: Schema.String, id: Uuid })),
+  delivery: Schema.Literals(["none", "shown", "denied"]),
+  deliveryNumber: Schema.NullOr(Schema.String),
+  deliveryDate: Schema.NullOr(CalendarDate),
+  customerId: Schema.NullOr(Uuid),
+  customerName: Schema.NullOr(Schema.String),
+})
+
+export type SerialTrace = Schema.Schema.Type<typeof SerialTrace>
+
 export const PipelineInput = Schema.Struct({
   principal: Principal,
   tenantId: Uuid,
@@ -138,6 +170,10 @@ export type CommonFailure =
  * the owning modules already expose; every read is authorized by the module that owns the document.
  */
 export interface DocumentsService {
+  /** Where a serial went, for a warranty claim: item, state, delivery, and customer. */
+  readonly serialLookup: (
+    input: Schema.Codec.Encoded<typeof SerialLookupInput>,
+  ) => Effect.Effect<ReadonlyArray<SerialTrace>, CommonFailure>
   readonly chain: (
     input: Schema.Codec.Encoded<typeof ChainInput>,
   ) => Effect.Effect<DocumentChain, DocumentNotFound | CommonFailure>

@@ -10,6 +10,8 @@ export {
   Pipeline,
   PipelineInput,
   PipelineStage,
+  SerialLookupInput,
+  SerialTrace,
 } from "./src/contract.ts"
 
 export type {
