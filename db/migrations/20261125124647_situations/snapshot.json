@@ -1,9 +1,10 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "cde7ec3d-28ab-4c3d-aa61-0dc3527e4fc0",
+  "id": "124b5fa3-36a7-415c-ab8e-a9bfc11e6b0d",
   "prevIds": [
-    "7e4cfc29-9c01-4ad8-939e-60c271420809"
+    "7e4cfc29-9c01-4ad8-939e-60c271420809",
+    "d1ff9023-2210-45f3-81bb-5860a8626c7a"
   ],
   "ddl": [
     {
@@ -12095,6 +12096,19 @@
       "table": "purchase_receipts"
     },
     {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "number",
+      "entityType": "columns",
+      "schema": "procurement",
+      "table": "purchase_receipts"
+    },
+    {
       "type": "timestamp with time zone",
       "typeSchema": null,
       "notNull": true,
@@ -15775,6 +15789,34 @@
       "method": "btree",
       "concurrently": false,
       "name": "purchase_receipts_tenant_order_idx",
+      "entityType": "indexes",
+      "schema": "procurement",
+      "table": "purchase_receipts"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "tenant_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "number",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "purchase_receipts_tenant_number_idx",
       "entityType": "indexes",
       "schema": "procurement",
       "table": "purchase_receipts"
