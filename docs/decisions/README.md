@@ -158,6 +158,7 @@ current system; ADRs preserve decision history.
 | [`0130`](./0130-adopt-organization-units-and-read-only-consolidation.md)                              | Adopt Organization Units and Read-Only Consolidation                                             | Accepted   |
 | [`0131`](./0131-adopt-lot-and-serial-tracking.md)                                                     | Adopt Lot and Serial Tracking                                                                    | Accepted   |
 | [`0132`](./0132-adopt-a-helpdesk-extension-for-work-without-a-document.md)                            | Adopt a Helpdesk Extension for Work Without a Document                                           | Accepted   |
+| [`0134`](./0134-adopt-a-governance-extension-for-board-decisions-and-restricted-notes.md)             | Adopt a Governance Extension for Board Decisions and Restricted Notes                            | Accepted   |
 
 <!-- adr-index:end -->
 
