@@ -18,6 +18,7 @@ import {
   Database,
   formatSignedMinor,
   isDatabaseConstraint,
+  omitUndefined,
   requireExactMajorToMinor,
   uuidv7,
 } from "../../../../framework/foundation/mod.ts"
@@ -848,6 +849,7 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
             itemId: byLine.get(requested.purchaseOrderLineId)!.productId,
             quantity: requested.quantity,
             unitCost: byLine.get(requested.purchaseOrderLineId)!.unitPrice,
+            ...omitUndefined({ identity: requested.identity }),
           })),
         })
 
@@ -963,6 +965,7 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
             itemId: byLine.get(requested.purchaseOrderLineId)!.productId,
             quantity: requested.quantity,
             unitCost: byLine.get(requested.purchaseOrderLineId)!.unitPrice,
+            ...omitUndefined({ identity: requested.identity }),
           })),
         })
 

@@ -69,6 +69,8 @@ export {
   SetCreditLimitInput,
   Delivery,
   DiscountPercent,
+  DeliverySummary,
+  DeliverySummaryInput,
   DraftQuotationInput,
   ExpireQuotationsInput,
   FulfillmentLine,
