@@ -93,3 +93,19 @@ export { PartyBankAccountAlreadyExists } from "./src/errors.ts"
 export { PartyModule } from "./manifest.ts"
 
 export { IdentifierSchemes } from "./src/identifier-schemes.ts"
+
+export {
+  AssignLegalEntityInput,
+  CreateOrgUnitInput,
+  ListOrgUnitsInput,
+  makeOrgUnitService,
+  MoveOrgUnitInput,
+  OrgUnit,
+  OrgUnitInvalid,
+  OrgUnitKind,
+  OrgUnitNotFound,
+  OrgUnitService,
+  OrgUnitsLive,
+  ResolvedUnit,
+  ResolveUnitInput,
+} from "./src/org-units.ts"

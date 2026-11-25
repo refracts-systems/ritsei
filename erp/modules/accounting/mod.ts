@@ -273,3 +273,15 @@ export { AccountingFiscalCalendarLive } from "./src/fiscal-calendar.ts"
 export { GeneralLedgerLive, makeGeneralLedgerService } from "./src/layers.ts"
 
 export { AccountingModule } from "./manifest.ts"
+
+export {
+  ExchangeRate,
+  ExchangeRateInvalid,
+  ExchangeRateService,
+  ExchangeRatesLive,
+  FindExchangeRateInput,
+  LegalEntityCurrenciesInput,
+  makeExchangeRateService,
+  RateText,
+  SetExchangeRateInput,
+} from "./src/exchange-rates.ts"

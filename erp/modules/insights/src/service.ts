@@ -12,6 +12,7 @@ import { BillingService } from "../../billing/mod.ts"
 import { SalesDocumentService } from "../../sales/mod.ts"
 import { SettlementService } from "../../settlement/mod.ts"
 import { InsightsService, type Kpis, KpisInput } from "./contract.ts"
+import { makeGroupReads } from "./group.ts"
 import { periodDates } from "./period.ts"
 
 const minor = (value: string) => requireSignedMajorToMinor(value, 2)
@@ -166,7 +167,9 @@ export const makeInsightsService = Effect.gen(function* () {
     } satisfies Kpis
   })
 
-  return { kpis: kpisOf } satisfies InsightsService
+  const group = yield* makeGroupReads(kpisOf)
+
+  return { kpis: kpisOf, ...group } satisfies InsightsService
 })
 
 export const InsightsLive = Layer.effect(InsightsService, makeInsightsService)

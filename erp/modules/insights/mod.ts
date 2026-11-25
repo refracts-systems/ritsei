@@ -1,4 +1,8 @@
 export {
+  GroupKpis,
+  GroupKpisInput,
+  GroupStatements,
+  GroupStatementsInput,
   InsightsService,
   Kpi,
   Kpis,

@@ -58,6 +58,8 @@ import { BillingCreditExposureLive, BillingLive } from "../modules/billing/mod.t
 import { SettlementLive } from "../modules/settlement/mod.ts"
 import { DocumentsLive } from "../modules/documents/mod.ts"
 import { InsightsLive } from "../modules/insights/mod.ts"
+import { ExchangeRatesLive } from "../modules/accounting/mod.ts"
+import { OrgUnitsLive } from "../modules/party/mod.ts"
 import { OnboardingLive } from "../modules/onboarding/mod.ts"
 import {
   IndonesianChartTemplatesLive,
@@ -293,10 +295,15 @@ export const serviceLayers = (
     ),
   )
 
+  const OrgUnitServiceLive = OrgUnitsLive.pipe(Layer.provide(BusinessRequirements))
+  const ExchangeRateServiceLive = ExchangeRatesLive.pipe(Layer.provide(BusinessRequirements))
+
   const InsightsServiceLive = InsightsLive.pipe(
     Layer.provide(
       Layer.mergeAll(
         LedgerLive,
+        OrgUnitServiceLive,
+        ExchangeRateServiceLive,
         SalesDocumentServiceLive,
         BillingServiceLive,
         SettlementServiceLive,
@@ -346,6 +353,8 @@ export const serviceLayers = (
     SettlementServiceLive,
     DocumentsServiceLive,
     InsightsServiceLive,
+    OrgUnitServiceLive,
+    ExchangeRateServiceLive,
     LocalizationIdServiceLive,
     ApprovalServiceLive,
     PurchaseDocumentServiceLive,
