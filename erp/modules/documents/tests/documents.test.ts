@@ -17,6 +17,7 @@ describe("documents module", () => {
     assert.strictEqual(DocumentsModule.name, "documents")
     assert.deepStrictEqual(DocumentsModule.dependsOn, [
       "billing",
+      "inventory",
       "procurement",
       "sales",
       "settlement",
