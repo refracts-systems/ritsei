@@ -126,7 +126,9 @@ export const erpChainLayers = (client: Sql, grants: ReadonlyArray<Grant>) => {
   )
 
   const documents = DocumentsLive.pipe(
-    Layer.provide(Layer.mergeAll(legacySales, sales, procurement, purchasing, billing, settlement)),
+    Layer.provide(
+      Layer.mergeAll(legacySales, sales, procurement, purchasing, billing, settlement, stock),
+    ),
   )
 
   const orgUnits = OrgUnitsLive.pipe(Layer.provide(platform))

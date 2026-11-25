@@ -7,6 +7,7 @@ import {
   items,
   itemValuations,
   movements,
+  serialUnits,
   openingStockPositions,
   stockBalances,
   valuationEntries,
@@ -41,9 +42,13 @@ import {
   OpeningStockInTransitNotCarried,
   OpeningStockLotTrackingUnsupported,
   OpeningStockReservationsNotCarried,
+  ItemTrackingLocked,
   StockNotStockable,
   StockUnavailable,
   StockValuationUnavailable,
+  TrackedIdentityInvalid,
+  TrackedIdentityRequired,
+  TrackedIdentityUnavailable,
 } from "./errors.ts"
 import {
   CountStockInput,
@@ -51,12 +56,23 @@ import {
   type OpeningRevaluation,
   OpeningStockInput,
   type OpeningStockLoad,
+  LookupSerialInput,
   ReceiveValuedStockInput,
   RegisterProductItemInput,
+  SetItemTrackingInput,
+  type SerialRecord,
+  type StockIdentity,
   StockKeepingService,
   type ValuedStockMovement,
   ValuationReportInput,
 } from "./stock-keeping-contract.ts"
+import {
+  availabilityProblem,
+  type IdentityProblem,
+  identityMismatch,
+  trackingOf,
+  writeIdentity,
+} from "./tracking.ts"
 import {
   type Balance,
   LineValue,
@@ -87,6 +103,27 @@ type Plan = Movement & {
   readonly postingDate: string
   readonly gainRole: PostingRoleType
   readonly lossRole: PostingRoleType
+  /** The lot or serials each line moves by, for tracked items (ADR-0131). */
+  readonly identities?: ReadonlyMap<string, StockIdentity | undefined>
+}
+
+/** The typed failure for a tracked line that cannot move. */
+const identityFailure = (tenantId: string, problem: IdentityProblem) => {
+  if (problem.kind === "required") {
+    return new TrackedIdentityRequired({
+      tenantId,
+      itemId: problem.itemId,
+      tracking: problem.tracking,
+    })
+  }
+
+  return problem.kind === "invalid"
+    ? new TrackedIdentityInvalid({ tenantId, itemId: problem.itemId, reason: problem.reason })
+    : new TrackedIdentityUnavailable({
+        tenantId,
+        itemId: problem.itemId,
+        identity: problem.identity,
+      })
 }
 
 type LockedStock = {
@@ -511,6 +548,38 @@ export const makeStockKeepingService = Effect.gen(function* () {
 
         const state = locked.state!
         const valued = yield* valueAll(plan, legalEntityId, state)
+
+        // A tracked item moves only by identity, checked while its balance is locked.
+        const modes = yield* database.transaction(async (tx) => {
+          const tracking = await trackingOf(
+            tx,
+            plan.tenantId,
+            valued.map((line) => line.itemId),
+          )
+
+          for (const line of valued) {
+            const mode = tracking.get(line.itemId) ?? "none"
+
+            const candidate = {
+              itemId: line.itemId,
+              quantity: line.quantity,
+              identity: plan.identities?.get(line.itemId),
+            }
+
+            const problem =
+              identityMismatch(line.itemId, mode, line.quantity, candidate.identity) ??
+              (await availabilityProblem(tx, plan.tenantId, plan.warehouseId, mode, candidate))
+
+            if (problem !== undefined) return { problem }
+          }
+
+          return { tracking }
+        }, "inventory.tracking.verify")
+
+        if (modes.problem !== undefined) {
+          return yield* Effect.fail(identityFailure(plan.tenantId, modes.problem))
+        }
+
         const journalLines = journalFor(valued, plan.gainRole, plan.lossRole)
 
         const journal =
@@ -530,11 +599,37 @@ export const makeStockKeepingService = Effect.gen(function* () {
         const written = yield* database.transaction(async (tx) => {
           const result: Array<ValuedStockMovement["lines"][number]> = []
 
+          // Shapes and availability were checked above, so the guard may let tracked stock move.
+          await tx.execute(sql`select set_config('ritsei.tracked_identity', 'on', true)`)
+
           for (const line of valued.toSorted((left, right) =>
             left.itemId.localeCompare(right.itemId),
           )) {
             const unit = state.units.get(line.itemId)!
-            result.push(await writeLine(tx, plan, legalEntityId, line, unit, journal?.id ?? null))
+
+            const movement = await writeLine(
+              tx,
+              plan,
+              legalEntityId,
+              line,
+              unit,
+              journal?.id ?? null,
+            )
+
+            result.push(movement)
+
+            await writeIdentity(tx, {
+              tenantId: plan.tenantId,
+              warehouseId: plan.warehouseId,
+              source: plan.source,
+              movementId: movement.movementId,
+              tracking: modes.tracking!.get(line.itemId) ?? "none",
+              line: {
+                itemId: line.itemId,
+                quantity: line.quantity,
+                identity: plan.identities?.get(line.itemId),
+              },
+            })
           }
 
           return result
@@ -576,6 +671,7 @@ export const makeStockKeepingService = Effect.gen(function* () {
             sku: product.code,
             name: product.name,
             unitOfMeasure: product.unitOfMeasure,
+            tracking: decoded.tracking ?? "none",
           })
           .onConflictDoNothing({ target: items.id })
           .returning(),
@@ -602,6 +698,122 @@ export const makeStockKeepingService = Effect.gen(function* () {
     }
   })
 
+  const setItemTracking = Effect.fn("StockKeepingService.setItemTracking")(function* (
+    input: Schema.Codec.Encoded<typeof SetItemTrackingInput>,
+  ) {
+    const decoded = yield* authorized(SetItemTrackingInput, InventoryCapabilities.itemCreate)(input)
+
+    return yield* database.withTransaction(
+      Effect.gen(function* () {
+        const item = (yield* database.query(
+          (db) =>
+            db
+              .select({ id: items.id })
+              .from(items)
+              .where(and(eq(items.tenantId, decoded.tenantId), eq(items.id, decoded.itemId)))
+              .for("update"),
+          "inventory.item.lock",
+        ))[0]
+
+        if (item === undefined) {
+          return yield* Effect.fail(
+            new InventoryReferenceNotFound({
+              tenantId: decoded.tenantId,
+              warehouseId: decoded.itemId,
+              itemId: decoded.itemId,
+            }),
+          )
+        }
+
+        // A mode that is already set is not a change; otherwise stock or history locks it.
+        const used = yield* database.query(
+          (db) =>
+            db
+              .select({ id: movements.id })
+              .from(movements)
+              .where(
+                and(eq(movements.tenantId, decoded.tenantId), eq(movements.itemId, decoded.itemId)),
+              )
+              .limit(1),
+          "inventory.item.movements",
+        )
+
+        const held = yield* database.query(
+          (db) =>
+            db
+              .select({ onHand: stockBalances.onHand })
+              .from(stockBalances)
+              .where(
+                and(
+                  eq(stockBalances.tenantId, decoded.tenantId),
+                  eq(stockBalances.itemId, decoded.itemId),
+                  gt(stockBalances.onHand, "0"),
+                ),
+              )
+              .limit(1),
+          "inventory.item.stock",
+        )
+
+        const current = (yield* database.query(
+          (db) =>
+            db
+              .select({ tracking: items.tracking })
+              .from(items)
+              .where(and(eq(items.tenantId, decoded.tenantId), eq(items.id, decoded.itemId))),
+          "inventory.item.tracking",
+        ))[0]!.tracking
+
+        if (current !== decoded.tracking && (used.length > 0 || held.length > 0)) {
+          return yield* Effect.fail(
+            new ItemTrackingLocked({ tenantId: decoded.tenantId, itemId: decoded.itemId }),
+          )
+        }
+
+        yield* database.query(
+          (db) =>
+            db
+              .update(items)
+              .set({ tracking: decoded.tracking, updatedAt: new Date() })
+              .where(and(eq(items.tenantId, decoded.tenantId), eq(items.id, decoded.itemId))),
+          "inventory.item.set_tracking",
+        )
+
+        return { itemId: decoded.itemId, tracking: decoded.tracking }
+      }),
+      "inventory.item.set_tracking.atomic",
+    )
+  })
+
+  const lookupSerial = Effect.fn("StockKeepingService.lookupSerial")(function* (
+    input: Schema.Codec.Encoded<typeof LookupSerialInput>,
+  ) {
+    const decoded = yield* authorized(LookupSerialInput, InventoryCapabilities.stockRead)(input)
+
+    const rows = yield* database.query(
+      (db) =>
+        db
+          .select()
+          .from(serialUnits)
+          .where(
+            and(eq(serialUnits.tenantId, decoded.tenantId), eq(serialUnits.serial, decoded.serial)),
+          )
+          .orderBy(asc(serialUnits.itemId)),
+      "inventory.serial.lookup",
+    )
+
+    return rows.map((row): SerialRecord => ({
+      itemId: row.itemId,
+      serial: row.serial,
+      status: row.status,
+      warehouseId: row.warehouseId,
+      issuedBy:
+        row.issuedSourceType === null || row.issuedSourceId === null
+          ? null
+          : { type: row.issuedSourceType, id: row.issuedSourceId },
+      issuedAt: row.issuedAt?.toISOString() ?? null,
+    }))
+  })
+
   const receiveValued = Effect.fn("StockKeepingService.receiveValued")(function* (
     input: Schema.Codec.Encoded<typeof ReceiveValuedStockInput>,
   ) {
@@ -616,6 +828,7 @@ export const makeStockKeepingService = Effect.gen(function* () {
       gainRole: decoded.counterRole,
       lossRole: decoded.counterRole,
       itemIds: decoded.lines.map((line) => line.itemId),
+      identities: new Map(decoded.lines.map((line) => [line.itemId, line.identity])),
       resolve: () =>
         decoded.lines.map((line) => ({
           itemId: line.itemId,
@@ -639,6 +852,7 @@ export const makeStockKeepingService = Effect.gen(function* () {
       gainRole: decoded.counterRole,
       lossRole: decoded.counterRole,
       itemIds: decoded.lines.map((line) => line.itemId),
+      identities: new Map(decoded.lines.map((line) => [line.itemId, line.identity])),
       resolve: () =>
         decoded.lines.map((line) => ({
           itemId: line.itemId,
@@ -921,6 +1135,8 @@ export const makeStockKeepingService = Effect.gen(function* () {
 
   return {
     registerProductItem,
+    setItemTracking,
+    lookupSerial,
     receiveValued,
     issueValued,
     countStock,

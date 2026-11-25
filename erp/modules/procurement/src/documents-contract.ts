@@ -20,8 +20,12 @@ import type {
   InventoryReferenceNotFound,
   StockUnavailable,
   StockValuationUnavailable,
+  TrackedIdentityInvalid,
+  TrackedIdentityRequired,
+  TrackedIdentityUnavailable,
   ValuedStockMovement,
 } from "../../inventory/mod.ts"
+import { StockIdentity } from "../../inventory/mod.ts"
 import type { PartyRelationshipNotFound } from "../../party/mod.ts"
 import type { ProductNotFound } from "../../product/mod.ts"
 import type * as ProcurementErrors from "./errors.ts"
@@ -32,7 +36,14 @@ const ScopedInput = { principal: Principal, tenantId: Uuid }
 const uniqueLines = <T extends { readonly purchaseOrderLineId: string }>(lines: ReadonlyArray<T>) =>
   new Set(lines.map((line) => line.purchaseOrderLineId)).size === lines.length
 
-const DocumentLines = Schema.Array(Schema.Struct({ purchaseOrderLineId: Uuid, quantity: Quantity }))
+const DocumentLines = Schema.Array(
+  Schema.Struct({
+    purchaseOrderLineId: Uuid,
+    quantity: Quantity,
+    /** The lot or serials of a tracked item (ADR-0131). */
+    identity: Schema.optionalKey(StockIdentity),
+  }),
+)
   .check(Schema.isMinLength(1))
   .check(Schema.makeFilter(uniqueLines, { expected: "each order line appears once" }))
 
@@ -204,6 +215,9 @@ type StockFailure =
   | InventoryReferenceNotFound
   | StockUnavailable
   | StockValuationUnavailable
+  | TrackedIdentityInvalid
+  | TrackedIdentityRequired
+  | TrackedIdentityUnavailable
   | PostEntryFailure
   | ProductNotFound
 

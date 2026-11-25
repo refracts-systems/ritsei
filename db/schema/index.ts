@@ -213,3 +213,12 @@ export {
   situationsSchema,
   workingCalendars,
 } from "./situations.ts"
+
+export {
+  itemTracking,
+  lotBalances,
+  lotMovements,
+  lots,
+  serialStatus,
+  serialUnits,
+} from "./inventory.ts"
