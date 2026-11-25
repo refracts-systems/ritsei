@@ -1,6 +1,6 @@
 # ADR-0128: Adopt Tiered Approvals and Delegation
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-25
 - Amends: ADR-0103 (its consequence that multi-step chains and delegation stay out)
 - Compatible with: ADR-0004, ADR-0006, ADR-0103, ADR-0125
@@ -90,7 +90,7 @@ later one).
 
 - Approvals grows from two tables to five (steps, request steps, delegations) and the request model
   gains a state per step.
-- A step scope is only as strong as Authorization's scoped grants (below).
+- A step scope is stored but not enforced until Authorization has scoped grants (decision 1).
 
 ### Risks
 
@@ -99,19 +99,15 @@ later one).
 - A delegate's authority is checked at decision time against the dates and the delegator's own grant;
   if the delegator loses the capability, the delegation stops working with it.
 
-## Open questions for the owner
+## Owner decisions (2026-11-25)
 
-1. **Scoped grants.** Grants today are `scope: tenant` only; the scope kinds in `authorization.md`
-   (legal entity and others) are described but not implemented as grants. A step scope needs
-   legal-entity-scoped grants and a "who holds capability X in scope S" query. Proposed: implement
-   the legal-entity scope kind in Authorization as part of this work, and ship steps with no scope
-   (tenant) first if that is too large.
-2. **Distinct approvers.** Should one person be barred from deciding two steps of the same request?
-   Recommended yes, since a chain of one person is not a chain. It is stricter than ADR-0103 and
-   new, not a change to it.
-3. **Date semantics.** Whole days in UTC, as above, or in the legal entity's time zone?
-4. **Who may delegate and revoke.** The delegator, and a holder of a new `approvals.delegation.revoke`
-   (an administrator) for revocation. Confirm.
+1. **Scope.** Steps ship at tenant level first. The optional scope column exists and is stored and
+   returned, but it is not enforced until Authorization has legal-entity-scoped grants; a step with a
+   scope is refused at configuration until then, so no policy silently looks narrower than it is.
+2. **Distinct approvers.** One person cannot decide two steps of the same request, directly or through
+   a delegation.
+3. **Dates.** Whole days in UTC.
+4. **Revocation.** The delegator, or a holder of `approvals.delegation.revoke`.
 
 ## Validation
 
