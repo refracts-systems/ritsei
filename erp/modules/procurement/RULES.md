@@ -136,7 +136,7 @@ Enforced by: `src/order-lifecycle.ts` (`decideApprovalCover`, called by the rele
 
 `receiveValued` (`procurement.purchase_receipt.receive`) locks the confirmed order, rejects
 quantities above what is still unreceived (`PurchaseReceiptQuantityExceeded`), numbers the receipt
-`GR/`, and receives the stock through Inventory at the order line's price against
+`GR/` and keeps the number on the receipt (receipts before that have none), and receives the stock through Inventory at the order line's price against
 `goods_received_not_invoiced`. A repeated receipt id returns the recorded receipt.
 Why: [ADR-0104](../../../docs/decisions/0104-adopt-valued-procure-to-pay-documents.md).
 
