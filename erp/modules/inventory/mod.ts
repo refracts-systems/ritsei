@@ -113,3 +113,19 @@ export {
 } from "./src/errors.ts"
 
 export { StockKeepingLive } from "./src/stock-keeping.ts"
+
+export {
+  ItemTracking,
+  LookupSerialInput,
+  SerialRecord,
+  SetItemTrackingInput,
+  StockIdentity,
+  TrackingCode,
+} from "./src/stock-keeping-contract.ts"
+
+export {
+  ItemTrackingLocked,
+  TrackedIdentityInvalid,
+  TrackedIdentityRequired,
+  TrackedIdentityUnavailable,
+} from "./src/errors.ts"

@@ -18,6 +18,14 @@ import { branches, legalEntities } from "./party.ts"
 
 export const inventorySchema = pgSchema("inventory")
 
+export const itemTracking = inventorySchema.enum("item_tracking", ["none", "lot", "serial"])
+
+export const serialStatus = inventorySchema.enum("serial_status", [
+  "in_stock",
+  "issued",
+  "returned_to_supplier",
+])
+
 export const reservationStatus = inventorySchema.enum("reservation_status", [
   "active",
   "released",
@@ -82,6 +90,8 @@ export const items = inventorySchema.table(
     sku: text("sku").notNull(),
     name: text("name").notNull(),
     unitOfMeasure: text("unit_of_measure").notNull().default("EA"),
+    // Whether stock of this item has an identity: a lot, or a serial per unit (ADR-0131).
+    tracking: itemTracking("tracking").notNull().default("none"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -409,5 +419,120 @@ export const openingStockPositions = inventorySchema.table(
       (${table.adjustmentName} ~ '[^[:space:]]' and ${table.approvedBy} ~ '[^[:space:]]' and
         ${table.approvedAt} is not null and ${table.approvalReference} ~ '[^[:space:]]')`,
     ),
+  ],
+)
+
+/** A lot of a tracked item: a code unique per item, with an expiry that is stored, not enforced. */
+export const lots = inventorySchema.table(
+  "lots",
+  {
+    id: id(),
+    tenantId: uuid("tenant_id").notNull(),
+    itemId: uuid("item_id").notNull(),
+    code: text("code").notNull(),
+    expiryDate: date("expiry_date", { mode: "string" }),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    unique("lots_tenant_id_id_key").on(table.tenantId, table.id),
+    unique("lots_tenant_item_code_key").on(table.tenantId, table.itemId, table.code),
+    check(
+      "lots_code_check",
+      sql`${table.code} = btrim(${table.code}) and length(${table.code}) between 1 and 64`,
+    ),
+    foreignKey({
+      columns: [table.tenantId, table.itemId],
+      foreignColumns: [items.tenantId, items.id],
+      name: "lots_item_fkey",
+    }),
+  ],
+)
+
+/** What a warehouse holds of one lot; the item's balance is the sum over its lots. */
+export const lotBalances = inventorySchema.table(
+  "lot_balances",
+  {
+    tenantId: uuid("tenant_id").notNull(),
+    warehouseId: uuid("warehouse_id").notNull(),
+    lotId: uuid("lot_id").notNull(),
+    onHand: bigint("on_hand", { mode: "string" }).notNull().default("0"),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.tenantId, table.warehouseId, table.lotId] }),
+    check("lot_balances_on_hand_check", sql`${table.onHand} >= 0`),
+    foreignKey({
+      columns: [table.tenantId, table.warehouseId],
+      foreignColumns: [warehouses.tenantId, warehouses.id],
+      name: "lot_balances_warehouse_fkey",
+    }),
+    foreignKey({
+      columns: [table.tenantId, table.lotId],
+      foreignColumns: [lots.tenantId, lots.id],
+      name: "lot_balances_lot_fkey",
+    }),
+  ],
+)
+
+/** The lots a movement moved, signed like the movement (ADR-0131). */
+export const lotMovements = inventorySchema.table(
+  "lot_movements",
+  {
+    id: id(),
+    tenantId: uuid("tenant_id").notNull(),
+    movementId: uuid("movement_id").notNull(),
+    lotId: uuid("lot_id").notNull(),
+    quantity: bigint("quantity", { mode: "string" }).notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    check("lot_movements_quantity_check", sql`${table.quantity} <> 0`),
+    foreignKey({
+      columns: [table.tenantId, table.movementId],
+      foreignColumns: [movements.tenantId, movements.id],
+      name: "lot_movements_movement_fkey",
+    }),
+    foreignKey({
+      columns: [table.tenantId, table.lotId],
+      foreignColumns: [lots.tenantId, lots.id],
+      name: "lot_movements_lot_fkey",
+    }),
+  ],
+)
+
+/** One serial unit: unique per item, always quantity one, with where it is and what issued it. */
+export const serialUnits = inventorySchema.table(
+  "serial_units",
+  {
+    id: id(),
+    tenantId: uuid("tenant_id").notNull(),
+    itemId: uuid("item_id").notNull(),
+    serial: text("serial").notNull(),
+    status: serialStatus("status").notNull().default("in_stock"),
+    warehouseId: uuid("warehouse_id"),
+    receivedSourceType: text("received_source_type").notNull(),
+    receivedSourceId: uuid("received_source_id").notNull(),
+    issuedSourceType: text("issued_source_type"),
+    issuedSourceId: uuid("issued_source_id"),
+    issuedAt: timestamp("issued_at", { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    unique("serial_units_tenant_item_serial_key").on(table.tenantId, table.itemId, table.serial),
+    check(
+      "serial_units_serial_check",
+      sql`${table.serial} = btrim(${table.serial}) and length(${table.serial}) between 1 and 64`,
+    ),
+    check(
+      "serial_units_state_check",
+      sql`(${table.status} = 'in_stock' and ${table.warehouseId} is not null and ${table.issuedSourceId} is null) or
+      (${table.status} <> 'in_stock' and ${table.issuedSourceId} is not null)`,
+    ),
+    foreignKey({
+      columns: [table.tenantId, table.itemId],
+      foreignColumns: [items.tenantId, items.id],
+      name: "serial_units_item_fkey",
+    }),
   ],
 )

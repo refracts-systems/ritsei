@@ -4,6 +4,8 @@ import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
 import * as HttpApiEndpoint from "effect/http-api/HttpApiEndpoint"
 import * as HttpApiGroup from "effect/http-api/HttpApiGroup"
 
+import * as Schema from "effect/Schema"
+
 import { TrimmedText } from "../../../framework/foundation/mod.ts"
 import {
   ApiErrors,
@@ -15,7 +17,14 @@ import {
   apiErrorMapping,
   moduleApi,
 } from "../../../framework/modules/http/mod.ts"
-import { DocumentChain, DocumentsService, FlowEntryType, Lookup, Pipeline } from "./mod.ts"
+import {
+  DocumentChain,
+  DocumentsService,
+  FlowEntryType,
+  Lookup,
+  Pipeline,
+  SerialTrace,
+} from "./mod.ts"
 
 export const DocumentsHttpGroup = HttpApiGroup.make("Documents")
   .add(
@@ -31,6 +40,14 @@ export const DocumentsHttpGroup = HttpApiGroup.make("Documents")
       headers: TenantHeaders,
       query: { number: TrimmedText(64) },
       success: Lookup,
+      error: ApiErrors,
+    }).middleware(BearerAuth),
+  )
+  .add(
+    HttpApiEndpoint.get("documentSerial", "/documents/serial", {
+      headers: TenantHeaders,
+      query: { serial: TrimmedText(64) },
+      success: Schema.Array(SerialTrace),
       error: ApiErrors,
     }).middleware(BearerAuth),
   )
@@ -75,6 +92,16 @@ export const DocumentsHttpHandlers = HttpApiBuilder.group(
 
             return yield* DocumentsHttpErrors.apiEffect(
               documents.lookup({ principal, tenantId: headers["x-tenant-id"], ...query }),
+            )
+          }),
+        )
+        .handle(
+          "documentSerial",
+          Effect.fn("Http.Documents.documentSerial")(function* ({ headers, query }) {
+            const principal = yield* CurrentPrincipal
+
+            return yield* DocumentsHttpErrors.apiEffect(
+              documents.serialLookup({ principal, tenantId: headers["x-tenant-id"], ...query }),
             )
           }),
         )
