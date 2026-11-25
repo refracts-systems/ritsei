@@ -1,6 +1,6 @@
 # ADR-0130: Adopt Organization Units and Read-Only Consolidation
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-25
 - Amends: ADR-0021 (its deferral of group structures)
 - Compatible with: ADR-0005, ADR-0006, ADR-0042, ADR-0091, ADR-0128
@@ -98,18 +98,17 @@ What exists today:
 - A user reads the group total and takes it for an eliminated, audited figure. Mitigation: the
   "not eliminated" flag and the per-entity lines are part of every response.
 
-## Open questions for the owner
+## Owner decisions (2026-11-25)
 
-1. **Owner of the tree.** `party` (proposed), or a separate module?
-2. **One tree only.** A legal entity belongs to one unit, so there is no second, geographic tree.
-   Confirm, or say what a second view would need.
-3. **Translation method.** One closing rate per entity and as-of date for every line (proposed), or
-   the closing rate for balances and an average rate for flows (profit and loss, net sales)?
-4. **Rates.** Entered by hand under a new `accounting.exchange_rate.configure` capability, with a
-   lookup of the latest rate on or before the date (proposed); no rate feed. Confirm.
-5. **Which reads first.** The six KPIs, profit and loss, and balance sheet (proposed), or the KPIs
-   only?
-6. **Group currency.** One currency per root group; a unit under it inherits it. Confirm.
+The owner accepted the recommendations:
+
+1. The tree is owned by `party`.
+2. One tree only: a legal entity belongs to at most one unit.
+3. One closing rate per entity and as-of date for every line.
+4. Rates are entered by hand under `accounting.exchange_rate.configure`, with a lookup of the latest
+   rate on or before the date; no rate feed.
+5. The first consolidated reads are the six KPIs, profit and loss, and balance sheet.
+6. One currency per root group, inherited by the units under it.
 
 ## Validation
 
