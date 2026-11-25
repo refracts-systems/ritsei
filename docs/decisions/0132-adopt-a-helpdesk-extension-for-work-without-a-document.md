@@ -46,7 +46,7 @@ extension exists, and the working-day calendar and its due-time arithmetic live 
    check refuses a subject whose type starts with `approvals.`. Document workflows keep their own
    owners; a ticket may name a document in its text only.
 6. **Capabilities, deny by default:** `helpdesk.ticket.create`, `.read` (all tickets), `.assign`,
-   `.resolve`, and `helpdesk.incident.manage`. A requester always reads their own tickets without
+   `.resolve`, and `helpdesk.incident.coordinate`. A requester always reads their own tickets without
    `.read`, and an assignee reads theirs.
 7. **First extension prerequisites** are part of this decision: the composition root and
    `modules.gen.ts` discover modules under `extensions/`, `db/ownership.toml` and the migration

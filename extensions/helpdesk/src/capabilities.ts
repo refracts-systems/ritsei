@@ -5,5 +5,5 @@ export const HelpdeskCapabilities = {
   ticketRead: "helpdesk.ticket.read",
   ticketAssign: "helpdesk.ticket.assign",
   ticketResolve: "helpdesk.ticket.resolve",
-  incidentManage: "helpdesk.incident.manage",
+  incidentCoordinate: "helpdesk.incident.coordinate",
 } as const

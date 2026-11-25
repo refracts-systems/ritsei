@@ -431,7 +431,7 @@ export const makeHelpdeskService = Effect.gen(function* () {
   ) {
     const decoded = yield* authorized(
       CreateIncidentInput,
-      HelpdeskCapabilities.incidentManage,
+      HelpdeskCapabilities.incidentCoordinate,
     )(input)
 
     const [row] = yield* database.query(
@@ -453,7 +453,10 @@ export const makeHelpdeskService = Effect.gen(function* () {
   const linkTicket = Effect.fn("HelpdeskService.linkTicket")(function* (
     input: Schema.Codec.Encoded<typeof LinkTicketInput>,
   ) {
-    const decoded = yield* authorized(LinkTicketInput, HelpdeskCapabilities.incidentManage)(input)
+    const decoded = yield* authorized(
+      LinkTicketInput,
+      HelpdeskCapabilities.incidentCoordinate,
+    )(input)
 
     return yield* database.withTransaction(
       Effect.gen(function* () {
@@ -500,7 +503,7 @@ export const makeHelpdeskService = Effect.gen(function* () {
   ) {
     const decoded = yield* authorized(
       ResolveIncidentInput,
-      HelpdeskCapabilities.incidentManage,
+      HelpdeskCapabilities.incidentCoordinate,
     )(input)
 
     return yield* database.withTransaction(
