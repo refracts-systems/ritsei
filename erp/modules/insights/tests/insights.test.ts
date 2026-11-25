@@ -11,6 +11,7 @@ describe("insights module", () => {
     assert.deepStrictEqual(InsightsModule.dependsOn, [
       "accounting",
       "billing",
+      "party",
       "sales",
       "settlement",
     ])

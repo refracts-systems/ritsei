@@ -73,6 +73,17 @@ by every owner is told so. Known gaps: an order cancelled since the previous mon
 the previous undelivered figure (a cancellation has no date); the base currency is not returned
 yet; there is no scope narrower than the tenant capability and the legal entity filter.
 
+**Groups and consolidation (gap G-11, ADR-0130).** `party` owns a strict tree of organization units
+above legal entities (a root group with a currency, units under it, a legal entity in at most one
+unit); a unit only selects legal entities for reads and commands still name one entity. Accounting
+owns a hand-entered exchange-rate table (the latest rate on or before the day). `GET
+/insights/group/kpis?unitId=&period=` and `GET /insights/group/statements?unitId=&from=&to=` return,
+for every entity at or under the unit, its figures, its rate, and the figures in the group currency,
+plus the totals, which totals leave an entity out, and a flag that intercompany balances are not
+eliminated. Each entity is read with the same owners and capabilities as a single-entity read; one
+that is denied or has no rate is marked, never counted as zero. Not built: HTTP routes to manage units
+and rates (service commands only), intercompany elimination, and a translation adjustment.
+
 ## E5 Cari: search over objects
 
 **What exists.** Search is owner-local only: `ListItemsInput`, `ListPartiesInput`, and the tenant

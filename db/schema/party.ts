@@ -2,6 +2,8 @@ import { sql } from "drizzle-orm"
 import {
   boolean,
   check,
+  customType,
+  index,
   foreignKey,
   integer,
   pgSchema,
@@ -369,5 +371,75 @@ export const partyBankAccounts = partySchema.table(
       "party_bank_accounts_number_check",
       sql`${table.accountNumber} ~ '^[A-Za-z0-9 -]+$' and ${table.accountNumber} = btrim(${table.accountNumber})`,
     ),
+  ],
+)
+
+/** The ltree type of PostgreSQL, for the path of a strict hierarchy (ADR-0005, ADR-0130). */
+const ltree = customType<{ data: string }>({ dataType: () => "ltree" })
+
+export const orgUnitKind = partySchema.enum("org_unit_kind", ["group", "business_unit"])
+
+/**
+ * A node of the organization tree above legal entities (ADR-0130). It only selects legal entities
+ * for reads; commands never run in a unit. The path is kept by a trigger, so it is never written.
+ */
+export const orgUnits = partySchema.table(
+  "org_units",
+  {
+    id: id(),
+    tenantId: uuid("tenant_id").notNull(),
+    kind: orgUnitKind("kind").notNull(),
+    name: text("name").notNull(),
+    parentId: uuid("parent_id"),
+    path: ltree("path")
+      .notNull()
+      .default(sql`''::ltree`),
+    // The currency of a root group, inherited by the units under it.
+    currency: text("currency"),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    unique("org_units_tenant_id_id_key").on(table.tenantId, table.id),
+    index("org_units_tenant_path_idx").on(table.tenantId, table.path),
+    check("org_units_name_check", sql`${table.name} ~ '[^[:space:]]'`),
+    check(
+      "org_units_root_check",
+      sql`(${table.parentId} is null and ${table.kind} = 'group' and ${table.currency} ~ '^[A-Z]{3}$') or
+      (${table.parentId} is not null and ${table.currency} is null)`,
+    ),
+    foreignKey({
+      columns: [table.tenantId, table.parentId],
+      foreignColumns: [table.tenantId, table.id],
+      name: "org_units_parent_fkey",
+    }),
+    foreignKey({
+      columns: [table.tenantId],
+      foreignColumns: [tenants.id],
+      name: "org_units_tenant_id_fkey",
+    }).onDelete("cascade"),
+  ],
+)
+
+/** A legal entity belongs to at most one unit. */
+export const orgUnitMembers = partySchema.table(
+  "org_unit_members",
+  {
+    tenantId: uuid("tenant_id").notNull(),
+    legalEntityId: uuid("legal_entity_id").notNull(),
+    unitId: uuid("unit_id").notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.tenantId, table.legalEntityId] }),
+    foreignKey({
+      columns: [table.tenantId, table.legalEntityId],
+      foreignColumns: [legalEntities.tenantId, legalEntities.id],
+      name: "org_unit_members_legal_entity_fkey",
+    }),
+    foreignKey({
+      columns: [table.tenantId, table.unitId],
+      foreignColumns: [orgUnits.tenantId, orgUnits.id],
+      name: "org_unit_members_unit_fkey",
+    }),
   ],
 )

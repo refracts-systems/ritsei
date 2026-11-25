@@ -966,3 +966,35 @@ export const financialOperationTransfers = accountingSchema.table(
     ),
   ],
 )
+
+/**
+ * An exchange rate entered by hand (ADR-0130): one unit of `fromCurrency` is `rate` of `toCurrency`
+ * on `rateDate`. A lookup takes the latest rate on or before the day it needs.
+ */
+export const exchangeRates = accountingSchema.table(
+  "exchange_rates",
+  {
+    tenantId: uuid("tenant_id").notNull(),
+    fromCurrency: text("from_currency").notNull(),
+    toCurrency: text("to_currency").notNull(),
+    rateDate: date("rate_date", { mode: "string" }).notNull(),
+    rate: numeric("rate", { precision: 28, scale: 10 }).notNull(),
+    enteredBy: text("entered_by").notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.tenantId, table.fromCurrency, table.toCurrency, table.rateDate],
+    }),
+    check(
+      "exchange_rates_currency_check",
+      sql`${table.fromCurrency} ~ '^[A-Z]{3}$' and ${table.toCurrency} ~ '^[A-Z]{3}$' and ${table.fromCurrency} <> ${table.toCurrency}`,
+    ),
+    check("exchange_rates_rate_check", sql`${table.rate} > 0`),
+    foreignKey({
+      columns: [table.tenantId],
+      foreignColumns: [tenants.id],
+      name: "exchange_rates_tenant_id_fkey",
+    }).onDelete("cascade"),
+  ],
+)

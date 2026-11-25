@@ -16,6 +16,8 @@ import { BillingCreditExposureLive, BillingLive } from "../../erp/modules/billin
 import { DocumentsLive } from "../../erp/modules/documents/mod.ts"
 import { SituationsLive } from "../../erp/modules/situations/mod.ts"
 import { InsightsLive } from "../../erp/modules/insights/mod.ts"
+import { ExchangeRatesLive } from "../../erp/modules/accounting/mod.ts"
+import { OrgUnitsLive } from "../../erp/modules/party/mod.ts"
 import {
   IndonesianChartTemplatesLive,
   IndonesianIdentifierSchemesLive,
@@ -127,12 +129,15 @@ export const erpChainLayers = (client: Sql, grants: ReadonlyArray<Grant>) => {
     Layer.provide(Layer.mergeAll(legacySales, sales, procurement, purchasing, billing, settlement)),
   )
 
+  const orgUnits = OrgUnitsLive.pipe(Layer.provide(platform))
+  const exchangeRates = ExchangeRatesLive.pipe(Layer.provide(platform))
+
   const situations = SituationsLive.pipe(
     Layer.provide(Layer.mergeAll(platform, messaging, approvals, billing, settlement)),
   )
 
   const insights = InsightsLive.pipe(
-    Layer.provide(Layer.mergeAll(ledger, sales, billing, settlement)),
+    Layer.provide(Layer.mergeAll(ledger, orgUnits, exchangeRates, sales, billing, settlement)),
   )
 
   const localization = LocalizationIdLive.pipe(Layer.provide(Layer.mergeAll(platform, ledger, tax)))
@@ -161,6 +166,8 @@ export const erpChainLayers = (client: Sql, grants: ReadonlyArray<Grant>) => {
     documents,
     situations,
     insights,
+    orgUnits,
+    exchangeRates,
     localization,
     orderToCash,
     customFields,

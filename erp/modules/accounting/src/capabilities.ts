@@ -23,4 +23,5 @@ export const AccountingCapabilities = {
   documentJournalPost: "accounting.document_journal.post",
   ledgerRead: "accounting.ledger.read",
   openingBalancePost: "accounting.opening_balance.post",
+  exchangeRateConfigure: "accounting.exchange_rate.configure",
 } as const
