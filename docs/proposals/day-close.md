@@ -1,7 +1,6 @@
 # Proposal: Day Close ("Tutup Hari")
 
-> **Status:** Proposal, 2026-11-25. Nothing is built, and nothing should be until the owner decides
-> the questions at the end. It defines what "close the day" means and what data it needs (gap G-16).
+> **Status:** Proposal, 2026-11-25, with the owner's decisions recorded below. Nothing is built. It defines what "close the day" means and what data it needs (gap G-16).
 >
 > **Owns:** The definition of a day close and the data it needs.
 >
@@ -56,15 +55,16 @@ anything posted to the closed part before it is reopened remains as it was.
 | Who closed and reopened | Nothing | Actor, time, reason on every close and reopen |
 | An approval for a large difference | Approvals with steps | A policy for the day-close subject |
 
-## Open questions for the owner
+## Owner decisions (2026-11-25)
 
-1. **Which one is "tutup hari"**: the cash close, the stock cut-off, or both (proposed: both, as two
-   independent parts)?
-2. **Who counts and who approves**: the cashier counts; is the supervisor the approver of a difference?
-3. **The cut-off lock**: is a hard refusal in every posting owner wanted, or a warning only?
-4. **Cash drawers**: is one drawer per legal entity enough, or one per person or shift?
-5. **Over-and-short**: a posting role in the chart (proposed), or the ordinary expense account?
-6. **Timing**: calendar date in UTC, or the legal entity's local date?
+1. Both parts, as two independent parts.
+2. The cashier counts; the supervisor approves a difference.
+3. The cut-off is a hard refusal in every posting owner.
+4. One cash drawer per legal entity for now.
+5. Over-and-short is its own posting role in the chart.
+6. A day is the calendar date in the legal entity's time zone (the one place that is not UTC, because
+   a cashier closes the day by the local clock). Legal entities have no time zone today, so this
+   needs one stored on the entity before it can be built.
 
 ## What this does not decide
 
