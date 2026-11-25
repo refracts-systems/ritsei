@@ -114,6 +114,20 @@ describe("design tokens", () => {
         }
       })
 
+      it("keeps the ink bar's text, links, and focus ring above their minimums", () => {
+        for (const fill of ["bar", "barField"]) {
+          for (const text of ["onBar", "onBarMuted"]) {
+            const ratio = contrast(color(text), color(fill))
+
+            assert.isAtLeast(ratio, 4.5, `${text} on ${fill} is ${ratio.toFixed(2)}`)
+          }
+
+          const accent = contrast(color("barAccent"), color(fill))
+
+          assert.isAtLeast(accent, 3, `barAccent on ${fill} is ${accent.toFixed(2)}`)
+        }
+      })
+
       it("keeps input borders, commands, and status text above their minimums", () => {
         for (const surface of ["canvas", "content"]) {
           const border = contrast(color("boundaryStrong"), color(surface))

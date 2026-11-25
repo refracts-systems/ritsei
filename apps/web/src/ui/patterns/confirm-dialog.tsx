@@ -1,10 +1,10 @@
 import { Dialog as KobalteDialog } from "@kobalte/core/dialog"
-import { Button } from "../primitives/button.tsx"
+import { Button, type ButtonProps } from "../primitives/button.tsx"
 import { Dialog } from "../primitives/dialog.tsx"
 
 interface ConfirmDialogProps {
   readonly triggerLabel: string
-  readonly triggerVariant?: "primary" | "secondary" | "ghost" | "danger"
+  readonly triggerVariant?: ButtonProps["variant"]
   readonly title: string
   readonly description: string
   readonly confirmLabel: string

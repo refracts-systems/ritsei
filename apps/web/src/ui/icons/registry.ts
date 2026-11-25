@@ -32,7 +32,6 @@ export const iconRegistry = {
   "navigation.parties": "users-three",
   "navigation.user-accounts": "user-circle",
   "navigation.access": "shield-check",
-  "navigation.sidebar": "sidebar-simple",
   "navigation.menu": "list",
 
   "object.customer": "user",

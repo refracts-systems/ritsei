@@ -139,10 +139,12 @@ it.effect(
             .getByRole("link", { name: "User accounts", exact: true })
             .getAttribute("data-active"),
         )
-        assert.isNotNull(
+        // On a page inside the area, the link to the area is marked as the place it is within.
+        assert.equal(
           await page
-            .getByRole("link", { name: "Accounts", exact: true })
-            .getAttribute("data-active"),
+            .getByRole("link", { name: "User accounts", exact: true })
+            .getAttribute("aria-current"),
+          "true",
         )
 
         const edit = page.getByRole("button", { name: "Edit email", exact: true })

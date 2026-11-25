@@ -49,9 +49,11 @@ identity, selection, and focus.
 
 ## 3. Shell and navigation
 
-The shell (`apps/web/src/app/shell.tsx`) has a collapsible **global navigation** (`aside`, toggled with
-the button or ⌘B/Ctrl+B), a **topbar** holding the local section navigation, the operating context
-(tenant) and utilities (theme, sign out), and a single `main` landmark with a skip link. Page identity
+The shell (`apps/web/src/app/shell.tsx`) is one ink **bar** across the top, as in the Kontainer
+mockups, and no sidebar: the wordmark, a Ctrl+K field that opens a palette of workspaces, the
+operating context (tenant), utilities (theme, sign out), and the links to every workspace grouped
+under Work, Operations, Processes, and Administration, with a single `main` landmark and a skip link.
+On a phone the links sit behind one toggle. Page identity
 and commands belong to the workspace's pattern, not the shell. Tested facts
 (`apps/web/src/ui/accessibility.test.ts`, `tests/frontend/shell.test.ts`): the skip link targets
 `#main`, there is exactly one `main`, navigation and the theme control are reachable by keyboard and
@@ -61,8 +63,8 @@ Design intent: global structure keeps a stable order and marks the current desti
 `aria-current="page"`; one semantic level has one visual representation; navigation locates while
 commands change things, through the owning authorized boundary; context stays until it becomes a
 burden; and the workspace outranks navigation chrome. Object-level commands live with the object
-rather than in the topbar, a region usually has one primary button, and the current destination uses
-the `contentActive` fill and a filled icon rather than the accent.
+rather than in the topbar, a region usually has one primary button, and the current destination is the lit link
+with a shu underline on the bar.
 
 ## 4. Color and status
 
