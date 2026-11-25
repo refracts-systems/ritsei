@@ -1,6 +1,6 @@
 # ADR-0134: Adopt a Governance Extension for Board Decisions and Restricted Notes
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-25
 - Amends: None
 - Compatible with: ADR-0006, ADR-0037, ADR-0091, ADR-0103, ADR-0128
@@ -78,14 +78,16 @@ reads. Authorization is by tenant capability, so "visible to these five people" 
 - An indicator reveals that a note exists, which may itself be sensitive. Mitigation: it is shown only
   to people who may read the subject, and the owner accepts that exposure in this decision.
 
-## Open questions for the owner
+## Owner decisions (2026-11-25)
 
-1. **Who may request and decide** a decision record: any holder of the capability, or named directors only?
-2. **Quorum or signatures.** Is one decider enough (proposed), or must several directors decide?
-3. **Break-glass.** None (proposed), or a recorded emergency read by a named role?
-4. **Indicator.** Visible to anyone who can read the subject (proposed); confirm the exposure is acceptable.
-5. **Retention.** Notes and the read log are kept forever (proposed); confirm.
-6. **Encryption of note bodies** at rest in the application: later (proposed) or now?
+The owner accepted the recommendations:
+
+1. Requesting and deciding a record are capabilities granted to named directors.
+2. One decider is enough; there is no quorum.
+3. There is no break-glass read.
+4. The note indicator is visible to anyone who may read the subject, and the exposure is accepted.
+5. Notes and the read log are kept forever.
+6. Encryption of note bodies is a later decision.
 
 ## Validation
 
