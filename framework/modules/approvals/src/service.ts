@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull, lte, gte, or } from "drizzle-orm"
+import { and, asc, desc, eq, gte, inArray, isNull, lt, lte, or } from "drizzle-orm"
 import * as Clock from "effect/Clock"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
@@ -28,6 +28,8 @@ import {
   RevokeDelegationInput,
   SubjectInput,
   SubmitApprovalInput,
+  type WaitingApproval,
+  WaitingInput,
 } from "./contract.ts"
 import {
   ApprovalAlreadyDecided,
@@ -627,6 +629,54 @@ export const makeApprovalService = Effect.gen(function* () {
     return yield* withSteps(rows)
   })
 
+  const listWaiting = Effect.fn("ApprovalService.listWaiting")(function* (
+    input: Schema.Codec.Encoded<typeof WaitingInput>,
+  ) {
+    const decoded = yield* Schema.decodeUnknownEffect(WaitingInput)(input)
+
+    yield* authorization.authorize({
+      principal: decoded.principal,
+      tenantId: decoded.tenantId,
+      capability: ApprovalCapabilities.requestRead,
+    })
+
+    const rows = yield* database.query(
+      (db) =>
+        db
+          .select()
+          .from(approvalRequests)
+          .where(
+            and(
+              eq(approvalRequests.tenantId, decoded.tenantId),
+              eq(approvalRequests.status, "pending"),
+              lt(approvalRequests.createdAt, new Date(decoded.olderThan)),
+            ),
+          )
+          .orderBy(asc(approvalRequests.createdAt), asc(approvalRequests.id))
+          .limit(500),
+      "approvals.request.waiting",
+    )
+
+    const lastSteps = new Map<string, { above: string; upTo: string | null } | undefined>()
+
+    for (const subjectType of new Set(rows.map((row) => row.subjectType))) {
+      lastSteps.set(subjectType, (yield* loadSteps(decoded.tenantId, subjectType)).at(-1))
+    }
+
+    return rows.map((row): WaitingApproval => {
+      const last = lastSteps.get(row.subjectType)
+
+      return {
+        requestId: row.id,
+        subjectType: row.subjectType,
+        subjectId: row.subjectId,
+        amount: normalize(row.amount),
+        requestedAt: row.createdAt.toISOString(),
+        reachesLastStep: last !== undefined && covers(last, row.amount),
+      }
+    })
+  })
+
   const getForSubject = Effect.fn("ApprovalService.getForSubject")(function* (
     input: Schema.Codec.Encoded<typeof SubjectInput>,
   ) {
@@ -782,6 +832,7 @@ export const makeApprovalService = Effect.gen(function* () {
     decide,
     list,
     getForSubject,
+    listWaiting,
     createDelegation,
     revokeDelegation,
     listDelegations,

@@ -10,6 +10,7 @@ import {
 } from "../../../foundation/mod.ts"
 import {
   AddTenantMembershipInput,
+  CapabilityHoldersInput,
   AuthorizationDecision,
   AuthorizationInput,
   AuthorizationService,
@@ -207,6 +208,37 @@ export const makePostgresAuthorizationService = (
         )
 
         return rows.map(toTenantMembership)
+      }),
+  ),
+  listCapabilityHolders: Effect.fn("AuthorizationService.listCapabilityHolders")(
+    (input: Schema.Codec.Encoded<typeof CapabilityHoldersInput>) =>
+      Effect.gen(function* () {
+        const decoded = yield* Schema.decodeUnknownEffect(CapabilityHoldersInput)(input)
+
+        const rows = yield* database.query(
+          (db) =>
+            db
+              .select({ userAccountId: memberships.userAccountId })
+              .from(memberships)
+              .innerJoin(
+                tenantMemberships,
+                and(
+                  eq(tenantMemberships.userAccountId, memberships.userAccountId),
+                  eq(tenantMemberships.tenantId, memberships.tenantId),
+                  eq(tenantMemberships.status, "active"),
+                ),
+              )
+              .where(
+                and(
+                  eq(memberships.tenantId, decoded.tenantId),
+                  eq(memberships.capability, decoded.capability),
+                ),
+              )
+              .orderBy(asc(memberships.userAccountId)),
+          "authorization.holders.list",
+        )
+
+        return rows.map((row) => row.userAccountId)
       }),
   ),
   listDirectGrants: Effect.fn("AuthorizationService.listDirectGrants")(

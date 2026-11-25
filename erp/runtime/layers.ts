@@ -57,6 +57,7 @@ import { TaxLive } from "../modules/tax/mod.ts"
 import { BillingCreditExposureLive, BillingLive } from "../modules/billing/mod.ts"
 import { SettlementLive } from "../modules/settlement/mod.ts"
 import { DocumentsLive } from "../modules/documents/mod.ts"
+import { SituationsLive } from "../modules/situations/mod.ts"
 import { InsightsLive } from "../modules/insights/mod.ts"
 import { OnboardingLive } from "../modules/onboarding/mod.ts"
 import {
@@ -293,6 +294,18 @@ export const serviceLayers = (
     ),
   )
 
+  const SituationsServiceLive = SituationsLive.pipe(
+    Layer.provide(
+      Layer.mergeAll(
+        BusinessRequirements,
+        MessagingLive,
+        ApprovalServiceLive,
+        BillingServiceLive,
+        SettlementServiceLive,
+      ),
+    ),
+  )
+
   const InsightsServiceLive = InsightsLive.pipe(
     Layer.provide(
       Layer.mergeAll(
@@ -345,6 +358,7 @@ export const serviceLayers = (
     BillingServiceLive,
     SettlementServiceLive,
     DocumentsServiceLive,
+    SituationsServiceLive,
     InsightsServiceLive,
     LocalizationIdServiceLive,
     ApprovalServiceLive,

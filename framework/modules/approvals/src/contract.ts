@@ -179,6 +179,24 @@ export const ListApprovalsInput = Schema.Struct({
   limit: Schema.optionalKey(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 200 }))),
 })
 
+export const WaitingInput = Schema.Struct({
+  ...ScopedInput,
+  /** Requests submitted before this instant. */
+  olderThan: InstantString,
+})
+
+/** A pending request and when it was submitted; `reachesLastStep` when its amount is in the policy's last step. */
+export const WaitingApproval = Schema.Struct({
+  requestId: Uuid,
+  subjectType: SubjectType,
+  subjectId: Uuid,
+  amount: FinancialMajorAmount,
+  requestedAt: InstantString,
+  reachesLastStep: Schema.Boolean,
+})
+
+export type WaitingApproval = Schema.Schema.Type<typeof WaitingApproval>
+
 export const SubjectInput = Schema.Struct({
   ...ScopedInput,
   subjectType: SubjectType,
@@ -227,6 +245,10 @@ export interface ApprovalService {
   readonly getForSubject: (
     input: Schema.Codec.Encoded<typeof SubjectInput>,
   ) => Effect.Effect<ApprovalRequest | null, CommonFailure>
+  /** Pending requests submitted before an instant, oldest first; needs the request-read capability. */
+  readonly listWaiting: (
+    input: Schema.Codec.Encoded<typeof WaitingInput>,
+  ) => Effect.Effect<ReadonlyArray<WaitingApproval>, CommonFailure>
   readonly createDelegation: (
     input: Schema.Codec.Encoded<typeof CreateDelegationInput>,
   ) => Effect.Effect<Delegation, DelegationInvalid | CommonFailure>

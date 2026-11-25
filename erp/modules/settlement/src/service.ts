@@ -40,6 +40,8 @@ import { SettlementCapabilities } from "./capabilities.ts"
 import {
   AgingInput,
   AllocatePaymentInput,
+  OverdueInput,
+  type OverdueReceivable,
   AssignPartyTermInput,
   BankReconciliationInput,
   CreatePaymentTermInput,
@@ -769,6 +771,45 @@ export const makeSettlementService = Effect.gen(function* () {
     }
   })
 
+  const listOverdueReceivables = Effect.fn("SettlementService.listOverdueReceivables")(function* (
+    input: Schema.Codec.Encoded<typeof OverdueInput>,
+  ) {
+    const decoded = yield* authorized(OverdueInput, SettlementCapabilities.reportRead)(input)
+
+    const items = yield* billing.listOpenItems({
+      principal: decoded.principal,
+      tenantId: decoded.tenantId,
+      legalEntityId: decoded.legalEntityId,
+      side: "receivable",
+      asOf: decoded.asOf,
+    })
+
+    const netDays = yield* netDaysFor(decoded.tenantId, "receivable", [
+      ...new Set(items.map((item) => item.partyId)),
+    ])
+
+    return items
+      .flatMap((item): ReadonlyArray<OverdueReceivable> => {
+        const dueDate = addDays(item.invoiceDate, netDays.get(item.partyId) ?? 0)
+        const daysOverdue = daysBetween(dueDate, decoded.asOf)
+
+        // Credit notes are negative open items and are not receivables past due.
+        return signedMinor(item.openAmount) > 0n && daysOverdue > 0
+          ? [
+              {
+                invoiceId: item.invoiceId,
+                partyId: item.partyId,
+                number: item.number,
+                openAmount: item.openAmount,
+                dueDate,
+                daysOverdue,
+              },
+            ]
+          : []
+      })
+      .toSorted((left, right) => right.daysOverdue - left.daysOverdue)
+  })
+
   const customerStatement = Effect.fn("SettlementService.customerStatement")(function* (
     input: Schema.Codec.Encoded<typeof StatementInput>,
   ) {
@@ -1333,6 +1374,7 @@ export const makeSettlementService = Effect.gen(function* () {
     listPayments,
     findByNumber,
     aging,
+    listOverdueReceivables,
     customerStatement,
     importBankStatement,
     matchBankLine,

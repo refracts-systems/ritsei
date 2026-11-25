@@ -14,6 +14,7 @@ import {
 import { StockKeepingLive } from "../../erp/modules/inventory/mod.ts"
 import { BillingCreditExposureLive, BillingLive } from "../../erp/modules/billing/mod.ts"
 import { DocumentsLive } from "../../erp/modules/documents/mod.ts"
+import { SituationsLive } from "../../erp/modules/situations/mod.ts"
 import { InsightsLive } from "../../erp/modules/insights/mod.ts"
 import {
   IndonesianChartTemplatesLive,
@@ -126,6 +127,10 @@ export const erpChainLayers = (client: Sql, grants: ReadonlyArray<Grant>) => {
     Layer.provide(Layer.mergeAll(legacySales, sales, procurement, purchasing, billing, settlement)),
   )
 
+  const situations = SituationsLive.pipe(
+    Layer.provide(Layer.mergeAll(platform, messaging, approvals, billing, settlement)),
+  )
+
   const insights = InsightsLive.pipe(
     Layer.provide(Layer.mergeAll(ledger, sales, billing, settlement)),
   )
@@ -154,6 +159,7 @@ export const erpChainLayers = (client: Sql, grants: ReadonlyArray<Grant>) => {
     procurement,
     purchasing,
     documents,
+    situations,
     insights,
     localization,
     orderToCash,

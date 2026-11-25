@@ -44,6 +44,11 @@ export const TenantMembershipInput = Schema.Struct({
   tenantId: Schema.String,
 })
 
+export const CapabilityHoldersInput = Schema.Struct({
+  tenantId: Schema.String,
+  capability: Capability,
+})
+
 export const ListAccessibleTenantsInput = Schema.Struct({
   userAccountId: Schema.String,
 })
@@ -108,6 +113,10 @@ export interface AuthorizationService {
   readonly listAccessibleTenants: (
     input: Schema.Codec.Encoded<typeof ListAccessibleTenantsInput>,
   ) => Effect.Effect<readonly TenantMembership[], DatabaseFailure | Schema.SchemaError>
+  /** The active members of a tenant who hold a capability directly, by user account id. */
+  readonly listCapabilityHolders: (
+    input: Schema.Codec.Encoded<typeof CapabilityHoldersInput>,
+  ) => Effect.Effect<readonly string[], DatabaseFailure | Schema.SchemaError>
   readonly listDirectGrants: (
     input: Schema.Codec.Encoded<typeof TenantMembershipInput>,
   ) => Effect.Effect<
