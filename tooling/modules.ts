@@ -10,22 +10,35 @@ import { hasErrnoCode } from "./errno.ts"
 
 const moduleRoot = "erp/modules"
 
+/** ERP modules and extensions are installed the same way (ADR-0091). */
+const moduleRoots = [moduleRoot, "extensions"] as const
+
+type Roots = ReadonlyMap<string, string>
+
 const isTestPath = (path: string) => /\/tests\/|\.test\.tsx?$/.test(path)
 
-const moduleDirectories = async () => {
-  const names: string[] = []
+const hasModuleEntry = async (directory: string) => {
+  try {
+    return (await stat(`${directory}/mod.ts`)).isFile()
+  } catch (cause) {
+    if (hasErrnoCode(cause, "ENOENT")) return false
+    throw cause
+  }
+}
 
-  for (const entry of await readdir(moduleRoot, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue
+/** Each installed module's name and the root it lives under. */
+const moduleDirectories = async (): Promise<Roots> => {
+  const found = new Map<string, string>()
 
-    try {
-      if ((await stat(`${moduleRoot}/${entry.name}/mod.ts`)).isFile()) names.push(entry.name)
-    } catch (cause) {
-      if (!hasErrnoCode(cause, "ENOENT")) throw cause
+  for (const root of moduleRoots) {
+    for (const entry of await readdir(root, { withFileTypes: true })) {
+      if (entry.isDirectory() && (await hasModuleEntry(`${root}/${entry.name}`))) {
+        found.set(entry.name, root)
+      }
     }
   }
 
-  return names
+  return found
 }
 
 const sameSet = (left: Iterable<string>, right: Iterable<string>) => {
@@ -37,25 +50,30 @@ const sameSet = (left: Iterable<string>, right: Iterable<string>) => {
 
 type Manifests = ReadonlyMap<string, ModuleManifest>
 
-const moduleOf = (path: string | undefined) => path?.match(/^erp\/modules\/([^/]+)\//)?.[1]
+const moduleOf = (path: string | undefined) =>
+  path?.match(/^(?:erp\/modules|extensions)\/([^/]+)\//)?.[1]
 
 /** Every module directory is registered under its own name, and every manifest has a directory. */
-const registrationFailures = (directories: readonly string[], manifests: Manifests) => [
+const registrationFailures = (directories: Roots, manifests: Manifests) => [
   ...directories
-    .values()
-    .filter((name) => !manifests.has(name))
-    .map((name) => `${moduleRoot}/${name} has no registered manifest`),
+    .entries()
+    .filter(([name]) => !manifests.has(name))
+    .map(([name, root]) => `${root}/${name} has no registered manifest`),
   ...manifests
     .keys()
-    .filter((name) => !directories.includes(name))
+    .filter((name) => !directories.has(name))
     .map((name) => `manifest ${name} has no ${moduleRoot}/${name}`),
 ]
 
-const schemaFailures = (manifests: Manifests, ownership: ReadonlyMap<string, string>) =>
+const schemaFailures = (
+  manifests: Manifests,
+  ownership: ReadonlyMap<string, string>,
+  roots: Roots,
+) =>
   [...manifests.values()].flatMap(({ name, schemas }) => {
     const owned = ownership
       .entries()
-      .filter(([, owner]) => owner === `${moduleRoot}/${name}`)
+      .filter(([, owner]) => owner === `${roots.get(name) ?? moduleRoot}/${name}`)
       .map(([schema]) => schema)
       .toArray()
 
@@ -83,7 +101,11 @@ const importFailures = (files: ReadonlyArray<SourceFile>, manifests: Manifests) 
   })
 
 /** Declared HTTP groups are defined in the module's http.ts; codegen composes them (ADR-0094). */
-const surfaceFailures = (manifests: Manifests, adapters: ReadonlyMap<string, string>) =>
+const surfaceFailures = (
+  manifests: Manifests,
+  adapters: ReadonlyMap<string, string>,
+  roots: Roots,
+) =>
   [...manifests.values()].flatMap(({ name, http }) =>
     http
       .filter(
@@ -92,16 +114,21 @@ const surfaceFailures = (manifests: Manifests, adapters: ReadonlyMap<string, str
       )
       .map(
         (group) =>
-          `${name} declares HTTP group ${group}, missing from ${moduleRoot}/${name}/http.ts`,
+          `${name} declares HTTP group ${group}, missing from ${roots.get(name) ?? moduleRoot}/${name}/http.ts`,
       ),
   )
 
-const httpAdapters = async (manifests: ReadonlyArray<ModuleManifest>) =>
+const httpAdapters = async (manifests: ReadonlyArray<ModuleManifest>, roots: Roots) =>
   new Map(
     await Promise.all(
       manifests.map(
         async ({ name }) =>
-          [name, await readFile(`${moduleRoot}/${name}/http.ts`, "utf8").catch(() => "")] as const,
+          [
+            name,
+            await readFile(`${roots.get(name) ?? moduleRoot}/${name}/http.ts`, "utf8").catch(
+              () => "",
+            ),
+          ] as const,
       ),
     ),
   )
@@ -130,6 +157,7 @@ const citedRules = (source: string) =>
 export const ruleFailures = (
   rules: ReadonlyMap<string, readonly ModuleRule[]>,
   files: ReadonlyArray<SourceFile>,
+  roots: Roots = new Map(),
 ) => {
   const owners = new Map<string, string[]>()
 
@@ -157,15 +185,16 @@ export const ruleFailures = (
     .map(([id, modules]) => `rule ${id} is declared by more than one module: ${modules.join(", ")}`)
     .toArray()
 
-  return [...new Set([...unknown, ...shared, ...declaredFailures(rules, citations)])]
+  return [...new Set([...unknown, ...shared, ...declaredFailures(rules, citations, roots)])]
 }
 
 const declaredFailures = (
   rules: ReadonlyMap<string, readonly ModuleRule[]>,
   citations: ReadonlyArray<{ readonly module: string | undefined; readonly id: string }>,
+  roots: Roots,
 ) =>
   [...rules].flatMap(([module, declared]) => {
-    const where = `${moduleRoot}/${module}/RULES.md`
+    const where = `${roots.get(module) ?? moduleRoot}/${module}/RULES.md`
 
     const named = new Set(
       citations
@@ -187,16 +216,14 @@ const declaredFailures = (
     ])
   })
 
-const moduleRules = async (directories: readonly string[]) => {
+const moduleRules = async (directories: Roots) => {
   const rules = new Map<string, readonly ModuleRule[]>()
 
-  for (const name of directories) {
-    const text = await readFile(`${moduleRoot}/${name}/RULES.md`, "utf8").catch(
-      (cause: unknown) => {
-        if (hasErrnoCode(cause, "ENOENT")) return undefined
-        throw cause
-      },
-    )
+  for (const [name, root] of directories) {
+    const text = await readFile(`${root}/${name}/RULES.md`, "utf8").catch((cause: unknown) => {
+      if (hasErrnoCode(cause, "ENOENT")) return undefined
+      throw cause
+    })
 
     if (text !== undefined) rules.set(name, parseRules(text))
   }
@@ -213,8 +240,10 @@ export const checkModules = async (
   const [directories, ownership, files, adapters, chainTests, frontendTests] = await Promise.all([
     moduleDirectories(),
     readFile("db/ownership.toml", "utf8").then(parseOwnership),
-    collectSourceFiles(moduleRoot, [".ts", ".tsx"]),
-    httpAdapters(manifests),
+    Promise.all(moduleRoots.map((root) => collectSourceFiles(root, [".ts", ".tsx"]))).then(
+      (lists) => lists.flat(),
+    ),
+    moduleDirectories().then((roots) => httpAdapters(manifests, roots)),
     // Cross-module tests that may enforce a module rule; tests/architecture holds rule fixtures.
     collectSourceFiles("tests/chains", [".ts"]),
     collectSourceFiles("tests/frontend", [".ts"]),
@@ -223,10 +252,14 @@ export const checkModules = async (
   const failures = [
     ...validateModuleRegistry(manifests),
     ...registrationFailures(directories, byName),
-    ...schemaFailures(byName, ownership),
+    ...schemaFailures(byName, ownership, directories),
     ...importFailures(files, byName),
-    ...surfaceFailures(byName, adapters),
-    ...ruleFailures(await moduleRules(directories), [...files, ...chainTests, ...frontendTests]),
+    ...surfaceFailures(byName, adapters, directories),
+    ...ruleFailures(
+      await moduleRules(directories),
+      [...files, ...chainTests, ...frontendTests],
+      directories,
+    ),
   ]
 
   return [...new Set(failures)].toSorted()

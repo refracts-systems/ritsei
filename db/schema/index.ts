@@ -215,6 +215,15 @@ export {
 } from "./situations.ts"
 
 export {
+  helpdeskSchema,
+  incidents,
+  incidentStatus,
+  ticketPriority,
+  tickets,
+  ticketStatus,
+} from "./helpdesk.ts"
+
+export {
   itemTracking,
   lotBalances,
   lotMovements,
