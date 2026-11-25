@@ -24,6 +24,7 @@ import type { AuthorizationDenied } from "../../../../framework/modules/authoriz
 import { EventEnvelope } from "../../../../framework/modules/messaging/mod.ts"
 import {
   CommunicationNotFound,
+  CommunicationPreviewStale,
   CommunicationStateFailure,
   UnsupportedCommunicationEvent,
 } from "./errors.ts"
@@ -40,11 +41,48 @@ export type ProcessPurchaseOrderConfirmedInput = Schema.Schema.Type<
   typeof ProcessPurchaseOrderConfirmedInput
 >
 
-export const RetryCommunicationInput = Schema.Struct({
-  communicationId: Uuid,
+const CommunicationScope = { principal: Principal, tenantId: Uuid, communicationId: Uuid }
+
+/** Reads one communication: its preview or its delivery attempts. */
+export const CommunicationQueryInput = Schema.Struct(CommunicationScope)
+
+export type CommunicationQueryInput = Schema.Schema.Type<typeof CommunicationQueryInput>
+
+/**
+ * Sends a communication once. It names the rendering the caller previewed, so what is sent is what
+ * was reviewed; a different rendering is refused.
+ */
+export const SendCommunicationInput = Schema.Struct({
+  ...CommunicationScope,
+  previewedArtifactId: Uuid,
 })
 
+export type SendCommunicationInput = Schema.Schema.Type<typeof SendCommunicationInput>
+
+export const RetryCommunicationInput = Schema.Struct(CommunicationScope)
+
 export type RetryCommunicationInput = Schema.Schema.Type<typeof RetryCommunicationInput>
+
+/**
+ * What would be sent, exactly: the sender, the recipients as resolved, and the rendered message.
+ * Reading it calls no transport, so it can be repeated freely.
+ */
+export const CommunicationPreview = Schema.Struct({
+  communicationId: Uuid,
+  status: Communication.fields.status,
+  artifactId: Uuid,
+  sender: SenderIdentity,
+  to: Schema.Array(RecipientMailbox),
+  cc: Schema.Array(RecipientMailbox),
+  bcc: Schema.Array(RecipientMailbox),
+  subject: Schema.String,
+  html: Schema.String,
+  text: Schema.String,
+  attachments: CommunicationArtifact.fields.attachments,
+  attempts: Schema.Int,
+})
+
+export type CommunicationPreview = Schema.Schema.Type<typeof CommunicationPreview>
 
 /**
  * A dispatch that happened before cutover, recorded from the source system's evidence. It is an
@@ -144,22 +182,43 @@ export interface CommunicationService {
     HistoricalDispatchResult,
     AuthorizationDenied | CommunicationStateFailure | DatabaseFailure | Schema.SchemaError
   >
+  /** What would be sent, with no side effect: the review that comes before `deliver`. */
+  readonly preview: (
+    input: Schema.Codec.Encoded<typeof CommunicationQueryInput>,
+  ) => Effect.Effect<
+    CommunicationPreview,
+    AuthorizationDenied | CommunicationNotFound | DatabaseFailure | Schema.SchemaError
+  >
+  /** The delivery attempts so far, oldest first. Attempts are only ever appended. */
+  readonly listAttempts: (
+    input: Schema.Codec.Encoded<typeof CommunicationQueryInput>,
+  ) => Effect.Effect<
+    ReadonlyArray<DeliveryAttempt>,
+    AuthorizationDenied | CommunicationNotFound | DatabaseFailure | Schema.SchemaError
+  >
+  /** The first send, of the previewed rendering. It cannot be undone. */
   readonly deliver: (
-    input: Schema.Codec.Encoded<typeof RetryCommunicationInput>,
+    input: Schema.Codec.Encoded<typeof SendCommunicationInput>,
   ) => Effect.Effect<
     CommunicationProcessingResult,
+    | AuthorizationDenied
     | CommunicationNotFound
+    | CommunicationPreviewStale
     | CommunicationStateFailure
     | CommunicationTransportFailure
+    | DatabaseFailure
     | Schema.SchemaError
   >
+  /** Sends the same rendering again after an attempt. */
   readonly retry: (
     input: Schema.Codec.Encoded<typeof RetryCommunicationInput>,
   ) => Effect.Effect<
     CommunicationProcessingResult,
+    | AuthorizationDenied
     | CommunicationNotFound
     | CommunicationStateFailure
     | CommunicationTransportFailure
+    | DatabaseFailure
     | Schema.SchemaError
   >
 }

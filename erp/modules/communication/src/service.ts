@@ -35,15 +35,22 @@ import { PurchaseOrderConfirmedEventPayload } from "../../procurement/mod.ts"
 import {
   CommunicationConfiguration,
   CommunicationPolicy,
+  CommunicationPreview,
   CommunicationProcessingResult,
+  CommunicationQueryInput,
   CommunicationService,
   HistoricalDispatchOutcome,
   HistoricalDispatchResult,
   ProcessPurchaseOrderConfirmedInput,
   RecordHistoricalDispatchInput,
   RetryCommunicationInput,
+  SendCommunicationInput,
 } from "./contract.ts"
-import { CommunicationNotFound, CommunicationStateFailure } from "./errors.ts"
+import {
+  CommunicationNotFound,
+  CommunicationPreviewStale,
+  CommunicationStateFailure,
+} from "./errors.ts"
 
 type PurchaseOrderConfirmedPayload = Schema.Schema.Type<typeof PurchaseOrderConfirmedEventPayload>
 
@@ -355,19 +362,71 @@ export const makeCommunicationService = Effect.gen(function* () {
     },
   )
 
-  const send = (communicationId: string, retry: boolean) =>
+  /** A communication of the caller's tenant; another tenant's is not found. */
+  const storedFor = (tenantId: string, communicationId: string) =>
     Effect.gen(function* () {
-      if (historicalIds.has(communicationId)) {
-        return yield* Effect.fail(
-          new CommunicationStateFailure({ reason: "historical dispatch is never sent or retried" }),
-        )
-      }
-
       const stored = byCommunicationId.get(communicationId)
 
-      if (stored === undefined) {
+      if (stored === undefined || stored.communication.tenantId !== tenantId) {
         return yield* Effect.fail(new CommunicationNotFound({ communicationId }))
       }
+
+      return stored
+    })
+
+  const preview = Effect.fn("CommunicationService.preview")(function* (
+    input: Schema.Codec.Encoded<typeof CommunicationQueryInput>,
+  ) {
+    const decoded = yield* authorized(
+      CommunicationQueryInput,
+      CommunicationCapabilities.communicationRead,
+    )(input)
+
+    const stored = yield* storedFor(decoded.tenantId, decoded.communicationId)
+    const email = stored.preparedEmail
+
+    return {
+      communicationId: stored.communication.communicationId,
+      status: stored.communication.status,
+      artifactId: email.artifactId,
+      sender: email.sender,
+      to: email.to,
+      cc: email.cc,
+      bcc: email.bcc,
+      subject: email.subject,
+      html: email.html,
+      text: email.text,
+      attachments: email.attachments,
+      attempts: stored.attempts.length,
+    } satisfies CommunicationPreview
+  })
+
+  const listAttempts = Effect.fn("CommunicationService.listAttempts")(function* (
+    input: Schema.Codec.Encoded<typeof CommunicationQueryInput>,
+  ) {
+    const decoded = yield* authorized(
+      CommunicationQueryInput,
+      CommunicationCapabilities.communicationRead,
+    )(input)
+
+    const stored = yield* storedFor(decoded.tenantId, decoded.communicationId)
+
+    // Copies, frozen: a reader cannot rewrite the log.
+    return stored.attempts.map((attempt) => Object.freeze({ ...attempt }))
+  })
+
+  const refuseHistorical = (communicationId: string) =>
+    historicalIds.has(communicationId)
+      ? Effect.fail(
+          new CommunicationStateFailure({ reason: "historical dispatch is never sent or retried" }),
+        )
+      : Effect.void
+
+  const send = (tenantId: string, communicationId: string, retry: boolean) =>
+    Effect.gen(function* () {
+      yield* refuseHistorical(communicationId)
+
+      const stored = yield* storedFor(tenantId, communicationId)
 
       if (!retry && stored.attempts.length !== 0) {
         return yield* Effect.fail(
@@ -405,24 +464,47 @@ export const makeCommunicationService = Effect.gen(function* () {
     })
 
   const deliver = Effect.fn("CommunicationService.deliver")(function* (
-    input: Schema.Codec.Encoded<typeof RetryCommunicationInput>,
+    input: Schema.Codec.Encoded<typeof SendCommunicationInput>,
   ) {
-    const decoded = yield* Schema.decodeUnknownEffect(RetryCommunicationInput)(input)
+    const decoded = yield* authorized(
+      SendCommunicationInput,
+      CommunicationCapabilities.communicationSend,
+    )(input)
 
-    return yield* send(decoded.communicationId, false)
+    // The rendering is fixed once made, so a send of anything but the previewed one is refused
+    // before the transport is touched.
+    yield* refuseHistorical(decoded.communicationId)
+    const stored = yield* storedFor(decoded.tenantId, decoded.communicationId)
+
+    if (decoded.previewedArtifactId !== stored.preparedEmail.artifactId) {
+      return yield* Effect.fail(
+        new CommunicationPreviewStale({
+          communicationId: decoded.communicationId,
+          previewedArtifactId: decoded.previewedArtifactId,
+          currentArtifactId: stored.preparedEmail.artifactId,
+        }),
+      )
+    }
+
+    return yield* send(decoded.tenantId, decoded.communicationId, false)
   })
 
   const retry = Effect.fn("CommunicationService.retry")(function* (
     input: Schema.Codec.Encoded<typeof RetryCommunicationInput>,
   ) {
-    const decoded = yield* Schema.decodeUnknownEffect(RetryCommunicationInput)(input)
+    const decoded = yield* authorized(
+      RetryCommunicationInput,
+      CommunicationCapabilities.communicationSend,
+    )(input)
 
-    return yield* send(decoded.communicationId, true)
+    return yield* send(decoded.tenantId, decoded.communicationId, true)
   })
 
   const service: CommunicationService = {
     processPurchaseOrderConfirmed,
     recordHistoricalDispatch,
+    preview,
+    listAttempts,
     deliver,
     retry,
   }
