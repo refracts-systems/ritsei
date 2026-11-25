@@ -222,3 +222,12 @@ export {
   tickets,
   ticketStatus,
 } from "./helpdesk.ts"
+
+export {
+  itemTracking,
+  lotBalances,
+  lotMovements,
+  lots,
+  serialStatus,
+  serialUnits,
+} from "./inventory.ts"

@@ -117,3 +117,17 @@ with the value held, `migration_clearing` is credited with the source total, and
 difference goes to `inventory_adjustment` (a debit when the value held is lower, a credit when
 higher). Zero lines are left out and stock with no value posts nothing. A failure later in the load
 rolls the journal back with it.
+
+### `INV-TRK-1` A tracked item moves only with its lot or serial
+
+An item is `none`, `lot`, or `serial` tracked (ADR-0131); the mode changes only while the item has no
+stock and no movement (`ItemTrackingLocked`). `receiveValued` and `issueValued` of a lot item need
+lots whose quantities add up to the line, and of a serial item exactly as many distinct serials as
+units; a missing, mismatched, or repeated identity fails with `TrackedIdentityRequired` or
+`TrackedIdentityInvalid`, and an unknown lot, a lot without enough stock, a serial not in stock in
+the warehouse, or a serial received while already in stock fails with `TrackedIdentityUnavailable`,
+before anything is written. An untracked item takes no identity. A serial is unique per item, always
+one unit, and is `in_stock`, `issued`, or `returned_to_supplier` (a purchase return); stock per lot
+sums to the item's balance. Valuation is unchanged. A movement of a tracked item written any other
+way (counts, transfers, adjustments, the opening load) is refused by the database
+(`tracked_item_requires_identity`). Expiry is stored, not enforced.

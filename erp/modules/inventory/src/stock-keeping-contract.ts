@@ -26,9 +26,13 @@ import type {
   OpeningStockInTransitNotCarried,
   OpeningStockLotTrackingUnsupported,
   OpeningStockReservationsNotCarried,
+  ItemTrackingLocked,
   StockNotStockable,
   StockUnavailable,
   StockValuationUnavailable,
+  TrackedIdentityInvalid,
+  TrackedIdentityRequired,
+  TrackedIdentityUnavailable,
 } from "./errors.ts"
 
 const Quantity = PositiveQuantity
@@ -54,7 +58,62 @@ const DocumentLines = <S extends Schema.Top>(line: S) =>
       ),
     )
 
-export const RegisterProductItemInput = Schema.Struct({ ...ScopedInput, productId: Uuid })
+/** A lot code or a serial: a trimmed string of up to 64 characters, compared exactly (ADR-0131). */
+export const TrackingCode = Schema.String.check(
+  Schema.makeFilter((value) => value === value.trim() && value.length >= 1 && value.length <= 64, {
+    expected: "a trimmed code of 1 to 64 characters",
+  }),
+)
+
+/**
+ * What identifies the stock of a tracked line: lots with their quantities (a new lot may carry its
+ * expiry), or the serials, one per unit. An untracked item takes none.
+ */
+export const StockIdentity = Schema.Struct({
+  lots: Schema.optionalKey(
+    Schema.Array(
+      Schema.Struct({
+        code: TrackingCode,
+        quantity: PositiveQuantity,
+        expiry: Schema.optionalKey(CalendarDate),
+      }),
+    ).check(Schema.isMinLength(1), Schema.isMaxLength(200)),
+  ),
+  serials: Schema.optionalKey(
+    Schema.Array(TrackingCode).check(Schema.isMinLength(1), Schema.isMaxLength(1000)),
+  ),
+})
+
+export type StockIdentity = Schema.Schema.Type<typeof StockIdentity>
+
+export const ItemTracking = Schema.Literals(["none", "lot", "serial"])
+
+export const RegisterProductItemInput = Schema.Struct({
+  ...ScopedInput,
+  productId: Uuid,
+  /** The tracking mode a new item starts with; an existing item keeps its own. */
+  tracking: Schema.optionalKey(ItemTracking),
+})
+
+export const SetItemTrackingInput = Schema.Struct({
+  ...ScopedInput,
+  itemId: Uuid,
+  tracking: ItemTracking,
+})
+
+export const LookupSerialInput = Schema.Struct({ ...ScopedInput, serial: TrackingCode })
+
+/** Where a serial unit is and what issued it; the document's owner says who it went to. */
+export const SerialRecord = Schema.Struct({
+  itemId: Uuid,
+  serial: Schema.String,
+  status: Schema.Literals(["in_stock", "issued", "returned_to_supplier"]),
+  warehouseId: Schema.NullOr(Uuid),
+  issuedBy: Schema.NullOr(StockSource),
+  issuedAt: Schema.NullOr(InstantString),
+})
+
+export type SerialRecord = Schema.Schema.Type<typeof SerialRecord>
 
 export const ReceiveValuedStockInput = Schema.Struct({
   ...ScopedInput,
@@ -64,7 +123,12 @@ export const ReceiveValuedStockInput = Schema.Struct({
   /** The account role credited for the received value. */
   counterRole: Schema.Literals(["goods_received_not_invoiced", "inventory_adjustment"]),
   lines: DocumentLines(
-    Schema.Struct({ itemId: Uuid, quantity: Quantity, unitCost: FinancialMajorAmount }),
+    Schema.Struct({
+      itemId: Uuid,
+      quantity: Quantity,
+      unitCost: FinancialMajorAmount,
+      identity: Schema.optionalKey(StockIdentity),
+    }),
   ),
 })
 
@@ -85,6 +149,7 @@ export const IssueValuedStockInput = Schema.Struct({
       quantity: Quantity,
       /** Removes value at this cost instead of the moving average, as returns to suppliers do. */
       unitCost: Schema.optionalKey(FinancialMajorAmount),
+      identity: Schema.optionalKey(StockIdentity),
     }),
   ),
 })
@@ -213,6 +278,9 @@ type CommonFailure = AuthorizationDenied | DatabaseFailure | Schema.SchemaError
 type MovementFailure =
   | InventoryReferenceNotFound
   | StockUnavailable
+  | TrackedIdentityInvalid
+  | TrackedIdentityRequired
+  | TrackedIdentityUnavailable
   | StockValuationUnavailable
   | PostEntryFailure
   | CommonFailure
@@ -225,6 +293,17 @@ export interface StockKeepingService {
   readonly registerProductItem: (
     input: Schema.Codec.Encoded<typeof RegisterProductItemInput>,
   ) => Effect.Effect<Item, ProductNotFound | StockNotStockable | CommonFailure>
+  /** Sets how an item is tracked; refused once it has stock or a movement. */
+  readonly setItemTracking: (
+    input: Schema.Codec.Encoded<typeof SetItemTrackingInput>,
+  ) => Effect.Effect<
+    { readonly itemId: string; readonly tracking: "none" | "lot" | "serial" },
+    InventoryReferenceNotFound | ItemTrackingLocked | CommonFailure
+  >
+  /** The record of a serial in every item that has it, with what issued it. */
+  readonly lookupSerial: (
+    input: Schema.Codec.Encoded<typeof LookupSerialInput>,
+  ) => Effect.Effect<ReadonlyArray<SerialRecord>, CommonFailure>
   readonly receiveValued: (
     input: Schema.Codec.Encoded<typeof ReceiveValuedStockInput>,
   ) => Effect.Effect<ValuedStockMovement, MovementFailure>

@@ -3,7 +3,7 @@ import { defineModule } from "../../../framework/modules/module/mod.ts"
 export const DocumentsModule = defineModule({
   name: "documents",
   layer: "erp",
-  dependsOn: ["billing", "procurement", "sales", "settlement"],
+  dependsOn: ["billing", "inventory", "procurement", "sales", "settlement"],
   schemas: [],
   capabilities: {},
   actions: [],
