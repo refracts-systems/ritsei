@@ -220,3 +220,27 @@ export class OpeningStockConflict extends Schema.TaggedError<OpeningStockConflic
   "OpeningStockConflict",
   { tenantId: Uuid, openingId: Uuid },
 ) {}
+
+/** A tracked item moved without the lot or serial it needs (ADR-0131). */
+export class TrackedIdentityRequired extends Schema.TaggedError<TrackedIdentityRequired>()(
+  "TrackedIdentityRequired",
+  { tenantId: Uuid, itemId: Uuid, tracking: Schema.Literals(["lot", "serial"]) },
+) {}
+
+/** The identity given does not match the item or the quantity: wrong kind, count, or duplicates. */
+export class TrackedIdentityInvalid extends Schema.TaggedError<TrackedIdentityInvalid>()(
+  "TrackedIdentityInvalid",
+  { tenantId: Uuid, itemId: Uuid, reason: Schema.String },
+) {}
+
+/** A lot does not hold enough in the warehouse, or a serial is not in stock there (or already is). */
+export class TrackedIdentityUnavailable extends Schema.TaggedError<TrackedIdentityUnavailable>()(
+  "TrackedIdentityUnavailable",
+  { tenantId: Uuid, itemId: Uuid, identity: Schema.String },
+) {}
+
+/** An item with stock or a movement keeps its tracking mode. */
+export class ItemTrackingLocked extends Schema.TaggedError<ItemTrackingLocked>()(
+  "ItemTrackingLocked",
+  { tenantId: Uuid, itemId: Uuid },
+) {}

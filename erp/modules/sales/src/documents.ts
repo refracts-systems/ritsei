@@ -47,6 +47,8 @@ import {
   type OrderFulfillment,
   OrderQueryInput,
   type PartyCustomer,
+  DeliverySummaryInput,
+  type DeliverySummary,
   PipelineFactsInput,
   UndeliveredInput,
   type UndeliveredOrders,
@@ -1023,6 +1025,40 @@ export const makeSalesDocumentService = Effect.gen(function* () {
   const asDate = (value: Date | string | null): string | null =>
     value === null ? null : new Date(value).toISOString().slice(0, 10)
 
+  const getDeliverySummary = Effect.fn("SalesDocumentService.getDeliverySummary")(function* (
+    input: Schema.Codec.Encoded<typeof DeliverySummaryInput>,
+  ) {
+    const decoded = yield* authorized(DeliverySummaryInput, SalesCapabilities.orderRead)(input)
+
+    const [row] = yield* database.query(
+      (db) =>
+        db
+          .select({
+            deliveryId: deliveries.id,
+            number: deliveries.number,
+            deliveryDate: deliveries.deliveryDate,
+            orderId: deliveries.orderId,
+            customerId: customers.id,
+            customerName: customers.name,
+          })
+          .from(deliveries)
+          .innerJoin(
+            orders,
+            and(eq(orders.tenantId, deliveries.tenantId), eq(orders.id, deliveries.orderId)),
+          )
+          .innerJoin(
+            customers,
+            and(eq(customers.tenantId, orders.tenantId), eq(customers.id, orders.customerId)),
+          )
+          .where(
+            and(eq(deliveries.tenantId, decoded.tenantId), eq(deliveries.id, decoded.deliveryId)),
+          ),
+      "sales.delivery.summary",
+    )
+
+    return (row ?? null) satisfies DeliverySummary | null
+  })
+
   const getUndeliveredOrders = Effect.fn("SalesDocumentService.getUndeliveredOrders")(function* (
     input: Schema.Codec.Encoded<typeof UndeliveredInput>,
   ) {
@@ -1336,6 +1372,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
     listDeliveries,
     getPipelineFacts,
     getUndeliveredOrders,
+    getDeliverySummary,
     findByNumber,
     recordDelivery,
   } satisfies SalesDocumentService

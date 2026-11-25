@@ -7,6 +7,7 @@ import {
   CalendarDate,
   Database,
   type DatabaseFailure,
+  omitUndefined,
   uuidv7,
 } from "../../../../framework/foundation/mod.ts"
 import { Principal } from "../../../../framework/modules/auth/mod.ts"
@@ -14,9 +15,13 @@ import type { AuthorizationDenied } from "../../../../framework/modules/authoriz
 import type { PostEntryFailure } from "../../accounting/mod.ts"
 import {
   type InventoryReferenceNotFound,
+  StockIdentity,
   StockKeepingService,
   type StockUnavailable,
   type StockValuationUnavailable,
+  type TrackedIdentityInvalid,
+  type TrackedIdentityRequired,
+  type TrackedIdentityUnavailable,
   ValuedStockMovement,
 } from "../../inventory/mod.ts"
 import { ProductService, type ProductNotFound } from "../../product/mod.ts"
@@ -44,6 +49,8 @@ export const DeliverOrderInput = Schema.Struct({
     Schema.Struct({
       orderLineId: Uuid,
       quantity: Schema.String.check(Schema.isPattern(/^[1-9]\d*$/)),
+      /** The lot or serials of a tracked item (ADR-0131). */
+      identity: Schema.optionalKey(StockIdentity),
     }),
   ).check(Schema.isMinLength(1)),
 })
@@ -66,6 +73,9 @@ export type DeliverOrderFailure =
   | InventoryReferenceNotFound
   | StockUnavailable
   | StockValuationUnavailable
+  | TrackedIdentityInvalid
+  | TrackedIdentityRequired
+  | TrackedIdentityUnavailable
   | PostEntryFailure
   | AuthorizationDenied
   | DatabaseFailure
@@ -103,8 +113,15 @@ export const makeOrderToCashService = Effect.gen(function* () {
           orderId: decoded.orderId,
           warehouseId: decoded.warehouseId,
           deliveryDate: decoded.deliveryDate,
-          lines: decoded.lines,
+          lines: decoded.lines.map((line) => ({
+            orderLineId: line.orderLineId,
+            quantity: line.quantity,
+          })),
         })
+
+        const identityByLine = new Map(
+          decoded.lines.map((line) => [line.orderLineId, line.identity]),
+        )
 
         const stockLines = []
 
@@ -112,7 +129,11 @@ export const makeOrderToCashService = Effect.gen(function* () {
           const product = yield* products.getProduct({ ...scope, productId: line.productId })
 
           if (product.type === "stockable") {
-            stockLines.push({ itemId: line.productId, quantity: line.quantity })
+            stockLines.push({
+              itemId: line.productId,
+              quantity: line.quantity,
+              ...omitUndefined({ identity: identityByLine.get(line.orderLineId) }),
+            })
           }
         }
 
