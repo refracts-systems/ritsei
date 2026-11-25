@@ -1,6 +1,6 @@
 # ADR-0136: Adopt Per-Extension Migration Chains
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-25
 - Amends: None
 - Compatible with: ADR-0091, ADR-0094
@@ -97,13 +97,15 @@ One chain is fine while every author is a maintainer. It does not hold for publi
 - Ordering bugs between chains when extensions depend on each other. Mitigation: decision 2 orders by
   `dependsOn`, and the runner fails on a cycle.
 
-## Open questions for the owner
+## Owner decisions (2026-11-25)
 
-1. Is a database foreign key from an extension into core ever allowed, or never (decision 5 says
-   never)?
-2. Does uninstalling an extension drop its schema, or only stop loading it and keep the data?
-3. Should the migration check run only on pull requests that touch `extensions/`, or on every pull
-   request?
+The owner accepted the recommendations:
+
+1. A database foreign key from an extension into core is never allowed (decision 5); extensions
+   tolerate a missing core row.
+2. Uninstalling an extension stops loading it and keeps its data. Dropping its schema is a separate,
+   explicit command that asks for confirmation and writes an audit record.
+3. The migration check runs on every pull request, not only those that touch `extensions/`.
 
 ## Validation
 
