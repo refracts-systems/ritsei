@@ -59,8 +59,11 @@ opens, updates, and resolves them idempotently; `advanceEscalations` raises an u
 flow owner after 2 working days (1 when high) and to the supervisor 2 later, over a per-legal-entity
 working calendar. Escalation notifies and never assigns. Following a flow or a subject is read-only
 and feeds an in-app inbox; `assign` takes up to 100 situations to one flow owner, all or nothing.
-Not built: a recurring job that calls `detect` and `advanceEscalations` (the worker loop in
-`erp/runtime/worker` is not generic), and e-mail.
+A separate process (`pnpm run situations-sweep`, `erp/runtime/worker/situations-sweep-main.ts`) calls `detect` and then
+`advanceEscalations` for each configured legal entity every 5 minutes as a service account
+(`SITUATIONS_SWEEP_USER_ID`) that holds the detect capability; both calls are idempotent, so overlapping
+sweeps are safe, and a failing legal entity is logged and retried by the next sweep. Not built: e-mail,
+and discovering legal entities (they are listed in `SITUATIONS_LEGAL_ENTITY_IDS`).
 **KPI read (gap G-04).** `GET /insights/kpis?legalEntityId=&period=YYYY-MM` returns six figures
 beside the same figure for the previous month, joined by the `insights` module (read-only, no data
 of its own) from reads in the owning modules, each authorized by its owner: net sales (Billing,

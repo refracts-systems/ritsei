@@ -8,6 +8,7 @@
     "start": "varlock run -- tsx erp/runtime/api/mod.ts",
     "dev": "varlock run -- tsx watch erp/runtime/api/mod.ts",
     "worker": "varlock run -- tsx erp/runtime/worker/mod.ts",
+    "situations-sweep": "varlock run -- tsx erp/runtime/worker/situations-sweep-main.ts",
     "auth:bootstrap": "varlock run -- tsx erp/runtime/auth/bootstrap.ts",
     "p0:backfill": "varlock run -- tsx erp/runtime/migrator/p0-backfill.ts",
     "migrate": "varlock run -- tsx erp/runtime/migrator/mod.ts",
