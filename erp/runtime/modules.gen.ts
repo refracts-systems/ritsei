@@ -7,6 +7,8 @@ import { BillingModule } from "../modules/billing/mod.ts"
 import { CommunicationModule } from "../modules/communication/mod.ts"
 import { DocumentsHttpGroup, DocumentsHttpHandlers } from "../modules/documents/http.ts"
 import { DocumentsModule } from "../modules/documents/mod.ts"
+import { InsightsHttpGroup, InsightsHttpHandlers } from "../modules/insights/http.ts"
+import { InsightsModule } from "../modules/insights/mod.ts"
 import { InventoryHttpGroup, InventoryHttpHandlers } from "../modules/inventory/http.ts"
 import { InventoryModule } from "../modules/inventory/mod.ts"
 import {
@@ -39,6 +41,7 @@ export const ErpModules: ReadonlyArray<ModuleManifest> = [
   BillingModule,
   CommunicationModule,
   DocumentsModule,
+  InsightsModule,
   InventoryModule,
   LocalizationIdModule,
   OnboardingModule,
@@ -57,6 +60,7 @@ export const ErpHttpGroups = [
   AccountingHttpGroup,
   BillingHttpGroup,
   DocumentsHttpGroup,
+  InsightsHttpGroup,
   InventoryHttpGroup,
   LocalizationIdHttpGroup,
   OnboardingHttpGroup,
@@ -75,6 +79,7 @@ export const ErpHttpHandlers = [
   AccountingHttpHandlers,
   BillingHttpHandlers,
   DocumentsHttpHandlers,
+  InsightsHttpHandlers,
   InventoryHttpHandlers,
   LocalizationIdHttpHandlers,
   OnboardingHttpHandlers,

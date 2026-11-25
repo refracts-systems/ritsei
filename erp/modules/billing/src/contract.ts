@@ -201,6 +201,23 @@ export const BillMismatch = Schema.Struct({
 
 export type BillMismatch = Schema.Schema.Type<typeof BillMismatch>
 
+export const NetSalesInput = Schema.Struct({
+  ...ScopedInput,
+  legalEntityId: Uuid,
+  from: CalendarDate,
+  to: CalendarDate,
+})
+
+/** Customer invoices less customer credit notes dated in a period, before tax. */
+export const NetSales = Schema.Struct({
+  legalEntityId: Uuid,
+  from: CalendarDate,
+  to: CalendarDate,
+  netSales: SignedAmount,
+})
+
+export type NetSales = Schema.Schema.Type<typeof NetSales>
+
 /** How many documents are at a stage, and the invoice date of the oldest. */
 export const StageFacts = Schema.Struct({
   count: Schema.Int,
@@ -387,6 +404,10 @@ export interface BillingService {
   readonly listBillMismatches: (
     input: Schema.Codec.Encoded<typeof BillMismatchInput>,
   ) => Effect.Effect<ReadonlyArray<BillMismatch>, CommonFailure>
+  /** What was sold in a period: invoice subtotals less credit note subtotals, by document date. */
+  readonly netSales: (
+    input: Schema.Codec.Encoded<typeof NetSalesInput>,
+  ) => Effect.Effect<NetSales, CommonFailure>
   /** What the given order or purchase order lines have been billed so far. */
   readonly billedQuantities: (
     input: Schema.Codec.Encoded<typeof BilledQuantitiesInput>,

@@ -210,10 +210,12 @@ export const setCreditLimit = Effect.fn("Frontend.Sales.setCreditLimit")(functio
   return yield* decodeResponse(CreditStanding, body, "unknown-outcome")
 })
 
-/** What the user is told when confirming an order is refused by the credit limit. */
+/** What the user is told when confirming an order is refused. */
 export const confirmFailureMessages = {
   CreditLimitExceeded:
     "Confirming this order would take the customer past their credit limit. Raise the limit in the customer's detail or collect what is open first.",
+  CustomerLegalEntityRequired:
+    "This customer has no legal entity yet, so the order cannot be numbered or confirmed. Link the customer to a legal entity first.",
 } as const
 
 export const creditFailureMessages = {

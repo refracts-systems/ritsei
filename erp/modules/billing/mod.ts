@@ -35,6 +35,8 @@ export {
   ListBillingDocumentsInput,
   ListOpenItemsInput,
   MaxImportedArtifactBytes,
+  NetSales,
+  NetSalesInput,
   NumberCandidate,
   NumberLookupInput,
   OpenItem,
@@ -47,6 +49,7 @@ export type {
   BillingPipelineFacts as BillingPipelineFactsType,
   BillingService as BillingServiceContract,
   BillMismatch as BillMismatchType,
+  NetSales as NetSalesType,
   InvoiceFailure,
   OpenItem as OpenItemType,
 } from "./src/contract.ts"

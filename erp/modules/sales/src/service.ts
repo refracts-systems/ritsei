@@ -9,7 +9,7 @@ import { MessagingService } from "../../../../framework/modules/messaging/mod.ts
 import { NumberingService } from "../../../../framework/modules/numbering/mod.ts"
 import { SalesCapabilities } from "./capabilities.ts"
 import { committedAmount, CreditExposure, exceedsCreditLimit } from "./credit.ts"
-import { CreditLimitExceeded } from "./errors.ts"
+import { CreditLimitExceeded, CustomerLegalEntityRequired } from "./errors.ts"
 import {
   CancelConfirmedOrderInput,
   ConfirmOrderInput,
@@ -217,11 +217,17 @@ export const makeSalesServiceFromStore = <R>(storeEffect: Effect.Effect<SalesSto
           }
         })
 
-      // The number belongs to the legal entity that issues the order (ADR-0095); an order without
-      // one is confirmed unnumbered. The series is locked until the confirmation commits.
+      // The number belongs to the legal entity that issues the order (ADR-0095), so an order whose
+      // customer has none cannot be confirmed (`SAL-CUST-2`). The series is locked until the
+      // confirmation commits.
       const numberOrder: NumberOrder = (order, legalEntityId, confirmedAt) =>
         legalEntityId === null
-          ? Effect.succeed(null)
+          ? Effect.fail(
+              new CustomerLegalEntityRequired({
+                tenantId: decoded.tenantId,
+                customerId: order.customerId,
+              }),
+            )
           : numbering
               .allocate({
                 tenantId: decoded.tenantId,

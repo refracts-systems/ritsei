@@ -14,7 +14,13 @@ import { withTemporaryDatabase } from "../../../../tests/support/postgres-databa
 import { PartyCapabilities, PartyService } from "../../party/mod.ts"
 import { ProductCapabilities, ProductService } from "../../product/mod.ts"
 import { TaxCapabilities, TaxService } from "../../tax/mod.ts"
-import { makeSalesService, SalesCapabilities, SalesDocumentService, SalesService } from "../mod.ts"
+import {
+  CustomerLegalEntityRequired,
+  makeSalesService,
+  SalesCapabilities,
+  SalesDocumentService,
+  SalesService,
+} from "../mod.ts"
 
 const databaseUrl = process.env["DATABASE_URL"]
 const principal = { userAccountId: "sales-number-user", sessionId: "sales-number-session" }
@@ -245,7 +251,8 @@ it.effect.skipIf(databaseUrl === undefined)(
 
           assert.strictEqual(newYearSent.number, "QT/2027/00001")
 
-          // A legacy customer has no legal entity to number in: its order confirms without a number.
+          // A legacy customer has no legal entity to number in: its order cannot be confirmed, and
+          // the refusal leaves the order a draft with no number.
           const legacy = yield* sales.createCustomer({
             ...scope,
             name: "Legacy",
@@ -258,9 +265,14 @@ it.effect.skipIf(databaseUrl === undefined)(
             lines: [{ itemId: widget.id, quantity: "1", unitPrice: "10.00" }],
           })
 
-          const legacyConfirmed = yield* confirm(sales, legacyOrder.id)
-          assert.strictEqual(legacyConfirmed.status, "confirmed")
-          assert.strictEqual(legacyConfirmed.number, null)
+          const refused = yield* Effect.flip(confirm(sales, legacyOrder.id))
+          assert.instanceOf(refused, CustomerLegalEntityRequired)
+          assert.strictEqual(refused.customerId, legacy.id)
+          assert.strictEqual(refused.tenantId, tenantId)
+
+          const stillDraft = yield* sales.getOrder({ ...scope, orderId: legacyOrder.id })
+          assert.strictEqual(stillDraft.status, "draft")
+          assert.strictEqual(stillDraft.number, null)
           assert.deepStrictEqual(yield* issued("sales.order"), ["1", "2", "3", "1"])
         }).pipe(Effect.provide(erpChainLayers(client, grants)))
       }),

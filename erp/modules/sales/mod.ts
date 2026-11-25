@@ -88,6 +88,8 @@ export {
   SalesQuotation,
   SetPriceInput,
   StageFacts,
+  UndeliveredInput,
+  UndeliveredOrders,
 } from "./src/documents-contract.ts"
 
 export type {
@@ -97,6 +99,7 @@ export type {
   SalesDocumentService as SalesDocumentServiceContract,
   SalesPipelineFacts as SalesPipelineFactsType,
   SalesQuotation as SalesQuotationType,
+  UndeliveredOrders as UndeliveredOrdersType,
 } from "./src/documents-contract.ts"
 
 export {

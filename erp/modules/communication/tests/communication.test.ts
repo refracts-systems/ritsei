@@ -7,6 +7,7 @@ import {
   makeMessagingTestLayer,
   MessagingService,
 } from "../../../../framework/modules/messaging/mod.ts"
+import { uuidv7 } from "../../../../framework/foundation/mod.ts"
 import { ProcurementPurchaseOrderConfirmedEvent } from "../../procurement/mod.ts"
 import {
   AuthorizationDenied,
@@ -51,6 +52,7 @@ const event: EventEnvelopeContract = {
 
 const otherTenantId = "01990000-0000-7000-8000-000000000009"
 const principal = { userAccountId: "importer", sessionId: "importer-session" }
+const scope = { principal, tenantId }
 
 const withCommunication = <A, E>(
   program: Effect.Effect<
@@ -62,11 +64,13 @@ const withCommunication = <A, E>(
   const messaging = makeMessagingTestLayer()
 
   const authorization = makeAuthorizationTestLayer(
-    [tenantId, otherTenantId].map((granted) => ({
-      userAccountId: principal.userAccountId,
-      tenantId: granted,
-      capability: CommunicationCapabilities.historicalDispatchRecord,
-    })),
+    [tenantId, otherTenantId].flatMap((granted) =>
+      Object.values(CommunicationCapabilities).map((capability) => ({
+        userAccountId: principal.userAccountId,
+        tenantId: granted,
+        capability,
+      })),
+    ),
   )
 
   const communication = makeCommunicationTestLayer({
@@ -93,14 +97,20 @@ it.effect("derives one intent, renders once, and retries the same artifact", () 
       assert.strictEqual(duplicate.artifact.artifactId, first.artifact.artifactId)
 
       const firstDelivery = yield* service.deliver({
+        ...scope,
         communicationId: first.intent.communicationId,
+        previewedArtifactId: first.artifact.artifactId,
       })
 
       assert.strictEqual(firstDelivery.communication.status, "reconciling")
       assert.strictEqual(firstDelivery.attempt?.status, "unknown")
       assert.strictEqual(firstDelivery.receipt?.status, "unknown")
 
-      const retry = yield* service.retry({ communicationId: first.intent.communicationId })
+      const retry = yield* service.retry({
+        ...scope,
+        communicationId: first.intent.communicationId,
+      })
+
       assert.strictEqual(retry.communication.status, "accepted")
       assert.strictEqual(retry.attempt?.attemptNumber, 2)
       assert.strictEqual(retry.receipt?.status, "accepted")
@@ -146,7 +156,7 @@ it.effect("does not retry a communication before its first delivery attempt", ()
       const processed = yield* service.processPurchaseOrderConfirmed({ event })
 
       const failure = yield* Effect.flip(
-        service.retry({ communicationId: processed.intent.communicationId }),
+        service.retry({ ...scope, communicationId: processed.intent.communicationId }),
       )
 
       assert.strictEqual(
@@ -274,8 +284,12 @@ it.effect("never delivers or retries a historical dispatch", () =>
       })
 
       const { communicationId } = recorded.communication
-      const deliver = yield* Effect.flip(service.deliver({ communicationId }))
-      const retry = yield* Effect.flip(service.retry({ communicationId }))
+
+      const deliver = yield* Effect.flip(
+        service.deliver({ ...scope, communicationId, previewedArtifactId: uuidv7() }),
+      )
+
+      const retry = yield* Effect.flip(service.retry({ ...scope, communicationId }))
 
       assert.strictEqual(deliver._tag, "CommunicationStateFailure")
       assert.strictEqual(retry._tag, "CommunicationStateFailure")
@@ -319,5 +333,169 @@ it.effect("denies recording a historical dispatch without the capability", () =>
         Layer.provide(Layer.merge(makeMessagingTestLayer(), makeAuthorizationTestLayer())),
       ),
     ),
+  ),
+)
+
+const otherPrincipal = { userAccountId: "reader", sessionId: "reader-session" }
+
+it.effect(
+  "previews what would be sent without sending, and sends only the previewed rendering",
+  () =>
+    withCommunication(
+      Effect.gen(function* () {
+        const messaging = yield* MessagingService
+        yield* messaging.append(event)
+        const service = yield* CommunicationService
+        const transport = yield* CommunicationTestTransport
+        const processed = yield* service.processPurchaseOrderConfirmed({ event })
+        const { communicationId } = processed.intent
+
+        // Previewing is repeatable and calls no transport.
+        const first = yield* service.preview({ ...scope, communicationId })
+        const again = yield* service.preview({ ...scope, communicationId })
+
+        assert.deepStrictEqual(again, first)
+        assert.strictEqual(first.artifactId, processed.artifact.artifactId)
+        assert.strictEqual(first.status, "queued")
+        assert.strictEqual(first.attempts, 0)
+        assert.strictEqual(first.subject, processed.artifact.subject)
+        assert.isAbove(first.to.length, 0)
+        assert.strictEqual(transport.sent.length, 0)
+        assert.deepStrictEqual(yield* service.listAttempts({ ...scope, communicationId }), [])
+
+        // A send that names another rendering is refused and sends nothing.
+        const stale = yield* Effect.flip(
+          service.deliver({ ...scope, communicationId, previewedArtifactId: uuidv7() }),
+        )
+
+        assert.strictEqual(stale._tag, "CommunicationPreviewStale")
+        assert.strictEqual(transport.sent.length, 0)
+
+        // Sending the previewed rendering delivers exactly what the preview showed.
+        yield* service.deliver({ ...scope, communicationId, previewedArtifactId: first.artifactId })
+        assert.strictEqual(transport.sent.length, 1)
+        assert.strictEqual(transport.sent[0]?.html, first.html)
+        assert.strictEqual(transport.sent[0]?.subject, first.subject)
+
+        // It is sent once: a second first-send is refused.
+        const twice = yield* Effect.flip(
+          service.deliver({ ...scope, communicationId, previewedArtifactId: first.artifactId }),
+        )
+
+        assert.strictEqual(twice._tag, "CommunicationStateFailure")
+        assert.strictEqual(transport.sent.length, 1)
+      }),
+    ),
+)
+
+it.effect("keeps an append-only log of delivery attempts that a reader cannot rewrite", () =>
+  withCommunication(
+    Effect.gen(function* () {
+      const messaging = yield* MessagingService
+      yield* messaging.append(event)
+      const service = yield* CommunicationService
+      const processed = yield* service.processPurchaseOrderConfirmed({ event })
+      const { communicationId } = processed.intent
+      const previewedArtifactId = processed.artifact.artifactId
+
+      yield* service.deliver({ ...scope, communicationId, previewedArtifactId })
+      const afterFirst = yield* service.listAttempts({ ...scope, communicationId })
+      yield* service.retry({ ...scope, communicationId })
+      const afterRetry = yield* service.listAttempts({ ...scope, communicationId })
+
+      // Attempts accumulate in order, and an earlier read is not changed by a later send.
+      assert.deepStrictEqual(
+        afterRetry.map((attempt) => attempt.attemptNumber),
+        [1, 2],
+      )
+
+      assert.strictEqual(afterFirst.length, 1)
+      assert.deepStrictEqual(afterRetry[0], afterFirst[0])
+
+      // The copies handed out are frozen, so a reader cannot rewrite the record.
+      assert.isTrue(Object.isFrozen(afterRetry[0]))
+      const preview = yield* service.preview({ ...scope, communicationId })
+      assert.strictEqual(preview.attempts, 2)
+      assert.strictEqual(preview.status, "accepted")
+    }),
+  ),
+)
+
+it.effect("denies previewing, reading attempts, and sending without their capabilities", () =>
+  Effect.gen(function* () {
+    const messaging = yield* MessagingService
+    yield* messaging.append(event)
+    const service = yield* CommunicationService
+    const processed = yield* service.processPurchaseOrderConfirmed({ event })
+    const { communicationId } = processed.intent
+    const transport = yield* CommunicationTestTransport
+    const reader = { principal: otherPrincipal, tenantId, communicationId }
+
+    // Reading is granted to this caller, sending is not.
+    assert.strictEqual((yield* service.preview(reader)).communicationId, communicationId)
+
+    const denied = yield* Effect.flip(
+      service.deliver({ ...reader, previewedArtifactId: processed.artifact.artifactId }),
+    )
+
+    assert.instanceOf(denied, AuthorizationDenied)
+    assert.instanceOf(yield* Effect.flip(service.retry(reader)), AuthorizationDenied)
+
+    const stranger = {
+      principal: { userAccountId: "stranger", sessionId: "stranger-session" },
+      tenantId,
+      communicationId,
+    }
+
+    assert.instanceOf(yield* Effect.flip(service.preview(stranger)), AuthorizationDenied)
+    assert.instanceOf(yield* Effect.flip(service.listAttempts(stranger)), AuthorizationDenied)
+    assert.strictEqual(transport.sent.length, 0)
+  }).pipe(
+    Effect.provide(
+      (() => {
+        const messaging = makeMessagingTestLayer()
+
+        const authorization = makeAuthorizationTestLayer([
+          {
+            userAccountId: otherPrincipal.userAccountId,
+            tenantId,
+            capability: CommunicationCapabilities.communicationRead,
+          },
+        ])
+
+        const communication = makeCommunicationTestLayer().pipe(
+          Layer.provide(Layer.merge(messaging, authorization)),
+        )
+
+        return Layer.merge(messaging, communication)
+      })(),
+    ),
+  ),
+)
+
+it.effect("does not show or send another tenant's communication", () =>
+  withCommunication(
+    Effect.gen(function* () {
+      const messaging = yield* MessagingService
+      yield* messaging.append(event)
+      const service = yield* CommunicationService
+      const processed = yield* service.processPurchaseOrderConfirmed({ event })
+      const { communicationId } = processed.intent
+      const transport = yield* CommunicationTestTransport
+      const foreign = { principal, tenantId: otherTenantId, communicationId }
+
+      const refused = [
+        (yield* Effect.flip(service.preview(foreign)))._tag,
+        (yield* Effect.flip(service.listAttempts(foreign)))._tag,
+        (yield* Effect.flip(
+          service.deliver({ ...foreign, previewedArtifactId: processed.artifact.artifactId }),
+        ))._tag,
+        (yield* Effect.flip(service.retry(foreign)))._tag,
+      ]
+
+      assert.deepStrictEqual(refused, Array(4).fill("CommunicationNotFound"))
+
+      assert.strictEqual(transport.sent.length, 0)
+    }),
   ),
 )

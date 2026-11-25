@@ -229,6 +229,25 @@ export type NumberCandidate = Schema.Schema.Type<typeof NumberCandidate>
 
 export const PipelineFactsInput = Schema.Struct({ ...ScopedInput, legalEntityId: Uuid })
 
+export const UndeliveredInput = Schema.Struct({
+  ...ScopedInput,
+  legalEntityId: Uuid,
+  asOf: CalendarDate,
+})
+
+/**
+ * Confirmed orders with something still to deliver on a date, and what that is worth at order
+ * prices. An order cancelled since that date is not counted, because a cancellation has no date.
+ */
+export const UndeliveredOrders = Schema.Struct({
+  legalEntityId: Uuid,
+  asOf: CalendarDate,
+  orders: Schema.Int,
+  value: FinancialMajorAmount,
+})
+
+export type UndeliveredOrders = Schema.Schema.Type<typeof UndeliveredOrders>
+
 /** How many documents are at a stage, and the date of the oldest. */
 export const StageFacts = Schema.Struct({
   count: Schema.Int,
@@ -337,6 +356,10 @@ export interface SalesDocumentService {
   readonly getPipelineFacts: (
     input: Schema.Codec.Encoded<typeof PipelineFactsInput>,
   ) => Effect.Effect<SalesPipelineFacts, CommonFailure>
+  /** Confirmed orders not yet fully delivered on a date, for one legal entity. */
+  readonly getUndeliveredOrders: (
+    input: Schema.Codec.Encoded<typeof UndeliveredInput>,
+  ) => Effect.Effect<UndeliveredOrders, CommonFailure>
   /** The order's deliveries, oldest first. */
   readonly listDeliveries: (
     input: Schema.Codec.Encoded<typeof OrderQueryInput>,

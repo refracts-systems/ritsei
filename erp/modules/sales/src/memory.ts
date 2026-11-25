@@ -41,6 +41,8 @@ import {
   deriveTotal,
 } from "./store.ts"
 
+const memoryLegalEntityId = "00000000-0000-4000-8000-0000000000e1"
+
 export const makeSalesMemoryStore = (): SalesStore => {
   const customers = new Map<string, Customer>()
   const quotations = new Map<string, Quotation>()
@@ -246,8 +248,9 @@ export const makeSalesMemoryStore = (): SalesStore => {
 
     const confirmedAt = new Date()
 
-    // A memory customer has no legal entity, so the order is confirmed without a number.
-    const number = yield* numberOrder(order, null, confirmedAt)
+    // A memory customer carries no Party, so every memory order is numbered in one fixed legal
+    // entity; PostgreSQL takes it from the order or its customer and rejects a customer without one.
+    const number = yield* numberOrder(order, memoryLegalEntityId, confirmedAt)
 
     const confirmed = {
       ...order,

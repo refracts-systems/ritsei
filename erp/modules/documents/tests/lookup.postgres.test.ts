@@ -10,10 +10,14 @@ import { erpChainLayers } from "../../../../tests/support/erp-layers.ts"
 import { withTemporaryDatabase } from "../../../../tests/support/postgres-database.ts"
 import { AccountingCapabilities, GeneralLedgerService } from "../../accounting/mod.ts"
 import { BillingCapabilities, BillingService } from "../../billing/mod.ts"
-import { InventoryCapabilities } from "../../inventory/mod.ts"
+import { InventoryCapabilities, StockKeepingService } from "../../inventory/mod.ts"
 import { PartyCapabilities, PartyService } from "../../party/mod.ts"
 import { ProductCapabilities, ProductService } from "../../product/mod.ts"
-import { ProcurementCapabilities, ProcurementService } from "../../procurement/mod.ts"
+import {
+  ProcurementCapabilities,
+  ProcurementService,
+  PurchaseDocumentService,
+} from "../../procurement/mod.ts"
 import { SalesCapabilities, SalesDocumentService, SalesService } from "../../sales/mod.ts"
 import { SettlementCapabilities, SettlementService } from "../../settlement/mod.ts"
 import { TaxCapabilities } from "../../tax/mod.ts"
@@ -76,6 +80,8 @@ it.effect.skipIf(databaseUrl === undefined)(
           const salesDocuments = yield* SalesDocumentService
           const sales = yield* SalesService
           const procurement = yield* ProcurementService
+          const purchasing = yield* PurchaseDocumentService
+          const stock = yield* StockKeepingService
           const billing = yield* BillingService
           const settlement = yield* SettlementService
           const documents = yield* DocumentsService
@@ -103,6 +109,8 @@ it.effect.skipIf(databaseUrl === undefined)(
             name: "Widget",
             type: "stockable",
           })
+
+          yield* stock.registerProductItem({ ...scope, productId: widget.id })
 
           // One customer party with a customer role in each legal entity of the tenant.
           const buyer = yield* party.create({ ...scope, kind: "organization", name: "PT Pembeli" })
@@ -240,6 +248,27 @@ it.effect.skipIf(databaseUrl === undefined)(
           assert.deepStrictEqual(yield* lookup(confirmedPurchase.number!), [
             ["procurement.purchase_order", purchase.id, legalEntityId],
           ])
+
+          // A goods receipt, numbered GR/ when received, belongs to its order's legal entity.
+          const receipt = yield* purchasing.receiveValued({
+            ...scope,
+            purchaseOrderId: purchase.id,
+            warehouseId: warehouse!.id,
+            receiptDate: "2026-10-08",
+            lines: [{ purchaseOrderLineId: confirmedPurchase.lines[0]!.id, quantity: "2" }],
+          })
+
+          assert.strictEqual(receipt.number, "GR/2026/00001")
+
+          assert.deepStrictEqual(yield* lookup(receipt.number), [
+            ["procurement.receipt", receipt.id, legalEntityId],
+          ])
+
+          // A caller who cannot read purchase orders does not find the receipt either.
+          assert.deepStrictEqual(
+            yield* lookup(receipt.number, { principal: salesOnly, tenantId }),
+            [],
+          )
 
           // A quotation, numbered when sent.
           const priceList = yield* salesDocuments.createPriceList({

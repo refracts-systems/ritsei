@@ -28,6 +28,7 @@ import {
 } from "../../../../framework/modules/messaging/mod.ts"
 import {
   CreditLimitExceeded,
+  CustomerLegalEntityRequired,
   SalesOrder,
   SalesOrderConfirmationIdempotencyConflict,
   SalesOrderInvalidState,
@@ -299,6 +300,7 @@ export type OrderFulfillmentResult = Schema.Schema.Type<typeof OrderFulfillmentR
 type OrderConfirmationFailure =
   | AccountingPeriodNotOpen
   | CreditLimitExceeded
+  | CustomerLegalEntityRequired
   | FinancialEngineActivated
   | AuthorizationDenied
   | DatabaseFailure
