@@ -161,6 +161,7 @@ current system; ADRs preserve decision history.
 | [`0133`](./0133-adopt-a-partner-portal-extension-for-warranty-claims-and-royalty-disputes.md)         | Adopt a Partner Portal Extension for Warranty Claims and Royalty Disputes                        | Accepted   |
 | [`0134`](./0134-adopt-a-governance-extension-for-board-decisions-and-restricted-notes.md)             | Adopt a Governance Extension for Board Decisions and Restricted Notes                            | Accepted   |
 | [`0135`](./0135-scope-manufacturing-and-projects-and-set-their-release-order.md)                      | Scope Manufacturing and Projects and Set Their Release Order                                     | Accepted   |
+| [`0136`](./0136-adopt-per-extension-migration-chains.md)                                              | Adopt Per-Extension Migration Chains                                                             | Accepted   |
 
 <!-- adr-index:end -->
 
