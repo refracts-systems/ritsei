@@ -155,6 +155,7 @@ current system; ADRs preserve decision history.
 | [`0127`](./0127-adopt-the-kontainer-visual-language.md)                                               | Adopt the Kontainer Visual Language                                                              | Accepted   |
 | [`0128`](./0128-adopt-tiered-approvals-and-delegation.md)                                             | Adopt Tiered Approvals and Delegation                                                            | Accepted   |
 | [`0129`](./0129-adopt-situations-escalation-and-follow.md)                                            | Adopt Situations, Working-Day Escalation, and Follow                                             | Accepted   |
+| [`0130`](./0130-adopt-organization-units-and-read-only-consolidation.md)                              | Adopt Organization Units and Read-Only Consolidation                                             | Proposed   |
 
 <!-- adr-index:end -->
 
