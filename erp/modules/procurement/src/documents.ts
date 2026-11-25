@@ -554,8 +554,23 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
         .where(and(eq(purchaseReturns.tenantId, tenantId), eq(purchaseReturns.number, number)))
         .limit(20)
 
+      // A receipt belongs to the legal entity of its purchase order.
+      const received = await tx
+        .select({ id: purchaseReceipts.id, legalEntityId: purchaseOrders.legalEntityId })
+        .from(purchaseReceipts)
+        .innerJoin(
+          purchaseOrders,
+          and(
+            eq(purchaseOrders.tenantId, purchaseReceipts.tenantId),
+            eq(purchaseOrders.id, purchaseReceipts.purchaseOrderId),
+          ),
+        )
+        .where(and(eq(purchaseReceipts.tenantId, tenantId), eq(purchaseReceipts.number, number)))
+        .limit(20)
+
       return [
         ...ordered.map((row) => ({ type: "procurement.purchase_order" as const, ...row })),
+        ...received.map((row) => ({ type: "procurement.receipt" as const, ...row })),
         ...returned.map((row) => ({ type: "procurement.return" as const, ...row })),
       ].flatMap((row) =>
         row.legalEntityId === null ? [] : [{ ...row, number, legalEntityId: row.legalEntityId }],
@@ -697,6 +712,7 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
     decoded: Schema.Schema.Type<typeof ReceiveValuedInput>,
     receiptId: string,
     matching: PurchaseMatching,
+    number: string,
   ) =>
     Effect.gen(function* () {
       if (matching.status !== "confirmed") {
@@ -750,6 +766,7 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
           purchaseOrderId: decoded.purchaseOrderId,
           warehouseId: decoded.warehouseId,
           idempotencyKey: `valued:${receiptId}`,
+          number,
         })
         await tx.insert(purchaseReceiptLines).values(
           lines.map(({ line, quantity, unitOfMeasure }) => ({
@@ -803,7 +820,22 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
 
         const byLine = new Map(matching.lines.map((line) => [line.purchaseOrderLineId, line]))
 
-        if (recorded === undefined) yield* recordReceipt(decoded, receiptId, matching)
+        // The number is issued with the receipt and kept on it, so it can be found by number; a
+        // replay is given the number it already holds.
+        const allocated = yield* numbering
+          .allocate({
+            tenantId: decoded.tenantId,
+            scopeId: matching.legalEntityId,
+            documentType: "procurement.receipt",
+            documentId: receiptId,
+            documentDate: decoded.receiptDate,
+            prefix: "GR/",
+          })
+          .pipe(Effect.catchTag("SchemaError", (error) => Effect.die(error)))
+
+        if (recorded === undefined) {
+          yield* recordReceipt(decoded, receiptId, matching, allocated.number)
+        }
 
         // Goods enter stock at the purchase price against goods received not invoiced.
         const moved = yield* stock.receiveValued({
@@ -818,17 +850,6 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
             unitCost: byLine.get(requested.purchaseOrderLineId)!.unitPrice,
           })),
         })
-
-        const allocated = yield* numbering
-          .allocate({
-            tenantId: decoded.tenantId,
-            scopeId: matching.legalEntityId,
-            documentType: "procurement.receipt",
-            documentId: receiptId,
-            documentDate: decoded.receiptDate,
-            prefix: "GR/",
-          })
-          .pipe(Effect.catchTag("SchemaError", (error) => Effect.die(error)))
 
         return {
           id: receiptId,

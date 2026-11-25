@@ -42,7 +42,11 @@ export const NumberLookupInput = Schema.Struct({ ...ScopedInput, number: Trimmed
 
 /** A document found by its number: where to open it, not proof that the caller may. */
 export const NumberCandidate = Schema.Struct({
-  type: Schema.Literals(["procurement.purchase_order", "procurement.return"]),
+  type: Schema.Literals([
+    "procurement.purchase_order",
+    "procurement.receipt",
+    "procurement.return",
+  ]),
   id: Uuid,
   number: Schema.String,
   legalEntityId: Uuid,
@@ -246,7 +250,7 @@ export interface PurchaseDocumentService {
     | EventIdempotencyConflict
     | CommonFailure
   >
-  /** The purchase orders and returns with exactly this number, in any legal entity. */
+  /** The purchase orders, receipts, and returns with exactly this number, in any legal entity. */
   readonly findByNumber: (
     input: Schema.Codec.Encoded<typeof NumberLookupInput>,
   ) => Effect.Effect<ReadonlyArray<NumberCandidate>, CommonFailure>

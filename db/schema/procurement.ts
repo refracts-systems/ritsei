@@ -156,6 +156,8 @@ export const purchaseReceipts = procurementSchema.table(
     purchaseOrderId: uuid("purchase_order_id").notNull(),
     warehouseId: uuid("warehouse_id").notNull(),
     idempotencyKey: text("idempotency_key").notNull(),
+    // ADR-0095 GR/ number, issued when the receipt is recorded; null on receipts recorded before it.
+    number: text("number"),
     receivedAt: timestamp("received_at", { withTimezone: true }).defaultNow().notNull(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -169,6 +171,7 @@ export const purchaseReceipts = procurementSchema.table(
     ),
     unique("purchase_receipts_tenant_idempotency_key").on(table.tenantId, table.idempotencyKey),
     index("purchase_receipts_tenant_order_idx").on(table.tenantId, table.purchaseOrderId),
+    index("purchase_receipts_tenant_number_idx").on(table.tenantId, table.number),
     foreignKey({
       columns: [table.tenantId],
       foreignColumns: [tenants.id],
