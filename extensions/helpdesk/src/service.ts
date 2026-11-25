@@ -3,7 +3,7 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
 
-import { incidents, tickets } from "../../../db/schema/helpdesk.ts"
+import { incidents, tickets } from "../db/schema.ts"
 import { Database, uuidv7 } from "../../../framework/foundation/mod.ts"
 import {
   AuthorizationService,
