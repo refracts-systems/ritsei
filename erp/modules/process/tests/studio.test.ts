@@ -58,6 +58,7 @@ const makeAuthorization = (allow: boolean): AuthorizationServiceContract => ({
   listMembers: unused,
   listAccessibleTenants: unused,
   listDirectGrants: unused,
+  listCapabilityHolders: unused,
   suspendMember: unused,
   activateMember: unused,
   removeMember: unused,

@@ -186,6 +186,21 @@ export type NumberCandidate = Schema.Schema.Type<typeof NumberCandidate>
 
 export const PipelineFactsInput = Schema.Struct({ ...ScopedInput, legalEntityId: Uuid })
 
+export const BillMismatchInput = Schema.Struct({ ...ScopedInput, legalEntityId: Uuid })
+
+/** An open supplier bill whose billed value differs from the value cleared against receipts. */
+export const BillMismatch = Schema.Struct({
+  invoiceId: Uuid,
+  number: Schema.String,
+  partyId: Uuid,
+  invoiceDate: CalendarDate,
+  billed: FinancialMajorAmount,
+  matched: FinancialMajorAmount,
+  difference: SignedAmount,
+})
+
+export type BillMismatch = Schema.Schema.Type<typeof BillMismatch>
+
 export const NetSalesInput = Schema.Struct({
   ...ScopedInput,
   legalEntityId: Uuid,
@@ -385,6 +400,10 @@ export interface BillingService {
   readonly getPipelineFacts: (
     input: Schema.Codec.Encoded<typeof PipelineFactsInput>,
   ) => Effect.Effect<BillingPipelineFacts, CommonFailure>
+  /** Open supplier bills that differ from what was received, largest difference first. */
+  readonly listBillMismatches: (
+    input: Schema.Codec.Encoded<typeof BillMismatchInput>,
+  ) => Effect.Effect<ReadonlyArray<BillMismatch>, CommonFailure>
   /** What was sold in a period: invoice subtotals less credit note subtotals, by document date. */
   readonly netSales: (
     input: Schema.Codec.Encoded<typeof NetSalesInput>,

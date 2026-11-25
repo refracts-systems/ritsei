@@ -3,6 +3,7 @@ import * as Schema from "effect/Schema"
 
 import {
   AddTenantMembershipInput,
+  CapabilityHoldersInput,
   AuthorizationDecision,
   AuthorizationInput,
   AuthorizationService,
@@ -124,6 +125,24 @@ export const makeMemoryAuthorizationService = (
                 member.userAccountId === decoded.userAccountId && member.status === "active",
             )
             .sort((left, right) => left.tenantId.localeCompare(right.tenantId))
+        }),
+    ),
+    listCapabilityHolders: Effect.fn("AuthorizationService.listCapabilityHolders")(
+      (input: Schema.Codec.Encoded<typeof CapabilityHoldersInput>) =>
+        Effect.gen(function* () {
+          const decoded = yield* Schema.decodeUnknownEffect(CapabilityHoldersInput)(input)
+
+          return [...membershipsStore.values()]
+            .flatMap((found) =>
+              found.tenantId === decoded.tenantId &&
+              found.status === "active" &&
+              grants.has(
+                `${membershipKey(found.userAccountId, found.tenantId)}:${decoded.capability}`,
+              )
+                ? [found.userAccountId]
+                : [],
+            )
+            .toSorted()
         }),
     ),
     listDirectGrants: Effect.fn("AuthorizationService.listDirectGrants")(

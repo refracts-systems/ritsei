@@ -52,6 +52,15 @@ entering the stage. The first version is one legal entity: a branch exists only 
 and as an authorization scope kind, and no group or branch hierarchy over documents was found, so
 the mockup's zoom from group to entity to branch is not built.
 
+**Situations (gaps G-08 to G-10, ADR-0129).** The `situations` module lists what needs a person:
+an open situation per subject for a receivable past due (Settlement), a supplier bill that differs
+from what was received (Billing), and an approval pending past 2 working days (Approvals). `detect`
+opens, updates, and resolves them idempotently; `advanceEscalations` raises an untaken one to the
+flow owner after 2 working days (1 when high) and to the supervisor 2 later, over a per-legal-entity
+working calendar. Escalation notifies and never assigns. Following a flow or a subject is read-only
+and feeds an in-app inbox; `assign` takes up to 100 situations to one flow owner, all or nothing.
+Not built: a recurring job that calls `detect` and `advanceEscalations` (the worker loop in
+`erp/runtime/worker` is not generic), and e-mail.
 **KPI read (gap G-04).** `GET /insights/kpis?legalEntityId=&period=YYYY-MM` returns six figures
 beside the same figure for the previous month, joined by the `insights` module (read-only, no data
 of its own) from reads in the owning modules, each authorized by its owner: net sales (Billing,
@@ -63,6 +72,17 @@ entity without the posting rule leaves it `unavailable`; neither shows as zero, 
 by every owner is told so. Known gaps: an order cancelled since the previous month-end is not in
 the previous undelivered figure (a cancellation has no date); the base currency is not returned
 yet; there is no scope narrower than the tenant capability and the legal entity filter.
+
+**Groups and consolidation (gap G-11, ADR-0130).** `party` owns a strict tree of organization units
+above legal entities (a root group with a currency, units under it, a legal entity in at most one
+unit); a unit only selects legal entities for reads and commands still name one entity. Accounting
+owns a hand-entered exchange-rate table (the latest rate on or before the day). `GET
+/insights/group/kpis?unitId=&period=` and `GET /insights/group/statements?unitId=&from=&to=` return,
+for every entity at or under the unit, its figures, its rate, and the figures in the group currency,
+plus the totals, which totals leave an entity out, and a flag that intercompany balances are not
+eliminated. Each entity is read with the same owners and capabilities as a single-entity read; one
+that is denied or has no rate is marked, never counted as zero. Not built: HTTP routes to manage units
+and rates (service commands only), intercompany elimination, and a translation adjustment.
 
 ## E5 Cari: search over objects
 

@@ -219,7 +219,7 @@ export const makeOrgUnitService = Effect.gen(function* () {
       )
       .pipe(
         Effect.mapError((error) =>
-          isDatabaseConstraint(error, "org_units_acyclic")
+          isDatabaseConstraint(error, "org_units_acyclic", "23514")
             ? new OrgUnitInvalid({
                 tenantId: decoded.tenantId,
                 reason: "a unit cannot move under itself or its own subtree",
@@ -259,7 +259,7 @@ export const makeOrgUnitService = Effect.gen(function* () {
       )
       .pipe(
         Effect.mapError((error) =>
-          isDatabaseConstraint(error, "org_unit_members_legal_entity_fkey")
+          isDatabaseConstraint(error, "org_unit_members_legal_entity_fkey", "23503")
             ? new OrgUnitInvalid({ tenantId: decoded.tenantId, reason: "unknown legal entity" })
             : error,
         ),

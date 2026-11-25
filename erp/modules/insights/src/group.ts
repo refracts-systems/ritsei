@@ -111,6 +111,32 @@ export const makeGroupReads = Effect.fn("InsightsService.makeGroupReads")(functi
       Object.entries(figures ?? {}).map(([key, value]) => [`${key}Previous`, value]),
     )
 
+  /** An entity's KPI figures now and a period earlier, each with its own rate to the group currency. */
+  const entityPair = Effect.fn("InsightsService.entityPair")(function* (
+    scope: Scope,
+    groupCurrency: string,
+    legalEntityId: string,
+    currency: string | null,
+    kpis: Kpis | null,
+  ) {
+    const to = kpis?.to ?? ""
+
+    return {
+      current: {
+        legalEntityId,
+        currency,
+        rate: yield* rateOf(scope, currency, groupCurrency, to),
+        figures: kpis === null ? {} : figuresOf(kpis, false),
+      } satisfies EntityFigures,
+      previous: {
+        legalEntityId,
+        currency,
+        rate: yield* rateOf(scope, currency, groupCurrency, previousEnd(to)),
+        figures: kpis === null ? {} : figuresOf(kpis, true),
+      } satisfies EntityFigures,
+    }
+  })
+
   const groupKpis = Effect.fn("InsightsService.groupKpis")(function* (
     input: Schema.Codec.Encoded<typeof GroupKpisInput>,
   ) {
@@ -128,34 +154,18 @@ export const makeGroupReads = Effect.fn("InsightsService.makeGroupReads")(functi
 
     const first = read.find((kpis) => kpis !== null)
 
-    const dates = {
-      to: first?.to ?? "",
-      previousTo: previousEnd(first?.to ?? ""),
-    }
-
-    const current: Array<EntityFigures> = []
-    const previous: Array<EntityFigures> = []
-
-    for (const [index, legalEntityId] of unit.legalEntityIds.entries()) {
-      const kpis = read[index] ?? null
-      const currency = currencies.get(legalEntityId) ?? null
-      const to = kpis?.to ?? dates.to
-      const previousTo = kpis === null ? dates.previousTo : previousEnd(kpis.to)
-
-      current.push({
+    const pairs = yield* Effect.forEach(unit.legalEntityIds, (legalEntityId, index) =>
+      entityPair(
+        scope,
+        unit.currency,
         legalEntityId,
-        currency,
-        rate: yield* rateOf(scope, currency, unit.currency, to),
-        figures: kpis === null ? {} : figuresOf(kpis, false),
-      })
+        currencies.get(legalEntityId) ?? null,
+        read[index] ?? null,
+      ),
+    )
 
-      previous.push({
-        legalEntityId,
-        currency,
-        rate: yield* rateOf(scope, currency, unit.currency, previousTo),
-        figures: kpis === null ? {} : figuresOf(kpis, true),
-      })
-    }
+    const current = pairs.map((pair) => pair.current)
+    const previous = pairs.map((pair) => pair.previous)
 
     const now = consolidate(current, kpiKeys)
     const before = consolidate(previous, kpiKeys)
@@ -172,11 +182,7 @@ export const makeGroupReads = Effect.fn("InsightsService.makeGroupReads")(functi
       entities: now.entities.map((entity, index) =>
         toEntity(
           entity,
-          read[index] === null
-            ? "denied"
-            : entity.currency === null || entity.rate === null
-              ? "unavailable"
-              : "ok",
+          statusOf(read[index] === null, entity),
           before.entities[index]!.rate,
           before.entities[index],
         ),
@@ -240,11 +246,7 @@ export const makeGroupReads = Effect.fn("InsightsService.makeGroupReads")(functi
       entities: result.entities.map((entity) =>
         toEntity(
           entity,
-          denied.has(entity.legalEntityId)
-            ? "denied"
-            : entity.currency === null || entity.rate === null
-              ? "unavailable"
-              : "ok",
+          statusOf(denied.has(entity.legalEntityId), entity),
           entity.rate,
           undefined,
         ),
@@ -261,6 +263,16 @@ export const makeGroupReads = Effect.fn("InsightsService.makeGroupReads")(functi
 type PnL = Effect.Success<ReturnType<GeneralLedgerService["profitAndLoss"]>>
 
 type Sheet = Effect.Success<ReturnType<GeneralLedgerService["balanceSheet"]>>
+
+/** Whether an entity could be read and translated; a missing rate or currency is not zero. */
+const statusOf = (
+  denied: boolean,
+  entity: { readonly currency: string | null; readonly rate: string | null },
+): GroupEntity["status"] => {
+  if (denied) return "denied"
+
+  return entity.currency === null || entity.rate === null ? "unavailable" : "ok"
+}
 
 /** The last day of the month before the one a date is in. */
 const previousEnd = (day: string) =>

@@ -70,6 +70,7 @@ it.layer(TestHttpServices)("Authorization API", (it) => {
         },
         getMember: () => Effect.succeed(membership),
         listDirectGrants: () => Effect.succeed([directGrant]),
+        listCapabilityHolders: () => Effect.succeed([]),
         addMember: unused,
         listAccessibleTenants: () => Effect.succeed([membership]),
         listMembers: (input) => {

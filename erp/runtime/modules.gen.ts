@@ -30,6 +30,8 @@ import { SalesHttpGroup, SalesHttpHandlers } from "../modules/sales/http.ts"
 import { SalesModule } from "../modules/sales/mod.ts"
 import { SettlementHttpGroup, SettlementHttpHandlers } from "../modules/settlement/http.ts"
 import { SettlementModule } from "../modules/settlement/mod.ts"
+import { SituationsHttpGroup, SituationsHttpHandlers } from "../modules/situations/http.ts"
+import { SituationsModule } from "../modules/situations/mod.ts"
 import { TaxHttpGroup, TaxHttpHandlers } from "../modules/tax/http.ts"
 import { TaxModule } from "../modules/tax/mod.ts"
 
@@ -49,6 +51,7 @@ export const ErpModules: ReadonlyArray<ModuleManifest> = [
   ProductModule,
   SalesModule,
   SettlementModule,
+  SituationsModule,
   TaxModule,
 ]
 
@@ -67,6 +70,7 @@ export const ErpHttpGroups = [
   ProductHttpGroup,
   SalesHttpGroup,
   SettlementHttpGroup,
+  SituationsHttpGroup,
   TaxHttpGroup,
 ] as const
 
@@ -85,5 +89,6 @@ export const ErpHttpHandlers = [
   ProductHttpHandlers,
   SalesHttpHandlers,
   SettlementHttpHandlers,
+  SituationsHttpHandlers,
   TaxHttpHandlers,
 ] as const

@@ -1,10 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "e035e149-9260-4eda-96b5-a6cef99faee2",
+  "id": "7ed69dc6-d8b5-48b2-8788-dd1e602e0016",
   "prevIds": [
-    "7e4cfc29-9c01-4ad8-939e-60c271420809",
-    "d1ff9023-2210-45f3-81bb-5860a8626c7a"
+    "bdc8b002-e61e-40be-8725-1207b191f5d0"
   ],
   "ddl": [
     {
@@ -81,6 +80,10 @@
     },
     {
       "name": "settlement",
+      "entityType": "schemas"
+    },
+    {
+      "name": "situations",
       "entityType": "schemas"
     },
     {
@@ -547,6 +550,16 @@
     },
     {
       "values": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "name": "situation_severity",
+      "entityType": "enums",
+      "schema": "situations"
+    },
+    {
+      "values": [
         "sales",
         "purchase"
       ],
@@ -876,6 +889,12 @@
     },
     {
       "isRlsEnabled": false,
+      "name": "non_working_days",
+      "entityType": "tables",
+      "schema": "situations"
+    },
+    {
+      "isRlsEnabled": false,
       "name": "number_series",
       "entityType": "tables",
       "schema": "numbering"
@@ -1128,6 +1147,24 @@
     },
     {
       "isRlsEnabled": false,
+      "name": "follows",
+      "entityType": "tables",
+      "schema": "situations"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "inbox",
+      "entityType": "tables",
+      "schema": "situations"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "situations",
+      "entityType": "tables",
+      "schema": "situations"
+    },
+    {
+      "isRlsEnabled": false,
       "name": "source_identities",
       "entityType": "tables",
       "schema": "onboarding"
@@ -1209,6 +1246,12 @@
       "name": "workflow_runs",
       "entityType": "tables",
       "schema": "process"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "working_calendars",
+      "entityType": "tables",
+      "schema": "situations"
     },
     {
       "type": "uuid",
@@ -8352,6 +8395,71 @@
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "tenant_id",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "non_working_days"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "legal_entity_id",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "non_working_days"
+    },
+    {
+      "type": "date",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "day",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "non_working_days"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "name",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "non_working_days"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "non_working_days"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
       "default": "uuidv7()",
       "generated": null,
       "identity": null,
@@ -13076,6 +13184,396 @@
       "identity": null,
       "name": "id",
       "entityType": "columns",
+      "schema": "situations",
+      "table": "follows"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "tenant_id",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "follows"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "follows"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "flow_type",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "follows"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "subject_type",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "follows"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "subject_id",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "follows"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "follows"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "uuidv7()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "inbox"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "tenant_id",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "inbox"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "inbox"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "situation_id",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "inbox"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "event_id",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "inbox"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "kind",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "inbox"
+    },
+    {
+      "type": "situation_severity",
+      "typeSchema": "situations",
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "severity",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "inbox"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "0",
+      "generated": null,
+      "identity": null,
+      "name": "escalation_level",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "inbox"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "inbox"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "read_at",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "inbox"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "uuidv7()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "situations"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "tenant_id",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "situations"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "legal_entity_id",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "situations"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "type",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "situations"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "subject_type",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "situations"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "subject_id",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "situations"
+    },
+    {
+      "type": "situation_severity",
+      "typeSchema": "situations",
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "severity",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "situations"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "owner_id",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "situations"
+    },
+    {
+      "type": "smallint",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "0",
+      "generated": null,
+      "identity": null,
+      "name": "escalation_level",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "situations"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "escalation_due_at",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "situations"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "detected_at",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "situations"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "resolved_at",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "situations"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "situations"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "uuidv7()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
       "schema": "onboarding",
       "table": "source_identities"
     },
@@ -14432,6 +14930,58 @@
       "table": "workflow_runs"
     },
     {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "tenant_id",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "working_calendars"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "legal_entity_id",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "working_calendars"
+    },
+    {
+      "type": "smallint",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 1,
+      "default": "'{1,2,3,4,5}'",
+      "generated": null,
+      "identity": null,
+      "name": "weekdays",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "working_calendars"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "situations",
+      "table": "working_calendars"
+    },
+    {
       "nameExplicit": true,
       "columns": [
         {
@@ -15655,6 +16205,258 @@
       "entityType": "indexes",
       "schema": "sales",
       "table": "quotations"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "tenant_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "user_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "flow_type",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": "\"flow_type\" is not null",
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "follows_flow_key",
+      "entityType": "indexes",
+      "schema": "situations",
+      "table": "follows"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "tenant_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "user_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "subject_type",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "subject_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": "\"subject_id\" is not null",
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "follows_subject_key",
+      "entityType": "indexes",
+      "schema": "situations",
+      "table": "follows"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "tenant_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "user_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "event_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "inbox_user_event_key",
+      "entityType": "indexes",
+      "schema": "situations",
+      "table": "inbox"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "tenant_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "user_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "read_at",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "inbox_user_idx",
+      "entityType": "indexes",
+      "schema": "situations",
+      "table": "inbox"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "tenant_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "type",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "subject_type",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "subject_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": "\"resolved_at\" is null",
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "situations_open_subject_key",
+      "entityType": "indexes",
+      "schema": "situations",
+      "table": "situations"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "tenant_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "legal_entity_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "resolved_at",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "situations_tenant_entity_idx",
+      "entityType": "indexes",
+      "schema": "situations",
+      "table": "situations"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "tenant_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "escalation_due_at",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": "\"resolved_at\" is null and \"escalation_due_at\" is not null",
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "situations_escalation_due_idx",
+      "entityType": "indexes",
+      "schema": "situations",
+      "table": "situations"
     },
     {
       "nameExplicit": true,
@@ -17158,6 +17960,25 @@
       "entityType": "fks",
       "schema": "inventory",
       "table": "movements"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "legal_entity_id"
+      ],
+      "schemaTo": "party",
+      "tableTo": "legal_entities",
+      "columnsTo": [
+        "tenant_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "non_working_days_legal_entity_fkey",
+      "entityType": "fks",
+      "schema": "situations",
+      "table": "non_working_days"
     },
     {
       "nameExplicit": true,
@@ -18673,6 +19494,76 @@
       ],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
+      "name": "follows_tenant_id_fkey",
+      "entityType": "fks",
+      "schema": "situations",
+      "table": "follows"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "situation_id"
+      ],
+      "schemaTo": "situations",
+      "tableTo": "situations",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "inbox_situation_fkey",
+      "entityType": "fks",
+      "schema": "situations",
+      "table": "inbox"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "legal_entity_id"
+      ],
+      "schemaTo": "party",
+      "tableTo": "legal_entities",
+      "columnsTo": [
+        "tenant_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "situations_legal_entity_fkey",
+      "entityType": "fks",
+      "schema": "situations",
+      "table": "situations"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id"
+      ],
+      "schemaTo": "auth",
+      "tableTo": "tenants",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "situations_tenant_id_fkey",
+      "entityType": "fks",
+      "schema": "situations",
+      "table": "situations"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id"
+      ],
+      "schemaTo": "auth",
+      "tableTo": "tenants",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
       "name": "source_identities_tenant_id_fkey",
       "entityType": "fks",
       "schema": "onboarding",
@@ -19074,6 +19965,25 @@
       "table": "workflow_runs"
     },
     {
+      "nameExplicit": true,
+      "columns": [
+        "tenant_id",
+        "legal_entity_id"
+      ],
+      "schemaTo": "party",
+      "tableTo": "legal_entities",
+      "columnsTo": [
+        "tenant_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "working_calendars_legal_entity_fkey",
+      "entityType": "fks",
+      "schema": "situations",
+      "table": "working_calendars"
+    },
+    {
       "columns": [
         "object",
         "key"
@@ -19297,6 +20207,18 @@
     {
       "columns": [
         "tenant_id",
+        "legal_entity_id",
+        "day"
+      ],
+      "nameExplicit": false,
+      "name": "non_working_days_pkey",
+      "entityType": "pks",
+      "schema": "situations",
+      "table": "non_working_days"
+    },
+    {
+      "columns": [
+        "tenant_id",
         "order_line_id"
       ],
       "nameExplicit": false,
@@ -19456,6 +20378,17 @@
       "entityType": "pks",
       "schema": "authorization",
       "table": "tenant_memberships"
+    },
+    {
+      "columns": [
+        "tenant_id",
+        "legal_entity_id"
+      ],
+      "nameExplicit": false,
+      "name": "working_calendars_pkey",
+      "entityType": "pks",
+      "schema": "situations",
+      "table": "working_calendars"
     },
     {
       "columns": [
@@ -20085,6 +21018,36 @@
       "name": "sessions_pkey",
       "schema": "auth",
       "table": "sessions",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "follows_pkey",
+      "schema": "situations",
+      "table": "follows",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "inbox_pkey",
+      "schema": "situations",
+      "table": "inbox",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "situations_pkey",
+      "schema": "situations",
+      "table": "situations",
       "entityType": "pks"
     },
     {
@@ -23488,6 +24451,48 @@
       "table": "sessions"
     },
     {
+      "value": "(\"flow_type\" is not null and \"subject_type\" is null and \"subject_id\" is null) or\n      (\"flow_type\" is null and \"subject_type\" is not null and \"subject_id\" is not null)",
+      "name": "follows_target_check",
+      "entityType": "checks",
+      "schema": "situations",
+      "table": "follows"
+    },
+    {
+      "value": "\"kind\" in ('opened', 'escalated', 'resolved')",
+      "name": "inbox_kind_check",
+      "entityType": "checks",
+      "schema": "situations",
+      "table": "inbox"
+    },
+    {
+      "value": "\"type\" in ('receivable_overdue', 'bill_mismatch', 'approval_waiting')",
+      "name": "situations_type_check",
+      "entityType": "checks",
+      "schema": "situations",
+      "table": "situations"
+    },
+    {
+      "value": "\"escalation_level\" between 0 and 2",
+      "name": "situations_escalation_level_check",
+      "entityType": "checks",
+      "schema": "situations",
+      "table": "situations"
+    },
+    {
+      "value": "\"resolved_at\" is null or \"escalation_due_at\" is null",
+      "name": "situations_resolved_check",
+      "entityType": "checks",
+      "schema": "situations",
+      "table": "situations"
+    },
+    {
+      "value": "\"owner_id\" is null or \"escalation_due_at\" is null",
+      "name": "situations_owned_check",
+      "entityType": "checks",
+      "schema": "situations",
+      "table": "situations"
+    },
+    {
       "value": "\"source_id\" ~ '[^[:space:]]'",
       "name": "source_identities_source_id_check",
       "entityType": "checks",
@@ -23633,6 +24638,13 @@
       "entityType": "checks",
       "schema": "process",
       "table": "workflow_runs"
+    },
+    {
+      "value": "cardinality(\"weekdays\") between 1 and 7 and \"weekdays\" <@ array[1,2,3,4,5,6,7]::smallint[]",
+      "name": "working_calendars_weekdays_check",
+      "entityType": "checks",
+      "schema": "situations",
+      "table": "working_calendars"
     }
   ],
   "renames": []

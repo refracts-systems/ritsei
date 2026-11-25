@@ -202,6 +202,24 @@ export const AgingInput = Schema.Struct({
   asOf: CalendarDate,
 })
 
+export const OverdueInput = Schema.Struct({
+  ...ScopedInput,
+  legalEntityId: Uuid,
+  asOf: CalendarDate,
+})
+
+/** An open customer document past its due date by the party's payment terms. */
+export const OverdueReceivable = Schema.Struct({
+  invoiceId: Uuid,
+  partyId: Uuid,
+  number: Schema.String,
+  openAmount: SignedAmount,
+  dueDate: CalendarDate,
+  daysOverdue: Schema.Int,
+})
+
+export type OverdueReceivable = Schema.Schema.Type<typeof OverdueReceivable>
+
 export const StatementInput = Schema.Struct({
   ...ScopedInput,
   legalEntityId: Uuid,
@@ -376,6 +394,10 @@ export interface SettlementService {
   readonly aging: (
     input: Schema.Codec.Encoded<typeof AgingInput>,
   ) => Effect.Effect<AgingReport, CommonFailure>
+  /** The open customer documents past their due date on a day, most overdue first. */
+  readonly listOverdueReceivables: (
+    input: Schema.Codec.Encoded<typeof OverdueInput>,
+  ) => Effect.Effect<ReadonlyArray<OverdueReceivable>, CommonFailure>
   readonly customerStatement: (
     input: Schema.Codec.Encoded<typeof StatementInput>,
   ) => Effect.Effect<CustomerStatement, CommonFailure>
