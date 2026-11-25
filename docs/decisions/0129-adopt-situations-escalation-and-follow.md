@@ -1,6 +1,6 @@
 # ADR-0129: Adopt Situations, Working-Day Escalation, and Follow
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-25
 - Amends: None
 - Compatible with: ADR-0004, ADR-0006, ADR-0126, ADR-0128
@@ -123,18 +123,17 @@ to the flow owner, 2 more to the supervisor, and a High situation escalates afte
 - Time is subtle: a due time computed on a holiday table that changes later. Mitigation: a stored due
   instant is recomputed only when the open run is advanced, never silently shifted.
 
-## Open questions for the owner
+## Owner decisions (2026-11-25)
 
-1. **A second workflow mechanism.** AGENTS.md defers the process engine. Is a small escalation state
-   machine on the job table acceptable as the "workflow" of your decision, with a path onto
-   `pg_durable` later? If not, escalation waits for the engine and only detection and follow are built.
-2. **The calendar.** Weekdays plus a holiday table per legal entity, entered by hand (no public
-   holiday feed). Confirm, and say which weekdays count (Monday to Friday?).
-3. **Thresholds.** 1 to 30 days medium and beyond high for receivables; 2 working days for approvals.
-   Fixed in code at first, or configurable per tenant from the start?
-4. **Holders read.** Adding "who holds capability X" (tenant level) to Authorization. Confirm.
-5. **Notifications.** An in-app inbox only for now, no e-mail, because Communication is memory-only.
-   Confirm.
+The owner accepted the proposal as written:
+
+1. A small escalation state machine on the job table is the "workflow", with a path onto `pg_durable`
+   later.
+2. The calendar is weekdays plus a hand-entered holiday table per legal entity; Monday to Friday count
+   by default.
+3. Thresholds are fixed in code first.
+4. A tenant-level "who holds capability X" read is added to Authorization.
+5. Notifications go to an in-app inbox only; no e-mail.
 
 ## Validation
 
