@@ -14,7 +14,8 @@ import {
 import { StockKeepingLive } from "../../erp/modules/inventory/mod.ts"
 import { BillingCreditExposureLive, BillingLive } from "../../erp/modules/billing/mod.ts"
 import { DocumentsLive } from "../../erp/modules/documents/mod.ts"
-import { SituationsLive } from "../../erp/modules/situations/mod.ts"
+import { HelpdeskLive } from "../../extensions/helpdesk/mod.ts"
+import { SituationsLive, WorkingCalendarLive } from "../../erp/modules/situations/mod.ts"
 import { InsightsLive } from "../../erp/modules/insights/mod.ts"
 import { ExchangeRatesLive } from "../../erp/modules/accounting/mod.ts"
 import { OrgUnitsLive } from "../../erp/modules/party/mod.ts"
@@ -136,6 +137,12 @@ export const erpChainLayers = (client: Sql, grants: ReadonlyArray<Grant>) => {
     Layer.provide(Layer.mergeAll(platform, messaging, approvals, billing, settlement)),
   )
 
+  const helpdesk = HelpdeskLive.pipe(
+    Layer.provide(
+      Layer.mergeAll(platform, numbering, WorkingCalendarLive.pipe(Layer.provide(platform))),
+    ),
+  )
+
   const insights = InsightsLive.pipe(
     Layer.provide(Layer.mergeAll(ledger, orgUnits, exchangeRates, sales, billing, settlement)),
   )
@@ -165,6 +172,7 @@ export const erpChainLayers = (client: Sql, grants: ReadonlyArray<Grant>) => {
     purchasing,
     documents,
     situations,
+    helpdesk,
     insights,
     orgUnits,
     exchangeRates,

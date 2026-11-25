@@ -57,7 +57,8 @@ import { TaxLive } from "../modules/tax/mod.ts"
 import { BillingCreditExposureLive, BillingLive } from "../modules/billing/mod.ts"
 import { SettlementLive } from "../modules/settlement/mod.ts"
 import { DocumentsLive } from "../modules/documents/mod.ts"
-import { SituationsLive } from "../modules/situations/mod.ts"
+import { HelpdeskLive } from "../../extensions/helpdesk/mod.ts"
+import { SituationsLive, WorkingCalendarLive } from "../modules/situations/mod.ts"
 import { InsightsLive } from "../modules/insights/mod.ts"
 import { ExchangeRatesLive } from "../modules/accounting/mod.ts"
 import { OrgUnitsLive } from "../modules/party/mod.ts"
@@ -299,6 +300,16 @@ export const serviceLayers = (
   const OrgUnitServiceLive = OrgUnitsLive.pipe(Layer.provide(BusinessRequirements))
   const ExchangeRateServiceLive = ExchangeRatesLive.pipe(Layer.provide(BusinessRequirements))
 
+  const HelpdeskServiceLive = HelpdeskLive.pipe(
+    Layer.provide(
+      Layer.mergeAll(
+        BusinessRequirements,
+        NumberingServiceLive,
+        WorkingCalendarLive.pipe(Layer.provide(BusinessRequirements)),
+      ),
+    ),
+  )
+
   const SituationsServiceLive = SituationsLive.pipe(
     Layer.provide(
       Layer.mergeAll(
@@ -366,6 +377,7 @@ export const serviceLayers = (
     SettlementServiceLive,
     DocumentsServiceLive,
     SituationsServiceLive,
+    HelpdeskServiceLive,
     InsightsServiceLive,
     OrgUnitServiceLive,
     ExchangeRateServiceLive,

@@ -213,3 +213,12 @@ export {
   situationsSchema,
   workingCalendars,
 } from "./situations.ts"
+
+export {
+  helpdeskSchema,
+  incidents,
+  incidentStatus,
+  ticketPriority,
+  tickets,
+  ticketStatus,
+} from "./helpdesk.ts"

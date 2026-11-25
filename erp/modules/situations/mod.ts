@@ -41,3 +41,10 @@ export {
 export { SituationsLive, makeSituationsService } from "./src/layers.ts"
 
 export { SituationsModule } from "./manifest.ts"
+
+export {
+  DueAfterInput,
+  makeWorkingCalendar,
+  WorkingCalendar,
+  WorkingCalendarLive,
+} from "./src/working-calendar.ts"

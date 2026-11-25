@@ -163,14 +163,20 @@ export const analyzePublicPackageImports = (
   return [...new Set(failures)].toSorted()
 }
 
+/**
+ * The runtime is the composition root of the whole product: it assembles framework, ERP, and
+ * extension modules, so it belongs to no layer (ADR-0091).
+ */
 const layerOf = (path: string) =>
-  path.startsWith("framework/")
-    ? "framework"
-    : path.startsWith("erp/")
-      ? "erp"
-      : path.startsWith("extensions/")
-        ? "extensions"
-        : undefined
+  path.startsWith("erp/runtime/")
+    ? undefined
+    : path.startsWith("framework/")
+      ? "framework"
+      : path.startsWith("erp/")
+        ? "erp"
+        : path.startsWith("extensions/")
+          ? "extensions"
+          : undefined
 
 const forbiddenLayers: ReadonlyMap<string, readonly string[]> = new Map([
   ["framework", ["erp", "extensions"]],

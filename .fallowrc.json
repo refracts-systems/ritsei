@@ -296,7 +296,8 @@
           "framework-platform",
           "framework-modules",
           "database",
-          "tooling"
+          "tooling",
+          "extensions"
         ]
       },
       {
