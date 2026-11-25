@@ -87,6 +87,7 @@ export const toSalesOrder = (
     readonly customerId: string
     readonly quotationId: string | null
     readonly status: "draft" | "confirmed" | "cancelled"
+    readonly number: string | null
     readonly confirmedAt: Date | null
     readonly total: string
   },
@@ -97,6 +98,7 @@ export const toSalesOrder = (
   customerId: row.customerId,
   quotationId: row.quotationId,
   status: row.status,
+  number: row.number,
   confirmedAt: row.confirmedAt?.toISOString() ?? null,
   total: row.total,
   lines: lines.map(({ itemId, quantity, unitPrice }) => ({ itemId, quantity, unitPrice })),
@@ -118,6 +120,17 @@ export interface CreditContext {
 export type CreditCheck = (
   context: CreditContext,
 ) => Effect.Effect<void, CreditLimitExceeded | DatabaseFailure>
+
+/**
+ * Allocates the ADR-0095 number of an order being confirmed, in the confirmation transaction. The
+ * legal entity is the order's, else its customer's; null when neither has one, and then the order is
+ * confirmed without a number.
+ */
+export type NumberOrder = (
+  order: SalesOrder,
+  legalEntityId: string | null,
+  confirmedAt: Date,
+) => Effect.Effect<string | null, DatabaseFailure>
 
 export interface SalesStore {
   readonly listCustomers: (
@@ -156,6 +169,7 @@ export interface SalesStore {
       order: SalesOrder,
     ) => Effect.Effect<unknown, EventIdempotencyConflict | DatabaseFailure | Schema.SchemaError>,
     checkCredit: CreditCheck,
+    numberOrder: NumberOrder,
   ) => Effect.Effect<
     ConfirmationMutation,
     | CreditLimitExceeded

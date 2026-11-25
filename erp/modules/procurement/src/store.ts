@@ -63,6 +63,7 @@ export const purchaseOrderSelection = {
   tenantId: purchaseOrders.tenantId,
   supplierAccountId: purchaseOrders.supplierAccountId,
   status: purchaseOrders.status,
+  number: purchaseOrders.number,
   confirmedAt: purchaseOrders.confirmedAt,
   total: purchaseOrders.total,
 }
@@ -169,6 +170,7 @@ export const toPurchaseOrder = (
     readonly tenantId: string
     readonly supplierAccountId: string
     readonly status: "draft" | "confirmed" | "cancelled"
+    readonly number: string | null
     readonly confirmedAt: Date | null
     readonly total: string
   },
@@ -178,6 +180,7 @@ export const toPurchaseOrder = (
   tenantId: row.tenantId,
   supplierAccountId: row.supplierAccountId,
   status: row.status,
+  number: row.number,
   confirmedAt: row.confirmedAt?.toISOString() ?? null,
   total: row.total,
   lines,

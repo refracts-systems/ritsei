@@ -39,6 +39,7 @@ const quotation = {
   tenantId,
   customerId,
   status: "draft" as const,
+  number: null,
   total: "10.00",
 }
 
@@ -48,6 +49,7 @@ const draftOrder = {
   customerId,
   quotationId,
   status: "draft" as const,
+  number: null,
   confirmedAt: null,
   total: "10.00",
   lines: [{ itemId, quantity: "1", unitPrice: "10.00" }],
@@ -56,6 +58,7 @@ const draftOrder = {
 const confirmedOrder = {
   ...draftOrder,
   status: "confirmed" as const,
+  number: "SO/2026/00001",
   confirmedAt: "2026-09-13T00:00:00.000Z",
 }
 
@@ -67,6 +70,7 @@ const documentQuotation: SalesQuotationType = {
   customerId,
   legalEntityId: "018f2000-0000-7000-8000-000000000006",
   status: "draft",
+  number: null,
   validUntil: "2026-12-31",
   total: "10.00",
   lines: [],

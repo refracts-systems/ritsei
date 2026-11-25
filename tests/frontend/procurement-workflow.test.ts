@@ -43,6 +43,7 @@ const legacyOrder = (status: string) => ({
   tenantId,
   supplierAccountId,
   status,
+  number: status === "draft" ? null : "PO/2026/00001",
   confirmedAt: status === "draft" ? null : "2026-09-13T12:00:00.000Z",
   total: "25.00",
   lines: [{ id: orderLineId, itemId: productId, quantity: "2", unitPrice: "12.50" }],

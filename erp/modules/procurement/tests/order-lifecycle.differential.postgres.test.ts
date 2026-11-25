@@ -6,6 +6,7 @@ import * as Result from "effect/Result"
 import { uuidv7 } from "../../../../framework/foundation/mod.ts"
 import { makeAuthorizationTestLayer } from "../../../../framework/modules/authorization/mod.ts"
 import { makeMessagingTestLayer } from "../../../../framework/modules/messaging/mod.ts"
+import { makeNumberingTestLayer } from "../../../../framework/modules/numbering/mod.ts"
 import { runMigrations } from "../../../../framework/platform/mod.ts"
 import { seedErpFixture } from "../../../../tests/support/erp-fixture.ts"
 import { erpChainLayers } from "../../../../tests/support/erp-layers.ts"
@@ -102,7 +103,9 @@ it.effect.skipIf(databaseUrl === undefined)(
       const party = makePartyTestLayer().pipe(Layer.provide(authorization))
 
       const procurementLayer = makeProcurementTestLayer().pipe(
-        Layer.provide(Layer.mergeAll(authorization, party, makeMessagingTestLayer())),
+        Layer.provide(
+          Layer.mergeAll(authorization, party, makeMessagingTestLayer(), makeNumberingTestLayer()),
+        ),
       )
 
       const fromMemory = yield* Effect.gen(function* () {

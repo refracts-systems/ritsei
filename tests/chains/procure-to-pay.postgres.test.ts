@@ -34,6 +34,13 @@ import { erpChainLayers } from "../support/erp-layers.ts"
 import { withTemporaryDatabase } from "../support/postgres-database.ts"
 
 const databaseUrl = process.env["DATABASE_URL"]
+
+/** The prefix and the value of a document number, whatever its fiscal year. */
+const documentNumberParts = (number: string | null | undefined) => [
+  number?.split("/")[0],
+  number?.split("/")[2],
+]
+
 const buyer = { userAccountId: "p2p-buyer", sessionId: "p2p-buyer-session" }
 const approver = { userAccountId: "p2p-approver", sessionId: "p2p-approver-session" }
 
@@ -406,6 +413,14 @@ it.effect.skipIf(databaseUrl === undefined)(
           assert.deepStrictEqual(
             flow.nodes.filter((node) => node.current).map((node) => node.id),
             [secondBill.id],
+          )
+
+          // The purchase order carries the number it was confirmed with.
+          assert.deepStrictEqual(
+            documentNumberParts(
+              flow.nodes.find((node) => node.type === "procurement.purchase_order")?.number,
+            ),
+            ["PO", "00001"],
           )
           assert.deepStrictEqual(
             (yield* documents.chain({

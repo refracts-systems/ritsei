@@ -181,7 +181,7 @@ export const makeDocumentsService = Effect.gen(function* () {
         {
           type: "sales.order",
           id: order.id,
-          number: null,
+          number: order.number,
           state: order.status,
           amount: order.total,
           date: instantDate(order.confirmedAt),
@@ -213,7 +213,7 @@ export const makeDocumentsService = Effect.gen(function* () {
         {
           type: "procurement.purchase_order",
           id: order.id,
-          number: null,
+          number: order.number,
           state: order.status,
           amount: order.total,
           date: instantDate(order.confirmedAt),
@@ -263,7 +263,7 @@ export const makeDocumentsService = Effect.gen(function* () {
             {
               type: "sales.quotation",
               id: quotation.id,
-              number: null,
+              number: quotation.number,
               state: quotation.status,
               amount: quotation.total,
               date: null,

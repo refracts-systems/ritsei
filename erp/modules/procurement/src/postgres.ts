@@ -27,6 +27,7 @@ import type { Principal as PrincipalSchema } from "../../../../framework/modules
 import { AuthorizationService } from "../../../../framework/modules/authorization/mod.ts"
 import { InventoryService } from "../../inventory/mod.ts"
 import { MessagingService } from "../../../../framework/modules/messaging/mod.ts"
+import { NumberingService } from "../../../../framework/modules/numbering/mod.ts"
 import { PartyService } from "../../party/mod.ts"
 import { ProcurementCapabilities } from "./capabilities.ts"
 import { PurchaseApprovalSubject } from "./documents-contract.ts"
@@ -101,6 +102,7 @@ export type CancelPurchaseOrderOutcome = Data.TaggedEnum<{
       readonly tenantId: string
       readonly supplierAccountId: string
       readonly status: "draft" | "confirmed" | "cancelled"
+      readonly number: string | null
       readonly confirmedAt: string | null
       readonly total: string
       readonly lines: readonly {
@@ -126,6 +128,7 @@ export type ConfirmPurchaseOrderOutcome = Data.TaggedEnum<{
       readonly tenantId: string
       readonly supplierAccountId: string
       readonly status: "draft" | "confirmed" | "cancelled"
+      readonly number: string | null
       readonly confirmedAt: string | null
       readonly total: string
       readonly lines: readonly {
@@ -145,6 +148,7 @@ export type ConfirmPurchaseOrderOutcome = Data.TaggedEnum<{
       readonly tenantId: string
       readonly supplierAccountId: string
       readonly status: "draft" | "confirmed" | "cancelled"
+      readonly number: string | null
       readonly confirmedAt: string | null
       readonly total: string
       readonly lines: readonly {
@@ -165,6 +169,7 @@ export const makeProcurementService = Effect.gen(function* () {
   const authorization = yield* AuthorizationService
   const party = yield* PartyService
   const messaging = yield* MessagingService
+  const numbering = yield* NumberingService
   const approvalsOption = yield* Effect.serviceOption(ApprovalService)
   const clock = yield* Clock.Clock
   const now = () => new Date(clock.currentTimeMillisUnsafe())
@@ -597,6 +602,41 @@ export const makeProcurementService = Effect.gen(function* () {
 
               const confirmedAt = now()
 
+              // The number belongs to the supplier's legal entity (ADR-0095), the same one the
+              // receipt takes; it is allocated in this transaction and returned on a retry.
+              const [account] = yield* database.query(
+                (db) =>
+                  db
+                    .select({ supplierRelationshipId: supplierAccounts.supplierRelationshipId })
+                    .from(supplierAccounts)
+                    .where(
+                      and(
+                        eq(supplierAccounts.tenantId, decoded.tenantId),
+                        eq(supplierAccounts.id, row.supplierAccountId),
+                      ),
+                    ),
+                "procurement.purchase_order.confirm.supplier",
+              )
+
+              const relationship = yield* party
+                .getRelationship({
+                  principal: decoded.principal,
+                  tenantId: decoded.tenantId,
+                  relationshipId: account!.supplierRelationshipId,
+                })
+                .pipe(Effect.catchTag("PartyRelationshipNotFound", Effect.die))
+
+              const allocated = yield* numbering
+                .allocate({
+                  tenantId: decoded.tenantId,
+                  scopeId: relationship.legalEntityId,
+                  documentType: "procurement.purchase_order",
+                  documentId: row.id,
+                  documentDate: confirmedAt.toISOString().slice(0, 10),
+                  prefix: "PO/",
+                })
+                .pipe(Effect.catchTag("SchemaError", (error) => Effect.die(error)))
+
               const [confirmed] = yield* database.query(
                 (db) =>
                   db
@@ -604,6 +644,8 @@ export const makeProcurementService = Effect.gen(function* () {
                     .set({
                       status: "confirmed",
                       confirmationIdempotencyKey: normalizedIdempotencyKey,
+                      number: allocated.number,
+                      legalEntityId: relationship.legalEntityId,
                       confirmedAt,
                       updatedAt: confirmedAt,
                     })

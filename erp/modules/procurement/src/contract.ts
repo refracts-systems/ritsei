@@ -74,10 +74,17 @@ export const PurchaseOrder = Schema.Struct({
   tenantId: Uuid,
   supplierAccountId: Uuid,
   status: PurchaseOrderStatus,
+  /** The ADR-0095 number, allocated at confirmation; a record without the key decodes as null. */
+  number: Schema.NullOr(NonEmptyString).pipe(Schema.withDecodingDefaultKey(Effect.succeed(null))),
   confirmedAt: Schema.NullOr(InstantString),
   total: FinancialMajorAmount,
   lines: Schema.Array(PurchaseOrderLineSnapshot).check(Schema.isMinLength(1)),
 })
+  .check(
+    Schema.makeFilter((order) => order.status !== "draft" || order.number === null, {
+      expected: "a draft purchase order without a number",
+    }),
+  )
   .check(
     Schema.makeFilter(
       (order) =>

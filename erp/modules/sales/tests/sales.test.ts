@@ -12,6 +12,7 @@ import {
   makeMessagingTestLayer,
   MessagingService,
 } from "../../../../framework/modules/messaging/mod.ts"
+import { makeNumberingTestLayer } from "../../../../framework/modules/numbering/mod.ts"
 import {
   ConfirmOrderInput,
   CreateCustomerInput,
@@ -82,7 +83,9 @@ const withSales = <A, E>(
 
   return Effect.provide(
     program,
-    makeSalesTestLayer().pipe(Layer.provide(Layer.merge(authorizationLayer, messaging))),
+    makeSalesTestLayer().pipe(
+      Layer.provide(Layer.mergeAll(authorizationLayer, messaging, makeNumberingTestLayer())),
+    ),
   )
 }
 

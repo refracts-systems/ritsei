@@ -61,6 +61,15 @@ Approvals has no memory implementation, so approval gating is verified against P
 Enforced by: `src/order-lifecycle.ts`; `tests/order-lifecycle.test.ts`;
 `tests/order-lifecycle.differential.postgres.test.ts`; the unique constraint above.
 
+### `PRC-NUM-1` A purchase order is numbered when confirmed
+
+`confirmPurchaseOrder` gives the order `PO/<fiscal year>/<value>` from the gapless series of the
+supplier's legal entity (ADR-0095), which it records on the order, in the confirmation transaction: a rollback returns the value, and
+a repeated confirmation returns the number already issued. A draft has none (PostgreSQL rejects a draft
+with a number), and a new fiscal year restarts at 1. Resolving the legal entity reads the supplier's
+relationship through Party, so confirming needs `party.party_relationship.read` as well. The date of the
+number is the UTC date of the confirmation.
+
 ### `PRC-PO-4` A purchase order outside the tenant is not found
 
 Reads and writes are tenant scoped, and a missing or foreign-tenant order is `PurchaseOrderNotFound`.
@@ -170,18 +179,18 @@ currencies, supplier communication, and Process Studio publication are not suppo
 
 ## Authority Matrix
 
-| Fact or responsibility | Authority | Current rule |
-| --- | --- | --- |
-| Party identity, supplier role, Legal Entity, supplier relationship | Party | Procurement consumes the public Party relationship contract |
-| Tenant-local usable supplier identity | Procurement `SupplierAccount` | References one active Party supplier relationship |
-| Supplier prices, purchase orders, receipts, returns | Procurement | PostgreSQL-backed owner state |
-| Approval policy, requests, and decisions | Approvals (framework) | Procurement asks and enforces the result (`PRC-REL-1`) |
-| Tax code selection and rates | Tax | Procurement asks Tax for default codes; it computes no rate |
-| Physical stock, valuation, and movement | Inventory | Receipts and returns move stock through the public Inventory contract |
-| Supplier bills, supplier credit notes, three-way match, payables | Billing | Billing matches against Procurement's receipt and return quantities (`BIL-BILL-1`) |
-| Payments to suppliers | Settlement | Not a Procurement fact |
-| Journals, accounts, periods | Accounting | Reached through Inventory and Billing postings; Procurement posts none |
-| External supplier transmission and acknowledgement | Integrations plus Procurement contract | Not implemented |
+| Fact or responsibility                                             | Authority                              | Current rule                                                                       |
+| ------------------------------------------------------------------ | -------------------------------------- | ---------------------------------------------------------------------------------- |
+| Party identity, supplier role, Legal Entity, supplier relationship | Party                                  | Procurement consumes the public Party relationship contract                        |
+| Tenant-local usable supplier identity                              | Procurement `SupplierAccount`          | References one active Party supplier relationship                                  |
+| Supplier prices, purchase orders, receipts, returns                | Procurement                            | PostgreSQL-backed owner state                                                      |
+| Approval policy, requests, and decisions                           | Approvals (framework)                  | Procurement asks and enforces the result (`PRC-REL-1`)                             |
+| Tax code selection and rates                                       | Tax                                    | Procurement asks Tax for default codes; it computes no rate                        |
+| Physical stock, valuation, and movement                            | Inventory                              | Receipts and returns move stock through the public Inventory contract              |
+| Supplier bills, supplier credit notes, three-way match, payables   | Billing                                | Billing matches against Procurement's receipt and return quantities (`BIL-BILL-1`) |
+| Payments to suppliers                                              | Settlement                             | Not a Procurement fact                                                             |
+| Journals, accounts, periods                                        | Accounting                             | Reached through Inventory and Billing postings; Procurement posts none             |
+| External supplier transmission and acknowledgement                 | Integrations plus Procurement contract | Not implemented                                                                    |
 
 No package may mutate Procurement tables except Procurement. Procurement must not mutate Party,
 Inventory, Billing, Accounting, Messaging, Process, or integration tables directly.
@@ -235,12 +244,12 @@ absent -> draft -> confirmed -> cancelled
 
 All other transitions are invalid.
 
-| Transition or query | Preconditions | Effect | Capability | Retry behavior | Public business failure |
-| --- | --- | --- | --- | --- | --- |
-| `absent -> draft` | Supplier Account exists in the Tenant; at least one valid line | Atomically persist header and lines; derive total | `procurement.purchase_order.create` | No idempotency identity; a retry may create another draft | `SupplierAccountNotFound` |
-| read | Order exists in the Tenant | Return draft, confirmed, or cancelled snapshot | `procurement.purchase_order.read` | Safe repeat | `PurchaseOrderNotFound` |
-| `draft -> confirmed` | Current state is draft | Record confirmation identity and timestamp; freeze header and lines | `procurement.purchase_order.confirm` | Same key and order returns the original result; another key or order conflicts | `PurchaseOrderConfirmationIdempotencyConflict`, `PurchaseOrderInvalidState`, `PurchaseOrderNotFound` |
-| `confirmed -> cancelled` | Current state is confirmed | Change only terminal status and private update timestamp | `procurement.purchase_order.cancel` | Natural idempotency: cancelled returns the existing result | `PurchaseOrderInvalidState`, `PurchaseOrderNotFound` |
+| Transition or query      | Preconditions                                                  | Effect                                                              | Capability                           | Retry behavior                                                                 | Public business failure                                                                              |
+| ------------------------ | -------------------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| `absent -> draft`        | Supplier Account exists in the Tenant; at least one valid line | Atomically persist header and lines; derive total                   | `procurement.purchase_order.create`  | No idempotency identity; a retry may create another draft                      | `SupplierAccountNotFound`                                                                            |
+| read                     | Order exists in the Tenant                                     | Return draft, confirmed, or cancelled snapshot                      | `procurement.purchase_order.read`    | Safe repeat                                                                    | `PurchaseOrderNotFound`                                                                              |
+| `draft -> confirmed`     | Current state is draft                                         | Record confirmation identity and timestamp; freeze header and lines | `procurement.purchase_order.confirm` | Same key and order returns the original result; another key or order conflicts | `PurchaseOrderConfirmationIdempotencyConflict`, `PurchaseOrderInvalidState`, `PurchaseOrderNotFound` |
+| `confirmed -> cancelled` | Current state is confirmed                                     | Change only terminal status and private update timestamp            | `procurement.purchase_order.cancel`  | Natural idempotency: cancelled returns the existing result                     | `PurchaseOrderInvalidState`, `PurchaseOrderNotFound`                                                 |
 
 A draft has no committed effect and therefore is not cancelled. A mistaken confirmed order is
 corrected by cancelling it and creating a new draft. Reopening or editing a confirmed/cancelled row
@@ -431,22 +440,22 @@ internals.
 
 ## Implementation Map
 
-| Concern | Owner path |
-| --- | --- |
-| Public schemas and service contract | `erp/modules/procurement/src/contract.ts` |
-| Public tagged errors | `erp/modules/procurement/src/errors.ts` |
-| Service compatibility surface | `erp/modules/procurement/src/service.ts` |
-| Semantic persistence port | `erp/modules/procurement/src/store.ts` |
-| PostgreSQL implementation | `erp/modules/procurement/src/postgres.ts` |
-| Deterministic test implementation | `erp/modules/procurement/src/memory.ts` |
-| Named production/test layers | `erp/modules/procurement/src/layers.ts` |
-| Public package exports | `erp/modules/procurement/mod.ts` |
-| Capability constants | `erp/modules/procurement/src/capabilities.ts` |
-| Closed authorization catalog | `framework/modules/authorization/src/capabilities.ts` |
-| Drizzle schema | `db/schema/procurement.ts` |
-| Migration history | `db/migrations/` |
-| Contract tests | `erp/modules/procurement/tests/procurement.test.ts` |
-| PostgreSQL invariant tests | `erp/modules/procurement/tests/procurement.postgres.test.ts` |
+| Concern                             | Owner path                                                   |
+| ----------------------------------- | ------------------------------------------------------------ |
+| Public schemas and service contract | `erp/modules/procurement/src/contract.ts`                    |
+| Public tagged errors                | `erp/modules/procurement/src/errors.ts`                      |
+| Service compatibility surface       | `erp/modules/procurement/src/service.ts`                     |
+| Semantic persistence port           | `erp/modules/procurement/src/store.ts`                       |
+| PostgreSQL implementation           | `erp/modules/procurement/src/postgres.ts`                    |
+| Deterministic test implementation   | `erp/modules/procurement/src/memory.ts`                      |
+| Named production/test layers        | `erp/modules/procurement/src/layers.ts`                      |
+| Public package exports              | `erp/modules/procurement/mod.ts`                             |
+| Capability constants                | `erp/modules/procurement/src/capabilities.ts`                |
+| Closed authorization catalog        | `framework/modules/authorization/src/capabilities.ts`        |
+| Drizzle schema                      | `db/schema/procurement.ts`                                   |
+| Migration history                   | `db/migrations/`                                             |
+| Contract tests                      | `erp/modules/procurement/tests/procurement.test.ts`          |
+| PostgreSQL invariant tests          | `erp/modules/procurement/tests/procurement.postgres.test.ts` |
 
 Persistence tables, repositories, Drizzle query types, confirmation keys, and migration helpers are
 private and must not be re-exported.

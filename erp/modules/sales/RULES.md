@@ -138,6 +138,16 @@ Why: [ADR-0101](../../../docs/decisions/0101-coordinate-sales-delivery-with-inve
 Phase 5 outcome (2026-11-24): this rule stays on its PostgreSQL transaction (ADR-0124). Its pilot
 model and story were removed on 2026-11-24; they are in git history at `821d88ce`.
 
+### `SAL-NUM-1` A quotation is numbered when sent, an order when confirmed
+
+`sendQuotation` gives the quotation `QT/<fiscal year>/<value>` and `confirmOrder` gives the order
+`SO/<fiscal year>/<value>` from the gapless series of the document's legal entity (ADR-0095), in the
+transaction that changes the status: a rollback returns the value, and repeating the command returns
+the number already issued. A draft has none (PostgreSQL rejects a draft with a number), a number never
+changes once issued, and a new fiscal year restarts at 1. The legal entity of an order is its own, else
+its customer's; an order whose customer has no legal entity (a legacy customer, `SAL-CUST-2`) is
+confirmed without a number. The date of the number is the UTC date of the confirmation or sending.
+
 ## Position
 
 Sales owns customers in their Sales role, price lists, quotations, sales orders, and delivery
@@ -166,18 +176,18 @@ fulfillment.
 
 ## Authority matrix
 
-| Fact or responsibility | Authority | Current rule |
-| --- | --- | --- |
-| Tenant and authenticated principal | Identity / API composition | Every service input includes tenant and principal context |
-| Party identity, customer relationship, legal entity | Party | A document customer references an active Party customer relationship (`SAL-CUST-2`) |
-| Customer in its Sales role, credit limit, price list assignment | Sales | Tenant-local, email-normalized |
-| Price lists, quotations, sales orders, deliveries | Sales | PostgreSQL is the canonical source |
-| Tax code selection and rates | Tax | Sales asks Tax for default codes; it computes no rate |
-| Stock, availability, valuation, and movements | Inventory | Issued by Process on delivery (`SAL-DLV-2`); Sales item IDs are product references |
-| Invoices, credit notes, receivables | Billing | Billing invoices delivered quantity and answers credit exposure (`SAL-CREDIT-1`) |
-| Journals, accounts, periods | Accounting | Reached only through Billing and Inventory postings |
-| Confirmation event envelope and outbox delivery | Messaging plus Sales event contract | Sales supplies event meaning; Messaging owns delivery |
-| Delivery coordination across Sales and Inventory | Process (`order_to_cash`) | One transaction through public contracts |
+| Fact or responsibility                                          | Authority                           | Current rule                                                                        |
+| --------------------------------------------------------------- | ----------------------------------- | ----------------------------------------------------------------------------------- |
+| Tenant and authenticated principal                              | Identity / API composition          | Every service input includes tenant and principal context                           |
+| Party identity, customer relationship, legal entity             | Party                               | A document customer references an active Party customer relationship (`SAL-CUST-2`) |
+| Customer in its Sales role, credit limit, price list assignment | Sales                               | Tenant-local, email-normalized                                                      |
+| Price lists, quotations, sales orders, deliveries               | Sales                               | PostgreSQL is the canonical source                                                  |
+| Tax code selection and rates                                    | Tax                                 | Sales asks Tax for default codes; it computes no rate                               |
+| Stock, availability, valuation, and movements                   | Inventory                           | Issued by Process on delivery (`SAL-DLV-2`); Sales item IDs are product references  |
+| Invoices, credit notes, receivables                             | Billing                             | Billing invoices delivered quantity and answers credit exposure (`SAL-CREDIT-1`)    |
+| Journals, accounts, periods                                     | Accounting                          | Reached only through Billing and Inventory postings                                 |
+| Confirmation event envelope and outbox delivery                 | Messaging plus Sales event contract | Sales supplies event meaning; Messaging owns delivery                               |
+| Delivery coordination across Sales and Inventory                | Process (`order_to_cash`)           | One transaction through public contracts                                            |
 
 No package may mutate Sales tables except Sales. Consumers use the public Sales package contract and
 must not import `db/schema/sales.ts`, private stores, or Drizzle query types.
@@ -196,7 +206,8 @@ response must reconcile by reading the record; it must not assume that no row wa
 
 A Quotation contains a UUIDv7 identity, tenant, customer and legal entity, status `draft`, `sent`,
 `accepted`, `rejected`, or `expired`, a `validUntil` date, priced lines with list price, discount,
-net unit price, and tax code, and a derived total (`SAL-QUOT-1`, `SAL-QUOT-2`). Revision of a sent
+net unit price, and tax code, a document number from sending (`SAL-NUM-1`), and a derived total
+(`SAL-QUOT-1`, `SAL-QUOT-2`). Revision of a sent
 quotation and external customer acceptance are not supported.
 
 ### SalesOrder
@@ -208,6 +219,7 @@ A SalesOrder contains:
 - tenant-local Customer identity;
 - an optional tenant-local Quotation identity matching the same Customer;
 - status `draft`, `confirmed`, or `cancelled`;
+- a document number from confirmation (`SAL-NUM-1`);
 - confirmation timestamp and idempotency identity after confirmation;
 - at least one immutable order line at the public snapshot boundary;
 - opaque Inventory item UUIDs, positive PostgreSQL-bigint quantities, and exact two-decimal unit
@@ -320,24 +332,24 @@ activating one.
 
 | Concern                                 | Owner path                                                                          |
 | --------------------------------------- | ----------------------------------------------------------------------------------- |
-| Public schemas and service contract     | `erp/modules/sales/src/contract.ts`                                                     |
-| Public tagged errors                    | `erp/modules/sales/src/errors.ts`                                                       |
-| Service authorization and orchestration | `erp/modules/sales/src/service.ts`                                                      |
-| Semantic persistence port               | `erp/modules/sales/src/store.ts`                                                        |
-| PostgreSQL implementation               | `erp/modules/sales/src/postgres.ts`                                                     |
-| Deterministic memory implementation     | `erp/modules/sales/src/memory.ts`                                                       |
-| Named production/test layers            | `erp/modules/sales/src/layers.ts`                                                       |
-| Public package exports                  | `erp/modules/sales/mod.ts`                                                              |
-| Capability constants                    | `erp/modules/sales/src/capabilities.ts`                                                 |
+| Public schemas and service contract     | `erp/modules/sales/src/contract.ts`                                                 |
+| Public tagged errors                    | `erp/modules/sales/src/errors.ts`                                                   |
+| Service authorization and orchestration | `erp/modules/sales/src/service.ts`                                                  |
+| Semantic persistence port               | `erp/modules/sales/src/store.ts`                                                    |
+| PostgreSQL implementation               | `erp/modules/sales/src/postgres.ts`                                                 |
+| Deterministic memory implementation     | `erp/modules/sales/src/memory.ts`                                                   |
+| Named production/test layers            | `erp/modules/sales/src/layers.ts`                                                   |
+| Public package exports                  | `erp/modules/sales/mod.ts`                                                          |
+| Capability constants                    | `erp/modules/sales/src/capabilities.ts`                                             |
 | Drizzle schema                          | `db/schema/sales.ts`                                                                |
-| HTTP group, handlers, error mapping | `erp/modules/sales/http.ts` |
-| Document flow service | `erp/modules/sales/src/documents.ts`, `erp/modules/sales/src/documents-contract.ts` |
-| Delivery with stock issue | `erp/modules/process/src/order-to-cash.ts` |
+| HTTP group, handlers, error mapping     | `erp/modules/sales/http.ts`                                                         |
+| Document flow service                   | `erp/modules/sales/src/documents.ts`, `erp/modules/sales/src/documents-contract.ts` |
+| Delivery with stock issue               | `erp/modules/process/src/order-to-cash.ts`                                          |
 | Generated browser contracts             | `tooling/frontend/contracts.ts`, `apps/web/src/shared/contracts/generated/sales.ts` |
-| Browser service/query/workspace         | `apps/web/src/features/sales/`, `apps/web/src/app/modules/sales.tsx`                  |
-| Domain contract tests                   | `erp/modules/sales/tests/sales.test.ts`                                                 |
-| PostgreSQL invariant/publication tests  | `erp/modules/sales/tests/sales.postgres.test.ts`                                        |
-| HTTP contract test                      | `erp/runtime/api/sales.integration.test.ts`                                             |
+| Browser service/query/workspace         | `apps/web/src/features/sales/`, `apps/web/src/app/modules/sales.tsx`                |
+| Domain contract tests                   | `erp/modules/sales/tests/sales.test.ts`                                             |
+| PostgreSQL invariant/publication tests  | `erp/modules/sales/tests/sales.postgres.test.ts`                                    |
+| HTTP contract test                      | `erp/runtime/api/sales.integration.test.ts`                                         |
 | Browser/Axe workflow test               | `tests/frontend/sales-workflow.test.ts`                                             |
 
 Persistence tables, confirmation keys, repository implementations, event delivery infrastructure,

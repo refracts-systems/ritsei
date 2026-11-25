@@ -40,7 +40,7 @@ import {
   quotationBelongsToCustomer,
 } from "./order-lifecycle.ts"
 import { canonicalEmail } from "./derived-ids.ts"
-import type { CreditCheck, CreditContext, SalesStore } from "./store.ts"
+import type { CreditCheck, CreditContext, NumberOrder, SalesStore } from "./store.ts"
 import {
   CancellationMutation,
   ConfirmationMutation,
@@ -62,6 +62,7 @@ const quotationSelection = {
   tenantId: quotations.tenantId,
   customerId: quotations.customerId,
   status: quotations.status,
+  number: quotations.number,
   total: quotations.total,
 }
 
@@ -71,6 +72,7 @@ const orderSelection = {
   customerId: orders.customerId,
   quotationId: orders.quotationId,
   status: orders.status,
+  number: orders.number,
   confirmedAt: orders.confirmedAt,
   total: orders.total,
 }
@@ -422,6 +424,7 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
       order: SalesOrder,
     ) => Effect.Effect<unknown, EventIdempotencyConflict | DatabaseFailure | Schema.SchemaError>,
     checkCredit: CreditCheck,
+    numberOrder: NumberOrder,
   ) {
     return yield* database
       .withTransaction(
@@ -464,10 +467,13 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
 
           if (credit !== undefined) yield* checkCredit(credit)
 
-          const mutation = yield* database.transaction(async (tx) => {
+          // The order stays locked from this read to the update below, so deciding, numbering,
+          // and updating are one step of the confirmation transaction.
+          const decided = yield* database.transaction(async (tx) => {
             const [row] = await tx
               .select({
                 ...orderSelection,
+                legalEntityId: orders.legalEntityId,
                 confirmationIdempotencyKey: orders.confirmationIdempotencyKey,
               })
               .from(orders)
@@ -492,15 +498,27 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
               InvalidState: ({ status }) => ConfirmationMutation.InvalidState({ status }),
             })
 
-            if (settled !== undefined) return settled
+            return (
+              settled ?? {
+                lines,
+                current,
+                legalEntityId: row.legalEntityId ?? credit?.legalEntityId ?? null,
+              }
+            )
+          }, "sales.order.confirm.decide")
 
-            const confirmedAt = now()
+          if (!("lines" in decided)) return decided
 
+          const confirmedAt = now()
+          const number = yield* numberOrder(decided.current, decided.legalEntityId, confirmedAt)
+
+          const mutation = yield* database.transaction(async (tx) => {
             const [confirmed] = await tx
               .update(orders)
               .set({
                 status: "confirmed",
                 confirmationIdempotencyKey: decoded.idempotencyKey,
+                number,
                 confirmedAt,
                 updatedAt: confirmedAt,
               })
@@ -513,7 +531,9 @@ export const makeSalesPostgresStore = Effect.fn("Sales.makePostgresStore")(funct
               )
               .returning(orderSelection)
 
-            return ConfirmationMutation.Confirmed({ order: toSalesOrder(confirmed!, lines) })
+            return ConfirmationMutation.Confirmed({
+              order: toSalesOrder(confirmed!, decided.lines),
+            })
           }, "sales.order.confirm")
 
           if (ConfirmationMutation.$is("Confirmed")(mutation)) yield* append(mutation.order)

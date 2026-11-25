@@ -59,13 +59,27 @@ export const Customer = Schema.Struct({
 export const QuotationStatus = Schema.Literals(["draft", "sent", "accepted", "rejected", "expired"])
 export const SalesOrderStatus = Schema.Literals(["draft", "confirmed", "cancelled"])
 
+/**
+ * The document number (ADR-0095): allocated when a quotation is sent or an order is confirmed, null
+ * before that. A record written before numbering has no key and decodes as null, so stored results
+ * of the released actions (and Process's stored order confirmations) still decode.
+ */
+export const DocumentNumber = Schema.NullOr(NonEmptyString).pipe(
+  Schema.withDecodingDefaultKey(Effect.succeed(null)),
+)
+
 export const Quotation = Schema.Struct({
   id: Uuid,
   tenantId: Uuid,
   customerId: Uuid,
   status: QuotationStatus,
+  number: DocumentNumber,
   total: Money,
-})
+}).check(
+  Schema.makeFilter((quotation) => quotation.status !== "draft" || quotation.number === null, {
+    expected: "a draft quotation without a number",
+  }),
+)
 
 export const SalesOrderLine = Schema.Struct({
   itemId: Uuid,
@@ -79,6 +93,8 @@ export const SalesOrder = Schema.Struct({
   customerId: Uuid,
   quotationId: Schema.NullOr(Uuid),
   status: SalesOrderStatus,
+  /** The document number (ADR-0095), allocated at confirmation; null for a draft. */
+  number: DocumentNumber,
   confirmedAt: Schema.NullOr(InstantString),
   total: Money,
   lines: Schema.Array(SalesOrderLine).check(Schema.isMinLength(1)),
@@ -90,6 +106,11 @@ export const SalesOrder = Schema.Struct({
         (order.status !== "draft" && order.confirmedAt !== null),
       { expected: "sales order confirmation metadata consistent with status" },
     ),
+  )
+  .check(
+    Schema.makeFilter((order) => order.status !== "draft" || order.number === null, {
+      expected: "a draft sales order without a number",
+    }),
   )
   .check(
     Schema.makeFilter(

@@ -33,6 +33,13 @@ import { erpChainLayers } from "../support/erp-layers.ts"
 import { withTemporaryDatabase } from "../support/postgres-database.ts"
 
 const databaseUrl = process.env["DATABASE_URL"]
+
+/** The prefix and the value of a document number, whatever its fiscal year. */
+const documentNumberParts = (number: string | null | undefined) => [
+  number?.split("/")[0],
+  number?.split("/")[2],
+]
+
 const principal = { userAccountId: "o2c-user", sessionId: "o2c-session" }
 
 // [SAL-CREDIT-1] [SAL-CUST-2] [SAL-PRICE-1] [SAL-QUOT-1] [SAL-QUOT-2] [SAL-QUOT-3] [SAL-DLV-1]
@@ -423,6 +430,16 @@ it.effect.skipIf(databaseUrl === undefined)(
           assert.deepStrictEqual(
             flow.nodes.filter((node) => node.current).map((node) => node.id),
             [firstInvoice.id],
+          )
+
+          // The quotation and the order carry the numbers they were sent and confirmed with.
+          assert.deepStrictEqual(
+            documentNumberParts(flow.nodes.find((node) => node.type === "sales.quotation")?.number),
+            ["QT", "00001"],
+          )
+          assert.deepStrictEqual(
+            documentNumberParts(flow.nodes.find((node) => node.type === "sales.order")?.number),
+            ["SO", "00001"],
           )
 
           for (const [documentType, documentId] of [

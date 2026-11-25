@@ -94,6 +94,8 @@ export const quotations = salesSchema.table(
     total: money("total"),
     legalEntityId: uuid("legal_entity_id"),
     validUntil: date("valid_until", { mode: "string" }),
+    // ADR-0095 number, allocated when the quotation is sent; null while it is a draft.
+    number: text("number"),
     sentAt: timestamp("sent_at", { withTimezone: true }),
     decidedAt: timestamp("decided_at", { withTimezone: true }),
     createdAt: createdAt(),
@@ -117,6 +119,10 @@ export const quotations = salesSchema.table(
       name: "quotations_tenant_customer_fkey",
     }),
     check("quotations_total_check", sql`${table.total} >= 0`),
+    check(
+      "quotations_draft_number_check",
+      sql`${table.status} <> 'draft' or ${table.number} is null`,
+    ),
   ],
 )
 
@@ -132,6 +138,9 @@ export const orders = salesSchema.table(
     confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
     total: money("total"),
     legalEntityId: uuid("legal_entity_id"),
+    // ADR-0095 number, allocated when the order is confirmed; null while it is a draft, and for a
+    // customer without a legal entity.
+    number: text("number"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -167,6 +176,7 @@ export const orders = salesSchema.table(
       table.confirmationIdempotencyKey,
     ),
     check("orders_total_check", sql`${table.total} >= 0`),
+    check("orders_draft_number_check", sql`${table.status} <> 'draft' or ${table.number} is null`),
     check(
       "orders_confirmation_state_check",
       sql`(${table.status} = 'draft' and ${table.confirmedAt} is null) or

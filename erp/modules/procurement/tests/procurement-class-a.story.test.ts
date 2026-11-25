@@ -9,6 +9,7 @@ import {
   makeAuthorizationTestLayer,
 } from "../../../../framework/modules/authorization/mod.ts"
 import { makeMessagingTestLayer } from "../../../../framework/modules/messaging/mod.ts"
+import { makeNumberingTestLayer } from "../../../../framework/modules/numbering/mod.ts"
 import { makePartyTestLayer, PartyCapabilities } from "../../party/mod.ts"
 import {
   makeProcurementTestLayer,
@@ -462,7 +463,9 @@ describe("procurement authorization on the production service", () => {
     const party = makePartyTestLayer().pipe(Layer.provide(authorization))
 
     const procurement = makeProcurementTestLayer().pipe(
-      Layer.provide(Layer.mergeAll(authorization, party, makeMessagingTestLayer())),
+      Layer.provide(
+        Layer.mergeAll(authorization, party, makeMessagingTestLayer(), makeNumberingTestLayer()),
+      ),
     )
 
     return Effect.gen(function* () {
@@ -561,6 +564,7 @@ describe("purchase order document on the production function", () => {
   const withStatus = (status: "draft" | "confirmed" | "cancelled") => ({
     ...ids,
     status,
+    number: status === "draft" ? null : "PO/2026/00001",
     confirmedAt: status === "draft" ? null : confirmedAt,
     total: "25.00",
     lines: [line],

@@ -1,4 +1,5 @@
 import { and, asc, eq, inArray, lt, sum } from "drizzle-orm"
+import * as Clock from "effect/Clock"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 
@@ -114,6 +115,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
   const tax = yield* TaxService
   const exposure = yield* CreditExposure
   const numbering = yield* NumberingService
+  const clock = yield* Clock.Clock
 
   const loadCustomer = (tenantId: string, customerId: string) =>
     Effect.gen(function* () {
@@ -177,6 +179,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
         customerId: header.customerId,
         legalEntityId: header.legalEntityId!,
         status: header.status,
+        number: header.number,
         validUntil: header.validUntil!,
         total: normalizeMoney(header.total),
         lines: lines.map((line) => ({
@@ -219,14 +222,31 @@ export const makeSalesDocumentService = Effect.gen(function* () {
             )
           }
 
-          const now = new Date()
+          const now = new Date(clock.currentTimeMillisUnsafe())
+
+          // A quotation is numbered once, when it is sent, in the series of its legal entity
+          // (ADR-0095); the transaction that records the status takes the number or returns it.
+          const number =
+            to === "sent"
+              ? (yield* numbering
+                  .allocate({
+                    tenantId: decoded.tenantId,
+                    scopeId: quotation.legalEntityId,
+                    documentType: "sales.quotation",
+                    documentId: quotation.id,
+                    documentDate: now.toISOString().slice(0, 10),
+                    prefix: "QT/",
+                  })
+                  .pipe(Effect.catchTag("SchemaError", (error) => Effect.die(error)))).number
+              : quotation.number
+
           yield* database.query(
             (db) =>
               db
                 .update(quotations)
                 .set(
                   to === "sent"
-                    ? { status: to, sentAt: now, updatedAt: now }
+                    ? { status: to, number, sentAt: now, updatedAt: now }
                     : { status: to, decidedAt: now, updatedAt: now },
                 )
                 .where(
@@ -238,7 +258,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
             "sales.quotation.transition",
           )
 
-          return { ...quotation, status: to }
+          return { ...quotation, status: to, number }
         }),
         "sales.quotation.transition.atomic",
       )
@@ -656,6 +676,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
       customerId: customer.id,
       legalEntityId: customer.legalEntityId,
       status: "draft" as const,
+      number: null,
       validUntil: decoded.validUntil,
       total,
       lines: priced,

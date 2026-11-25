@@ -98,6 +98,8 @@ export const SalesQuotation = Schema.Struct({
   customerId: Uuid,
   legalEntityId: Uuid,
   status: QuotationStatus,
+  /** The ADR-0095 number, allocated when the quotation is sent; null while it is a draft. */
+  number: Schema.NullOr(Schema.String),
   validUntil: CalendarDate,
   total: FinancialMajorAmount,
   lines: Schema.Array(PricedLine),

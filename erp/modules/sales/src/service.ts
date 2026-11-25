@@ -6,6 +6,7 @@ import { FinancialMajorAmount, uuidv7 } from "../../../../framework/foundation/m
 import { Principal } from "../../../../framework/modules/auth/mod.ts"
 import { AuthorizationService } from "../../../../framework/modules/authorization/mod.ts"
 import { MessagingService } from "../../../../framework/modules/messaging/mod.ts"
+import { NumberingService } from "../../../../framework/modules/numbering/mod.ts"
 import { SalesCapabilities } from "./capabilities.ts"
 import { committedAmount, CreditExposure, exceedsCreditLimit } from "./credit.ts"
 import { CreditLimitExceeded } from "./errors.ts"
@@ -32,7 +33,7 @@ import {
   SalesOrderNotFound,
 } from "./errors.ts"
 import { SalesOrderConfirmedEvent, SalesOrderConfirmedEventPayload } from "./events.ts"
-import type { CreditCheck, SalesStore } from "./store.ts"
+import type { CreditCheck, NumberOrder, SalesStore } from "./store.ts"
 import { CancellationMutation, ConfirmationMutation, ConfirmedTotalLookup } from "./store.ts"
 
 export const makeSalesServiceFromStore = <R>(storeEffect: Effect.Effect<SalesStore, never, R>) =>
@@ -41,6 +42,7 @@ export const makeSalesServiceFromStore = <R>(storeEffect: Effect.Effect<SalesSto
     const authorization = yield* AuthorizationService
     const messaging = yield* MessagingService
     const exposure = yield* CreditExposure
+    const numbering = yield* NumberingService
 
     const authorize = (
       input: { principal: Schema.Schema.Type<typeof Principal>; tenantId: string },
@@ -215,6 +217,25 @@ export const makeSalesServiceFromStore = <R>(storeEffect: Effect.Effect<SalesSto
           }
         })
 
+      // The number belongs to the legal entity that issues the order (ADR-0095); an order without
+      // one is confirmed unnumbered. The series is locked until the confirmation commits.
+      const numberOrder: NumberOrder = (order, legalEntityId, confirmedAt) =>
+        legalEntityId === null
+          ? Effect.succeed(null)
+          : numbering
+              .allocate({
+                tenantId: decoded.tenantId,
+                scopeId: legalEntityId,
+                documentType: "sales.order",
+                documentId: order.id,
+                documentDate: confirmedAt.toISOString().slice(0, 10),
+                prefix: "SO/",
+              })
+              .pipe(
+                Effect.map((allocated) => allocated.number),
+                Effect.catchTag("SchemaError", (error) => Effect.die(error)),
+              )
+
       const mutation = yield* store.confirmOrder(
         normalized,
         (order) =>
@@ -241,6 +262,7 @@ export const makeSalesServiceFromStore = <R>(storeEffect: Effect.Effect<SalesSto
             ),
           ),
         checkCredit,
+        numberOrder,
       )
 
       return yield* ConfirmationMutation.$match(mutation, {

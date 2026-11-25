@@ -10,6 +10,7 @@ import {
   makeAuthorizationTestLayer,
 } from "../../../../framework/modules/authorization/mod.ts"
 import { makeMessagingTestLayer } from "../../../../framework/modules/messaging/mod.ts"
+import { makeNumberingTestLayer } from "../../../../framework/modules/numbering/mod.ts"
 import {
   AbsentOrder,
   AbsentQuotation,
@@ -681,7 +682,13 @@ const withGrants = <A, E>(
   Effect.provide(
     program,
     makeSalesTestLayer().pipe(
-      Layer.provide(Layer.merge(makeAuthorizationTestLayer(granted), makeMessagingTestLayer())),
+      Layer.provide(
+        Layer.mergeAll(
+          makeAuthorizationTestLayer(granted),
+          makeMessagingTestLayer(),
+          makeNumberingTestLayer(),
+        ),
+      ),
     ),
   )
 

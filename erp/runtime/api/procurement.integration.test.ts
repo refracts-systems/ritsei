@@ -40,6 +40,7 @@ const order = {
   tenantId,
   supplierAccountId,
   status: "draft" as const,
+  number: null,
   confirmedAt: null,
   total: "12.50",
   lines: [
