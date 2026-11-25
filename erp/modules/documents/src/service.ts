@@ -3,6 +3,7 @@ import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
 
 import { BillingService, type BillingDocumentType } from "../../billing/mod.ts"
+import { StockKeepingService } from "../../inventory/mod.ts"
 import { ProcurementService, PurchaseDocumentService } from "../../procurement/mod.ts"
 import { SalesDocumentService, SalesService } from "../../sales/mod.ts"
 import { SettlementService } from "../../settlement/mod.ts"
@@ -16,6 +17,8 @@ import {
   LookupInput,
   type Pipeline,
   PipelineInput,
+  SerialLookupInput,
+  type SerialTrace,
 } from "./contract.ts"
 import { DocumentNotFound } from "./errors.ts"
 import { unbilledStage } from "./pipeline.ts"
@@ -38,6 +41,7 @@ export const makeDocumentsService = Effect.gen(function* () {
   const purchasing = yield* PurchaseDocumentService
   const billing = yield* BillingService
   const settlement = yield* SettlementService
+  const stock = yield* StockKeepingService
 
   const billingNode = (document: BillingDocumentType): FlowNode => {
     const type = `billing.${document.kind}` as const
@@ -424,7 +428,61 @@ export const makeDocumentsService = Effect.gen(function* () {
     } satisfies Lookup
   })
 
-  return { chain: chainOf, pipeline: pipelineOf, lookup: lookupOf } satisfies DocumentsService
+  const serialLookupOf = Effect.fn("DocumentsService.serialLookup")(function* (
+    input: Schema.Codec.Encoded<typeof SerialLookupInput>,
+  ) {
+    const decoded = yield* Schema.decodeUnknownEffect(SerialLookupInput)(input)
+    const scope = { principal: decoded.principal, tenantId: decoded.tenantId }
+    const units = yield* stock.lookupSerial({ ...scope, serial: decoded.serial })
+
+    return yield* Effect.forEach(units, (unit) =>
+      Effect.gen(function* () {
+        const base = {
+          itemId: unit.itemId,
+          serial: unit.serial,
+          status: unit.status,
+          warehouseId: unit.warehouseId,
+          issuedBy: unit.issuedBy,
+          deliveryNumber: null,
+          deliveryDate: null,
+          customerId: null,
+          customerName: null,
+        }
+
+        if (unit.issuedBy?.type !== "sales.delivery") {
+          return { ...base, delivery: "none" as const } satisfies SerialTrace
+        }
+
+        // The delivery and its customer are Sales' to show; a denial leaves them out.
+        return yield* salesDocuments
+          .getDeliverySummary({ ...scope, deliveryId: unit.issuedBy.id })
+          .pipe(
+            Effect.map((summary): SerialTrace =>
+              summary === null
+                ? { ...base, delivery: "none" }
+                : {
+                    ...base,
+                    delivery: "shown",
+                    deliveryNumber: summary.number,
+                    deliveryDate: summary.deliveryDate,
+                    customerId: summary.customerId,
+                    customerName: summary.customerName,
+                  },
+            ),
+            Effect.catchTag("AuthorizationDenied", () =>
+              Effect.succeed<SerialTrace>({ ...base, delivery: "denied" }),
+            ),
+          )
+      }),
+    )
+  })
+
+  return {
+    chain: chainOf,
+    pipeline: pipelineOf,
+    lookup: lookupOf,
+    serialLookup: serialLookupOf,
+  } satisfies DocumentsService
 })
 
 export const DocumentsLive = Layer.effect(DocumentsService, makeDocumentsService)

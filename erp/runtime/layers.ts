@@ -292,6 +292,7 @@ export const serviceLayers = (
         PurchaseDocumentServiceLive,
         BillingServiceLive,
         SettlementServiceLive,
+        StockKeepingServiceLive,
       ),
     ),
   )
