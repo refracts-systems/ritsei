@@ -256,6 +256,24 @@ original recipients and content are not ours to resubmit. An `unknown` record st
 until a person resolves it; resolution is not yet a command. Like the rest of this document, it is
 memory-only today.
 
+### 6.2 Preview before send, and the attempt log
+
+Sending to someone outside the tenant cannot be undone, so reviewing and sending are separate
+operations with separate capabilities, both deny by default and scoped to the caller's tenant (another
+tenant's communication is `CommunicationNotFound`):
+
+| Operation | Capability | Effect |
+| --- | --- | --- |
+| `preview` | `communication.communication.read` | The rendering exactly as it would be sent: sender, recipients as resolved, subject, HTML, text, attachment references, status, attempt count. Calls no transport; repeatable. |
+| `listAttempts` | `communication.communication.read` | The delivery attempts, oldest first, as frozen copies. |
+| `deliver` | `communication.communication.send` | The first send. It must name the `previewedArtifactId` it was shown; another rendering fails with `CommunicationPreviewStale` before the transport is called. |
+| `retry` | `communication.communication.send` | Sends the same rendering again after an attempt. |
+
+The attempt log has no update or delete operation: an attempt is only ever appended, and a reader
+gets copies. It is not durable, though: like the rest of this slice it lives in memory and is lost on
+restart, so it is not yet the immutable record an audit needs. A durable, append-only attempt table
+needs a schema owner and its own decision (section 17), and no HTTP route exists yet.
+
 ## 7. Idempotency and retry
 
 The logical idempotency identity is derived from stable business semantics:

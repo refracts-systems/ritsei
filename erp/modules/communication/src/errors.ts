@@ -16,6 +16,12 @@ export class CommunicationNotFound extends Schema.TaggedError<CommunicationNotFo
   { communicationId: Uuid },
 ) {}
 
+/** The caller approved a different rendering than the one that would be sent. */
+export class CommunicationPreviewStale extends Schema.TaggedError<CommunicationPreviewStale>()(
+  "CommunicationPreviewStale",
+  { communicationId: Uuid, previewedArtifactId: Uuid, currentArtifactId: Uuid },
+) {}
+
 export class CommunicationStateFailure extends Schema.TaggedError<CommunicationStateFailure>()(
   "CommunicationStateFailure",
   { reason: NonEmptyString },

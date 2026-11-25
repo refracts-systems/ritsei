@@ -3,7 +3,9 @@ export { CommunicationCapabilities } from "./src/capabilities.ts"
 export {
   CommunicationConfiguration,
   CommunicationPolicy,
+  CommunicationPreview,
   CommunicationProcessingResult,
+  CommunicationQueryInput,
   CommunicationService,
   CommunicationTestTransport,
   HistoricalDispatchOutcome,
@@ -12,6 +14,7 @@ export {
   ProcessPurchaseOrderConfirmedInput,
   RecordHistoricalDispatchInput,
   RetryCommunicationInput,
+  SendCommunicationInput,
 } from "./src/contract.ts"
 
 export type {
@@ -22,6 +25,7 @@ export type {
 
 export {
   CommunicationNotFound,
+  CommunicationPreviewStale,
   CommunicationStateFailure,
   UnsupportedCommunicationEvent,
 } from "./src/errors.ts"
