@@ -6,6 +6,10 @@ import * as Schema from "effect/Schema"
 import { Database, DatabaseFailure, uuidv7 } from "../../../../framework/foundation/mod.ts"
 import { makePostgresDatabase, runMigrations } from "../../../../framework/platform/mod.ts"
 import { LARGE_FINANCIAL_MAJOR } from "../../../../tests/support/financial-ledger-conformance.ts"
+import {
+  bindCustomerToLegalEntity,
+  seedLegalEntity,
+} from "../../../../tests/support/erp-fixture.ts"
 import { withTemporaryDatabase } from "../../../../tests/support/postgres-database.ts"
 import {
   AuthorizationService,
@@ -98,6 +102,16 @@ it.effect.skipIf(databaseUrl === undefined)(
             email: "sales-postgres@example.test",
           })
 
+          const { legalEntityId } = yield* Effect.promise(() =>
+            seedLegalEntity(client, tenant!.id, "Sales Trading"),
+          )
+
+          yield* bindCustomerToLegalEntity(client, {
+            tenantId: tenant!.id,
+            customerId: customer.id,
+            legalEntityId,
+          })
+
           const mismatchedCustomer = yield* sales.createCustomer({
             principal,
             tenantId: tenant!.id,
@@ -175,6 +189,16 @@ it.effect.skipIf(databaseUrl === undefined)(
             tenantId: otherTenant!.id,
             name: "Other Sales Customer",
             email: "other-sales-postgres@example.test",
+          })
+
+          const other = yield* Effect.promise(() =>
+            seedLegalEntity(client, otherTenant!.id, "Other Sales Trading"),
+          )
+
+          yield* bindCustomerToLegalEntity(client, {
+            tenantId: otherTenant!.id,
+            customerId: otherCustomer.id,
+            legalEntityId: other.legalEntityId,
           })
 
           const otherOrder = yield* sales.createOrder({

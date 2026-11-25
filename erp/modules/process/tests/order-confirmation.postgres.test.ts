@@ -6,6 +6,7 @@ import type { Sql } from "postgres"
 
 import { Database, uuidv7 } from "../../../../framework/foundation/mod.ts"
 import { makePostgresDatabase, runMigrations } from "../../../../framework/platform/mod.ts"
+import { bindCustomerToLegalEntity } from "../../../../tests/support/erp-fixture.ts"
 import { withTemporaryDatabase } from "../../../../tests/support/postgres-database.ts"
 import {
   AccountingCapabilities,
@@ -574,6 +575,12 @@ it.effect.skipIf(databaseUrl === undefined)(
             tenantId: tenant!.id,
             name: "Order Customer",
             email: "order-confirmation@example.test",
+          })
+
+          yield* bindCustomerToLegalEntity(client, {
+            tenantId: tenant!.id,
+            customerId: customer.id,
+            legalEntityId: legalEntity.id,
           })
 
           const order = yield* sales.createOrder({
@@ -1275,6 +1282,12 @@ it.effect.skipIf(databaseUrl === undefined)(
             email: "rollback@example.test",
           })
 
+          yield* bindCustomerToLegalEntity(client, {
+            tenantId: tenant!.id,
+            customerId: customer.id,
+            legalEntityId: legalEntity.id,
+          })
+
           const order = yield* sales.createOrder({
             principal,
             tenantId: tenant!.id,
@@ -1489,6 +1502,12 @@ it.effect.skipIf(databaseUrl === undefined)(
             tenantId: tenant!.id,
             name: "Concurrency Customer",
             email: "concurrency@example.test",
+          })
+
+          yield* bindCustomerToLegalEntity(client, {
+            tenantId: tenant!.id,
+            customerId: customer.id,
+            legalEntityId: legalEntity.id,
           })
 
           const order = yield* sales.createOrder({

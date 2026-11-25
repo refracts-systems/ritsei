@@ -14,6 +14,7 @@ import {
 import {
   CreditLimitExceeded,
   CustomerAlreadyExists,
+  CustomerLegalEntityRequired,
   CustomerNotFound,
   QuotationCustomerMismatch,
   QuotationNotFound,
@@ -277,6 +278,7 @@ export interface SalesService {
   ) => Effect.Effect<
     SalesOrder,
     | CreditLimitExceeded
+    | CustomerLegalEntityRequired
     | EventIdempotencyConflict
     | SalesOrderConfirmationIdempotencyConflict
     | SalesOrderInvalidState
@@ -294,6 +296,7 @@ export interface SalesService {
 export {
   CreditLimitExceeded,
   CustomerAlreadyExists,
+  CustomerLegalEntityRequired,
   CustomerNotFound,
   QuotationCustomerMismatch,
   QuotationNotFound,
