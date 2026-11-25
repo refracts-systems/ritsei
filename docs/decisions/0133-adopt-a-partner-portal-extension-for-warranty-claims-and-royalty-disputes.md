@@ -1,6 +1,6 @@
 # ADR-0133: Adopt a Partner Portal Extension for Warranty Claims and Royalty Disputes
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-25
 - Amends: None
 - Compatible with: ADR-0006, ADR-0021, ADR-0029, ADR-0058, ADR-0091, ADR-0131, ADR-0132
@@ -82,15 +82,18 @@ this party's records".
   the scope, every portal query needs it by construction, and tests assert isolation between two
   partners.
 
-## Open questions for the owner
+## Owner decisions (2026-11-25)
 
-1. **Who is a partner**, and which party owes a royalty invoice: is the royalty invoice a customer
-   invoice to the partner (proposed)? A customer who buys serial items, a reseller, or both?
-2. **Identity provider.** Is an OIDC adapter available to build against, or does the portal wait for it?
-3. **Authentication strength.** Require MFA for portal users (proposed)?
-4. **Claim rules.** Is a delivered serial enough, or is a warranty period needed (a period by product)?
-5. **Status shown to partners.** The ticket's status as is (proposed), or a smaller set?
-6. **Attachments** (photos, documents) are out of the first version. Confirm.
+The owner accepted the recommendations:
+
+1. A partner is a Party with the role `partner`, and a royalty invoice is a customer invoice to that partner.
+2. The portal waits for an OIDC identity adapter, which does not exist yet.
+3. Portal users must use MFA.
+4. A delivered serial is enough for a claim; no warranty period yet.
+5. The partner sees the ticket's status as it is.
+6. Attachments are out of the first version.
+
+The decision is accepted, and building waits for the identity adapter.
 
 ## Validation
 
