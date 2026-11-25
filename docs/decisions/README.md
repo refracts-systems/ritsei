@@ -156,7 +156,7 @@ current system; ADRs preserve decision history.
 | [`0128`](./0128-adopt-tiered-approvals-and-delegation.md)                                             | Adopt Tiered Approvals and Delegation                                                            | Accepted   |
 | [`0129`](./0129-adopt-situations-escalation-and-follow.md)                                            | Adopt Situations, Working-Day Escalation, and Follow                                             | Accepted   |
 | [`0130`](./0130-adopt-organization-units-and-read-only-consolidation.md)                              | Adopt Organization Units and Read-Only Consolidation                                             | Accepted   |
-| [`0132`](./0132-adopt-a-helpdesk-extension-for-work-without-a-document.md)                            | Adopt a Helpdesk Extension for Work Without a Document                                           | Proposed   |
+| [`0132`](./0132-adopt-a-helpdesk-extension-for-work-without-a-document.md)                            | Adopt a Helpdesk Extension for Work Without a Document                                           | Accepted   |
 
 <!-- adr-index:end -->
 

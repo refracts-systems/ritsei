@@ -1,6 +1,6 @@
 # ADR-0132: Adopt a Helpdesk Extension for Work Without a Document
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-25
 - Amends: None
 - Compatible with: ADR-0004, ADR-0006, ADR-0091, ADR-0094, ADR-0095, ADR-0129
@@ -79,14 +79,16 @@ extension exists, and the working-day calendar and its due-time arithmetic live 
 
 - Tickets become a place to approve things. Mitigation: decision 5 and a test.
 
-## Open questions for the owner
+## Owner decisions (2026-11-25)
 
-1. **Extension infrastructure.** Build it inside this change (proposed), or as its own earlier change?
-2. **SLA unit.** Working days by priority for now (proposed); which days per priority?
-3. **Calendar.** Read through `situations`' contract (proposed), or extract it into its own module now?
-4. **Incident resolve.** Resolving the incident resolves its open tickets (proposed), or each ticket by hand?
-5. **Visibility.** Requester and assignee see their own; `helpdesk.ticket.read` sees all (proposed). Confirm.
-6. **Breach.** Show breached tickets in the queue only (proposed), or also notify the assignee's supervisor?
+The owner accepted the recommendations:
+
+1. The extension infrastructure is built in the same change as Helpdesk.
+2. The SLA is in working days by priority (suggested: critical 1, high 2, normal 5, low 10).
+3. The calendar is read through the public contract of `situations`.
+4. Resolving an incident resolves its open tickets, each with its own note.
+5. A requester and an assignee read their own tickets; `helpdesk.ticket.read` reads all.
+6. A breached ticket is flagged in the queue only.
 
 ## Validation
 
