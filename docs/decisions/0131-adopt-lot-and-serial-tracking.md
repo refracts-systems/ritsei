@@ -1,6 +1,6 @@
 # ADR-0131: Adopt Lot and Serial Tracking
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-25
 - Amends: ADR-0118 (point 5, lot and expiry under source authority)
 - Compatible with: ADR-0015, ADR-0100, ADR-0101, ADR-0104, ADR-0118
@@ -91,16 +91,16 @@ be received or delivered without a lot or serial.
 - Serial codes typed by hand have typos. Mitigation: they are exact strings; the lookup returns
   nothing for a near miss, never a guess.
 
-## Open questions for the owner
+## Owner decisions (2026-11-25)
 
-1. **Owner of the mode.** Inventory (proposed) or Product?
-2. **Existing stock.** Refuse switching an item that has stock to a tracked mode (proposed), or allow it
-   with a one-time breakdown by lot or serial?
-3. **Transfers, counts, adjustments of tracked items.** Refuse in the first version (proposed), or in
-   scope now?
-4. **Expiry.** Stored and returned only (proposed), or should issuing an expired lot be refused?
-5. **Picking.** The caller names the lot (proposed), or does Inventory suggest first-expired-first-out?
-6. **Serial format.** A trimmed, case-sensitive string up to 64 characters, unique per item (proposed).
+The owner accepted the recommendations:
+
+1. Inventory owns the tracking mode.
+2. An item that has stock is not switched to a tracked mode.
+3. Transfers, counts, and adjustments of a tracked item are refused in the first version.
+4. Expiry is stored and returned, not enforced.
+5. The caller names the lot to issue; there is no automatic picking.
+6. A serial is a trimmed, case-sensitive string of up to 64 characters, unique per item.
 
 ## Validation
 

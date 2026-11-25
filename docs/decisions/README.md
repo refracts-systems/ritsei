@@ -156,7 +156,7 @@ current system; ADRs preserve decision history.
 | [`0128`](./0128-adopt-tiered-approvals-and-delegation.md)                                             | Adopt Tiered Approvals and Delegation                                                            | Accepted   |
 | [`0129`](./0129-adopt-situations-escalation-and-follow.md)                                            | Adopt Situations, Working-Day Escalation, and Follow                                             | Accepted   |
 | [`0130`](./0130-adopt-organization-units-and-read-only-consolidation.md)                              | Adopt Organization Units and Read-Only Consolidation                                             | Accepted   |
-| [`0131`](./0131-adopt-lot-and-serial-tracking.md)                                                     | Adopt Lot and Serial Tracking                                                                    | Proposed   |
+| [`0131`](./0131-adopt-lot-and-serial-tracking.md)                                                     | Adopt Lot and Serial Tracking                                                                    | Accepted   |
 
 <!-- adr-index:end -->
 
