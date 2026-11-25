@@ -1,6 +1,6 @@
 # ADR-0135: Scope Manufacturing and Projects and Set Their Release Order
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-25
 - Amends: None
 - Compatible with: ADR-0091, ADR-0095, ADR-0100, ADR-0128, ADR-0131
@@ -81,16 +81,18 @@ master.
 - A pilot needs work in process early. Mitigation: it is the first decision after release 3, and the
   single-step completion does not block it.
 
-## Open questions for the owner
+## Owner decisions (2026-11-25)
 
-1. **Order.** Projects first (proposed), or manufacturing first?
-2. **Trigger.** Is there a pilot asking now, or does this wait for D12?
-3. **Completion in one step** without work in process, labor, or overhead: acceptable for a first
-   version (proposed)?
-4. **Billing from timesheets** by creating a Sales order of service lines (proposed), or a direct
-   Billing document?
-5. **Rates.** A rate per project and role, per person, or per product? One per project (proposed).
-6. **Who approves timesheets**: the project manager (a capability), or the person's supervisor?
+The owner accepted the recommendations:
+
+1. Projects and timesheets come first, then the bill of materials, then work orders.
+2. Nothing is built until a pilot asks (D12).
+3. Completion in one step, without work in process, labor, or overhead, is accepted for a first version.
+4. Timesheets are billed through a Sales order of service lines.
+5. One rate per project.
+6. A capability held by the project manager approves timesheets.
+
+The scope and order are accepted; no implementation is authorized.
 
 ## Validation
 

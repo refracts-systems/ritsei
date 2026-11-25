@@ -156,7 +156,7 @@ current system; ADRs preserve decision history.
 | [`0128`](./0128-adopt-tiered-approvals-and-delegation.md)                                             | Adopt Tiered Approvals and Delegation                                                            | Accepted   |
 | [`0129`](./0129-adopt-situations-escalation-and-follow.md)                                            | Adopt Situations, Working-Day Escalation, and Follow                                             | Accepted   |
 | [`0130`](./0130-adopt-organization-units-and-read-only-consolidation.md)                              | Adopt Organization Units and Read-Only Consolidation                                             | Accepted   |
-| [`0135`](./0135-scope-manufacturing-and-projects-and-set-their-release-order.md)                      | Scope Manufacturing and Projects and Set Their Release Order                                     | Proposed   |
+| [`0135`](./0135-scope-manufacturing-and-projects-and-set-their-release-order.md)                      | Scope Manufacturing and Projects and Set Their Release Order                                     | Accepted   |
 
 <!-- adr-index:end -->
 
