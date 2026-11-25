@@ -158,6 +158,7 @@ current system; ADRs preserve decision history.
 | [`0130`](./0130-adopt-organization-units-and-read-only-consolidation.md)                              | Adopt Organization Units and Read-Only Consolidation                                             | Accepted   |
 | [`0131`](./0131-adopt-lot-and-serial-tracking.md)                                                     | Adopt Lot and Serial Tracking                                                                    | Accepted   |
 | [`0132`](./0132-adopt-a-helpdesk-extension-for-work-without-a-document.md)                            | Adopt a Helpdesk Extension for Work Without a Document                                           | Accepted   |
+| [`0133`](./0133-adopt-a-partner-portal-extension-for-warranty-claims-and-royalty-disputes.md)         | Adopt a Partner Portal Extension for Warranty Claims and Royalty Disputes                        | Accepted   |
 | [`0134`](./0134-adopt-a-governance-extension-for-board-decisions-and-restricted-notes.md)             | Adopt a Governance Extension for Board Decisions and Restricted Notes                            | Accepted   |
 | [`0135`](./0135-scope-manufacturing-and-projects-and-set-their-release-order.md)                      | Scope Manufacturing and Projects and Set Their Release Order                                     | Accepted   |
 
