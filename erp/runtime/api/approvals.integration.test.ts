@@ -33,6 +33,7 @@ const request: ApprovalRequestType = {
   status: "pending",
   requestedBy: "buyer-user",
   decidedBy: null,
+  steps: [],
   decidedAt: null,
 }
 

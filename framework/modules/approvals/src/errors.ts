@@ -22,3 +22,31 @@ export class SelfApprovalForbidden extends Schema.TaggedError<SelfApprovalForbid
   "SelfApprovalForbidden",
   { tenantId: Uuid, requestId: Uuid },
 ) {}
+
+/** A step needs a scope Authorization cannot yet enforce, or the steps are not a valid policy. */
+export class ApprovalPolicyInvalid extends Schema.TaggedError<ApprovalPolicyInvalid>()(
+  "ApprovalPolicyInvalid",
+  { tenantId: Uuid, reason: Schema.String },
+) {}
+
+/** One person may decide only one step of a request, directly or through a delegation. */
+export class DistinctApproverRequired extends Schema.TaggedError<DistinctApproverRequired>()(
+  "DistinctApproverRequired",
+  { tenantId: Uuid, requestId: Uuid },
+) {}
+
+/** A delegation to oneself, or one whose dates run backwards. */
+export class DelegationInvalid extends Schema.TaggedError<DelegationInvalid>()(
+  "DelegationInvalid",
+  { tenantId: Uuid, reason: Schema.String },
+) {}
+
+export class DelegationNotFound extends Schema.TaggedError<DelegationNotFound>()(
+  "DelegationNotFound",
+  { tenantId: Uuid, delegationId: Uuid },
+) {}
+
+export class DelegationAlreadyRevoked extends Schema.TaggedError<DelegationAlreadyRevoked>()(
+  "DelegationAlreadyRevoked",
+  { tenantId: Uuid, delegationId: Uuid },
+) {}

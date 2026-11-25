@@ -190,4 +190,12 @@ export {
   settlementSide,
 } from "./settlement.ts"
 
-export { approvalPolicies, approvalRequests, approvalsSchema, approvalStatus } from "./approvals.ts"
+export {
+  approvalDelegations,
+  approvalPolicies,
+  approvalPolicySteps,
+  approvalRequests,
+  approvalRequestSteps,
+  approvalsSchema,
+  approvalStatus,
+} from "./approvals.ts"
