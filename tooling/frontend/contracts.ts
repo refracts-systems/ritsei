@@ -212,6 +212,7 @@ export function procurementSource(): string {
     tenantId: Uuid,
     supplierAccountId: Uuid,
     status: PurchaseOrderStatus,
+    number: Schema.NullOr(NonEmptyString),
     confirmedAt: Schema.NullOr(Schema.String),
     total: Money,
     lines: Schema.Array(PurchaseOrderLineSnapshot).check(Schema.isMinLength(1)),
@@ -549,6 +550,7 @@ export function salesSource(): string {
     tenantId: Uuid,
     customerId: Uuid,
     status: QuotationStatus,
+    number: Schema.NullOr(NonEmptyString),
     total: Money,
   })
 
@@ -560,6 +562,7 @@ export function salesSource(): string {
     customerId: Uuid,
     quotationId: Schema.NullOr(Uuid),
     status: SalesOrderStatus,
+    number: Schema.NullOr(NonEmptyString),
     confirmedAt: Schema.NullOr(Schema.String),
     total: Money,
     lines: Schema.Array(SalesOrderLine).check(Schema.isMinLength(1)),

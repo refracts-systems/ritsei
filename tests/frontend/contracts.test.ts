@@ -472,6 +472,7 @@ it.effect("preserves Sales projection validation and tenant-shaped values", () =
       customerId: customer.id,
       quotationId: null,
       status: "draft" as const,
+      number: null,
       confirmedAt: null,
       total: "10.00",
       lines: [

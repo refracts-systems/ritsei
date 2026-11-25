@@ -7,6 +7,7 @@ import { FinancialMajorAmount, uuidv7 } from "../../../../framework/foundation/m
 import { AuthorizationService } from "../../../../framework/modules/authorization/mod.ts"
 import { InventoryService } from "../../inventory/mod.ts"
 import { MessagingService } from "../../../../framework/modules/messaging/mod.ts"
+import { NumberingService } from "../../../../framework/modules/numbering/mod.ts"
 import { PartyService } from "../../party/mod.ts"
 import { ProcurementCapabilities } from "./capabilities.ts"
 import { supplierAccountInstanceKey } from "./supplier-account.ts"
@@ -65,6 +66,7 @@ export const makeProcurementTestLayer = () =>
       const authorization = yield* AuthorizationService
       const messaging = yield* MessagingService
       const party = yield* PartyService
+      const numbering = yield* NumberingService
       const clock = yield* Clock.Clock
       const now = () => new Date(clock.currentTimeMillisUnsafe())
       const storedSupplierAccounts = new Map<string, SupplierAccount>()
@@ -157,6 +159,7 @@ export const makeProcurementTestLayer = () =>
               tenantId: decoded.tenantId,
               supplierAccountId: decoded.supplierAccountId,
               status: "draft",
+              number: null,
               confirmedAt: null,
               total,
               lines: decoded.lines.map((line) => ({ id: uuidv7(), ...line })),
@@ -290,10 +293,25 @@ export const makeProcurementTestLayer = () =>
               )
             }
 
+            const confirmedAt = now()
+
+            // Numbered in the legal entity of the supplier (ADR-0095), like PostgreSQL.
+            const allocated = yield* numbering
+              .allocate({
+                tenantId: decoded.tenantId,
+                scopeId: storedSupplierAccounts.get(order.supplierAccountId)!.legalEntityId,
+                documentType: "procurement.purchase_order",
+                documentId: order.id,
+                documentDate: confirmedAt.toISOString().slice(0, 10),
+                prefix: "PO/",
+              })
+              .pipe(Effect.catchTag("SchemaError", (error) => Effect.die(error)))
+
             const confirmed: PurchaseOrder = {
               ...order,
               status: "confirmed",
-              confirmedAt: now().toISOString(),
+              number: allocated.number,
+              confirmedAt: confirmedAt.toISOString(),
             }
 
             const payload = yield* Schema.decodeUnknownEffect(PurchaseOrderConfirmedEventPayload)({

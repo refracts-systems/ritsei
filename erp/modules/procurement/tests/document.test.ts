@@ -28,6 +28,7 @@ const confirmedOrder: PurchaseOrder = {
   tenantId,
   supplierAccountId,
   status: "confirmed",
+  number: "PO/2026/00001",
   confirmedAt,
   total: "25.00",
   lines: [{ id: lineId, itemId, quantity: "2", unitPrice: "12.50" }],
@@ -81,7 +82,7 @@ describe("purchase order document pilot", () => {
     Effect.gen(function* () {
       const error = yield* Effect.flip(
         makePurchaseOrderDocumentSnapshot(
-          { ...confirmedOrder, status: "draft", confirmedAt: null },
+          { ...confirmedOrder, status: "draft", number: null, confirmedAt: null },
           { snapshotId, capturedAt: confirmedAt },
         ),
       )

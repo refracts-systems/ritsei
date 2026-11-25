@@ -116,8 +116,16 @@ export const serviceLayers = (
 
   const CreditExposureLive = BillingCreditExposureLive.pipe(Layer.provide(BusinessRequirements))
 
+  const NumberingServiceLive = NumberingLive.pipe(
+    Layer.provide(
+      Layer.merge(DatabaseLive, AccountingFiscalCalendarLive.pipe(Layer.provide(DatabaseLive))),
+    ),
+  )
+
   const SalesLive = SalesServiceLayer.pipe(
-    Layer.provide(Layer.mergeAll(BusinessRequirements, MessagingLive, CreditExposureLive)),
+    Layer.provide(
+      Layer.mergeAll(BusinessRequirements, MessagingLive, CreditExposureLive, NumberingServiceLive),
+    ),
   )
 
   const InventoryLive = InventoryServiceLayer.pipe(
@@ -143,12 +151,6 @@ export const serviceLayers = (
         )
 
   const AccountingLive = AccountingServiceLayer.pipe(Layer.provide(AccountingRequirements))
-
-  const NumberingServiceLive = NumberingLive.pipe(
-    Layer.provide(
-      Layer.merge(DatabaseLive, AccountingFiscalCalendarLive.pipe(Layer.provide(DatabaseLive))),
-    ),
-  )
 
   const LedgerLive = GeneralLedgerLive.pipe(
     Layer.provide(
@@ -191,6 +193,7 @@ export const serviceLayers = (
         InventoryLive,
         MessagingLive,
         ApprovalServiceLive,
+        NumberingServiceLive,
       ),
     ),
   )

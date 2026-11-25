@@ -16,7 +16,7 @@ import {
 import { tenants } from "./auth.ts"
 import { createdAt, id, money, updatedAt } from "./common.ts"
 import { warehouses } from "./inventory.ts"
-import { partyRelationships } from "./party.ts"
+import { legalEntities, partyRelationships } from "./party.ts"
 import { products } from "./product.ts"
 import { taxCodes } from "./tax.ts"
 
@@ -66,11 +66,22 @@ export const purchaseOrders = procurementSchema.table(
     confirmationIdempotencyKey: text("confirmation_idempotency_key"),
     confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
     total: money("total"),
+    // ADR-0095 number, allocated when the order is confirmed; null while it is a draft, and for a
+    // supplier whose relationship has no legal entity.
+    number: text("number"),
+    // The supplier's legal entity, recorded at confirmation: the scope the number was issued in and
+    // the filter of per-legal-entity reads. Null on a draft and on orders confirmed before it existed.
+    legalEntityId: uuid("legal_entity_id"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (table) => [
     unique("purchase_orders_tenant_id_id_key").on(table.tenantId, table.id),
+    foreignKey({
+      columns: [table.tenantId, table.legalEntityId],
+      foreignColumns: [legalEntities.tenantId, legalEntities.id],
+      name: "purchase_orders_legal_entity_fkey",
+    }),
     foreignKey({
       columns: [table.tenantId],
       foreignColumns: [tenants.id],
@@ -86,6 +97,10 @@ export const purchaseOrders = procurementSchema.table(
       table.confirmationIdempotencyKey,
     ),
     check("purchase_orders_total_check", sql`${table.total} >= 0`),
+    check(
+      "purchase_orders_draft_number_check",
+      sql`${table.status} <> 'draft' or ${table.number} is null`,
+    ),
     check(
       "purchase_orders_confirmation_metadata_check",
       sql`(${table.status} = 'draft' and

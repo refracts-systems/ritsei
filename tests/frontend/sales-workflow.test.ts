@@ -23,6 +23,7 @@ const quotation = {
   tenantId,
   customerId,
   status: "draft" as const,
+  number: null,
   total: "25.00",
 }
 
@@ -57,6 +58,7 @@ const draftOrder: SalesOrder = {
   customerId,
   quotationId,
   status: "draft",
+  number: null,
   confirmedAt: null,
   total: "25.00",
   lines: [{ itemId, quantity: "2", unitPrice: "12.50" }],
@@ -179,6 +181,7 @@ it.effect(
             currentOrder = {
               ...(currentOrder ?? draftOrder),
               status: "confirmed",
+              number: "SO/2026/00001",
               confirmedAt: "2026-09-13T12:00:00.000Z",
             }
 

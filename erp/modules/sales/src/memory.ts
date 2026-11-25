@@ -33,7 +33,7 @@ import {
   quotationBelongsToCustomer,
 } from "./order-lifecycle.ts"
 import { canonicalEmail } from "./derived-ids.ts"
-import type { SalesStore } from "./store.ts"
+import type { CreditCheck, NumberOrder, SalesStore } from "./store.ts"
 import {
   CancellationMutation,
   ConfirmationMutation,
@@ -150,6 +150,7 @@ export const makeSalesMemoryStore = (): SalesStore => {
       tenantId: input.tenantId,
       customerId: input.customerId,
       status: "draft" as const,
+      number: null,
       total: input.total,
     }
 
@@ -193,6 +194,7 @@ export const makeSalesMemoryStore = (): SalesStore => {
       customerId: input.customerId,
       quotationId: input.quotationId ?? null,
       status: "draft",
+      number: null,
       confirmedAt: null,
       total: deriveTotal(input.lines),
       lines: input.lines,
@@ -211,6 +213,8 @@ export const makeSalesMemoryStore = (): SalesStore => {
       unknown,
       EventIdempotencyConflict | DatabaseFailure | import("effect/Schema").SchemaError
     >,
+    _checkCredit: CreditCheck,
+    numberOrder: NumberOrder,
   ) {
     const order = orders.get(input.orderId)
 
@@ -240,10 +244,16 @@ export const makeSalesMemoryStore = (): SalesStore => {
 
     if (settled !== undefined) return settled
 
+    const confirmedAt = new Date()
+
+    // A memory customer has no legal entity, so the order is confirmed without a number.
+    const number = yield* numberOrder(order, null, confirmedAt)
+
     const confirmed = {
       ...order,
       status: "confirmed" as const,
-      confirmedAt: new Date().toISOString(),
+      number,
+      confirmedAt: confirmedAt.toISOString(),
     }
 
     yield* append(confirmed)

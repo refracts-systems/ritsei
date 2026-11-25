@@ -27,6 +27,7 @@ import {
   makeMessagingService,
   MessagingService,
 } from "../../../../framework/modules/messaging/mod.ts"
+import { NumberingLive } from "../../../../framework/modules/numbering/mod.ts"
 import { makePartyService, PartyCapabilities, PartyService } from "../../party/mod.ts"
 import {
   makeProcurementService,
@@ -121,6 +122,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               Layer.succeed(AuthorizationService, authorization),
               Layer.succeed(PartyService, party),
               Layer.succeed(MessagingService, messaging),
+              NumberingLive.pipe(Layer.provide(Layer.succeed(Database, database))),
             ),
           )
 
@@ -943,6 +945,7 @@ it.effect.skipIf(databaseUrl === undefined)(
               requirements,
               Layer.succeed(PartyService, party),
               Layer.succeed(MessagingService, messaging),
+              NumberingLive.pipe(Layer.provide(requirements)),
             ),
           )
 

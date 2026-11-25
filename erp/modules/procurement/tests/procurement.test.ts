@@ -28,6 +28,7 @@ import {
   makeMessagingTestLayer,
   MessagingService,
 } from "../../../../framework/modules/messaging/mod.ts"
+import { makeNumberingTestLayer } from "../../../../framework/modules/numbering/mod.ts"
 import { makePartyTestLayer, PartyCapabilities, PartyService } from "../../party/mod.ts"
 import {
   GoodsReceipt,
@@ -103,7 +104,7 @@ const withProcurement = <A, E>(
   ).pipe(Layer.provide(makeMessagingTestLayer()))
 
   const procurement = makeProcurementTestLayer().pipe(
-    Layer.provide(Layer.mergeAll(authorization, party, messaging)),
+    Layer.provide(Layer.mergeAll(authorization, party, messaging, makeNumberingTestLayer())),
   )
 
   const inventory = makeInventoryTestLayer().pipe(
@@ -214,6 +215,7 @@ const makeProcurementPostgresTestLayer = (
         messaging,
         party,
         inventory,
+        makeNumberingTestLayer(),
         Layer.succeed(Database, primary),
         Layer.succeed(PostgresReadYourWrites, readYourWrites),
       ),
@@ -226,6 +228,7 @@ const readFixtureOrder: PurchaseOrder = {
   tenantId,
   supplierAccountId: "018f0000-0000-7000-8000-000000000011",
   status: "draft",
+  number: null,
   confirmedAt: null,
   total: "12.50",
   lines: [

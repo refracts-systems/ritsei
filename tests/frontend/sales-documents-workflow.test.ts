@@ -52,6 +52,7 @@ const confirmedOrder = {
   customerId,
   quotationId,
   status: "confirmed",
+  number: "SO/2026/00001",
   confirmedAt: "2026-10-20T00:00:00.000Z",
   total: "25.00",
   lines: [{ itemId: productId, quantity: "2", unitPrice: "12.50" }],
@@ -108,7 +109,7 @@ it.effect(
           ...common,
           "GET /sales/quotations": (route) =>
             fulfillJson(route, 200, [
-              { id: quotationId, tenantId, customerId, status, total: "25.00" },
+              { id: quotationId, tenantId, customerId, status, number: null, total: "25.00" },
             ]),
           [`GET /sales/quotations/${quotationId}`]: (route) =>
             fulfillJson(route, 200, {
@@ -116,6 +117,7 @@ it.effect(
               tenantId,
               customerId,
               status,
+              number: null,
               total: "25.00",
             }),
           [`GET /sales/quotation-documents/${quotationId}`]: (route) =>
