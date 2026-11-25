@@ -153,6 +153,7 @@ current system; ADRs preserve decision history.
 | [`0125`](./0125-require-an-approval-for-exactly-the-amount-it-releases.md)                            | Require an Approval for Exactly the Amount It Releases                                           | Accepted   |
 | [`0126`](./0126-decide-job-timing-with-the-database-clock.md)                                         | Decide Job Timing with the Database Clock                                                        | Accepted   |
 | [`0127`](./0127-adopt-the-kontainer-visual-language.md)                                               | Adopt the Kontainer Visual Language                                                              | Accepted   |
+| [`0128`](./0128-adopt-tiered-approvals-and-delegation.md)                                             | Adopt Tiered Approvals and Delegation                                                            | Proposed   |
 
 <!-- adr-index:end -->
 
