@@ -157,6 +157,7 @@ current system; ADRs preserve decision history.
 | [`0129`](./0129-adopt-situations-escalation-and-follow.md)                                            | Adopt Situations, Working-Day Escalation, and Follow                                             | Accepted   |
 | [`0130`](./0130-adopt-organization-units-and-read-only-consolidation.md)                              | Adopt Organization Units and Read-Only Consolidation                                             | Accepted   |
 | [`0132`](./0132-adopt-a-helpdesk-extension-for-work-without-a-document.md)                            | Adopt a Helpdesk Extension for Work Without a Document                                           | Accepted   |
+| [`0136`](./0136-adopt-per-extension-migration-chains.md)                                              | Adopt Per-Extension Migration Chains                                                             | Accepted   |
 
 <!-- adr-index:end -->
 
