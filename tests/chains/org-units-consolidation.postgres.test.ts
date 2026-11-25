@@ -2,6 +2,7 @@ import { assert, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import * as TestClock from "effect/testing/TestClock"
 
+import { uuidv7 } from "../../framework/foundation/mod.ts"
 import { AuthorizationDenied } from "../../framework/modules/authorization/mod.ts"
 import { runMigrations } from "../../framework/platform/mod.ts"
 import {
@@ -107,7 +108,7 @@ it.effect.skipIf(databaseUrl === undefined)(
                 ...scope,
                 kind: "business_unit",
                 name: "x",
-                parentId: crypto.randomUUID(),
+                parentId: uuidv7(),
               }),
             ))._tag,
             "OrgUnitNotFound",
@@ -138,7 +139,7 @@ it.effect.skipIf(databaseUrl === undefined)(
             (yield* Effect.flip(
               units.assignLegalEntity({
                 ...scope,
-                legalEntityId: crypto.randomUUID(),
+                legalEntityId: uuidv7(),
                 unitId: root.id,
               }),
             ))._tag,
