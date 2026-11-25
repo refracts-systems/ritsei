@@ -46,46 +46,47 @@ const schemaOf = (match: RegExpMatchArray | null) => match?.[2] ?? match?.[3]
 const referencedSchemas = (statement: string) =>
   [...statement.matchAll(new RegExp(name, "gi"))].map((match) => match[1] ?? match[2]!)
 
+const schemaStatement =
+  /^(?:CREATE|ALTER|DROP)\s+SCHEMA\s+(?:IF\s+(?:NOT\s+)?EXISTS\s+)?"?([a-z_][a-z0-9_]*)"?/i
+
+const ownSchemaFailures = (statement: string, scope: Scope) => {
+  const schema = schemaStatement.exec(statement)?.[1]
+
+  return schema === undefined || scope.owned.has(schema)
+    ? []
+    : [`schema ${schema} is not owned by this extension`]
+}
+
+const targetFailures = (statement: string, verb: string, scope: Scope) =>
+  targets.flatMap((target) => {
+    const match = target.exec(statement)
+
+    return match === null || scope.owned.has(schemaOf(match) ?? "")
+      ? []
+      : [`${verb} target must be qualified with a schema this extension owns`]
+  })
+
+const foreignFailures = (statement: string, scope: Scope) =>
+  referencedSchemas(statement).flatMap((schema) =>
+    (scope.registered.has(schema) || alwaysForeign.has(schema)) && !scope.owned.has(schema)
+      ? [`references ${schema}, outside this extension's schemas (no foreign key into core)`]
+      : [],
+  )
+
 const statementFailures = (statement: string, scope: Scope) => {
   const verb = statement.split(" ")[0]!.toUpperCase()
 
   if (!allowedVerbs.has(verb)) return [`statement kind ${verb} is not allowed in an extension`]
 
-  if (forbidden.test(statement))
+  if (forbidden.test(statement)) {
     return ["extensions may not create extensions, roles, or databases"]
-
-  const failures: string[] = []
-
-  const createsSchema =
-    /^(?:CREATE|ALTER|DROP)\s+SCHEMA\s+(?:IF\s+(?:NOT\s+)?EXISTS\s+)?"?([a-z_][a-z0-9_]*)"?/i.exec(
-      statement,
-    )
-
-  if (createsSchema !== null && !scope.owned.has(createsSchema[1]!)) {
-    failures.push(`schema ${createsSchema[1]} is not owned by this extension`)
   }
 
-  for (const target of targets) {
-    const match = target.exec(statement)
-
-    if (match === null) continue
-
-    const schema = schemaOf(match)
-
-    if (schema === undefined || !scope.owned.has(schema)) {
-      failures.push(`${verb} target must be qualified with a schema this extension owns`)
-    }
-  }
-
-  for (const schema of referencedSchemas(statement)) {
-    if ((scope.registered.has(schema) || alwaysForeign.has(schema)) && !scope.owned.has(schema)) {
-      failures.push(
-        `references ${schema}, outside this extension's schemas (no foreign key into core)`,
-      )
-    }
-  }
-
-  return failures
+  return [
+    ...ownSchemaFailures(statement, scope),
+    ...targetFailures(statement, verb, scope),
+    ...foreignFailures(statement, scope),
+  ]
 }
 
 const tenantFailures = (statement: string, scope: Scope) => {
