@@ -86,8 +86,8 @@ Alchemy model was removed on 2026-11-24; it is in git history at `f157dc5b`.
 `createPartyCustomer` (`sales.customer.create`) accepts only an active Party relationship of kind
 `customer`, otherwise `CustomerPartyRoleInvalid`; it takes the name, party, relationship, and legal
 entity from Party and returns the existing customer for a relationship that already has one. A
-legacy customer without a party role and legal entity cannot be quoted, priced, or delivered to
-(`CustomerLegalEntityRequired`).
+legacy customer without a party role and legal entity cannot be quoted, priced, delivered to, or
+have an order confirmed (`CustomerLegalEntityRequired`; `SAL-NUM-1`).
 Why: [ADR-0099](../../../docs/decisions/0099-make-sales-customers-party-roles.md).
 
 ### `SAL-PRICE-1` Prices come from tenant price lists
@@ -145,8 +145,10 @@ model and story were removed on 2026-11-24; they are in git history at `821d88ce
 transaction that changes the status: a rollback returns the value, and repeating the command returns
 the number already issued. A draft has none (PostgreSQL rejects a draft with a number), a number never
 changes once issued, and a new fiscal year restarts at 1. The legal entity of an order is its own, else
-its customer's; an order whose customer has no legal entity (a legacy customer, `SAL-CUST-2`) is
-confirmed without a number. The date of the number is the UTC date of the confirmation or sending.
+its customer's; an order whose customer has no legal entity (a legacy customer, `SAL-CUST-2`) is not
+confirmed: `confirmOrder` fails with `CustomerLegalEntityRequired` and leaves it a draft, so a
+confirmed order always has a number (an order confirmed before this rule may still have none). The
+date of the number is the UTC date of the confirmation or sending.
 
 ## Position
 

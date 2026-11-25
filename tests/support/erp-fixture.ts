@@ -63,3 +63,35 @@ export const grantsFor = <const Capability extends string>(
   tenantId: string,
   capabilities: ReadonlyArray<Capability>,
 ) => capabilities.map((capability) => ({ userAccountId, tenantId, capability }))
+
+/**
+ * Gives a customer created with `createCustomer` the Party customer role in a legal entity, as
+ * `createPartyCustomer` does. An order of a customer without one cannot be confirmed (`SAL-CUST-2`).
+ */
+export const bindCustomerToLegalEntity = (
+  client: Sql,
+  input: { readonly tenantId: string; readonly customerId: string; readonly legalEntityId: string },
+) =>
+  Effect.promise(async () => {
+    const [party] = await client<{ id: string }[]>`
+      insert into party.parties (tenant_id, kind, name)
+      values (${input.tenantId}, 'organization', ${`Buyer ${input.customerId}`}) returning id
+    `
+
+    await client`
+      insert into party.party_roles (tenant_id, party_id, role)
+      values (${input.tenantId}, ${party!.id}, 'customer')
+    `
+
+    const [relationship] = await client<{ id: string }[]>`
+      insert into party.party_relationships (tenant_id, party_id, legal_entity_id, kind)
+      values (${input.tenantId}, ${party!.id}, ${input.legalEntityId}, 'customer') returning id
+    `
+
+    await client`
+      update sales.customers
+      set party_id = ${party!.id}, party_relationship_id = ${relationship!.id},
+          legal_entity_id = ${input.legalEntityId}
+      where tenant_id = ${input.tenantId} and id = ${input.customerId}
+    `
+  })

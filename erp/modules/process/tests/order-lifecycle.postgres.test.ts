@@ -7,6 +7,7 @@ import type { Sql } from "postgres"
 
 import { Database, uuidv7 } from "../../../../framework/foundation/mod.ts"
 import { makePostgresDatabase, runMigrations } from "../../../../framework/platform/mod.ts"
+import { bindCustomerToLegalEntity } from "../../../../tests/support/erp-fixture.ts"
 import { withTemporaryDatabase } from "../../../../tests/support/postgres-database.ts"
 import {
   AccountingCapabilities,
@@ -232,6 +233,12 @@ const makeFixture = (client: Sql, tenantId: string, label: string) =>
       tenantId,
       name: `${label} Customer`,
       email: `${label.toLowerCase()}@example.test`,
+    })
+
+    yield* bindCustomerToLegalEntity(client, {
+      tenantId,
+      customerId: customer.id,
+      legalEntityId: legalEntity.id,
     })
 
     const order = yield* sales.createOrder({

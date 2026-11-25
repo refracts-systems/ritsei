@@ -26,6 +26,7 @@ import type { SalesOrderStatus } from "./contract.ts"
 import {
   CreditLimitExceeded,
   CustomerAlreadyExists,
+  CustomerLegalEntityRequired,
   CustomerNotFound,
   QuotationCustomerMismatch,
   QuotationNotFound,
@@ -123,14 +124,14 @@ export type CreditCheck = (
 
 /**
  * Allocates the ADR-0095 number of an order being confirmed, in the confirmation transaction. The
- * legal entity is the order's, else its customer's; null when neither has one, and then the order is
- * confirmed without a number.
+ * legal entity is the order's, else its customer's; null when neither has one, and then the
+ * confirmation fails with `CustomerLegalEntityRequired` instead of leaving an unnumbered order.
  */
 export type NumberOrder = (
   order: SalesOrder,
   legalEntityId: string | null,
   confirmedAt: Date,
-) => Effect.Effect<string | null, DatabaseFailure>
+) => Effect.Effect<string, CustomerLegalEntityRequired | DatabaseFailure>
 
 export interface SalesStore {
   readonly listCustomers: (
@@ -173,6 +174,7 @@ export interface SalesStore {
   ) => Effect.Effect<
     ConfirmationMutation,
     | CreditLimitExceeded
+    | CustomerLegalEntityRequired
     | EventIdempotencyConflict
     | DatabaseFailure
     | Schema.SchemaError
