@@ -1,4 +1,4 @@
-import { and, asc, count, eq, inArray, isNull, lt, min, notExists, or, sum } from "drizzle-orm"
+import { and, asc, count, eq, inArray, isNull, lt, min, notExists, or, sql, sum } from "drizzle-orm"
 import * as Clock from "effect/Clock"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
@@ -15,7 +15,13 @@ import {
   quotationLines,
   quotations,
 } from "../../../../db/schema/sales.ts"
-import { Database, isDatabaseConstraint, uuidv7 } from "../../../../framework/foundation/mod.ts"
+import {
+  Database,
+  formatSignedMinor,
+  isDatabaseConstraint,
+  requireExactMajorToMinor,
+  uuidv7,
+} from "../../../../framework/foundation/mod.ts"
 import {
   AuthorizationService,
   type CapabilityType,
@@ -42,6 +48,8 @@ import {
   OrderQueryInput,
   type PartyCustomer,
   PipelineFactsInput,
+  UndeliveredInput,
+  type UndeliveredOrders,
   QuotationCommandInput,
   RecordDeliveryInput,
   SalesDocumentService,
@@ -1015,6 +1023,66 @@ export const makeSalesDocumentService = Effect.gen(function* () {
   const asDate = (value: Date | string | null): string | null =>
     value === null ? null : new Date(value).toISOString().slice(0, 10)
 
+  const getUndeliveredOrders = Effect.fn("SalesDocumentService.getUndeliveredOrders")(function* (
+    input: Schema.Codec.Encoded<typeof UndeliveredInput>,
+  ) {
+    const decoded = yield* authorized(UndeliveredInput, SalesCapabilities.orderRead)(input)
+    const { tenantId, legalEntityId, asOf } = decoded
+
+    return yield* database.transaction(async (tx) => {
+      // What was delivered by the date: deliveries are dated by their delivery date.
+      const deliveredByThen = sql<string>`coalesce((
+        select sum(${deliveryLines.quantity}) from ${deliveryLines}
+        join ${deliveries} on ${deliveries.tenantId} = ${deliveryLines.tenantId}
+          and ${deliveries.id} = ${deliveryLines.deliveryId}
+        where ${deliveryLines.tenantId} = ${orderLines.tenantId}
+          and ${deliveryLines.orderLineId} = ${orderLines.id}
+          and ${deliveries.deliveryDate} <= ${asOf}
+      ), 0)`
+
+      // An order belongs to its own legal entity, else to its customer's (as in the pipeline).
+      const rows = await tx
+        .select({
+          orderId: orderLines.orderId,
+          unitPrice: orderLines.unitPrice,
+          remaining: sql<string>`${orderLines.quantity} - ${deliveredByThen}`,
+        })
+        .from(orderLines)
+        .innerJoin(
+          orders,
+          and(eq(orders.tenantId, orderLines.tenantId), eq(orders.id, orderLines.orderId)),
+        )
+        .innerJoin(
+          customers,
+          and(eq(customers.tenantId, orders.tenantId), eq(customers.id, orders.customerId)),
+        )
+        .where(
+          and(
+            eq(orders.tenantId, tenantId),
+            eq(orders.status, "confirmed"),
+            or(
+              eq(orders.legalEntityId, legalEntityId),
+              and(isNull(orders.legalEntityId), eq(customers.legalEntityId, legalEntityId)),
+            ),
+            sql`(${orders.confirmedAt} at time zone 'UTC')::date <= ${asOf}::date`,
+            sql`${orderLines.quantity} > ${deliveredByThen}`,
+          ),
+        )
+
+      const value = rows.reduce(
+        (total, row) => total + BigInt(row.remaining) * requireExactMajorToMinor(row.unitPrice, 2),
+        0n,
+      )
+
+      return {
+        legalEntityId,
+        asOf,
+        orders: new Set(rows.map((row) => row.orderId)).size,
+        value: formatSignedMinor(value, 2),
+      } satisfies UndeliveredOrders
+    }, "sales.orders.undelivered")
+  })
+
   const getPipelineFacts = Effect.fn("SalesDocumentService.getPipelineFacts")(function* (
     input: Schema.Codec.Encoded<typeof PipelineFactsInput>,
   ) {
@@ -1267,6 +1335,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
     getFulfillment,
     listDeliveries,
     getPipelineFacts,
+    getUndeliveredOrders,
     findByNumber,
     recordDelivery,
   } satisfies SalesDocumentService

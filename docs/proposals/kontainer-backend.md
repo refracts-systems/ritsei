@@ -52,6 +52,18 @@ entering the stage. The first version is one legal entity: a branch exists only 
 and as an authorization scope kind, and no group or branch hierarchy over documents was found, so
 the mockup's zoom from group to entity to branch is not built.
 
+**KPI read (gap G-04).** `GET /insights/kpis?legalEntityId=&period=YYYY-MM` returns six figures
+beside the same figure for the previous month, joined by the `insights` module (read-only, no data
+of its own) from reads in the owning modules, each authorized by its owner: net sales (Billing,
+invoice less credit note subtotals by document date), receivables and payables past due
+(Settlement aging at the last day), cash and inventory value (ledger balance of the `cash` and
+`inventory` posting roles, Accounting), and confirmed orders still to deliver (Sales, count and
+value at order prices). An owner that denies the caller leaves its figure `denied` and a legal
+entity without the posting rule leaves it `unavailable`; neither shows as zero, and a caller denied
+by every owner is told so. Known gaps: an order cancelled since the previous month-end is not in
+the previous undelivered figure (a cancellation has no date); the base currency is not returned
+yet; there is no scope narrower than the tenant capability and the legal entity filter.
+
 ## E5 Cari: search over objects
 
 **What exists.** Search is owner-local only: `ListItemsInput`, `ListPartiesInput`, and the tenant

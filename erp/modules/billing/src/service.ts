@@ -1,4 +1,4 @@
-import { and, asc, count, eq, inArray, lte, min, sql, sum } from "drizzle-orm"
+import { and, asc, count, eq, gte, inArray, lte, min, sql, sum } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
@@ -50,6 +50,7 @@ import {
   isCreditNote,
   ListBillingDocumentsInput,
   ListOpenItemsInput,
+  NetSalesInput,
   NumberLookupInput,
   PipelineFactsInput,
   sideOf,
@@ -926,6 +927,44 @@ export const makeBillingService = Effect.gen(function* () {
     }))
   })
 
+  const netSales = Effect.fn("BillingService.netSales")(function* (
+    input: Schema.Codec.Encoded<typeof NetSalesInput>,
+  ) {
+    const decoded = yield* authorized(NetSalesInput, BillingCapabilities.documentRead)(input)
+
+    const rows = yield* database.query(
+      (db) =>
+        db
+          .select({ kind: invoices.kind, subtotal: sum(invoices.subtotal) })
+          .from(invoices)
+          .where(
+            and(
+              eq(invoices.tenantId, decoded.tenantId),
+              eq(invoices.legalEntityId, decoded.legalEntityId),
+              inArray(invoices.kind, kindsOf("receivable")),
+              gte(invoices.invoiceDate, decoded.from),
+              lte(invoices.invoiceDate, decoded.to),
+            ),
+          )
+          .groupBy(invoices.kind),
+      "billing.net_sales",
+    )
+
+    const net = rows.reduce(
+      (total, row) =>
+        total +
+        (isCreditNote(row.kind) ? -1n : 1n) * (row.subtotal === null ? 0n : minor(row.subtotal)),
+      0n,
+    )
+
+    return {
+      legalEntityId: decoded.legalEntityId,
+      from: decoded.from,
+      to: decoded.to,
+      netSales: major(net),
+    }
+  })
+
   const getPipelineFacts = Effect.fn("BillingService.getPipelineFacts")(function* (
     input: Schema.Codec.Encoded<typeof PipelineFactsInput>,
   ) {
@@ -1174,6 +1213,7 @@ export const makeBillingService = Effect.gen(function* () {
     listDocuments,
     listOpenItems,
     getPipelineFacts,
+    netSales,
     findByNumber,
     billedQuantities: billedQuantitiesOf,
     importArtifact,
