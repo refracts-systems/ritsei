@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, sum } from "drizzle-orm"
+import { and, asc, count, eq, inArray, min, notExists, sum } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
@@ -38,8 +38,10 @@ import {
   DraftPurchaseOrderInput,
   PurchaseApprovalSubject,
   PurchaseDocumentService,
+  PipelineFactsInput,
   type PurchaseMatching,
   PurchaseOrderQueryInput,
+  type PurchasePipelineFacts,
   ReceiveValuedInput,
   ReleasePurchaseOrderInput,
   ReturnToSupplierInput,
@@ -519,6 +521,124 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
     return yield* loadMatching(decoded.principal, decoded.tenantId, decoded.purchaseOrderId)
   })
 
+  const asDate = (value: Date | string | null): string | null =>
+    value === null ? null : new Date(value).toISOString().slice(0, 10)
+
+  const getPipelineFacts = Effect.fn("PurchaseDocumentService.getPipelineFacts")(function* (
+    input: Schema.Codec.Encoded<typeof PipelineFactsInput>,
+  ) {
+    const decoded = yield* authorized(
+      PipelineFactsInput,
+      ProcurementCapabilities.purchaseOrderRead,
+    )(input)
+
+    const { tenantId, legalEntityId } = decoded
+
+    return yield* database.transaction(async (tx) => {
+      const inEntity = and(
+        eq(purchaseOrders.tenantId, tenantId),
+        eq(purchaseOrders.legalEntityId, legalEntityId),
+        eq(purchaseOrders.status, "confirmed"),
+      )
+
+      const [orderedRow] = await tx
+        .select({ count: count(), oldest: min(purchaseOrders.confirmedAt) })
+        .from(purchaseOrders)
+        .where(
+          and(
+            inEntity,
+            notExists(
+              tx
+                .select({ id: purchaseReceipts.id })
+                .from(purchaseReceipts)
+                .where(
+                  and(
+                    eq(purchaseReceipts.tenantId, purchaseOrders.tenantId),
+                    eq(purchaseReceipts.purchaseOrderId, purchaseOrders.id),
+                  ),
+                ),
+            ),
+          ),
+        )
+
+      const receivedOrders = await tx
+        .select({
+          purchaseOrderId: purchaseReceipts.purchaseOrderId,
+          first: min(purchaseReceipts.receivedAt),
+        })
+        .from(purchaseReceipts)
+        .innerJoin(
+          purchaseOrders,
+          and(
+            eq(purchaseOrders.tenantId, purchaseReceipts.tenantId),
+            eq(purchaseOrders.id, purchaseReceipts.purchaseOrderId),
+          ),
+        )
+        .where(and(inEntity, eq(purchaseReceipts.tenantId, tenantId)))
+        .groupBy(purchaseReceipts.purchaseOrderId)
+
+      const orderIds = receivedOrders.map((row) => row.purchaseOrderId)
+
+      const received =
+        orderIds.length === 0
+          ? []
+          : await tx
+              .select({
+                purchaseOrderId: purchaseReceiptLines.purchaseOrderId,
+                lineId: purchaseReceiptLines.purchaseOrderLineId,
+                quantity: sum(purchaseReceiptLines.quantity),
+              })
+              .from(purchaseReceiptLines)
+              .where(
+                and(
+                  eq(purchaseReceiptLines.tenantId, tenantId),
+                  inArray(purchaseReceiptLines.purchaseOrderId, orderIds),
+                ),
+              )
+              .groupBy(
+                purchaseReceiptLines.purchaseOrderId,
+                purchaseReceiptLines.purchaseOrderLineId,
+              )
+
+      const returned =
+        orderIds.length === 0
+          ? []
+          : await tx
+              .select({
+                lineId: purchaseReturnLines.purchaseOrderLineId,
+                quantity: sum(purchaseReturnLines.quantity),
+              })
+              .from(purchaseReturnLines)
+              .where(
+                and(
+                  eq(purchaseReturnLines.tenantId, tenantId),
+                  inArray(purchaseReturnLines.purchaseOrderId, orderIds),
+                ),
+              )
+              .groupBy(purchaseReturnLines.purchaseOrderLineId)
+
+      const returnedBy = new Map(returned.map((row) => [row.lineId, BigInt(row.quantity ?? "0")]))
+      const linesByOrder = Map.groupBy(received, (line) => line.purchaseOrderId)
+
+      return {
+        ordered: {
+          count: orderedRow!.count,
+          oldestDate: asDate(orderedRow!.oldest),
+        },
+        received: receivedOrders.map((row) => ({
+          purchaseOrderId: row.purchaseOrderId,
+          firstReceiptDate: asDate(row.first)!,
+          lines: (linesByOrder.get(row.purchaseOrderId) ?? []).map((line) => ({
+            purchaseOrderLineId: line.lineId,
+            receivedNetOfReturns: (
+              BigInt(line.quantity ?? "0") - (returnedBy.get(line.lineId) ?? 0n)
+            ).toString(),
+          })),
+        })),
+      } satisfies PurchasePipelineFacts
+    }, "procurement.pipeline.facts")
+  })
+
   const getMatching = Effect.fn("PurchaseDocumentService.getMatching")(function* (
     input: Schema.Codec.Encoded<typeof PurchaseOrderQueryInput>,
   ) {
@@ -796,6 +916,7 @@ export const makePurchaseDocumentService = Effect.gen(function* () {
     draftPurchaseOrder,
     releasePurchaseOrder,
     getMatching,
+    getPipelineFacts,
     receiveValued,
     returnToSupplier,
   } satisfies PurchaseDocumentService

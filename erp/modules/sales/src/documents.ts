@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, lt, sum } from "drizzle-orm"
+import { and, asc, count, eq, inArray, isNull, lt, min, notExists, or, sum } from "drizzle-orm"
 import * as Clock from "effect/Clock"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
@@ -39,9 +39,11 @@ import {
   type OrderFulfillment,
   OrderQueryInput,
   type PartyCustomer,
+  PipelineFactsInput,
   QuotationCommandInput,
   RecordDeliveryInput,
   SalesDocumentService,
+  type SalesPipelineFacts,
   type SalesQuotation,
   SetCreditLimitInput,
   SetPriceInput,
@@ -953,6 +955,129 @@ export const makeSalesDocumentService = Effect.gen(function* () {
     return loaded.filter((delivery) => delivery !== undefined)
   })
 
+  const asDate = (value: Date | string | null): string | null =>
+    value === null ? null : new Date(value).toISOString().slice(0, 10)
+
+  const getPipelineFacts = Effect.fn("SalesDocumentService.getPipelineFacts")(function* (
+    input: Schema.Codec.Encoded<typeof PipelineFactsInput>,
+  ) {
+    const decoded = yield* authorized(PipelineFactsInput, SalesCapabilities.orderRead)(input)
+
+    yield* authorization.authorize({
+      principal: decoded.principal,
+      tenantId: decoded.tenantId,
+      capability: SalesCapabilities.quotationRead,
+    })
+
+    const { tenantId, legalEntityId } = decoded
+
+    return yield* database.transaction(async (tx) => {
+      const [quotationRow] = await tx
+        .select({ count: count(), oldest: min(quotations.sentAt) })
+        .from(quotations)
+        .where(
+          and(
+            eq(quotations.tenantId, tenantId),
+            eq(quotations.legalEntityId, legalEntityId),
+            inArray(quotations.status, ["sent", "accepted"]),
+            notExists(
+              tx
+                .select({ id: orders.id })
+                .from(orders)
+                .where(
+                  and(
+                    eq(orders.tenantId, quotations.tenantId),
+                    eq(orders.quotationId, quotations.id),
+                    inArray(orders.status, ["draft", "confirmed"]),
+                  ),
+                ),
+            ),
+          ),
+        )
+
+      // An order belongs to its own legal entity, else to its customer's (as deliveries do).
+      const inEntity = and(
+        eq(orders.tenantId, tenantId),
+        eq(orders.status, "confirmed"),
+        or(
+          eq(orders.legalEntityId, legalEntityId),
+          and(isNull(orders.legalEntityId), eq(customers.legalEntityId, legalEntityId)),
+        ),
+      )
+
+      const [orderRow] = await tx
+        .select({ count: count(), oldest: min(orders.confirmedAt) })
+        .from(orders)
+        .innerJoin(
+          customers,
+          and(eq(customers.tenantId, orders.tenantId), eq(customers.id, orders.customerId)),
+        )
+        .where(
+          and(
+            inEntity,
+            notExists(
+              tx
+                .select({ id: deliveries.id })
+                .from(deliveries)
+                .where(
+                  and(eq(deliveries.tenantId, orders.tenantId), eq(deliveries.orderId, orders.id)),
+                ),
+            ),
+          ),
+        )
+
+      const deliveredOrders = await tx
+        .select({ orderId: deliveries.orderId, first: min(deliveries.deliveryDate) })
+        .from(deliveries)
+        .innerJoin(
+          orders,
+          and(eq(orders.tenantId, deliveries.tenantId), eq(orders.id, deliveries.orderId)),
+        )
+        .innerJoin(
+          customers,
+          and(eq(customers.tenantId, orders.tenantId), eq(customers.id, orders.customerId)),
+        )
+        .where(and(inEntity, eq(deliveries.tenantId, tenantId)))
+        .groupBy(deliveries.orderId)
+
+      const deliveredLines =
+        deliveredOrders.length === 0
+          ? []
+          : await tx
+              .select({
+                orderId: deliveryLines.orderId,
+                orderLineId: deliveryLines.orderLineId,
+                delivered: sum(deliveryLines.quantity),
+              })
+              .from(deliveryLines)
+              .where(
+                and(
+                  eq(deliveryLines.tenantId, tenantId),
+                  inArray(
+                    deliveryLines.orderId,
+                    deliveredOrders.map((row) => row.orderId),
+                  ),
+                ),
+              )
+              .groupBy(deliveryLines.orderId, deliveryLines.orderLineId)
+
+      const linesByOrder = Map.groupBy(deliveredLines, (line) => line.orderId)
+
+      return {
+        quotations: { count: quotationRow!.count, oldestDate: asDate(quotationRow!.oldest) },
+        orders: { count: orderRow!.count, oldestDate: asDate(orderRow!.oldest) },
+        delivered: deliveredOrders.map((row) => ({
+          orderId: row.orderId,
+          firstDeliveryDate: row.first!,
+          lines: (linesByOrder.get(row.orderId) ?? []).map((line) => ({
+            orderLineId: line.orderLineId,
+            delivered: line.delivered ?? "0",
+          })),
+        })),
+      } satisfies SalesPipelineFacts
+    }, "sales.pipeline.facts")
+  })
+
   const recordDelivery = Effect.fn("SalesDocumentService.recordDelivery")(function* (
     input: Schema.Codec.Encoded<typeof RecordDeliveryInput>,
   ) {
@@ -1084,6 +1209,7 @@ export const makeSalesDocumentService = Effect.gen(function* () {
     convertQuotation,
     getFulfillment,
     listDeliveries,
+    getPipelineFacts,
     recordDelivery,
   } satisfies SalesDocumentService
 })

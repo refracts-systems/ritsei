@@ -37,6 +37,36 @@ const DocumentLines = Schema.Array(Schema.Struct({ purchaseOrderLineId: Uuid, qu
 
 export const PurchaseApprovalSubject = "procurement.purchase_order"
 
+export const PipelineFactsInput = Schema.Struct({ ...ScopedInput, legalEntityId: Uuid })
+
+/** How many documents are at a stage, and the date of the oldest. */
+export const StageFacts = Schema.Struct({
+  count: Schema.Int,
+  oldestDate: Schema.NullOr(CalendarDate),
+})
+
+/**
+ * What Procurement knows of its purchase orders' stages in one legal entity (Yard, E3). Whether a
+ * received order is fully billed is Billing's fact, so the received quantities (net of returns) come
+ * out per order line for the documents module to set against Billing's.
+ */
+export const PurchasePipelineFacts = Schema.Struct({
+  /** Confirmed orders with nothing received; dated by confirmation. */
+  ordered: StageFacts,
+  /** Confirmed orders with a receipt; dated by the first receipt. */
+  received: Schema.Array(
+    Schema.Struct({
+      purchaseOrderId: Uuid,
+      firstReceiptDate: CalendarDate,
+      lines: Schema.Array(
+        Schema.Struct({ purchaseOrderLineId: Uuid, receivedNetOfReturns: Schema.String }),
+      ),
+    }),
+  ),
+})
+
+export type PurchasePipelineFacts = Schema.Schema.Type<typeof PurchasePipelineFacts>
+
 export const SupplierPrice = Schema.Struct({
   supplierAccountId: Uuid,
   productId: Uuid,
@@ -203,6 +233,10 @@ export interface PurchaseDocumentService {
     | EventIdempotencyConflict
     | CommonFailure
   >
+  /** The stages of the purchase orders and receipts of one legal entity. */
+  readonly getPipelineFacts: (
+    input: Schema.Codec.Encoded<typeof PipelineFactsInput>,
+  ) => Effect.Effect<PurchasePipelineFacts, CommonFailure>
   readonly getMatching: (
     input: Schema.Codec.Encoded<typeof PurchaseOrderQueryInput>,
   ) => Effect.Effect<
