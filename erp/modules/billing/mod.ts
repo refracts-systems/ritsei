@@ -16,8 +16,11 @@ export {
   BillingDocumentLine,
   BillPurchaseOrderInput,
   BillVarianceSubject,
+  BillingPipelineFacts,
   BillingService,
   BillingSide,
+  BilledQuantitiesInput,
+  BilledQuantity,
   CreditInvoiceInput,
   GetBillingDocumentInput,
   GetImportedArtifactInput,
@@ -31,10 +34,13 @@ export {
   ListOpenItemsInput,
   MaxImportedArtifactBytes,
   OpenItem,
+  PipelineFactsInput,
+  StageFacts,
 } from "./src/contract.ts"
 
 export type {
   BillingDocument as BillingDocumentType,
+  BillingPipelineFacts as BillingPipelineFactsType,
   BillingService as BillingServiceContract,
   InvoiceFailure,
   OpenItem as OpenItemType,

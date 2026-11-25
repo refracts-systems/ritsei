@@ -75,14 +75,17 @@ export {
   OrderFulfillment,
   OrderQueryInput,
   PartyCustomer,
+  PipelineFactsInput,
   PricedLine,
   PriceList,
   PriceListItem,
   QuotationCommandInput,
   RecordDeliveryInput,
   SalesDocumentService,
+  SalesPipelineFacts,
   SalesQuotation,
   SetPriceInput,
+  StageFacts,
 } from "./src/documents-contract.ts"
 
 export type {
@@ -90,6 +93,7 @@ export type {
   OrderFulfillment as OrderFulfillmentType,
   PartyCustomer as PartyCustomerType,
   SalesDocumentService as SalesDocumentServiceContract,
+  SalesPipelineFacts as SalesPipelineFactsType,
   SalesQuotation as SalesQuotationType,
 } from "./src/documents-contract.ts"
 

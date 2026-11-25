@@ -7,8 +7,9 @@ import { ProcurementService, PurchaseDocumentService } from "../../procurement/m
 import { SalesDocumentService, SalesService } from "../../sales/mod.ts"
 import { SettlementService } from "../../settlement/mod.ts"
 import { arrangeChain, billingState, type FlowNode, instantDate } from "./chain.ts"
-import { ChainInput, DocumentsService } from "./contract.ts"
+import { ChainInput, DocumentsService, type Pipeline, PipelineInput } from "./contract.ts"
 import { DocumentNotFound } from "./errors.ts"
+import { unbilledStage } from "./pipeline.ts"
 
 /**
  * Where a chain begins once the requested document is traced back to its source. The legal entity
@@ -291,7 +292,80 @@ export const makeDocumentsService = Effect.gen(function* () {
     }
   })
 
-  return { chain: chainOf } satisfies DocumentsService
+  const pipelineOf = Effect.fn("DocumentsService.pipeline")(function* (
+    input: Schema.Codec.Encoded<typeof PipelineInput>,
+  ) {
+    const decoded = yield* Schema.decodeUnknownEffect(PipelineInput)(input)
+    const scope = { principal: decoded.principal, tenantId: decoded.tenantId }
+    const owned = { ...scope, legalEntityId: decoded.legalEntityId }
+
+    // One read per owner, then one for what Billing has billed of the lines they report.
+    const sold = yield* salesDocuments.getPipelineFacts(owned)
+    const bought = yield* purchasing.getPipelineFacts(owned)
+    const billed = yield* billing.getPipelineFacts(owned)
+
+    const billedBy = (side: "receivable" | "payable", lineIds: ReadonlyArray<string>) =>
+      billing
+        .billedQuantities({ ...scope, side, sourceLineIds: lineIds })
+        .pipe(
+          Effect.map(
+            (rows) => new Map(rows.map((row) => [row.sourceLineId, BigInt(row.quantity)])),
+          ),
+        )
+
+    const invoiced = yield* billedBy(
+      "receivable",
+      sold.delivered.flatMap((order) => order.lines.map((line) => line.orderLineId)),
+    )
+
+    const billedPurchases = yield* billedBy(
+      "payable",
+      bought.received.flatMap((order) => order.lines.map((line) => line.purchaseOrderLineId)),
+    )
+
+    return {
+      legalEntityId: decoded.legalEntityId,
+      receivable: [
+        { stage: "quotation", ...sold.quotations },
+        { stage: "order", ...sold.orders },
+        {
+          stage: "delivered",
+          ...unbilledStage(
+            sold.delivered.map((order) => ({
+              firstDate: order.firstDeliveryDate,
+              lines: order.lines.map((line) => ({
+                lineId: line.orderLineId,
+                quantity: line.delivered,
+              })),
+            })),
+            invoiced,
+          ),
+        },
+        { stage: "invoiced", ...billed.customerInvoiced },
+        { stage: "paid", ...billed.customerPaid },
+      ],
+      payable: [
+        { stage: "ordered", ...bought.ordered },
+        {
+          stage: "received",
+          ...unbilledStage(
+            bought.received.map((order) => ({
+              firstDate: order.firstReceiptDate,
+              lines: order.lines.map((line) => ({
+                lineId: line.purchaseOrderLineId,
+                quantity: line.receivedNetOfReturns,
+              })),
+            })),
+            billedPurchases,
+          ),
+        },
+        { stage: "billed", ...billed.supplierBilled },
+        { stage: "paid", ...billed.supplierPaid },
+      ],
+    } satisfies Pipeline
+  })
+
+  return { chain: chainOf, pipeline: pipelineOf } satisfies DocumentsService
 })
 
 export const DocumentsLive = Layer.effect(DocumentsService, makeDocumentsService)

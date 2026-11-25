@@ -14,16 +14,25 @@ import {
   apiErrorMapping,
   moduleApi,
 } from "../../../framework/modules/http/mod.ts"
-import { DocumentChain, DocumentsService, FlowEntryType } from "./mod.ts"
+import { DocumentChain, DocumentsService, FlowEntryType, Pipeline } from "./mod.ts"
 
-export const DocumentsHttpGroup = HttpApiGroup.make("Documents").add(
-  HttpApiEndpoint.get("documentChain", "/documents/chain", {
-    headers: TenantHeaders,
-    query: { documentType: FlowEntryType, documentId: Uuid },
-    success: DocumentChain,
-    error: ApiErrors,
-  }).middleware(BearerAuth),
-)
+export const DocumentsHttpGroup = HttpApiGroup.make("Documents")
+  .add(
+    HttpApiEndpoint.get("documentChain", "/documents/chain", {
+      headers: TenantHeaders,
+      query: { documentType: FlowEntryType, documentId: Uuid },
+      success: DocumentChain,
+      error: ApiErrors,
+    }).middleware(BearerAuth),
+  )
+  .add(
+    HttpApiEndpoint.get("documentPipeline", "/documents/pipeline", {
+      headers: TenantHeaders,
+      query: { legalEntityId: Uuid },
+      success: Pipeline,
+      error: ApiErrors,
+    }).middleware(BearerAuth),
+  )
 
 const DocumentsHttpApi = moduleApi(DocumentsHttpGroup)
 
@@ -39,15 +48,26 @@ export const DocumentsHttpHandlers = HttpApiBuilder.group(
     Effect.gen(function* () {
       const documents = yield* DocumentsService
 
-      return handlers.handle(
-        "documentChain",
-        Effect.fn("Http.Documents.documentChain")(function* ({ headers, query }) {
-          const principal = yield* CurrentPrincipal
+      return handlers
+        .handle(
+          "documentChain",
+          Effect.fn("Http.Documents.documentChain")(function* ({ headers, query }) {
+            const principal = yield* CurrentPrincipal
 
-          return yield* DocumentsHttpErrors.apiEffect(
-            documents.chain({ principal, tenantId: headers["x-tenant-id"], ...query }),
-          )
-        }),
-      )
+            return yield* DocumentsHttpErrors.apiEffect(
+              documents.chain({ principal, tenantId: headers["x-tenant-id"], ...query }),
+            )
+          }),
+        )
+        .handle(
+          "documentPipeline",
+          Effect.fn("Http.Documents.documentPipeline")(function* ({ headers, query }) {
+            const principal = yield* CurrentPrincipal
+
+            return yield* DocumentsHttpErrors.apiEffect(
+              documents.pipeline({ principal, tenantId: headers["x-tenant-id"], ...query }),
+            )
+          }),
+        )
     }),
 )

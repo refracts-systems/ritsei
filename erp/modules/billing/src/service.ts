@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, lte, sql, sum } from "drizzle-orm"
+import { and, asc, count, eq, inArray, lte, min, sql, sum } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
@@ -36,6 +36,7 @@ import { type BillMatch, creditShare, firstUncoveredExcess, matchBill } from "./
 import { decideSettlement, SettlementDecision } from "./settlement-decision.ts"
 import {
   ApplySettlementInput,
+  BilledQuantitiesInput,
   BillPurchaseOrderInput,
   BillVarianceSubject,
   type BillingDocument,
@@ -49,6 +50,7 @@ import {
   isCreditNote,
   ListBillingDocumentsInput,
   ListOpenItemsInput,
+  PipelineFactsInput,
   sideOf,
 } from "./contract.ts"
 import {
@@ -895,6 +897,74 @@ export const makeBillingService = Effect.gen(function* () {
     )
   })
 
+  const getPipelineFacts = Effect.fn("BillingService.getPipelineFacts")(function* (
+    input: Schema.Codec.Encoded<typeof PipelineFactsInput>,
+  ) {
+    const decoded = yield* authorized(PipelineFactsInput, BillingCapabilities.documentRead)(input)
+
+    const rows = yield* database.query(
+      (db) =>
+        db
+          .select({
+            kind: invoices.kind,
+            open: sql<boolean>`${invoices.openAmount} > 0`.mapWith(Boolean),
+            count: count(),
+            oldest: min(invoices.invoiceDate),
+          })
+          .from(invoices)
+          .where(
+            and(
+              eq(invoices.tenantId, decoded.tenantId),
+              eq(invoices.legalEntityId, decoded.legalEntityId),
+              inArray(invoices.kind, ["customer_invoice", "supplier_bill"]),
+            ),
+          )
+          .groupBy(invoices.kind, sql`${invoices.openAmount} > 0`),
+      "billing.pipeline.facts",
+    )
+
+    const stage = (kind: InvoiceKind, open: boolean) => {
+      const row = rows.find((candidate) => candidate.kind === kind && candidate.open === open)
+
+      return { count: row?.count ?? 0, oldestDate: row?.oldest ?? null }
+    }
+
+    return {
+      customerInvoiced: stage("customer_invoice", true),
+      customerPaid: stage("customer_invoice", false),
+      supplierBilled: stage("supplier_bill", true),
+      supplierPaid: stage("supplier_bill", false),
+    }
+  })
+
+  const billedQuantitiesOf = Effect.fn("BillingService.billedQuantities")(function* (
+    input: Schema.Codec.Encoded<typeof BilledQuantitiesInput>,
+  ) {
+    const decoded = yield* authorized(
+      BilledQuantitiesInput,
+      BillingCapabilities.documentRead,
+    )(input)
+
+    const lineIds = [...decoded.sourceLineIds]
+
+    if (decoded.side === "receivable") {
+      const invoiced = yield* billedQuantities(decoded.tenantId, "customer_invoice", lineIds)
+
+      return [...invoiced].map(([sourceLineId, quantity]) => ({
+        sourceLineId,
+        quantity: quantity.toString(),
+      }))
+    }
+
+    const billed = yield* billedQuantities(decoded.tenantId, "supplier_bill", lineIds)
+    const credited = yield* creditedPurchaseQuantities(decoded.tenantId, lineIds)
+
+    return [...billed].map(([sourceLineId, quantity]) => ({
+      sourceLineId,
+      quantity: (quantity - (credited.get(sourceLineId) ?? 0n)).toString(),
+    }))
+  })
+
   const listOpenItems = Effect.fn("BillingService.listOpenItems")(function* (
     input: Schema.Codec.Encoded<typeof ListOpenItemsInput>,
   ) {
@@ -1074,6 +1144,8 @@ export const makeBillingService = Effect.gen(function* () {
     getDocument,
     listDocuments,
     listOpenItems,
+    getPipelineFacts,
+    billedQuantities: billedQuantitiesOf,
     importArtifact,
     getImportedArtifact,
   } satisfies BillingService

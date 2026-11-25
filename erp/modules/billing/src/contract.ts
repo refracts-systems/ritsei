@@ -167,6 +167,35 @@ export const ListBillingDocumentsInput = Schema.Struct({
   creditedInvoiceId: Schema.optionalKey(Uuid),
 })
 
+export const PipelineFactsInput = Schema.Struct({ ...ScopedInput, legalEntityId: Uuid })
+
+/** How many documents are at a stage, and the invoice date of the oldest. */
+export const StageFacts = Schema.Struct({
+  count: Schema.Int,
+  oldestDate: Schema.NullOr(CalendarDate),
+})
+
+/** Invoices and bills of one legal entity by whether anything is still open (Yard, E3). */
+export const BillingPipelineFacts = Schema.Struct({
+  customerInvoiced: StageFacts,
+  customerPaid: StageFacts,
+  supplierBilled: StageFacts,
+  supplierPaid: StageFacts,
+})
+
+export type BillingPipelineFacts = Schema.Schema.Type<typeof BillingPipelineFacts>
+
+export const BilledQuantitiesInput = Schema.Struct({
+  ...ScopedInput,
+  side: BillingSide,
+  sourceLineIds: Schema.Array(Uuid).check(Schema.isMaxLength(5000)),
+})
+
+/** The quantity billed per order line (receivable) or purchase order line (payable, net of credits). */
+export const BilledQuantity = Schema.Struct({ sourceLineId: Uuid, quantity: Schema.String })
+
+export type BilledQuantity = Schema.Schema.Type<typeof BilledQuantity>
+
 /** The most bytes of one retained source document; the database enforces the same limit. */
 export const MaxImportedArtifactBytes = 10_485_760
 
@@ -314,6 +343,14 @@ export interface BillingService {
   readonly listOpenItems: (
     input: Schema.Codec.Encoded<typeof ListOpenItemsInput>,
   ) => Effect.Effect<ReadonlyArray<OpenItem>, CommonFailure>
+  /** Counts of customer invoices and supplier bills that are open or settled, with the oldest date. */
+  readonly getPipelineFacts: (
+    input: Schema.Codec.Encoded<typeof PipelineFactsInput>,
+  ) => Effect.Effect<BillingPipelineFacts, CommonFailure>
+  /** What the given order or purchase order lines have been billed so far. */
+  readonly billedQuantities: (
+    input: Schema.Codec.Encoded<typeof BilledQuantitiesInput>,
+  ) => Effect.Effect<ReadonlyArray<BilledQuantity>, CommonFailure>
   /**
    * Retains the bytes of a document the source system issued. One record per tenant, source system,
    * and source reference: a replay with the same evidence returns the record, different evidence

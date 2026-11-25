@@ -215,6 +215,36 @@ export const RecordDeliveryInput = Schema.Struct({
     ),
 })
 
+export const PipelineFactsInput = Schema.Struct({ ...ScopedInput, legalEntityId: Uuid })
+
+/** How many documents are at a stage, and the date of the oldest. */
+export const StageFacts = Schema.Struct({
+  count: Schema.Int,
+  oldestDate: Schema.NullOr(CalendarDate),
+})
+
+/**
+ * What Sales knows of its documents' stages in one legal entity (Yard, E3). Whether a delivered
+ * order is fully invoiced is Billing's fact, so the delivered quantities come out per order line
+ * for the documents module to set against Billing's.
+ */
+export const SalesPipelineFacts = Schema.Struct({
+  /** Quotations sent or accepted, with no order made from them; dated by sending. */
+  quotations: StageFacts,
+  /** Confirmed orders with nothing delivered; dated by confirmation. */
+  orders: StageFacts,
+  /** Confirmed orders with a delivery; dated by the first delivery. */
+  delivered: Schema.Array(
+    Schema.Struct({
+      orderId: Uuid,
+      firstDeliveryDate: CalendarDate,
+      lines: Schema.Array(Schema.Struct({ orderLineId: Uuid, delivered: NonNegativeQuantity })),
+    }),
+  ),
+})
+
+export type SalesPipelineFacts = Schema.Schema.Type<typeof SalesPipelineFacts>
+
 type CommonFailure = AuthorizationDenied | DatabaseFailure | Schema.SchemaError
 
 /**
@@ -287,6 +317,10 @@ export interface SalesDocumentService {
     OrderFulfillment,
     SalesOrderNotFound | CustomerLegalEntityRequired | CommonFailure
   >
+  /** The stages of the quotations, orders, and deliveries of one legal entity. */
+  readonly getPipelineFacts: (
+    input: Schema.Codec.Encoded<typeof PipelineFactsInput>,
+  ) => Effect.Effect<SalesPipelineFacts, CommonFailure>
   /** The order's deliveries, oldest first. */
   readonly listDeliveries: (
     input: Schema.Codec.Encoded<typeof OrderQueryInput>,
