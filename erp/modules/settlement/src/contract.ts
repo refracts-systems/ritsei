@@ -173,6 +173,18 @@ export const AllocatePaymentInput = Schema.Struct({
   allocations: Schema.Array(Allocation).check(Schema.isMinLength(1)),
 })
 
+export const NumberLookupInput = Schema.Struct({ ...ScopedInput, number: Text })
+
+/** A payment found by its number: where to open it, not proof that the caller may. */
+export const NumberCandidate = Schema.Struct({
+  type: Schema.Literal("settlement.payment"),
+  id: Uuid,
+  number: Schema.String,
+  legalEntityId: Uuid,
+})
+
+export type NumberCandidate = Schema.Schema.Type<typeof NumberCandidate>
+
 export const ListPaymentsInput = Schema.Struct({
   ...ScopedInput,
   legalEntityId: Uuid,
@@ -357,6 +369,10 @@ export interface SettlementService {
   readonly listPayments: (
     input: Schema.Codec.Encoded<typeof ListPaymentsInput>,
   ) => Effect.Effect<ReadonlyArray<Payment>, CommonFailure>
+  /** The payments with exactly this number, in any legal entity. */
+  readonly findByNumber: (
+    input: Schema.Codec.Encoded<typeof NumberLookupInput>,
+  ) => Effect.Effect<ReadonlyArray<NumberCandidate>, CommonFailure>
   readonly aging: (
     input: Schema.Codec.Encoded<typeof AgingInput>,
   ) => Effect.Effect<AgingReport, CommonFailure>

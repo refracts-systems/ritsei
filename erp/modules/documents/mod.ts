@@ -5,6 +5,8 @@ export {
   DocumentNodeType,
   DocumentsService,
   FlowEntryType,
+  Lookup,
+  LookupInput,
   Pipeline,
   PipelineInput,
   PipelineStage,
@@ -12,6 +14,7 @@ export {
 
 export type {
   DocumentChain as DocumentChainType,
+  Lookup as LookupType,
   Pipeline as PipelineType,
   DocumentsService as DocumentsServiceContract,
 } from "./src/contract.ts"

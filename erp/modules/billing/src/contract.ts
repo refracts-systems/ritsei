@@ -167,6 +167,23 @@ export const ListBillingDocumentsInput = Schema.Struct({
   creditedInvoiceId: Schema.optionalKey(Uuid),
 })
 
+export const NumberLookupInput = Schema.Struct({ ...ScopedInput, number: TrimmedText(64) })
+
+/** A document found by its number: where to open it, not proof that the caller may. */
+export const NumberCandidate = Schema.Struct({
+  type: Schema.Literals([
+    "billing.customer_invoice",
+    "billing.customer_credit_note",
+    "billing.supplier_bill",
+    "billing.supplier_credit_note",
+  ]),
+  id: Uuid,
+  number: Schema.String,
+  legalEntityId: Uuid,
+})
+
+export type NumberCandidate = Schema.Schema.Type<typeof NumberCandidate>
+
 export const PipelineFactsInput = Schema.Struct({ ...ScopedInput, legalEntityId: Uuid })
 
 /** How many documents are at a stage, and the invoice date of the oldest. */
@@ -343,6 +360,10 @@ export interface BillingService {
   readonly listOpenItems: (
     input: Schema.Codec.Encoded<typeof ListOpenItemsInput>,
   ) => Effect.Effect<ReadonlyArray<OpenItem>, CommonFailure>
+  /** The invoices, credit notes, and bills with exactly this number, in any legal entity. */
+  readonly findByNumber: (
+    input: Schema.Codec.Encoded<typeof NumberLookupInput>,
+  ) => Effect.Effect<ReadonlyArray<NumberCandidate>, CommonFailure>
   /** Counts of customer invoices and supplier bills that are open or settled, with the oldest date. */
   readonly getPipelineFacts: (
     input: Schema.Codec.Encoded<typeof PipelineFactsInput>,

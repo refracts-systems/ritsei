@@ -89,6 +89,8 @@ export { ProcurementModule } from "./manifest.ts"
 export {
   DraftPurchaseOrderInput,
   MatchingLine,
+  NumberCandidate,
+  NumberLookupInput,
   PipelineFactsInput,
   PricedPurchaseOrder,
   PurchaseApprovalSubject,

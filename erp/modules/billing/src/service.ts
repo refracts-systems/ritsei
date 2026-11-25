@@ -50,6 +50,7 @@ import {
   isCreditNote,
   ListBillingDocumentsInput,
   ListOpenItemsInput,
+  NumberLookupInput,
   PipelineFactsInput,
   sideOf,
 } from "./contract.ts"
@@ -897,6 +898,34 @@ export const makeBillingService = Effect.gen(function* () {
     )
   })
 
+  const findByNumber = Effect.fn("BillingService.findByNumber")(function* (
+    input: Schema.Codec.Encoded<typeof NumberLookupInput>,
+  ) {
+    const decoded = yield* authorized(NumberLookupInput, BillingCapabilities.documentRead)(input)
+
+    const rows = yield* database.query(
+      (db) =>
+        db
+          .select({
+            id: invoices.id,
+            kind: invoices.kind,
+            number: invoices.number,
+            legalEntityId: invoices.legalEntityId,
+          })
+          .from(invoices)
+          .where(and(eq(invoices.tenantId, decoded.tenantId), eq(invoices.number, decoded.number)))
+          .limit(20),
+      "billing.number.lookup",
+    )
+
+    return rows.map((row) => ({
+      type: `billing.${row.kind}` as const,
+      id: row.id,
+      number: row.number,
+      legalEntityId: row.legalEntityId,
+    }))
+  })
+
   const getPipelineFacts = Effect.fn("BillingService.getPipelineFacts")(function* (
     input: Schema.Codec.Encoded<typeof PipelineFactsInput>,
   ) {
@@ -1145,6 +1174,7 @@ export const makeBillingService = Effect.gen(function* () {
     listDocuments,
     listOpenItems,
     getPipelineFacts,
+    findByNumber,
     billedQuantities: billedQuantitiesOf,
     importArtifact,
     getImportedArtifact,

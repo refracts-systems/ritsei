@@ -7,7 +7,16 @@ import { ProcurementService, PurchaseDocumentService } from "../../procurement/m
 import { SalesDocumentService, SalesService } from "../../sales/mod.ts"
 import { SettlementService } from "../../settlement/mod.ts"
 import { arrangeChain, billingState, type FlowNode, instantDate } from "./chain.ts"
-import { ChainInput, DocumentsService, type Pipeline, PipelineInput } from "./contract.ts"
+import {
+  ChainInput,
+  type CommonFailure,
+  DocumentsService,
+  type Lookup,
+  type LookupCandidate,
+  LookupInput,
+  type Pipeline,
+  PipelineInput,
+} from "./contract.ts"
 import { DocumentNotFound } from "./errors.ts"
 import { unbilledStage } from "./pipeline.ts"
 
@@ -365,7 +374,57 @@ export const makeDocumentsService = Effect.gen(function* () {
     } satisfies Pipeline
   })
 
-  return { chain: chainOf, pipeline: pipelineOf } satisfies DocumentsService
+  const lookupOf = Effect.fn("DocumentsService.lookup")(function* (
+    input: Schema.Codec.Encoded<typeof LookupInput>,
+  ) {
+    const decoded = yield* Schema.decodeUnknownEffect(LookupInput)(input)
+
+    const query = {
+      principal: decoded.principal,
+      tenantId: decoded.tenantId,
+      number: decoded.number,
+    }
+
+    // An owner that denies the caller adds no candidate, so a search never shows what the caller
+    // may not read; only a caller denied by every owner is told so.
+    const nothingFound: ReadonlyArray<LookupCandidate> = []
+
+    const owners: ReadonlyArray<Effect.Effect<ReadonlyArray<LookupCandidate>, CommonFailure>> = [
+      salesDocuments.findByNumber(query),
+      purchasing.findByNumber(query),
+      billing.findByNumber(query),
+      settlement.findByNumber(query),
+    ]
+
+    const found = yield* Effect.all(
+      owners.map((owner) =>
+        owner.pipe(
+          Effect.map((candidates) => ({ candidates, denial: undefined })),
+          Effect.catchTag("AuthorizationDenied", (denial) =>
+            Effect.succeed({ candidates: nothingFound, denial }),
+          ),
+        ),
+      ),
+      { concurrency: "unbounded" },
+    )
+
+    const denials = found.flatMap((owner) => (owner.denial === undefined ? [] : [owner.denial]))
+
+    if (denials.length === found.length) return yield* Effect.fail(denials[0]!)
+
+    return {
+      candidates: found
+        .flatMap((owner) => owner.candidates)
+        .toSorted(
+          (left, right) =>
+            left.type.localeCompare(right.type) ||
+            left.legalEntityId.localeCompare(right.legalEntityId) ||
+            left.id.localeCompare(right.id),
+        ),
+    } satisfies Lookup
+  })
+
+  return { chain: chainOf, pipeline: pipelineOf, lookup: lookupOf } satisfies DocumentsService
 })
 
 export const DocumentsLive = Layer.effect(DocumentsService, makeDocumentsService)

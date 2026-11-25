@@ -45,6 +45,7 @@ import {
   CreatePaymentTermInput,
   ImportBankStatementInput,
   ListPaymentsInput,
+  NumberLookupInput,
   MakePaymentInput,
   MatchBankLineInput,
   type BankLineMatch,
@@ -697,6 +698,28 @@ export const makeSettlementService = Effect.gen(function* () {
     }, "settlement.payment.list")
   })
 
+  const findByNumber = Effect.fn("SettlementService.findByNumber")(function* (
+    input: Schema.Codec.Encoded<typeof NumberLookupInput>,
+  ) {
+    const decoded = yield* authorized(NumberLookupInput, SettlementCapabilities.reportRead)(input)
+
+    const rows = yield* database.query(
+      (db) =>
+        db
+          .select({
+            id: payments.id,
+            number: payments.number,
+            legalEntityId: payments.legalEntityId,
+          })
+          .from(payments)
+          .where(and(eq(payments.tenantId, decoded.tenantId), eq(payments.number, decoded.number)))
+          .limit(20),
+      "settlement.number.lookup",
+    )
+
+    return rows.map((row) => ({ type: "settlement.payment" as const, ...row }))
+  })
+
   const aging = Effect.fn("SettlementService.aging")(function* (
     input: Schema.Codec.Encoded<typeof AgingInput>,
   ) {
@@ -1308,6 +1331,7 @@ export const makeSettlementService = Effect.gen(function* () {
     makePayment,
     allocatePayment,
     listPayments,
+    findByNumber,
     aging,
     customerStatement,
     importBankStatement,

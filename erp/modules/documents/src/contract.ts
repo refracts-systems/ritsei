@@ -6,6 +6,7 @@ import {
   CalendarDate,
   type DatabaseFailure,
   type ReplicaConsistencyFailure,
+  TrimmedText,
   Uuid,
 } from "../../../../framework/foundation/mod.ts"
 import { Principal } from "../../../../framework/modules/auth/mod.ts"
@@ -102,7 +103,30 @@ export const Pipeline = Schema.Struct({
 
 export type Pipeline = Schema.Schema.Type<typeof Pipeline>
 
-type CommonFailure =
+export const LookupInput = Schema.Struct({
+  principal: Principal,
+  tenantId: Uuid,
+  number: TrimmedText(64),
+})
+
+/**
+ * A document with exactly the number asked for. It says where to open the document, not that the
+ * caller may: opening it is authorized again by the module that owns it.
+ */
+export const LookupCandidate = Schema.Struct({
+  type: DocumentNodeType,
+  id: Uuid,
+  number: Schema.String,
+  legalEntityId: Uuid,
+})
+
+export type LookupCandidate = Schema.Schema.Type<typeof LookupCandidate>
+
+export const Lookup = Schema.Struct({ candidates: Schema.Array(LookupCandidate) })
+
+export type Lookup = Schema.Schema.Type<typeof Lookup>
+
+export type CommonFailure =
   | AuthorizationDenied
   | DatabaseFailure
   | EventIdempotencyConflict
@@ -117,6 +141,13 @@ export interface DocumentsService {
   readonly chain: (
     input: Schema.Codec.Encoded<typeof ChainInput>,
   ) => Effect.Effect<DocumentChain, DocumentNotFound | CommonFailure>
+  /**
+   * The documents of the caller's tenant whose number is exactly this, from every owner the caller
+   * may read. An owner the caller may not read adds nothing; a caller who may read none is denied.
+   */
+  readonly lookup: (
+    input: Schema.Codec.Encoded<typeof LookupInput>,
+  ) => Effect.Effect<Lookup, CommonFailure>
   /** Counts and the oldest document date per stage for one legal entity, read once per owner. */
   readonly pipeline: (
     input: Schema.Codec.Encoded<typeof PipelineInput>,

@@ -9,6 +9,7 @@ import {
   Uuid,
   PositiveQuantity,
   NonNegativeQuantity,
+  TrimmedText,
 } from "../../../../framework/foundation/mod.ts"
 import type { ApprovalRequest } from "../../../../framework/modules/approvals/mod.ts"
 import { Principal } from "../../../../framework/modules/auth/mod.ts"
@@ -36,6 +37,18 @@ const DocumentLines = Schema.Array(Schema.Struct({ purchaseOrderLineId: Uuid, qu
   .check(Schema.makeFilter(uniqueLines, { expected: "each order line appears once" }))
 
 export const PurchaseApprovalSubject = "procurement.purchase_order"
+
+export const NumberLookupInput = Schema.Struct({ ...ScopedInput, number: TrimmedText(64) })
+
+/** A document found by its number: where to open it, not proof that the caller may. */
+export const NumberCandidate = Schema.Struct({
+  type: Schema.Literals(["procurement.purchase_order", "procurement.return"]),
+  id: Uuid,
+  number: Schema.String,
+  legalEntityId: Uuid,
+})
+
+export type NumberCandidate = Schema.Schema.Type<typeof NumberCandidate>
 
 export const PipelineFactsInput = Schema.Struct({ ...ScopedInput, legalEntityId: Uuid })
 
@@ -233,6 +246,10 @@ export interface PurchaseDocumentService {
     | EventIdempotencyConflict
     | CommonFailure
   >
+  /** The purchase orders and returns with exactly this number, in any legal entity. */
+  readonly findByNumber: (
+    input: Schema.Codec.Encoded<typeof NumberLookupInput>,
+  ) => Effect.Effect<ReadonlyArray<NumberCandidate>, CommonFailure>
   /** The stages of the purchase orders and receipts of one legal entity. */
   readonly getPipelineFacts: (
     input: Schema.Codec.Encoded<typeof PipelineFactsInput>,

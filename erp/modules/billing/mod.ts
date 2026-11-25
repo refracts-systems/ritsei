@@ -33,6 +33,8 @@ export {
   ListBillingDocumentsInput,
   ListOpenItemsInput,
   MaxImportedArtifactBytes,
+  NumberCandidate,
+  NumberLookupInput,
   OpenItem,
   PipelineFactsInput,
   StageFacts,

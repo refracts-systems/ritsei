@@ -4,6 +4,7 @@ import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
 import * as HttpApiEndpoint from "effect/http-api/HttpApiEndpoint"
 import * as HttpApiGroup from "effect/http-api/HttpApiGroup"
 
+import { TrimmedText } from "../../../framework/foundation/mod.ts"
 import {
   ApiErrors,
   BaseApiErrorPolicy,
@@ -14,7 +15,7 @@ import {
   apiErrorMapping,
   moduleApi,
 } from "../../../framework/modules/http/mod.ts"
-import { DocumentChain, DocumentsService, FlowEntryType, Pipeline } from "./mod.ts"
+import { DocumentChain, DocumentsService, FlowEntryType, Lookup, Pipeline } from "./mod.ts"
 
 export const DocumentsHttpGroup = HttpApiGroup.make("Documents")
   .add(
@@ -22,6 +23,14 @@ export const DocumentsHttpGroup = HttpApiGroup.make("Documents")
       headers: TenantHeaders,
       query: { documentType: FlowEntryType, documentId: Uuid },
       success: DocumentChain,
+      error: ApiErrors,
+    }).middleware(BearerAuth),
+  )
+  .add(
+    HttpApiEndpoint.get("documentLookup", "/documents/lookup", {
+      headers: TenantHeaders,
+      query: { number: TrimmedText(64) },
+      success: Lookup,
       error: ApiErrors,
     }).middleware(BearerAuth),
   )
@@ -56,6 +65,16 @@ export const DocumentsHttpHandlers = HttpApiBuilder.group(
 
             return yield* DocumentsHttpErrors.apiEffect(
               documents.chain({ principal, tenantId: headers["x-tenant-id"], ...query }),
+            )
+          }),
+        )
+        .handle(
+          "documentLookup",
+          Effect.fn("Http.Documents.documentLookup")(function* ({ headers, query }) {
+            const principal = yield* CurrentPrincipal
+
+            return yield* DocumentsHttpErrors.apiEffect(
+              documents.lookup({ principal, tenantId: headers["x-tenant-id"], ...query }),
             )
           }),
         )
