@@ -8,7 +8,8 @@ import { startSituationsSweep } from "./mod.ts"
 
 /**
  * Runs the situations sweep as its own process. SITUATIONS_SWEEP_USER_ID is a service account that
- * holds the detect capability; SITUATIONS_LEGAL_ENTITY_IDS is a comma-separated list.
+ * holds the detect capability and may read accounting configurations. SITUATIONS_LEGAL_ENTITY_IDS is an
+ * optional comma-separated list; omitted, every legal entity with accounting configured is swept.
  */
 if (isMain(import.meta.url)) {
   const url = process.env["DATABASE_URL"]
@@ -26,12 +27,11 @@ if (isMain(import.meta.url)) {
     url === undefined ||
     tenantId === undefined ||
     !userAccountId ||
-    legalEntityIds.length === 0 ||
     !Number.isInteger(intervalMs) ||
     intervalMs < 1_000
   ) {
     console.error(
-      "DATABASE_URL, WORKER_TENANT_ID, SITUATIONS_SWEEP_USER_ID, and SITUATIONS_LEGAL_ENTITY_IDS are required; SITUATIONS_SWEEP_INTERVAL_MS is at least 1000",
+      "DATABASE_URL, WORKER_TENANT_ID, and SITUATIONS_SWEEP_USER_ID are required; SITUATIONS_SWEEP_INTERVAL_MS is at least 1000",
     )
     process.exit(1)
   }
@@ -39,13 +39,11 @@ if (isMain(import.meta.url)) {
   Effect.gen(function* () {
     const configuration = yield* readRuntimeConfiguration()
 
+    const input = { tenantId, principal: { userAccountId, sessionId: "situations-sweep" } }
+
     yield* startSituationsSweep(
       url,
-      {
-        tenantId,
-        principal: { userAccountId, sessionId: "situations-sweep" },
-        legalEntityIds,
-      },
+      legalEntityIds.length > 0 ? { ...input, legalEntityIds } : input,
       configuration,
       intervalMs,
     )

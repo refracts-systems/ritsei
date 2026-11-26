@@ -3,13 +3,18 @@ import * as Schema from "effect/Schema"
 
 import { Uuid } from "../../../framework/foundation/mod.ts"
 import { Principal } from "../../../framework/modules/auth/mod.ts"
+import { AccountingService } from "../../modules/accounting/mod.ts"
 import { SituationsService } from "../../modules/situations/mod.ts"
 
 export const SituationsSweepInput = Schema.Struct({
   tenantId: Uuid,
   /** A service account granted the detect capability, and read access in each owning module. */
   principal: Principal,
-  legalEntityIds: Schema.Array(Uuid).check(Schema.isMinLength(1)),
+  /**
+   * The legal entities to sweep. Omitted, every legal entity with accounting configured in the
+   * tenant, which the principal must be allowed to read.
+   */
+  legalEntityIds: Schema.optionalKey(Schema.Array(Uuid).check(Schema.isMinLength(1))),
 })
 
 export interface SituationsSweepResult {
@@ -29,6 +34,14 @@ export const runSituationsSweepOnce = Effect.fn("SituationsSweep.runOnce")(funct
 ) {
   const decoded = yield* Schema.decodeUnknownEffect(SituationsSweepInput)(input)
   const situations = yield* SituationsService
+
+  const legalEntityIds =
+    decoded.legalEntityIds ??
+    (yield* (yield* AccountingService).listAccountingConfigurations({
+      principal: decoded.principal,
+      tenantId: decoded.tenantId,
+      limit: 200,
+    })).map((configuration) => configuration.legalEntityId)
 
   const sweepOne = (legalEntityId: string) =>
     Effect.gen(function* () {
@@ -54,5 +67,5 @@ export const runSituationsSweepOnce = Effect.fn("SituationsSweep.runOnce")(funct
       ),
     )
 
-  return yield* Effect.forEach(decoded.legalEntityIds, sweepOne)
+  return yield* Effect.forEach(legalEntityIds, sweepOne)
 })

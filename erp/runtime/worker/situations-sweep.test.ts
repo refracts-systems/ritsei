@@ -3,6 +3,7 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 
 import { DatabaseFailure } from "../../../framework/foundation/mod.ts"
+import { AccountingService, type AccountingServiceContract } from "../../modules/accounting/mod.ts"
 import { SituationsService, type SituationsServiceContract } from "../../modules/situations/mod.ts"
 import { partial } from "../../../tests/support/partial.ts"
 import { runSituationsSweepOnce } from "./situations-sweep.ts"
@@ -11,6 +12,14 @@ const tenantId = "018f0000-0000-7000-8000-000000000001"
 const first = "018f0000-0000-7000-8000-000000000011"
 const second = "018f0000-0000-7000-8000-000000000012"
 const principal = { userAccountId: "sweeper", sessionId: "sweep-session" }
+
+const accountingLayer = Layer.succeed(
+  AccountingService,
+  partial<AccountingServiceContract>()({
+    listAccountingConfigurations: () =>
+      Effect.succeed([{ legalEntityId: first }, { legalEntityId: second }]),
+  }),
+)
 
 const situationsLayer = (calls: string[], failing: string) =>
   Layer.succeed(
@@ -51,7 +60,27 @@ it.effect("detects before escalating, per legal entity, and keeps going after a 
     ])
 
     assert.deepStrictEqual(calls, [`detect:${second}`, `advance:${second}`])
-  }).pipe(Effect.provide(situationsLayer(calls, first)))
+  }).pipe(Effect.provide(Layer.merge(situationsLayer(calls, first), accountingLayer)))
+})
+
+it.effect("sweeps every legal entity with accounting configured when none are listed", () => {
+  const calls: string[] = []
+
+  return Effect.gen(function* () {
+    const results = yield* runSituationsSweepOnce({ tenantId, principal })
+
+    assert.deepStrictEqual(
+      results.map((result) => result.legalEntityId),
+      [first, second],
+    )
+
+    assert.deepStrictEqual(calls, [
+      `detect:${first}`,
+      `advance:${first}`,
+      `detect:${second}`,
+      `advance:${second}`,
+    ])
+  }).pipe(Effect.provide(Layer.merge(situationsLayer(calls, ""), accountingLayer)))
 })
 
 it.effect("rejects a sweep with no legal entities", () =>
@@ -61,5 +90,5 @@ it.effect("rejects a sweep with no legal entities", () =>
     )
 
     assert.strictEqual(error._tag, "SchemaError")
-  }).pipe(Effect.provide(situationsLayer([], ""))),
+  }).pipe(Effect.provide(Layer.merge(situationsLayer([], ""), accountingLayer))),
 )
