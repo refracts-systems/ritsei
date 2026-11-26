@@ -39,6 +39,9 @@ import {
   PartyContact,
   PartyContactBook,
   PartyContactService,
+  OrgUnit,
+  OrgUnitKind,
+  OrgUnitService,
 } from "./mod.ts"
 
 const CreatedParty = Party.pipe(HttpApiSchema.status(201))
@@ -200,6 +203,36 @@ export const PartyHttpGroup = HttpApiGroup.make("Parties").add(
     success: PartyBankAccount.pipe(HttpApiSchema.status(201)),
     error: errors,
   }).middleware(BearerAuth),
+  HttpApiEndpoint.get("listOrgUnits", "/org-units", {
+    headers: tenantHeaders,
+    success: Schema.Array(OrgUnit),
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.post("createOrgUnit", "/org-units", {
+    headers: tenantHeaders,
+    payload: Schema.Struct({
+      kind: OrgUnitKind,
+      name: ShortString,
+      parentId: Schema.optionalKey(Uuid),
+      currency: Schema.optionalKey(Schema.String),
+    }),
+    success: OrgUnit.pipe(HttpApiSchema.status(201)),
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.post("moveOrgUnit", "/org-units/:id/move", {
+    params: { id: Uuid },
+    headers: tenantHeaders,
+    payload: Schema.Struct({ parentId: Uuid }),
+    success: OrgUnit,
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.post("assignLegalEntityToOrgUnit", "/org-units/:id/legal-entities", {
+    params: { id: Uuid },
+    headers: tenantHeaders,
+    payload: Schema.Struct({ legalEntityId: Uuid }),
+    success: OrgUnit,
+    error: errors,
+  }).middleware(BearerAuth),
 )
 
 const PartyHttpApi = moduleApi(PartyHttpGroup)
@@ -212,6 +245,8 @@ export const PartyHttpErrors = apiErrorMapping({
   LegalEntityAlreadyExists: "conflict",
   LegalEntityNotFound: "not_found",
   OrganizationRequired: "conflict",
+  OrgUnitInvalid: "conflict",
+  OrgUnitNotFound: "not_found",
   PartyBankAccountAlreadyExists: "conflict",
   PartyNotFound: "not_found",
   PartyRelationshipAlreadyExists: "conflict",
@@ -228,6 +263,7 @@ export const PartyHttpHandlers = HttpApiBuilder.group(PartyHttpApi, "Parties", (
   Effect.gen(function* () {
     const party = yield* PartyService
     const contacts = yield* PartyContactService
+    const orgUnits = yield* OrgUnitService
 
     const partyScope = (headers: { "x-tenant-id": string }, params: { id: string }) =>
       Effect.gen(function* () {
@@ -237,6 +273,60 @@ export const PartyHttpHandlers = HttpApiBuilder.group(PartyHttpApi, "Parties", (
       })
 
     return handlers
+      .handle(
+        "listOrgUnits",
+        Effect.fn("Http.Parties.listOrgUnits")(function* ({ headers }) {
+          const principal = yield* CurrentPrincipal
+
+          return yield* coreApiEffect(
+            orgUnits.list({ principal, tenantId: headers["x-tenant-id"] }),
+          )
+        }),
+      )
+      .handle(
+        "createOrgUnit",
+        Effect.fn("Http.Parties.createOrgUnit")(function* ({ headers, payload }) {
+          const principal = yield* CurrentPrincipal
+
+          return yield* coreApiEffect(
+            orgUnits.create({ principal, tenantId: headers["x-tenant-id"], ...payload }),
+          )
+        }),
+      )
+      .handle(
+        "moveOrgUnit",
+        Effect.fn("Http.Parties.moveOrgUnit")(function* ({ headers, params, payload }) {
+          const principal = yield* CurrentPrincipal
+
+          return yield* coreApiEffect(
+            orgUnits.move({
+              principal,
+              tenantId: headers["x-tenant-id"],
+              unitId: params.id,
+              parentId: payload.parentId,
+            }),
+          )
+        }),
+      )
+      .handle(
+        "assignLegalEntityToOrgUnit",
+        Effect.fn("Http.Parties.assignLegalEntityToOrgUnit")(function* ({
+          headers,
+          params,
+          payload,
+        }) {
+          const principal = yield* CurrentPrincipal
+
+          return yield* coreApiEffect(
+            orgUnits.assignLegalEntity({
+              principal,
+              tenantId: headers["x-tenant-id"],
+              unitId: params.id,
+              legalEntityId: payload.legalEntityId,
+            }),
+          )
+        }),
+      )
       .handle(
         "getContactBook",
         Effect.fn("Http.Parties.getContactBook")(function* ({ headers, params }) {

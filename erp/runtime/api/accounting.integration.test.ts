@@ -11,6 +11,8 @@ import * as Path from "effect/Path"
 import {
   AccountingService,
   type AccountingService as AccountingServiceContract,
+  ExchangeRateService,
+  type ExchangeRateService as ExchangeRateServiceContract,
   FinancialOperationService,
   type FinancialOperationService as FinancialOperationServiceContract,
   GeneralLedgerService,
@@ -98,6 +100,34 @@ const accountingService = partial<AccountingServiceContract>()({
   postJournal: () => Effect.succeed(journal),
 })
 
+const rate = {
+  fromCurrency: "USD",
+  toCurrency: "IDR",
+  rateDate: "2026-11-25",
+  rate: "16250.5",
+}
+
+type RateCall =
+  | Parameters<ExchangeRateServiceContract["set"]>[0]
+  | Parameters<ExchangeRateServiceContract["find"]>[0]
+
+const rateCalls: RateCall[] = []
+
+const exchangeRates = partial<ExchangeRateServiceContract>()({
+  set: (input: Parameters<ExchangeRateServiceContract["set"]>[0]) =>
+    Effect.sync(() => {
+      rateCalls.push(input)
+
+      return rate
+    }),
+  find: (input: Parameters<ExchangeRateServiceContract["find"]>[0]) =>
+    Effect.sync(() => {
+      rateCalls.push(input)
+
+      return rate
+    }),
+})
+
 const financialOperations = partial<FinancialOperationServiceContract>()({})
 
 // The ledger endpoints are covered by the general-ledger tests; these contracts never reach them.
@@ -123,6 +153,7 @@ it.layer(TestHttpServices)("Accounting API contracts", (it) => {
         Layer.provide(Layer.succeed(AccountingService, accountingService)),
         Layer.provide(Layer.succeed(FinancialOperationService, financialOperations)),
         Layer.provide(Layer.succeed(GeneralLedgerService, ledger)),
+        Layer.provide(Layer.succeed(ExchangeRateService, exchangeRates)),
       )
 
       const client = yield* HttpApiTest.groups(RitseiApi, ["Accounting"]).pipe(
@@ -130,6 +161,22 @@ it.layer(TestHttpServices)("Accounting API contracts", (it) => {
       )
 
       const headers = { "x-tenant-id": tenantId }
+
+      assert.deepStrictEqual(
+        yield* client.Accounting.setExchangeRate({ headers, payload: rate }),
+        rate,
+      )
+      assert.deepStrictEqual(
+        yield* client.Accounting.findExchangeRate({
+          headers,
+          query: { fromCurrency: "USD", toCurrency: "IDR", asOf: "2026-11-26" },
+        }),
+        rate,
+      )
+      assert.deepStrictEqual(rateCalls, [
+        { principal, tenantId, ...rate },
+        { principal, tenantId, fromCurrency: "USD", toCurrency: "IDR", asOf: "2026-11-26" },
+      ])
 
       assert.deepStrictEqual(
         yield* client.Accounting.listConfigurations({

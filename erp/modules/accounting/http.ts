@@ -27,6 +27,9 @@ import {
   AccountingConfiguration,
   AccountingPeriod,
   AccountingService,
+  ExchangeRate,
+  ExchangeRateService,
+  RateText,
   FINANCIAL_STAGING_EVIDENCE_CANONICALIZATION_VERSION,
   FinancialCutoverControl,
   FinancialOperation,
@@ -423,6 +426,23 @@ export const AccountingHttpGroup = HttpApiGroup.make("Accounting").add(
     success: GeneralLedger,
     error: errors,
   }).middleware(BearerAuth),
+  HttpApiEndpoint.put("setExchangeRate", "/accounting/exchange-rates", {
+    headers: tenantHeaders,
+    payload: Schema.Struct({
+      fromCurrency: CurrencyCode,
+      toCurrency: CurrencyCode,
+      rateDate: CalendarDate,
+      rate: RateText,
+    }),
+    success: ExchangeRate,
+    error: errors,
+  }).middleware(BearerAuth),
+  HttpApiEndpoint.get("findExchangeRate", "/accounting/exchange-rates", {
+    headers: tenantHeaders,
+    query: { fromCurrency: CurrencyCode, toCurrency: CurrencyCode, asOf: CalendarDate },
+    success: Schema.NullOr(ExchangeRate),
+    error: errors,
+  }).middleware(BearerAuth),
 )
 
 const AccountingHttpApi = moduleApi(AccountingHttpGroup)
@@ -439,6 +459,7 @@ export const AccountingHttpErrors = apiErrorMapping({
   AccountingPeriodNotFound: "not_found",
   AccountingPeriodNotOpen: "conflict",
   AccountingPeriodOverlap: "conflict",
+  ExchangeRateInvalid: "conflict",
   FinancialCurrencyMismatch: "conflict",
   FinancialEngineActivated: "conflict",
   FinancialEngineCutoverBlocked: "conflict",
@@ -494,8 +515,29 @@ export const AccountingHttpHandlers = HttpApiBuilder.group(
       const accounting = yield* AccountingService
       const financialOperations = yield* FinancialOperationService
       const ledger = yield* GeneralLedgerService
+      const rates = yield* ExchangeRateService
 
       return handlers
+        .handle(
+          "setExchangeRate",
+          Effect.fn("Http.Accounting.setExchangeRate")(function* ({ headers, payload }) {
+            const principal = yield* CurrentPrincipal
+
+            return yield* coreApiEffect(
+              rates.set({ principal, tenantId: headers["x-tenant-id"], ...payload }),
+            )
+          }),
+        )
+        .handle(
+          "findExchangeRate",
+          Effect.fn("Http.Accounting.findExchangeRate")(function* ({ headers, query }) {
+            const principal = yield* CurrentPrincipal
+
+            return yield* coreApiEffect(
+              rates.find({ principal, tenantId: headers["x-tenant-id"], ...query }),
+            )
+          }),
+        )
         .handle(
           "listChart",
           Effect.fn("Http.Accounting.listChart")(function* ({ headers }) {
