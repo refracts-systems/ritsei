@@ -503,6 +503,7 @@ export const OpeningLine = Schema.Struct({
   sourceValue: Schema.String,
   movingAverageValue: Schema.optionalKey(Schema.String),
   tracking: Schema.Literals(["none", "lot", "expiry"]),
+  identified: Schema.optionalKey(Schema.Boolean),
   reservedQuantity: Schema.String,
   inTransitQuantity: Schema.String,
 })

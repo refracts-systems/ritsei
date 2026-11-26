@@ -14,6 +14,7 @@ import {
   StockKeepingService,
   type StockKeepingServiceContract,
 } from "../../modules/inventory/mod.ts"
+import { partial } from "../../../tests/support/partial.ts"
 import { unusedService } from "../../../tests/support/unused-service.ts"
 import { BearerAuth, CurrentPrincipal, RitseiApi } from "./api.ts"
 import { InventoryHttpHandlers as InventoryHandlers } from "../../modules/inventory/http.ts"
@@ -175,6 +176,50 @@ it.layer(TestHttpServices)("inventory API read projections", (it) => {
         }),
         [movement],
       )
+    }),
+  )
+
+  it.effect("sets how an item is tracked through the Inventory route", () =>
+    Effect.gen(function* () {
+      const calls: Array<Parameters<StockKeepingServiceContract["setItemTracking"]>[0]> = []
+
+      const stock = partial<StockKeepingServiceContract>()({
+        setItemTracking: (input: Parameters<StockKeepingServiceContract["setItemTracking"]>[0]) =>
+          Effect.sync(() => {
+            calls.push(input)
+
+            return { itemId, tracking: "lot" as const }
+          }),
+      })
+
+      const bearer = Layer.succeed(BearerAuth, {
+        bearer: (effect) => Effect.provideService(effect, CurrentPrincipal, principal),
+      })
+
+      const bearerClient = HttpApiMiddleware.layerClient(BearerAuth, ({ request, next }) =>
+        next(HttpClientRequest.bearerToken(request, "inventory-token")),
+      )
+
+      const handlers = InventoryHandlers.pipe(
+        Layer.provide(bearer),
+        Layer.provide(Layer.succeed(InventoryService, inventoryService)),
+        Layer.provide(Layer.succeed(StockKeepingService, stock)),
+      )
+
+      const client = yield* HttpApiTest.groups(RitseiApi, ["Inventory"]).pipe(
+        Effect.provide(Layer.mergeAll(handlers, bearerClient, bearer)),
+      )
+
+      assert.deepStrictEqual(
+        yield* client.Inventory.setItemTracking({
+          params: { id: itemId },
+          headers: { "x-tenant-id": tenantId },
+          payload: { tracking: "lot" },
+        }),
+        { itemId, tracking: "lot" },
+      )
+
+      assert.deepStrictEqual(calls, [{ principal, tenantId, itemId, tracking: "lot" }])
     }),
   )
 })

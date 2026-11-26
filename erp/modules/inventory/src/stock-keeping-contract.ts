@@ -203,6 +203,8 @@ export const OpeningStockInput = Schema.Struct({
       /** The line's total value at moving average, when the source values stock another way. */
       movingAverageValue: Schema.optionalKey(FinancialMajorAmount),
       tracking: OpeningTracking,
+      /** The lots or serials of a tracked item's stock (ADR-0131); an untracked item takes none. */
+      identity: Schema.optionalKey(StockIdentity),
       reservedQuantity: NonNegativeQuantity,
       inTransitQuantity: NonNegativeQuantity,
     }),
@@ -330,6 +332,9 @@ export interface StockKeepingService {
     | OpeningStockInTransitNotCarried
     | OpeningStockLotTrackingUnsupported
     | OpeningStockReservationsNotCarried
+    | TrackedIdentityInvalid
+    | TrackedIdentityRequired
+    | TrackedIdentityUnavailable
     | CommonFailure
   >
   readonly valuation: (

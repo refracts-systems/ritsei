@@ -93,8 +93,8 @@ registered and locked once it has stock or a movement. Valued receipts, deliveri
 returns of a tracked item carry a lot (code, quantity, optional expiry) or exactly as many distinct
 serials as units, and Inventory validates and stores them; valuation stays moving average.
 `GET /documents/serial?serial=` returns, for each item with that serial, its state, the delivery that
-issued it, and the customer (marked `denied` when Sales would not show it). Not built: opening stock
-by lot or serial, transfers, counts, and adjustments of tracked items (refused), reservations by
+issued it, and the customer (marked `denied` when Sales would not show it). The opening load takes the lots or serials of a tracked line (a retry must name the same ones), and
+`PUT /inventory/items/:id/tracking` sets an item's mode. Not built: transfers, counts, and adjustments of tracked items (refused), reservations by
 identity, and enforced expiry.
 
 ## E5 Cari: search over objects

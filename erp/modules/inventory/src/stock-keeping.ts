@@ -69,7 +69,9 @@ import {
 import {
   availabilityProblem,
   type IdentityProblem,
+  identityKey,
   identityMismatch,
+  recordedIdentityKeys,
   trackingOf,
   writeIdentity,
 } from "./tracking.ts"
@@ -189,7 +191,9 @@ const openingRejection = (
   tenantId: string,
   lines: Schema.Schema.Type<typeof OpeningStockInput>["lines"],
 ) => {
-  const uncarried = firstUncarried(lines)
+  const uncarried = firstUncarried(
+    lines.map((line) => ({ ...line, identified: line.identity !== undefined })),
+  )
 
   return uncarried === undefined
     ? undefined
@@ -1005,11 +1009,28 @@ export const makeStockKeepingService = Effect.gen(function* () {
             value: requireExactMajorToMinor(row.value ?? "0", 2),
           }))
 
-          // A document is one approved bundle: a retry repeats it, and a changed one is a conflict.
-          return sameOpeningBundle(
-            { warehouseId: recorded[0]!.warehouseId, cutoffDate: recorded[0]!.cutoffDate, rows },
-            { warehouseId: decoded.warehouseId, cutoffDate: decoded.cutoffDate, rows: requested },
+          const recordedIdentities = yield* database.transaction(
+            (tx) =>
+              recordedIdentityKeys(
+                tx,
+                decoded.tenantId,
+                movement.source,
+                new Map(recorded.map((row) => [row.movementId, row.itemId])),
+              ),
+            "inventory.opening_stock.identity",
           )
+
+          // Lots and serials are part of the bundle: a retry must name the same ones.
+          const sameIdentity = decoded.lines.every(
+            (line) => identityKey(line.identity) === (recordedIdentities.get(line.itemId) ?? ""),
+          )
+
+          // A document is one approved bundle: a retry repeats it, and a changed one is a conflict.
+          return sameIdentity &&
+            sameOpeningBundle(
+              { warehouseId: recorded[0]!.warehouseId, cutoffDate: recorded[0]!.cutoffDate, rows },
+              { warehouseId: decoded.warehouseId, cutoffDate: decoded.cutoffDate, rows: requested },
+            )
             ? toOpeningLoad(legalEntityId, decoded, rows, recorded[0]!.journalEntryId)
             : yield* Effect.fail(
                 new OpeningStockConflict({
@@ -1048,12 +1069,48 @@ export const makeStockKeepingService = Effect.gen(function* () {
         const state = locked.state!
         const revaluation = decoded.revaluation
 
+        // A tracked item is carried only by its lots or serials, checked before anything is posted.
+        const modes = yield* database.transaction(async (tx) => {
+          const tracking = await trackingOf(tx, decoded.tenantId, movement.itemIds)
+
+          for (const request of requested) {
+            const mode = tracking.get(request.itemId) ?? "none"
+
+            const candidate = {
+              itemId: request.itemId,
+              quantity: request.quantity,
+              identity: decoded.lines.find((line) => line.itemId === request.itemId)?.identity,
+            }
+
+            const problem =
+              identityMismatch(request.itemId, mode, request.quantity, candidate.identity) ??
+              (await availabilityProblem(
+                tx,
+                decoded.tenantId,
+                decoded.warehouseId,
+                mode,
+                candidate,
+              ))
+
+            if (problem !== undefined) return { problem }
+          }
+
+          return { tracking }
+        }, "inventory.opening_stock.tracking")
+
+        if (modes.problem !== undefined) {
+          return yield* Effect.fail(identityFailure(decoded.tenantId, modes.problem))
+        }
+
         // The journal joins this transaction, so a later failure rolls back the posting too, and
         // a retry that finds the recorded load never reaches this point to post again.
         const journalEntryId = yield* postOpeningJournal(decoded, legalEntityId, requested)
 
         const rows = yield* database.transaction(async (tx) => {
           const written: OpeningRow[] = []
+
+          // Shapes and availability were checked above, so the guard may let tracked stock in.
+          await tx.execute(sql`select set_config('ritsei.tracked_identity', 'on', true)`)
 
           // The receipt value is the value held, so the valuation entry stays one receipt per line.
           for (const request of requested) {
@@ -1079,6 +1136,19 @@ export const makeStockKeepingService = Effect.gen(function* () {
               adjustment: major(request.value - request.sourceValue),
               // Only a line the owner revalued carries the approval.
               ...approvalColumns(stated.movingAverageValue === undefined ? undefined : revaluation),
+            })
+
+            await writeIdentity(tx, {
+              tenantId: decoded.tenantId,
+              warehouseId: decoded.warehouseId,
+              source: movement.source,
+              movementId: result.movementId,
+              tracking: modes.tracking!.get(request.itemId) ?? "none",
+              line: {
+                itemId: request.itemId,
+                quantity: request.quantity,
+                identity: stated.identity,
+              },
             })
             written.push({ ...request, movementId: result.movementId })
           }

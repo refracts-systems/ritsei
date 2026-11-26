@@ -11,6 +11,8 @@ import { requireExactMajorToMinor } from "../../../../framework/foundation/mod.t
 export type OpeningLine = {
   readonly itemId: string
   readonly tracking: "none" | "lot" | "expiry"
+  /** The line names its lots or serials (ADR-0131), so tracked stock can be carried. */
+  readonly identified?: boolean
   readonly reservedQuantity: string
   readonly inTransitQuantity: string
 }
@@ -24,13 +26,13 @@ export type OpeningRejection = Data.TaggedEnum<{
 export const OpeningRejection = Data.taggedEnum<OpeningRejection>()
 
 /**
- * The first source position the load does not carry: tracked batches, reservations, goods in
- * transit. The load is on-hand stock only, and a position it cannot carry is rejected, never
+ * The first source position the load does not carry: tracked stock without its lots or serials,
+ * reservations, goods in transit. The load is on-hand stock only, and a position it cannot carry is rejected, never
  * dropped (ADR-0118).
  */
 export const firstUncarried = (lines: ReadonlyArray<OpeningLine>): OpeningRejection | undefined => {
   for (const line of lines) {
-    if (line.tracking !== "none") {
+    if (line.tracking !== "none" && line.identified !== true) {
       return OpeningRejection.LotTrackingUnsupported({
         itemId: line.itemId,
         tracking: line.tracking,
