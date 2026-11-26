@@ -1,12 +1,16 @@
 import "../../../tooling/load-env.ts"
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime"
 import * as Effect from "effect/Effect"
+import * as Schema from "effect/Schema"
 import postgres from "postgres"
 
 import { isMain } from "../../../tooling/entrypoint.ts"
 import { readRuntimeConfiguration, type RitseiRuntimeConfiguration } from "../config.ts"
 import { serviceLayers } from "../layers.ts"
 import { type FinancialWorkerInput, runFinancialOperationOnce } from "./runner.ts"
+import { runSituationsSweepOnce, type SituationsSweepInput } from "./situations-sweep.ts"
+
+export { runSituationsSweepOnce, SituationsSweepInput } from "./situations-sweep.ts"
 
 export {
   FinancialWorkerInput,
@@ -32,6 +36,29 @@ export const startWorker = (
       yield* Effect.forever(
         runFinancialOperationOnce(input).pipe(
           Effect.provide(services),
+          Effect.andThen(Effect.sleep(intervalMs)),
+        ),
+      )
+    }),
+  )
+
+/** Runs the situations sweep on an interval; one failed sweep is reported and the next still runs. */
+export const startSituationsSweep = (
+  url: string,
+  input: Schema.Codec.Encoded<typeof SituationsSweepInput>,
+  configuration: RitseiRuntimeConfiguration,
+  intervalMs = 300_000,
+) =>
+  Effect.scoped(
+    Effect.gen(function* () {
+      const client = postgres(url)
+      yield* Effect.addFinalizer(() => Effect.promise(() => client.end()))
+      const services = serviceLayers(client, configuration)
+
+      yield* Effect.forever(
+        runSituationsSweepOnce(input).pipe(
+          Effect.provide(services),
+          Effect.catch((error) => Effect.logError("situations sweep failed", error._tag)),
           Effect.andThen(Effect.sleep(intervalMs)),
         ),
       )
