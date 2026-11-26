@@ -62,8 +62,9 @@ and feeds an in-app inbox; `assign` takes up to 100 situations to one flow owner
 A separate process (`pnpm run situations-sweep`, `erp/runtime/worker/situations-sweep-main.ts`) calls `detect` and then
 `advanceEscalations` for each configured legal entity every 5 minutes as a service account
 (`SITUATIONS_SWEEP_USER_ID`) that holds the detect capability; both calls are idempotent, so overlapping
-sweeps are safe, and a failing legal entity is logged and retried by the next sweep. Not built: e-mail,
-and discovering legal entities (they are listed in `SITUATIONS_LEGAL_ENTITY_IDS`).
+sweeps are safe, and a failing legal entity is logged and retried by the next sweep. Legal entities are those with accounting configured in the
+tenant (the service account needs read access to them), or the list in `SITUATIONS_LEGAL_ENTITY_IDS`.
+Not built: e-mail.
 **KPI read (gap G-04).** `GET /insights/kpis?legalEntityId=&period=YYYY-MM` returns six figures
 beside the same figure for the previous month, joined by the `insights` module (read-only, no data
 of its own) from reads in the owning modules, each authorized by its owner: net sales (Billing,
