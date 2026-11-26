@@ -132,5 +132,16 @@ the warehouse, or a serial received while already in stock fails with `TrackedId
 before anything is written. An untracked item takes no identity. A serial is unique per item, always
 one unit, and is `in_stock`, `issued`, or `returned_to_supplier` (a purchase return); stock per lot
 sums to the item's balance. Valuation is unchanged. A movement of a tracked item written any other
-way (counts, transfers, adjustments) is refused by the database
+way (counts, adjustments, a quantity-only receipt) is refused by the database
 (`tracked_item_requires_identity`). Expiry is stored, not enforced.
+
+### `INV-TRK-2` A tracked transfer line names its identity and moves at confirm
+
+Why: [ADR-0137](../../../docs/decisions/0137-move-tracked-stock-through-transfers-counts-and-adjustments.md).
+A transfer line of a lot item lists lots with quantities adding up to the line, of a serial item exactly
+as many serials as units, and a line of an untracked item lists none; otherwise creating the transfer
+fails with `TrackedIdentityRequired` or `TrackedIdentityInvalid`. Confirm moves a tracked line in both
+warehouses in one step, with no in-transit state: the lot quantities leave the source balance and join the
+destination's, and each serial stays `in_stock` with its warehouse changed. A lot short at the source, or a
+serial not in stock there, fails confirm with `TrackedIdentityUnavailable` and nothing is written. Complete
+moves only the untracked lines. A transfer posts nothing and valuation does not change.

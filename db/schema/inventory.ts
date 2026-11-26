@@ -4,6 +4,7 @@ import {
   check,
   date,
   foreignKey,
+  jsonb,
   pgSchema,
   primaryKey,
   text,
@@ -190,6 +191,8 @@ export const stockTransferLines = inventorySchema.table(
     transferId: uuid("transfer_id").notNull(),
     itemId: uuid("item_id").notNull(),
     quantity: bigint("quantity", { mode: "string" }).notNull(),
+    /** The lots or serials a tracked item's line moves (ADR-0137); null for an untracked item. */
+    identity: jsonb("identity"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -210,6 +213,10 @@ export const stockTransferLines = inventorySchema.table(
       name: "stock_transfer_lines_item_fkey",
     }),
     check("stock_transfer_lines_quantity_check", sql`${table.quantity} > 0`),
+    check(
+      "stock_transfer_lines_identity_check",
+      sql`${table.identity} is null or jsonb_typeof(${table.identity}) = 'object'`,
+    ),
   ],
 )
 

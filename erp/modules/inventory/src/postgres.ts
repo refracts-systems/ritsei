@@ -16,6 +16,7 @@ import {
 import {
   Database,
   DatabaseFailure,
+  type DrizzleTransaction,
   isDatabaseConstraint,
   uuidv7,
 } from "../../../../framework/foundation/mod.ts"
@@ -67,6 +68,15 @@ import {
   WarehouseBranchNotFound,
   WarehouseLegalEntityNotFound,
 } from "./errors.ts"
+import type { StockIdentity } from "./stock-identity.ts"
+import {
+  availabilityProblem,
+  identityFailure,
+  identityMismatch,
+  type IdentityProblem,
+  moveIdentityBetween,
+  trackingOf,
+} from "./tracking.ts"
 import { InventoryStockCorrectedEvent, StockCorrectedEventPayload } from "./events.ts"
 import {
   correctionKeepsReservations,
@@ -176,7 +186,23 @@ const transferSelection = {
 const transferLineSelection = {
   itemId: stockTransferLines.itemId,
   quantity: stockTransferLines.quantity,
+  identity: stockTransferLines.identity,
 }
+
+/** A stored line as the contract returns it: the identity key is present only for a tracked line. */
+const toTransferLine = (row: {
+  readonly itemId: string
+  readonly quantity: string
+  readonly identity: unknown
+}): StockTransferLine =>
+  row.identity === null || row.identity === undefined
+    ? { itemId: row.itemId, quantity: row.quantity }
+    : {
+        itemId: row.itemId,
+        quantity: row.quantity,
+        // SAFETY: the column is written only from a validated StockIdentity.
+        identity: row.identity as StockIdentity,
+      }
 
 const toStockTransfer = (
   row: {
@@ -201,6 +227,147 @@ const toStockTransfer = (
   completedAt: row.completedAt?.toISOString() ?? null,
   lines,
 })
+
+/** Receives a tracked line in the destination at confirm, with the identity the issue took out. */
+const receiveTrackedLine = async (
+  tx: DrizzleTransaction,
+  args: {
+    readonly tenantId: string
+    readonly transferId: string
+    readonly sourceWarehouseId: string
+    readonly destinationWarehouseId: string
+    readonly itemId: string
+    readonly quantity: string
+    readonly identity: StockIdentity
+    readonly issueMovementId: string
+    readonly timestamp: Date
+  },
+) => {
+  await tx
+    .insert(stockBalances)
+    .values({
+      tenantId: args.tenantId,
+      warehouseId: args.destinationWarehouseId,
+      itemId: args.itemId,
+      onHand: args.quantity,
+    })
+    .onConflictDoUpdate({
+      target: [stockBalances.tenantId, stockBalances.warehouseId, stockBalances.itemId],
+      set: { onHand: sql`${stockBalances.onHand} + ${args.quantity}`, updatedAt: args.timestamp },
+    })
+
+  const receipt = (
+    await tx
+      .insert(movements)
+      .values({
+        tenantId: args.tenantId,
+        warehouseId: args.destinationWarehouseId,
+        itemId: args.itemId,
+        quantity: args.quantity,
+        kind: "receipt" as const,
+        referenceId: args.transferId,
+      })
+      .returning({ id: movements.id })
+  )[0]!
+
+  await moveIdentityBetween(tx, { ...args, receiptMovementId: receipt.id })
+}
+
+type TransferRow = { readonly id: string; readonly tenantId: string } & Record<
+  "sourceWarehouseId" | "destinationWarehouseId",
+  string
+>
+
+type StoredLine = Parameters<typeof toTransferLine>[0]
+
+/** Whether the source balance can cover a line. */
+const hasLine = (
+  balance: { readonly onHand: string; readonly reserved: string } | undefined,
+  line: { readonly quantity: string },
+) =>
+  hasAvailableStock(
+    balance === undefined
+      ? undefined
+      : { onHand: BigInt(balance.onHand), reserved: BigInt(balance.reserved) },
+    BigInt(line.quantity),
+  )
+
+/** The first line whose identity does not fit its item's tracking mode and quantity. */
+const firstIdentityMismatch = async (
+  tx: DrizzleTransaction,
+  tenantId: string,
+  lines: ReadonlyArray<StockTransferLine>,
+) => {
+  const tracking = await trackingOf(
+    tx,
+    tenantId,
+    lines.map((line) => line.itemId),
+  )
+
+  return lines
+    .values()
+    .map((line) =>
+      identityMismatch(
+        line.itemId,
+        tracking.get(line.itemId) ?? "none",
+        BigInt(line.quantity),
+        line.identity,
+      ),
+    )
+    .find((problem) => problem !== undefined)
+}
+
+/** The first tracked line whose lots or serials are not at the source, read under its locks. */
+const firstTrackedProblem = async (
+  tx: DrizzleTransaction,
+  row: TransferRow,
+  lines: readonly StoredLine[],
+) => {
+  for (const line of lines) {
+    const identity = toTransferLine(line).identity
+
+    if (identity === undefined) continue
+
+    const problem = await availabilityProblem(
+      tx,
+      row.tenantId,
+      row.sourceWarehouseId,
+      identity.serials === undefined ? "lot" : "serial",
+      { itemId: line.itemId, quantity: -BigInt(line.quantity), identity },
+    )
+
+    if (problem !== undefined) return problem
+  }
+
+  return undefined
+}
+
+/** Receives every tracked line in the destination, after the source issues were written. */
+const receiveTrackedLines = async (
+  tx: DrizzleTransaction,
+  row: TransferRow,
+  lines: readonly StoredLine[],
+  issueByItem: ReadonlyMap<string, string>,
+  timestamp: Date,
+) => {
+  for (const line of lines) {
+    const identity = toTransferLine(line).identity
+
+    if (identity === undefined) continue
+
+    await receiveTrackedLine(tx, {
+      tenantId: row.tenantId,
+      transferId: row.id,
+      destinationWarehouseId: row.destinationWarehouseId,
+      sourceWarehouseId: row.sourceWarehouseId,
+      itemId: line.itemId,
+      quantity: line.quantity,
+      identity,
+      issueMovementId: issueByItem.get(line.itemId)!,
+      timestamp,
+    })
+  }
+}
 
 const mapTransferCreateError = (
   error: DatabaseFailure,
@@ -228,7 +395,7 @@ export type CompleteTransferOutcome = Data.TaggedEnum<{
       readonly status: "draft" | "confirmed" | "completed"
       readonly confirmedAt: string | null
       readonly completedAt: string | null
-      readonly lines: readonly { readonly itemId: string; readonly quantity: string }[]
+      readonly lines: readonly StockTransferLine[]
     }
   }
   InvalidState: { readonly status: "draft" | "confirmed" | "completed" }
@@ -249,9 +416,10 @@ export type ConfirmTransferOutcome = Data.TaggedEnum<{
       readonly status: "draft" | "confirmed" | "completed"
       readonly confirmedAt: string | null
       readonly completedAt: string | null
-      readonly lines: readonly { readonly itemId: string; readonly quantity: string }[]
+      readonly lines: readonly StockTransferLine[]
     }
   }
+  IdentityProblem: { readonly problem: IdentityProblem }
   Unavailable: { readonly warehouseId: string; readonly itemId: string; readonly requested: string }
   Confirmed: { readonly transfer: ReturnType<typeof toStockTransfer> }
 }>
@@ -265,6 +433,7 @@ export type CreateTransferOutcome = Data.TaggedEnum<{
     readonly destinationWarehouseId: string
   }
   ItemNotFound: { readonly itemId: string }
+  IdentityProblem: { readonly problem: IdentityProblem }
   Created: { readonly transfer: ReturnType<typeof toStockTransfer> }
 }>
 
@@ -1589,6 +1758,10 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
               return CreateTransferOutcome.ItemNotFound({ itemId: missingItemId })
             }
 
+            const problem = await firstIdentityMismatch(tx, decoded.tenantId, decoded.lines)
+
+            if (problem !== undefined) return CreateTransferOutcome.IdentityProblem({ problem })
+
             const [row] = await tx
               .insert(stockTransfers)
               .values({
@@ -1605,6 +1778,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
                 transferId: row!.id,
                 itemId: line.itemId,
                 quantity: line.quantity,
+                identity: line.identity ?? null,
               })),
             )
 
@@ -1629,6 +1803,10 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
               destinationWarehouseId: result.destinationWarehouseId,
             }),
           )
+        }
+
+        if (CreateTransferOutcome.$is("IdentityProblem")(result)) {
+          return yield* Effect.fail(identityFailure(decoded.tenantId, result.problem))
         }
 
         if (CreateTransferOutcome.$is("ItemNotFound")(result)) {
@@ -1673,7 +1851,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
             )
             .orderBy(stockTransferLines.itemId)
 
-          const current = toStockTransfer(row, lines)
+          const current = toStockTransfer(row, lines.map(toTransferLine))
 
           if (row.status !== "draft") return ConfirmTransferOutcome.Existing({ transfer: current })
 
@@ -1702,26 +1880,24 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
 
           const balancesByItem = new Map(balances.map((balance) => [balance.itemId, balance]))
 
-          for (const line of lines) {
-            const balance = balancesByItem.get(line.itemId)
+          const short = lines.find((line) => !hasLine(balancesByItem.get(line.itemId), line))
 
-            if (
-              !hasAvailableStock(
-                balance === undefined
-                  ? undefined
-                  : { onHand: BigInt(balance.onHand), reserved: BigInt(balance.reserved) },
-                BigInt(line.quantity),
-              )
-            ) {
-              return ConfirmTransferOutcome.Unavailable({
-                warehouseId: row.sourceWarehouseId,
-                itemId: line.itemId,
-                requested: line.quantity,
-              })
-            }
+          if (short !== undefined) {
+            return ConfirmTransferOutcome.Unavailable({
+              warehouseId: row.sourceWarehouseId,
+              itemId: short.itemId,
+              requested: short.quantity,
+            })
           }
 
+          const problem = await firstTrackedProblem(tx, row, lines)
+
+          if (problem !== undefined) return ConfirmTransferOutcome.IdentityProblem({ problem })
+
           const timestamp = now()
+
+          // Tracked lines move now, in both warehouses; the identity guard is on for this transaction.
+          await tx.execute(sql`select set_config('ritsei.tracked_identity', 'on', true)`)
 
           for (const line of lines) {
             await tx
@@ -1739,18 +1915,26 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
               )
           }
 
-          if (lines.length > 0) {
-            await tx.insert(movements).values(
-              lines.map((line) => ({
-                tenantId: decoded.tenantId,
-                warehouseId: row.sourceWarehouseId,
-                itemId: line.itemId,
-                quantity: String(-BigInt(line.quantity)),
-                kind: "issue" as const,
-                referenceId: row.id,
-              })),
-            )
-          }
+          const issues =
+            lines.length === 0
+              ? []
+              : await tx
+                  .insert(movements)
+                  .values(
+                    lines.map((line) => ({
+                      tenantId: decoded.tenantId,
+                      warehouseId: row.sourceWarehouseId,
+                      itemId: line.itemId,
+                      quantity: String(-BigInt(line.quantity)),
+                      kind: "issue" as const,
+                      referenceId: row.id,
+                    })),
+                  )
+                  .returning({ id: movements.id, itemId: movements.itemId })
+
+          const issueByItem = new Map(issues.map((issue) => [issue.itemId, issue.id]))
+
+          await receiveTrackedLines(tx, row, lines, issueByItem, timestamp)
 
           const [confirmed] = await tx
             .update(stockTransfers)
@@ -1764,7 +1948,9 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
             )
             .returning(transferSelection)
 
-          return ConfirmTransferOutcome.Confirmed({ transfer: toStockTransfer(confirmed!, lines) })
+          return ConfirmTransferOutcome.Confirmed({
+            transfer: toStockTransfer(confirmed!, lines.map(toTransferLine)),
+          })
         }, "inventory.stock.transfer.confirm")
 
         if (ConfirmTransferOutcome.$is("NotFound")(result)) {
@@ -1774,6 +1960,10 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
               transferId: decoded.transferId,
             }),
           )
+        }
+
+        if (ConfirmTransferOutcome.$is("IdentityProblem")(result)) {
+          return yield* Effect.fail(identityFailure(decoded.tenantId, result.problem))
         }
 
         if (ConfirmTransferOutcome.$is("Unavailable")(result)) {
@@ -1823,7 +2013,7 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
             )
             .orderBy(stockTransferLines.itemId)
 
-          const current = toStockTransfer(row, lines)
+          const current = toStockTransfer(row, lines.map(toTransferLine))
 
           if (row.status === "completed")
             return CompleteTransferOutcome.Existing({ transfer: current })
@@ -1834,7 +2024,10 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
 
           const timestamp = now()
 
-          for (const line of lines) {
+          // Tracked lines were received at confirm (ADR-0137).
+          const untracked = lines.filter((line) => line.identity === null)
+
+          for (const line of untracked) {
             await tx
               .insert(stockBalances)
               .values({
@@ -1852,9 +2045,9 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
               })
           }
 
-          if (lines.length > 0) {
+          if (untracked.length > 0) {
             await tx.insert(movements).values(
-              lines.map((line) => ({
+              untracked.map((line) => ({
                 tenantId: decoded.tenantId,
                 warehouseId: row.destinationWarehouseId,
                 itemId: line.itemId,
@@ -1877,7 +2070,9 @@ export const makeInventoryPostgresService = Effect.gen(function* () {
             )
             .returning(transferSelection)
 
-          return CompleteTransferOutcome.Completed({ transfer: toStockTransfer(completed!, lines) })
+          return CompleteTransferOutcome.Completed({
+            transfer: toStockTransfer(completed!, lines.map(toTransferLine)),
+          })
         }, "inventory.stock.transfer.complete")
 
         if (CompleteTransferOutcome.$is("NotFound")(result)) {

@@ -5,6 +5,7 @@ import * as Schema from "effect/Schema"
 import type { DatabaseFailure } from "../../../../framework/foundation/mod.ts"
 import { Principal } from "../../../../framework/modules/auth/mod.ts"
 import type { AuthorizationDenied } from "../../../../framework/modules/authorization/mod.ts"
+import { StockIdentity } from "./stock-identity.ts"
 import { EventEnvelope } from "../../../../framework/modules/messaging/mod.ts"
 import type { EventIdempotencyConflict } from "../../../../framework/modules/messaging/mod.ts"
 import type {
@@ -25,6 +26,9 @@ import type {
   StockTransferSameWarehouse,
   StockTransferWarehouseNotFound,
   StockUnavailable,
+  TrackedIdentityInvalid,
+  TrackedIdentityRequired,
+  TrackedIdentityUnavailable,
   WarehouseAlreadyExists,
   WarehouseBranchNotFound,
   WarehouseLegalEntityNotFound,
@@ -139,6 +143,8 @@ export const StockTransferStatus = Schema.Literals(["draft", "confirmed", "compl
 export const StockTransferLine = Schema.Struct({
   itemId: Uuid,
   quantity: Quantity,
+  /** The lots or serials a tracked item's line moves; an untracked item takes none (ADR-0137). */
+  identity: Schema.optionalKey(StockIdentity),
 })
 
 export const StockMovement = Schema.Struct({
@@ -416,11 +422,22 @@ export interface InventoryService {
     | StockTransferItemNotFound
     | StockTransferSameWarehouse
     | StockTransferWarehouseNotFound
+    | TrackedIdentityInvalid
+    | TrackedIdentityRequired
+    | TrackedIdentityUnavailable
     | CommonFailure
   >
   readonly confirmTransfer: (
     input: Schema.Codec.Encoded<typeof ConfirmStockTransferInput>,
-  ) => Effect.Effect<StockTransfer, StockUnavailable | StockTransferNotFound | CommonFailure>
+  ) => Effect.Effect<
+    StockTransfer,
+    | StockUnavailable
+    | StockTransferNotFound
+    | TrackedIdentityInvalid
+    | TrackedIdentityRequired
+    | TrackedIdentityUnavailable
+    | CommonFailure
+  >
   readonly completeTransfer: (
     input: Schema.Codec.Encoded<typeof CompleteStockTransferInput>,
   ) => Effect.Effect<

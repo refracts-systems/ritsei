@@ -8,7 +8,12 @@ import {
   serialUnits,
 } from "../../../../db/schema/inventory.ts"
 import type { DrizzleTransaction } from "../../../../framework/foundation/mod.ts"
-import type { StockIdentity } from "./stock-keeping-contract.ts"
+import {
+  TrackedIdentityInvalid,
+  TrackedIdentityRequired,
+  TrackedIdentityUnavailable,
+} from "./errors.ts"
+import type { StockIdentity } from "./stock-identity.ts"
 
 export type Tracking = "none" | "lot" | "serial"
 
@@ -17,6 +22,25 @@ export type IdentityProblem =
   | { readonly kind: "required"; readonly itemId: string; readonly tracking: "lot" | "serial" }
   | { readonly kind: "invalid"; readonly itemId: string; readonly reason: string }
   | { readonly kind: "unavailable"; readonly itemId: string; readonly identity: string }
+
+/** The typed failure for a tracked line that cannot move. */
+export const identityFailure = (tenantId: string, problem: IdentityProblem) => {
+  if (problem.kind === "required") {
+    return new TrackedIdentityRequired({
+      tenantId,
+      itemId: problem.itemId,
+      tracking: problem.tracking,
+    })
+  }
+
+  return problem.kind === "invalid"
+    ? new TrackedIdentityInvalid({ tenantId, itemId: problem.itemId, reason: problem.reason })
+    : new TrackedIdentityUnavailable({
+        tenantId,
+        itemId: problem.itemId,
+        identity: problem.identity,
+      })
+}
 
 const invalidIdentity = (itemId: string, reason: string): IdentityProblem => ({
   kind: "invalid",
@@ -367,4 +391,85 @@ export const recordedIdentityKeys = async (
   for (const row of serialRows) add(row.itemId, `serial:${row.serial}`)
 
   return new Map([...keys].map(([itemId, found]) => [itemId, found.toSorted().join("|")]))
+}
+
+/**
+ * Moves a tracked line between warehouses inside one transaction (ADR-0137): each lot leaves the
+ * source balance and joins the destination's, and each serial stays in stock with its warehouse
+ * changed. The issue and the receipt are the movements already written for the line.
+ */
+export const moveIdentityBetween = async (
+  tx: DrizzleTransaction,
+  args: {
+    readonly tenantId: string
+    readonly sourceWarehouseId: string
+    readonly destinationWarehouseId: string
+    readonly itemId: string
+    readonly identity: StockIdentity
+    readonly issueMovementId: string
+    readonly receiptMovementId: string
+  },
+) => {
+  const { tenantId, itemId } = args
+
+  for (const lot of args.identity.lots ?? []) {
+    const row = (
+      await tx
+        .select({ id: lots.id })
+        .from(lots)
+        .where(and(eq(lots.tenantId, tenantId), eq(lots.itemId, itemId), eq(lots.code, lot.code)))
+    )[0]!
+
+    const quantity = BigInt(lot.quantity).toString()
+
+    await tx
+      .update(lotBalances)
+      .set({ onHand: sql`${lotBalances.onHand} - ${quantity}`, updatedAt: new Date() })
+      .where(
+        and(
+          eq(lotBalances.tenantId, tenantId),
+          eq(lotBalances.warehouseId, args.sourceWarehouseId),
+          eq(lotBalances.lotId, row.id),
+        ),
+      )
+
+    await tx
+      .insert(lotBalances)
+      .values({
+        tenantId,
+        warehouseId: args.destinationWarehouseId,
+        lotId: row.id,
+        onHand: quantity,
+      })
+      .onConflictDoUpdate({
+        target: [lotBalances.tenantId, lotBalances.warehouseId, lotBalances.lotId],
+        set: { onHand: sql`${lotBalances.onHand} + ${quantity}`, updatedAt: new Date() },
+      })
+
+    await tx.insert(lotMovements).values({
+      tenantId,
+      movementId: args.issueMovementId,
+      lotId: row.id,
+      quantity: `-${quantity}`,
+    })
+
+    await tx
+      .insert(lotMovements)
+      .values({ tenantId, movementId: args.receiptMovementId, lotId: row.id, quantity })
+  }
+
+  const serials = args.identity.serials ?? []
+
+  if (serials.length > 0) {
+    await tx
+      .update(serialUnits)
+      .set({ warehouseId: args.destinationWarehouseId, updatedAt: new Date() })
+      .where(
+        and(
+          eq(serialUnits.tenantId, tenantId),
+          eq(serialUnits.itemId, itemId),
+          inArray(serialUnits.serial, [...serials]),
+        ),
+      )
+  }
 }

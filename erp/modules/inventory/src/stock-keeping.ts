@@ -46,9 +46,6 @@ import {
   StockNotStockable,
   StockUnavailable,
   StockValuationUnavailable,
-  TrackedIdentityInvalid,
-  TrackedIdentityRequired,
-  TrackedIdentityUnavailable,
 } from "./errors.ts"
 import {
   CountStockInput,
@@ -68,7 +65,7 @@ import {
 } from "./stock-keeping-contract.ts"
 import {
   availabilityProblem,
-  type IdentityProblem,
+  identityFailure,
   identityKey,
   identityMismatch,
   recordedIdentityKeys,
@@ -107,25 +104,6 @@ type Plan = Movement & {
   readonly lossRole: PostingRoleType
   /** The lot or serials each line moves by, for tracked items (ADR-0131). */
   readonly identities?: ReadonlyMap<string, StockIdentity | undefined>
-}
-
-/** The typed failure for a tracked line that cannot move. */
-const identityFailure = (tenantId: string, problem: IdentityProblem) => {
-  if (problem.kind === "required") {
-    return new TrackedIdentityRequired({
-      tenantId,
-      itemId: problem.itemId,
-      tracking: problem.tracking,
-    })
-  }
-
-  return problem.kind === "invalid"
-    ? new TrackedIdentityInvalid({ tenantId, itemId: problem.itemId, reason: problem.reason })
-    : new TrackedIdentityUnavailable({
-        tenantId,
-        itemId: problem.itemId,
-        identity: problem.identity,
-      })
 }
 
 type LockedStock = {
