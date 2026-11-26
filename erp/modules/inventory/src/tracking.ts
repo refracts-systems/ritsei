@@ -316,3 +316,55 @@ export const writeIdentity = async (
 
   if (args.tracking === "serial") await writeSerials(tx, args)
 }
+
+/** A line's identity as one comparable text: its lots with quantities, or its serials, sorted. */
+export const identityKey = (identity: StockIdentity | undefined) =>
+  [
+    ...(identity?.lots ?? []).map((lot) => `lot:${lot.code}:${lot.quantity}`),
+    ...(identity?.serials ?? []).map((serial) => `serial:${serial}`),
+  ]
+    .toSorted()
+    .join("|")
+
+/** What an earlier load recorded per item, in the same form as `identityKey`. */
+export const recordedIdentityKeys = async (
+  tx: DrizzleTransaction,
+  tenantId: string,
+  source: { readonly type: string; readonly id: string },
+  movementItems: ReadonlyMap<string, string>,
+) => {
+  const movementIds = [...movementItems.keys()]
+
+  const lotRows = await tx
+    .select({
+      movementId: lotMovements.movementId,
+      code: lots.code,
+      quantity: lotMovements.quantity,
+    })
+    .from(lotMovements)
+    .innerJoin(lots, and(eq(lots.tenantId, lotMovements.tenantId), eq(lots.id, lotMovements.lotId)))
+    .where(and(eq(lotMovements.tenantId, tenantId), inArray(lotMovements.movementId, movementIds)))
+
+  const serialRows = await tx
+    .select({ itemId: serialUnits.itemId, serial: serialUnits.serial })
+    .from(serialUnits)
+    .where(
+      and(
+        eq(serialUnits.tenantId, tenantId),
+        eq(serialUnits.receivedSourceType, source.type),
+        eq(serialUnits.receivedSourceId, source.id),
+      ),
+    )
+
+  const keys = new Map<string, string[]>()
+
+  const add = (itemId: string, key: string) => keys.set(itemId, [...(keys.get(itemId) ?? []), key])
+
+  for (const row of lotRows) {
+    add(movementItems.get(row.movementId)!, `lot:${row.code}:${BigInt(row.quantity)}`)
+  }
+
+  for (const row of serialRows) add(row.itemId, `serial:${row.serial}`)
+
+  return new Map([...keys].map(([itemId, found]) => [itemId, found.toSorted().join("|")]))
+}

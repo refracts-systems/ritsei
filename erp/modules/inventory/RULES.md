@@ -94,8 +94,11 @@ These replace ADR-0100 point 4.
 
 ### `INV-OPEN-2` The load carries on-hand stock only
 
-Lot and expiry tracked stock stays under source authority, and declared reservations and goods in
-transit are rejected rather than dropped.
+Tracked stock is carried only with its lots or serials on the line (ADR-0131 decision 6): a line the
+source declares lot or expiry tracked, without identity, fails with `OpeningStockLotTrackingUnsupported`,
+and an item tracked in Inventory with no or wrong identity fails with `TrackedIdentityRequired`,
+`TrackedIdentityInvalid`, or `TrackedIdentityUnavailable` (a serial already in stock), before anything
+is posted. Declared reservations and goods in transit are rejected rather than dropped.
 
 ### `INV-OPEN-3` A revalued line needs an approval
 
@@ -104,8 +107,8 @@ carries it; a line without one is held at its source value.
 
 ### `INV-OPEN-4` An opening is loaded once
 
-An `openingId` is one approved bundle. Loading it again with the same warehouse, cutoff date, and
-lines returns the recorded load and journal without posting again; any change fails with
+An `openingId` is one approved bundle. Loading it again with the same warehouse, cutoff date,
+lines, and lots or serials returns the recorded load and journal without posting again; any change fails with
 `OpeningStockConflict`. An item already opened in the warehouse fails with
 `OpeningStockAlreadyLoaded`.
 
@@ -129,5 +132,5 @@ the warehouse, or a serial received while already in stock fails with `TrackedId
 before anything is written. An untracked item takes no identity. A serial is unique per item, always
 one unit, and is `in_stock`, `issued`, or `returned_to_supplier` (a purchase return); stock per lot
 sums to the item's balance. Valuation is unchanged. A movement of a tracked item written any other
-way (counts, transfers, adjustments, the opening load) is refused by the database
+way (counts, transfers, adjustments) is refused by the database
 (`tracked_item_requires_identity`). Expiry is stored, not enforced.

@@ -234,6 +234,16 @@ export const InventoryHttpGroup = HttpApiGroup.make("Inventory").add(
     success: Item,
     error: errors,
   }).middleware(BearerAuth),
+  HttpApiEndpoint.put("setItemTracking", "/inventory/items/:id/tracking", {
+    params: { id: Uuid },
+    headers: tenantHeaders,
+    payload: Schema.Struct({ tracking: Schema.Literals(["none", "lot", "serial"]) }),
+    success: Schema.Struct({
+      itemId: Uuid,
+      tracking: Schema.Literals(["none", "lot", "serial"]),
+    }),
+    error: errors,
+  }).middleware(BearerAuth),
   HttpApiEndpoint.post("countStock", "/inventory/warehouses/:id/counts", {
     params: { id: Uuid },
     headers: tenantHeaders,
@@ -321,6 +331,21 @@ export const InventoryHttpHandlers = HttpApiBuilder.group(
                 principal,
                 tenantId: headers["x-tenant-id"],
                 productId: payload.productId,
+              }),
+            )
+          }),
+        )
+        .handle(
+          "setItemTracking",
+          Effect.fn("Http.Inventory.setItemTracking")(function* ({ headers, params, payload }) {
+            const principal = yield* CurrentPrincipal
+
+            return yield* coreApiEffect(
+              stockKeeping.setItemTracking({
+                principal,
+                tenantId: headers["x-tenant-id"],
+                itemId: params.id,
+                tracking: payload.tracking,
               }),
             )
           }),
