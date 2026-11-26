@@ -18,6 +18,7 @@ const lead = person("hd-lead")
 const other = person("hd-other")
 
 // ADR-0132: tickets with a working-day due date, an assignee, and incidents that group them.
+// [HD-AUTH-1] [HD-NUM-1] [HD-VIS-1] [HD-STA-1] [HD-SUB-1] [HD-INC-1] [HD-MIG-1]
 it.effect.skipIf(databaseUrl === undefined)(
   "runs a ticket from request to close and groups tickets under an incident",
   () =>
