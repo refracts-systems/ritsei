@@ -162,6 +162,7 @@ current system; ADRs preserve decision history.
 | [`0134`](./0134-adopt-a-governance-extension-for-board-decisions-and-restricted-notes.md)             | Adopt a Governance Extension for Board Decisions and Restricted Notes                            | Accepted   |
 | [`0135`](./0135-scope-manufacturing-and-projects-and-set-their-release-order.md)                      | Scope Manufacturing and Projects and Set Their Release Order                                     | Accepted   |
 | [`0136`](./0136-adopt-per-extension-migration-chains.md)                                              | Adopt Per-Extension Migration Chains                                                             | Accepted   |
+| [`0137`](./0137-move-tracked-stock-through-transfers-counts-and-adjustments.md)                       | Move Tracked Stock Through Transfers, Counts, and Adjustments                                    | Accepted   |
 
 <!-- adr-index:end -->
 
